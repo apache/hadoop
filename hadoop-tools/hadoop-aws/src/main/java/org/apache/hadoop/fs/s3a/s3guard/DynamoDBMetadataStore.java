@@ -1371,7 +1371,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
       final DirListingMetadata meta,
       @Nullable final BulkOperationState operationState) throws IOException {
     LOG.debug("Saving {} dir meta for {} to table {} in region {}: {}",
-        tableName,
         meta.isAuthoritative() ? "auth" : "nonauth",
         meta.getPath(),
         tableName, region, meta);

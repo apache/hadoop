@@ -351,4 +351,13 @@ public class StoreContext {
         ? k + "/"
         : k;
   }
+
+  /**
+   * Qualify a path.
+   * @param path path in
+   * @return qualified path
+   */
+  public Path qualify(Path path) {
+    return contextAccessors.qualify(path);
+  }
 }

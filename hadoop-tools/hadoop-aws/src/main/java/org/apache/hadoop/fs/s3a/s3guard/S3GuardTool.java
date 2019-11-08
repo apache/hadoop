@@ -101,7 +101,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
       "\t" + Prune.NAME + " - " + Prune.PURPOSE + "\n" +
       "\t" + SetCapacity.NAME + " - " + SetCapacity.PURPOSE + "\n" +
       "\t" + SelectTool.NAME + " - " + SelectTool.PURPOSE + "\n" +
-      "\t" + Fsck.NAME + " - " + Fsck.PURPOSE + "\n";
+      "\t" + Fsck.NAME + " - " + Fsck.PURPOSE + "\n" +
+      "\t" + Authoritative.NAME + " - " + Authoritative.PURPOSE + "\n";
   private static final String DATA_IN_S3_IS_PRESERVED
       = "(all data in S3 is preserved)";
 
@@ -780,7 +781,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
     private long importDir(FileStatus status) throws IOException {
       Preconditions.checkArgument(status.isDirectory());
       BulkOperationState operationState = getStore().initiateBulkWrite(
-          BulkOperationState.OperationType.Put,
+          BulkOperationState.OperationType.Import,
           status.getPath());
       RemoteIterator<S3ALocatedFileStatus> it = getFilesystem()
           .listFilesAndEmptyDirectories(status.getPath(), true);
@@ -1688,6 +1689,89 @@ public abstract class S3GuardTool extends Configured implements Tool {
       return exitValue;
     }
   }
+  /**
+   * Audits a DynamoDB S3Guard repository for all the entries being
+   * 'authoritative'.
+   * Checks bucket settings if {@link #CHECK_FLAG} is set, then
+   * treewalk.
+   */
+  static class Authoritative extends S3GuardTool {
+
+    public static final String NAME = "authoritative";
+
+    public static final String CHECK_FLAG = "check-config";
+
+    public static final String PURPOSE = "Audits a DynamoDB S3Guard "
+        + "repository for all the entries being 'authoritative'";
+    private static final String USAGE = NAME + " " + CHECK_FLAG
+        + " [s3a://BUCKET/PATH]\n" +
+        "\t" + PURPOSE + "\n\n";
+
+    Authoritative(Configuration conf) {
+      super(conf, CHECK_FLAG);
+    }
+
+    @Override
+    public String getName() {
+      return NAME;
+    }
+
+    @Override
+    public String getUsage() {
+      return USAGE;
+    }
+
+    public int run(String[] args, PrintStream out) throws
+        InterruptedException, IOException {
+      List<String> paths = parseArgs(args);
+      if (paths.isEmpty()) {
+        out.println(USAGE);
+        throw invalidArgs("no arguments");
+      }
+      maybeInitFilesystem(paths);
+      initMetadataStore(false);
+      String s3Path = paths.get(0);
+
+      URI uri = toUri(s3Path);
+      Path auditPath;
+      if (uri.getPath().isEmpty()) {
+        auditPath = new Path("/");
+      } else {
+        auditPath = new Path(uri.getPath());
+      }
+
+      final S3AFileSystem fs = getFilesystem();
+      final MetadataStore ms = getStore();
+
+      if (!(ms instanceof DynamoDBMetadataStore)) {
+        errorln(s3Path + " path uses MS: " + ms);
+        errorln(NAME + " can be only used with a DynamoDB backed s3a bucket.");
+        errorln(USAGE);
+        return ERROR;
+      }
+
+      final CommandFormat commandFormat = getCommandFormat();
+      if (commandFormat.getOpt(CHECK_FLAG)) {
+        // check that the path is auth
+        if (!fs.allowAuthoritative(auditPath)) {
+          // path isn't considered auth in the S3A bucket info
+          errorln("Path " + auditPath
+              + " is not confiugured to be authoritative");
+          errorln(USAGE);
+          return S3GuardAuthoritativeAudit.ERROR_PATH_NOT_AUTH_IN_FS;
+        }
+      }
+
+      final S3GuardAuthoritativeAudit audit
+          = new S3GuardAuthoritativeAudit(fs.createStoreContext(),
+          (DynamoDBMetadataStore) ms);
+      final int count = audit.audit(auditPath);
+      LOG.info("Audit scanned {} directories", count);
+
+      out.flush();
+      return EXIT_SUCCESS;
+    }
+  }
 
   private static S3GuardTool command;
 
@@ -1870,6 +1954,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
       break;
     case Fsck.NAME:
       command = new Fsck(conf);
+      break;
+    case Authoritative.NAME:
+      command = new Authoritative(conf);
       break;
     default:
       printHelp();

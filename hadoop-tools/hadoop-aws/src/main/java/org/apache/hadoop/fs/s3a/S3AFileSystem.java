@@ -2454,7 +2454,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param path path
    * @return true if the path is auth
    */
-  protected boolean allowAuthoritative(final Path path) {
+  public boolean allowAuthoritative(final Path path) {
     return S3Guard.allowAuthoritative(path, this,
         allowAuthoritativeMetadataStore, allowAuthoritativePaths);
   }
@@ -4437,6 +4437,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public String getBucketLocation() throws IOException {
       return S3AFileSystem.this.getBucketLocation();
+    }
+
+    @Override
+    public Path qualify(Path path) {
+      return S3AFileSystem.this.qualify(path);
     }
   }
 }

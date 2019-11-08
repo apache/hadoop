@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -291,7 +292,9 @@ public final class S3Guard {
         .collect(Collectors.toMap(
             pm -> pm.getFileStatus().getPath(), PathMetadata::getFileStatus)
         );
-
+    BulkOperationState operationState = ms.initiateBulkWrite(
+        BulkOperationState.OperationType.Listing,
+        path);
     for (S3AFileStatus s : backingStatuses) {
       if (deleted.contains(s.getPath())) {
         continue;
@@ -304,7 +307,7 @@ public final class S3Guard {
         if (status != null
             && s.getModificationTime() > status.getModificationTime()) {
           LOG.debug("Update ms with newer metadata of: {}", status);
-          S3Guard.putWithTtl(ms, pathMetadata, timeProvider, null);
+          S3Guard.putWithTtl(ms, pathMetadata, timeProvider, operationState);
         }
       }
 
@@ -324,9 +327,11 @@ public final class S3Guard {
     changed = changed || (!dirMeta.isAuthoritative() && isAuthoritative);
 
     if (changed && isAuthoritative) {
+      LOG.debug("Marking the directory {} as authoritative", path);
       dirMeta.setAuthoritative(true); // This is the full directory contents
-      S3Guard.putWithTtl(ms, dirMeta, timeProvider, null);
+      S3Guard.putWithTtl(ms, dirMeta, timeProvider, operationState);
     }
+    IOUtils.cleanupWithLogger(LOG, operationState);
 
     return dirMetaToStatuses(dirMeta);
   }
