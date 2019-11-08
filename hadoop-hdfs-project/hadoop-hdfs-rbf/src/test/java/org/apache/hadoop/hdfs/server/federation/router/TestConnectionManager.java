@@ -28,6 +28,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.Map;
@@ -301,4 +302,14 @@ public class TestConnectionManager {
 
     tmpConnManager.close();
   }
+
+  @Test
+  public void testUnsupportedProtoExceptionMsg() throws IOException {
+    exceptionRule.expect(IllegalStateException.class);
+    exceptionRule.expectMessage(UnsupportedProto.class.getName());
+    ConnectionPool.newConnection(conf, TEST_NN_ADDRESS, TEST_USER1,
+        UnsupportedProto.class);
+  }
+
+  interface UnsupportedProto { }
 }
