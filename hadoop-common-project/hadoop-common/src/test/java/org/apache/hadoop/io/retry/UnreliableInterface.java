@@ -83,6 +83,10 @@ public interface UnreliableInterface {
   void failsWithAccessControlExceptionEightTimes()
       throws AccessControlException;
 
+  @Idempotent
+  void failsWithWrappedAccessControlException()
+      throws IOException;
+
   public String succeedsOnceThenFailsReturningString()
       throws UnreliableException, StandbyException, IOException;
   @Idempotent
