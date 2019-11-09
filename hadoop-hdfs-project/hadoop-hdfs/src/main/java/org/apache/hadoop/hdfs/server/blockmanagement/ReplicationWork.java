@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.net.Node;
 
 import java.util.List;
@@ -43,10 +44,16 @@ class ReplicationWork extends BlockReconstructionWork {
     assert getSrcNodes().length > 0
         : "At least 1 source node should have been selected";
     try {
-      DatanodeStorageInfo[] chosenTargets = blockplacement.chooseTarget(
-          getSrcPath(), getAdditionalReplRequired(), getSrcNodes()[0],
-          getLiveReplicaStorages(), false, excludedNodes, getBlockSize(),
-          storagePolicySuite.getPolicy(getStoragePolicyID()), null);
+      DatanodeStorageInfo[] chosenTargets = null;
+      // HDFS-14720 If the block is deleted, the block size will become
+      // BlockCommand.NO_ACK (LONG.MAX_VALUE) . This kind of block we don't need
+      // to send for replication or reconstruction
+      if (getBlock().getNumBytes() != BlockCommand.NO_ACK) {
+        chosenTargets = blockplacement.chooseTarget(getSrcPath(),
+            getAdditionalReplRequired(), getSrcNodes()[0],
+            getLiveReplicaStorages(), false, excludedNodes, getBlockSize(),
+            storagePolicySuite.getPolicy(getStoragePolicyID()), null);
+      }
       setTargets(chosenTargets);
     } finally {
       getSrcNodes()[0].decrementPendingReplicationWithoutTargets();
