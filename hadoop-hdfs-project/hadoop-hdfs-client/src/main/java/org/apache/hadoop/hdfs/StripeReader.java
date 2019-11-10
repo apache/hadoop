@@ -215,7 +215,7 @@ abstract class StripeReader {
     if (chunk.useByteBuffer()) {
       ByteBufferStrategy strategy = new ByteBufferStrategy(
           chunk.getByteBuffer(), dfsStripedInputStream.getReadStatistics(),
-          dfsStripedInputStream.getDFSClient());
+          dfsStripedInputStream.getDfsClient());
       return new ByteBufferStrategy[]{strategy};
     }
 
@@ -225,7 +225,7 @@ abstract class StripeReader {
       ByteBuffer buffer = chunk.getChunkBuffer().getSlice(i);
       strategies[i] = new ByteBufferStrategy(buffer,
               dfsStripedInputStream.getReadStatistics(),
-              dfsStripedInputStream.getDFSClient());
+              dfsStripedInputStream.getDfsClient());
     }
     return strategies;
   }

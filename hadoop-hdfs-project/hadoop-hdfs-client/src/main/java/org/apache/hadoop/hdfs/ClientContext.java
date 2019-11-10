@@ -40,6 +40,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
+import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -118,6 +119,19 @@ public class ClientContext {
   private NodeBase clientNode;
   private boolean topologyResolutionEnabled;
 
+  private Daemon deadNodeDetectorThr = null;
+
+  /**
+   * The switch to DeadNodeDetector.
+   */
+  private boolean sharedDeadNodesEnabled = false;
+
+  /**
+   * Detect the dead datanodes n advance, and share this information among all
+   * the DFSInputStreams in the same client.
+   */
+  private DeadNodeDetector deadNodeDetector = null;
+
   private ClientContext(String name, DfsClientConf conf,
       Configuration config) {
     final ShortCircuitConf scConf = conf.getShortCircuitConf();
@@ -134,6 +148,12 @@ public class ClientContext {
 
     this.byteArrayManager = ByteArrayManager.newInstance(
         conf.getWriteByteArrayManagerConf());
+    this.sharedDeadNodesEnabled = conf.isSharedDeadNodesEnabled();
+    if (sharedDeadNodesEnabled && deadNodeDetector == null) {
+      deadNodeDetector = new DeadNodeDetector(name);
+      deadNodeDetectorThr = new Daemon(deadNodeDetector);
+      deadNodeDetectorThr.start();
+    }
     initTopologyResolution(config);
   }
 
@@ -250,5 +270,13 @@ public class ClientContext {
     NodeBase node = new NodeBase(datanodeInfo.getHostName(),
         datanodeInfo.getNetworkLocation());
     return NetworkTopology.getDistanceByPath(clientNode, node);
+  }
+
+  public boolean isSharedDeadNodesEnabled() {
+    return sharedDeadNodesEnabled;
+  }
+
+  public DeadNodeDetector getDeadNodeDetector() {
+    return deadNodeDetector;
   }
 }

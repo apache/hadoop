@@ -2977,6 +2977,14 @@
 </property>
 
 <property>
+  <name>dfs.client.deadnode.detect.enabled</name>
+  <value>false</value>
+  <description>
+    Set to true to enable all the DFSInputStreams of some Client share DeadNode information.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.lease-recheck-interval-ms</name>
   <value>2000</value>
   <description>During the release of lease a lock is hold that make any
