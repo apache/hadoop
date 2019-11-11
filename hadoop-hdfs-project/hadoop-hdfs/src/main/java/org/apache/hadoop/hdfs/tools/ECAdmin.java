@@ -330,7 +330,7 @@ public class ECAdmin extends Configured implements Tool {
           "Set the erasure coding policy for a file/directory.\n\n" +
           listing.toString() + "\n" +
           "-replicate and -policy are optional arguments. They cannot been " +
-          "used at the same time";
+          "used at the same time.\n";
     }
 
     @Override
