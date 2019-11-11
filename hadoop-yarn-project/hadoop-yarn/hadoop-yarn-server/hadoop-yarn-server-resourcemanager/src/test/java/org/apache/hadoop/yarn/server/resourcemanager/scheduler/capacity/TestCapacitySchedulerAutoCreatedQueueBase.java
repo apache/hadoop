@@ -329,7 +329,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     // Define top-level queues
     // Set childQueue for root
     conf.setQueues(ROOT,
-        new String[] { "a", "b", "c", "d" });
+        new String[] { "a", "b", "c", "d", "asubgroup1", "asubgroup2" });
 
     conf.setCapacity(A, A_CAPACITY);
     conf.setCapacity(B, B_CAPACITY);

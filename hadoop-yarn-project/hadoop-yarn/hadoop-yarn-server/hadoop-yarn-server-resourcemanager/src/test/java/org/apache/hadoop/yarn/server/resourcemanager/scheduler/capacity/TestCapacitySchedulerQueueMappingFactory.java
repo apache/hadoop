@@ -133,61 +133,6 @@ public class TestCapacitySchedulerQueueMappingFactory {
   }
 
   @Test
-  public void testNestedUserQueueWithDynamicParentQueue() throws Exception {
-
-    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
-    setupQueueConfiguration(conf);
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-        ResourceScheduler.class);
-    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
-        SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
-
-    List<String> queuePlacementRules = new ArrayList<>();
-    queuePlacementRules.add(QUEUE_MAPPING_RULE_USER_GROUP);
-    conf.setQueuePlacementRules(queuePlacementRules);
-
-    List<UserGroupMappingPlacementRule.QueueMapping> existingMappingsForUG =
-        conf.getQueueMappings();
-
-    // set queue mapping
-    List<UserGroupMappingPlacementRule.QueueMapping> queueMappingsForUG =
-        new ArrayList<>();
-
-    // u:%user:%primary_group.%user
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping =
-        new UserGroupMappingPlacementRule.QueueMapping(
-            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-            "%user", getQueueMapping("%primary_group", "%user"));
-    queueMappingsForUG.add(userQueueMapping);
-
-    existingMappingsForUG.addAll(queueMappingsForUG);
-    conf.setQueueMappings(existingMappingsForUG);
-
-    // override with queue mappings
-    conf.setOverrideWithQueueMappings(true);
-
-    mockRM = new MockRM(conf);
-    CapacityScheduler cs = (CapacityScheduler) mockRM.getResourceScheduler();
-    cs.updatePlacementRules();
-    mockRM.start();
-    cs.start();
-
-    ApplicationSubmissionContext asc =
-        Records.newRecord(ApplicationSubmissionContext.class);
-    asc.setQueue("default");
-    String inputUser = "a";
-
-    List<PlacementRule> rules =
-        cs.getRMContext().getQueuePlacementManager().getPlacementRules();
-
-    UserGroupMappingPlacementRule r =
-        (UserGroupMappingPlacementRule) rules.get(0);
-    ApplicationPlacementContext ctx = r.getPlacementForApp(asc, inputUser);
-    assertEquals("Queue", "a", ctx.getQueue());
-    assertEquals("Group", "agroup", ctx.getParentQueue());
-  }
-
-  @Test
   public void testNestedUserQueueWithStaticParentQueue() throws Exception {
 
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
@@ -249,5 +194,121 @@ public class TestCapacitySchedulerQueueMappingFactory {
     ApplicationPlacementContext ctx2 = r.getPlacementForApp(asc, "user2");
     assertEquals("Queue", "user2", ctx2.getQueue());
     assertEquals("Queue", "c", ctx2.getParentQueue());
+  }
+
+  @Test
+  public void testNestedUserQueueWithPrimaryGroupAsDynamicParentQueue()
+      throws Exception {
+
+    /**
+     * Mapping order: 1. u:%user:%primary_group.%user 2.
+     * u:%user:%secondary_group.%user
+     *
+     * Expected parent queue is primary group of the user
+     */
+
+    // set queue mapping
+    List<UserGroupMappingPlacementRule.QueueMapping> queueMappingsForUG =
+        new ArrayList<>();
+
+    // u:%user:%primary_group.%user
+    UserGroupMappingPlacementRule.QueueMapping userQueueMapping1 =
+        new UserGroupMappingPlacementRule.QueueMapping(
+            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
+            "%user", getQueueMapping("%primary_group", "%user"));
+
+    // u:%user:%secondary_group.%user
+    UserGroupMappingPlacementRule.QueueMapping userQueueMapping2 =
+        new UserGroupMappingPlacementRule.QueueMapping(
+            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
+            "%user", getQueueMapping("%secondary_group", "%user"));
+
+    queueMappingsForUG.add(userQueueMapping1);
+    queueMappingsForUG.add(userQueueMapping2);
+
+    testNestedUserQueueWithDynamicParentQueue(queueMappingsForUG, true);
+  }
+
+  @Test
+  public void testNestedUserQueueWithSecondaryGroupAsDynamicParentQueue()
+      throws Exception {
+
+    /**
+     * Mapping order: 1. u:%user:%secondary_group.%user 2.
+     * u:%user:%primary_group.%user
+     *
+     * Expected parent queue is secondary group of the user
+     */
+
+    // set queue mapping
+    List<UserGroupMappingPlacementRule.QueueMapping> queueMappingsForUG =
+        new ArrayList<>();
+
+    // u:%user:%primary_group.%user
+    UserGroupMappingPlacementRule.QueueMapping userQueueMapping1 =
+        new UserGroupMappingPlacementRule.QueueMapping(
+            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
+            "%user", getQueueMapping("%primary_group", "%user"));
+
+    // u:%user:%secondary_group.%user
+    UserGroupMappingPlacementRule.QueueMapping userQueueMapping2 =
+        new UserGroupMappingPlacementRule.QueueMapping(
+            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
+            "%user", getQueueMapping("%secondary_group", "%user"));
+
+    queueMappingsForUG.add(userQueueMapping2);
+    queueMappingsForUG.add(userQueueMapping1);
+
+    testNestedUserQueueWithDynamicParentQueue(queueMappingsForUG, false);
+  }
+
+  private void testNestedUserQueueWithDynamicParentQueue(
+      List<UserGroupMappingPlacementRule.QueueMapping> mapping,
+      boolean primary)
+      throws Exception {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    setupQueueConfiguration(conf);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
+
+    List<String> queuePlacementRules = new ArrayList<>();
+    queuePlacementRules.add(QUEUE_MAPPING_RULE_USER_GROUP);
+    conf.setQueuePlacementRules(queuePlacementRules);
+
+    List<UserGroupMappingPlacementRule.QueueMapping> existingMappingsForUG =
+        conf.getQueueMappings();
+
+    existingMappingsForUG.addAll(mapping);
+    conf.setQueueMappings(existingMappingsForUG);
+
+    // override with queue mappings
+    conf.setOverrideWithQueueMappings(true);
+
+    mockRM = new MockRM(conf);
+    CapacityScheduler cs = (CapacityScheduler) mockRM.getResourceScheduler();
+    cs.updatePlacementRules();
+    mockRM.start();
+    cs.start();
+
+    ApplicationSubmissionContext asc =
+        Records.newRecord(ApplicationSubmissionContext.class);
+    asc.setQueue("default");
+
+    List<PlacementRule> rules =
+        cs.getRMContext().getQueuePlacementManager().getPlacementRules();
+
+    UserGroupMappingPlacementRule r =
+        (UserGroupMappingPlacementRule) rules.get(0);
+    ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "a");
+    assertEquals("Queue", "a", ctx.getQueue());
+
+    if (primary) {
+      assertEquals("Primary Group", "agroup", ctx.getParentQueue());
+    } else {
+      assertEquals("Secondary Group", "asubgroup1", ctx.getParentQueue());
+    }
+    mockRM.close();
   }
 }
