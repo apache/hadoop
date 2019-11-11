@@ -351,7 +351,7 @@ public class AuxServices extends AbstractService
     FileStatus[] allSubDirs = localLFS.util().listStatus(nmAuxDir);
     for (FileStatus sub : allSubDirs) {
       if (sub.getPath().getName().equals(downloadDest.getName())) {
-        return new Path(targetDirPath + Path.SEPARATOR + "*");
+        return targetDirPath;
       } else {
         if (sub.getPath().getName().contains(className) &&
             !sub.getPath().getName().endsWith(DEL_SUFFIX)) {
