@@ -311,6 +311,4 @@ public class TestConnectionManager {
         () -> ConnectionPool.newConnection(conf, TEST_NN_ADDRESS, TEST_USER1,
             TestConnectionManager.class));
   }
-
-  interface UnsupportedProto { }
 }
