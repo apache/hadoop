@@ -114,6 +114,10 @@ public class TestUserGroupMappingPlacementRule {
     verifyQueueMapping(
         new QueueMapping(MappingType.USER, "%user", "%user", "%primary_group"),
         "a", YarnConfiguration.DEFAULT_QUEUE_NAME, "a", false, "agroup");
+    verifyQueueMapping(
+        new QueueMapping(MappingType.USER, "%user", "%user",
+            "%secondary_group"),
+        "a", YarnConfiguration.DEFAULT_QUEUE_NAME, "a", false, "asubgroup2");
     verifyQueueMapping(new QueueMapping(MappingType.GROUP, "asubgroup1", "q1"),
         "a", "q1");
     

@@ -170,13 +170,15 @@ Example:
 ```
  <property>
    <name>yarn.scheduler.capacity.queue-mappings</name>
-   <value>u:user1:queue1,g:group1:queue2,u:%user:%user,u:user2:%primary_group,u:user3:%secondary_group,u:%user:%primary_group.%user</value>
+   <value>u:user1:queue1,g:group1:queue2,u:%user:%user,u:user2:%primary_group,u:user3:%secondary_group,u:%user:%primary_group.%user,u:%user:%secondary_group.%user</value>
    <description>
      Here, <user1> is mapped to <queue1>, <group1> is mapped to <queue2>, 
      maps users to queues with the same name as user, <user2> is mapped 
      to queue name same as <primary group>, maps users to queue with the
      same name as user but parent queue name should be same as <primary group>
-     of the user respectively. The mappings will be evaluated from left to
+     of the user, maps users to queue with the same name as user but parent
+     queue name should be same as any <secondary group> of the user
+     respectively. The mappings will be evaluated from left to
      right, and the first valid mapping will be used.
    </description>
  </property>
