@@ -858,7 +858,7 @@ public class TestDistCpSync {
       for (int i = 0; i < minFiles; i++) {
         if (slist[i].getPath().getName().contains(deletedName)) {
           if (tlist[i].getPath().getName().contains(deletedName)) {
-            throw new Exception("Target file is not synced as per exclusion filter");
+            throw new Exception("Target is not synced as per exclusion filter");
           }
           continue;
         }
