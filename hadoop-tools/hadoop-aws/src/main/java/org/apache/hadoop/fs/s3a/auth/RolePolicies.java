@@ -55,7 +55,7 @@ public final class RolePolicies {
   /**
    * Arn for all KMS keys: {@value}.
    */
-  public static final String KMS_ALL_KEYS = "arn:aws:kms:*";
+  public static final String KMS_ALL_KEYS = "*";
 
   /**
    * This is used by S3 to generate a per-object encryption key and
@@ -68,7 +68,7 @@ public final class RolePolicies {
    * Actions needed to read and write SSE-KMS data.
    */
   private static final String[] KMS_KEY_RW =
-      new String[]{KMS_DECRYPT, KMS_GENERATE_DATA_KEY};
+      new String[]{KMS_DECRYPT, KMS_GENERATE_DATA_KEY, KMS_ENCRYPT};
 
   /**
    * Actions needed to read SSE-KMS data.
@@ -81,7 +81,7 @@ public final class RolePolicies {
    * SSE-KMS.
    */
   public static final Statement STATEMENT_ALLOW_SSE_KMS_RW =
-      statement(true, KMS_ALL_KEYS, KMS_KEY_RW);
+      statement(true, KMS_ALL_KEYS, KMS_ALL_OPERATIONS);
 
   /**
    * Statement to allow read access to KMS keys, so the ability
