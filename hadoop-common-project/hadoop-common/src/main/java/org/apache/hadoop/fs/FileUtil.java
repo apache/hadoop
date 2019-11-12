@@ -26,6 +26,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.URI;
@@ -1378,7 +1379,7 @@ public class FileUtil {
           Thread.sleep(1000);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
-          throw new IOException("replaceFile interrupted");
+          throw new InterruptedIOException("replaceFile interrupted");
         }
       }
       if (!src.renameTo(target)) {

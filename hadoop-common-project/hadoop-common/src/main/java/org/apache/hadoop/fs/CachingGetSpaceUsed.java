@@ -182,6 +182,7 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
         } catch (InterruptedException e) {
           LOG.warn("Thread Interrupted waiting to refresh disk information. "
               + "Ignoring.");
+          LOG.debug("Thread interrupted", e);
         }
       }
     }
