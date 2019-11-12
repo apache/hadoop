@@ -19,7 +19,6 @@ package org.apache.hadoop.test;
 
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -27,13 +26,16 @@ import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 
 /**
- * A base class for JUnit4 tests that sets a default timeout for all tests
+ * A base class for JUnit5+ tests that sets a default timeout for all tests
  * that subclass this test.
  *
  * Threads are named to the method being executed, for ease of diagnostics
  * in logs and thread dumps.
+ *
+ * Unlike {@link HadoopTestBase} this class does not extend JUnit Assert
+ * so is easier to use with AssertJ.
  */
-public abstract class HadoopTestBase extends Assert {
+public abstract class AbstractHadoopTestBase {
 
   /**
    * System property name to set the test timeout: {@value}.
