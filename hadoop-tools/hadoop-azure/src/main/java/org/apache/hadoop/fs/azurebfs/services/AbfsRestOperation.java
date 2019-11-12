@@ -130,9 +130,16 @@ public class AbfsRestOperation {
       }
     }
 
-    if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
-      throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
-          result.getStorageErrorMessage(), null, result);
+    int statusCode = this.result.getStatusCode();
+    if (this.operationType == AbfsRestOperationType.CheckAccess
+        && statusCode == HttpURLConnection.HTTP_FORBIDDEN) {
+      return;
+    }
+
+    if (statusCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
+      throw new AbfsRestOperationException(statusCode,
+          this.result.getStorageErrorCode(),
+          this.result.getStorageErrorMessage(), null, this.result);
     }
   }
 

@@ -862,8 +862,10 @@ public class AzureBlobFileSystem extends FileSystem {
    */
   @Override
   public void access(final Path path, FsAction mode) throws IOException {
-    // TODO: make it no-op to unblock hive permission issue for now.
-    // Will add a long term fix similar to the implementation in AdlFileSystem.
+    LOG.debug("AzureBlobFileSystem.access path : {}, mode : {}", path, mode);
+    Path qualifiedPath = makeQualified(path);
+    performAbfsAuthCheck(FsAction.READ, new Path[] {qualifiedPath});
+    this.abfsStore.access(qualifiedPath, mode);
   }
 
   private FileStatus tryGetFileStatus(final Path f) {

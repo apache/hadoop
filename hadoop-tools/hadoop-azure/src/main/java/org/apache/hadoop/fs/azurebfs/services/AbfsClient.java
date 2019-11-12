@@ -517,6 +517,21 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
+  public AbfsRestOperation checkAccess(String path, String rwx)
+      throws IOException {
+    AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, CHECK_ACCESS);
+
+    abfsUriQueryBuilder.addQuery(QUERY_FS_ACTION, rwx);
+    URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
+
+    AbfsRestOperation op = new AbfsRestOperation(
+        AbfsRestOperationType.CheckAccess, this,
+        AbfsHttpConstants.HTTP_METHOD_HEAD, url, createDefaultHeaders());
+    op.execute();
+    return op;
+  }
+
   private URL createRequestUrl(final String query) throws AzureBlobFileSystemException {
     return createRequestUrl(EMPTY_STRING, query);
   }

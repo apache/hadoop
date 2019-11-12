@@ -90,6 +90,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
@@ -122,6 +123,8 @@ public class AzureBlobFileSystemStore implements Closeable {
   private static final String TOKEN_DATE_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS'Z'";
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int LIST_MAX_RESULTS = 500;
+
+  private static final int CHECK_ACCESS_SUCCESS = 200;
 
   private final AbfsConfiguration abfsConfiguration;
   private final Set<String> azureAtomicRenameDirSet;
@@ -262,6 +265,20 @@ public class AzureBlobFileSystemStore implements Closeable {
 
   public AbfsConfiguration getAbfsConfiguration() {
     return this.abfsConfiguration;
+  }
+
+  public void access(Path path, FsAction mode) throws IOException {
+    LOG.debug("access for filesystem: {}, path: {}, mode: {}",
+        this.client.getFileSystem(), path, mode);
+    if (!this.abfsConfiguration.isCheckAccessEnabled()) {
+      return;
+    }
+    String relativePath = path.isRoot() ? "" : ("/" + getRelativePath(path));
+    AbfsRestOperation abfsOp = this.client
+        .checkAccess(relativePath, mode.SYMBOL);
+    if (abfsOp.getResult().getStatusCode() != CHECK_ACCESS_SUCCESS) {
+      throw new AccessControlException();
+    }
   }
 
   public Hashtable<String, String> getFilesystemProperties() throws AzureBlobFileSystemException {
