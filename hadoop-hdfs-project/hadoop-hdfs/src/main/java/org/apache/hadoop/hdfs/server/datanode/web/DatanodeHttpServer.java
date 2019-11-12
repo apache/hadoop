@@ -93,8 +93,9 @@ public class DatanodeHttpServer implements Closeable {
   // set them to the minimum possible
   private static final int HTTP_SELECTOR_THREADS = 1;
   private static final int HTTP_ACCEPTOR_THREADS = 1;
+  // Jetty 9.4.x: Adding one more thread to HTTP_MAX_THREADS.
   private static final int HTTP_MAX_THREADS =
-      HTTP_SELECTOR_THREADS + HTTP_ACCEPTOR_THREADS + 1;
+      HTTP_SELECTOR_THREADS + HTTP_ACCEPTOR_THREADS + 2;
 
   public DatanodeHttpServer(final Configuration conf,
       final DataNode datanode,
