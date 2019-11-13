@@ -864,7 +864,11 @@ public class AzureBlobFileSystem extends FileSystem {
   public void access(final Path path, FsAction mode) throws IOException {
     LOG.debug("AzureBlobFileSystem.access path : {}, mode : {}", path, mode);
     Path qualifiedPath = makeQualified(path);
-    this.abfsStore.access(qualifiedPath, mode);
+    try {
+      this.abfsStore.access(qualifiedPath, mode);
+    }catch(AzureBlobFileSystemException ex){
+      checkCheckAccessException(path, ex);
+    }
   }
 
   private FileStatus tryGetFileStatus(final Path f) {
@@ -975,6 +979,20 @@ public class AzureBlobFileSystem extends FileSystem {
           = new FileSystemOperationUnhandledException(exception);
       throw new IOException(fileSystemOperationUnhandledException);
     }
+  }
+
+  private void checkCheckAccessException(final Path path,
+      final AzureBlobFileSystemException exception,
+      final AzureServiceErrorCode... allowedErrorCodesList) throws IOException {
+    if (exception instanceof AbfsRestOperationException) {
+      AbfsRestOperationException ere = (AbfsRestOperationException) exception;
+      int statusCode = ere.getStatusCode();
+      if (statusCode == HttpURLConnection.HTTP_FORBIDDEN) {
+        throw (IOException) new AccessControlException(ere.getMessage())
+            .initCause(exception);
+      }
+    }
+    checkException(path, exception, allowedErrorCodesList);
   }
 
   /**

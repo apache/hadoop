@@ -125,8 +125,6 @@ public class AzureBlobFileSystemStore implements Closeable {
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int LIST_MAX_RESULTS = 500;
 
-  private static final int CHECK_ACCESS_SUCCESS = 200;
-
   private final AbfsConfiguration abfsConfiguration;
   private final Set<String> azureAtomicRenameDirSet;
   private boolean isNamespaceEnabledSet;
@@ -268,29 +266,15 @@ public class AzureBlobFileSystemStore implements Closeable {
     return this.abfsConfiguration;
   }
 
-  public void access(Path path, FsAction mode) throws IOException {
+  public void access(Path path, FsAction mode)
+      throws AzureBlobFileSystemException {
     LOG.debug("access for filesystem: {}, path: {}, mode: {}",
         this.client.getFileSystem(), path, mode);
     if (!this.abfsConfiguration.isCheckAccessEnabled()) {
       return;
     }
     String relativePath = path.isRoot() ? "" : ("/" + getRelativePath(path));
-    throwFileNotFoundIfNotExists(relativePath);
-    AbfsRestOperation abfsOp = this.client
-        .checkAccess(relativePath, mode.SYMBOL);
-    if (abfsOp.getResult().getStatusCode() != CHECK_ACCESS_SUCCESS) {
-      throw new AccessControlException();
-    }
-  }
-
-  private void throwFileNotFoundIfNotExists(String relativePath) throws IOException {
-    try {
-      FileStatus fStatus = getFileStatus(new Path(relativePath));
-    } catch (AbfsRestOperationException e) {
-      if (e.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-        throw new FileNotFoundException();
-      }
-    }
+    this.client.checkAccess(relativePath, mode.SYMBOL);
   }
 
   public Hashtable<String, String> getFilesystemProperties() throws AzureBlobFileSystemException {

@@ -102,10 +102,11 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test(expected = FileNotFoundException.class)
-  public void testCheckAccessForNonExistentFile() throws IOException {
-    Path nonExistentFile = new Path("nonExistentFile1.txt");
+  public void testCheckAccessForNonExistentFile() throws Exception {
+    Path nonExistentFile = setupTestDirectoryAndUserAccess(
+        "/nonExistentFile1.txt", FsAction.ALL);
     superUserFs.delete(nonExistentFile, true);
-    superUserFs.access(nonExistentFile, FsAction.READ);
+    testUserFs.access(nonExistentFile, FsAction.READ);
   }
 
   @Test
@@ -135,7 +136,7 @@ public class ITestAzureBlobFileSystemCheckAccess
     fs.access(testFilePath, FsAction.ALL);
     fs.access(testFilePath, null);
 
-    Path nonExistentFile = new Path("nonExistentFile2.txt");
+    Path nonExistentFile = new Path("/nonExistentFile2.txt");
     nonExistentFile = this.superUserFs.makeQualified(nonExistentFile);
     superUserFs.delete(nonExistentFile, true);
     fs.access(nonExistentFile, FsAction.READ);

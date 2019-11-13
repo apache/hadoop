@@ -518,7 +518,7 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation checkAccess(String path, String rwx)
-      throws IOException {
+      throws AzureBlobFileSystemException {
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, CHECK_ACCESS);
 
