@@ -142,6 +142,8 @@ public class AbfsRestOperation {
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
           result.getStorageErrorMessage(), null, result);
     }
+
+    LOG.trace(operationType + " REST operation complete." );
   }
 
   /**
