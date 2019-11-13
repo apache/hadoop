@@ -90,6 +90,8 @@ Configuration
   The configuration for `CapacityScheduler` uses a concept called *queue path* to configure the hierarchy of queues. The *queue path* is the full path of the queue's hierarchy, starting at *root*, with . (dot) as the delimiter.
 
   A given queue's children can be defined with the configuration knob: `yarn.scheduler.capacity.<queue-path>.queues`. Children do not inherit properties directly from the parent unless otherwise noted.
+  
+  Currently, CapacityScheduler does not allow two queues with same name. For example, root.a.a1 and root.b.a1 are not allowed as both have same name a1 irrespective of the hierarchy.
 
   Here is an example with three top-level child-queues `a`, `b` and `c` and some sub-queues for `a` and `b`:
     
