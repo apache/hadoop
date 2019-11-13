@@ -192,6 +192,8 @@ public class JobHistory extends AbstractService implements HistoryContext {
         hsManager.scanIntermediateDirectory();
       } catch (IOException e) {
         LOG.error("Error while scanning intermediate done dir ", e);
+      } catch (RuntimeException e) {
+        LOG.error("Error while scanning intermediate done dir ", e);
       }
     }
   }
@@ -202,6 +204,8 @@ public class JobHistory extends AbstractService implements HistoryContext {
       try {
         hsManager.clean();
       } catch (IOException e) {
+        LOG.warn("Error trying to clean up ", e);
+      } catch (RuntimeException e) {
         LOG.warn("Error trying to clean up ", e);
       }
       LOG.info("History Cleaner complete");
