@@ -42,6 +42,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ORDERING_POLICY;
+
 /**
  * CS configuration provider which implements
  * {@link MutableConfigurationProvider} for modifying capacity scheduler
@@ -259,6 +261,13 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
             + CapacitySchedulerConfiguration.QUEUES;
         if (siblingQueues.size() == 0) {
           confUpdate.put(queuesConfig, null);
+          // Unset Ordering Policy of Leaf Queue converted from
+          // Parent Queue after removeQueue
+          String queueOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
+              + parentQueuePath + CapacitySchedulerConfiguration.DOT
+              + ORDERING_POLICY;
+          proposedConf.unset(queueOrderingPolicy);
+          confUpdate.put(queueOrderingPolicy, null);
         } else {
           confUpdate.put(queuesConfig, Joiner.on(',').join(siblingQueues));
         }
@@ -306,6 +315,14 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
           proposedConf.set(keyPrefix + kv.getKey(), kv.getValue());
         }
         confUpdate.put(keyPrefix + kv.getKey(), kv.getValue());
+      }
+      // Unset Ordering Policy of Parent Queue converted from
+      // Leaf Queue after addQueue
+      String queueOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
+          + parentQueue + CapacitySchedulerConfiguration.DOT + ORDERING_POLICY;
+      if (siblingQueues.size() == 1) {
+        proposedConf.unset(queueOrderingPolicy);
+        confUpdate.put(queueOrderingPolicy, null);
       }
     }
   }

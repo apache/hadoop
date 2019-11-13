@@ -53,6 +53,7 @@ import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
  * Upload files/parts directly via different buffering mechanisms:
@@ -396,9 +397,9 @@ class S3ABlockOutputStream extends OutputStream implements
       writeOperationHelper.writeFailed(ioe);
       throw ioe;
     } finally {
-      closeAll(LOG, block, blockFactory);
+      cleanupWithLogger(LOG, block, blockFactory);
       LOG.debug("Statistics: {}", statistics);
-      closeAll(LOG, statistics);
+      cleanupWithLogger(LOG, statistics);
       clearActiveBlock();
     }
     // Note end of write. This does not change the state of the remote FS.
@@ -437,7 +438,7 @@ class S3ABlockOutputStream extends OutputStream implements
             // stream afterwards.
             return writeOperationHelper.putObject(putObjectRequest);
           } finally {
-            closeAll(LOG, uploadData, block);
+            cleanupWithLogger(LOG, uploadData, block);
           }
         });
     clearActiveBlock();
@@ -614,7 +615,7 @@ class S3ABlockOutputStream extends OutputStream implements
               return partETag;
             } finally {
               // close the stream and block
-              closeAll(LOG, uploadData, block);
+              cleanupWithLogger(LOG, uploadData, block);
             }
           });
       partETagsFutures.add(partETagFuture);

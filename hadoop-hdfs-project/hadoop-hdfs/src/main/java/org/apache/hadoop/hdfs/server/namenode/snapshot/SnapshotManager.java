@@ -155,6 +155,10 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     this.allowNestedSnapshots = allowNestedSnapshots;
   }
 
+  public boolean isAllowNestedSnapshots() {
+    return allowNestedSnapshots;
+  }
+
   private void checkNestedSnapshottable(INodeDirectory dir, String path)
       throws SnapshotException {
     if (allowNestedSnapshots) {
@@ -288,6 +292,19 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     }
   }
 
+  public boolean isDescendantOfSnapshotRoot(INodeDirectory dir) {
+    if (dir.isSnapshottable()) {
+      return true;
+    } else {
+      for (INodeDirectory p = dir; p != null; p = p.getParent()) {
+        if (this.snapshottables.containsValue(p)) {
+          return true;
+        }
+      }
+      return false;
+    }
+  }
+
   /**
    * Create a snapshot of the given path.
    * It is assumed that the caller will perform synchronization.
@@ -295,6 +312,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    * @param iip the INodes resolved from the snapshottable directory's path
    * @param snapshotName
    *          The name of the snapshot.
+   * @param mtime is the snapshot creation time set by Time.now().
    * @throws IOException
    *           Throw IOException when 1) the given path does not lead to an
    *           existing snapshottable directory, and/or 2) there exists a
@@ -302,7 +320,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    *           snapshot number exceeds quota
    */
   public String createSnapshot(final LeaseManager leaseManager,
-      final INodesInPath iip, String snapshotRoot, String snapshotName)
+      final INodesInPath iip, String snapshotRoot, String snapshotName,
+      long mtime)
       throws IOException {
     INodeDirectory srcRoot = getSnapshottableRoot(iip);
 
@@ -316,7 +335,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     }
 
     srcRoot.addSnapshot(snapshotCounter, snapshotName, leaseManager,
-        this.captureOpenFiles, maxSnapshotLimit);
+        this.captureOpenFiles, maxSnapshotLimit, mtime);
       
     //create success, update id
     snapshotCounter++;

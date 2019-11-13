@@ -22,16 +22,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
+import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
@@ -259,6 +264,30 @@ public class TestS3Guard extends Assert {
             + conf.get(METADATASTORE_METADATA_TTL),
         timeProviderExplicit,
         new S3Guard.TtlTimeProvider(conf));
+  }
+
+  @Test
+  public void testLogS3GuardDisabled() throws Exception {
+    final Logger localLogger = LoggerFactory.getLogger(
+        TestS3Guard.class.toString() + UUID.randomUUID());
+    S3Guard.logS3GuardDisabled(localLogger,
+        S3Guard.DisabledWarnLevel.SILENT.toString(), "bucket");
+    S3Guard.logS3GuardDisabled(localLogger,
+        S3Guard.DisabledWarnLevel.INFORM.toString(), "bucket");
+    S3Guard.logS3GuardDisabled(localLogger,
+        S3Guard.DisabledWarnLevel.WARN.toString(), "bucket");
+
+    // Test that lowercase setting is accepted
+    S3Guard.logS3GuardDisabled(localLogger,
+        S3Guard.DisabledWarnLevel.WARN.toString()
+            .toLowerCase(Locale.US), "bucket");
+
+    LambdaTestUtils.intercept(UnsupportedOperationException.class,
+        S3Guard.DISABLED_LOG_MSG, () -> S3Guard.logS3GuardDisabled(
+            localLogger, S3Guard.DisabledWarnLevel.FAIL.toString(), "bucket"));
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        S3Guard.UNKNOWN_WARN_LEVEL, () -> S3Guard.logS3GuardDisabled(
+            localLogger, "FOO_BAR_LEVEL", "bucket"));
   }
 
   void assertContainsPath(FileStatus[] statuses, String pathStr) {

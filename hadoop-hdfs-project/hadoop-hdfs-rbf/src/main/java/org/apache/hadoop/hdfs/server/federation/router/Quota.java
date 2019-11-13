@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
+import org.apache.hadoop.security.AccessControlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,10 +69,17 @@ public class Quota {
    * @param namespaceQuota Name space quota.
    * @param storagespaceQuota Storage space quota.
    * @param type StorageType that the space quota is intended to be set on.
-   * @throws IOException If the quota system is disabled.
+   * @param checkMountEntry whether to check the path is a mount entry.
+   * @throws AccessControlException If the quota system is disabled or if
+   * checkMountEntry is true and the path is a mount entry.
    */
-  public void setQuota(String path, long namespaceQuota,
-      long storagespaceQuota, StorageType type) throws IOException {
+  public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
+      StorageType type, boolean checkMountEntry) throws IOException {
+    if (checkMountEntry && isMountEntry(path)) {
+      throw new AccessControlException(
+          "Permission denied: " + RouterRpcServer.getRemoteUser()
+              + " is not allowed to change quota of " + path);
+    }
     setQuotaInternal(path, null, namespaceQuota, storagespaceQuota, type);
   }
 
@@ -172,6 +180,16 @@ public class Quota {
       entry = pts.lowerEntry(ppath);
     }
     return new QuotaUsage.Builder().quota(nQuota).spaceQuota(sQuota).build();
+  }
+
+  /**
+   * Is the path a mount entry.
+   *
+   * @param path the path to be checked.
+   * @return {@code true} if path is a mount entry; {@code false} otherwise.
+   */
+  private boolean isMountEntry(String path) {
+    return router.getQuotaManager().isMountEntry(path);
   }
 
   /**

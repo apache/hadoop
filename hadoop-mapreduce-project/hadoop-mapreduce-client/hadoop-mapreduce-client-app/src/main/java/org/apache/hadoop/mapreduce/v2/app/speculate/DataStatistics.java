@@ -71,8 +71,22 @@ public class DataStatistics {
     return count;
   }
 
+  /**
+   * calculates the mean value within 95% ConfidenceInterval.
+   * 1.96 is standard for 95 %
+   *
+   * @return the mean value adding 95% confidence interval
+   */
+  public synchronized double meanCI() {
+    if (count <= 1) return 0.0;
+    double currMean = mean();
+    double currStd = std();
+    return currMean + (1.96 * currStd / Math.sqrt(count));
+  }
+
   public String toString() {
-    return "DataStatistics: count is " + count + ", sum is " + sum +
-    ", sumSquares is " + sumSquares + " mean is " + mean() + " std() is " + std();
+    return "DataStatistics: count is " + count + ", sum is " + sum
+        + ", sumSquares is " + sumSquares + " mean is " + mean()
+        + " std() is " + std() + ", meanCI() is " + meanCI();
   }
 }

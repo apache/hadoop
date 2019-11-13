@@ -539,8 +539,10 @@ public class MockNamenode {
         String nsId = nn.getNameserviceId();
         String rpcAddress = "localhost:" + nn.getRPCPort();
         String httpAddress = "localhost:" + nn.getHTTPPort();
+        String scheme = "http";
         NamenodeStatusReport report = new NamenodeStatusReport(
-            nsId, null, rpcAddress, rpcAddress, rpcAddress, httpAddress);
+            nsId, null, rpcAddress, rpcAddress,
+            rpcAddress, scheme, httpAddress);
         if (unavailableSubclusters.contains(nsId)) {
           LOG.info("Register {} as UNAVAILABLE", nsId);
           report.setRegistrationValid(false);

@@ -56,12 +56,16 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class TestOpportunisticContainerAllocator {
+/**
+ * Test cases for DistributedOpportunisticContainerAllocator.
+ */
+public class TestDistributedOpportunisticContainerAllocator {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestOpportunisticContainerAllocator.class);
+      LoggerFactory.getLogger(
+          TestDistributedOpportunisticContainerAllocator.class);
   private static final int GB = 1024;
-  private OpportunisticContainerAllocator allocator = null;
+  private DistributedOpportunisticContainerAllocator allocator = null;
   private OpportunisticContainerContext oppCntxt = null;
   private static final Priority PRIORITY_NORMAL = Priority.newInstance(1);
   private static final Resource CAPABILITY_1GB =

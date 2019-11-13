@@ -276,12 +276,17 @@ public class INodeDirectory extends INodeWithAdditionalFields
     getDirectorySnapshottableFeature().setSnapshotQuota(snapshotQuota);
   }
 
+  /**
+   * Add a snapshot.
+   * @param name Name of the snapshot.
+   * @param mtime The snapshot creation time set by Time.now().
+   */
   public Snapshot addSnapshot(int id, String name,
       final LeaseManager leaseManager, final boolean captureOpenFiles,
-      int maxSnapshotLimit)
+      int maxSnapshotLimit, long mtime)
       throws SnapshotException {
     return getDirectorySnapshottableFeature().addSnapshot(this, id, name,
-        leaseManager, captureOpenFiles, maxSnapshotLimit);
+        leaseManager, captureOpenFiles, maxSnapshotLimit, mtime);
   }
 
   public Snapshot removeSnapshot(

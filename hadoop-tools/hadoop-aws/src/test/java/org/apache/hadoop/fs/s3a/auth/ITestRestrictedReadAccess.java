@@ -45,7 +45,6 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore;
 import org.apache.hadoop.mapred.LocatedFileStatusFetcher;
@@ -71,6 +70,7 @@ import static org.apache.hadoop.fs.s3a.auth.RoleModel.statement;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.bindRolePolicyStatements;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.mapreduce.lib.input.FileInputFormat.LIST_STATUS_NUM_THREADS;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.GenericTestUtils.failif;
@@ -255,7 +255,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     try {
       super.teardown();
     } finally {
-      S3AUtils.closeAll(LOG, readonlyFS);
+      cleanupWithLogger(LOG, readonlyFS);
     }
   }
 

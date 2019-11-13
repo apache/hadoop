@@ -1115,7 +1115,45 @@ public class TestRenameWithSnapshots {
     assertEquals(bar, dirs[0].getFullPath());
     assertEquals(fooId, dirs[0].getDirStatus().getFileId());
   }
-  
+
+  /**
+   * Test rename where src has snapshottable descendant directories and
+   * dst is a descent of a snapshottable directory. Such case will cause
+   * nested snapshot which HDFS currently not fully supported.
+   */
+  @Test
+  public void testRenameWithNestedSnapshottableDirs() throws Exception {
+    final Path sdir1 = new Path("/dir1");
+    final Path sdir2 = new Path("/dir2");
+    final Path foo = new Path(sdir1, "foo");
+    final Path bar = new Path(sdir2, "bar");
+
+    hdfs.mkdirs(foo);
+    hdfs.mkdirs(bar);
+
+    hdfs.allowSnapshot(foo);
+    hdfs.allowSnapshot(sdir2);
+
+    try {
+      hdfs.rename(foo, bar, Rename.OVERWRITE);
+      fail("Except exception since " + "Unable to rename because "
+          + foo.toString() + " has snapshottable descendant directories and "
+          + sdir2.toString() + " is a descent of a snapshottable directory, "
+          + "and HDFS does not support nested snapshottable directory.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Unable to rename because "
+            + foo.toString() + " has snapshottable descendant directories and "
+            + sdir2.toString() + " is a descent of a snapshottable directory, "
+            + "and HDFS does not support nested snapshottable directory.", e);
+    }
+
+    hdfs.disallowSnapshot(foo);
+    hdfs.rename(foo, bar, Rename.OVERWRITE);
+    SnapshottableDirectoryStatus[] dirs = fsn.getSnapshottableDirListing();
+    assertEquals(1, dirs.length);
+    assertEquals(sdir2, dirs[0].getFullPath());
+  }
+
   /**
    * After rename, delete the snapshot in src
    */

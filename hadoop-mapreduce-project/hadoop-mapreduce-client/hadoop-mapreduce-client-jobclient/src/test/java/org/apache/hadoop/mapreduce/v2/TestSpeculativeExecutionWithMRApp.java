@@ -18,12 +18,17 @@
 
 package org.apache.hadoop.mapreduce.v2;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.v2.app.speculate.LegacyTaskRuntimeEstimator;
+import org.apache.hadoop.mapreduce.v2.app.speculate.SimpleExponentialTaskRuntimeEstimator;
+import org.apache.hadoop.mapreduce.v2.app.speculate.TaskRuntimeEstimator;
 import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -48,12 +53,30 @@ import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.Test;
 
 import com.google.common.base.Supplier;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })
+@RunWith(Parameterized.class)
 public class TestSpeculativeExecutionWithMRApp {
 
   private static final int NUM_MAPPERS = 5;
   private static final int NUM_REDUCERS = 0;
+
+  @Parameterized.Parameters(name = "{index}: TaskEstimator(EstimatorClass {0})")
+  public static Collection<Object[]> getTestParameters() {
+    return Arrays.asList(new Object[][] {
+        {SimpleExponentialTaskRuntimeEstimator.class},
+        {LegacyTaskRuntimeEstimator.class}
+    });
+  }
+
+  private Class<? extends TaskRuntimeEstimator> estimatorClass;
+
+  public TestSpeculativeExecutionWithMRApp(
+      Class<? extends TaskRuntimeEstimator>  estimatorKlass) {
+    this.estimatorClass = estimatorKlass;
+  }
 
   @Test
   public void testSpeculateSuccessfulWithoutUpdateEvents() throws Exception {
@@ -64,7 +87,7 @@ public class TestSpeculativeExecutionWithMRApp {
 
     MRApp app =
         new MRApp(NUM_MAPPERS, NUM_REDUCERS, false, "test", true, clock);
-    Job job = app.submit(new Configuration(), true, true);
+    Job job = app.submit(createConfiguration(), true, true);
     app.waitForState(job, JobState.RUNNING);
 
     Map<TaskId, Task> tasks = job.getTasks();
@@ -136,7 +159,7 @@ public class TestSpeculativeExecutionWithMRApp {
 
     MRApp app =
         new MRApp(NUM_MAPPERS, NUM_REDUCERS, false, "test", true, clock);
-    Job job = app.submit(new Configuration(), true, true);
+    Job job = app.submit(createConfiguration(), true, true);
     app.waitForState(job, JobState.RUNNING);
 
     Map<TaskId, Task> tasks = job.getTasks();
@@ -191,6 +214,9 @@ public class TestSpeculativeExecutionWithMRApp {
     }
 
     clock.setTime(System.currentTimeMillis() + 15000);
+    // give a chance to the speculator thread to run a scan before we proceed
+    // with updating events
+    Thread.yield();
     for (Map.Entry<TaskId, Task> task : tasks.entrySet()) {
       for (Map.Entry<TaskAttemptId, TaskAttempt> taskAttempt : task.getValue()
         .getAttempts().entrySet()) {
@@ -250,5 +276,21 @@ public class TestSpeculativeExecutionWithMRApp {
     status.progress = progress;
     status.taskState = state;
     return status;
+  }
+
+  private Configuration createConfiguration() {
+    Configuration conf = new Configuration();
+    conf.setClass(MRJobConfig.MR_AM_TASK_ESTIMATOR,
+        estimatorClass,
+        TaskRuntimeEstimator.class);
+    if (SimpleExponentialTaskRuntimeEstimator.class.equals(estimatorClass)) {
+      // set configurations specific to SimpleExponential estimator
+      conf.setInt(
+          MRJobConfig.MR_AM_TASK_ESTIMATOR_SIMPLE_SMOOTH_SKIP_INITIALS, 1);
+      conf.setLong(
+          MRJobConfig.MR_AM_TASK_ESTIMATOR_SIMPLE_SMOOTH_LAMBDA_MS,
+          1000L * 10);
+    }
+    return conf;
   }
 }
