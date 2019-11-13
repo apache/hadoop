@@ -26,6 +26,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
+import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.INodeType.FILE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -791,16 +792,19 @@ public class TestWebHDFS {
       Assert.assertEquals("s1", diffReport.getFromSnapshot());
       Assert.assertEquals("s2", diffReport.getLaterSnapshotName());
       DiffReportEntry entry0 =
-          new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes(""));
+          new DiffReportEntry(FILE, DiffType.MODIFY, DFSUtil.string2Bytes(""));
       DiffReportEntry entry1 =
-          new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file0"));
+          new DiffReportEntry(FILE, DiffType.MODIFY,
+              DFSUtil.string2Bytes("file0"));
       DiffReportEntry entry2 =
-          new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file1"));
+          new DiffReportEntry(FILE, DiffType.DELETE,
+              DFSUtil.string2Bytes("file1"));
       DiffReportEntry entry3 =
-          new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("file2"),
-              DFSUtil.string2Bytes("file4"));
+          new DiffReportEntry(FILE, DiffType.RENAME,
+              DFSUtil.string2Bytes("file2"), DFSUtil.string2Bytes("file4"));
       DiffReportEntry entry4 =
-          new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file3"));
+          new DiffReportEntry(FILE, DiffType.CREATE,
+              DFSUtil.string2Bytes("file3"));
       Assert.assertTrue(diffReport.getDiffList().contains(entry0));
       Assert.assertTrue(diffReport.getDiffList().contains(entry1));
       Assert.assertTrue(diffReport.getDiffList().contains(entry2));

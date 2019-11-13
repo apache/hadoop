@@ -803,11 +803,15 @@ public class JsonUtilClient {
     if (json == null) {
       return null;
     }
+    SnapshotDiffReport.INodeType iNodeType =
+        SnapshotDiffReport.INodeType.parseINodeType(
+            (String) json.get("inodeType"));
     SnapshotDiffReport.DiffType type =
         SnapshotDiffReport.DiffType.parseDiffType((String) json.get("type"));
     byte[] sourcePath = toByteArray((String) json.get("sourcePath"));
     byte[] targetPath = toByteArray((String) json.get("targetPath"));
-    return new SnapshotDiffReport.DiffReportEntry(type, sourcePath, targetPath);
+    return new SnapshotDiffReport.DiffReportEntry(iNodeType, type, sourcePath,
+        targetPath);
   }
 
   private static byte[] toByteArray(String str) {

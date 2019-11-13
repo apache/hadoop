@@ -559,6 +559,7 @@ public class JsonUtil {
   private static Object toJsonMap(
       SnapshotDiffReport.DiffReportEntry diffReportEntry) {
     final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("inodeType", diffReportEntry.getInodeType());
     m.put("type", diffReportEntry.getType());
     if (diffReportEntry.getSourcePath() != null) {
       m.put("sourcePath",

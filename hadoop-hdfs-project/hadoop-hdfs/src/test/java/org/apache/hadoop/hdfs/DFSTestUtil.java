@@ -25,6 +25,7 @@ import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.INodeType.DIRECTORY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
@@ -2480,17 +2481,25 @@ public class DFSTestUtil {
     assertEquals(entries.length, inverseReport.getDiffList().size());
 
     for (DiffReportEntry entry : entries) {
+      DiffReportEntry reportEntry = report.getDiffList().stream()
+          .filter(e -> e.equals(entry))
+          .findFirst()
+          .orElseThrow(() ->
+              new AssertionError("DiffReportEntry not found: " +
+                  entry.getType() + " " + entry.getSourcePath()));
       if (entry.getType() == DiffType.MODIFY) {
         assertTrue(report.getDiffList().contains(entry));
         assertTrue(inverseReport.getDiffList().contains(entry));
       } else if (entry.getType() == DiffType.DELETE) {
         assertTrue(report.getDiffList().contains(entry));
         assertTrue(inverseReport.getDiffList().contains(
-            new DiffReportEntry(DiffType.CREATE, entry.getSourcePath())));
+            new DiffReportEntry(DIRECTORY,
+                DiffType.CREATE, entry.getSourcePath())));
       } else if (entry.getType() == DiffType.CREATE) {
         assertTrue(report.getDiffList().contains(entry));
         assertTrue(inverseReport.getDiffList().contains(
-            new DiffReportEntry(DiffType.DELETE, entry.getSourcePath())));
+            new DiffReportEntry(DIRECTORY,
+                DiffType.DELETE, entry.getSourcePath())));
       }
     }
   }
