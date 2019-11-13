@@ -232,8 +232,7 @@ public class UserGroupInformation {
         subject.getPrincipals().add(userEntry);
         return true;
       }
-      LOG.error("Failed to find user name in " + subject);
-      throw new LoginException("Failed to find user in name");
+      throw new LoginException("Failed to find user in name " + subject);
     }
 
     @Override
@@ -1019,7 +1018,7 @@ public class UserGroupInformation {
 
           LOG.warn(
               "Exception encountered while running the "
-                  + "renewal command for %s. "
+                  + "renewal command for {}. "
                   + "(TGT end time:{}, renewalFailures: {}, "
                   + "renewalFailuresTotal: {})",
               getUserName(), tgtEndTime, metrics.renewalFailures.value(),
