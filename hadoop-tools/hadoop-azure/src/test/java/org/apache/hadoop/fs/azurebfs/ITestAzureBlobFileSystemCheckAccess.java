@@ -41,6 +41,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_FS_CHECKACCESS_TEST_USER_GUID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_FS_CLIENT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_FS_CLIENT_SECRET;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 
 public class ITestAzureBlobFileSystemCheckAccess
     extends AbstractAbfsIntegrationTest {
@@ -96,6 +97,9 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testWhenCheckAccessConfigIsOff() throws Exception {
+    Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
+        getConfiguration()
+            .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false));
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ENABLE_CHECK_ACCESS, false);
     FileSystem fs = FileSystem.newInstance(conf);
