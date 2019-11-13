@@ -1074,8 +1074,6 @@ entry-by-entry delete operation.
 This can break the expectations of client applications for O(1) atomic directory
 deletion, preventing the stores' use as drop-in replacements for HDFS.
 
-* [The feature of protected directories](#ProtectedDirectories) can be supported.
-
 ### `boolean rename(Path src, Path d)`
 
 In terms of its specification, `rename()` is one of the most complex operations within a filesystem .
@@ -1242,9 +1240,6 @@ The behavior of HDFS here should not be considered a feature to replicate.
 `FileContext` explicitly changed the behavior to raise an exception, and the retrofitting of that action
 to the `DFSFileSystem` implementation is an ongoing matter for debate.
 
-**Protected directories**
-
-* [The feature of protected directories](#ProtectedDirectories) can be supported.
 
 ### `void concat(Path p, Path sources[])`
 
