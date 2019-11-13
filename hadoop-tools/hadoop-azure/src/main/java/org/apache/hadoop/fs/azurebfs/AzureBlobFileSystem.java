@@ -864,7 +864,6 @@ public class AzureBlobFileSystem extends FileSystem {
   public void access(final Path path, FsAction mode) throws IOException {
     LOG.debug("AzureBlobFileSystem.access path : {}, mode : {}", path, mode);
     Path qualifiedPath = makeQualified(path);
-    performAbfsAuthCheck(FsAction.READ, new Path[] {qualifiedPath});
     this.abfsStore.access(qualifiedPath, mode);
   }
 

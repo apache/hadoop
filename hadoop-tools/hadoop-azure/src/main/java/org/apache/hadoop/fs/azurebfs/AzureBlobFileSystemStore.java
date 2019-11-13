@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -274,10 +275,21 @@ public class AzureBlobFileSystemStore implements Closeable {
       return;
     }
     String relativePath = path.isRoot() ? "" : ("/" + getRelativePath(path));
+    throwFileNotFoundIfNotExists(relativePath);
     AbfsRestOperation abfsOp = this.client
         .checkAccess(relativePath, mode.SYMBOL);
     if (abfsOp.getResult().getStatusCode() != CHECK_ACCESS_SUCCESS) {
       throw new AccessControlException();
+    }
+  }
+
+  private void throwFileNotFoundIfNotExists(String relativePath) throws IOException {
+    try {
+      FileStatus fStatus = getFileStatus(new Path(relativePath));
+    } catch (AbfsRestOperationException e) {
+      if (e.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+        throw new FileNotFoundException();
+      }
     }
   }
 
