@@ -24,6 +24,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
+import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
@@ -57,6 +58,8 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   protected boolean isAutoCreatedLeafQueue;
   protected long maxApplicationLifetime;
   protected long defaultApplicationLifetime;
+  protected String submitAcls;
+  protected String adminAcls;
 
   @XmlTransient
   protected String orderingPolicyDisplayName;
@@ -84,6 +87,8 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     defaultNodeLabelExpression = q.getDefaultNodeLabelExpression();
     defaultPriority = q.getDefaultApplicationPriority().getPriority();
     ArrayList<UserInfo> usersList = users.getUsersList();
+    submitAcls = q.getACLs().get(AccessType.SUBMIT_APP).getAclString();
+    adminAcls = q.getACLs().get(AccessType.ADMINISTER_QUEUE).getAclString();
     if (usersList.isEmpty()) {
       // If no users are present, consider AM Limit for that queue.
       userAMResourceLimit = resources.getPartitionResourceUsageInfo(
@@ -191,6 +196,14 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
 
   public long getMaxApplicationLifetime() {
     return maxApplicationLifetime;
+  }
+
+  public String getSubmitAcls() {
+    return submitAcls;
+  }
+
+  public String getAdminAcls() {
+    return adminAcls;
   }
 
 }
