@@ -21,10 +21,7 @@ package org.apache.hadoop.yarn.client.api.impl;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.net.ConnectException;
 import java.net.HttpURLConnection;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
@@ -38,8 +35,8 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 
 import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.client.ClientRequest;
-import org.glassfish.jersey.client.ClientResponse;
+import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.RetryPolicy;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
@@ -85,9 +82,8 @@ public class TimelineConnector extends AbstractService {
   private DelegationTokenAuthenticatedURL.Token token;
   private UserGroupInformation authUgi;
   private String doAsUser;
-  @VisibleForTesting
-  TimelineClientConnectionRetry connectionRetry;
   private boolean requireConnectionRetry;
+  private RetryPolicy<Object> retryPolicy;
 
   public TimelineConnector(boolean requireConnectionRetry,
       UserGroupInformation authUgi, String doAsUser,
@@ -124,17 +120,11 @@ public class TimelineConnector extends AbstractService {
     }
     authenticator.setConnectionConfigurator(connConfigurator);
 
-    connectionRetry = new TimelineClientConnectionRetry(conf);
+    retryPolicy = createRetryPolicy(conf);
 
     cc.connectorProvider(new HttpUrlConnectorProvider().connectionFactory(
         new TimelineURLConnectionFactory(
             authUgi, authenticator, connConfigurator, token, doAsUser)));
-
-    if (requireConnectionRetry) {
-      TimelineJerseyRetryFilter retryFilter =
-          new TimelineJerseyRetryFilter(connectionRetry);
-      client.addFilter(retryFilter);
-    }
 
     client = ClientBuilder.newClient(cc);
   }
@@ -225,8 +215,7 @@ public class TimelineConnector extends AbstractService {
     // Set up the retry operation
     TimelineClientRetryOp tokenRetryOp =
         createRetryOpForOperateDelegationToken(action);
-
-    return connectionRetry.retryOn(tokenRetryOp);
+    return Failsafe.with(retryPolicy).get(tokenRetryOp::run);
   }
 
   @Private
@@ -245,9 +234,6 @@ public class TimelineConnector extends AbstractService {
   public static abstract class TimelineClientRetryOp {
     // The operation that should be retried
     public abstract Object run() throws IOException;
-
-    // The method to indicate if we should retry given the incoming exception
-    public abstract boolean shouldRetryOn(Exception e);
   }
 
   private static class TimelineURLConnectionFactory
@@ -283,43 +269,17 @@ public class TimelineConnector extends AbstractService {
     }
   }
 
-  // Class to handle retry
-  // Outside this class, only visible to tests
-  @Private
-  @VisibleForTesting
-  static class TimelineClientConnectionRetry {
-
-    // maxRetries < 0 means keep trying
-    @Private
-    @VisibleForTesting
-    public int maxRetries;
-
-    @Private
-    @VisibleForTesting
-    public long retryInterval;
-
-    // Indicates if retries happened last time. Only tests should read it.
-    // In unit tests, retryOn() calls should _not_ be concurrent.
-    private boolean retried = false;
-
-    @Private
-    @VisibleForTesting
-    boolean getRetired() {
-      return retried;
-    }
-
-    // Constructor with default retry settings
-    public TimelineClientConnectionRetry(Configuration conf) {
-      Preconditions.checkArgument(
-          conf.getInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
-              YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES)
-              >= -1,
-          "%s property value should be greater than or equal to -1",
-          YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
-      Preconditions.checkArgument(
-          conf.getLong(
-              YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
-              YarnConfiguration.
+  private RetryPolicy<Object> createRetryPolicy(Configuration conf) {
+    Preconditions.checkArgument(
+        conf.getInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES)
+            >= -1,
+        "%s property value should be greater than or equal to -1",
+        YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
+    Preconditions.checkArgument(
+        conf.getLong(
+            YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+            YarnConfiguration.
                 DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS) > 0,
           "%s property value should be greater than zero",
           YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS);
@@ -382,43 +342,6 @@ public class TimelineConnector extends AbstractService {
     }
   }
 
-  private static class TimelineJerseyRetryFilter extends ClientFilter {
-    private TimelineClientConnectionRetry connectionRetry;
-
-    public TimelineJerseyRetryFilter(
-        TimelineClientConnectionRetry connectionRetry) {
-      this.connectionRetry = connectionRetry;
-    }
-
-    @Override
-    public ClientResponse handle(final ClientRequest cr)
-        throws ClientHandlerException {
-      // Set up the retry operation
-      TimelineClientRetryOp jerseyRetryOp = new TimelineClientRetryOp() {
-        @Override
-        public Object run() {
-          // Try pass the request, if fail, keep retrying
-          return getNext().handle(cr);
-        }
-
-        @Override
-        public boolean shouldRetryOn(Exception e) {
-          // Only retry on connection exceptions
-          return (e instanceof ClientHandlerException)
-              && (e.getCause() instanceof ConnectException
-                  || e.getCause() instanceof SocketTimeoutException
-                  || e.getCause() instanceof SocketException);
-        }
-      };
-      try {
-        return (ClientResponse) connectionRetry.retryOn(jerseyRetryOp);
-      } catch (IOException e) {
-        throw new ClientHandlerException(
-            "Jersey retry failed!\nMessage: " + e.getMessage());
-      }
-    }
-  }
-
   @Private
   @VisibleForTesting
   public static class TimelineClientRetryOpForOperateDelegationToken
@@ -444,14 +367,6 @@ public class TimelineConnector extends AbstractService {
       } catch (InterruptedException e) {
         throw new IOException(e);
       }
-    }
-
-    @Override
-    public boolean shouldRetryOn(Exception e) {
-      // retry on connection exceptions
-      // and SocketTimeoutException
-      return (e instanceof ConnectException
-          || e instanceof SocketTimeoutException);
     }
   }
 }

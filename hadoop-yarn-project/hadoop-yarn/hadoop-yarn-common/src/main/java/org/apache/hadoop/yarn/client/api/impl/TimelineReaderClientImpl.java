@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import net.jodah.failsafe.Failsafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -33,6 +34,7 @@ import org.apache.hadoop.yarn.client.api.TimelineReaderClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
+import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedHashMap;
@@ -227,8 +229,9 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     for(Map.Entry<String, List<String>> param : params.entrySet()) {
       target = target.queryParam(param.getKey(), param.getValue());
     }
-    Response resp = target.request(MediaType.APPLICATION_JSON)
-        .get(Response.class);
+    Invocation.Builder builder = target.request(MediaType.APPLICATION_JSON);
+    Response resp = Failsafe.with(connector.getRetryPolicy())
+        .get(() -> builder.get(Response.class));
     if (resp == null ||
         resp.getStatusInfo().getStatusCode() != Response.Status.OK
         .getStatusCode()) {
