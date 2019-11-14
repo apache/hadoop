@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.client.api.impl;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import net.jodah.failsafe.Failsafe;
+import org.glassfish.jersey.client.ClientResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -115,7 +116,7 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     params.add("fields", fields);
     mergeFilters(params, filters);
 
-    Response response = doGetUri(baseUri, path, params);
+    ClientResponse response = doGetUri(baseUri, path, params);
     TimelineEntity entity = response.readEntity(TimelineEntity.class);
     return entity;
   }
@@ -135,7 +136,7 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     params.add("fields", fields);
     mergeFilters(params, filters);
 
-    Response response = doGetUri(baseUri, path, params);
+    ClientResponse response = doGetUri(baseUri, path, params);
     TimelineEntity entity = response.readEntity(TimelineEntity.class);
     return entity;
   }
@@ -160,7 +161,7 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     }
     mergeFilters(params, filters);
 
-    Response response = doGetUri(baseUri, path, params);
+    ClientResponse response = doGetUri(baseUri, path, params);
     TimelineEntity[] entities = response.readEntity(TimelineEntity[].class);
     return Arrays.asList(entities);
   }
@@ -180,7 +181,7 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     params.add("fields", fields);
     mergeFilters(params, filters);
 
-    Response response = doGetUri(baseUri, path, params);
+    ClientResponse response = doGetUri(baseUri, path, params);
     TimelineEntity entity = response.readEntity(TimelineEntity.class);
     return entity;
   }
@@ -206,7 +207,7 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     }
     mergeFilters(params, filters);
 
-    Response response = doGetUri(baseUri, path, params);
+    ClientResponse response = doGetUri(baseUri, path, params);
     TimelineEntity[] entity = response.readEntity(TimelineEntity[].class);
     return Arrays.asList(entity);
   }
@@ -223,15 +224,15 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
   }
 
   @VisibleForTesting
-  protected Response doGetUri(URI base, String path,
+  protected ClientResponse doGetUri(URI base, String path,
       MultivaluedMap<String, String> params) throws IOException {
     WebTarget target = connector.getClient().target(base).path(path);
     for(Map.Entry<String, List<String>> param : params.entrySet()) {
       target = target.queryParam(param.getKey(), param.getValue());
     }
     Invocation.Builder builder = target.request(MediaType.APPLICATION_JSON);
-    Response resp = Failsafe.with(connector.getRetryPolicy())
-        .get(() -> builder.get(Response.class));
+    ClientResponse resp = Failsafe.with(connector.getRetryPolicy())
+        .get(() -> builder.get(ClientResponse.class));
     if (resp == null ||
         resp.getStatusInfo().getStatusCode() != Response.Status.OK
         .getStatusCode()) {

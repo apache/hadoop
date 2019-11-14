@@ -23,7 +23,6 @@ import static org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityT
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.sun.jersey.api.client.ClientResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -31,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.client.api.TimelineReaderClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.glassfish.jersey.client.ClientResponse;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -133,22 +133,22 @@ public class TestTimelineReaderClientImpl {
   private class MockTimelineReaderClient extends TimelineReaderClientImpl {
     @Override
     protected ClientResponse doGetUri(URI base, String path,
-        MultivaluedMap<String, String> params) throws IOException {
+                                MultivaluedMap<String, String> params) throws IOException {
       ClientResponse mockClientResponse = mock(ClientResponse.class);
       if (path.contains(YARN_CONTAINER.toString())) {
-        when(mockClientResponse.getEntity(TimelineEntity.class)).thenReturn(
+        when(mockClientResponse.readEntity(TimelineEntity.class)).thenReturn(
             createTimelineEntity("mockContainer1"));
-        when(mockClientResponse.getEntity(TimelineEntity[].class)).thenReturn(
+        when(mockClientResponse.readEntity(TimelineEntity[].class)).thenReturn(
             createTimelineEntities("mockContainer1", "mockContainer2"));
       } else if (path.contains(YARN_APPLICATION_ATTEMPT.toString())) {
-        when(mockClientResponse.getEntity(TimelineEntity.class)).thenReturn(
+        when(mockClientResponse.readEntity(TimelineEntity.class)).thenReturn(
             createTimelineEntity("mockAppAttempt1"));
-        when(mockClientResponse.getEntity(TimelineEntity[].class)).thenReturn(
+        when(mockClientResponse.readEntity(TimelineEntity[].class)).thenReturn(
             createTimelineEntities("mockAppAttempt1", "mockAppAttempt2"));
       } else {
-        when(mockClientResponse.getEntity(TimelineEntity.class)).thenReturn(
+        when(mockClientResponse.readEntity(TimelineEntity.class)).thenReturn(
             createTimelineEntity("mockApp1"));
-        when(mockClientResponse.getEntity(TimelineEntity[].class)).thenReturn(
+        when(mockClientResponse.readEntity(TimelineEntity[].class)).thenReturn(
             createTimelineEntities("mockApp1", "mockApp2"));
       }
       return mockClientResponse;

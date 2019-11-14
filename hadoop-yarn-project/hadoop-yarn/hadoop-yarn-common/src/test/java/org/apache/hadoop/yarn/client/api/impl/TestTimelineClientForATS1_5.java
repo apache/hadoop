@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
+import org.glassfish.jersey.client.ClientResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -47,8 +48,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.core.Response;
 
 public class TestTimelineClientForATS1_5 {
 
@@ -258,7 +259,7 @@ public class TestTimelineClientForATS1_5 {
               public ClientResponse doPostingObject(Object object, String path) {
                 ClientResponse response = mock(ClientResponse.class);
                 when(response.getStatusInfo()).thenReturn(
-                    ClientResponse.Status.OK);
+                    Response.Status.OK);
                 return response;
               }
             };
