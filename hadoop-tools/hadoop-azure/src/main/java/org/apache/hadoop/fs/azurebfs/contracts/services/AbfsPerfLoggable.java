@@ -27,6 +27,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 public interface AbfsPerfLoggable {
   /**
    * Gets the string to log to the Abfs Logging API.
+   *
+   * @return the string that will be logged.
    */
   String getLogString();
 }

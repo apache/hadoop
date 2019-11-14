@@ -74,10 +74,10 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
  */
 public final class AbfsPerfTracker {
 
-  // the logger
+  // the logger.
   private static final Logger LOG = LoggerFactory.getLogger(AbfsPerfTracker.class);
 
-  // the field names of perf log lines
+  // the field names of perf log lines.
   private static final String HOST_NAME_KEY = "h";
   private static final String TIMESTAMP_KEY = "t";
   private static final String STORAGE_ACCOUNT_NAME_KEY = "a";
@@ -101,19 +101,19 @@ public final class AbfsPerfTracker {
   private static final String HTTP_URL_KEY = "u";
   private static final String STRING_PLACEHOLDER = "%s";
 
-  // the queue to hold latency information
+  // the queue to hold latency information.
   private final ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<String>();
 
-  // whether the latency tracker has been enabled
+  // whether the latency tracker has been enabled.
   private boolean enabled = false;
 
-  // the host name
+  // the host name.
   private String hostName;
 
-  // singleton latency reporting format
+  // singleton latency reporting format.
   private String singletonLatencyReportingFormat;
 
-  // aggregate latency reporting format
+  // aggregate latency reporting format.
   private String aggregateLatencyReportingFormat;
 
   public AbfsPerfTracker(String filesystemName, String accountName, AbfsConfiguration configuration) {

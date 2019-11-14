@@ -476,7 +476,9 @@ public class AbfsConfiguration{
   }
 
   /**
-   * Whether {@code AbfsClient} should track and send latency info back to storage servers
+   * Whether {@code AbfsClient} should track and send latency info back to storage servers.
+   *
+   * @return a boolean indicating whether latency should be tracked.
    */
   public boolean shouldTrackLatency() {
     return this.trackLatency;

@@ -30,31 +30,31 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
  */
 public final class AbfsPerfInfo implements AutoCloseable {
 
-  // the tracker which will be extracting perf info out of this object
+  // the tracker which will be extracting perf info out of this object.
   private AbfsPerfTracker abfsPerfTracker;
 
-  // the caller name
+  // the caller name.
   private String callerName;
 
-  // the callee name
+  // the callee name.
   private String calleeName;
 
-  // time when this tracking started
+  // time when this tracking started.
   private Instant trackingStart;
 
-  // time when this tracking ended
+  // time when this tracking ended.
   private Instant trackingEnd;
 
-  // whether the tracked request was successful
+  // whether the tracked request was successful.
   private boolean success;
 
-  // time when the aggregate operation (to which this request belongs) started
+  // time when the aggregate operation (to which this request belongs) started.
   private Instant aggregateStart;
 
-  // number of requests in the aggregate operation (to which this request belongs)
+  // number of requests in the aggregate operation (to which this request belongs).
   private long aggregateCount;
 
-  // result of the request
+  // result of the request.
   private AbfsPerfLoggable res;
 
   public AbfsPerfInfo(AbfsPerfTracker abfsPerfTracker, String callerName, String calleeName) {
