@@ -193,6 +193,8 @@ class CapacitySchedulerPage extends RmView {
 
     private void renderCommonLeafQueueInfo(ResponseInfo ri) {
       ri.
+          __("Submit App ACL:", lqinfo.getSubmitAcls()).
+          __("Administer Queue ACL:", lqinfo.getAdminAcls()).
           __("Num Schedulable Applications:", Integer.toString(lqinfo.getNumActiveApplications())).
           __("Num Non-Schedulable Applications:", Integer.toString(lqinfo.getNumPendingApplications())).
           __("Num Containers:", Integer.toString(lqinfo.getNumContainers())).
