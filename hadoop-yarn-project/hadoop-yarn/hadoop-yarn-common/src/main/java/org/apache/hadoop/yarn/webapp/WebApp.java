@@ -40,11 +40,8 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import com.google.inject.Provides;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.container.filter.GZIPContentEncodingFilter;
-import com.sun.jersey.api.core.ResourceConfig;
-import com.sun.jersey.core.util.FeaturesAndProperties;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.spi.container.servlet.ServletContainer;
+
+import javax.servlet.Filter;
 
 /**
  * @see WebApps for a usage example
@@ -189,8 +186,8 @@ public abstract class WebApp extends ServletModule {
     }
   }
 
-  protected Class<? extends GuiceContainer> getWebAppFilterClass() {
-    return GuiceContainer.class;
+  protected Class<? extends Filter> getWebAppFilterClass() {
+    return GuiceFilter.class;
   }
 
   /**

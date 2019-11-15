@@ -15,32 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.yarn.webapp;
 
-import java.io.IOException;
-import java.util.Random;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 
-import org.apache.hadoop.net.ServerSocketUtil;
+import javax.ws.rs.ext.ContextResolver;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
-import com.sun.jersey.test.framework.JerseyTest;
-import com.sun.jersey.test.framework.WebAppDescriptor;
+public class MyTestObjectWriterContextResolver implements ContextResolver<ObjectWriter> {
 
-public abstract class JerseyTestBase extends JerseyTest {
-  public JerseyTestBase(WebAppDescriptor appDescriptor) {
-    super(appDescriptor);
+  private final ObjectWriter writer;
+  private final Set<Class> types;
+  private final Class[] cTypes = { MyTestWebService.MyInfo.class };
+
+  public MyTestObjectWriterContextResolver() throws Exception {
+    this.types = new HashSet<>(Arrays.asList(cTypes));
+    this.writer = new ObjectMapper().writerFor(MyTestWebService.MyInfo.class);
   }
 
   @Override
-  protected int getPort(int port) {
-    Random rand = new Random();
-    int jerseyPort = port + rand.nextInt(1000);
-    try {
-      jerseyPort = ServerSocketUtil.getPort(jerseyPort, 10);
-    } catch (IOException e) {
-      // Ignore exception even after 10 times free port is
-      // not received.
-    }
-    return super.getPort(jerseyPort);
+  public ObjectWriter getContext(Class<?> type) {
+    return (types.contains(type)) ? writer : null;
   }
 }

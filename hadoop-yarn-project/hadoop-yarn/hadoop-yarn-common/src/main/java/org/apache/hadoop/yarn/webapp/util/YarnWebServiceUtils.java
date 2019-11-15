@@ -19,16 +19,13 @@ package org.apache.hadoop.yarn.webapp.util;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONMarshaller;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
-import org.codehaus.jettison.json.JSONObject;
 
-import java.io.StringWriter;
+import org.codehaus.jettison.json.JSONObject;
 
 /**
  * This class contains several utility function which could be used to generate
@@ -38,6 +35,8 @@ import java.io.StringWriter;
 public final class YarnWebServiceUtils {
 
   private YarnWebServiceUtils() {}
+
+  private static final ObjectMapper mapper = new ObjectMapper();
 
   /**
    * Utility function to get NodeInfo by calling RM WebService.
@@ -54,27 +53,18 @@ public final class YarnWebServiceUtils {
   private static JSONObject getNodeInfoFromRM(String webAppAddress,
       String nodeId) {
     Client webServiceClient = ClientBuilder.newClient();
-    Response response = null;
-    try {
-      WebTarget target = webServiceClient.target(webAppAddress)
-          .path("ws").path("v1").path("cluster")
-          .path("nodes").path(nodeId);
-      response = target.request(MediaType.APPLICATION_JSON).get(Response.class);
+    try (Response response = webServiceClient.target(webAppAddress)
+        .path("ws").path("v1").path("cluster")
+        .path("nodes").path(nodeId)
+        .request(MediaType.APPLICATION_JSON)
+        .get(Response.class)) {
       return response.readEntity(JSONObject.class);
     } finally {
-      if (response != null) {
-        response.close();
-      }
       webServiceClient.close();
     }
   }
 
-  @SuppressWarnings("rawtypes")
-  public static String toJson(Object nsli, Class klass) throws Exception {
-    StringWriter sw = new StringWriter();
-    JSONJAXBContext ctx = new JSONJAXBContext(klass);
-    JSONMarshaller jm = ctx.createJSONMarshaller();
-    jm.marshallToJSON(nsli, sw);
-    return sw.toString();
+  public static String toJson(Object obj, Class<?> klass) throws Exception {
+    return mapper.writerFor(klass).writeValueAsString(obj);
   }
 }

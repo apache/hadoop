@@ -237,7 +237,7 @@ public class TestWebApp {
         WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
           @Override
           public void setup() {
-            bind(MyTestJAXBContextResolver.class);
+            bind(MyTestObjectWriterContextResolver.class);
             bind(MyTestWebService.class);
 
             route("/:foo", FooController.class);
@@ -268,7 +268,7 @@ public class TestWebApp {
         WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
           @Override
           public void setup() {
-            bind(MyTestJAXBContextResolver.class);
+            bind(MyTestObjectWriterContextResolver.class);
             bind(MyTestWebService.class);
 
             route("/:foo", FooController.class);
@@ -297,7 +297,7 @@ public class TestWebApp {
         WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
           @Override
           public void setup() {
-            bind(MyTestJAXBContextResolver.class);
+            bind(MyTestObjectWriterContextResolver.class);
             bind(MyTestWebService.class);
           }
         });

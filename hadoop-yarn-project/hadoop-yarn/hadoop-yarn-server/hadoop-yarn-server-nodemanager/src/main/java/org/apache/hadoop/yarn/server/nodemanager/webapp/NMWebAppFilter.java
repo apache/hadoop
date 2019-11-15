@@ -18,16 +18,16 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.container.ContainerResponseContext;
+import javax.ws.rs.container.ContainerResponseFilter;
+import javax.ws.rs.core.MultivaluedMap;
 
+import com.google.inject.Injector;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -36,12 +36,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
-import com.google.inject.Injector;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.http.NameValuePair;
 
 @Singleton
-public class NMWebAppFilter extends GuiceContainer{
+public class NMWebAppFilter implements ContainerResponseFilter {
 
   private Injector injector;
   private Context nmContext;
@@ -50,30 +49,26 @@ public class NMWebAppFilter extends GuiceContainer{
 
   @Inject
   public NMWebAppFilter(Injector injector, Context nmContext) {
-    super(injector);
     this.injector = injector;
     this.nmContext = nmContext;
   }
 
   @Override
-  public void doFilter(HttpServletRequest request,
-      HttpServletResponse response, FilterChain chain) throws IOException,
-      ServletException {
-    String redirectPath = containerLogPageRedirectPath(request);
+  public void filter(ContainerRequestContext requestContext,
+                     ContainerResponseContext responseContext) {
+    String redirectPath = containerLogPageRedirectPath(requestContext);
     if (redirectPath != null) {
       String redirectMsg =
           "Redirecting to log server" + " : " + redirectPath;
-      PrintWriter out = response.getWriter();
-      out.println(redirectMsg);
-      response.setHeader("Location", redirectPath);
-      response.setStatus(HttpServletResponse.SC_TEMPORARY_REDIRECT);
-      return;
+      responseContext.setEntity(redirectMsg);
+      MultivaluedMap<String, Object> headers = responseContext.getHeaders();
+      headers.add("Location", redirectPath);
+      responseContext.setStatus(HttpServletResponse.SC_TEMPORARY_REDIRECT);
     }
-    super.doFilter(request, response, chain);
   }
 
-  private String containerLogPageRedirectPath(HttpServletRequest request) {
-    String uri = HtmlQuoting.quoteHtmlChars(request.getRequestURI());
+  private String containerLogPageRedirectPath(ContainerRequestContext request) {
+    String uri = HtmlQuoting.quoteHtmlChars(request.getUriInfo().getPath());
     String redirectPath = null;
     if (!uri.contains("/ws/v1/node") && uri.contains("/containerlogs")) {
       String[] parts = uri.split("/");
@@ -88,7 +83,7 @@ public class NMWebAppFilter extends GuiceContainer{
         try {
           containerId = ContainerId.fromString(containerIdStr);
         } catch (IllegalArgumentException ex) {
-          return redirectPath;
+          return null;
         }
         ApplicationId appId =
             containerId.getApplicationAttemptId().getApplicationId();
