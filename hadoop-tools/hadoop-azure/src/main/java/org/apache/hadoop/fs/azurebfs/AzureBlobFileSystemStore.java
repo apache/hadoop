@@ -266,17 +266,6 @@ public class AzureBlobFileSystemStore implements Closeable {
     return this.abfsConfiguration;
   }
 
-  public void access(Path path, FsAction mode)
-      throws AzureBlobFileSystemException {
-    LOG.debug("access for filesystem: {}, path: {}, mode: {}",
-        this.client.getFileSystem(), path, mode);
-    if (!this.abfsConfiguration.isCheckAccessEnabled()) {
-      return;
-    }
-    String relativePath = path.isRoot() ? "" : ("/" + getRelativePath(path));
-    this.client.checkAccess(relativePath, mode.SYMBOL);
-  }
-
   public Hashtable<String, String> getFilesystemProperties() throws AzureBlobFileSystemException {
     LOG.debug("getFilesystemProperties for filesystem: {}",
             client.getFileSystem());
@@ -903,6 +892,21 @@ public class AzureBlobFileSystemStore implements Closeable {
     aclStatusBuilder.stickyBit(fsPermission.getStickyBit());
     aclStatusBuilder.addEntries(aclEntries);
     return aclStatusBuilder.build();
+  }
+
+  public void access(final Path path, final FsAction mode)
+      throws AzureBlobFileSystemException {
+    LOG.debug("access for filesystem: {}, path: {}, mode: {}",
+        this.client.getFileSystem(), path, mode);
+    if (!this.abfsConfiguration.isCheckAccessEnabled()
+        || !getIsNamespaceEnabled()) {
+      LOG.debug("Returning; either check access is not enabled or the account"
+          + " used is not namespace enabled");
+      return;
+    }
+    String relativePath =
+        AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true);
+    this.client.checkAccess(relativePath, mode.SYMBOL);
   }
 
   public boolean isAtomicRenameKey(String key) {

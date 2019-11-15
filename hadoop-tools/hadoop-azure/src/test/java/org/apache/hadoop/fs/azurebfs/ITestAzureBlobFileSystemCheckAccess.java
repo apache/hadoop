@@ -19,10 +19,6 @@ package org.apache.hadoop.fs.azurebfs;
 
 import com.google.common.collect.Lists;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -32,8 +28,13 @@ import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.security.AccessControlException;
+
 import org.junit.Assume;
 import org.junit.Test;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.List;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CHECK_ACCESS;
@@ -54,7 +55,6 @@ public class ITestAzureBlobFileSystemCheckAccess
   private final boolean isCheckAccessEnabled;
 
   public ITestAzureBlobFileSystemCheckAccess() throws Exception {
-    super();
     super.setup();
     this.superUserFs = getFileSystem();
     testUserGuid = getConfiguration()
@@ -87,7 +87,6 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test(expected = IllegalArgumentException.class)
   public void testCheckAccessWithNullPath() throws IOException {
-
     superUserFs.access(null, FsAction.READ);
   }
 
@@ -136,10 +135,18 @@ public class ITestAzureBlobFileSystemCheckAccess
     fs.access(testFilePath, FsAction.ALL);
     fs.access(testFilePath, null);
 
-    Path nonExistentFile = new Path("/nonExistentFile2.txt");
-    nonExistentFile = this.superUserFs.makeQualified(nonExistentFile);
+    Path nonExistentFile = setupTestDirectoryAndUserAccess(
+        "/nonExistentFile2" + ".txt", FsAction.NONE);
     superUserFs.delete(nonExistentFile, true);
     fs.access(nonExistentFile, FsAction.READ);
+  }
+
+  @Test
+  public void testCheckAccessForAccountWithoutNS() throws Exception {
+    Assume.assumeFalse(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is true",
+        getConfiguration()
+            .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, true));
+    testUserFs.access(new Path("/"), FsAction.READ);
   }
 
   @Test
@@ -148,13 +155,13 @@ public class ITestAzureBlobFileSystemCheckAccess
         isCheckAccessEnabled);
     Path testFilePath = setupTestDirectoryAndUserAccess("/test2.txt",
         FsAction.NONE);
-    assertFalse(isAccessible(testFilePath, FsAction.EXECUTE));
-    assertFalse(isAccessible(testFilePath, FsAction.READ));
-    assertFalse(isAccessible(testFilePath, FsAction.WRITE));
-    assertFalse(isAccessible(testFilePath, FsAction.READ_EXECUTE));
-    assertFalse(isAccessible(testFilePath, FsAction.WRITE_EXECUTE));
-    assertFalse(isAccessible(testFilePath, FsAction.READ_WRITE));
-    assertFalse(isAccessible(testFilePath, FsAction.ALL));
+    assertInaccessible(testFilePath, FsAction.EXECUTE);
+    assertInaccessible(testFilePath, FsAction.READ);
+    assertInaccessible(testFilePath, FsAction.WRITE);
+    assertInaccessible(testFilePath, FsAction.READ_EXECUTE);
+    assertInaccessible(testFilePath, FsAction.WRITE_EXECUTE);
+    assertInaccessible(testFilePath, FsAction.READ_WRITE);
+    assertInaccessible(testFilePath, FsAction.ALL);
   }
 
   @Test
@@ -163,14 +170,14 @@ public class ITestAzureBlobFileSystemCheckAccess
         isCheckAccessEnabled);
     Path testFilePath = setupTestDirectoryAndUserAccess("/test3.txt",
         FsAction.EXECUTE);
-    assertTrue(isAccessible(testFilePath, FsAction.EXECUTE));
+    assertAccessible(testFilePath, FsAction.EXECUTE);
 
-    assertFalse(isAccessible(testFilePath, FsAction.READ));
-    assertFalse(isAccessible(testFilePath, FsAction.WRITE));
-    assertFalse(isAccessible(testFilePath, FsAction.READ_EXECUTE));
-    assertFalse(isAccessible(testFilePath, FsAction.WRITE_EXECUTE));
-    assertFalse(isAccessible(testFilePath, FsAction.READ_WRITE));
-    assertFalse(isAccessible(testFilePath, FsAction.ALL));
+    assertInaccessible(testFilePath, FsAction.READ);
+    assertInaccessible(testFilePath, FsAction.WRITE);
+    assertInaccessible(testFilePath, FsAction.READ_EXECUTE);
+    assertInaccessible(testFilePath, FsAction.WRITE_EXECUTE);
+    assertInaccessible(testFilePath, FsAction.READ_WRITE);
+    assertInaccessible(testFilePath, FsAction.ALL);
   }
 
   @Test
@@ -179,14 +186,14 @@ public class ITestAzureBlobFileSystemCheckAccess
         isCheckAccessEnabled);
     Path testFilePath = setupTestDirectoryAndUserAccess("/test4.txt",
         FsAction.READ);
-    assertTrue(isAccessible(testFilePath, FsAction.READ));
+    assertAccessible(testFilePath, FsAction.READ);
 
-    assertFalse(isAccessible(testFilePath, FsAction.EXECUTE));
-    assertFalse(isAccessible(testFilePath, FsAction.WRITE));
-    assertFalse(isAccessible(testFilePath, FsAction.READ_EXECUTE));
-    assertFalse(isAccessible(testFilePath, FsAction.WRITE_EXECUTE));
-    assertFalse(isAccessible(testFilePath, FsAction.READ_WRITE));
-    assertFalse(isAccessible(testFilePath, FsAction.ALL));
+    assertInaccessible(testFilePath, FsAction.EXECUTE);
+    assertInaccessible(testFilePath, FsAction.WRITE);
+    assertInaccessible(testFilePath, FsAction.READ_EXECUTE);
+    assertInaccessible(testFilePath, FsAction.WRITE_EXECUTE);
+    assertInaccessible(testFilePath, FsAction.READ_WRITE);
+    assertInaccessible(testFilePath, FsAction.ALL);
   }
 
   @Test
@@ -195,14 +202,14 @@ public class ITestAzureBlobFileSystemCheckAccess
         isCheckAccessEnabled);
     Path testFilePath = setupTestDirectoryAndUserAccess("/test5.txt",
         FsAction.WRITE);
-    assertTrue(isAccessible(testFilePath, FsAction.WRITE));
+    assertAccessible(testFilePath, FsAction.WRITE);
 
-    assertFalse(isAccessible(testFilePath, FsAction.EXECUTE));
-    assertFalse(isAccessible(testFilePath, FsAction.READ));
-    assertFalse(isAccessible(testFilePath, FsAction.READ_EXECUTE));
-    assertFalse(isAccessible(testFilePath, FsAction.WRITE_EXECUTE));
-    assertFalse(isAccessible(testFilePath, FsAction.READ_WRITE));
-    assertFalse(isAccessible(testFilePath, FsAction.ALL));
+    assertInaccessible(testFilePath, FsAction.EXECUTE);
+    assertInaccessible(testFilePath, FsAction.READ);
+    assertInaccessible(testFilePath, FsAction.READ_EXECUTE);
+    assertInaccessible(testFilePath, FsAction.WRITE_EXECUTE);
+    assertInaccessible(testFilePath, FsAction.READ_WRITE);
+    assertInaccessible(testFilePath, FsAction.ALL);
   }
 
   @Test
@@ -211,14 +218,14 @@ public class ITestAzureBlobFileSystemCheckAccess
         isCheckAccessEnabled);
     Path testFilePath = setupTestDirectoryAndUserAccess("/test6.txt",
         FsAction.READ_EXECUTE);
-    assertTrue(isAccessible(testFilePath, FsAction.EXECUTE));
-    assertTrue(isAccessible(testFilePath, FsAction.READ));
-    assertTrue(isAccessible(testFilePath, FsAction.READ_EXECUTE));
+    assertAccessible(testFilePath, FsAction.EXECUTE);
+    assertAccessible(testFilePath, FsAction.READ);
+    assertAccessible(testFilePath, FsAction.READ_EXECUTE);
 
-    assertFalse(isAccessible(testFilePath, FsAction.WRITE));
-    assertFalse(isAccessible(testFilePath, FsAction.WRITE_EXECUTE));
-    assertFalse(isAccessible(testFilePath, FsAction.READ_WRITE));
-    assertFalse(isAccessible(testFilePath, FsAction.ALL));
+    assertInaccessible(testFilePath, FsAction.WRITE);
+    assertInaccessible(testFilePath, FsAction.WRITE_EXECUTE);
+    assertInaccessible(testFilePath, FsAction.READ_WRITE);
+    assertInaccessible(testFilePath, FsAction.ALL);
   }
 
   @Test
@@ -227,14 +234,14 @@ public class ITestAzureBlobFileSystemCheckAccess
         isCheckAccessEnabled);
     Path testFilePath = setupTestDirectoryAndUserAccess("/test7.txt",
         FsAction.WRITE_EXECUTE);
-    assertTrue(isAccessible(testFilePath, FsAction.EXECUTE));
-    assertTrue(isAccessible(testFilePath, FsAction.WRITE));
-    assertTrue(isAccessible(testFilePath, FsAction.WRITE_EXECUTE));
+    assertAccessible(testFilePath, FsAction.EXECUTE);
+    assertAccessible(testFilePath, FsAction.WRITE);
+    assertAccessible(testFilePath, FsAction.WRITE_EXECUTE);
 
-    assertFalse(isAccessible(testFilePath, FsAction.READ));
-    assertFalse(isAccessible(testFilePath, FsAction.READ_EXECUTE));
-    assertFalse(isAccessible(testFilePath, FsAction.READ_WRITE));
-    assertFalse(isAccessible(testFilePath, FsAction.ALL));
+    assertInaccessible(testFilePath, FsAction.READ);
+    assertInaccessible(testFilePath, FsAction.READ_EXECUTE);
+    assertInaccessible(testFilePath, FsAction.READ_WRITE);
+    assertInaccessible(testFilePath, FsAction.ALL);
   }
 
   @Test
@@ -243,29 +250,41 @@ public class ITestAzureBlobFileSystemCheckAccess
         isCheckAccessEnabled);
     Path testFilePath = setupTestDirectoryAndUserAccess("/test8.txt",
         FsAction.ALL);
-    assertTrue(isAccessible(testFilePath, FsAction.EXECUTE));
-    assertTrue(isAccessible(testFilePath, FsAction.WRITE));
-    assertTrue(isAccessible(testFilePath, FsAction.WRITE_EXECUTE));
-    assertTrue(isAccessible(testFilePath, FsAction.READ));
-    assertTrue(isAccessible(testFilePath, FsAction.READ_EXECUTE));
-    assertTrue(isAccessible(testFilePath, FsAction.READ_WRITE));
-    assertTrue(isAccessible(testFilePath, FsAction.ALL));
+    assertAccessible(testFilePath, FsAction.EXECUTE);
+    assertAccessible(testFilePath, FsAction.WRITE);
+    assertAccessible(testFilePath, FsAction.WRITE_EXECUTE);
+    assertAccessible(testFilePath, FsAction.READ);
+    assertAccessible(testFilePath, FsAction.READ_EXECUTE);
+    assertAccessible(testFilePath, FsAction.READ_WRITE);
+    assertAccessible(testFilePath, FsAction.ALL);
+  }
+
+  private void assertAccessible(Path testFilePath, FsAction fsAction)
+      throws IOException {
+    assertTrue(
+        "Should have been given access  " + fsAction + " on " + testFilePath,
+        isAccessible(testUserFs, testFilePath, fsAction));
+  }
+
+  private void assertInaccessible(Path testFilePath, FsAction fsAction)
+      throws IOException {
+    assertFalse(
+        "Should have been denied access  " + fsAction + " on " + testFilePath,
+        isAccessible(testUserFs, testFilePath, fsAction));
   }
 
   private void setExecuteAccessForParentDirs(Path dir) throws IOException {
-    String testUser = testUserGuid;
     dir = dir.getParent();
     while (dir != null) {
-      modifyAcl(dir, testUser, FsAction.EXECUTE);
+      modifyAcl(dir, testUserGuid, FsAction.EXECUTE);
       dir = dir.getParent();
     }
   }
 
   private void modifyAcl(Path file, String uid, FsAction fsAction)
       throws IOException {
-    List<AclEntry> aclSpec = Lists.newArrayList(new AclEntry[] {
-        AclTestHelpers.aclEntry(AclEntryScope.ACCESS, AclEntryType.USER, uid,
-            fsAction)});
+    List<AclEntry> aclSpec = Lists.newArrayList(AclTestHelpers
+        .aclEntry(AclEntryScope.ACCESS, AclEntryType.USER, uid, fsAction));
     this.superUserFs.modifyAclEntries(file, aclSpec);
   }
 
@@ -276,21 +295,17 @@ public class ITestAzureBlobFileSystemCheckAccess
     this.superUserFs.delete(file, true);
     this.superUserFs.create(file);
     modifyAcl(file, testUserGuid, fsAction);
-
     setExecuteAccessForParentDirs(file);
     return file;
   }
 
-  private boolean isAccessible(Path path, FsAction fsAction)
+  private boolean isAccessible(FileSystem fs, Path path, FsAction fsAction)
       throws IOException {
-    boolean isAccessible = true;
     try {
-      this.testUserFs.access(path, fsAction);
-    } catch (AccessControlException e) {
-      isAccessible = false;
-    } catch (IOException e) {
-      throw e;
+      fs.access(path, fsAction);
+    } catch (AccessControlException ace) {
+      return false;
     }
-    return isAccessible;
+    return true;
   }
 }

@@ -521,10 +521,8 @@ public class AbfsClient implements Closeable {
       throws AzureBlobFileSystemException {
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, CHECK_ACCESS);
-
     abfsUriQueryBuilder.addQuery(QUERY_FS_ACTION, rwx);
     URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-
     AbfsRestOperation op = new AbfsRestOperation(
         AbfsRestOperationType.CheckAccess, this,
         AbfsHttpConstants.HTTP_METHOD_HEAD, url, createDefaultHeaders());

@@ -861,12 +861,12 @@ public class AzureBlobFileSystem extends FileSystem {
    * @throws IOException                   see specific implementation
    */
   @Override
-  public void access(final Path path, FsAction mode) throws IOException {
+  public void access(final Path path, final FsAction mode) throws IOException {
     LOG.debug("AzureBlobFileSystem.access path : {}, mode : {}", path, mode);
     Path qualifiedPath = makeQualified(path);
     try {
       this.abfsStore.access(qualifiedPath, mode);
-    }catch(AzureBlobFileSystemException ex){
+    } catch (AzureBlobFileSystemException ex) {
       checkCheckAccessException(path, ex);
     }
   }
@@ -982,17 +982,15 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   private void checkCheckAccessException(final Path path,
-      final AzureBlobFileSystemException exception,
-      final AzureServiceErrorCode... allowedErrorCodesList) throws IOException {
+      final AzureBlobFileSystemException exception) throws IOException {
     if (exception instanceof AbfsRestOperationException) {
       AbfsRestOperationException ere = (AbfsRestOperationException) exception;
-      int statusCode = ere.getStatusCode();
-      if (statusCode == HttpURLConnection.HTTP_FORBIDDEN) {
+      if (ere.getStatusCode() == HttpURLConnection.HTTP_FORBIDDEN) {
         throw (IOException) new AccessControlException(ere.getMessage())
             .initCause(exception);
       }
     }
-    checkException(path, exception, allowedErrorCodesList);
+    checkException(path, exception);
   }
 
   /**
