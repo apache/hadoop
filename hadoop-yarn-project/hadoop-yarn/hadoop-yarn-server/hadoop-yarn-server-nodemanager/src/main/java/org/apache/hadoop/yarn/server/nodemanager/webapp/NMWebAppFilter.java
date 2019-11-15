@@ -37,7 +37,6 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
 import com.google.inject.Injector;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.http.NameValuePair;
 

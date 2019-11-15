@@ -34,8 +34,6 @@ import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-
 /**
  * The RM webapp
  */

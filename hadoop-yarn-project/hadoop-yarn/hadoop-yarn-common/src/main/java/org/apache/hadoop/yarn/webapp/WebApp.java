@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.yarn.webapp.view.RobotsTextPage;
+import org.glassfish.jersey.servlet.ServletProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -183,11 +184,7 @@ public abstract class WebApp extends ServletModule {
       serveRegex(regex).with(DefaultWrapperServlet.class);
 
       Map<String, String> params = new HashMap<String, String>();
-      params.put(ResourceConfig.FEATURE_IMPLICIT_VIEWABLES, "true");
-      params.put(ServletContainer.FEATURE_FILTER_FORWARD_ON_404, "true");
-      params.put(FeaturesAndProperties.FEATURE_XMLROOTELEMENT_PROCESSING, "true");
-      params.put(ResourceConfig.PROPERTY_CONTAINER_REQUEST_FILTERS, GZIPContentEncodingFilter.class.getName());
-      params.put(ResourceConfig.PROPERTY_CONTAINER_RESPONSE_FILTERS, GZIPContentEncodingFilter.class.getName());
+      params.put(ServletProperties.FILTER_FORWARD_ON_404, "true");
       filter("/*").through(getWebAppFilterClass(), params);
     }
   }
