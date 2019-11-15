@@ -39,6 +39,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_TRUSTSTORE_P
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetAddress;
@@ -57,6 +58,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -65,6 +67,11 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
+import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
+import org.apache.hadoop.security.AccessControlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -1735,4 +1742,48 @@ public class DFSUtil {
     }
     return id;
   }
+
+  /**
+   * Throw if the given directory has any non-empty protected descendants
+   * (including itself).
+   *
+   * @param iip directory whose descendants are to be checked.
+   * @throws AccessControlException if a non-empty protected descendant
+   *                                was found.
+   * @throws ParentNotDirectoryException
+   * @throws UnresolvedLinkException
+   * @throws FileNotFoundException
+   */
+  public static void checkProtectedDescendants(
+      FSDirectory fsd, INodesInPath iip)
+          throws AccessControlException, UnresolvedLinkException,
+          ParentNotDirectoryException {
+    final SortedSet<String> protectedDirs = fsd.getProtectedDirectories();
+    if (protectedDirs.isEmpty()) {
+      return;
+    }
+
+    String src = iip.getPath();
+    // Is src protected? Caller has already checked it is non-empty.
+    if (protectedDirs.contains(src)) {
+      throw new AccessControlException(
+          "Cannot delete/rename non-empty protected directory " + src);
+    }
+
+    // Are any descendants of src protected?
+    // The subSet call returns only the descendants of src since
+    // {@link Path#SEPARATOR} is "/" and '0' is the next ASCII
+    // character after '/'.
+    for (String descendant :
+        protectedDirs.subSet(src + Path.SEPARATOR, src + "0")) {
+      INodesInPath subdirIIP =
+          fsd.getINodesInPath(descendant, FSDirectory.DirOp.WRITE);
+      if (fsd.isNonEmptyDirectory(subdirIIP)) {
+        throw new AccessControlException(
+            "Cannot delete/rename non-empty protected subdirectory "
+            + descendant);
+      }
+    }
+  }
+
 }
