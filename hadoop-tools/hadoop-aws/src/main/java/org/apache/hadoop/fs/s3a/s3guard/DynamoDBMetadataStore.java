@@ -939,7 +939,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     Collection<DDBPathMetadata> newDirs = new ArrayList<>();
     final AncestorState ancestorState = extractOrCreate(operationState,
-        BulkOperationState.OperationType.Rename);
+        BulkOperationState.OperationType.Put);
     Path parent = qualifiedPath.getParent();
     boolean entryFound = false;
 
@@ -1478,10 +1478,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @param keyPrefix The prefix for the keys that should be removed
    * @throws IOException Any IO/DDB failure.
    * @throws InterruptedIOException if the prune was interrupted
+   * @return count of pruned items.
    */
   @Override
   @Retries.RetryTranslated
-  public void prune(PruneMode pruneMode, long cutoff, String keyPrefix)
+  public long prune(PruneMode pruneMode, long cutoff, String keyPrefix)
       throws IOException {
     LOG.debug("Prune {} under {} with age {}",
         pruneMode == PruneMode.ALL_BY_MODTIME
@@ -1489,10 +1490,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
         keyPrefix, cutoff);
     final ItemCollection<ScanOutcome> items =
         expiredFiles(pruneMode, cutoff, keyPrefix);
-    innerPrune(keyPrefix, items);
+    return innerPrune(keyPrefix, items);
   }
 
-  private void innerPrune(String keyPrefix, ItemCollection<ScanOutcome> items)
+  private int innerPrune(String keyPrefix, ItemCollection<ScanOutcome> items)
       throws IOException {
     int itemCount = 0;
     try (AncestorState state = initiateBulkWrite(
@@ -1562,6 +1563,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     }
     LOG.info("Finished pruning {} items in batches of {}", itemCount,
         S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT);
+    return itemCount;
   }
 
   /**
@@ -2081,6 +2083,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
     } else {
       return new AncestorState(this, operation, null);
     }
+  }
+
+  @Override
+  public S3AInstrumentation.S3GuardInstrumentation getInstrumentation() {
+    return instrumentation;
   }
 
   /**

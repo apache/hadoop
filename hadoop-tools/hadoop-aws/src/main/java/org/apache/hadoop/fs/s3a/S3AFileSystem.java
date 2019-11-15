@@ -4439,9 +4439,5 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return S3AFileSystem.this.getBucketLocation();
     }
 
-    @Override
-    public Path qualify(Path path) {
-      return S3AFileSystem.this.qualify(path);
-    }
   }
 }

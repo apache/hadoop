@@ -23,34 +23,74 @@ import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Queue;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
 
 /**
  * Audit a directory tree for being authoritative.
+ * One aspect of the audit  to be aware of: the root directory is
+ * always considered authoritative, even though, because there is no
+ * matching entry in any of the stores, it is not strictly true.
  */
 public class S3GuardAuthoritativeAudit {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       S3GuardAuthoritativeAudit.class);
 
+  /**
+   * Exception error code when a path is nonauth in the DB: {@value}.
+   */
   public static final int ERROR_ENTRY_NOT_AUTH_IN_DDB = 4;
+
+  /**
+   * Exception error code when a path is not configured to be
+   * auth in the S3A FS Config: {@value}.
+   */
   public static final int ERROR_PATH_NOT_AUTH_IN_FS = 5;
 
-  private final StoreContext storeContext;
+  /**
+   * Exception error string: {@value}.
+   */
+  public static final String E_NONAUTH
+      = "Directory is not marked as authoritative in the S3Guard store";
 
   private final DynamoDBMetadataStore metastore;
 
-  public S3GuardAuthoritativeAudit(final StoreContext storeContext,
-      final DynamoDBMetadataStore metastore) {
-    this.storeContext = storeContext;
+  private final boolean requireAuthoritative;
+
+  /**
+   * Constructor.
+   * @param metastore metastore
+   * @param requireAuthoritative require all directories to be authoritative
+   */
+  public S3GuardAuthoritativeAudit(
+      final DynamoDBMetadataStore metastore,
+      final boolean requireAuthoritative) {
     this.metastore = metastore;
+    this.requireAuthoritative = requireAuthoritative;
+  }
+
+  /**
+   * Examine the path metadata and verify that the dir is authoritative.
+   * @param md metadata.
+   * @param requireAuth require all directories to be authoritative
+   * @throws NonAuthoritativeDirException if it is non-auth and requireAuth=true.
+   */
+  private void verifyAuthDir(final DDBPathMetadata md, final boolean requireAuth)
+      throws PathIOException {
+    final Path path = md.getFileStatus().getPath();
+    boolean isAuth = path.isRoot() || md.isAuthoritativeDir();
+    if (!isAuth && requireAuth) {
+      throw new NonAuthoritativeDirException(path);
+    }
   }
 
   /**
@@ -58,46 +98,48 @@ public class S3GuardAuthoritativeAudit {
    * recursive scanning.
    * @param md metadata.
    * @return true if it is a dir to scan.
-   * @throws ExitUtil.ExitException if it is a non-auth dir.
    */
-  private boolean isAuthDir(DDBPathMetadata md) {
-    if (md.getFileStatus().isFile()) {
-      // file: exist without a check
-      return false;
-    }
-    // directory - require authoritativeness
-    if (!md.isAuthoritativeDir()) {
-      throw new ExitUtil.ExitException(ERROR_ENTRY_NOT_AUTH_IN_DDB,
-          "Directory is not marked as authoritative in the S3Guard store: "
-              + md.getFileStatus().getPath());
-    }
-    // we are an authoritative dir
-    return true;
+  private boolean isDirectory(PathMetadata md) {
+    return !md.getFileStatus().isFile();
   }
 
   /**
    * Audit the tree.
-   * @param path path to scan
-   * @return count of dirs scanned. 0 == path was a file.
+   * @param path qualified path to scan
+   * @return tuple(dirs scanned, nonauth dirs found)
    * @throws IOException IO failure
    * @throws ExitUtil.ExitException if a non-auth dir was found.
    */
-  public int audit(Path path) throws IOException {
-    final Path qualified = storeContext.qualify(path);
-    LOG.info("Auditing {}", qualified);
-    try (DurationInfo d = new DurationInfo(LOG, "audit %s", qualified)) {
-      return executeAudit(qualified);
+  public Pair<Integer, Integer> audit(Path path) throws IOException {
+    LOG.info("Auditing {}", path);
+    try (DurationInfo ignored =
+             new DurationInfo(LOG, "audit %s", path)) {
+      return executeAudit(path, requireAuthoritative, true);
+    } catch (NonAuthoritativeDirException p) {
+      throw new ExitUtil.ExitException(
+          ERROR_ENTRY_NOT_AUTH_IN_DDB,
+          p.toString(),
+          p);
     }
   }
 
   /**
    * Audit the tree.
+   * This is the internal code which throws a NonAuthoritativePathException
+   * on failures; tests may use it.
    * @param path path to scan
-   * @return count of dirs scanned. 0 == path was a file.
+   * @param requireAuth require all directories to be authoritative
+   * @param recursive recurse?
+   * @return tuple(dirs scanned, nonauth dirs found)
    * @throws IOException IO failure
-   * @throws ExitUtil.ExitException if a non-auth dir was found.
+   * @throws NonAuthoritativeDirException if a non-auth dir was found.
    */
-  private int executeAudit(Path path) throws IOException {
+  @VisibleForTesting
+  Pair<Integer, Integer> executeAudit(final Path path,
+      final boolean requireAuth,
+      final boolean recursive) throws IOException {
+    int dirs = 0;
+    int nonauth = 0;
     final Queue<DDBPathMetadata> queue = new ArrayDeque<>();
     final boolean isRoot = path.isRoot();
     final DDBPathMetadata baseData = metastore.get(path);
@@ -106,41 +148,58 @@ public class S3GuardAuthoritativeAudit {
           "No S3Guard entry for path " + path);
     }
 
-    if (isRoot || isAuthDir(baseData)) {
+    if (isRoot || isDirectory(baseData)) {
       // we have the root entry or an authoritative a directory
       queue.add(baseData);
     } else {
       LOG.info("Path represents file");
-      return 0;
+      return Pair.of(0, 0);
     }
 
-    int count = 0;
     while (!queue.isEmpty()) {
-      count++;
+      dirs++;
       final DDBPathMetadata dir = queue.poll();
-      LOG.info("Directory {}", dir.getFileStatus().getPath());
+      LOG.info("Directory {} {} authoritative",
+          dir.getFileStatus().getPath(),
+          dir.isAuthoritativeDir() ? "is" : "is not");
       LOG.debug("Directory {}", dir);
+      verifyAuthDir(dir, requireAuth);
 
       // list its children
-      final DirListingMetadata entry = metastore.listChildren(
-          dir.getFileStatus().getPath());
+      if (recursive) {
+        final DirListingMetadata entry = metastore.listChildren(
+            dir.getFileStatus().getPath());
 
-      if (entry != null) {
-        final Collection<PathMetadata> listing = entry.getListing();
-        int files = 0, dirs = 0;
-        for (PathMetadata e : listing) {
-          if (isAuthDir((DDBPathMetadata) e)) {
-            queue.add((DDBPathMetadata) e);
-            dirs++;
-          } else {
-            files++;
+        if (entry != null) {
+          final Collection<PathMetadata> listing = entry.getListing();
+          int files = 0, subdirs = 0;
+          for (PathMetadata e : listing) {
+            if (isDirectory(e)) {
+              final DDBPathMetadata e1 = (DDBPathMetadata) e;
+              verifyAuthDir(e1, requireAuth);
+              queue.add(e1);
+              subdirs++;
+            } else {
+              files++;
+            }
           }
+          LOG.info("  files {}; directories {}", files, subdirs);
+        } else {
+          LOG.info("Directory {} has been deleted", dir);
         }
-        LOG.info("  files {}; directories {}", files, dirs);
-      } else {
-        LOG.info("Directory {} has been deleted", dir);
       }
     }
-    return count;
+    return Pair.of(dirs, nonauth);
   }
+
+  /**
+   * A directory was found which was non-authoritative.
+   */
+  public static class NonAuthoritativeDirException extends PathIOException {
+
+    public NonAuthoritativeDirException(final Path path) {
+      super(path.toString(), E_NONAUTH);
+    }
+  }
+
 }

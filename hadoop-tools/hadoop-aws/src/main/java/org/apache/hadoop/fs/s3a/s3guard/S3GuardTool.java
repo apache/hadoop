@@ -1700,15 +1700,18 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public static final String NAME = "authoritative";
 
     public static final String CHECK_FLAG = "check-config";
+    public static final String REQUIRE_AUTH = "require-auth";
 
     public static final String PURPOSE = "Audits a DynamoDB S3Guard "
         + "repository for all the entries being 'authoritative'";
-    private static final String USAGE = NAME + " " + CHECK_FLAG
+    private static final String USAGE = NAME
+        + " " + CHECK_FLAG
+        + " " + REQUIRE_AUTH
         + " [s3a://BUCKET/PATH]\n" +
         "\t" + PURPOSE + "\n\n";
 
     Authoritative(Configuration conf) {
-      super(conf, CHECK_FLAG);
+      super(conf, CHECK_FLAG, REQUIRE_AUTH);
     }
 
     @Override
@@ -1763,10 +1766,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
       }
 
       final S3GuardAuthoritativeAudit audit
-          = new S3GuardAuthoritativeAudit(fs.createStoreContext(),
-          (DynamoDBMetadataStore) ms);
-      final int count = audit.audit(auditPath);
-      LOG.info("Audit scanned {} directories", count);
+          = new S3GuardAuthoritativeAudit(
+          (DynamoDBMetadataStore) ms, commandFormat.getOpt(REQUIRE_AUTH));
+      audit.audit(fs.qualify(auditPath));
 
       out.flush();
       return EXIT_SUCCESS;

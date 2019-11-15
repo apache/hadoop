@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 /**
@@ -328,12 +329,13 @@ public interface MetadataStore extends Closeable {
    * additional keyPrefix parameter to filter the pruned keys with a prefix.
    *
    * @param pruneMode Prune Mode
-   * @param cutoff Oldest time to allow (UTC)
+   * @param cutoff Oldest time in milliseconds to allow (UTC)
    * @param keyPrefix The prefix for the keys that should be removed
    * @throws IOException if there is an error
    * @throws UnsupportedOperationException if not implemented
+   * @return the number of pruned entries
    */
-  void prune(PruneMode pruneMode, long cutoff, String keyPrefix)
+  long prune(PruneMode pruneMode, long cutoff, String keyPrefix)
       throws IOException, UnsupportedOperationException;
 
   /**
@@ -401,4 +403,11 @@ public interface MetadataStore extends Closeable {
    */
   void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider);
 
+  /**
+   * Get any S3GuardInstrumentation for this store...may be null.
+   * @return any store instrumentation.
+   */
+  default S3AInstrumentation.S3GuardInstrumentation getInstrumentation() {
+    return null;
+  }
 }

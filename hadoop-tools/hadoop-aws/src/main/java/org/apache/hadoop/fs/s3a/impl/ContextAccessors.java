@@ -73,11 +73,4 @@ public interface ContextAccessors {
    */
   @Retries.RetryTranslated
   String getBucketLocation() throws IOException;
-
-  /**
-   * Qualify a path.
-   * @param path path in
-   * @return qualified path
-   */
-  Path qualify(Path path);
 }

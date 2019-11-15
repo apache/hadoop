@@ -188,6 +188,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       S3GUARD_METADATASTORE_RECORD_WRITES,
       S3GUARD_METADATASTORE_RETRY,
       S3GUARD_METADATASTORE_THROTTLED,
+      S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED,
       STORE_IO_THROTTLED,
       DELEGATION_TOKENS_ISSUED,
       FILES_DELETE_REJECTED
@@ -1174,6 +1175,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      */
     public void recordsWritten(int count) {
       incrementCounter(S3GUARD_METADATASTORE_RECORD_WRITES, count);
+    }
+
+    public void directoryMarkedAuthoritative() {
+      incrementCounter(S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED, 1);
     }
 
   }

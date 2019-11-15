@@ -328,6 +328,11 @@ public final class S3Guard {
 
     if (changed && isAuthoritative) {
       LOG.debug("Marking the directory {} as authoritative", path);
+      final S3AInstrumentation.S3GuardInstrumentation instrumentation
+          = ms.getInstrumentation();
+      if (instrumentation != null) {
+        instrumentation.directoryMarkedAuthoritative();
+      }
       dirMeta.setAuthoritative(true); // This is the full directory contents
       S3Guard.putWithTtl(ms, dirMeta, timeProvider, operationState);
     }
