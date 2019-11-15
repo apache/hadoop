@@ -184,8 +184,6 @@ public class KMS {
         keyVersion = removeKeyMaterial(keyVersion);
       }
       Map json = KMSUtil.toJSON(keyVersion);
-      String requestURL = KMSMDCFilter.getURL();
-      int idx = requestURL.lastIndexOf(KMSRESTConstants.KEYS_RESOURCE);
       LOG.trace("Exiting createKey Method.");
       return Response.created(getKeyURI(KMSRESTConstants.SERVICE_VERSION, name))
           .type(MediaType.APPLICATION_JSON).entity(json).build();
