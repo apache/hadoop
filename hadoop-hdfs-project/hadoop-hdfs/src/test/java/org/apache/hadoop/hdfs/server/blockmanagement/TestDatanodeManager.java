@@ -518,6 +518,88 @@ public class TestDatanodeManager {
     assertEquals(locs[4].getIpAddr(), sortedLocs2[0].getIpAddr());
   }
 
+  @Test
+  public void testGetBlockLocationConsiderLoad()
+      throws IOException, URISyntaxException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERLOAD_KEY, true);
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    URL shellScript = getClass().getResource(
+        "/" + Shell.appendScriptExtension("topology-script"));
+    Path resourcePath = Paths.get(shellScript.toURI());
+    FileUtil.setExecutable(resourcePath.toFile(), true);
+    conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY,
+        resourcePath.toString());
+    DatanodeManager dm = mockDatanodeManager(fsn, conf);
+
+    int totalDNs = 5;
+    // Register 5 datanodes and 2 nodes per rack with different load.
+    DatanodeInfo[] locs = new DatanodeInfo[totalDNs];
+    String[] storageIDs = new String[totalDNs];
+    for (int i = 0; i < totalDNs; i++) {
+      // Register new datanode.
+      String uuid = "UUID-" + i;
+      String ip = "IP-" + i / 2 + "-" + i;
+      DatanodeRegistration dr = Mockito.mock(DatanodeRegistration.class);
+      Mockito.when(dr.getDatanodeUuid()).thenReturn(uuid);
+      Mockito.when(dr.getIpAddr()).thenReturn(ip);
+      dm.registerDatanode(dr);
+
+      // Get location and storage information.
+      locs[i] = dm.getDatanode(uuid);
+      storageIDs[i] = "storageID-" + i;
+
+      // Set load for datanodes.
+      locs[i].setXceiverCount(i);
+    }
+
+    // Set node 0 decommissioned.
+    locs[0].setDecommissioned();
+
+    // Create LocatedBlock with above locations.
+    ExtendedBlock b = new ExtendedBlock("somePoolID", 1234);
+    LocatedBlock block = new LocatedBlock(b, locs);
+    List<LocatedBlock> blocks = new ArrayList<>();
+    blocks.add(block);
+
+    // Test client located at locs[3] in cluster.
+    final String targetIpInCluster = locs[3].getIpAddr();
+    dm.sortLocatedBlocks(targetIpInCluster, blocks);
+    DatanodeInfo[] sortedLocs = block.getLocations();
+    assertEquals(totalDNs, sortedLocs.length);
+    // Ensure the local node is first.
+    assertEquals(targetIpInCluster, sortedLocs[0].getIpAddr());
+    // Ensure the lightweight node is more close when distance is same.
+    assertEquals(locs[3].getIpAddr(), sortedLocs[0].getIpAddr());
+    assertEquals(locs[2].getIpAddr(), sortedLocs[1].getIpAddr());
+    assertEquals(locs[1].getIpAddr(), sortedLocs[2].getIpAddr());
+    assertEquals(locs[4].getIpAddr(), sortedLocs[3].getIpAddr());
+    // Ensure the two decommissioned DNs were moved to the end.
+    assertThat(sortedLocs[4].getAdminState(),
+        is(DatanodeInfo.AdminStates.DECOMMISSIONED));
+    assertEquals(locs[0].getIpAddr(), sortedLocs[4].getIpAddr());
+
+    // Test client not in cluster but same rack with locs[3].
+    final String targetIpNotInCluster = locs[3].getIpAddr() + "-client";
+    dm.sortLocatedBlocks(targetIpNotInCluster, blocks);
+    DatanodeInfo[] sortedLocs2 = block.getLocations();
+    assertEquals(totalDNs, sortedLocs2.length);
+    // Ensure the local rack is first and lightweight node is first
+    // when distance is same.
+    assertEquals(locs[2].getIpAddr(), sortedLocs2[0].getIpAddr());
+    assertEquals(locs[3].getIpAddr(), sortedLocs2[1].getIpAddr());
+    assertEquals(locs[1].getIpAddr(), sortedLocs2[2].getIpAddr());
+    assertEquals(locs[4].getIpAddr(), sortedLocs2[3].getIpAddr());
+    // Ensure the two decommissioned DNs were moved to the end.
+    assertThat(sortedLocs[4].getAdminState(),
+        is(DatanodeInfo.AdminStates.DECOMMISSIONED));
+    assertEquals(locs[0].getIpAddr(), sortedLocs2[4].getIpAddr());
+  }
+
   /**
    * Test whether removing a host from the includes list without adding it to
    * the excludes list will exclude it from data node reports.
