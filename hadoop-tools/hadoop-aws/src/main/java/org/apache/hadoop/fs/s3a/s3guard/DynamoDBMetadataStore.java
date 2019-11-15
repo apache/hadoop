@@ -77,6 +77,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.impl.FunctionsRaisingIOE;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
 import org.apache.hadoop.fs.s3a.Constants;
@@ -84,7 +85,6 @@ import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
@@ -98,6 +98,7 @@ import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ReflectionUtils;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowAllDynamoDBOperations;
@@ -299,7 +300,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
    */
   private RetryPolicy batchWriteRetryPolicy;
 
-  private S3AInstrumentation.S3GuardInstrumentation instrumentation;
+  /**
+   * The instrumentation is never null -if/when bound to an owner file system
+   * That filesystem statistics will be updated as appropriate.
+   */
+  private MetastoreInstrumentation instrumentation
+      = new MetastoreInstrumentationImpl();
 
   /** Owner FS: only valid if configured with an owner FS. */
   private S3AFileSystem owner;
@@ -1350,6 +1356,19 @@ public class DynamoDBMetadataStore implements MetadataStore,
     return true;
   }
 
+  /**
+   * Get the value of an optional boolean attribute.
+   * @param item Item
+   * @param attrName Attribute name
+   * @param defVal Default value
+   * @return The value or the default
+   */
+  private static boolean hasBoolAttribute(Item item,
+      String attrName,
+      boolean defVal) {
+    return item.hasAttribute(attrName) ? item.getBoolean(attrName) : defVal;
+  }
+
   /** Create a directory FileStatus using 0 for the lastUpdated time. */
   static S3AFileStatus makeDirStatus(Path f, String owner) {
     return new S3AFileStatus(Tristate.UNKNOWN, f, owner);
@@ -1403,9 +1422,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   @Override
   public synchronized void close() {
-    if (instrumentation != null) {
-      instrumentation.storeClosed();
-    }
+    instrumentation.storeClosed();
     try {
       if (dynamoDB != null) {
         LOG.debug("Shutting down {}", this);
@@ -1445,7 +1462,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       filterExpression =
           "last_updated < :last_updated and begins_with(parent, :parent) "
               + "and is_deleted = :is_deleted";
-      projectionExpression = "parent,child";
+      projectionExpression = "parent,child,is_deleted";
       map = new ValueMap()
           .withLong(":last_updated", cutoff)
           .withString(":parent", keyPrefix)
@@ -1508,6 +1525,22 @@ public class DynamoDBMetadataStore implements MetadataStore,
           TimeUnit.MILLISECONDS);
       Set<Path> parentPathSet = new HashSet<>();
       Set<Path> clearedParentPathSet = new HashSet<>();
+      // declare the operation to delete a batch as a function so
+      // as to keep the code consistent across multiple uses.
+      FunctionsRaisingIOE.CallableRaisingIOE<Void> deleteBatchOperation =
+          () -> {
+            // lowest path entries get deleted first.
+            deletionBatch.sort(PathOrderComparators.TOPMOST_PATH_LAST);
+            processBatchWriteRequest(state, pathToKey(deletionBatch), null);
+
+            // set authoritative false for each pruned dir listing
+            // if at least one entry was not a tombstone
+            removeAuthoritativeDirFlag(parentPathSet, state);
+            // already cleared parent paths.
+            clearedParentPathSet.addAll(parentPathSet);
+            parentPathSet.clear();
+            return null;
+          };
       for (Item item : items) {
         DDBPathMetadata md = PathMetadataDynamoDBTranslation
             .itemToPathMetadata(item, username);
@@ -1530,16 +1563,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
         itemCount++;
         if (deletionBatch.size() == S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT) {
-          // lowest path entries get deleted first.
-          deletionBatch.sort(PathOrderComparators.TOPMOST_PATH_LAST);
-          processBatchWriteRequest(state, pathToKey(deletionBatch), null);
-
-          // set authoritative false for each pruned dir listing
-          removeAuthoritativeDirFlag(parentPathSet, state);
-          // already cleared parent paths.
-          clearedParentPathSet.addAll(parentPathSet);
-          parentPathSet.clear();
-
+          deleteBatchOperation.apply();
           deletionBatch.clear();
           if (delay > 0) {
             Thread.sleep(delay);
@@ -1548,11 +1572,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       }
       // final batch of deletes
       if (!deletionBatch.isEmpty()) {
-        processBatchWriteRequest(state, pathToKey(deletionBatch), null);
-
-        // set authoritative false for each pruned dir listing
-        removeAuthoritativeDirFlag(parentPathSet, state);
-        parentPathSet.clear();
+        deleteBatchOperation.apply();
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -1880,9 +1900,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       boolean idempotent) {
     if (S3AUtils.isThrottleException(ex)) {
       // throttled
-      if (instrumentation != null) {
-        instrumentation.throttled();
-      }
+      instrumentation.throttled();
       int eventCount = throttleEventCount.addAndGet(1);
       if (attempts == 1 && eventCount < THROTTLE_EVENT_LOG_LIMIT) {
         LOG.warn("DynamoDB IO limits reached in {};"
@@ -1899,10 +1917,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
       LOG.debug("Retrying {}", text, ex);
     }
 
-    if (instrumentation != null) {
-      // note a retry
-      instrumentation.retrying();
-    }
+    // note a retry
+    instrumentation.retrying();
     if (owner != null) {
       owner.metastoreOperationRetried(ex, attempts, idempotent);
     }
@@ -1941,9 +1957,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @param count count of records.
    */
   private void recordsWritten(final int count) {
-    if (instrumentation != null) {
-      instrumentation.recordsWritten(count);
-    }
+    instrumentation.recordsWritten(count);
   }
 
   /**
@@ -1951,18 +1965,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @param count count of records.
    */
   private void recordsRead(final int count) {
-    if (instrumentation != null) {
-      instrumentation.recordsRead(count);
-    }
+    instrumentation.recordsRead(count);
   }
   /**
    * Record the number of records deleted.
    * @param count count of records.
    */
   private void recordsDeleted(final int count) {
-    if (instrumentation != null) {
-      instrumentation.recordsDeleted(count);
-    }
+    instrumentation.recordsDeleted(count);
   }
 
   /**
@@ -1982,6 +1992,38 @@ public class DynamoDBMetadataStore implements MetadataStore,
       final Path dest) {
     return new ProgressiveRenameTracker(storeContext, this, source, dest,
         new AncestorState(this, BulkOperationState.OperationType.Rename, dest));
+  }
+
+  @Override
+  public void completeMoveToDestination(final Path dest,
+      final BulkOperationState operationState) throws IOException {
+    AncestorState state = (AncestorState) requireNonNull(operationState);
+    // only mark paths under the dest as auth
+    final String simpleDestKey = pathToParentKey(dest);
+    String destPathKey = simpleDestKey + "/";
+    final String opId = AncestorState.stateAsString(state);
+    LOG.debug("{}: completing move under {}", opId, destPathKey);
+
+    // the list of dirs to build up.
+    List<DDBPathMetadata> dirsToUpdate = new ArrayList<>();
+    synchronized (state) {
+      for (Map.Entry<Path, DDBPathMetadata> entry :
+          state.getAncestry().entrySet()) {
+        final Path path = entry.getKey();
+        final DDBPathMetadata md = entry.getValue();
+        final String key = pathToParentKey(path);
+        if (md.getFileStatus().isDirectory()
+            && (key.equals(simpleDestKey) || key.startsWith(destPathKey))) {
+          // the updated entry is under the destination.
+          md.setAuthoritativeDir(true);
+          LOG.debug("{}: added {}", opId, key);
+          dirsToUpdate.add(md);
+        }
+      }
+      processBatchWriteRequest(state,
+          null, pathMetadataToItem(dirsToUpdate));
+    }
+
   }
 
   @Override
@@ -2017,10 +2059,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
       String stateStr = AncestorState.stateAsString(state);
       for (Item item : items) {
         boolean tombstone = !itemExists(item);
-        OPERATIONS_LOG.debug("{} {} {}",
+        boolean auth = hasBoolAttribute(item, IS_AUTHORITATIVE, false);
+        OPERATIONS_LOG.debug("{} {} {}{}",
             stateStr,
             tombstone ? "TOMBSTONE" : "PUT",
-            itemPrimaryKeyToString(item));
+            itemPrimaryKeyToString(item),
+            auth ? " [auth]" : "");
       }
     }
   }
@@ -2086,7 +2130,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   @Override
-  public S3AInstrumentation.S3GuardInstrumentation getInstrumentation() {
+  public MetastoreInstrumentation getInstrumentation() {
     return instrumentation;
   }
 
@@ -2095,6 +2139,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * across multiple move/write operations.
    * This is to avoid duplicate creation of ancestors during bulk commits
    * and rename operations managed by a rename tracker.
+   *
+   * There is no thread safety: callers must synchronize as appropriate.
    */
   @VisibleForTesting
   static final class AncestorState extends BulkOperationState {
@@ -2139,6 +2185,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     int size() {
       return ancestry.size();
+    }
+
+    /**
+     * Get the ancestry. Not thread safe.
+     * @return the map of ancestors.
+     */
+    Map<Path, DDBPathMetadata> getAncestry() {
+      return ancestry;
     }
 
     public Path getDest() {

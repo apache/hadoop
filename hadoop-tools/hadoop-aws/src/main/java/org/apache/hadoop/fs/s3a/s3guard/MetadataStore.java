@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 /**
@@ -355,6 +354,21 @@ public interface MetadataStore extends Closeable {
   void updateParameters(Map<String, String> parameters) throws IOException;
 
   /**
+   * Complete a move to a destination path.
+   * The metastore can now update that path with any authoritative
+   * flags it chooses.
+   * The store may assumeThat the destination was only updated during this
+   * rename -and that therefore the operation state is complete.
+   * @param dest destination path.
+   * @param operationState any active state.
+   * @throws IOException failure.
+   */
+  default void completeMoveToDestination(Path dest,
+      BulkOperationState operationState)
+      throws IOException {
+  }
+
+  /**
    * Modes of operation for prune.
    * For details see {@link MetadataStore#prune(PruneMode, long)}
    */
@@ -404,10 +418,10 @@ public interface MetadataStore extends Closeable {
   void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider);
 
   /**
-   * Get any S3GuardInstrumentation for this store...may be null.
+   * Get any S3GuardInstrumentation for this store...must not be null.
    * @return any store instrumentation.
    */
-  default S3AInstrumentation.S3GuardInstrumentation getInstrumentation() {
-    return null;
+  default MetastoreInstrumentation getInstrumentation() {
+    return new MetastoreInstrumentationImpl();
   }
 }

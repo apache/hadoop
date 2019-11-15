@@ -174,8 +174,8 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     describe("create an empty dir and assert it is tagged as authoritative");
     final Path dir = new Path(methodAuthPath, "dir");
     authFS.mkdirs(dir);
-    expectAuth(dir);
-    expectAuth(methodAuthPath);
+    expectAuthRecursive(dir);
+    expectAuthRecursive(methodAuthPath);
   }
 
   @Test
@@ -186,7 +186,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     expectNonauth(dir);
     authFS.listStatus(dir);
     // dir is auth; subdir is not
-    expectAuth(dir);
+    expectAuthRecursive(dir);
     // Next list will not go to s3
     assertListDoesNotUpdateAuth(dir);
   }
@@ -198,7 +198,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     final Path subdir = new Path(dir, "subdir");
 
     mkAuthDir(dir);
-    expectAuth(dir);
+    expectAuthRecursive(dir);
     authFS.mkdirs(subdir);
     // dir is auth; subdir is not
     expectAuthNonRecursive(dir);
@@ -214,7 +214,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     final Path dir = methodAuthPath;
     final Path file = new Path(dir, "testAddFileMarksNonAuth");
 
-    ContractTestUtils.touch(authFS, file);
+    touchAuth(file);
     expectNonauth(dir);
     assertListUpdatesAuth(dir);
   }
@@ -225,7 +225,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     final Path dir = methodAuthPath;
     final Path file = new Path(dir, "testDeleteFileMarksNonAuth");
 
-    ContractTestUtils.touch(authFS, file);
+    touchAuth(file);
     assertListUpdatesAuth(dir);
     authFS.delete(file, false);
     expectNonauth(dir);
@@ -237,7 +237,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     final Path dir = methodAuthPath;
     final Path file = new Path(dir, "file");
 
-    ContractTestUtils.touch(authFS, file);
+    touchAuth(file);
     assertListUpdatesAuth(dir);
     String keyPrefix
         = PathMetadataDynamoDBTranslation.pathToParentKey(dir);
@@ -257,7 +257,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     final Path dir = methodAuthPath;
     final Path file = new Path(dir, "file");
 
-    ContractTestUtils.touch(authFS, file);
+    touchAuth(file);
     assertListUpdatesAuth(dir);
     authFS.delete(file, false);
     expectNonauth(dir);
@@ -271,16 +271,16 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
             keyPrefix))
         .describedAs("Prune of keys under %s", keyPrefix)
         .isEqualTo(1);
-    expectAuth(dir);
+    expectAuthRecursive(dir);
   }
 
   @Test
   public void testRenameFile() throws Throwable {
     describe("renaming a file");
-    final Path dir = this.methodAuthPath;
+    final Path dir = methodAuthPath;
     final Path source = new Path(dir, "source");
     final Path dest = new Path(dir, "dest");
-    ContractTestUtils.touch(authFS, source);
+    touchAuth(source);
     assertListUpdatesAuth(dir);
     authFS.rename(source, dest);
     expectNonauth(dir);
@@ -289,14 +289,19 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
   @Test
   public void testRenameDirMarksDestAsAuth() throws Throwable {
     describe("renaming a file");
-    final Path dir = this.methodAuthPath;
+    final Path dir = methodAuthPath;
     final Path source = new Path(dir, "source");
     final Path dest = new Path(dir, "dest");
     mkAuthDir(source);
-    assertListUpdatesAuth(dir);
+    Path file = new Path(source, "subdir/file");
+    touchAuth(file);
     authFS.rename(source, dest);
     expectNonauth(dir);
-    expectAuth(dest);
+    expectAuthRecursive(dest);
+  }
+
+  protected void touchAuth(final Path file) throws IOException {
+    ContractTestUtils.touch(authFS, file);
   }
 
 
@@ -326,7 +331,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
 
   private void assertListUpdatesAuth(Path path) throws Exception {
     expectAuthoritativeUpdate(1, 1, () -> authFS.listStatus(path));
-    expectAuth(path);
+    expectAuthRecursive(path);
   }
 
   private void assertListDoesNotUpdateAuth(Path path) throws Exception {
@@ -343,7 +348,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     authFS.listStatus(dir);
   }
 
-  private void expectAuth(Path dir) throws Exception {
+  private void expectAuthRecursive(Path dir) throws Exception {
     auditor.executeAudit(dir, true, true);
   }
 

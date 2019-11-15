@@ -2697,7 +2697,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 + " s3modtime={}; msModTime={} updating metastore",
                 path, s3ModTime, msModTime);
             return S3Guard.putAndReturn(metadataStore, s3AFileStatus,
-                instrumentation, ttlTimeProvider);
+                ttlTimeProvider);
           }
         }
       }
@@ -2732,13 +2732,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       // entry was found, save in S3Guard
       return S3Guard.putAndReturn(metadataStore, s3FileStatus,
-          instrumentation, ttlTimeProvider);
+          ttlTimeProvider);
     } else {
       // there was no entry in S3Guard
       // retrieve the data and update the metadata store in the process.
       return S3Guard.putAndReturn(metadataStore,
           s3GetFileStatus(path, key, probes, tombstones),
-          instrumentation,
           ttlTimeProvider);
     }
   }
@@ -3510,7 +3509,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             S3AUtils.objectRepresentsDirectory(key, length), length,
             getDefaultBlockSize(p), username, eTag, versionId);
         S3Guard.putAndReturn(metadataStore, status,
-            instrumentation,
             ttlTimeProvider,
             activeState);
       }

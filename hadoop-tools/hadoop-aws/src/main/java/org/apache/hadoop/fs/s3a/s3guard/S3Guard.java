@@ -54,8 +54,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_AUTHORITATIVE_PATH;
-import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_PUT_PATH_LATENCY;
-import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_PUT_PATH_REQUEST;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createUploadFileStatus;
 
 /**
@@ -150,7 +148,6 @@ public final class S3Guard {
    * returns the same S3AFileStatus. Instrumentation monitors the put operation.
    * @param ms MetadataStore to {@code put()} into.
    * @param status status to store
-   * @param instrumentation instrumentation of the s3a file system
    * @param timeProvider Time provider to use when writing entries
    * @return The same status as passed in
    * @throws IOException if metadata store update failed
@@ -158,9 +155,8 @@ public final class S3Guard {
   @RetryTranslated
   public static S3AFileStatus putAndReturn(MetadataStore ms,
       S3AFileStatus status,
-      S3AInstrumentation instrumentation,
       ITtlTimeProvider timeProvider) throws IOException {
-    return putAndReturn(ms, status, instrumentation, timeProvider, null);
+    return putAndReturn(ms, status, timeProvider, null);
   }
 
   /**
@@ -168,7 +164,6 @@ public final class S3Guard {
    * returns the same S3AFileStatus. Instrumentation monitors the put operation.
    * @param ms MetadataStore to {@code put()} into.
    * @param status status to store
-   * @param instrumentation instrumentation of the s3a file system
    * @param timeProvider Time provider to use when writing entries
    * @param operationState possibly-null metastore state tracker.
    * @return The same status as passed in
@@ -178,19 +173,13 @@ public final class S3Guard {
   public static S3AFileStatus putAndReturn(
       final MetadataStore ms,
       final S3AFileStatus status,
-      final S3AInstrumentation instrumentation,
       final ITtlTimeProvider timeProvider,
       @Nullable final BulkOperationState operationState) throws IOException {
     long startTimeNano = System.nanoTime();
     try {
       putWithTtl(ms, new PathMetadata(status), timeProvider, operationState);
     } finally {
-      instrumentation.addValueToQuantiles(
-          S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
-          (System.nanoTime() - startTimeNano));
-      instrumentation.incrementCounter(
-          S3GUARD_METADATASTORE_PUT_PATH_REQUEST,
-          1);
+      ms.getInstrumentation().entryAdded((System.nanoTime() - startTimeNano));
     }
     return status;
   }
@@ -328,7 +317,7 @@ public final class S3Guard {
 
     if (changed && isAuthoritative) {
       LOG.debug("Marking the directory {} as authoritative", path);
-      final S3AInstrumentation.S3GuardInstrumentation instrumentation
+      final MetastoreInstrumentation instrumentation
           = ms.getInstrumentation();
       if (instrumentation != null) {
         instrumentation.directoryMarkedAuthoritative();
