@@ -152,6 +152,10 @@ public interface HdfsClientConfigKeys {
       "dfs.client.block.reader.remote.buffer.size";
   int DFS_CLIENT_BLOCK_READER_REMOTE_BUFFER_SIZE_DEFAULT = 8192;
 
+  String DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY =
+          "dfs.client.deadnode.detection.enabled";
+  boolean DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_DEFAULT = false;
+
   String  DFS_DATANODE_KERBEROS_PRINCIPAL_KEY =
       "dfs.datanode.kerberos.principal";
   String  DFS_DATANODE_READAHEAD_BYTES_KEY = "dfs.datanode.readahead.bytes";

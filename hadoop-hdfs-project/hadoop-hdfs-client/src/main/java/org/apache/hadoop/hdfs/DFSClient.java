@@ -44,6 +44,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -631,6 +633,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       // lease renewal stops when all files are closed
       closeAllFilesBeingWritten(false);
       clientRunning = false;
+      // close dead node detector thread
+      clientContext.stopDeadNodeDetectorThread();
       // close connections to the namenode
       closeConnectionToNamenode();
     }
@@ -3225,5 +3229,99 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public HAServiceProtocol.HAServiceState getHAServiceState()
       throws IOException {
     return namenode.getHAServiceState();
+  }
+
+  /**
+   * If deadNodeDetectionEnabled is true, return the dead nodes that detected by
+   * all the DFSInputStreams in the same client. Otherwise return the dead nodes
+   * that detected by given DFSInputStream.
+   */
+  public ConcurrentHashMap<DatanodeInfo, DatanodeInfo> getDeadNodes(
+      DFSInputStream dfsInputStream) {
+    if (clientContext.isDeadNodeDetectionEnabled()) {
+      ConcurrentHashMap<DatanodeInfo, DatanodeInfo> deadNodes =
+          new ConcurrentHashMap<DatanodeInfo, DatanodeInfo>();
+      if (dfsInputStream != null) {
+        deadNodes.putAll(dfsInputStream.getLocalDeadNodes());
+      }
+
+      Set<DatanodeInfo> detectDeadNodes =
+          clientContext.getDeadNodeDetector().clearAndGetDetectedDeadNodes();
+      for (DatanodeInfo detectDeadNode : detectDeadNodes) {
+        deadNodes.put(detectDeadNode, detectDeadNode);
+      }
+      return deadNodes;
+    } else {
+      return dfsInputStream.getLocalDeadNodes();
+    }
+  }
+
+  /**
+   * If deadNodeDetectionEnabled is true, judgement based on whether this
+   * datanode is included or not in DeadNodeDetector. Otherwise judgment based
+   * given DFSInputStream.
+   */
+  public boolean isDeadNode(DFSInputStream dfsInputStream,
+      DatanodeInfo datanodeInfo) {
+    if (isDeadNodeDetectionEnabled()) {
+      boolean isDeadNode =
+          clientContext.getDeadNodeDetector().isDeadNode(datanodeInfo);
+      if (dfsInputStream != null) {
+        isDeadNode = isDeadNode
+            || dfsInputStream.getLocalDeadNodes().contains(datanodeInfo);
+      }
+      return isDeadNode;
+    } else {
+      return dfsInputStream.getLocalDeadNodes().contains(datanodeInfo);
+    }
+  }
+
+  /**
+   * Add given datanode in DeadNodeDetector.
+   */
+  public void addNodeToDeadNodeDetector(DFSInputStream dfsInputStream,
+      DatanodeInfo datanodeInfo) {
+    if (!isDeadNodeDetectionEnabled()) {
+      LOG.debug("DeadNode detection is not enabled, skip to add node {}.",
+          datanodeInfo);
+      return;
+    }
+    clientContext.getDeadNodeDetector().addNodeToDetect(dfsInputStream,
+        datanodeInfo);
+  }
+
+  /**
+   * Remove given datanode from DeadNodeDetector.
+   */
+  public void removeNodeFromDeadNodeDetector(DFSInputStream dfsInputStream,
+      DatanodeInfo datanodeInfo) {
+    if (!isDeadNodeDetectionEnabled()) {
+      LOG.debug("DeadNode detection is not enabled, skip to remove node {}.",
+          datanodeInfo);
+      return;
+    }
+    clientContext.getDeadNodeDetector()
+        .removeNodeFromDeadNodeDetector(dfsInputStream, datanodeInfo);
+  }
+
+  /**
+   * Remove datanodes that given block placed on from DeadNodeDetector.
+   */
+  public void removeNodeFromDeadNodeDetector(DFSInputStream dfsInputStream,
+      LocatedBlocks locatedBlocks) {
+    if (!isDeadNodeDetectionEnabled() || locatedBlocks == null) {
+      LOG.debug("DeadNode detection is not enabled or given block {} " +
+          "is null, skip to remove node.", locatedBlocks);
+      return;
+    }
+    for (LocatedBlock locatedBlock : locatedBlocks.getLocatedBlocks()) {
+      for (DatanodeInfo datanodeInfo : locatedBlock.getLocations()) {
+        removeNodeFromDeadNodeDetector(dfsInputStream, datanodeInfo);
+      }
+    }
+  }
+
+  private boolean isDeadNodeDetectionEnabled() {
+    return clientContext.isDeadNodeDetectionEnabled();
   }
 }
