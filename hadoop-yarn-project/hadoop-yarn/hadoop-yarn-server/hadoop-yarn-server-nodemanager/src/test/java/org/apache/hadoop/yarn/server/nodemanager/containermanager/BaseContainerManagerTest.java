@@ -223,6 +223,7 @@ public abstract class BaseContainerManagerTest {
     nodeHealthChecker.init(conf);
     containerManager = createContainerManager(delSrvc);
     ((NMContext)context).setContainerManager(containerManager);
+    ((NMContext)context).setContainerExecutor(exec);
     nodeStatusUpdater.init(conf);
     containerManager.init(conf);
     nodeStatusUpdater.start();

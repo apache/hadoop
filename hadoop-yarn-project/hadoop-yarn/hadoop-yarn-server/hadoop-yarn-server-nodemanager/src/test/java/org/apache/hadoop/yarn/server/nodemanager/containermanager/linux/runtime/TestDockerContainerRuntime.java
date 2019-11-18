@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -30,6 +31,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
@@ -38,6 +40,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.TestDockerClientConfigHandler;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
@@ -49,9 +52,13 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.DockerCommandPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalizedResource;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -136,6 +143,7 @@ public class TestDockerContainerRuntime {
   private Container container;
   private ContainerId cId;
   private ApplicationAttemptId appAttemptId;
+  private ApplicationId mockApplicationId;
   private ContainerLaunchContext context;
   private Context nmContext;
   private HashMap<String, String> env;
@@ -165,7 +173,9 @@ public class TestDockerContainerRuntime {
   private final String whitelistedUser = "yoda";
   private String[] testCapabilities;
   private final String signalPid = "1234";
-  private String runtimeTypeUpper = "DOCKER";
+  private final String tmpPath =
+      new StringBuffer(System.getProperty("test.build.data"))
+      .append('/').append("hadoop.tmp.dir").toString();
 
   private static final String RUNTIME_TYPE = "DOCKER";
   private final static String ENV_OCI_CONTAINER_PID_NAMESPACE =
@@ -188,8 +198,6 @@ public class TestDockerContainerRuntime {
 
   @Before
   public void setup() {
-    String tmpPath = new StringBuffer(System.getProperty("test.build.data"))
-        .append('/').append("hadoop.tmp.dir").toString();
 
     conf = new Configuration();
     conf.set("hadoop.tmp.dir", tmpPath);
@@ -201,6 +209,7 @@ public class TestDockerContainerRuntime {
     container = mock(Container.class);
     cId = mock(ContainerId.class);
     appAttemptId = mock(ApplicationAttemptId.class);
+    mockApplicationId = mock(ApplicationId.class);
     context = mock(ContainerLaunchContext.class);
     env = new HashMap<String, String>();
     env.put("FROM_CLIENT", "1");
@@ -210,6 +219,8 @@ public class TestDockerContainerRuntime {
     env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_IMAGE, image);
     when(container.getContainerId()).thenReturn(cId);
     when(cId.toString()).thenReturn(containerId);
+    when(mockApplicationId.toString()).thenReturn("applicationId");
+    when(appAttemptId.getApplicationId()).thenReturn(mockApplicationId);
     when(cId.getApplicationAttemptId()).thenReturn(appAttemptId);
     when(container.getLaunchContext()).thenReturn(context);
     when(context.getEnvironment()).thenReturn(env);
@@ -280,6 +291,9 @@ public class TestDockerContainerRuntime {
     localizedResources.put(new Path("/test_local_dir/test_resource_file"),
         Collections.singletonList("test_dir/test_resource_file"));
 
+    File tmpDir = new File(tmpPath);
+    tmpDir.mkdirs();
+
     testCapabilities = new String[] {"NET_BIND_SERVICE", "SYS_CHROOT"};
     conf.setStrings(YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
         testCapabilities);
@@ -309,15 +323,18 @@ public class TestDockerContainerRuntime {
         .setExecutionAttribute(RESOURCES_OPTIONS, resourcesOptions);
   }
 
+  @After
+  public void cleanUp() throws IOException {
+    File tmpDir = new File(tmpPath);
+    FileUtils.deleteDirectory(tmpDir);
+  }
+
   public Context createMockNMContext() {
     Context mockNMContext = mock(Context.class);
     LocalDirsHandlerService localDirsHandler =
         mock(LocalDirsHandlerService.class);
     ResourcePluginManager resourcePluginManager =
         mock(ResourcePluginManager.class);
-
-    String tmpPath = new StringBuffer(System.getProperty("test.build.data"))
-        .append('/').append("hadoop.tmp.dir").toString();
 
     ConcurrentMap<ContainerId, Container> containerMap =
         mock(ConcurrentMap.class);
@@ -327,6 +344,20 @@ public class TestDockerContainerRuntime {
         .thenReturn(resourcePluginManager);
     when(mockNMContext.getContainers()).thenReturn(containerMap);
     when(containerMap.get(any())).thenReturn(container);
+
+    ContainerManager mockContainerManager = mock(ContainerManager.class);
+    ResourceLocalizationService mockLocalzationService =
+        mock(ResourceLocalizationService.class);
+
+    LocalizedResource mockLocalizedResource = mock(LocalizedResource.class);
+
+    when(mockLocalizedResource.getLocalPath()).thenReturn(
+        new Path("/local/layer1"));
+    when(mockLocalzationService.getLocalizedResource(any(), anyString(), any()))
+        .thenReturn(mockLocalizedResource);
+    when(mockContainerManager.getResourceLocalizationService())
+        .thenReturn(mockLocalzationService);
+    when(mockNMContext.getContainerManager()).thenReturn(mockContainerManager);
 
     try {
       when(localDirsHandler.getLocalPathForWrite(anyString()))

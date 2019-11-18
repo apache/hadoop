@@ -2022,4 +2022,7 @@ public class ContainerManagerImpl extends CompositeService implements
     return container.getLocalizationStatuses();
   }
 
+  public ResourceLocalizationService getResourceLocalizationService() {
+    return rsrcLocalizationSrvc;
+  }
 }
