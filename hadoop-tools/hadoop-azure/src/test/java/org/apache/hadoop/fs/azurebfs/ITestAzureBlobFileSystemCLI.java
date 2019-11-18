@@ -56,8 +56,7 @@ public class ITestAzureBlobFileSystemCLI extends AbstractAbfsIntegrationTest {
     FsShell fsShell = new FsShell(rawConf);
 
     int result = fsShell.run(new String[] {"-mkdir",
-        ABFS_SCHEME + "://" + nonExistentContainer + "@" + account
-            + "/testDirOnRoot"});
+        ABFS_SCHEME + "://" + nonExistentContainer + "@" + account + "/"});
 
     assertEquals(1, result);
   }
