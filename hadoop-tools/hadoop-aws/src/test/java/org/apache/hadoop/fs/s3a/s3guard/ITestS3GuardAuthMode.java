@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
@@ -45,6 +46,7 @@ import org.apache.hadoop.io.IOUtils;
 import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
@@ -83,6 +85,11 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
 
   private static S3AFileSystem authFS;
 
+  /**
+   * The unguarded file system.
+   */
+  private static S3AFileSystem unguardedFS;
+
   private static Path basePath;
 
   private static Path authPath;
@@ -93,11 +100,11 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
 
   private Path methodNonauthPath;
 
-  private S3GuardAuthoritativeAudit auditor;
+  private AuthoritativeAudit auditor;
 
   @AfterClass
-  public static void closeAuthFS() {
-    IOUtils.cleanupWithLogger(LOG, authFS);
+  public static void closeFileSystems() {
+    IOUtils.cleanupWithLogger(LOG, authFS, unguardedFS);
   }
 
   @Override
@@ -129,11 +136,12 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     if (!fsUriStr.endsWith("/")) {
       fsUriStr = fsUriStr + "/";
     }
-    auditor = new S3GuardAuthoritativeAudit(metastore, true);
+    auditor = new AuthoritativeAudit(storeContext,
+        metastore, true);
 
 
     if (authFS == null) {
-      // creating the test FS.
+      // creating the test stores
       basePath = path("base");
       authPath = new Path(basePath, "auth");
       nonauthPath = new Path(basePath, "nonauth");
@@ -142,6 +150,12 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
       authconf.set(AUTHORITATIVE_PATH, uri.toString());
       authconf.setBoolean(METADATASTORE_AUTHORITATIVE, true);
       authFS = (S3AFileSystem) FileSystem.newInstance(uri, authconf);
+
+      // and create the unguarded at the same time
+      final Configuration unguardedConf = new Configuration(conf);
+      removeBaseAndBucketOverrides(unguardedConf,
+          S3_METADATA_STORE_IMPL);
+      unguardedFS = (S3AFileSystem) FileSystem.newInstance(uri, unguardedConf);
     }
     cleanupMethodPaths();
   }
@@ -304,11 +318,12 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
   }
 
   @Test
+  @Ignore("TODO: HADOOP-16465")
   public void testListLocatedStatusMarksDirAsAuth() throws Throwable {
     describe("validate listLocatedStatus()");
     final Path dir = new Path(methodAuthPath, "dir");
     final Path subdir = new Path(dir, "subdir");
-    Path file = new Path(subdir, "file");
+    final Path file = new Path(subdir, "file");
     touchFile(file);
     // Subdir list makes it auth
     expectAuthoritativeUpdate(1, 1, () -> {
@@ -318,7 +333,22 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
           f -> LOG.info("{}", f));
       return null;
     });
-    expectAuthRecursive(subdir);
+    expectAuthNonRecursive(subdir);
+  }
+
+  @Test
+  public void testS3GuardImportMarksDirAsAuth() throws Throwable {
+    describe("validate import");
+    final Path dir = new Path(methodAuthPath, "dir");
+    final Path subdir = new Path(dir, "subdir");
+    final Path file = new Path(subdir, "file");
+    ContractTestUtils.touch(unguardedFS, file);
+    final Importer importer = new Importer(unguardedFS,
+        authFS.getMetadataStore(),
+        (S3AFileStatus) unguardedFS.getFileStatus(dir),
+        true);
+    final Long count = importer.execute();
+    expectAuthRecursive(dir);
   }
 
   /**
@@ -383,7 +413,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
   }
 
   private void expectNonauthRecursive(Path dir) throws Exception {
-    intercept(S3GuardAuthoritativeAudit.NonAuthoritativeDirException.class,
+    intercept(AuthoritativeAudit.NonAuthoritativeDirException.class,
         () -> auditor.executeAudit(dir, true, true));
   }
   // test rename (aut, auth) -> auth

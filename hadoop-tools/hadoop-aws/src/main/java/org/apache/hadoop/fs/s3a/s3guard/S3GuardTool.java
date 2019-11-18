@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -48,11 +47,9 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.auth.RolePolicies;
 import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
@@ -719,8 +716,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public static final String NAME = "import";
     public static final String PURPOSE = "import metadata from existing S3 " +
         "data";
+
+    public static final String AUTH_FLAG = "auth";
     private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
         "\t" + PURPOSE + "\n\n" +
+        "  -" + AUTH_FLAG + "Mark imported directory data as authoritative." +
         "Common options:\n" +
         "  -" + META_FLAG + " URL - Metadata repository details " +
         "(implementation-specific)\n" +
@@ -732,10 +732,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
         "  Specifying both the -" + REGION_FLAG + " option and an S3A path\n" +
         "  is not supported.";
 
-    private final Set<Path> dirCache = new HashSet<>();
-
     Import(Configuration conf) {
-      super(conf);
+      super(conf, AUTH_FLAG);
     }
 
     @Override
@@ -746,65 +744,6 @@ public abstract class S3GuardTool extends Configured implements Tool {
     @Override
     public String getUsage() {
       return USAGE;
-    }
-
-    /**
-     * Put parents into MS and cache if the parents are not presented.
-     *
-     * @param f the file or an empty directory.
-     * @param operationState store's bulk update state.
-     * @throws IOException on I/O errors.
-     */
-    private void putParentsIfNotPresent(FileStatus f,
-        @Nullable BulkOperationState operationState) throws IOException {
-      Preconditions.checkNotNull(f);
-      Path parent = f.getPath().getParent();
-      while (parent != null) {
-        if (dirCache.contains(parent)) {
-          return;
-        }
-        S3AFileStatus dir = DynamoDBMetadataStore.makeDirStatus(parent,
-            f.getOwner());
-        S3Guard.putWithTtl(getStore(), new PathMetadata(dir),
-            getFilesystem().getTtlTimeProvider(),
-            operationState);
-        dirCache.add(parent);
-        parent = parent.getParent();
-      }
-    }
-
-    /**
-     * Recursively import every path under path.
-     * @return number of items inserted into MetadataStore
-     * @throws IOException on I/O errors.
-     */
-    private long importDir(FileStatus status) throws IOException {
-      Preconditions.checkArgument(status.isDirectory());
-      BulkOperationState operationState = getStore().initiateBulkWrite(
-          BulkOperationState.OperationType.Import,
-          status.getPath());
-      RemoteIterator<S3ALocatedFileStatus> it = getFilesystem()
-          .listFilesAndEmptyDirectories(status.getPath(), true);
-      long items = 0;
-
-      while (it.hasNext()) {
-        S3ALocatedFileStatus located = it.next();
-        S3AFileStatus child;
-        if (located.isDirectory()) {
-          child = DynamoDBMetadataStore.makeDirStatus(located.getPath(),
-              located.getOwner());
-          dirCache.add(child.getPath());
-        } else {
-          child = located.toS3AFileStatus();
-        }
-        putParentsIfNotPresent(child, operationState);
-        S3Guard.putWithTtl(getStore(),
-            new PathMetadata(child),
-            getFilesystem().getTtlTimeProvider(),
-            operationState);
-        items++;
-      }
-      return items;
     }
 
     @Override
@@ -834,14 +773,12 @@ public abstract class S3GuardTool extends Configured implements Tool {
         throw storeNotFound(e);
       }
 
-      long items = 1;
-      if (status.isFile()) {
-        PathMetadata meta = new PathMetadata(status);
-        getStore().put(meta, null);
-      } else {
-        items = importDir(status);
-      }
+      final CommandFormat commandFormat = getCommandFormat();
 
+      final Importer importer = new Importer(getFilesystem(), getStore(),
+          status,
+          commandFormat.getOpt(AUTH_FLAG));
+      long items = importer.execute();
       println(out, "Inserted %d items into Metadata Store", items);
 
       return SUCCESS;
@@ -1705,8 +1642,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public static final String PURPOSE = "Audits a DynamoDB S3Guard "
         + "repository for all the entries being 'authoritative'";
     private static final String USAGE = NAME
-        + " " + CHECK_FLAG
-        + " " + REQUIRE_AUTH
+        + " [-" + CHECK_FLAG + "]"
+        + " [-" + REQUIRE_AUTH + "]"
         + " [s3a://BUCKET/PATH]\n" +
         "\t" + PURPOSE + "\n\n";
 
@@ -1761,13 +1698,14 @@ public abstract class S3GuardTool extends Configured implements Tool {
           errorln("Path " + auditPath
               + " is not confiugured to be authoritative");
           errorln(USAGE);
-          return S3GuardAuthoritativeAudit.ERROR_PATH_NOT_AUTH_IN_FS;
+          return AuthoritativeAudit.ERROR_PATH_NOT_AUTH_IN_FS;
         }
       }
 
-      final S3GuardAuthoritativeAudit audit
-          = new S3GuardAuthoritativeAudit(
-          (DynamoDBMetadataStore) ms, commandFormat.getOpt(REQUIRE_AUTH));
+      final AuthoritativeAudit audit = new AuthoritativeAudit(
+          fs.createStoreContext(),
+          (DynamoDBMetadataStore) ms,
+          commandFormat.getOpt(REQUIRE_AUTH));
       audit.audit(fs.qualify(auditPath));
 
       out.flush();

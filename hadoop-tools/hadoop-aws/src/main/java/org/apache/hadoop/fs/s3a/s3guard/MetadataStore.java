@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
@@ -354,18 +355,20 @@ public interface MetadataStore extends Closeable {
   void updateParameters(Map<String, String> parameters) throws IOException;
 
   /**
-   * Complete a move to a destination path.
+   * Mark all directories created/touched in an operation as authoritative.
    * The metastore can now update that path with any authoritative
    * flags it chooses.
-   * The store may assumeThat the destination was only updated during this
-   * rename -and that therefore the operation state is complete.
+   * The store may assume that therefore the operation state is complete.
+   * This holds for rename and needs to be documented for import.
    * @param dest destination path.
-   * @param operationState any active state.
+   * @param operationState active state.
    * @throws IOException failure.
+   * @return the number of directories marked.
    */
-  default void completeMoveToDestination(Path dest,
-      BulkOperationState operationState)
+  default int markAsAuthoritative(Path dest,
+      @Nonnull BulkOperationState operationState)
       throws IOException {
+    return 0;
   }
 
   /**
@@ -405,7 +408,7 @@ public interface MetadataStore extends Closeable {
   default BulkOperationState initiateBulkWrite(
       BulkOperationState.OperationType operation,
       Path dest) throws IOException {
-    return null;
+    return new BulkOperationState(operation);
   }
 
   /**

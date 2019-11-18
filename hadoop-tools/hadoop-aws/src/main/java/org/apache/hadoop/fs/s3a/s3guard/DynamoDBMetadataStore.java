@@ -1994,15 +1994,24 @@ public class DynamoDBMetadataStore implements MetadataStore,
         new AncestorState(this, BulkOperationState.OperationType.Rename, dest));
   }
 
+  /**
+   * Mark the directories instantiated under the destination path
+   * as authoritative.
+   * @param dest destination path.
+   * @param operationState active state.
+   * @throws IOException failure.
+   * @return the number of directories marked.
+   */
   @Override
-  public void completeMoveToDestination(final Path dest,
+  public int markAsAuthoritative(final Path dest,
       final BulkOperationState operationState) throws IOException {
     AncestorState state = (AncestorState) requireNonNull(operationState);
     // only mark paths under the dest as auth
     final String simpleDestKey = pathToParentKey(dest);
     String destPathKey = simpleDestKey + "/";
     final String opId = AncestorState.stateAsString(state);
-    LOG.debug("{}: completing move under {}", opId, destPathKey);
+    LOG.debug("{}: marking directories under {} as authoritative",
+        opId, destPathKey);
 
     // the list of dirs to build up.
     List<DDBPathMetadata> dirsToUpdate = new ArrayList<>();
@@ -2023,6 +2032,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       processBatchWriteRequest(state,
           null, pathMetadataToItem(dirsToUpdate));
     }
+    return dirsToUpdate.size();
 
   }
 

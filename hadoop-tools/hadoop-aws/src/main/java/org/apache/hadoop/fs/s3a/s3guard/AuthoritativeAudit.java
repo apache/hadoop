@@ -30,6 +30,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
@@ -40,10 +42,10 @@ import org.apache.hadoop.util.ExitUtil;
  * always considered authoritative, even though, because there is no
  * matching entry in any of the stores, it is not strictly true.
  */
-public class S3GuardAuthoritativeAudit {
+public class AuthoritativeAudit extends AbstractStoreOperation {
 
   private static final Logger LOG = LoggerFactory.getLogger(
-      S3GuardAuthoritativeAudit.class);
+      AuthoritativeAudit.class);
 
   /**
    * Exception error code when a path is nonauth in the DB: {@value}.
@@ -62,18 +64,23 @@ public class S3GuardAuthoritativeAudit {
   public static final String E_NONAUTH
       = "Directory is not marked as authoritative in the S3Guard store";
 
+  /** The metastore to audit. */
   private final DynamoDBMetadataStore metastore;
 
+  /**  require all directories to be authoritative. */
   private final boolean requireAuthoritative;
 
   /**
    * Constructor.
+   * @param storeContext store context.
    * @param metastore metastore
    * @param requireAuthoritative require all directories to be authoritative
    */
-  public S3GuardAuthoritativeAudit(
+  public AuthoritativeAudit(
+      final StoreContext storeContext,
       final DynamoDBMetadataStore metastore,
       final boolean requireAuthoritative) {
+    super(storeContext);
     this.metastore = metastore;
     this.requireAuthoritative = requireAuthoritative;
   }
@@ -84,7 +91,8 @@ public class S3GuardAuthoritativeAudit {
    * @param requireAuth require all directories to be authoritative
    * @throws NonAuthoritativeDirException if it is non-auth and requireAuth=true.
    */
-  private void verifyAuthDir(final DDBPathMetadata md, final boolean requireAuth)
+  private void verifyAuthDir(final DDBPathMetadata md,
+      final boolean requireAuth)
       throws PathIOException {
     final Path path = md.getFileStatus().getPath();
     boolean isAuth = path.isRoot() || md.isAuthoritativeDir();
@@ -111,7 +119,6 @@ public class S3GuardAuthoritativeAudit {
    * @throws ExitUtil.ExitException if a non-auth dir was found.
    */
   public Pair<Integer, Integer> audit(Path path) throws IOException {
-    LOG.info("Auditing {}", path);
     try (DurationInfo ignored =
              new DurationInfo(LOG, "audit %s", path)) {
       return executeAudit(path, requireAuthoritative, true);

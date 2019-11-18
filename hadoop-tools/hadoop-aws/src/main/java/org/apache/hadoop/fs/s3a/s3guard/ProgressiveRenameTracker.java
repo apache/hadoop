@@ -215,7 +215,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
           getOwner());
       getMetadataStore().move(toDelete, toAdd, getOperationState());
     }
-    getMetadataStore().completeMoveToDestination(
+    getMetadataStore().markAsAuthoritative(
         getDest(), getOperationState());
   }
 
