@@ -49,20 +49,15 @@ public class ITestAzureBlobFileSystemCLI extends AbstractAbfsIntegrationTest {
   @Test
   public void testMkdirRootNonExistentContainer() throws Exception {
     final Configuration rawConf = getRawConfiguration();
-    FsShell fsShell = new FsShell(rawConf);
-    final String account =
-        rawConf.get(FS_AZURE_ABFS_ACCOUNT_NAME, null);
-
-    String nonExistentContainer = "nonexistent-" + UUID.randomUUID();
-
-    // Disable creation of new filesystem
-    final AbfsConfiguration conf = getConfiguration();
-    conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
+    final String account = rawConf.get(FS_AZURE_ABFS_ACCOUNT_NAME, null);
+    rawConf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
         false);
+    String nonExistentContainer = "nonexistent-" + UUID.randomUUID();
+    FsShell fsShell = new FsShell(rawConf);
 
-    int result = fsShell.run(new String[] { "-mkdir",
-        ABFS_SCHEME + "://" + nonExistentContainer + "@" + account +
-            "/testDirOnRoot" });
+    int result = fsShell.run(new String[] {"-mkdir",
+        ABFS_SCHEME + "://" + nonExistentContainer + "@" + account
+            + "/testDirOnRoot"});
 
     assertEquals(1, result);
   }
