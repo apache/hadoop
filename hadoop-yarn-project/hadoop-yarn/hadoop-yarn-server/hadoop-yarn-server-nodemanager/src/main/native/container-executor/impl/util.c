@@ -323,6 +323,12 @@ const char *get_error_message(const int error_code) {
         return "Invalid docker runtime";
       case DOCKER_SERVICE_MODE_DISABLED:
         return "Docker service mode disabled";
+      case ERROR_RUNC_SETUP_FAILED:
+        return "runC setup failed";
+      case ERROR_RUNC_RUN_FAILED:
+        return "runC run failed";
+      case ERROR_RUNC_REAP_LAYER_MOUNTS_FAILED:
+        return "runC reap layer mounts failed";
       default:
         return "Unknown error code";
     }
