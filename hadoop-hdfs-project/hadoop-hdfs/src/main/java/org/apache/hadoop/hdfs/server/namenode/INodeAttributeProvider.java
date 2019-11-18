@@ -30,6 +30,24 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceStability.Unstable
 public abstract class INodeAttributeProvider {
 
+  public class AuthorizationContext {
+    String fsOwner;
+    String supergroup;
+    UserGroupInformation callerUgi;
+    INodeAttributes[] inodeAttrs;
+    INode[] inodes;
+    byte[][] pathByNameArr;
+    int snapshotId;
+    String path;
+    int ancestorIndex;
+    boolean doCheckOwner;
+    FsAction ancestorAccess;
+    FsAction parentAccess;
+    FsAction access;
+    FsAction subAccess;
+    boolean ignoreEmptyDir;
+  }
+
   /**
    * The AccessControlEnforcer allows implementations to override the
    * default File System permission checking logic enforced on a file system
@@ -58,6 +76,7 @@ public abstract class INodeAttributeProvider {
      *                  the path and all the sub-directories. If path is not a
      *                  directory, there should ideally be no effect.
      * @param ignoreEmptyDir Ignore permission checking for empty directory?
+     * @deprecated use {@link #checkPermission(AuthorizationContext)} instead
      * @throws AccessControlException
      */
     public abstract void checkPermission(String fsOwner, String supergroup,
@@ -68,6 +87,8 @@ public abstract class INodeAttributeProvider {
         boolean ignoreEmptyDir)
             throws AccessControlException;
 
+    public abstract void checkPermission(AuthorizationContext authzContext)
+        throws AccessControlException;
   }
   /**
    * Initialize the provider. This method is called at NameNode startup

@@ -190,6 +190,8 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     int ancestorIndex = inodes.length - 2;
 
     AccessControlEnforcer enforcer = getAccessControlEnforcer();
+    // TODO: if the AccessControlEnforcer supports context enrichment, call
+    // the new API. Otherwise choose the old API.
     enforcer.checkPermission(fsOwner, supergroup, callerUgi, inodeAttrs, inodes,
         components, snapshotId, path, ancestorIndex, doCheckOwner,
         ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
@@ -271,6 +273,19 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     if (doCheckOwner) {
       checkOwner(inodeAttrs, components, inodeAttrs.length - 1);
     }
+  }
+
+  @Override
+  public void checkPermission(
+      INodeAttributeProvider.AuthorizationContext authzContext) throws
+      AccessControlException{
+    this.checkPermission(authzContext.fsOwner, authzContext.supergroup,
+        authzContext.callerUgi, authzContext.inodeAttrs, authzContext.inodes,
+        authzContext.pathByNameArr, authzContext.snapshotId, authzContext.path,
+        authzContext.ancestorIndex, authzContext.doCheckOwner,
+        authzContext.ancestorAccess, authzContext.parentAccess,
+        authzContext.access, authzContext.subAccess,
+        authzContext.ignoreEmptyDir);
   }
 
   private INodeAttributes getINodeAttrs(byte[][] pathByNameArr, int pathIdx,
