@@ -3018,6 +3018,14 @@
 </property>
 
 <property>
+  <name>ha.failover-controller.active-standby-elector.zk.op.retries</name>
+  <value>3</value>
+  <description>
+    The number of zookeeper operation retry times in ActiveStandbyElector
+  </description>
+</property>
+
+<property>
   <name>ha.failover-controller.cli-check.rpc-timeout.ms</name>
   <value>20000</value>
   <description>
