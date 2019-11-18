@@ -614,7 +614,18 @@ public class TestKMS {
 
   @Test
   public void testStartStopHttpPseudo() throws Exception {
-    testStartStop(false, false);
+    // Make sure bogus errors don't get emitted.
+    GenericTestUtils.LogCapturer logs =
+        GenericTestUtils.LogCapturer.captureLogs(LoggerFactory.getLogger(
+            "com.sun.jersey.server.wadl.generators.AbstractWadlGeneratorGrammarGenerator"));
+    try {
+      testStartStop(false, false);
+    } finally {
+      logs.stopCapturing();
+    }
+    assertFalse(logs.getOutput().contains(
+        "Couldn't find grammar element for class"));
+
   }
 
   @Test
