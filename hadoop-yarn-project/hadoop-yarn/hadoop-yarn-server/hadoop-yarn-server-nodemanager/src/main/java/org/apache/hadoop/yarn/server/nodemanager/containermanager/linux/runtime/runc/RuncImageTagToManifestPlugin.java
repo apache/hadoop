@@ -1,5 +1,5 @@
 /*
- * *
+ *
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
  *  distributed with this work for additional information
@@ -15,27 +15,23 @@
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- * /
  */
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.runc;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.service.Service;
 
-public class ContainerRuntimeConstants {
+import java.io.IOException;
 
-  /* Switch container runtimes. Work in progress: These
-   * parameters may be changed/removed in the future. */
+/**
+ * This class is a plugin interface for the
+ * {@link org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.RuncContainerRuntime}
+ * to convert image tags into OCI Image Manifests.
+ */
+@InterfaceStability.Unstable
+public interface RuncImageTagToManifestPlugin extends Service {
+  ImageManifest getManifestFromImageTag(String imageTag) throws IOException;
 
-  @Private
-  public static final String ENV_CONTAINER_TYPE =
-      "YARN_CONTAINER_RUNTIME_TYPE";
-
-  @Private
-  public static final String CONTAINER_RUNTIME_DOCKER =
-      "docker";
-
-  @Private
-  public static final String CONTAINER_RUNTIME_RUNC =
-      "runc";
+  String getHashFromImageTag(String imageTag);
 }
