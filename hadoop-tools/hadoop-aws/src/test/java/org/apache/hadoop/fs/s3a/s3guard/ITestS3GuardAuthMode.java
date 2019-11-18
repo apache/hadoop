@@ -32,7 +32,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -45,6 +47,7 @@ import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUESTS;
 import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -183,7 +186,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     describe("Verify listStatus marks an Empty dir as auth");
     final Path dir = new Path(methodAuthPath, "emptydir");
     authFS.mkdirs(dir);
-    expectNonauth(dir);
+    expectNonauthRecursive(dir);
     authFS.listStatus(dir);
     // dir is auth; subdir is not
     expectAuthRecursive(dir);
@@ -202,7 +205,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     authFS.mkdirs(subdir);
     // dir is auth; subdir is not
     expectAuthNonRecursive(dir);
-    expectNonauth(dir);
+    expectNonauthRecursive(dir);
     assertListDoesNotUpdateAuth(dir);
     // Subdir list makes it auth
     assertListUpdatesAuth(subdir);
@@ -214,8 +217,8 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     final Path dir = methodAuthPath;
     final Path file = new Path(dir, "testAddFileMarksNonAuth");
 
-    touchAuth(file);
-    expectNonauth(dir);
+    touchFile(file);
+    expectNonauthRecursive(dir);
     assertListUpdatesAuth(dir);
   }
 
@@ -225,10 +228,10 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     final Path dir = methodAuthPath;
     final Path file = new Path(dir, "testDeleteFileMarksNonAuth");
 
-    touchAuth(file);
+    touchFile(file);
     assertListUpdatesAuth(dir);
     authFS.delete(file, false);
-    expectNonauth(dir);
+    expectNonauthRecursive(dir);
   }
 
   @Test
@@ -237,7 +240,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     final Path dir = methodAuthPath;
     final Path file = new Path(dir, "file");
 
-    touchAuth(file);
+    touchFile(file);
     assertListUpdatesAuth(dir);
     String keyPrefix
         = PathMetadataDynamoDBTranslation.pathToParentKey(dir);
@@ -248,7 +251,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
             keyPrefix))
         .describedAs("Prune of keys under %s", keyPrefix)
         .isEqualTo(1);
-    expectNonauth(dir);
+    expectNonauthRecursive(dir);
   }
 
   @Test
@@ -257,10 +260,10 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     final Path dir = methodAuthPath;
     final Path file = new Path(dir, "file");
 
-    touchAuth(file);
+    touchFile(file);
     assertListUpdatesAuth(dir);
     authFS.delete(file, false);
-    expectNonauth(dir);
+    expectNonauthRecursive(dir);
     assertListUpdatesAuth(dir);
     String keyPrefix
         = PathMetadataDynamoDBTranslation.pathToParentKey(dir);
@@ -275,32 +278,55 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testRenameFile() throws Throwable {
+  public void testRenameFileMarksDirAsNonauth() throws Throwable {
     describe("renaming a file");
     final Path dir = methodAuthPath;
     final Path source = new Path(dir, "source");
     final Path dest = new Path(dir, "dest");
-    touchAuth(source);
+    touchFile(source);
     assertListUpdatesAuth(dir);
     authFS.rename(source, dest);
-    expectNonauth(dir);
+    expectNonauthRecursive(dir);
   }
 
   @Test
   public void testRenameDirMarksDestAsAuth() throws Throwable {
-    describe("renaming a file");
+    describe("renaming a dir must mark dest tree as auth");
     final Path dir = methodAuthPath;
     final Path source = new Path(dir, "source");
     final Path dest = new Path(dir, "dest");
     mkAuthDir(source);
     Path file = new Path(source, "subdir/file");
-    touchAuth(file);
+    touchFile(file);
     authFS.rename(source, dest);
-    expectNonauth(dir);
+    expectNonauthRecursive(dir);
     expectAuthRecursive(dest);
   }
 
-  protected void touchAuth(final Path file) throws IOException {
+  @Test
+  public void testListLocatedStatusMarksDirAsAuth() throws Throwable {
+    describe("validate listLocatedStatus()");
+    final Path dir = new Path(methodAuthPath, "dir");
+    final Path subdir = new Path(dir, "subdir");
+    Path file = new Path(subdir, "file");
+    touchFile(file);
+    // Subdir list makes it auth
+    expectAuthoritativeUpdate(1, 1, () -> {
+      final RemoteIterator<LocatedFileStatus> st
+          = authFS.listLocatedStatus(subdir);
+      applyLocatedFiles(st,
+          f -> LOG.info("{}", f));
+      return null;
+    });
+    expectAuthRecursive(subdir);
+  }
+
+  /**
+   * Touch a file in the authfs.
+   * @param file path of file
+   * @throws IOException Failure
+   */
+  protected void touchFile(final Path file) throws IOException {
     ContractTestUtils.touch(authFS, file);
   }
 
@@ -356,7 +382,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     auditor.executeAudit(dir, true, false);
   }
 
-  private void expectNonauth(Path dir) throws Exception {
+  private void expectNonauthRecursive(Path dir) throws Exception {
     intercept(S3GuardAuthoritativeAudit.NonAuthoritativeDirException.class,
         () -> auditor.executeAudit(dir, true, true));
   }
