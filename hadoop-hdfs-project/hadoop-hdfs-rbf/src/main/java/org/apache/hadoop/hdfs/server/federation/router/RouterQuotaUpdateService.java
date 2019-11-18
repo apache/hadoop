@@ -110,7 +110,7 @@ public class RouterQuotaUpdateService extends PeriodicService {
             Quota quotaModule = this.rpcServer.getQuotaModule();
             Map<RemoteLocation, QuotaUsage> usageMap =
                 quotaModule.getEachQuotaUsage(src);
-            currentQuotaUsage = quotaModule.aggregateQuota(usageMap);
+            currentQuotaUsage = quotaModule.aggregateQuota(src, usageMap);
             remoteQuotaUsage.putAll(usageMap);
           } catch (IOException ioe) {
             LOG.error("Unable to get quota usage for " + src, ioe);
