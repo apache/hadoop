@@ -964,6 +964,48 @@ public class TestRouterQuota {
     assertEquals(-1, qu.getSpaceQuota());
   }
 
+  @Test
+  public void testGetQuotaUsageOnMountPoint() throws Exception {
+    long nsQuota = 5;
+    long ssQuota = 3 * BLOCK_SIZE;
+    prepareGlobalQuotaTestMountTable(nsQuota, ssQuota);
+
+    final FileSystem routerFs = routerContext.getFileSystem();
+    // Verify getQuotaUsage() of the mount point /dir-1.
+    QuotaUsage quotaUsage = routerFs.getQuotaUsage(new Path("/dir-1"));
+    assertEquals(nsQuota, quotaUsage.getQuota());
+    assertEquals(ssQuota, quotaUsage.getSpaceQuota());
+    // Verify getQuotaUsage() of the mount point /dir-1/dir-2.
+    quotaUsage = routerFs.getQuotaUsage(new Path("/dir-1/dir-2"));
+    assertEquals(nsQuota, quotaUsage.getQuota());
+    assertEquals(ssQuota * 2, quotaUsage.getSpaceQuota());
+    // Verify getQuotaUsage() of the mount point /dir-1/dir-2/dir-3
+    quotaUsage = routerFs.getQuotaUsage(new Path("/dir-1/dir-2/dir-3"));
+    assertEquals(nsQuota, quotaUsage.getQuota());
+    assertEquals(ssQuota * 2, quotaUsage.getSpaceQuota());
+    // Verify getQuotaUsage() of the mount point /dir-4
+    quotaUsage = routerFs.getQuotaUsage(new Path("/dir-4"));
+    assertEquals(-1, quotaUsage.getQuota());
+    assertEquals(-1, quotaUsage.getSpaceQuota());
+
+    routerFs.mkdirs(new Path("/dir-1/dir-normal"));
+    try {
+      // Verify getQuotaUsage() of the normal path /dir-1/dir-normal.
+      quotaUsage = routerFs.getQuotaUsage(new Path("/dir-1/dir-normal"));
+      assertEquals(-1, quotaUsage.getQuota());
+      assertEquals(-1, quotaUsage.getSpaceQuota());
+
+      routerFs.setQuota(new Path("/dir-1/dir-normal"), 100, 200);
+      // Verify getQuotaUsage() of the normal path /dir-1/dir-normal.
+      quotaUsage = routerFs.getQuotaUsage(new Path("/dir-1/dir-normal"));
+      assertEquals(100, quotaUsage.getQuota());
+      assertEquals(200, quotaUsage.getSpaceQuota());
+    } finally {
+      // clear normal path.
+      routerFs.delete(new Path("/dir-1/dir-normal"), true);
+    }
+  }
+
   /**
    * Add three mount tables.
    * /dir-1              --> ns0---/dir-1 [nsQuota, ssQuota]
