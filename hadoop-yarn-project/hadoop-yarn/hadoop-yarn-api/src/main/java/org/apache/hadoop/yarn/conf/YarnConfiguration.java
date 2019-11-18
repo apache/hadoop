@@ -2001,6 +2001,7 @@ public class YarnConfiguration extends Configuration {
    *   <li>default</li>
    *   <li>docker</li>
    *   <li>javasandbox</li>
+   *   <li>runc</li>
    * </ul>
    */
   public static final String LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES =
@@ -2016,6 +2017,200 @@ public class YarnConfiguration extends Configuration {
   /** Default runtime to be used. */
   public static final String LINUX_CONTAINER_RUNTIME_TYPE =
       LINUX_CONTAINER_RUNTIME_PREFIX + "type";
+
+  public static final String RUNC_CONTAINER_RUNTIME_PREFIX =
+      LINUX_CONTAINER_RUNTIME_PREFIX + "runc.";
+
+  /**
+   * The runc image tag to manifest plugin class that should be used.
+   */
+  public static final String NM_RUNC_IMAGE_TAG_TO_MANIFEST_PLUGIN =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "image-tag-to-manifest-plugin";
+
+   /** Default runc image tag to manifest plugin class. */
+  public static final String DEFAULT_NM_RUNC_IMAGE_TAG_TO_MANIFEST_PLUGIN =
+      "org.apache.hadoop.yarn.server.nodemanager.containermanager" +
+      ".linux.runtime.runc.ImageTagToManifestPlugin";
+
+  /**
+   * The runc manifest to resources plugin class that should be used.
+   */
+  public static final String NM_RUNC_MANIFEST_TO_RESOURCES_PLUGIN =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "manifest-to-resources-plugin";
+
+  /** Default runc manifest to resources plugin plugin class. */
+  public static final String DEFAULT_NM_RUNC_MANIFEST_TO_RESOURCES_PLUGIN =
+      "org.apache.hadoop.yarn.server.nodemanager.containermanager" +
+      ".linux.runtime.runc.HdfsManifestToResourcesPlugin";
+
+  /**
+   * The HDFS location under which the oci image manifests, layers,
+   * and configs directories exist.
+   */
+  public static final String NM_RUNC_IMAGE_TOPLEVEL_DIR =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "image-toplevel-dir";
+
+  /**
+   * Default HDFS location under which the oci image manifests, layers,
+   * and configs directories exist.
+   */
+  public static final String DEFAULT_NM_RUNC_IMAGE_TOPLEVEL_DIR =
+      "/runc-root";
+
+  /**
+   * Target count of layer mounts that we should keep on disk at one time.
+   */
+  public static final String NM_RUNC_LAYER_MOUNTS_TO_KEEP =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "layer-mounts-to-keep";
+
+  public static final int DEFAULT_NM_RUNC_LAYER_MOUNTS_TO_KEEP = 100;
+
+  /**
+   * The interval in seconds between executions of reaping layer mounts.
+   */
+  public static final String NM_REAP_RUNC_LAYER_MOUNTS_INTERVAL =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "layer-mounts-interval-secs";
+
+  public static final int DEFAULT_NM_REAP_RUNC_LAYER_MOUNTS_INTERVAL = 600;
+
+  /** Default runc image to be used. */
+  public static final String NM_RUNC_IMAGE_NAME =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "image-name";
+
+  /** Allow privileged containers. Use with extreme care. */
+  public static final String NM_RUNC_ALLOW_PRIVILEGED_CONTAINERS =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "privileged-containers.allowed";
+
+  /** Privileged containers are disabled by default. */
+  public static final boolean DEFAULT_NM_RUNC_ALLOW_PRIVILEGED_CONTAINERS =
+      false;
+
+  /** The set of networks allowed when launching containers using the
+   * RuncContainerRuntime.
+   */
+  public static final String NM_RUNC_ALLOWED_CONTAINER_NETWORKS =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "allowed-container-networks";
+
+  /** The default set of networks allowed when launching containers using the
+   * RuncContainerRuntime.
+   */
+  public static final String[] DEFAULT_NM_RUNC_ALLOWED_CONTAINER_NETWORKS =
+      {"host", "none", "bridge"};
+
+  /** The set of runtimes allowed when launching containers using the
+   * RuncContainerRuntime.
+   */
+  public static final String NM_RUNC_ALLOWED_CONTAINER_RUNTIMES =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "allowed-container-runtimes";
+
+  /** The default set of runtimes allowed when launching containers using the
+   * RuncContainerRuntime.
+   */
+  public static final String[] DEFAULT_NM_RUNC_ALLOWED_CONTAINER_RUNTIMES =
+      {"runc"};
+
+  /** ACL list for users allowed to run privileged containers. */
+  public static final String NM_RUNC_PRIVILEGED_CONTAINERS_ACL =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "privileged-containers.acl";
+
+  /** Default list for users allowed to run privileged containers is empty. */
+  public static final String DEFAULT_NM_RUNC_PRIVILEGED_CONTAINERS_ACL = "";
+
+  /** Allow host pid namespace for containers. Use with care. */
+  public static final String NM_RUNC_ALLOW_HOST_PID_NAMESPACE =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "host-pid-namespace.allowed";
+
+  /** Host pid namespace for containers is disabled by default. */
+  public static final boolean DEFAULT_NM_RUNC_ALLOW_HOST_PID_NAMESPACE =
+      false;
+
+  /** The default list of read-only mounts to be bind-mounted into all
+   *  runC containers that use RuncContainerRuntime.
+   */
+  public static final String NM_RUNC_DEFAULT_RO_MOUNTS =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "default-ro-mounts";
+
+  /** The default list of read-write mounts to be bind-mounted into all
+   *  runC containers that use RuncContainerRuntime.
+   */
+  public static final String NM_RUNC_DEFAULT_RW_MOUNTS =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "default-rw-mounts";
+
+  /** Path to the seccomp profile to use with Runc containers. */
+  public static final String NM_RUNC_SECCOMP_PROFILE =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "seccomp-profile";
+
+  /** Prefix for image tag to manifest hash plugin used with the
+   * RuncContainerRuntime.
+   */
+  private static final String IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "image-tag-to-manifest-plugin.";
+
+  /**
+   * The HDFS location where the runC image tag to hash file exists.
+   */
+  public static final String NM_HDFS_RUNC_IMAGE_TAG_TO_HASH_FILE =
+      IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX + "hdfs-hash-file";
+
+  /**
+   * The local file system location where the runC image tag to hash file exists.
+   */
+  public static final String NM_LOCAL_RUNC_IMAGE_TAG_TO_HASH_FILE =
+      IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX + "local-hash-file";
+
+  /**
+   * The interval in seconds between refreshing the hdfs image tag to
+   * hash cache.
+   */
+  public static final String NM_RUNC_CACHE_REFRESH_INTERVAL =
+      IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX + "cache-refresh-interval-secs";
+
+  /**
+   * The default interval in seconds between refreshing the hdfs image tag to
+   * hash cache.
+   */
+  public static final int DEFAULT_NM_RUNC_CACHE_REFRESH_INTERVAL = 60;
+
+  /**
+   * The number of manifests to cache in the image tag to hash cache.
+   */
+  public static final String NM_RUNC_NUM_MANIFESTS_TO_CACHE =
+      IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX + "num-manifests-to-cache";
+
+  /**
+   * The default number of manifests to cache in the image tag to hash cache.
+   */
+  public static final int DEFAULT_NUM_MANIFESTS_TO_CACHE = 10;
+
+  /** Prefix for hdfs manifest hash to local resources plugin used with the
+   * RuncContainerRuntime.
+   */
+  private static final String HDFS_MANIFEST_TO_RESOURCES_PLUGIN_PREFIX =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "hdfs-manifest-to-resources-plugin.";
+
+  /**
+   * The timeout value in seconds for the values in the stat cache.
+   */
+  public static final String NM_RUNC_STAT_CACHE_TIMEOUT =
+      HDFS_MANIFEST_TO_RESOURCES_PLUGIN_PREFIX
+          + "stat-cache-timeout-interval-secs";
+
+  /**
+   * The default timeout value in seconds for the values in the stat cache.
+   */
+  public static final int DEFAULT_NM_RUNC_STAT_CACHE_TIMEOUT = 60 * 60;
+
+  /**
+   * The size of the stat cache which stores stats of the layers and config.
+   */
+  public static final String NM_RUNC_STAT_CACHE_SIZE =
+      HDFS_MANIFEST_TO_RESOURCES_PLUGIN_PREFIX + "stat-cache-size";
+
+  /**
+   * The default size of the stat cache which stores stats of the
+   * layers and config.
+   */
+  public static final int DEFAULT_RUNC_STAT_CACHE_SIZE = 500;
 
   public static final String DOCKER_CONTAINER_RUNTIME_PREFIX =
       LINUX_CONTAINER_RUNTIME_PREFIX + "docker.";

@@ -794,6 +794,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
       .byteValue() }));
     context.getContainerTokenSecretManager().setMasterKey(masterKey);
     context.getNMTokenSecretManager().setMasterKey(masterKey);
+    context.setContainerExecutor(exec);
     return context;
   }
 
