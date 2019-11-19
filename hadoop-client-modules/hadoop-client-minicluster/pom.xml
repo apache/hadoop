@@ -762,7 +762,6 @@
                         <exclude>ehcache-core.xsd</exclude>
                       </excludes>
                     </filter>
-
                    <!-- remove utility classes which are not required from
                         dnsjava -->
                     <filter>
@@ -774,7 +773,15 @@
                         <exclude>update*</exclude>
                       </excludes>
                     </filter>
-
+                    <!-- Jetty 9.4.x: jetty-client and jetty-xml are depended by org.eclipse.jetty.websocket:websocket-client.
+                         But we are only excluding jetty-client not jetty-xml because HttpServer2 implicitly uses the shaded package name.
+                    -->
+                    <filter>
+                      <artifact>org.eclipse.jetty:jetty-client</artifact>
+                      <excludes>
+                        <exclude>*/**</exclude>
+                      </excludes>
+                    </filter>
                   </filters>
 
                   <!-- relocate classes from mssql-jdbc -->
@@ -899,6 +906,13 @@
                     <relocation>
                       <pattern>javax/ws/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.javax.ws.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>javax/websocket/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.websocket.</shadedPattern>
                       <excludes>
                         <exclude>**/pom.xml</exclude>
                       </excludes>
