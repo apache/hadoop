@@ -106,6 +106,7 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3GuardClientOpera
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
+import static org.apache.hadoop.fs.s3a.s3guard.PathOrderComparators.TOPMOST_PM_LAST;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
 
 /**
@@ -856,7 +857,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    */
   private Collection<DDBPathMetadata> completeAncestry(
       final Collection<DDBPathMetadata> pathsToCreate,
-      final AncestorState ancestorState) throws PathIOException {
+      final AncestorState ancestorState) throws IOException {
     // Key on path to allow fast lookup
     Map<Path, DDBPathMetadata> ancestry = new HashMap<>();
     LOG.debug("Completing ancestry for {} paths", pathsToCreate.size());
@@ -914,7 +915,27 @@ public class DynamoDBMetadataStore implements MetadataStore,
         parent = parent.getParent();
       }
     }
-    return ancestry.values();
+    // we now have a list of ancestors which are not in the operation state.
+    // sort in reverse order of existence
+
+    final Collection<DDBPathMetadata> provisionalEntries = ancestry.values();
+    List<DDBPathMetadata> sorted = new ArrayList<>(provisionalEntries);
+    List<DDBPathMetadata> toCreate = new ArrayList<>(sorted.size());
+    sorted.sort(TOPMOST_PM_LAST);
+    for (final DDBPathMetadata next : sorted) {
+      final Item item = getConsistentItem(
+          next.getFileStatus().getPath());
+      if (item != null) {
+        // found an entry up the tree. See if it is really there
+        DDBPathMetadata meta = itemToPathMetadata(item, username);
+        if (!meta.isDeleted()) {
+          // it is a valid entry, so stop scanning up the tree
+          break;
+        }
+      }
+      toCreate.add(next);
+    }
+    return toCreate;
   }
 
   /**
@@ -1072,7 +1093,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         tombstones.add(new DDBPathMetadata(pmTombstone));
       }
       // sort all the tombstones lowest first.
-      tombstones.sort(PathOrderComparators.TOPMOST_PM_LAST);
+      tombstones.sort(TOPMOST_PM_LAST);
       newItems.addAll(tombstones);
     }
 

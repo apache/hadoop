@@ -83,6 +83,9 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
 
   private DynamoDBMetadataStore metastore;
 
+  /**
+   * Authoritative FS.
+   */
   private static S3AFileSystem authFS;
 
   /**
@@ -227,7 +230,8 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
 
   @Test
   public void testAddFileMarksNonAuth() throws Throwable {
-    describe("adding a file marks dir as nonauth");
+    describe("Adding a file marks dir as nonauth but leaves ancestors alone");
+    mkAuthDir(methodAuthPath);
     final Path dir = new Path(methodAuthPath, "dir");
     final Path file = new Path(dir, "file");
     touchFile(file);
@@ -237,15 +241,15 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testDeleteFileMarksNonAuth() throws Throwable {
-    describe("adding a file marks dir as nonauth");
-    final Path dir = methodAuthPath;
+  public void testDeleteFileLeavesMarkersAlone() throws Throwable {
+    describe("Deleting a file makes no changes to ancestors");
+    mkAuthDir(methodAuthPath);
+    final Path dir = new Path(methodAuthPath, "dir");
     final Path file = new Path(dir, "testDeleteFileMarksNonAuth");
-
     touchFile(file);
     assertListUpdatesAuth(dir);
     authFS.delete(file, false);
-    expectNonauthRecursive(dir);
+    expectAuthRecursive(methodAuthPath);
   }
 
   @Test
@@ -270,15 +274,14 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
 
   @Test
   public void testPruneTombstoneRetainsAuth() throws Throwable {
-    describe("adding a file marks dir as nonauth");
+    describe("Prune tombstones");
     final Path dir = methodAuthPath;
     final Path file = new Path(dir, "file");
 
     touchFile(file);
     assertListUpdatesAuth(dir);
     authFS.delete(file, false);
-    expectNonauthRecursive(dir);
-    assertListUpdatesAuth(dir);
+    expectAuthRecursive(dir);
     String keyPrefix
         = PathMetadataDynamoDBTranslation.pathToParentKey(dir);
     Assertions.assertThat(
@@ -292,7 +295,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testRenameFileMarksDirAsNonauth() throws Throwable {
+  public void testRenameFile() throws Throwable {
     describe("renaming a file");
     final Path dir = methodAuthPath;
     final Path source = new Path(dir, "source");
@@ -300,7 +303,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     touchFile(source);
     assertListUpdatesAuth(dir);
     authFS.rename(source, dest);
-    expectNonauthRecursive(dir);
+    expectAuthRecursive(dir);
   }
 
   @Test
@@ -365,7 +368,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     expectAuthRecursive(dir);
     //the parent dir shouldn't have changed
     // TODO: re-enable
-    //  expectAuthNonRecursive(methodAuthPath);
+    expectAuthNonRecursive(methodAuthPath);
 
     // file entry
     final S3AFileStatus status2 = (S3AFileStatus) authFS.getFileStatus(file);
