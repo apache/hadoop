@@ -311,7 +311,8 @@ public class AuxServices extends AbstractService
    * @return path of the downloaded file
    * @throws IOException
    */
-  private Path maybeDownloadJars(String sName, String className, String
+  @VisibleForTesting
+  protected Path maybeDownloadJars(String sName, String className, String
       remoteFile, AuxServiceFile.TypeEnum type, Configuration conf)
       throws IOException {
     // load AuxiliaryService from remote classpath
