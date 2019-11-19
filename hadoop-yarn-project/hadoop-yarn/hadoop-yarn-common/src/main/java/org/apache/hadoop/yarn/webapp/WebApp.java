@@ -26,11 +26,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.inject.Singleton;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.yarn.webapp.view.RobotsTextPage;
+import org.glassfish.jersey.servlet.ServletContainer;
 import org.glassfish.jersey.servlet.ServletProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -182,12 +184,19 @@ public abstract class WebApp extends ServletModule {
 
       Map<String, String> params = new HashMap<String, String>();
       params.put(ServletProperties.FILTER_FORWARD_ON_404, "true");
-      filter("/*").through(getWebAppFilterClass(), params);
+      Class<? extends Filter> filterClass = getWebAppFilterClass();
+      if (filterClass != null) {
+        filter("/*").through(getWebAppFilterClass(), params);
+      }
     }
   }
 
   protected Class<? extends Filter> getWebAppFilterClass() {
-    return GuiceFilter.class;
+    return SingletonSevletContainer.class;
+  }
+
+  @Singleton
+  private static class SingletonSevletContainer extends ServletContainer {
   }
 
   /**
