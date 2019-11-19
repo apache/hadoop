@@ -63,7 +63,8 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_USER_AGENT_PREFIX_KEY = "fs.azure.user.agent.prefix";
   public static final String FS_AZURE_SSL_CHANNEL_MODE_KEY = "fs.azure.ssl.channel.mode";
   /** Provides a config to enable/disable the checkAccess API.
-   *  By default this will be false.   */
+   *  By default this will be
+   *  FileSystemConfigurations.DEFAULT_ENABLE_CHECK_ACCESS. **/
   public static final String FS_AZURE_ENABLE_CHECK_ACCESS = "fs.azure.enable.check.access";
   public static final String FS_AZURE_USE_UPN = "fs.azure.use.upn";
   /** User principal names (UPNs) have the format “{alias}@{domain}”. If true,

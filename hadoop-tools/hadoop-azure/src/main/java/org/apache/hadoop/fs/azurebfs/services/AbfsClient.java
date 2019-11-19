@@ -517,6 +517,15 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
+  /**
+   * Talks to the server to check whether the permission specified  in
+   * the rwx parameter is present for the path specified in the path parameter.
+   *
+   * @param path  Path for which access check needs to be performed
+   * @param rwx   The permission to be checked on the path
+   * @return      The {@link AbfsRestOperation} object for the operation
+   * @throws AzureBlobFileSystemException in case of bad requests
+   */
   public AbfsRestOperation checkAccess(String path, String rwx)
       throws AzureBlobFileSystemException {
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
