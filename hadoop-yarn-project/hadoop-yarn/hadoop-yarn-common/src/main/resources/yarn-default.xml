@@ -1289,6 +1289,26 @@
   </property>
 
   <property>
+    <description>
+      Whether to enable application placement based on user ID passed via
+      application tags. When it is enabled, u=&lt;userId&gt; pattern will be checked
+      and if found, the application will be placed onto the found user's queue,
+      if the original user has enough rights on the passed user's queue.
+    </description>
+    <name>application-tag-based-placement.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Comma separated list of users who can use the application tag based
+      placement, if it is enabled.
+    </description>
+    <name>application-tag-based-placement.username.whitelist</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>How long to keep aggregation logs before deleting them.  -1 disables. 
     Be careful set this too small and you will spam the name node.</description>
     <name>yarn.log-aggregation.retain-seconds</name>
