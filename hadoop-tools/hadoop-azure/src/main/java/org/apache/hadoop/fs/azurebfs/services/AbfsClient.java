@@ -518,7 +518,7 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-   * Talks to the server to check whether the permission specified  in
+   * Talks to the server to check whether the permission specified in
    * the rwx parameter is present for the path specified in the path parameter.
    *
    * @param path  Path for which access check needs to be performed
