@@ -67,6 +67,7 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_ENABLE_HTTPS = true;
 
   public static final boolean DEFAULT_USE_UPN = false;
+  public static final boolean DEFAULT_ABFS_LATENCY_TRACK = false;
 
   private FileSystemConfigurations() {}
 }
