@@ -661,6 +661,52 @@ Hflush() being the only documented API that can provide persistent data
 transfer, Flush() also attempting to persist buffered data will lead to
 performance issues.
 
+### <a name="perfoptions"></a> Perf Options
+
+#### <a name="abfstracklatencyoptions"></a> 1. HTTP Request Tracking Options
+If you set `fs.azure.abfs.latency.track` to `true`, the module starts tracking the
+performance metrics of ABFS HTTP traffic. To obtain these numbers on your machine
+or cluster, you will also need to enable debug logging for the `AbfsPerfTracker`
+class in your `log4j` config. A typical perf log line appears like:
+
+```
+h=KARMA t=2019-10-25T20:21:14.518Z a=abfstest01.dfs.core.windows.net
+c=abfs-testcontainer-84828169-6488-4a62-a875-1e674275a29f cr=delete ce=deletePath
+r=Succeeded l=32 ls=32 lc=1 s=200 e= ci=95121dae-70a8-4187-b067-614091034558
+ri=97effdcf-201f-0097-2d71-8bae00000000 ct=0 st=0 rt=0 bs=0 br=0 m=DELETE
+u=https%3A%2F%2Fabfstest01.dfs.core.windows.net%2Ftestcontainer%2Ftest%3Ftimeout%3D90%26recursive%3Dtrue
+```
+
+The fields have the following definitions:
+
+`h`: host name
+`t`: time when this request was logged
+`a`: Azure storage account name
+`c`: container name
+`cr`: name of the caller method
+`ce`: name of the callee method
+`r`: result (Succeeded/Failed)
+`l`: latency (time spent in callee)
+`ls`: latency sum (aggregate time spent in caller; logged when there are multiple
+callees; logged with the last callee)
+`lc`: latency count (number of callees; logged when there are multiple callees;
+logged with the last callee)
+`s`: HTTP Status code
+`e`: Error code
+`ci`: client request ID
+`ri`: server request ID
+`ct`: connection time in milliseconds
+`st`: sending time in milliseconds
+`rt`: receiving time in milliseconds
+`bs`: bytes sent
+`br`: bytes received
+`m`: HTTP method (GET, PUT etc)
+`u`: Encoded HTTP URL
+
+Note that these performance numbers are also sent back to the ADLS Gen 2 API endpoints
+in the `x-ms-abfs-client-latency` HTTP headers in subsequent requests. Azure uses these
+settings to track their end-to-end latency.
+
 ## <a name="troubleshooting"></a> Troubleshooting
 
 The problems associated with the connector usually come down to, in order
