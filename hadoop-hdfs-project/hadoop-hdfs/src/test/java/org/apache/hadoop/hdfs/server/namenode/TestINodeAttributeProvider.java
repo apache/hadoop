@@ -81,6 +81,12 @@ public class TestINodeAttributeProvider {
         }
         CALLED.add("checkPermission|" + ancestorAccess + "|" + parentAccess + "|" + access);
       }
+
+      @Override
+      public void checkPermissionWithContext(
+          AuthorizationContext authzContext) throws AccessControlException {
+
+      }
     }
 
     @Override

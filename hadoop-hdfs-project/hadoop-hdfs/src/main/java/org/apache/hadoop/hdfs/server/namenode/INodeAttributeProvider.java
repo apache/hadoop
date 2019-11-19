@@ -30,7 +30,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceStability.Unstable
 public abstract class INodeAttributeProvider {
 
-  public class AuthorizationContext {
+  public static class AuthorizationContext {
     String fsOwner;
     String supergroup;
     UserGroupInformation callerUgi;
@@ -46,6 +46,67 @@ public abstract class INodeAttributeProvider {
     FsAction access;
     FsAction subAccess;
     boolean ignoreEmptyDir;
+
+    public AuthorizationContext(
+        String fsOwner,
+        String supergroup,
+        UserGroupInformation callerUgi,
+        INodeAttributes[] inodeAttrs,
+        INode[] inodes,
+        byte[][] pathByNameArr,
+        int snapshotId,
+        String path,
+        int ancestorIndex,
+        boolean doCheckOwner,
+        FsAction ancestorAccess,
+        FsAction parentAccess,
+        FsAction access,
+        FsAction subAccess,
+        boolean ignoreEmptyDir) {
+      this.fsOwner = fsOwner;
+      this.supergroup = supergroup;
+      this.callerUgi = callerUgi;
+      this.inodeAttrs = inodeAttrs;
+      this.inodes = inodes;
+      this.pathByNameArr = pathByNameArr;
+      this.snapshotId = snapshotId;
+      this.path = path;
+      this.ancestorIndex = ancestorIndex;
+      this.doCheckOwner = doCheckOwner;
+      this.ancestorAccess = ancestorAccess;
+      this.parentAccess = parentAccess;
+      this.access = access;
+      this.subAccess = subAccess;
+      this.ignoreEmptyDir = ignoreEmptyDir;
+    }
+  }
+
+  public static class AuthorizationWithOperationName extends
+      AuthorizationContext {
+    String operationName;
+
+    public AuthorizationWithOperationName(
+        String fsOwner,
+        String supergroup,
+        UserGroupInformation callerUgi,
+        INodeAttributes[] inodeAttrs,
+        INode[] inodes,
+        byte[][] pathByNameArr,
+        int snapshotId,
+        String path,
+        int ancestorIndex,
+        boolean doCheckOwner,
+        FsAction ancestorAccess,
+        FsAction parentAccess,
+        FsAction access,
+        FsAction subAccess,
+        boolean ignoreEmptyDir,
+        String operationName) {
+      super(fsOwner, supergroup, callerUgi, inodeAttrs, inodes,
+          pathByNameArr, snapshotId, path, ancestorIndex, doCheckOwner,
+          ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
+      this.operationName = operationName;
+    }
   }
 
   /**
@@ -76,7 +137,7 @@ public abstract class INodeAttributeProvider {
      *                  the path and all the sub-directories. If path is not a
      *                  directory, there should ideally be no effect.
      * @param ignoreEmptyDir Ignore permission checking for empty directory?
-     * @deprecated use {@link #checkPermission(AuthorizationContext)} instead
+     * @deprecated use {@link #checkPermissionWithContext(AuthorizationContext)}} instead
      * @throws AccessControlException
      */
     public abstract void checkPermission(String fsOwner, String supergroup,
@@ -87,7 +148,7 @@ public abstract class INodeAttributeProvider {
         boolean ignoreEmptyDir)
             throws AccessControlException;
 
-    public abstract void checkPermission(AuthorizationContext authzContext)
+    void checkPermissionWithContext(AuthorizationContext authzContext)
         throws AccessControlException;
   }
   /**
