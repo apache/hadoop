@@ -58,6 +58,7 @@ public final class HttpHeaderConfigurations {
   public static final String X_MS_PERMISSIONS = "x-ms-permissions";
   public static final String X_MS_UMASK = "x-ms-umask";
   public static final String X_MS_NAMESPACE_ENABLED = "x-ms-namespace-enabled";
+  public static final String X_MS_ABFS_CLIENT_LATENCY = "x-ms-abfs-client-latency";
 
   private HttpHeaderConfigurations() {}
 }

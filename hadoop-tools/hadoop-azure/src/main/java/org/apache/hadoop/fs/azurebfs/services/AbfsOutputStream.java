@@ -300,10 +300,16 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     final Future<Void> job = completionService.submit(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        client.append(path, offset, bytes, 0,
-            bytesLength);
-        byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
-        return null;
+        AbfsPerfTracker tracker = client.getAbfsPerfTracker();
+        try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
+                "writeCurrentBufferToService", "append")) {
+          AbfsRestOperation op = client.append(path, offset, bytes, 0,
+                  bytesLength);
+          perfInfo.registerResult(op.getResult());
+          byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
+          perfInfo.registerSuccess(true);
+          return null;
+        }
       }
     });
 
@@ -345,8 +351,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   private synchronized void flushWrittenBytesToServiceInternal(final long offset,
       final boolean retainUncommitedData, final boolean isClose) throws IOException {
-    try {
-      client.flush(path, offset, retainUncommitedData, isClose);
+    AbfsPerfTracker tracker = client.getAbfsPerfTracker();
+    try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
+            "flushWrittenBytesToServiceInternal", "flush")) {
+      AbfsRestOperation op = client.flush(path, offset, retainUncommitedData, isClose);
+      perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
         if (((AbfsRestOperationException) ex).getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {

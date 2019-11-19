@@ -121,6 +121,14 @@ public class AbfsRestOperation {
    * HTTP operations.
    */
   void execute() throws AzureBlobFileSystemException {
+    // see if we have latency reports from the previous requests
+    String latencyHeader = this.client.getAbfsPerfTracker().getClientLatency();
+    if (latencyHeader != null && !latencyHeader.isEmpty()) {
+      AbfsHttpHeader httpHeader =
+              new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_ABFS_CLIENT_LATENCY, latencyHeader);
+      requestHeaders.add(httpHeader);
+    }
+
     int retryCount = 0;
     LOG.debug("First execution of REST operation - {}", operationType);
     while (!executeHttpOperation(retryCount++)) {

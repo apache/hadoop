@@ -21,8 +21,10 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,12 +42,13 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
 /**
  * Represents an HTTP operation.
  */
-public class AbfsHttpOperation {
+public class AbfsHttpOperation implements AbfsPerfLoggable {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsHttpOperation.class);
 
   private static final int CONNECT_TIMEOUT = 30 * 1000;
@@ -158,6 +161,47 @@ public class AbfsHttpOperation {
     sb.append(method);
     sb.append(",");
     sb.append(urlStr);
+    return sb.toString();
+  }
+
+  // Returns a trace message for the ABFS API logging service to consume
+  public String getLogString() {
+    String urlStr = null;
+
+    try {
+      urlStr = URLEncoder.encode(url.toString(), "UTF-8");
+    } catch(UnsupportedEncodingException e) {
+      urlStr = "https%3A%2F%2Ffailed%2Fto%2Fencode%2Furl";
+    }
+
+    final StringBuilder sb = new StringBuilder();
+    sb.append("s=")
+      .append(statusCode)
+      .append(" e=")
+      .append(storageErrorCode)
+      .append(" ci=")
+      .append(clientRequestId)
+      .append(" ri=")
+      .append(requestId);
+
+    if (isTraceEnabled) {
+      sb.append(" ct=")
+        .append(connectionTimeMs)
+        .append(" st=")
+        .append(sendRequestTimeMs)
+        .append(" rt=")
+        .append(recvResponseTimeMs);
+    }
+
+    sb.append(" bs=")
+      .append(bytesSent)
+      .append(" br=")
+      .append(bytesReceived)
+      .append(" m=")
+      .append(method)
+      .append(" u=")
+      .append(urlStr);
+
     return sb.toString();
   }
 
