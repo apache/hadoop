@@ -1680,6 +1680,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Return time duration in the given time unit. Valid units are encoded in
    * properties as suffixes: nanoseconds (ns), microseconds (us), milliseconds
    * (ms), seconds (s), minutes (m), hours (h), and days (d).
+   *
    * @param name Property name
    * @param defaultValue Value returned if no mapping exists.
    * @param unit Unit to convert the stored property, if it exists.
@@ -1687,23 +1688,58 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *         a number
    */
   public long getTimeDuration(String name, long defaultValue, TimeUnit unit) {
+    return getTimeDuration(name, defaultValue, unit, unit);
+  }
+
+  /**
+   * Return time duration in the given time unit. Valid units are encoded in
+   * properties as suffixes: nanoseconds (ns), microseconds (us), milliseconds
+   * (ms), seconds (s), minutes (m), hours (h), and days (d). If no unit is
+   * provided, the default unit is applied.
+   *
+   * @param name Property name
+   * @param defaultValue Value returned if no mapping exists.
+   * @param defaultUnit Default time unit if no valid suffix is provided.
+   * @param returnUnit The unit used for the returned value.
+   * @throws NumberFormatException If the property stripped of its unit is not
+   *         a number
+   * @return time duration in given time unit
+   */
+  public long getTimeDuration(String name, long defaultValue,
+      TimeUnit defaultUnit, TimeUnit returnUnit) {
     String vStr = get(name);
     if (null == vStr) {
-      return defaultValue;
+      return returnUnit.convert(defaultValue, defaultUnit);
     }
     vStr = vStr.trim();
-    return getTimeDurationHelper(name, vStr, unit);
+    return getTimeDurationHelper(name, vStr, defaultUnit, returnUnit);
   }
 
   private long getTimeDurationHelper(String name, String vStr, TimeUnit unit) {
+    return getTimeDurationHelper(name, vStr, unit, unit);
+  }
+
+  /**
+   * Return time duration in the given time unit. Valid units are encoded in
+   * properties as suffixes: nanoseconds (ns), microseconds (us), milliseconds
+   * (ms), seconds (s), minutes (m), hours (h), and days (d).
+   *
+   * @param name Property name
+   * @param vStr The string value with time unit suffix to be converted.
+   * @param defaultUnit Unit to convert the stored property, if it exists.
+   * @param returnUnit Unit for the returned value.
+   */
+  private long getTimeDurationHelper(String name, String vStr,
+      TimeUnit defaultUnit, TimeUnit returnUnit) {
     ParsedTimeDuration vUnit = ParsedTimeDuration.unitFor(vStr);
     if (null == vUnit) {
-      LOG.warn("No unit for " + name + "(" + vStr + ") assuming " + unit);
-      vUnit = ParsedTimeDuration.unitFor(unit);
+      LOG.warn("No unit for " + name + "(" + vStr + ") assuming "
+          + defaultUnit);
+      vUnit = ParsedTimeDuration.unitFor(defaultUnit);
     } else {
       vStr = vStr.substring(0, vStr.lastIndexOf(vUnit.suffix()));
     }
-    return unit.convert(Long.parseLong(vStr), vUnit.unit());
+    return returnUnit.convert(Long.parseLong(vStr), vUnit.unit());
   }
 
   public long[] getTimeDurations(String name, TimeUnit unit) {

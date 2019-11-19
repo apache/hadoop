@@ -162,8 +162,10 @@ public class EditLogTailer {
     lastLoadTimeMs = monotonicNow();
     lastRollTimeMs = monotonicNow();
 
-    logRollPeriodMs = conf.getInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY,
-        DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_DEFAULT) * 1000;
+    logRollPeriodMs = conf.getTimeDuration(
+        DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY,
+        DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
     List<RemoteNameNodeInfo> nns = Collections.emptyList();
     if (logRollPeriodMs >= 0) {
       try {
@@ -188,8 +190,10 @@ public class EditLogTailer {
           DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY + " is negative.");
     }
 
-    sleepTimeMs = conf.getInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY,
-        DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_DEFAULT) * 1000;
+    sleepTimeMs = conf.getTimeDuration(
+        DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY,
+        DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
     long maxSleepTimeMsTemp = conf.getTimeDuration(
         DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_BACKOFF_MAX_KEY,
         DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_BACKOFF_MAX_DEFAULT,
@@ -223,9 +227,10 @@ public class EditLogTailer {
     // setup the iterator to endlessly loop the nns
     this.nnLookup = Iterators.cycle(nns);
 
-    rollEditsTimeoutMs = conf.getInt(
+    rollEditsTimeoutMs = conf.getTimeDuration(
         DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_KEY,
-        DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_DEFAULT) * 1000;
+        DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
 
     rollEditsRpcExecutor = Executors.newSingleThreadExecutor(
         new ThreadFactoryBuilder().setDaemon(true).build());
