@@ -22,6 +22,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -94,12 +95,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.doAnswer;
@@ -1197,4 +1200,191 @@ public class TestAppManager extends AppManagerTestBase{
     return cloneReqs;
   }
 
+  @Test
+  public void testGetUserNameForPlacementTagBasedPlacementDisabled()
+      throws YarnException {
+    String user = "user1";
+    String expectedQueue = "user1Queue";
+    String userIdTag = "u=user2";
+    setApplicationTags("tag1", userIdTag, "tag2");
+    verifyPlacementUsername(expectedQueue, user, user);
+  }
+
+  @Test
+  /**
+   * Test case for when the application tag based placement is enabled and
+   * the submitting user 'user1' is whitelisted and the user from the
+   * application tag has access to queue.
+   * Expected behaviour: the placement is done for user from the tag 'user2'
+   */
+  public void testGetUserNameForPlacementTagBasedPlacementEnabled()
+          throws YarnException {
+    String user = "user1";
+    String expectedQueue = "user1Queue";
+    String expectedUser = "user2";
+    String userIdTag = "u=" + expectedUser;
+    setApplicationTags("tag1", userIdTag, "tag2");
+    enableApplicationTagPlacement(true, user);
+    verifyPlacementUsername(expectedQueue, user, expectedUser);
+  }
+
+  @Test
+  /**
+   * Test case for when the application tag based placement is enabled and
+   * the submitting user 'user1' is whitelisted and  there are multiple valid
+   * username tags passed
+   * Expected behaviour: the placement is done for the first valid username
+   * from the tag 'user2'
+   */
+  public void testGetUserNameForPlacementTagBasedPlacementMultipleUserIds()
+          throws YarnException {
+    String user = "user1";
+    String expectedQueue = "user1Queue";
+    String expectedUser = "user2";
+    String userIdTag = "u=" + expectedUser;
+    String userIdTag2 = "u=user3";
+    setApplicationTags("tag1", userIdTag, "tag2", userIdTag2);
+    enableApplicationTagPlacement(true, user);
+    verifyPlacementUsername(expectedQueue, user, expectedUser);
+  }
+
+  @Test
+  /**
+   * Test case for when the application tag based placement is enabled but
+   * no username is set in the application tag
+   * Expected behaviour: the placement is done for the submitting user 'user1'
+   */
+  public void testGetUserNameForPlacementTagBasedPlacementNoUserId()
+          throws YarnException {
+    String user = "user1";
+    String expectedQueue = "user1Queue";
+    setApplicationTags("tag1", "tag2");
+    enableApplicationTagPlacement(true, user);
+    verifyPlacementUsername(expectedQueue, user, user);
+  }
+
+  @Test
+  /**
+   * Test case for when the application tag based placement is enabled but
+   * the user from the application tag 'user2' does not have access to the
+   * queue.
+   * Expected behaviour: the placement is done for the submitting user 'user1'
+   */
+  public void testGetUserNameForPlacementUserWithoutAccessToQueue()
+          throws YarnException {
+    String user = "user1";
+    String expectedQueue = "user1Queue";
+    String userIdTag = "u=user2";
+    setApplicationTags("tag1", userIdTag, "tag2");
+    enableApplicationTagPlacement(false, user);
+    verifyPlacementUsername(expectedQueue, user, user);
+  }
+
+  @Test
+  /**
+   * Test case for when the application tag based placement is enabled but
+   * the submitting user 'user1' is not whitelisted and there is a valid
+   * username tag passed.
+   * Expected behaviour: the placement is done for the submitting user 'user1'
+   */
+  public void testGetUserNameForPlacementNotWhitelistedUser()
+          throws YarnException {
+    String user = "user1";
+    String expectedQueue = "user1Queue";
+    String userIdTag = "u=user2";
+    setApplicationTags("tag1", userIdTag, "tag2");
+    enableApplicationTagPlacement(true, "someUser");
+    verifyPlacementUsername(expectedQueue, user, user);
+  }
+
+  @Test
+  /**
+   * Test case for when the application tag based placement is enabled but
+   * there is no whitelisted user.
+   * Expected behaviour: the placement is done for the submitting user 'user1'
+   */
+  public void testGetUserNameForPlacementEmptyWhiteList()
+          throws YarnException {
+    String user = "user1";
+    String expectedQueue = "user1Queue";
+    String userIdTag = "u=user2";
+    setApplicationTags("tag1", userIdTag, "tag2");
+    enableApplicationTagPlacement(false);
+    verifyPlacementUsername(expectedQueue, user, user);
+  }
+
+  @Test
+  /**
+   * Test case for when the application tag based placement is enabled and
+   * there is one wrongly qualified user 'u=' and a valid user 'u=user2' passed
+   * via application tag.
+   * Expected behaviour: the placement is done for the first valid username
+   * from the tag 'user2'
+   */
+  public void testGetUserNameForPlacementWronglyQualifiedFirstUserNameInTag()
+          throws YarnException {
+    String user = "user1";
+    String expectedQueue = "user1Queue";
+    String expectedUser = "user2";
+    String userIdTag = "u=" + expectedUser;
+    String wrongUserIdTag = "u=";
+    setApplicationTags("tag1", wrongUserIdTag, userIdTag, "tag2");
+    enableApplicationTagPlacement(true, user);
+    verifyPlacementUsername(expectedQueue, user, expectedUser);
+  }
+
+  @Test
+  /**
+   * Test case for when the application tag based placement is enabled and
+   * there is only one wrongly qualified user 'u=' passed via application tag.
+   * Expected behaviour: the placement is done for the submitting user 'user1'
+   */
+  public void testGetUserNameForPlacementWronglyQualifiedUserNameInTag()
+          throws YarnException {
+    String user = "user1";
+    String expectedQueue = "user1Queue";
+    String wrongUserIdTag = "u=";
+    setApplicationTags("tag1", wrongUserIdTag, "tag2");
+    enableApplicationTagPlacement(true, user);
+    verifyPlacementUsername(expectedQueue, user, user);
+  }
+
+  private void enableApplicationTagPlacement(boolean userHasAccessToQueue,
+                                             String... whiteListedUsers) {
+    Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration
+            .APPLICATION_TAG_BASED_PLACEMENT_ENABLED, true);
+    conf.setStrings(YarnConfiguration
+            .APPLICATION_TAG_BASED_PLACEMENT_USER_WHITELIST, whiteListedUsers);
+    ((RMContextImpl) rmContext).setYarnConfiguration(conf);
+    ResourceScheduler scheduler = mockResourceScheduler();
+    when(scheduler.checkAccess(any(UserGroupInformation.class),
+            eq(QueueACL.SUBMIT_APPLICATIONS), any(String.class)))
+            .thenReturn(userHasAccessToQueue);
+    ApplicationMasterService masterService =
+            new ApplicationMasterService(rmContext, scheduler);
+    appMonitor = new TestRMAppManager(rmContext,
+            new ClientToAMTokenSecretManagerInRM(),
+            scheduler, masterService,
+            new ApplicationACLsManager(conf), conf);
+  }
+
+  private void verifyPlacementUsername(final String queue,
+          final String submittingUser, final String expectedUser)
+          throws YarnException {
+    PlacementManager placementMgr = mock(PlacementManager.class);
+    ApplicationPlacementContext appContext
+            = new ApplicationPlacementContext(queue);
+    when(placementMgr.placeApplication(asContext, submittingUser))
+            .thenReturn(appContext);
+    String userNameForPlacement = appMonitor
+            .getUserNameForPlacement(submittingUser, asContext, placementMgr);
+    Assert.assertEquals(expectedUser, userNameForPlacement);
+  }
+
+  private void setApplicationTags(String... tags) {
+    Set<String> applicationTags = new TreeSet<>();
+    Collections.addAll(applicationTags, tags);
+    asContext.setApplicationTags(applicationTags);
+  }
 }

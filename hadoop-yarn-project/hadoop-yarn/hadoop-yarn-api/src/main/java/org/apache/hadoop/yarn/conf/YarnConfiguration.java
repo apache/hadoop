@@ -1859,6 +1859,14 @@ public class YarnConfiguration extends Configuration {
       "container-monitor.procfs-tree.smaps-based-rss.enabled";
   public static final boolean DEFAULT_PROCFS_USE_SMAPS_BASED_RSS_ENABLED =
       false;
+  private static final String APPLICATION_TAG_BASED_PLACEMENT_PREFIX =
+          "application-tag-based-placement";
+  public static final String APPLICATION_TAG_BASED_PLACEMENT_ENABLED =
+          APPLICATION_TAG_BASED_PLACEMENT_PREFIX + ".enable";
+  public static final boolean DEFAULT_APPLICATION_TAG_BASED_PLACEMENT_ENABLED =
+          false;
+  public static final String APPLICATION_TAG_BASED_PLACEMENT_USER_WHITELIST =
+          APPLICATION_TAG_BASED_PLACEMENT_PREFIX + ".username.whitelist";
 
   /** Enable/disable container metrics. */
   @Private
