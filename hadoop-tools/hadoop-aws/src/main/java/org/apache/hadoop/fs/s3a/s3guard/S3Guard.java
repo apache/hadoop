@@ -791,13 +791,6 @@ public final class S3Guard {
       return dlm;
     }
 
-    long ttl = timeProvider.getMetadataTtl();
-
-    if (dlm != null && dlm.isAuthoritative()
-        && dlm.isExpired(ttl, timeProvider.getNow())) {
-      dlm.setAuthoritative(false);
-    }
-
     // filter expired entries
     if (dlm != null) {
       dlm.removeExpiredEntriesFromListing(
