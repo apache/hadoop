@@ -172,6 +172,13 @@ class FSPreemptionThread extends Thread {
     for (RMContainer container : containersToCheck) {
       FSAppAttempt app =
           scheduler.getSchedulerApp(container.getApplicationAttemptId());
+      // If the app has unregistered while building the container list the app
+      // might be null, just skip this container: it should be cleaned up soon
+      if (app == null) {
+        LOG.info("Found container " + container + " on node "
+            + node.getNodeName() + "without app, skipping preemption");
+        continue;
+      }
 
       if (app.canContainerBePreempted(container)) {
         // Flag container for preemption
@@ -205,9 +212,13 @@ class FSPreemptionThread extends Thread {
     for (RMContainer container : containers) {
       ApplicationAttemptId appAttemptId = container.getApplicationAttemptId();
       FSAppAttempt app = scheduler.getSchedulerApp(appAttemptId);
-      LOG.info("Preempting container " + container +
-          " from queue " + app.getQueueName());
-      app.trackContainerForPreemption(container);
+      LOG.info("Preempting container " + container + " from queue: "
+          + (app != null ? app.getQueueName() : "unknown"));
+      // If the app has unregistered while building the container list
+      // the app might be null, skip notifying the app
+      if (app != null) {
+        app.trackContainerForPreemption(container);
+      }
     }
 
     // Schedule timer task to kill containers
