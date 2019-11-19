@@ -132,6 +132,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
   public static final String WRITE_FLAG = "write";
   public static final String TAG_FLAG = "tag";
 
+  public static final String VERBOSE = "verbose";
+
   /**
    * Constructor a S3Guard tool with HDFS configuration.
    * @param conf Configuration.
@@ -775,9 +777,10 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
       final CommandFormat commandFormat = getCommandFormat();
 
-      final Importer importer = new Importer(getFilesystem(), getStore(),
+      final ImportOperation importer = new ImportOperation(getFilesystem(), getStore(),
           status,
-          commandFormat.getOpt(AUTH_FLAG));
+          commandFormat.getOpt(AUTH_FLAG),
+          commandFormat.getOpt(VERBOSE));
       long items = importer.execute();
       println(out, "Inserted %d items into Metadata Store", items);
 
@@ -1336,7 +1339,6 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public static final String ABORT = "abort";
     public static final String LIST = "list";
     public static final String EXPECT = "expect";
-    public static final String VERBOSE = "verbose";
     public static final String FORCE = "force";
 
     public static final String PURPOSE = "list or abort pending " +
@@ -1698,11 +1700,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
           errorln("Path " + auditPath
               + " is not confiugured to be authoritative");
           errorln(USAGE);
-          return AuthoritativeAudit.ERROR_PATH_NOT_AUTH_IN_FS;
+          return AuthoritativeAuditOperation.ERROR_PATH_NOT_AUTH_IN_FS;
         }
       }
 
-      final AuthoritativeAudit audit = new AuthoritativeAudit(
+      final AuthoritativeAuditOperation audit = new AuthoritativeAuditOperation(
           fs.createStoreContext(),
           (DynamoDBMetadataStore) ms,
           commandFormat.getOpt(REQUIRE_AUTH));

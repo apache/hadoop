@@ -38,14 +38,14 @@ import org.apache.hadoop.util.ExitUtil;
 
 /**
  * Audit a directory tree for being authoritative.
- * One aspect of the audit  to be aware of: the root directory is
+ * One aspect of the audit to be aware of: the root directory is
  * always considered authoritative, even though, because there is no
  * matching entry in any of the stores, it is not strictly true.
  */
-public class AuthoritativeAudit extends AbstractStoreOperation {
+public class AuthoritativeAuditOperation extends AbstractStoreOperation {
 
   private static final Logger LOG = LoggerFactory.getLogger(
-      AuthoritativeAudit.class);
+      AuthoritativeAuditOperation.class);
 
   /**
    * Exception error code when a path is nonauth in the DB: {@value}.
@@ -76,7 +76,7 @@ public class AuthoritativeAudit extends AbstractStoreOperation {
    * @param metastore metastore
    * @param requireAuthoritative require all directories to be authoritative
    */
-  public AuthoritativeAudit(
+  public AuthoritativeAuditOperation(
       final StoreContext storeContext,
       final DynamoDBMetadataStore metastore,
       final boolean requireAuthoritative) {

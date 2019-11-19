@@ -100,7 +100,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
 
   private Path methodNonauthPath;
 
-  private AuthoritativeAudit auditor;
+  private AuthoritativeAuditOperation auditor;
 
   @AfterClass
   public static void closeFileSystems() {
@@ -136,7 +136,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
     if (!fsUriStr.endsWith("/")) {
       fsUriStr = fsUriStr + "/";
     }
-    auditor = new AuthoritativeAudit(storeContext,
+    auditor = new AuthoritativeAuditOperation(storeContext,
         metastore, true);
 
 
@@ -228,12 +228,12 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
   @Test
   public void testAddFileMarksNonAuth() throws Throwable {
     describe("adding a file marks dir as nonauth");
-    final Path dir = methodAuthPath;
-    final Path file = new Path(dir, "testAddFileMarksNonAuth");
-
+    final Path dir = new Path(methodAuthPath, "dir");
+    final Path file = new Path(dir, "file");
     touchFile(file);
     expectNonauthRecursive(dir);
     assertListUpdatesAuth(dir);
+    expectAuthRecursive(methodAuthPath);
   }
 
   @Test
@@ -338,28 +338,59 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
 
   @Test
   public void testS3GuardImportMarksDirAsAuth() throws Throwable {
-    describe("validate import");
+    describe("import with authoritive=true marks directories");
+    // the base dir is auth
+    mkAuthDir(methodAuthPath);
+    int expected = 0;
     final Path dir = new Path(methodAuthPath, "dir");
     final Path subdir = new Path(dir, "subdir");
     final Path file = new Path(subdir, "file");
-    ContractTestUtils.touch(unguardedFS, file);
-    final Importer importer = new Importer(unguardedFS,
-        authFS.getMetadataStore(),
+    ContractTestUtils.touch(authFS, file);
+    expected++;
+    for (int i = 0; i < 5; i++) {
+      ContractTestUtils.touch(authFS, new Path(subdir, "file-" + i));
+      expected++;
+    }
+    final Path emptydir = new Path(dir, "emptydir");
+    unguardedFS.mkdirs(emptydir);
+    expected++;
+
+    final S3AFileStatus status1 = (S3AFileStatus) authFS.getFileStatus(file);
+    final MetadataStore authMS = authFS.getMetadataStore();
+    final ImportOperation importer = new ImportOperation(unguardedFS,
+        authMS,
         (S3AFileStatus) unguardedFS.getFileStatus(dir),
-        true);
+        true, true);
     final Long count = importer.execute();
     expectAuthRecursive(dir);
+    //the parent dir shouldn't have changed
+    // TODO: re-enable
+    //  expectAuthNonRecursive(methodAuthPath);
+
+    // file entry
+    final S3AFileStatus status2 = (S3AFileStatus) authFS.getFileStatus(file);
+    Assertions.assertThat(status2.getETag())
+        .describedAs("Etag of %s", status2)
+        .isEqualTo(status1.getETag());
+    // only picked up on versioned stores.
+    Assertions.assertThat(status2.getVersionId())
+        .describedAs("version ID of %s", status2)
+        .isEqualTo(status1.getVersionId());
+
+    // the import finds files and empty dirs
+    Assertions.assertThat(count)
+        .describedAs("Count of imports under %s", dir)
+        .isEqualTo(expected);
   }
 
   /**
-   * Touch a file in the authfs.
+   * Touch a file in the authoritative fs.
    * @param file path of file
    * @throws IOException Failure
    */
   protected void touchFile(final Path file) throws IOException {
     ContractTestUtils.touch(authFS, file);
   }
-
 
   /**
    * Invoke an operation expecting the meta store to be updated{@code updates}
@@ -413,7 +444,7 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
   }
 
   private void expectNonauthRecursive(Path dir) throws Exception {
-    intercept(AuthoritativeAudit.NonAuthoritativeDirException.class,
+    intercept(AuthoritativeAuditOperation.NonAuthoritativeDirException.class,
         () -> auditor.executeAudit(dir, true, true));
   }
   // test rename (aut, auth) -> auth
