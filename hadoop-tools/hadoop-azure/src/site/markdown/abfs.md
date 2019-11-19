@@ -662,7 +662,7 @@ transfer, Flush() also attempting to persist buffered data will lead to
 performance issues.
 
 ### <a name="flushconfigoptions"></a> Access Options
-Config `fs.azure.enable.check.access` needs to be set true to enable 
+Config `fs.azure.enable.check.access` needs to be set true to enable
  the AzureBlobFileSystem.access().
 
 ## <a name="troubleshooting"></a> Troubleshooting
