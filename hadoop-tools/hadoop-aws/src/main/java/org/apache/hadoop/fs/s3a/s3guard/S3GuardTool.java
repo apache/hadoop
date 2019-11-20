@@ -722,8 +722,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public static final String AUTH_FLAG = "auth";
     private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
         "\t" + PURPOSE + "\n\n" +
-        "  -" + AUTH_FLAG + "Mark imported directory data as authoritative." +
         "Common options:\n" +
+        "  -" + AUTH_FLAG + " Mark imported directory data as authoritative." +
         "  -" + META_FLAG + " URL - Metadata repository details " +
         "(implementation-specific)\n" +
         "\n" +
@@ -735,7 +735,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         "  is not supported.";
 
     Import(Configuration conf) {
-      super(conf, AUTH_FLAG);
+      super(conf, AUTH_FLAG, VERBOSE);
     }
 
     @Override

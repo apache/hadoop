@@ -43,7 +43,8 @@ import org.apache.hadoop.util.DurationInfo;
  */
 class ImportOperation extends ExecutingStoreOperation<Long> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ImportOperation.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      ImportOperation.class);
 
   /**
    * Source file system: must not be guarded.
@@ -158,9 +159,7 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
           child = located.toS3AFileStatus();
         }
 
-        // skipping this as it can overwrite entries in DDB and so convert
-        // parents from auth to nonauth
-//        putParentsIfNotPresent(child, operationState);
+        putParentsIfNotPresent(child, operationState);
 
         // We don't blindly overwrite any existing file entry in S3Guard with a
         // new one, Because that may lose the version information.
@@ -198,7 +197,7 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
           // there's an entry to add.
           if (verbose) {
             LOG.info("{} {}",
-                isDirectory? "Dir ": "File",   // Spaced to same width
+                isDirectory ? "Dir " : "File",   // Spaced to same width
                 path);
           }
           S3Guard.putWithTtl(
@@ -211,7 +210,7 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
       }
       // here all entries are imported.
       // tell the store that everything should be marked as auth
-      if (authoritative){
+      if (authoritative) {
         LOG.info("Marking directory tree {} as authoritative",
             basePath);
         ms.markAsAuthoritative(basePath, operationState);
@@ -223,6 +222,8 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
   /**
    * Put parents into metastore and cache if the parents are not present.
    *
+   * There's duplication here with S3Guard DDB ancestor state, but this
+   * is designed to work across implementations.
    * @param f the file or an empty directory.
    * @param operationState store's bulk update state.
    * @throws IOException on I/O errors.
@@ -235,13 +236,20 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
       if (dirCache.contains(parent)) {
         return;
       }
-      S3AFileStatus dir = DynamoDBMetadataStore.makeDirStatus(parent,
-          f.getOwner());
-      S3Guard.putWithTtl(getStore(), new PathMetadata(dir),
-          getFilesystem().getTtlTimeProvider(),
-          operationState);
+      final ITtlTimeProvider timeProvider
+          = getFilesystem().getTtlTimeProvider();
+      final PathMetadata pmd = S3Guard.getWithTtl(getStore(), parent,
+          timeProvider, false);
+      if (pmd == null || pmd.isDeleted()) {
+        S3AFileStatus dir = DynamoDBMetadataStore.makeDirStatus(parent,
+            f.getOwner());
+        S3Guard.putWithTtl(getStore(), new PathMetadata(dir),
+            timeProvider,
+            operationState);
+      }
       dirCache.add(parent);
       parent = parent.getParent();
     }
   }
+
 }
