@@ -333,8 +333,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <suppressionsLocation>checkstyle/suppressions.xml</suppressionsLocation>
             <includeTestSourceDirectory>true</includeTestSourceDirectory>
             <failOnViolation>false</failOnViolation>
-            <format>xml</format>
-            <format>html</format>
             <outputFile>${project.build.directory}/test/checkstyle-errors.xml</outputFile>
           </configuration>
         </plugin>
