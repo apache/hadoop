@@ -63,9 +63,8 @@ public class TestBlockSyncOperationExecutor {
             (locatedBlock, config) -> blockReaderMock,
             fs -> multipartUploaderMock);
     String uploadHandleStr = "uploadHandle";
-    byte[] uploadHandle = uploadHandleStr.getBytes();
-    ByteBuffer byteBuffer = ByteBuffer.wrap(uploadHandle);
-    PartHandle partHandle = BBPartHandle.from(byteBuffer);
+    ByteBuffer uploadHandle = ByteBuffer.wrap(uploadHandleStr.getBytes());
+    PartHandle partHandle = BBPartHandle.from(uploadHandle);
     when(multipartUploaderMock.putPart(any(), any(), anyInt(), any(),
         anyLong())).thenReturn(partHandle);
     UUID syncTaskId = UUID.randomUUID();

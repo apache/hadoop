@@ -547,6 +547,7 @@ message SnapshottableDirectoryListingProto {
   repeated SnapshottableDirectoryStatusProto snapshottableDirListing = 1;
 }
 
+
 /**
  * Snapshot diff report entry
  */
@@ -554,6 +555,7 @@ message SnapshotDiffReportEntryProto {
   required bytes fullpath = 1;
   required string modificationLabel = 2;
   optional bytes targetPath = 3;
+  optional HdfsFileStatusProto.FileType fileType = 4;
 }
 
 /**
@@ -576,6 +578,7 @@ message SnapshotDiffReportListingEntryProto {
   required bool isReference = 3;
   optional bytes targetPath = 4;
   optional uint64 fileId = 5;
+  optional HdfsFileStatusProto.FileType fileType = 6;
 }
 
 message SnapshotDiffReportCursorProto {

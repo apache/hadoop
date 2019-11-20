@@ -106,6 +106,8 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.server.common.ECTopologyVerifier;
 import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksMBean;
+import org.apache.hadoop.hdfs.server.namenode.syncservice.MountManager;
+import org.apache.hadoop.hdfs.server.namenode.syncservice.SyncServiceSatisfier;
 import org.apache.hadoop.hdfs.server.protocol.BulkSyncTaskExecutionFeedback;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.util.Time;
@@ -474,6 +476,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private String nameserviceId;
 
+  private MountManager mountManager;
+
   private volatile RollingUpgradeInfo rollingUpgradeInfo = null;
   /**
    * A flag that indicates whether the checkpointer should checkpoint a rollback
@@ -647,6 +651,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public boolean isHaEnabled() {
     return haEnabled;
   }
+  @Override
+  public MountManager getMountManager() {
+    return mountManager;
+  }
+  
+  public void setMountManager(MountManager mountManager) {
+    this.mountManager = mountManager;
+  }
 
   /**
    * Check the supplied configuration for correctness.
@@ -801,6 +813,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             "must not be specified if HA is not enabled.");
       }
 
+      this.dir = new FSDirectory(this, conf);
+      this.snapshotManager = new SnapshotManager(conf, dir);
+      this.mountManager = new MountManager(this);
+
       // block manager needs the haEnabled initialized
       this.blockManager = new BlockManager(this, haEnabled, conf);
       this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
@@ -893,8 +909,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_DEFAULT);
       
       this.dtSecretManager = createDelegationTokenSecretManager(conf);
-      this.dir = new FSDirectory(this, conf);
-      this.snapshotManager = new SnapshotManager(conf, dir);
+
       this.cacheManager = new CacheManager(this, conf, blockManager);
       // Init ErasureCodingPolicyManager instance.
       ErasureCodingPolicyManager.getInstance().init(conf);
@@ -2378,6 +2393,69 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } finally {
       readUnlock("getStoragePolicies");
     }
+  }
+
+  void syncCreateToRemoteStore(String src, boolean logRetryCache) throws IOException {
+    final String operationName = "syncNodeToRemoteStore";
+    FileStatus auditStat;
+    //validateStoragePolicySatisfy();
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      checkNameNodeSafeMode("Cannot sync node for " + src);
+      auditStat = FSDirSyncNodeToRemoteStoreOp.syncCreateToRemoteStore(
+          dir, blockManager, src, logRetryCache);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, operationName, src);
+      throw e;
+    } finally {
+      readUnlock(operationName);
+    }
+    getEditLog().logSync();
+    logAuditEvent(true, operationName, src, null, auditStat);
+  }
+
+  void syncRenameToRemoteStore(String src, String dest, boolean logRetryCache) throws IOException {
+    final String operationName = "syncNodeToRemoteStore";
+    FileStatus auditStat;
+    //validateStoragePolicySatisfy();
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      checkNameNodeSafeMode("Cannot sync node for " + src);
+      auditStat = FSDirSyncNodeToRemoteStoreOp.syncRenameToRemoteStore(
+          dir, blockManager, src, dest, logRetryCache);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, operationName, src);
+      throw e;
+    } finally {
+      readUnlock(operationName);
+    }
+    getEditLog().logSync();
+    logAuditEvent(true, operationName, src, null, auditStat);
+  }
+
+  void syncDeleteToRemoteStore(String src, boolean logRetryCache) throws IOException {
+    final String operationName = "syncNodeToRemoteStore";
+    FileStatus auditStat;
+    //validateStoragePolicySatisfy();
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      checkNameNodeSafeMode("Cannot sync node for " + src);
+      auditStat = FSDirSyncNodeToRemoteStoreOp.syncDeleteToRemoteStore(
+          dir, blockManager, src, logRetryCache);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, operationName, src);
+      throw e;
+    } finally {
+      readUnlock(operationName);
+    }
+    getEditLog().logSync();
+    logAuditEvent(true, operationName, src, null, auditStat);
   }
 
   long getPreferredBlockSize(String src) throws IOException {
@@ -3975,6 +4053,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       long blockReportLeaseId = 0;
       if (requestFullBlockReportLease) {
         blockReportLeaseId =  blockManager.requestBlockReportLeaseId(nodeReg);
+      }
+
+      SyncServiceSatisfier syncServiceSatisfier =
+          this.blockManager.getSyncServiceSatisfier();
+      if (syncServiceSatisfier != null) {
+        if (!syncServiceSatisfier.isRunning()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                "Sync Service satisfier is not running. So, ignoring storage"
+                    + "  movement attempt finished block info sent by DN");
+          }
+        } else {
+          syncServiceSatisfier.handleExecutionFeedback(bulkSyncTaskExecutionFeedback);
+        }
       }
 
       //create ha status
@@ -6498,7 +6590,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   
   /** Allow snapshot on a directory. */
-  void allowSnapshot(String path) throws IOException {
+  public void allowSnapshot(String path) throws IOException {
     checkOperation(OperationCategory.WRITE);
     final String operationName = "allowSnapshot";
     boolean success = false;
@@ -6517,7 +6609,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   
   /** Disallow snapshot on a directory. */
-  void disallowSnapshot(String path) throws IOException {
+  public void disallowSnapshot(String path) throws IOException {
     checkOperation(OperationCategory.WRITE);
     final String operationName = "disallowSnapshot";
     checkSuperuserPrivilege(operationName);
@@ -6540,7 +6632,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param snapshotRoot The directory path where the snapshot is taken
    * @param snapshotName The name of the snapshot
    */
-  String createSnapshot(String snapshotRoot, String snapshotName,
+  public String createSnapshot(String snapshotRoot, String snapshotName,
                         boolean logRetryCache) throws IOException {
     checkOperation(OperationCategory.WRITE);
     final String operationName = "createSnapshot";
@@ -6648,7 +6740,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    *         and labeled as M/-/+/R respectively.
    * @throws IOException
    */
-  SnapshotDiffReport getSnapshotDiffReport(String path,
+  public SnapshotDiffReport getSnapshotDiffReport(String path,
       String fromSnapshot, String toSnapshot) throws IOException {
     long begTime = Time.monotonicNow();
     final String operationName = "computeSnapshotDiff";
@@ -7832,7 +7924,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
-  void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
+  public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
                 boolean logRetryCache)
       throws IOException {
     final String operationName = "setXAttr";
@@ -7855,7 +7947,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     logAuditEvent(true, operationName, src, null, auditStat);
   }
 
-  List<XAttr> getXAttrs(final String src, List<XAttr> xAttrs)
+  public List<XAttr> getXAttrs(final String src, List<XAttr> xAttrs)
       throws IOException {
     final String operationName = "getXAttrs";
     checkOperation(OperationCategory.READ);
@@ -7894,7 +7986,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return fsXattrs;
   }
 
-  void removeXAttr(String src, XAttr xAttr, boolean logRetryCache)
+  public void removeXAttr(String src, XAttr xAttr, boolean logRetryCache)
       throws IOException {
     final String operationName = "removeXAttr";
     FileStatus auditStat = null;

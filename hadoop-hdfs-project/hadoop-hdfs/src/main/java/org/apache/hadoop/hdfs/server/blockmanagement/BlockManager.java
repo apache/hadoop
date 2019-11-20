@@ -92,6 +92,7 @@ import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
+import org.apache.hadoop.hdfs.server.namenode.syncservice.SyncServiceSatisfier;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
@@ -435,6 +436,10 @@ public class BlockManager implements BlockStatsMXBean {
    */
   private StoragePolicySatisfyManager spsManager;
 
+  private final SyncServiceSatisfier syncServiceSatisfier;
+  private final boolean storagePolicyEnabled;
+  private boolean syncServiceEnabled;
+
   /** Minimum live replicas needed for the datanode to be transitioned
    * from ENTERING_MAINTENANCE to IN_MAINTENANCE.
    */
@@ -475,6 +480,15 @@ public class BlockManager implements BlockStatsMXBean {
         * 1000L);
 
     createSPSManager(conf);
+
+    storagePolicyEnabled =
+        conf.getBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY,
+            DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_DEFAULT);
+    syncServiceEnabled =
+        conf.getBoolean(
+            DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED,
+            DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED_DEFAULT);
+    syncServiceSatisfier = new SyncServiceSatisfier(namesystem, this, conf);
 
     blockTokenSecretManager = createBlockTokenSecretManager(conf);
 
@@ -581,6 +595,10 @@ public class BlockManager implements BlockStatsMXBean {
     LOG.info("redundancyRecheckInterval  = {}ms", redundancyRecheckIntervalMs);
     LOG.info("encryptDataTransfer        = {}", encryptDataTransfer);
     LOG.info("maxNumBlocksToLog          = {}", maxNumBlocksToLog);
+  }
+
+  public SyncServiceSatisfier getSyncServiceSatisfier() {
+    return syncServiceSatisfier;
   }
 
   private static BlockTokenSecretManager createBlockTokenSecretManager(
@@ -1261,11 +1279,12 @@ public class BlockManager implements BlockStatsMXBean {
             false);
       } else {
         final DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
+        DatanodeStorageInfo[] allStorages = extendStorageInfos(blk, storages);
         final ExtendedBlock eb = new ExtendedBlock(getBlockPoolId(),
             blk);
         return null == locatedBlocks
             ? newLocatedBlock(eb, storages, pos, false)
-                : locatedBlocks.newLocatedBlock(eb, storages, pos, false);
+                : locatedBlocks.newLocatedBlock(eb, allStorages, pos, false);
       }
     }
 
@@ -1329,10 +1348,29 @@ public class BlockManager implements BlockStatsMXBean {
       " numCorrupt: " + numCorruptNodes +
       " numCorruptRepls: " + numCorruptReplicas;
     final ExtendedBlock eb = new ExtendedBlock(getBlockPoolId(), blk);
+    DatanodeStorageInfo[] extendedMachines = extendStorageInfos(blk, machines);
+
     return blockIndices == null
-        ? null == locatedBlocks ? newLocatedBlock(eb, machines, pos, isCorrupt)
-            : locatedBlocks.newLocatedBlock(eb, machines, pos, isCorrupt)
-        : newLocatedStripedBlock(eb, machines, blockIndices, pos, isCorrupt);
+        ? null == locatedBlocks ? newLocatedBlock(eb, extendedMachines, pos, isCorrupt)
+            : locatedBlocks.newLocatedBlock(eb, extendedMachines, pos, isCorrupt)
+        : newLocatedStripedBlock(eb, extendedMachines, blockIndices, pos, isCorrupt);
+  }
+
+  private DatanodeStorageInfo[] extendStorageInfos(BlockInfo blk, DatanodeStorageInfo[] storages) {
+    DatanodeStorageInfo providedStorageInfo =
+        this.providedStorageMap.getProvidedStorageInfo();
+    if (providedStorageInfo == null) {
+      return storages;
+    }
+    boolean present = providedStorageInfo.isPresent(blk);
+    DatanodeStorageInfo[] allStorages;
+    if (present) {
+      allStorages = Arrays.copyOf(storages, storages.length + 1);
+      allStorages[storages.length] = providedStorageInfo;
+    } else {
+      allStorages = storages;
+    }
+    return allStorages;
   }
 
   /** Create a LocatedBlocks. */
@@ -2462,12 +2500,26 @@ public class BlockManager implements BlockStatsMXBean {
         failedVolumes, volumeFailureSummary);
   }
 
-  /**
-   * StatefulBlockInfo is used to build the "toUC" list, which is a list of
-   * updates to the information about under-construction blocks.
-   * Besides the block in question, it provides the ReplicaState
-   * reported by the datanode in the block report. 
-   */
+  public void processProvidedBlockReport(BlockInfo blockInfo, Block reportedBlock) throws IOException {
+    namesystem.writeLock();
+    try {
+      DatanodeStorageInfo providedStorageInfo =
+          this.providedStorageMap.getProvidedStorageInfo();
+      DatanodeDescriptor datanodeDescriptor =
+          this.providedStorageMap.chooseProvidedDatanode();
+      addStoredBlock(blockInfo, reportedBlock, providedStorageInfo,
+          datanodeDescriptor, true);
+    } finally {
+      namesystem.writeUnlock();
+    }
+  }
+
+    /**
+     * StatefulBlockInfo is used to build the "toUC" list, which is a list of
+     * updates to the information about under-construction blocks.
+     * Besides the block in question, it provides the ReplicaState
+     * reported by the datanode in the block report.
+     */
   static class StatefulBlockInfo {
     final BlockInfo storedBlock; // should be UC block
     final Block reportedBlock;
@@ -5118,5 +5170,40 @@ public class BlockManager implements BlockStatsMXBean {
    */
   public StoragePolicySatisfyManager getSPSManager() {
     return spsManager;
+  }
+
+  /**
+   * Start storage policy satisfier service.
+   */
+  public void startSyncService() {
+    if (!(storagePolicyEnabled && syncServiceEnabled)) {
+      LOG.info(
+          "Failed to start StoragePolicySatisfier "
+              + " as {} set to {} and {} set to {}.",
+          DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, storagePolicyEnabled,
+          DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED, syncServiceEnabled);
+      return;
+    } else if (syncServiceSatisfier.isRunning()) {
+      LOG.info("Storage policy satisfier is already running.");
+      return;
+    }
+    syncServiceSatisfier.start(false);
+  }
+
+  /**
+   * Stop storage policy satisfier service.
+   *
+   * @param forceStop true represents that it should stop SPS service by clearing all
+   *                  pending SPS work
+   */
+  public void stopSyncService(boolean forceStop) {
+    if (!(storagePolicyEnabled && syncServiceEnabled)) {
+      LOG.info("Storage policy satisfier is not enabled.");
+      return;
+    } else if (!syncServiceSatisfier.isRunning()) {
+      LOG.info("Storage policy satisfier is already stopped.");
+      return;
+    }
+    syncServiceSatisfier.disable();
   }
 }

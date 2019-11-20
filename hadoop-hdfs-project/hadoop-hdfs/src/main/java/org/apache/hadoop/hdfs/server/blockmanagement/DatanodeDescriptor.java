@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockSyncTask;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -68,6 +69,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
       LoggerFactory.getLogger(DatanodeDescriptor.class);
   public static final DatanodeDescriptor[] EMPTY_ARRAY = {};
   private static final int BLOCKS_SCHEDULED_ROLL_INTERVAL = 600*1000; //10min
+
+  /** A queue of files and directories commands that must be run. */
+  private final Queue<BlockSyncTask> plannedSyncTasks = new LinkedList<>();
 
   /** Block and targets pair */
   @InterfaceAudience.Private
@@ -508,6 +512,28 @@ public class DatanodeDescriptor extends DatanodeInfo {
       } else {
         assert storage == s : "found " + storage + " expected " + s;
       }
+    }
+  }
+
+  /**
+   * Add the file info that should be backed up to provided storage
+   *
+   * @param syncTask - store info of file that should be backed up to provided storage
+   */
+  public void scheduleSyncTaskOnHeartbeat(BlockSyncTask syncTask) {
+    synchronized (plannedSyncTasks) {
+      plannedSyncTasks.add(syncTask);
+    }
+  }
+
+  /**
+   * Add changes that should be backed up to provided storage
+   *
+   * @param multipartPutPartSyncTasks - store info of file that should be backed up to provided storage
+   */
+  public void scheduleSyncTaskOnHeartbeat(List<BlockSyncTask> multipartPutPartSyncTasks) {
+    synchronized (plannedSyncTasks) {
+      plannedSyncTasks.addAll(multipartPutPartSyncTasks);
     }
   }
 

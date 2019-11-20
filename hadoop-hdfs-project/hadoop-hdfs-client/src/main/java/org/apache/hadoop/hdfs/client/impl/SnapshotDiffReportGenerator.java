@@ -222,7 +222,9 @@ public class SnapshotDiffReportGenerator {
     generateReportList();
     for (DiffReportListingEntry modified : mlist) {
       diffReportList.add(
-          new DiffReportEntry(DiffType.MODIFY, modified.getSourcePath(), null));
+          new DiffReportEntry(modified.getINodeType()
+              .toSnapshotDiffReportINodeType(),
+              DiffType.MODIFY, modified.getSourcePath(), null));
       if (modified.isReference()
           && dirDiffMap.get(modified.getDirId()) != null) {
         List<DiffReportEntry> subList = generateReport(modified);
@@ -241,6 +243,7 @@ public class SnapshotDiffReportGenerator {
       RenameEntry entry = renameMap.get(created.getFileId());
       if (entry == null || !entry.isRename()) {
         diffReportList.add(new DiffReportEntry(
+            created.getINodeType().toSnapshotDiffReportINodeType(),
             isFromEarlier ? DiffType.CREATE : DiffType.DELETE,
             created.getSourcePath()));
       }
@@ -248,11 +251,14 @@ public class SnapshotDiffReportGenerator {
     for (DiffReportListingEntry deleted : list.getDeletedList()) {
       RenameEntry entry = renameMap.get(deleted.getFileId());
       if (entry != null && entry.isRename()) {
-        diffReportList.add(new DiffReportEntry(DiffType.RENAME,
+        diffReportList.add(new DiffReportEntry(
+            deleted.getINodeType().toSnapshotDiffReportINodeType(),
+            DiffType.RENAME,
             isFromEarlier ? entry.getSourcePath() : entry.getTargetPath(),
             isFromEarlier ? entry.getTargetPath() : entry.getSourcePath()));
       } else {
         diffReportList.add(new DiffReportEntry(
+            deleted.getINodeType().toSnapshotDiffReportINodeType(),
             isFromEarlier ? DiffType.DELETE : DiffType.CREATE,
             deleted.getSourcePath()));
       }

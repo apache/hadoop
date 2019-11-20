@@ -515,7 +515,7 @@ public class PBHelper {
           PBHelperClient.convertLocatedBlocks(
               syncTaskProto.getLocatedBlocksList()),
           syncTaskProto.getPartNumber(),
-          syncTaskProto.getUploadHandle().toByteArray(),
+          syncTaskProto.getUploadHandle().asReadOnlyByteBuffer(),
           syncTaskProto.getOffset(),
           syncTaskProto.getLength(),
           syncTaskIdProto.getSyncMountId());
