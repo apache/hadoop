@@ -584,6 +584,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static UserGroupInformation getCurrentUser() throws IOException {
+    ensureInitialized();
     AccessControlContext context = AccessController.getContext();
     Subject subject = Subject.getSubject(context);
     if (subject == null || subject.getPrincipals(User.class).isEmpty()) {
@@ -670,6 +671,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static UserGroupInformation getLoginUser() throws IOException {
+    ensureInitialized();
     UserGroupInformation loginUser = loginUserRef.get();
     // a potential race condition exists only for the initial creation of
     // the login user.  there's no need to penalize all subsequent calls
