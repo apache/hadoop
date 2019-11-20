@@ -254,8 +254,9 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
 
   @Test
   public void testPruneFilesMarksNonAuth() throws Throwable {
-    describe("adding a file marks dir as nonauth");
-    final Path dir = methodAuthPath;
+    describe("Pruning a file marks dir as nonauth");
+    mkAuthDir(methodAuthPath);
+    final Path dir = new Path(methodAuthPath, "dir");
     final Path file = new Path(dir, "file");
 
     touchFile(file);
@@ -275,7 +276,8 @@ public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
   @Test
   public void testPruneTombstoneRetainsAuth() throws Throwable {
     describe("Prune tombstones");
-    final Path dir = methodAuthPath;
+    mkAuthDir(methodAuthPath);
+    final Path dir = new Path(methodAuthPath, "dir");
     final Path file = new Path(dir, "file");
 
     touchFile(file);

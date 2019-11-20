@@ -54,6 +54,7 @@ import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
 import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.TableWriteItems;
+import com.amazonaws.services.dynamodbv2.document.internal.IteratorSupport;
 import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
@@ -69,6 +70,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -743,9 +745,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
           tableName, region, path, meta);
     }
 
-    if (wantEmptyDirectoryFlag && meta != null) {
+    if (wantEmptyDirectoryFlag && meta != null && !meta.isDeleted()) {
       final FileStatus status = meta.getFileStatus();
-      // for directory, we query its direct children to determine isEmpty bit
+      // for a non-deleted directory, we query its direct children to determine isEmpty bit
       if (status.isDirectory()) {
         final QuerySpec spec = new QuerySpec()
             .withHashKey(pathToParentKeyAttribute(path))
@@ -755,7 +757,21 @@ public class DynamoDBMetadataStore implements MetadataStore,
         boolean hasChildren = readOp.retry("get/hasChildren",
             path.toString(),
             true,
-            () -> table.query(spec).iterator().hasNext());
+            () -> {
+              // issue the query
+              final IteratorSupport<Item, QueryOutcome> it = table.query(
+                  spec).iterator();
+              // if non empty, log the first entry to aid with some debugging
+              if (it.hasNext()) {
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("Dir {} is non-empty, first child is {}",
+                      status.getPath(),
+                      itemToPathMetadata(it.next(), username));
+                }
+                return true;
+              } else {
+                return false;
+              } });
 
         // If directory is authoritative, we can set the empty directory flag
         // to TRUE or FALSE. Otherwise FALSE, or UNKNOWN.
@@ -846,6 +862,18 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
+   * Origin of entries in the ancestor map built up in
+   * {@link #completeAncestry(Collection, AncestorState)}.
+   * This is done to stop generated ancestor entries to overwriting those
+   * in the store, while allowing those requested in the API call to do this.
+   */
+  private enum EntryOrigin {
+    Requested,  // requested in method call
+    Retrieved,  // retrieved from DDB: do not resubmit
+    Generated   // generated ancestor.
+  }
+
+  /**
    * Build the list of all parent entries.
    * <p>
    * <b>Thread safety:</b> none. Callers must synchronize access.
@@ -859,7 +887,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       final Collection<DDBPathMetadata> pathsToCreate,
       final AncestorState ancestorState) throws IOException {
     // Key on path to allow fast lookup
-    Map<Path, DDBPathMetadata> ancestry = new HashMap<>();
+    Map<Path, Pair<EntryOrigin, DDBPathMetadata>> ancestry = new HashMap<>();
     LOG.debug("Completing ancestry for {} paths", pathsToCreate.size());
     // we sort the inputs to guarantee that the topmost entries come first.
     // that way if the put request contains both parents and children
@@ -899,43 +927,45 @@ public class DynamoDBMetadataStore implements MetadataStore,
               path, entry);
         }
       }
-      ancestry.put(path, entry);
+      // add the entry to the ancestry map as a requested value.
+      ancestry.put(path, Pair.of(EntryOrigin.Requested, entry));
       Path parent = path.getParent();
       while (!parent.isRoot() && !ancestry.containsKey(parent)) {
         if (!ancestorState.findEntry(parent, true)) {
-          // don't add this entry, but carry on with the parents
-          LOG.debug("auto-create ancestor path {} for child path {}",
-              parent, path);
-          final S3AFileStatus status = makeDirStatus(parent, username);
-          DDBPathMetadata md = new DDBPathMetadata(status, Tristate.FALSE,
-              false, false, ttlTimeProvider.getNow());
+          // there is no entry in the ancestor state.
+          // look in the store
+          DDBPathMetadata md;
+          Pair<EntryOrigin, DDBPathMetadata> newEntry;
+          final Item item = getConsistentItem(parent);
+          if (item != null && !itemToPathMetadata(item, username).isDeleted()) {
+            // This is an undeleted entry found in the database.
+            // register it in ancestor state and map of entries to create
+            md = itemToPathMetadata(item, username);
+            LOG.debug("Found existing entry for parent: {}", md);
+            newEntry = Pair.of(EntryOrigin.Retrieved, md);
+          } else {
+            // A directory entry was not found in the DB. Create one.
+            LOG.debug("auto-create ancestor path {} for child path {}",
+                parent, path);
+            final S3AFileStatus status = makeDirStatus(parent, username);
+            md = new DDBPathMetadata(status, Tristate.FALSE,
+                false, false, ttlTimeProvider.getNow());
+            newEntry =  Pair.of(EntryOrigin.Generated, md);
+          }
+          // insert into the ancestor state to avoid further checks
           ancestorState.put(parent, md);
-          ancestry.put(parent, md);
+          ancestry.put(parent, newEntry);
+
         }
         parent = parent.getParent();
       }
     }
-    // we now have a list of ancestors which are not in the operation state.
+    // we now have a list of entries which were not in the operation state.
     // sort in reverse order of existence
-
-    final Collection<DDBPathMetadata> provisionalEntries = ancestry.values();
-    List<DDBPathMetadata> sorted = new ArrayList<>(provisionalEntries);
-    List<DDBPathMetadata> toCreate = new ArrayList<>(sorted.size());
-    sorted.sort(TOPMOST_PM_LAST);
-    for (final DDBPathMetadata next : sorted) {
-      final Item item = getConsistentItem(
-          next.getFileStatus().getPath());
-      if (item != null) {
-        // found an entry up the tree. See if it is really there
-        DDBPathMetadata meta = itemToPathMetadata(item, username);
-        if (!meta.isDeleted()) {
-          // it is a valid entry, so stop scanning up the tree
-          break;
-        }
-      }
-      toCreate.add(next);
-    }
-    return toCreate;
+    return ancestry.values().stream()
+        .filter(p -> p.getLeft() != EntryOrigin.Retrieved)
+        .map(Pair::getRight)
+        .collect(Collectors.toList());
   }
 
   /**
