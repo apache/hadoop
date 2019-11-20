@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.QuotaUsage;
@@ -253,7 +254,7 @@ public class HttpFSFileSystem extends FileSystem
     ALLOWSNAPSHOT(HTTP_PUT), DISALLOWSNAPSHOT(HTTP_PUT),
     CREATESNAPSHOT(HTTP_PUT), DELETESNAPSHOT(HTTP_DELETE),
     RENAMESNAPSHOT(HTTP_PUT), GETSNAPSHOTDIFF(HTTP_GET),
-    GETSNAPSHOTTABLEDIRECTORYLIST(HTTP_GET);
+    GETSNAPSHOTTABLEDIRECTORYLIST(HTTP_GET), GETSERVERDEFAULTS(HTTP_GET);
 
     private String httpMethod;
 
@@ -1590,5 +1591,22 @@ public class HttpFSFileSystem extends FileSystem
     default:
       return super.hasPathCapability(p, capability);
     }
+  }
+
+  @Override
+  public FsServerDefaults getServerDefaults() throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETSERVERDEFAULTS.toString());
+    HttpURLConnection conn =
+        getConnection(Operation.GETSERVERDEFAULTS.getMethod(), params,
+            new Path(getUri().toString(), "/"), true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.toFsServerDefaults(json);
+  }
+
+  @Override
+  public FsServerDefaults getServerDefaults(Path p) throws IOException {
+    return getServerDefaults();
   }
 }

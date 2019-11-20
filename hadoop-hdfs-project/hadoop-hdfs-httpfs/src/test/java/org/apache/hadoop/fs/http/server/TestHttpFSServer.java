@@ -54,6 +54,7 @@ import java.util.Map;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DataParam;
@@ -1635,5 +1636,35 @@ public class TestHttpFSServer extends HFSTestCase {
         checksum.get("bytes"));
     Assert.assertEquals(28L, checksum.get("length"));
     Assert.assertEquals("MD5-of-0MD5-of-512CRC32C", checksum.get("algorithm"));
+  }
+
+  private void verifyGetServerDefaults(DistributedFileSystem dfs)
+      throws Exception {
+    // Send a request
+    HttpURLConnection conn =
+        sendRequestToHttpFSServer("/", "GETSERVERDEFAULTS", "");
+    // Should return HTTP_OK
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    // Verify the response
+    BufferedReader reader =
+        new BufferedReader(new InputStreamReader(conn.getInputStream()));
+    // The response should be a one-line JSON string.
+    String dirLst = reader.readLine();
+    FsServerDefaults dfsDirLst = dfs.getServerDefaults();
+    Assert.assertNotNull(dfsDirLst);
+    Assert.assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testGetServerDefaults() throws Exception {
+    createHttpFSServer(false, false);
+    String pathStr1 = "/";
+    Path path1 = new Path(pathStr1);
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .get(path1.toUri(), TestHdfsHelper.getHdfsConf());
+    verifyGetServerDefaults(dfs);
   }
 }
