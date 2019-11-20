@@ -56,6 +56,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   private final FileSystem testUserFs;
   private final String testUserGuid;
   private final boolean isCheckAccessEnabled;
+  private final boolean isHNSEnabled;
 
   public ITestAzureBlobFileSystemCheckAccess() throws Exception {
     super.setup();
@@ -63,7 +64,9 @@ public class ITestAzureBlobFileSystemCheckAccess
     testUserGuid = getConfiguration()
         .get(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_USER_GUID);
     this.testUserFs = getTestUserFs();
-    isCheckAccessEnabled = getConfiguration().isCheckAccessEnabled();
+    this.isCheckAccessEnabled = getConfiguration().isCheckAccessEnabled();
+    this.isHNSEnabled = getConfiguration()
+        .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
   }
 
   private FileSystem getTestUserFs() throws Exception {
@@ -95,16 +98,14 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test(expected = NullPointerException.class)
   public void testCheckAccessForFileWithNullFsAction() throws Exception {
-    Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
-        isCheckAccessEnabled);
-    Path testFilePath = setupTestDirectoryAndUserAccess("test0.txt",
-        FsAction.ALL);
+    assumeHNSAndCheckAccessEnabled();
     //  NPE when trying to convert null FsAction enum
-    superUserFs.access(testFilePath, null);
+    superUserFs.access(new Path("test.txt"), null);
   }
 
   @Test(expected = FileNotFoundException.class)
   public void testCheckAccessForNonExistentFile() throws Exception {
+    assumeHNSAndCheckAccessEnabled();
     Path nonExistentFile = setupTestDirectoryAndUserAccess(
         "/nonExistentFile1.txt", FsAction.ALL);
     superUserFs.delete(nonExistentFile, true);
@@ -114,8 +115,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   @Test
   public void testWhenCheckAccessConfigIsOff() throws Exception {
     Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
-        getConfiguration()
-            .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false));
+        isHNSEnabled);
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ENABLE_CHECK_ACCESS, false);
     FileSystem fs = FileSystem.newInstance(conf);
@@ -154,8 +154,7 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testFsActionNONE() throws Exception {
-    Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
-        isCheckAccessEnabled);
+    assumeHNSAndCheckAccessEnabled();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test2.txt",
         FsAction.NONE);
     assertInaccessible(testFilePath, FsAction.EXECUTE);
@@ -169,8 +168,7 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testFsActionEXECUTE() throws Exception {
-    Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
-        isCheckAccessEnabled);
+    assumeHNSAndCheckAccessEnabled();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test3.txt",
         FsAction.EXECUTE);
     assertAccessible(testFilePath, FsAction.EXECUTE);
@@ -185,8 +183,7 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testFsActionREAD() throws Exception {
-    Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
-        isCheckAccessEnabled);
+    assumeHNSAndCheckAccessEnabled();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test4.txt",
         FsAction.READ);
     assertAccessible(testFilePath, FsAction.READ);
@@ -201,8 +198,7 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testFsActionWRITE() throws Exception {
-    Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
-        isCheckAccessEnabled);
+    assumeHNSAndCheckAccessEnabled();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test5.txt",
         FsAction.WRITE);
     assertAccessible(testFilePath, FsAction.WRITE);
@@ -217,8 +213,7 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testFsActionREADEXECUTE() throws Exception {
-    Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
-        isCheckAccessEnabled);
+    assumeHNSAndCheckAccessEnabled();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test6.txt",
         FsAction.READ_EXECUTE);
     assertAccessible(testFilePath, FsAction.EXECUTE);
@@ -233,8 +228,7 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testFsActionWRITEEXECUTE() throws Exception {
-    Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
-        isCheckAccessEnabled);
+    assumeHNSAndCheckAccessEnabled();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test7.txt",
         FsAction.WRITE_EXECUTE);
     assertAccessible(testFilePath, FsAction.EXECUTE);
@@ -249,8 +243,7 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testFsActionALL() throws Exception {
-    Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
-        isCheckAccessEnabled);
+    assumeHNSAndCheckAccessEnabled();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test8.txt",
         FsAction.ALL);
     assertAccessible(testFilePath, FsAction.EXECUTE);
@@ -260,6 +253,13 @@ public class ITestAzureBlobFileSystemCheckAccess
     assertAccessible(testFilePath, FsAction.READ_EXECUTE);
     assertAccessible(testFilePath, FsAction.READ_WRITE);
     assertAccessible(testFilePath, FsAction.ALL);
+  }
+
+  private void assumeHNSAndCheckAccessEnabled() {
+    Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
+        isHNSEnabled);
+    Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
+        isCheckAccessEnabled);
   }
 
   private void assertAccessible(Path testFilePath, FsAction fsAction)
