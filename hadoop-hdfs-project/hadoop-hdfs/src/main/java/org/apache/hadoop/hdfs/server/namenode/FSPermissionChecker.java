@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Stack;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ipc.CallerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSExceptionMessages;
@@ -105,13 +106,26 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     // the new API. Otherwise choose the old API.
     Class[] cArg = new Class[1];
     cArg[0] = INodeAttributeProvider.AuthorizationContext.class;
-    try {
-      getAccessControlEnforcer().getClass().getDeclaredMethod(
-          "checkPermission", cArg);
+    
+    AccessControlEnforcer ace;
+    if (attributeProvider == null) {
+      // If attribute provider is null, use FSPermissionChecker default
+      // implementation to authorize, which supports authorization with context.
       authorizeWithContext1 = true;
-    } catch (NoSuchMethodException e) {
-      authorizeWithContext1 = false;
+    } else {
+      ace = attributeProvider.getExternalAccessControlEnforcer(this);
+      // if the runtime external authorization provider doesn't support
+      // checkPermissionWithContext(), fall back to the old API
+      // checkPermission().
+      try {
+        Class<?> clazz = ace.getClass();
+        clazz.getDeclaredMethod("checkPermissionWithContext", cArg);
+        authorizeWithContext1 = true;
+      } catch (NoSuchMethodException e) {
+        authorizeWithContext1 = false;
+      }
     }
+
     authorizeWithContext = authorizeWithContext1;
   }
 
@@ -219,7 +233,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
               fsOwner, supergroup, callerUgi, inodeAttrs, inodes,
               components, snapshotId, path, ancestorIndex, doCheckOwner,
               ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir,
-              opType));
+              opType, CallerContext.getCurrent()));
     } else {
       enforcer.checkPermission(fsOwner, supergroup, callerUgi, inodeAttrs,
           inodes, components, snapshotId, path, ancestorIndex, doCheckOwner,
@@ -258,7 +272,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
             false, null, null, access,
             // the target access to be checked against the inode
             null, // passing null sub access avoids checking children
-            false, opType));
+            false, opType, CallerContext.getCurrent()));
       } else {
         enforcer.checkPermission(
             fsOwner, supergroup, callerUgi,
@@ -326,6 +340,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
   public void checkPermissionWithContext(
       INodeAttributeProvider.AuthorizationContext authzContext)
       throws AccessControlException {
+    // The default authorization provider does not use the additional context.
     this.checkPermission(authzContext.fsOwner, authzContext.supergroup,
         authzContext.callerUgi, authzContext.inodeAttrs, authzContext.inodes,
         authzContext.pathByNameArr, authzContext.snapshotId, authzContext.path,

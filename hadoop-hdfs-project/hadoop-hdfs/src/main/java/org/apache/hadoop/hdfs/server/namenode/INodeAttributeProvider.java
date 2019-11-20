@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -84,6 +85,7 @@ public abstract class INodeAttributeProvider {
   public static class AuthorizationWithOperationName extends
       AuthorizationContext {
     String operationName;
+    CallerContext callerContext;
 
     public AuthorizationWithOperationName(
         String fsOwner,
@@ -101,11 +103,13 @@ public abstract class INodeAttributeProvider {
         FsAction access,
         FsAction subAccess,
         boolean ignoreEmptyDir,
-        String operationName) {
+        String operationName,
+        CallerContext callerContext) {
       super(fsOwner, supergroup, callerUgi, inodeAttrs, inodes,
           pathByNameArr, snapshotId, path, ancestorIndex, doCheckOwner,
           ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
       this.operationName = operationName;
+      this.callerContext = callerContext;
     }
   }
 
