@@ -738,8 +738,8 @@ public abstract class Server {
     private volatile String detailedMetricsName = "";
     final int callId;            // the client's call id
     final int retryCount;        // the retry count of the call
-    long timestampNanos;         // time received when response is null
-                                 // time served when response is not null
+    long timestampNanos;         // time the call was received
+    long responseTimestampNanos; // time the call was served
     private AtomicInteger responseWaitCount = new AtomicInteger(1);
     final RPC.RpcKind rpcKind;
     final byte[] clientId;
@@ -776,6 +776,7 @@ public abstract class Server {
       this.callId = id;
       this.retryCount = retryCount;
       this.timestampNanos = Time.monotonicNowNanos();
+      this.responseTimestampNanos = timestampNanos;
       this.rpcKind = kind;
       this.clientId = clientId;
       this.traceScope = traceScope;
@@ -1574,7 +1575,7 @@ public abstract class Server {
         Iterator<RpcCall> iter = responseQueue.listIterator(0);
         while (iter.hasNext()) {
           call = iter.next();
-          if (now > call.timestampNanos + PURGE_INTERVAL_NANOS) {
+          if (now > call.responseTimestampNanos + PURGE_INTERVAL_NANOS) {
             closeConnection(call.connection);
             break;
           }
@@ -1638,7 +1639,7 @@ public abstract class Server {
             
             if (inHandler) {
               // set the serve time when the response has to be sent later
-              call.timestampNanos = Time.monotonicNowNanos();
+              call.responseTimestampNanos = Time.monotonicNowNanos();
               
               incPending();
               try {
