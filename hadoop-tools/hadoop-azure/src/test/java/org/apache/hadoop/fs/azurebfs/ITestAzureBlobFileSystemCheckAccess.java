@@ -216,7 +216,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  public void testFsActionREAD_EXECUTE() throws Exception {
+  public void testFsActionREADEXECUTE() throws Exception {
     Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
         isCheckAccessEnabled);
     Path testFilePath = setupTestDirectoryAndUserAccess("/test6.txt",
@@ -232,7 +232,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  public void testFsActionWRITE_EXECUTE() throws Exception {
+  public void testFsActionWRITEEXECUTE() throws Exception {
     Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
         isCheckAccessEnabled);
     Path testFilePath = setupTestDirectoryAndUserAccess("/test7.txt",
