@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.GlobFilter;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
@@ -1815,6 +1816,40 @@ public class FSOperations {
         sds = dfs.getSnapshottableDirListing();
       } else {
         throw new UnsupportedOperationException("getSnapshottableDirListing is "
+            + "not supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      return JsonUtil.toJsonString(sds);
+    }
+  }
+
+  /**
+   * Executor that performs a getServerDefaults operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSGetServerDefaults
+      implements FileSystemAccess.FileSystemExecutor<String> {
+
+    /**
+     * Creates a getServerDefaults executor.
+     */
+    public FSGetServerDefaults() {
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @return A JSON string.
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public String execute(FileSystem fs) throws IOException {
+      FsServerDefaults sds = null;
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        sds = dfs.getServerDefaults();
+      } else {
+        throw new UnsupportedOperationException("getServerDefaults is "
             + "not supported for HttpFs on " + fs.getClass()
             + ". Please check your fs.defaultFS configuration");
       }
