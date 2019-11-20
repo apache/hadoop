@@ -96,8 +96,9 @@ public class BlockSyncOperationExecutor  {
   }
 
   private SyncTaskExecutionResult doMultiPartPart(URI uri,
-      List<LocatedBlock> locatedBlocks, int partNumber, byte[] uploadHandle,
-      int offset, long length) throws IOException {
+      List<LocatedBlock> locatedBlocks, int partNumber,
+      ByteBuffer uploadHandle, int offset, long length)
+      throws IOException {
     FileSystem fs = FileSystem.get(uri, conf);
     Path filePath = new Path(uri);
     Vector<InputStream> inputStreams = new Vector<>(locatedBlocks.size());
@@ -115,7 +116,7 @@ public class BlockSyncOperationExecutor  {
         new SequenceInputStream(streamEnumeration);
     MultipartUploader mpu = multipartUploaderSupplier.apply(fs);
     PartHandle partHandle = mpu.putPart(filePath, inputStream,
-        partNumber, BBUploadHandle.from(ByteBuffer.wrap(uploadHandle)), length);
+        partNumber, BBUploadHandle.from(uploadHandle), length);
     return new SyncTaskExecutionResult(partHandle.bytes(), length);
   }
 }
