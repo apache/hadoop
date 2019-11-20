@@ -424,7 +424,7 @@ public class NodeManager extends CompositeService
       exec.init(context);
     } catch (IOException e) {
       throw new YarnRuntimeException("Failed to initialize container executor", e);
-    }    
+    }
     DeletionService del = createDeletionService(exec);
     addService(del);
 
@@ -514,6 +514,7 @@ public class NodeManager extends CompositeService
 
     registerMXBean();
 
+    context.getContainerExecutor().start();
     super.serviceInit(conf);
     // TODO add local dirs to del
   }
@@ -527,8 +528,10 @@ public class NodeManager extends CompositeService
       super.serviceStop();
       DefaultMetricsSystem.shutdown();
 
-      // Cleanup ResourcePluginManager
       if (null != context) {
+        context.getContainerExecutor().stop();
+
+        // Cleanup ResourcePluginManager
         ResourcePluginManager rpm = context.getResourcePluginManager();
         if (rpm != null) {
           rpm.cleanup();

@@ -457,7 +457,7 @@ public class WriteOperationHelper {
   @Retries.RetryTranslated
   public PutObjectResult putObject(PutObjectRequest putObjectRequest)
       throws IOException {
-    return retry("put",
+    return retry("Writing Object",
         putObjectRequest.getKey(), true,
         () -> owner.putObjectDirect(putObjectRequest));
   }
@@ -472,7 +472,7 @@ public class WriteOperationHelper {
   public UploadResult uploadObject(PutObjectRequest putObjectRequest)
       throws IOException {
     // no retry; rely on xfer manager logic
-    return retry("put",
+    return retry("Writing Object",
         putObjectRequest.getKey(), true,
         () -> owner.executePut(putObjectRequest, null));
   }

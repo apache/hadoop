@@ -171,8 +171,24 @@ public class DFSInputStream extends FSInputStream
 
   private byte[] oneByteBuf; // used for 'int read()'
 
-  void addToDeadNodes(DatanodeInfo dnInfo) {
+  protected void addToLocalDeadNodes(DatanodeInfo dnInfo) {
     deadNodes.put(dnInfo, dnInfo);
+  }
+
+  protected void removeFromLocalDeadNodes(DatanodeInfo dnInfo) {
+    deadNodes.remove(dnInfo);
+  }
+
+  protected ConcurrentHashMap<DatanodeInfo, DatanodeInfo> getLocalDeadNodes() {
+    return deadNodes;
+  }
+
+  private void clearLocalDeadNodes() {
+    deadNodes.clear();
+  }
+
+  protected DFSClient getDFSClient() {
+    return dfsClient;
   }
 
   DFSInputStream(DFSClient dfsClient, String src, boolean verifyChecksum,
@@ -612,7 +628,8 @@ public class DFSInputStream extends FSInputStream
                   + "{}, add to deadNodes and continue. ", targetAddr, src,
               targetBlock.getBlock(), ex);
           // Put chosen node into dead list, continue
-          addToDeadNodes(chosenNode);
+          addToLocalDeadNodes(chosenNode);
+          dfsClient.addNodeToDeadNodeDetector(this, chosenNode);
         }
       }
     }
@@ -663,28 +680,40 @@ public class DFSInputStream extends FSInputStream
    */
   @Override
   public synchronized void close() throws IOException {
-    if (!closed.compareAndSet(false, true)) {
-      DFSClient.LOG.debug("DFSInputStream has been closed already");
-      return;
-    }
-    dfsClient.checkOpen();
+    try {
+      if (!closed.compareAndSet(false, true)) {
+        DFSClient.LOG.debug("DFSInputStream has been closed already");
+        return;
+      }
+      dfsClient.checkOpen();
 
-    if ((extendedReadBuffers != null) && (!extendedReadBuffers.isEmpty())) {
-      final StringBuilder builder = new StringBuilder();
-      extendedReadBuffers.visitAll(new IdentityHashStore.Visitor<ByteBuffer, Object>() {
-        private String prefix = "";
-        @Override
-        public void accept(ByteBuffer k, Object v) {
-          builder.append(prefix).append(k);
-          prefix = ", ";
-        }
-      });
-      DFSClient.LOG.warn("closing file " + src + ", but there are still " +
-          "unreleased ByteBuffers allocated by read().  " +
-          "Please release " + builder.toString() + ".");
+      if ((extendedReadBuffers != null) && (!extendedReadBuffers.isEmpty())) {
+        final StringBuilder builder = new StringBuilder();
+        extendedReadBuffers
+            .visitAll(new IdentityHashStore.Visitor<ByteBuffer, Object>() {
+              private String prefix = "";
+
+              @Override
+              public void accept(ByteBuffer k, Object v) {
+                builder.append(prefix).append(k);
+                prefix = ", ";
+              }
+            });
+        DFSClient.LOG.warn("closing file " + src + ", but there are still "
+            + "unreleased ByteBuffers allocated by read().  "
+            + "Please release " + builder.toString() + ".");
+      }
+      closeCurrentBlockReaders();
+      super.close();
+    } finally {
+      /**
+       * If dfsInputStream is closed and datanode is in
+       * DeadNodeDetector#dfsInputStreamNodes, we need remove the datanode from
+       * the DeadNodeDetector#dfsInputStreamNodes. Since user should not use
+       * this dfsInputStream anymore.
+       */
+      dfsClient.removeNodeFromDeadNodeDetector(this, locatedBlocks);
     }
-    closeCurrentBlockReaders();
-    super.close();
   }
 
   @Override
@@ -741,7 +770,8 @@ public class DFSInputStream extends FSInputStream
          */
         sourceFound = seekToBlockSource(pos);
       } else {
-        addToDeadNodes(currentNode);
+        addToLocalDeadNodes(currentNode);
+        dfsClient.addNodeToDeadNodeDetector(this, currentNode);
         sourceFound = seekToNewSource(pos);
       }
       if (!sourceFound) {
@@ -801,7 +831,8 @@ public class DFSInputStream extends FSInputStream
           }
           blockEnd = -1;
           if (currentNode != null) {
-            addToDeadNodes(currentNode);
+            addToLocalDeadNodes(currentNode);
+            dfsClient.addNodeToDeadNodeDetector(this, currentNode);
           }
           if (--retries == 0) {
             throw e;
@@ -883,7 +914,7 @@ public class DFSInputStream extends FSInputStream
   private LocatedBlock refetchLocations(LocatedBlock block,
       Collection<DatanodeInfo> ignoredNodes) throws IOException {
     String errMsg = getBestNodeDNAddrPairErrorString(block.getLocations(),
-        deadNodes, ignoredNodes);
+            dfsClient.getDeadNodes(this), ignoredNodes);
     String blockInfo = block.getBlock() + " file=" + src;
     if (failures >= dfsClient.getConf().getMaxBlockAcquireFailures()) {
       String description = "Could not obtain block: " + blockInfo;
@@ -924,7 +955,7 @@ public class DFSInputStream extends FSInputStream
       throw new InterruptedIOException(
           "Interrupted while choosing DataNode for read.");
     }
-    deadNodes.clear(); //2nd option is to remove only nodes[blockId]
+    clearLocalDeadNodes(); //2nd option is to remove only nodes[blockId]
     openInfo(true);
     block = refreshLocatedBlock(block);
     failures++;
@@ -945,7 +976,7 @@ public class DFSInputStream extends FSInputStream
     StorageType storageType = null;
     if (nodes != null) {
       for (int i = 0; i < nodes.length; i++) {
-        if (!deadNodes.containsKey(nodes[i])
+        if (!dfsClient.getDeadNodes(this).containsKey(nodes[i])
             && (ignoredNodes == null || !ignoredNodes.contains(nodes[i]))) {
           chosenNode = nodes[i];
           // Storage types are ordered to correspond with nodes, so use the same
@@ -1097,7 +1128,7 @@ public class DFSInputStream extends FSInputStream
         DFSClient.LOG.warn(msg);
         // we want to remember what we have tried
         corruptedBlocks.addCorruptedBlock(block.getBlock(), datanode.info);
-        addToDeadNodes(datanode.info);
+        addToLocalDeadNodes(datanode.info);
         throw new IOException(msg);
       } catch (IOException e) {
         checkInterrupted(e);
@@ -1119,7 +1150,8 @@ public class DFSInputStream extends FSInputStream
           String msg = "Failed to connect to " + datanode.addr + " for file "
               + src + " for block " + block.getBlock() + ":" + e;
           DFSClient.LOG.warn("Connection failure: " + msg, e);
-          addToDeadNodes(datanode.info);
+          addToLocalDeadNodes(datanode.info);
+          dfsClient.addNodeToDeadNodeDetector(this, datanode.info);
           throw new IOException(msg);
         }
         // Refresh the block for updated tokens in case of token failures or
@@ -1522,14 +1554,14 @@ public class DFSInputStream extends FSInputStream
     if (currentNode == null) {
       return seekToBlockSource(targetPos);
     }
-    boolean markedDead = deadNodes.containsKey(currentNode);
-    addToDeadNodes(currentNode);
+    boolean markedDead = dfsClient.isDeadNode(this, currentNode);
+    addToLocalDeadNodes(currentNode);
     DatanodeInfo oldNode = currentNode;
     DatanodeInfo newNode = blockSeekTo(targetPos);
     if (!markedDead) {
       /* remove it from deadNodes. blockSeekTo could have cleared
        * deadNodes and added currentNode again. Thats ok. */
-      deadNodes.remove(oldNode);
+      removeFromLocalDeadNodes(oldNode);
     }
     if (!oldNode.getDatanodeUuid().equals(newNode.getDatanodeUuid())) {
       currentNode = newNode;

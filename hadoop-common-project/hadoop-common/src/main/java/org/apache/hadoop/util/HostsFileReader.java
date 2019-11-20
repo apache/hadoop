@@ -52,6 +52,8 @@ public class HostsFileReader {
       .class);
 
   private final AtomicReference<HostDetails> current;
+  private final AtomicReference<HostDetails> lazyLoaded =
+      new AtomicReference<>();
 
   public HostsFileReader(String inFile,
                          String exFile) throws IOException {
@@ -187,7 +189,18 @@ public class HostsFileReader {
 
   public void refresh(String includesFile, String excludesFile)
       throws IOException {
-    LOG.info("Refreshing hosts (include/exclude) list");
+    refreshInternal(includesFile, excludesFile, false);
+  }
+
+  public void lazyRefresh(String includesFile, String excludesFile)
+      throws IOException {
+    refreshInternal(includesFile, excludesFile, true);
+  }
+
+  private void refreshInternal(String includesFile, String excludesFile,
+      boolean lazy) throws IOException {
+    LOG.info("Refreshing hosts (include/exclude) list (lazy refresh = {})",
+        lazy);
     HostDetails oldDetails = current.get();
     Set<String> newIncludes = oldDetails.includes;
     Map<String, Integer> newExcludes = oldDetails.excludes;
@@ -203,7 +216,21 @@ public class HostsFileReader {
     }
     HostDetails newDetails = new HostDetails(includesFile, newIncludes,
         excludesFile, newExcludes);
-    current.set(newDetails);
+
+    if (lazy) {
+      lazyLoaded.set(newDetails);
+    } else {
+      current.set(newDetails);
+    }
+  }
+
+  public void finishRefresh() {
+    if (lazyLoaded.get() == null) {
+      throw new IllegalStateException(
+          "Cannot finish refresh - call lazyRefresh() first");
+    }
+    current.set(lazyLoaded.get());
+    lazyLoaded.set(null);
   }
 
   @Private
@@ -277,6 +304,10 @@ public class HostsFileReader {
    */
   public HostDetails getHostDetails() {
     return current.get();
+  }
+
+  public HostDetails getLazyLoadedHostDetails() {
+    return lazyLoaded.get();
   }
 
   public void setIncludesFile(String includesFile) {

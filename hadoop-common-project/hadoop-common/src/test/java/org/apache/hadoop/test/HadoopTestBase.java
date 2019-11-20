@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.test;
 
+import java.util.concurrent.TimeUnit;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -70,7 +72,7 @@ public abstract class HadoopTestBase extends Assert {
       //fall back to the default value, as the property cannot be parsed
       millis = TEST_DEFAULT_TIMEOUT_VALUE;
     }
-    return new Timeout(millis);
+    return new Timeout(millis, TimeUnit.MILLISECONDS);
   }
 
   /**

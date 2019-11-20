@@ -22,6 +22,7 @@ import static org.apache.hadoop.service.Service.STATE.INITED;
 import static org.apache.hadoop.service.Service.STATE.STARTED;
 import static org.apache.hadoop.service.Service.STATE.STOPPED;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -95,6 +96,7 @@ import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceFile;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -483,6 +485,45 @@ public class TestAuxServices {
     } finally {
       if (testJar != null) {
         testJar.delete();
+      }
+    }
+  }
+
+  @Test (timeout = 15000)
+  public void testReuseLocalizedAuxiliaryJar() throws Exception {
+    File testJar = null;
+    AuxServices aux = null;
+    Configuration conf = new YarnConfiguration();
+    FileSystem fs = FileSystem.get(conf);
+    String root = "target/LocalDir";
+    try {
+      testJar = JarFinder.makeClassLoaderTestJar(this.getClass(), rootDir,
+          "test-runjar.jar", 2048, ServiceB.class.getName(), LightService
+          .class.getName());
+      Context mockContext = mock(Context.class);
+      LocalDirsHandlerService mockDirsHandler = mock(
+          LocalDirsHandlerService.class);
+      Path rootAuxServiceDirPath = new Path(root, "nmAuxService");
+      when(mockDirsHandler.getLocalPathForWrite(anyString())).thenReturn(
+          rootAuxServiceDirPath);
+      when(mockContext.getLocalDirsHandler()).thenReturn(mockDirsHandler);
+      aux = new AuxServices(MOCK_AUX_PATH_HANDLER, mockContext,
+          MOCK_DEL_SERVICE);
+      // First Time the jar gets localized
+      Path path = aux.maybeDownloadJars("ServiceB", ServiceB.class.getName(),
+          testJar.getAbsolutePath(), AuxServiceFile.TypeEnum.STATIC, conf);
+
+      // Validate the path on reuse of localized jar
+      path = aux.maybeDownloadJars("ServiceB", ServiceB.class.getName(),
+          testJar.getAbsolutePath(), AuxServiceFile.TypeEnum.STATIC, conf);
+      assertFalse("Failed to reuse the localized jar",
+          path.toString().endsWith("/*"));
+    } finally {
+      if (testJar != null) {
+        testJar.delete();
+      }
+      if (fs.exists(new Path(root))) {
+        fs.delete(new Path(root), true);
       }
     }
   }

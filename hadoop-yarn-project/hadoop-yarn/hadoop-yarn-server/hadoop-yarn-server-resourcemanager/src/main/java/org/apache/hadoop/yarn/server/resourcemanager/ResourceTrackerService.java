@@ -836,10 +836,17 @@ public class ResourceTrackerService extends AbstractService implements
    */
   private boolean isNodeInDecommissioning(NodeId nodeId) {
     RMNode rmNode = this.rmContext.getRMNodes().get(nodeId);
-    if (rmNode != null &&
-        rmNode.getState().equals(NodeState.DECOMMISSIONING)) {
-      return true;
+
+    if (rmNode != null) {
+      NodeState state = rmNode.getState();
+
+      if (state == NodeState.DECOMMISSIONING ||
+          (state == NodeState.RUNNING &&
+          this.nodesListManager.isGracefullyDecommissionableNode(rmNode))) {
+        return true;
+      }
     }
+
     return false;
   }
 

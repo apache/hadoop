@@ -48,6 +48,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ConfigurationException;
@@ -126,6 +127,10 @@ public abstract class ContainerExecutor implements Configurable {
    * @throws IOException if initialization fails
    */
   public abstract void init(Context nmContext) throws IOException;
+
+  public void start() {}
+
+  public void stop() {}
 
   /**
    * This function localizes the JAR file on-demand.
@@ -258,6 +263,12 @@ public abstract class ContainerExecutor implements Configurable {
    */
   public abstract boolean isContainerAlive(ContainerLivenessContext ctx)
       throws IOException;
+
+
+  public Map<String, LocalResource> getLocalResources(Container container)
+      throws IOException {
+    return container.getLaunchContext().getLocalResources();
+  }
 
   /**
    * Update cluster information inside container.

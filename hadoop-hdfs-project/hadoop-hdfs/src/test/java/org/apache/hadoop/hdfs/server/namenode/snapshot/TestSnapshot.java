@@ -456,6 +456,22 @@ public class TestSnapshot {
     assertEquals(0, rootNode.getDirectorySnapshottableFeature().getSnapshotQuota());
   }
 
+  @Test(timeout = 60000)
+  public void testSnapshotMtime() throws Exception {
+    Path dir = new Path("/dir");
+    Path sub = new Path(dir, "sub");
+    Path subFile = new Path(sub, "file");
+    DFSTestUtil.createFile(hdfs, subFile, BLOCKSIZE, REPLICATION, seed);
+
+    hdfs.allowSnapshot(dir);
+    Path snapshotPath = hdfs.createSnapshot(dir, "s1");
+    FileStatus oldSnapshotStatus = hdfs.getFileStatus(snapshotPath);
+    cluster.restartNameNodes();
+    FileStatus newSnapshotStatus = hdfs.getFileStatus(snapshotPath);
+    assertEquals(oldSnapshotStatus.getModificationTime(),
+        newSnapshotStatus.getModificationTime());
+  }
+
   /**
    * Prepare a list of modifications. A modification may be a file creation,
    * file deletion, or a modification operation such as appending to an existing
