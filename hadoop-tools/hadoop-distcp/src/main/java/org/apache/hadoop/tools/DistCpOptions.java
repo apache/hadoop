@@ -577,8 +577,8 @@ public final class DistCpOptions {
       }
 
       if (deleteUseTrash && !deleteMissing) {
-        throw new IllegalArgumentException("Delete useTrash is applicable "
-            + "only with delete option");
+        throw new IllegalArgumentException("Option -useTrash must be " +
+            "accompanied by -delete");
       }
 
       if (overwrite && syncFolder) {
