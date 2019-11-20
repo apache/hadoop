@@ -418,6 +418,14 @@ public class HttpFSServer {
       response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       break;
     }
+    case GETSERVERDEFAULTS: {
+      FSOperations.FSGetServerDefaults command =
+          new FSOperations.FSGetServerDefaults();
+      String js = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", "/");
+      response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
     default: {
       throw new IOException(
           MessageFormat.format("Invalid HTTP GET operation [{0}]", op.value()));

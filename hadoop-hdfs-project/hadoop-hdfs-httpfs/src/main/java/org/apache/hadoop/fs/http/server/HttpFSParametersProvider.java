@@ -117,6 +117,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
         new Class[] {OldSnapshotNameParam.class,
             SnapshotNameParam.class});
     PARAMS_DEF.put(Operation.GETSNAPSHOTTABLEDIRECTORYLIST, new Class[] {});
+    PARAMS_DEF.put(Operation.GETSERVERDEFAULTS, new Class[] {});
   }
 
   public HttpFSParametersProvider() {
