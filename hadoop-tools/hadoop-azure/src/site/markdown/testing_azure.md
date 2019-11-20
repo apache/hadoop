@@ -153,13 +153,18 @@ mvn -T 1C clean verify
 ```
 
 It's also possible to execute multiple test suites in parallel by passing the
-`parallel-tests` property on the command line.  The tests spend most of their
+`parallel-tests=wasb|abfs|both` property on the command line.  The tests spend most of their
 time blocked on network I/O, so running in parallel tends to
 complete full test runs faster.
 
 ```bash
-mvn -T 1C -Dparallel-tests clean verify
+mvn -T 1C -Dparallel-tests=both clean verify
+mvn -T 1C -Dparallel-tests=wasb clean verify
+mvn -T 1C -Dparallel-tests=abfs clean verify
 ```
+`-Dparallel-tests=wasb` runs the WASB related integration tests from azure directory<br/>
+`-Dparallel-tests=abfs` runs the ABFS related integration tests from azurebfs directory<br/>
+`-Dparallel-tests=both` runs all the integration tests from both azure and azurebfs directory<br/>
 
 Some tests must run with exclusive access to the storage container, so even with the
 `parallel-tests` property, several test suites will run in serial in a separate

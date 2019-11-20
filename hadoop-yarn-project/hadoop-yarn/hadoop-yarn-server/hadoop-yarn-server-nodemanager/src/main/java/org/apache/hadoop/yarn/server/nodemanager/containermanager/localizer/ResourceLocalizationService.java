@@ -1699,4 +1699,14 @@ public class ResourceLocalizationService extends CompositeService
     localDirPathFsPermissionsMap.put(sysDir, nmPrivatePermission);
     return localDirPathFsPermissionsMap;
   }
+
+  public LocalizedResource getLocalizedResource(LocalResourceRequest req,
+      String user, ApplicationId appId) {
+    LocalResourcesTracker tracker =
+        getLocalResourcesTracker(req.getVisibility(), user, appId);
+    if (tracker == null) {
+      return null;
+    }
+    return tracker.getLocalizedResource(req);
+  }
 }

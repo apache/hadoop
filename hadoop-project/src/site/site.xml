@@ -73,6 +73,7 @@
       <item name="Hadoop KMS" href="hadoop-kms/index.html"/>
       <item name="Tracing" href="hadoop-project-dist/hadoop-common/Tracing.html"/>
       <item name="Unix Shell Guide" href="hadoop-project-dist/hadoop-common/UnixShellGuide.html"/>
+      <item name="Registry" href="hadoop-project-dist/hadoop-common/registry/index.html"/>
     </menu>
     
     <menu name="HDFS" inherit="top">
@@ -111,15 +112,6 @@
       <item name="Provided Storage" href="hadoop-project-dist/hadoop-hdfs/HdfsProvidedStorage.html"/>
     </menu>
 
-    <menu name="Ozone" inherit="top">
-      <item name="Getting Started" href="hadoop-project-dist/hadoop-hdfs/OzoneGettingStarted.html"/>
-      <item name="Ozone Overview"
-            href="hadoop-project-dist/hadoop-hdfs/OzoneOverview.html"/>
-      <item name="Commands Reference" href="hadoop-project-dist/hadoop-hdfs/OzoneCommandShell.html"/>
-      <item name="Ozone Rest API" href="hadoop-project-dist/hadoop-hdfs/OzoneRest.html"/>
-      <item name="Ozone Metrics" href="hadoop-project-dist/hadoop-hdfs/OzoneMetrics.html"/>
-    </menu>
-
     <menu name="MapReduce" inherit="top">
       <item name="Tutorial" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html"/>
       <item name="Commands Reference" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredCommands.html"/>
@@ -152,9 +144,9 @@
       <item name="YARN Application Security" href="hadoop-yarn/hadoop-yarn-site/YarnApplicationSecurity.html"/>
       <item name="NodeManager" href="hadoop-yarn/hadoop-yarn-site/NodeManager.html"/>
       <item name="Running Applications in Docker Containers" href="hadoop-yarn/hadoop-yarn-site/DockerContainers.html"/>
+      <item name="Running Applications in runC Containers" href="hadoop-yarn/hadoop-yarn-site/RuncContainers.html"/>
       <item name="Using CGroups" href="hadoop-yarn/hadoop-yarn-site/NodeManagerCgroups.html"/>
       <item name="Secure Containers" href="hadoop-yarn/hadoop-yarn-site/SecureContainer.html"/>
-      <item name="Registry" href="hadoop-yarn/hadoop-yarn-site/registry/index.html"/>
       <item name="Reservation System" href="hadoop-yarn/hadoop-yarn-site/ReservationSystem.html"/>
       <item name="Graceful Decommission" href="hadoop-yarn/hadoop-yarn-site/GracefulDecommission.html"/>
       <item name="Opportunistic Containers" href="hadoop-yarn/hadoop-yarn-site/OpportunisticContainers.html"/>
@@ -196,7 +188,7 @@
       <item name="Azure Data Lake Storage"
             href="hadoop-azure-datalake/index.html"/>
       <item name="OpenStack Swift" href="hadoop-openstack/index.html"/>
-      <item name="Tencent COS" href="hadoop-cos/index.html"/>
+      <item name="Tencent COS" href="hadoop-cos/cloud-storage/index.html"/>
     </menu>
 
     <menu name="Auth" inherit="top">
@@ -220,7 +212,7 @@
     </menu>
 
     <menu name="Reference" inherit="top">
-      <item name="Changelog and Release Notes" href="hadoop-project-dist/hadoop-common/release/index.html"/>
+      <item name="Changelog and Release Notes" href="hadoop-project-dist/hadoop-common/release/"/>
       <item name="Java API docs" href="api/index.html"/>
       <item name="Unix Shell API" href="hadoop-project-dist/hadoop-common/UnixShellAPI.html"/>
       <item name="Metrics" href="hadoop-project-dist/hadoop-common/Metrics.html"/>

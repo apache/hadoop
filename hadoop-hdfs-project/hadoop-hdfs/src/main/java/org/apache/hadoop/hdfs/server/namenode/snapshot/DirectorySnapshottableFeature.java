@@ -166,10 +166,17 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     this.snapshotsByNames.add(snapshot);
   }
 
-  /** Add a snapshot. */
+  /**
+   * Add a snapshot.
+   * @param snapshotRoot Root of the snapshot.
+   * @param name Name of the snapshot.
+   * @param mtime The snapshot creation time set by Time.now().
+   * @throws SnapshotException Throw SnapshotException when there is a snapshot
+   *           with the same name already exists or snapshot quota exceeds
+   */
   public Snapshot addSnapshot(INodeDirectory snapshotRoot, int id, String name,
       final LeaseManager leaseManager, final boolean captureOpenFiles,
-      int maxSnapshotLimit)
+      int maxSnapshotLimit, long now)
       throws SnapshotException {
     //check snapshot quota
     final int n = getNumSnapshots();
@@ -195,8 +202,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     d.setSnapshotRoot(s.getRoot());
     snapshotsByNames.add(-i - 1, s);
 
-    // set modification time
-    final long now = Time.now();
+    // modification time is the snapshot creation time
     snapshotRoot.updateModificationTime(now, Snapshot.CURRENT_STATE_ID);
     s.getRoot().setModificationTime(now, Snapshot.CURRENT_STATE_ID);
 

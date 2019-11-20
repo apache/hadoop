@@ -125,7 +125,7 @@ public class Quota {
    * @throws IOException If the quota system is disabled.
    */
   public QuotaUsage getQuotaUsage(String path) throws IOException {
-    return aggregateQuota(getEachQuotaUsage(path));
+    return aggregateQuota(path, getEachQuotaUsage(path));
   }
 
   /**
@@ -234,20 +234,26 @@ public class Quota {
 
   /**
    * Aggregate quota that queried from sub-clusters.
+   * @param path Federation path of the results.
    * @param results Quota query result.
    * @return Aggregated Quota.
    */
-  QuotaUsage aggregateQuota(Map<RemoteLocation, QuotaUsage> results) {
+  QuotaUsage aggregateQuota(String path,
+      Map<RemoteLocation, QuotaUsage> results) throws IOException {
     long nsCount = 0;
     long ssCount = 0;
     long nsQuota = HdfsConstants.QUOTA_RESET;
     long ssQuota = HdfsConstants.QUOTA_RESET;
     boolean hasQuotaUnset = false;
+    boolean isMountEntry = isMountEntry(path);
 
     for (Map.Entry<RemoteLocation, QuotaUsage> entry : results.entrySet()) {
       RemoteLocation loc = entry.getKey();
       QuotaUsage usage = entry.getValue();
-      if (usage != null) {
+      if (isMountEntry) {
+        nsCount += usage.getFileAndDirectoryCount();
+        ssCount += usage.getSpaceConsumed();
+      } else if (usage != null) {
         // If quota is not set in real FileSystem, the usage
         // value will return -1.
         if (usage.getQuota() == -1 && usage.getSpaceQuota() == -1) {
@@ -266,6 +272,11 @@ public class Quota {
       }
     }
 
+    if (isMountEntry) {
+      QuotaUsage quota = getGlobalQuota(path);
+      nsQuota = quota.getQuota();
+      ssQuota = quota.getSpaceQuota();
+    }
     QuotaUsage.Builder builder = new QuotaUsage.Builder()
         .fileAndDirectoryCount(nsCount).spaceConsumed(ssCount);
     if (hasQuotaUnset) {

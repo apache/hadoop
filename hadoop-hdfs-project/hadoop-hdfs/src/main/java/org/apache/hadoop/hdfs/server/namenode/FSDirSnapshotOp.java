@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.ChunkedArrayList;
+import org.apache.hadoop.util.Time;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -104,16 +105,18 @@ class FSDirSnapshotOp {
 
     String snapshotPath;
     verifySnapshotName(fsd, snapshotName, snapshotRoot);
+    // time of snapshot creation
+    final long now = Time.now();
     fsd.writeLock();
     try {
       snapshotPath = snapshotManager.createSnapshot(
           fsd.getFSNamesystem().getLeaseManager(),
-          iip, snapshotRoot, snapshotName);
+          iip, snapshotRoot, snapshotName, now);
     } finally {
       fsd.writeUnlock();
     }
     fsd.getEditLog().logCreateSnapshot(snapshotRoot, snapshotName,
-        logRetryCache);
+        logRetryCache, now);
 
     return snapshotPath;
   }

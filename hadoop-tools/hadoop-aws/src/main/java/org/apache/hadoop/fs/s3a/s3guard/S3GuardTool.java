@@ -138,6 +138,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
   protected S3GuardTool(Configuration conf, String...opts) {
     super(conf);
 
+    // Set s3guard is off warn level to silent, as the fs is often instantiated
+    // without s3guard on purpose.
+    conf.set(S3GUARD_DISABLED_WARN_LEVEL,
+        S3Guard.DisabledWarnLevel.SILENT.toString());
+
     commandFormat = new CommandFormat(0, Integer.MAX_VALUE, opts);
     // For metadata store URI
     commandFormat.addOptionWithValue(META_FLAG);

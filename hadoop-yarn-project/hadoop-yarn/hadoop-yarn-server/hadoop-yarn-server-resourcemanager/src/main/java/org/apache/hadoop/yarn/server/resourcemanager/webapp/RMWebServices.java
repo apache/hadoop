@@ -2780,7 +2780,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr)
       throws AuthorizationException {
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    initForWritableEndpoints(callerUGI, true);
+    initForWritableEndpoints(callerUGI, false);
     if (!EnumUtils.isValidEnum(
         SignalContainerCommand.class, command.toUpperCase())) {
       String errMsg =

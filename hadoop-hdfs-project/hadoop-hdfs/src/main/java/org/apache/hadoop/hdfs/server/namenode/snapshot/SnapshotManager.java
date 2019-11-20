@@ -312,6 +312,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    * @param iip the INodes resolved from the snapshottable directory's path
    * @param snapshotName
    *          The name of the snapshot.
+   * @param mtime is the snapshot creation time set by Time.now().
    * @throws IOException
    *           Throw IOException when 1) the given path does not lead to an
    *           existing snapshottable directory, and/or 2) there exists a
@@ -319,7 +320,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    *           snapshot number exceeds quota
    */
   public String createSnapshot(final LeaseManager leaseManager,
-      final INodesInPath iip, String snapshotRoot, String snapshotName)
+      final INodesInPath iip, String snapshotRoot, String snapshotName,
+      long mtime)
       throws IOException {
     INodeDirectory srcRoot = getSnapshottableRoot(iip);
 
@@ -333,7 +335,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     }
 
     srcRoot.addSnapshot(snapshotCounter, snapshotName, leaseManager,
-        this.captureOpenFiles, maxSnapshotLimit);
+        this.captureOpenFiles, maxSnapshotLimit, mtime);
       
     //create success, update id
     snapshotCounter++;

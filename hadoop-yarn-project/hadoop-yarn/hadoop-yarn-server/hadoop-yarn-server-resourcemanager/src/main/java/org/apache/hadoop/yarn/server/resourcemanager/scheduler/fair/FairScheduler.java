@@ -113,6 +113,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -1001,15 +1002,17 @@ public class FairScheduler extends
   @Deprecated
   void continuousSchedulingAttempt() throws InterruptedException {
     long start = getClock().getTime();
-    List<FSSchedulerNode> nodeIdList;
-    // Hold a lock to prevent comparator order changes due to changes of node
-    // unallocated resources
-    synchronized (this) {
-      nodeIdList = nodeTracker.sortedNodeList(nodeAvailableResourceComparator);
+    TreeSet<FSSchedulerNode> nodeIdSet;
+    // Hold a lock to prevent node changes as much as possible.
+    readLock.lock();
+    try {
+      nodeIdSet = nodeTracker.sortedNodeSet(nodeAvailableResourceComparator);
+    } finally {
+      readLock.unlock();
     }
 
     // iterate all nodes
-    for (FSSchedulerNode node : nodeIdList) {
+    for (FSSchedulerNode node : nodeIdSet) {
       try {
         if (Resources.fitsIn(minimumAllocation,
             node.getUnallocatedResource())) {

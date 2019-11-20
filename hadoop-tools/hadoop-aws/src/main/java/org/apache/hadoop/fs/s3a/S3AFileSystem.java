@@ -306,22 +306,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws IOException {
     // get the host; this is guaranteed to be non-null, non-empty
     bucket = name.getHost();
-    LOG.debug("Initializing S3AFileSystem for {}", bucket);
-    // clone the configuration into one with propagated bucket options
-    Configuration conf = propagateBucketOptions(originalConf, bucket);
-    // patch the Hadoop security providers
-    patchSecurityCredentialProviders(conf);
-    // look for delegation token support early.
-    boolean delegationTokensEnabled = hasDelegationTokenBinding(conf);
-    if (delegationTokensEnabled) {
-      LOG.debug("Using delegation tokens");
-    }
-    // set the URI, this will do any fixup of the URI to remove secrets,
-    // canonicalize.
-    setUri(name, delegationTokensEnabled);
-    super.initialize(uri, conf);
-    setConf(conf);
     try {
+      LOG.debug("Initializing S3AFileSystem for {}", bucket);
+      // clone the configuration into one with propagated bucket options
+      Configuration conf = propagateBucketOptions(originalConf, bucket);
+      // patch the Hadoop security providers
+      patchSecurityCredentialProviders(conf);
+      // look for delegation token support early.
+      boolean delegationTokensEnabled = hasDelegationTokenBinding(conf);
+      if (delegationTokensEnabled) {
+        LOG.debug("Using delegation tokens");
+      }
+      // set the URI, this will do any fixup of the URI to remove secrets,
+      // canonicalize.
+      setUri(name, delegationTokensEnabled);
+      super.initialize(uri, conf);
+      setConf(conf);
 
       // look for encryption data
       // DT Bindings may override this
@@ -381,6 +381,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       initCannedAcls(conf);
 
+      // This initiates a probe against S3 for the bucket existing.
+      // It is where all network and authentication configuration issues
+      // surface, and is potentially slow.
       verifyBucketExists();
 
       inputPolicy = S3AInputPolicy.getPolicy(
@@ -436,7 +439,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       initMultipartUploads(conf);
     } catch (AmazonClientException e) {
+      // amazon client exception: stop all services then throw the translation
+      stopAllServices();
       throw translateException("initializing ", new Path(name), e);
+    } catch (IOException | RuntimeException e) {
+      // other exceptions: stop the services.
+      stopAllServices();
+      throw e;
     }
 
   }
@@ -3118,25 +3127,41 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     try {
       super.close();
     } finally {
-      if (transfers != null) {
-        transfers.shutdownNow(true);
-        transfers = null;
-      }
-      HadoopExecutors.shutdown(boundedThreadPool, LOG,
-          THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
-      boundedThreadPool = null;
-      HadoopExecutors.shutdown(unboundedThreadPool, LOG,
-          THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
-      unboundedThreadPool = null;
-      S3AUtils.closeAll(LOG, metadataStore, instrumentation);
-      metadataStore = null;
-      instrumentation = null;
-      closeAutocloseables(LOG, credentials);
-      cleanupWithLogger(LOG, delegationTokens.orElse(null));
-      cleanupWithLogger(LOG, signerManager);
-      signerManager = null;
-      credentials = null;
+      stopAllServices();
     }
+  }
+
+  /**
+   * Stop all services.
+   * This is invoked in close() and during failures of initialize()
+   * -make sure that all operations here are robust to failures in
+   * both the expected state of this FS and of failures while being stopped.
+   */
+  protected synchronized void stopAllServices() {
+    if (transfers != null) {
+      try {
+        transfers.shutdownNow(true);
+      } catch (RuntimeException e) {
+        // catch and swallow for resilience.
+        LOG.debug("When shutting down", e);
+      }
+      transfers = null;
+    }
+    HadoopExecutors.shutdown(boundedThreadPool, LOG,
+        THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
+    boundedThreadPool = null;
+    HadoopExecutors.shutdown(unboundedThreadPool, LOG,
+        THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
+    unboundedThreadPool = null;
+    closeAutocloseables(LOG, credentials);
+    cleanupWithLogger(LOG,
+        metadataStore,
+        instrumentation,
+        delegationTokens.orElse(null),
+        signerManager);
+    delegationTokens = Optional.empty();
+    signerManager = null;
+    credentials = null;
   }
 
   /**

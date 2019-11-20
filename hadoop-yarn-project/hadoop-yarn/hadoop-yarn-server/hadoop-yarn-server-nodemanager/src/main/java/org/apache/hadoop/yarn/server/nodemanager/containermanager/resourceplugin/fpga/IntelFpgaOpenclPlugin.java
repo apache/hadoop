@@ -22,8 +22,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator.FpgaDevice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -138,8 +136,8 @@ public class IntelFpgaOpenclPlugin implements AbstractFpgaVendorPlugin {
   }
 
   @Override
-  public List<FpgaResourceAllocator.FpgaDevice> discover(int timeout) {
-    List<FpgaResourceAllocator.FpgaDevice> list = new LinkedList<>();
+  public List<FpgaDevice> discover(int timeout) {
+    List<FpgaDevice> list = new LinkedList<>();
     String output;
     output = getDiagnoseInfo(timeout);
     if (null == output) {

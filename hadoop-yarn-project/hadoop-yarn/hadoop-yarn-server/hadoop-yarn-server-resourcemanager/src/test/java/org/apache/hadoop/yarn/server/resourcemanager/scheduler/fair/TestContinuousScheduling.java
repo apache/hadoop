@@ -335,9 +335,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
         for (int j = 0; j < 100; j++) {
           for (FSSchedulerNode node : clusterNodeTracker.getAllNodes()) {
             int i = ThreadLocalRandom.current().nextInt(-30, 30);
-            synchronized (scheduler) {
               node.deductUnallocatedResource(Resource.newInstance(i * 1024, i));
-            }
           }
         }
       }
