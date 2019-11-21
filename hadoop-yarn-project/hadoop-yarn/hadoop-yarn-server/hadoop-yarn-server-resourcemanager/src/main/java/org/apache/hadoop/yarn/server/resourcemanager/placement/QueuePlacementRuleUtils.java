@@ -41,7 +41,7 @@ public final class QueuePlacementRuleUtils {
   private QueuePlacementRuleUtils() {
   }
 
-    public static void validateQueueMappingUnderParentQueue(
+  public static void validateQueueMappingUnderParentQueue(
             CSQueue parentQueue, String parentQueueName,
             String leafQueueName) throws IOException {
     if (parentQueue == null) {

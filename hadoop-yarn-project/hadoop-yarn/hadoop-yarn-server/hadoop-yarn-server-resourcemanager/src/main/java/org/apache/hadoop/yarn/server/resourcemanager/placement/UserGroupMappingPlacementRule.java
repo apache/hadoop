@@ -44,8 +44,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
-
 public class UserGroupMappingPlacementRule extends PlacementRule {
   private static final Logger LOG = LoggerFactory
       .getLogger(UserGroupMappingPlacementRule.class);
@@ -287,7 +285,8 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
     // check if mappings refer to valid queues
     for (QueueMapping mapping : queueMappings) {
 
-      QueuePath queuePath = QueuePlacementRuleUtils.extractQueuePath(mapping.getQueue());
+      QueuePath queuePath = QueuePlacementRuleUtils
+              .extractQueuePath(mapping.getQueue());
       if (isStaticQueueMapping(mapping)) {
         //Try getting queue by its leaf queue name
         // without splitting into parent/leaf queues
