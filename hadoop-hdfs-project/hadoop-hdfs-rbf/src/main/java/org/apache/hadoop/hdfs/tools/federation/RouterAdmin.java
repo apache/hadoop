@@ -725,7 +725,8 @@ public class RouterAdmin extends Configured implements Tool {
   /**
    * List mount points.
    *
-   * @param path Path to list.
+   * @param argv Parameters of the path.
+   * @param i Index in the parameters.
    * @throws IOException If it cannot be listed.
    */
   public void listMounts(String[] argv, int i) throws IOException {
@@ -899,7 +900,7 @@ public class RouterAdmin extends Configured implements Tool {
     } else {
       long nsCount = existingEntry.getQuota().getFileAndDirectoryCount();
       long ssCount = existingEntry.getQuota().getSpaceConsumed();
-      // If nsQuota and ssQuota were unset, clear nsQuota and ssQuota.
+      // If nsQuota and ssQuota were reset, clear nsQuota and ssQuota.
       if (nsQuota == HdfsConstants.QUOTA_RESET &&
           ssQuota == HdfsConstants.QUOTA_RESET) {
         nsCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
