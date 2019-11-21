@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 
 /**
  * The AbfsInputStream for AbfsClient.
@@ -60,21 +61,18 @@ public class AbfsInputStream extends FSInputStream {
       final Statistics statistics,
       final String path,
       final long contentLength,
-      final int bufferSize,
-      final int readAheadQueueDepth,
-      final boolean tolerateOobAppends,
       final String eTag,
-      final boolean alwaysReadAhead) {
+      final AbfsConfiguration abfsConfiguration) {
     this.client = client;
     this.statistics = statistics;
     this.path = path;
     this.contentLength = contentLength;
-    this.bufferSize = bufferSize;
-    this.readAheadQueueDepth = (readAheadQueueDepth >= 0) ? readAheadQueueDepth : Runtime.getRuntime().availableProcessors();
-    this.tolerateOobAppends = tolerateOobAppends;
+    this.bufferSize = abfsConfiguration.getReadBufferSize();
+    this.readAheadQueueDepth = (abfsConfiguration.getReadAheadQueueDepth() >= 0) ? abfsConfiguration.getReadAheadQueueDepth() : Runtime.getRuntime().availableProcessors();
+    this.tolerateOobAppends = abfsConfiguration.getTolerateOobAppends();
     this.eTag = eTag;
     this.readAheadEnabled = true;
-    this.alwaysReadAhead = alwaysReadAhead;
+    this.alwaysReadAhead = abfsConfiguration.getAlwaysReadAhead();
   }
 
   public String getPath() {
