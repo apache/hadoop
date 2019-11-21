@@ -16,6 +16,8 @@
 
 package org.apache.hadoop.yarn.resourcetypes;
 
+import com.google.common.collect.Maps;
+import java.util.HashMap;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -88,6 +90,28 @@ public final class ResourceTypesTestHelper {
     long value = Long.parseLong(matcher.group(1));
 
     return new ResourceValueAndUnit(value, matcher.group(2));
+  }
+
+  public static Map<String, Long> extractCustomResources(Resource res) {
+    Map<String, Long> customResources = Maps.newHashMap();
+    for (int i = 0; i < res.getResources().length; i++) {
+      ResourceInformation ri = res.getResourceInformation(i);
+      if (!ri.getName().equals(ResourceInformation.MEMORY_URI)
+          && !ri.getName().equals(ResourceInformation.VCORES_URI)) {
+        customResources.put(ri.getName(), ri.getValue());
+      }
+    }
+    return customResources;
+  }
+
+  public static Map<String, String> extractCustomResourcesAsStrings(
+      Resource res) {
+    Map<String, Long> resValues = extractCustomResources(res);
+    Map<String, String> resValuesAsStrings = new HashMap<>();
+    for (Map.Entry<String, Long> entry : resValues.entrySet()) {
+      resValuesAsStrings.put(entry.getKey(), String.valueOf(entry.getValue()));
+    }
+    return resValuesAsStrings;
   }
 
 }
