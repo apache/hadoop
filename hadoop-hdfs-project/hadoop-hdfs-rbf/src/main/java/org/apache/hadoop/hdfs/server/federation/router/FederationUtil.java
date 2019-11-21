@@ -24,9 +24,11 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
@@ -249,6 +251,11 @@ public final class FederationUtil {
    */
   public static HdfsFileStatus updateMountPointStatus(HdfsFileStatus dirStatus,
       int children) {
+    // Get flags to set in new FileStatus.
+    EnumSet<HdfsFileStatus.Flags> flags =
+        DFSUtil.getFlags(dirStatus.isEncrypted(), dirStatus.isErasureCoded(),
+            dirStatus.isSnapshotEnabled(), dirStatus.hasAcl());
+    EnumSet.noneOf(HdfsFileStatus.Flags.class);
     return new HdfsFileStatus.Builder().atime(dirStatus.getAccessTime())
         .blocksize(dirStatus.getBlockSize()).children(children)
         .ecPolicy(dirStatus.getErasureCodingPolicy())
@@ -258,6 +265,6 @@ public final class FederationUtil {
         .owner(dirStatus.getOwner()).path(dirStatus.getLocalNameInBytes())
         .perm(dirStatus.getPermission()).replication(dirStatus.getReplication())
         .storagePolicy(dirStatus.getStoragePolicy())
-        .symlink(dirStatus.getSymlinkInBytes()).build();
+        .symlink(dirStatus.getSymlinkInBytes()).flags(flags).build();
   }
 }
