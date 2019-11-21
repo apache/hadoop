@@ -446,7 +446,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 
       // Add statistics for InputStream
       return new AbfsInputStream(client, statistics,
-                AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), contentLength,eTag, abfsConfiguration);
+                AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), contentLength, eTag, abfsConfiguration);
     }
   }
 
