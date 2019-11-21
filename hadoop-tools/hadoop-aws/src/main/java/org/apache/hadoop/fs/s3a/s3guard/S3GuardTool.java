@@ -1544,6 +1544,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
    */
   static class Fsck extends S3GuardTool {
     public static final String CHECK_FLAG = "check";
+    public static final String DDB_MS_CONSISTENCY_FLAG = "ddbIC";
 
     public static final String NAME = "fsck";
     public static final String PURPOSE = "Compares S3 with MetadataStore, and "
@@ -1553,10 +1554,12 @@ public abstract class S3GuardTool extends Configured implements Tool {
         "\t" + PURPOSE + "\n\n" +
         "Common options:\n" +
         "  -" + CHECK_FLAG + " Check the metadata store for errors, but do "
-        + "not fix any issues.\n";
+        + "not fix any issues.\n"+
+        "  -" + DDB_MS_CONSISTENCY_FLAG + " Check the dynamodb metadata store "
+        + "for internal consistency.\n";
 
     Fsck(Configuration conf) {
-      super(conf, CHECK_FLAG);
+      super(conf, CHECK_FLAG, DDB_MS_CONSISTENCY_FLAG);
     }
 
     @Override
@@ -1607,6 +1610,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       }
 
       final CommandFormat commandFormat = getCommandFormat();
+
       if (commandFormat.getOpt(CHECK_FLAG)) {
         // do the check
         S3GuardFsck s3GuardFsck = new S3GuardFsck(fs, ms);
@@ -1619,6 +1623,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
         } catch (IOException e) {
           throw e;
         }
+      } else if (commandFormat.getOpt(DDB_MS_CONSISTENCY_FLAG)) {
+        S3GuardFsck s3GuardFsck = new S3GuardFsck(fs, ms);
+        s3GuardFsck.checkDdbInternalConsistency(fs.qualify(root));
       } else {
         errorln("No supported operation is selected.");
         errorln(USAGE);

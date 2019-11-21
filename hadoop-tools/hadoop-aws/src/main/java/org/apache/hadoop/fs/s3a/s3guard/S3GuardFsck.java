@@ -362,7 +362,11 @@ public class S3GuardFsck {
       this.msPathMetadata = pm;
       this.s3DirListing = null;
       this.msDirListing = null;
-      this.path = status.getPath();
+      if (status != null) {
+        this.path = status.getPath();
+      } else {
+        this.path = pm.getFileStatus().getPath();
+      }
     }
 
     ComparePair(List<FileStatus> s3DirListing, DirListingMetadata msDirListing) {
@@ -410,26 +414,30 @@ public class S3GuardFsck {
   }
 
   /**
+   * Check the DynamoDB metadatastore internally for consistency.
+   * <pre>
    * Tasks to do here:
-   *
-   * - find orphan entries (entries without a parent)
-   * - find if a file's parent is not a directory (so the parent is a file)
-   * - warn: no lastUpdated field
-   * - entries where the parent is a tombstone
-   * @param ddbms the metadatastore to check
+   *  - find orphan entries (entries without a parent).
+   *  - find if a file's parent is not a directory (so the parent is a file).
+   *  - find entries where the parent is a tombstone.
+   *  - warn: no lastUpdated field.
+   * </pre>
    */
-  public void checkDdbInternalConsistency (DynamoDBMetadataStore ddbms,
-      Path rootPath) throws IOException {
+  public List<ComparePair> checkDdbInternalConsistency (Path basePath)
+      throws IOException {
+    Preconditions.checkArgument(basePath.isAbsolute(), "path must be absolute");
 
-    Preconditions.checkArgument(rootPath.isAbsolute(), "path must be absolute");
+    List<ComparePair> comparePairs = new ArrayList<>();
+    String rootStr = basePath.toString();
+    LOG.info("Root for internal consistency check: {}", rootStr);
+    StopWatch stopwatch = new StopWatch();
+    stopwatch.start();
 
-    String rootStr = rootPath.toString();
-    LOG.info("Rootstr: {}", rootStr);
-
-    final Table table = ddbms.getTable();
+    final Table table = metadataStore.getTable();
+    final String username = metadataStore.getUsername();
     DDBTree ddbTree = new DDBTree();
 
-    /**
+    /*
      * I. Root node construction
      * - If the root node is the real bucket root, a node is constructed instead of
      *   doing a query to the ddb because the bucket root is not stored.
@@ -437,91 +445,116 @@ public class S3GuardFsck {
      *   the ddb and constructed from the result.
      */
 
-    DDBPathMetadata rootMeta;
+    DDBPathMetadata baseMeta;
 
-    if (!rootPath.isRoot()) {
-      PrimaryKey rootKey = pathToKey(rootPath);
+    if (!basePath.isRoot()) {
+      PrimaryKey rootKey = pathToKey(basePath);
       final GetItemSpec spec = new GetItemSpec()
           .withPrimaryKey(rootKey)
           .withConsistentRead(true);
-      final Item rootItem = table.getItem(spec);
-      rootMeta = itemToPathMetadata(rootItem, ddbms.getUsername());
+      final Item baseItem = table.getItem(spec);
+      baseMeta = itemToPathMetadata(baseItem, username);
+
+      if (baseMeta == null) {
+        throw new FileNotFoundException(
+            "Base element metadata is null. " +
+                "This means the base path element is missing, or wrong path is " +
+                "passed as base path to the internal ddb consistency checker.");
+      }
     } else {
-      rootMeta = new DDBPathMetadata(
-          new S3AFileStatus(Tristate.UNKNOWN, rootPath, ddbms.getUsername())
+      baseMeta = new DDBPathMetadata(
+          new S3AFileStatus(Tristate.UNKNOWN, basePath, username)
       );
     }
 
-    DDBTreeNode root = new DDBTreeNode(rootMeta);
+    DDBTreeNode root = new DDBTreeNode(baseMeta);
     ddbTree.addNode(root);
     ddbTree.setRoot(root);
 
-    /**
-     * II. Build the descendant tree:
-     * 1. query all nodes where the parent is our root, and put it in the tree
-     * 2. Add edges to the tree: connect each node with the parent.
-     *    - This should be done in O(n): we only need to find the parent based on the
+    /*
+     * II. Build and check the descendant tree:
+     * 1. query all nodes where the prefix is the given root, and put it in the tree
+     * 2. Check connectivity: check if each parent is in the hashmap
+     *    - This is done in O(n): we only need to find the parent based on the
      *      path with a hashmap lookup.
+     *    - Do a test if the graph is connected - if the parent is not in the
+     *      hashmap, we found an orphan entry.
      *
-     * 3. Do a test if the graph is connected - find orphan entries
-     *
-     * 4. Do test the elements for errors:
+     * 3. Do test the elements for errors:
      *    - File is a parent of a file.
      *    - Entries where the parent is tombstoned but the entries are not.
      *    - Warn on no lastUpdated field.
+     *
      */
     ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
     builder.withCondition(
         ExpressionSpecBuilder.S("parent")
-            .beginsWith(pathToParentKey(rootPath))
+            .beginsWith(pathToParentKey(basePath))
     );
     final IteratorSupport<Item, ScanOutcome> resultIterator = table.scan(
         builder.buildForScan()).iterator();
     resultIterator.forEachRemaining(item -> {
-      final DDBPathMetadata pmd = itemToPathMetadata(item, ddbms.getUsername());
-      System.out.println(pmd.getFileStatus().getPath());
+      final DDBPathMetadata pmd = itemToPathMetadata(item, username);
       DDBTreeNode ddbTreeNode = new DDBTreeNode(pmd);
       ddbTree.addNode(ddbTreeNode);
     });
 
-    System.out.println(ddbTree.getContentMap().toString());
-    LOG.info("Root: {}", ddbTree.getRoot());
-    LOG.debug("Constructing tree.");
+    LOG.debug("Root: {}", ddbTree.getRoot());
 
     for (Map.Entry<Path, DDBTreeNode> entry : ddbTree.getContentMap().entrySet()) {
-      // let's skip the root node for building.
-      if (entry.getValue().getFileStatus().getPath().isRoot()) {
+      final DDBTreeNode node = entry.getValue();
+      final ComparePair pair = new ComparePair(null, node.val);
+      // let's skip the root node when checking.
+      if (node.getVal().getFileStatus().getPath().isRoot()) {
         continue;
       }
-      if(entry.getValue().getVal().getLastUpdated() == 0) {
-        LOG.warn("Last updated is not set for entry: {}", entry.getKey());
+
+      if(node.getVal().getLastUpdated() == 0) {
+        pair.violations.add(Violation.NO_LASTUPDATED_FIELD);
       }
 
-      final Path parent = entry.getValue()
-          .getFileStatus()
-          .getPath()
-          .getParent();
+      // skip further checking the basenode which is not the actual bucket root.
+      if (node.equals(ddbTree.getRoot())) {
+        continue;
+      }
+
+      final Path parent = node.getFileStatus().getPath().getParent();
       final DDBTreeNode parentNode = ddbTree.getContentMap().get(parent);
       if (parentNode == null) {
-        LOG.error("Orphan entry: {}", entry.getKey());
+        pair.violations.add(Violation.ORPHAN_DDB_ENTRY);
       } else {
-        if (!parentNode.isDirectory()) {
-          LOG.error("Parent is not a directory: {}", entry.getKey());
+        if (!node.isTombstoned() && !parentNode.isDirectory()) {
+          pair.violations.add(Violation.PARENT_IS_A_FILE);
         }
-        if(!entry.getValue().isTombstoned() && parentNode.isTombstoned()) {
-          LOG.error("Parent is tombstoned, but the entry is not. " +
-              "parent: {}; entry: {}", parent, entry.getKey());
+        if(!node.isTombstoned() && parentNode.isTombstoned()) {
+          pair.violations.add(Violation.PARENT_TOMBSTONED);
         }
       }
-      entry.getValue().setParent(parentNode);
+
+      if (!pair.violations.isEmpty()) {
+        comparePairs.add(pair);
+      }
+
+      node.setParent(parentNode);
     }
+
+    // Create a handler and handle each violated pairs
+    S3GuardFsckViolationHandler handler =
+        new S3GuardFsckViolationHandler(rawFS, metadataStore);
+    comparePairs.forEach(handler::handle);
+
+    stopwatch.stop();
+    LOG.info("Total scan time: {}s", stopwatch.now(TimeUnit.SECONDS));
+    LOG.info("Scanned entries: {}", ddbTree.contentMap.size());
+
+    return comparePairs;
   }
 
   /**
    * DDBTree is the tree that represents the structure of items in the DynamoDB
    */
   public static class DDBTree {
-    Map<Path, DDBTreeNode> contentMap = new HashMap<>();
+    final Map<Path, DDBTreeNode> contentMap = new HashMap<>();
     DDBTreeNode root;
 
     public DDBTree() {
@@ -541,6 +574,14 @@ public class S3GuardFsck {
 
     public void addNode(DDBTreeNode pm) {
       contentMap.put(pm.getVal().getFileStatus().getPath(), pm);
+    }
+
+    @Override
+    public String toString() {
+      return "DDBTree{" +
+          "contentMap=" + contentMap +
+          ", root=" + root +
+          '}';
     }
   }
 
@@ -666,7 +707,16 @@ public class S3GuardFsck {
      * Don't worry too much if we don't have an etag.
      */
     NO_ETAG(2,
-        S3GuardFsckViolationHandler.NoEtag.class);
+        S3GuardFsckViolationHandler.NoEtag.class),
+    /**
+     * The entry does not have a parent in ddb.
+     */
+    ORPHAN_DDB_ENTRY (0, S3GuardFsckViolationHandler.OrphanDDBEntry.class),
+    /**
+     * The entry's lastUpdated field is empty.
+     */
+    NO_LASTUPDATED_FIELD(2,
+        S3GuardFsckViolationHandler.NoLastUpdatedField.class);
 
     private final int severity;
     private final Class<? extends S3GuardFsckViolationHandler.ViolationHandler> handler;
