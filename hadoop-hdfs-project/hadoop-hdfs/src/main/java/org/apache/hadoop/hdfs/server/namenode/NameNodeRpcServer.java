@@ -1431,6 +1431,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
    */
   @Override // ClientProtocol
   public void setBalancerBandwidth(long bandwidth) throws IOException {
+    if (bandwidth > HdfsServerConstants.MAX_BANDWIDTH_PER_DATANODE) {
+      throw new IllegalArgumentException(
+          "Bandwidth should not exceed maximum limit "
+              + HdfsServerConstants.MAX_BANDWIDTH_PER_DATANODE
+              + " bytes per second");
+    }
     checkNNStartup();
     namesystem.setBalancerBandwidth(bandwidth);
   }
