@@ -68,8 +68,8 @@ public class AbfsInputStream extends FSInputStream {
     this.path = path;
     this.contentLength = contentLength;
     this.bufferSize = abfsConfiguration.getReadBufferSize();
-    this.readAheadQueueDepth = (abfsConfiguration.getReadAheadQueueDepth() >= 0) ?
-                 abfsConfiguration.getReadAheadQueueDepth() : Runtime.getRuntime().availableProcessors();
+    this.readAheadQueueDepth = (abfsConfiguration.getReadAheadQueueDepth() >= 0)
+              ? abfsConfiguration.getReadAheadQueueDepth() : Runtime.getRuntime().availableProcessors();
     this.tolerateOobAppends = abfsConfiguration.getTolerateOobAppends();
     this.eTag = eTag;
     this.readAheadEnabled = true;
