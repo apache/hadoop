@@ -72,10 +72,11 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * any assumptions about the state of any path outside the test tree.
  */
 @SuppressWarnings("StaticNonFinalField")
-public class ITestS3GuardAuthMode extends AbstractS3ATestBase {
+public class ITestS3GuardDynamoDBMetadataStoreAuthoritativeMode
+    extends AbstractS3ATestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(
-      ITestS3GuardAuthMode.class);
+      ITestS3GuardDynamoDBMetadataStoreAuthoritativeMode.class);
 
   private StoreContext storeContext;
 
