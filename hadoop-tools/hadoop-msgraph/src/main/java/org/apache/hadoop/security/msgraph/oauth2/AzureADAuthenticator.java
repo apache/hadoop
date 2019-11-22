@@ -23,8 +23,8 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -54,11 +54,15 @@ public class AzureADAuthenticator {
 
   /**
    * Get a token using the client credentials.
+   * @param authEndpoint Authentication endpoint.
+   * @param clientId Client identifier.
+   * @param clientSecret Client secret.
+   * @param grantType Type of grant.
+   * @param resource Resource to get a token for.
    */
   public static AzureADToken getTokenUsingClientCreds(
       String authEndpoint, String clientId, String clientSecret,
-      String grantType, String resource)
-      throws IOException {
+      String grantType, String resource) throws IOException {
     QueryParams qp = new QueryParams();
     qp.add("resource", resource);
     qp.add("grant_type", grantType);
@@ -72,7 +76,7 @@ public class AzureADAuthenticator {
   /**
    * Get a token.
    * @param authEndpoint Endpoint of the auth service.
-   * @param body
+   * @param body Body of the request.
    */
   private static AzureADToken getToken(String authEndpoint, String body)
       throws IOException {
@@ -186,6 +190,7 @@ public class AzureADAuthenticator {
 
   /**
    * Parse a token from an HTTP stream.
+   * @param httpResponseStream HTTP response stream.
    */
   private static AzureADToken parseTokenFromStream(
       InputStream httpResponseStream) throws IOException {
@@ -198,7 +203,6 @@ public class AzureADAuthenticator {
       JsonFactory jf = new JsonFactory();
       JsonParser jp = jf.createParser(httpResponseStream);
       jp.nextToken();
-
       for(; jp.hasCurrentToken(); jp.nextToken()) {
         if (jp.getCurrentToken() == JsonToken.FIELD_NAME) {
           String fieldName = jp.getCurrentName();
@@ -223,13 +227,14 @@ public class AzureADAuthenticator {
       }
 
       jp.close();
-      long expiry = System.currentTimeMillis();
-      expiry += expiryPeriod * 1000L;
 
-      token = new AzureADToken(accessToken, new Date(expiry));
+      long expiry = System.currentTimeMillis();
+      expiry += TimeUnit.SECONDS.toMillis(expiryPeriod);
+      Date expiryDate = new Date(expiry);
+      token = new AzureADToken(accessToken, expiryDate);
       LOG.debug("AADToken: fetched token with expiry {}.", token.getExpiry());
     } catch (Exception e) {
-      LOG.warn("AADToken: got exception when parsing json token {}.",
+      LOG.warn("AADToken: got an exception when parsing JSON token {}.",
           e.getMessage());
       throw e;
     } finally {
@@ -237,37 +242,5 @@ public class AzureADAuthenticator {
     }
 
     return token;
-  }
-
-  /**
-   * HTTP exception.
-   */
-  private static class HttpException extends IOException {
-    /** Error code. */
-    private int httpErrorCode;
-    /** Request identifier. */
-    private String requestId;
-
-    HttpException(int httpErrorCode, String requestId, String message) {
-      super(message);
-      this.httpErrorCode = httpErrorCode;
-      this.requestId = requestId;
-    }
-
-    /**
-     * Get the HTTP error code for the exception.
-     * @return HTTP error code.
-     */
-    public int getHttpErrorCode() {
-      return this.httpErrorCode;
-    }
-
-    /**
-     * Get the request identifier.
-     * @return Request identifier.
-     */
-    public String getRequestId() {
-      return this.requestId;
-    }
   }
 }
