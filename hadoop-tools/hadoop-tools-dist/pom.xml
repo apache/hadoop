@@ -139,6 +139,18 @@
       <artifactId>hadoop-msgraph</artifactId>
       <scope>compile</scope>
       <version>${project.version}</version>
+      <exclusions>
+        <!--
+          Avoiding conflicting dependency:
+            org.apache.hadoop:hadoop-hdfs-client
+              com.squareup.okhttp:okhttp
+                com.squareup.okio:okio
+        -->
+        <exclusion>
+          <groupId>com.squareup.okio</groupId>
+          <artifactId>okio</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 
