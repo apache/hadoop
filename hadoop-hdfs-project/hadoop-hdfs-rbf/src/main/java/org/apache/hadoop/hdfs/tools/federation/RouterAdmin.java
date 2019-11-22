@@ -530,6 +530,7 @@ public class RouterAdmin extends Configured implements Tool {
       for (String nsId : nss) {
         if (!existingEntry.addDestination(nsId, dest)) {
           System.err.println("Cannot add destination at " + nsId + " " + dest);
+          return false;
         }
       }
       if (readonly) {
