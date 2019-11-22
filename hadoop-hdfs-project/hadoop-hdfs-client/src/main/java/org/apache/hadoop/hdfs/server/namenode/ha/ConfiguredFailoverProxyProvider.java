@@ -122,7 +122,7 @@ public class ConfiguredFailoverProxyProvider<T> extends
       boolean exist = cacheActiveFile.exists();
       try (RandomAccessFile raf = new RandomAccessFile(cacheActiveFile, "rw");
           FileChannel fc = raf.getChannel();
-          FileLock lock = fc.tryLock()) {
+          FileLock lock = fc.tryLock(0, Long.MAX_VALUE, false)) {
         if (lock != null) {
           raf.setLength(0);
           raf.writeBytes(String.valueOf(index));
@@ -159,13 +159,13 @@ public class ConfiguredFailoverProxyProvider<T> extends
 
       try (RandomAccessFile raf = new RandomAccessFile(cacheActiveFile, "rw");
           FileChannel fc = raf.getChannel();
-          FileLock lock = fc.tryLock()) {
+          FileLock lock = fc.tryLock(0, Long.MAX_VALUE, true)) {
         if (lock != null) {
           index = Integer.parseInt(raf.readLine()) % proxies.size();
         }
       } catch (Throwable e) {
-        LOG.warn("Filed to read active index from cache file "
-            + cacheActiveFile, e);
+        LOG.warn("Failed to read active index from cache file "
+            + cacheActiveFile + ", will begin from index 0.", e);
       }
     }
     return index;
