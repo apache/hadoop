@@ -719,6 +719,8 @@ public final class S3Guard {
    * @param timeProvider nullable time provider
    * @param needEmptyDirectoryFlag if true, implementation will
    * return known state of directory emptiness.
+   * @param allowAuthoritative if this flag is true, the ttl won't apply to the
+   * metadata - so it will be returned regardless of it's expiry.
    * @return the metadata or null if there as no entry.
    * @throws IOException failure.
    */
@@ -769,7 +771,8 @@ public final class S3Guard {
    * @param ms metastore
    * @param path path to look up.
    * @param timeProvider nullable time provider
-   * @param allowAuthoritative
+   * @param allowAuthoritative if this flag is true, the ttl won't apply to the
+   * metadata - so it will be returned regardless of it's expiry.
    * @return the listing of entries under a path, or null if there as no entry.
    * @throws IOException failure.
    */

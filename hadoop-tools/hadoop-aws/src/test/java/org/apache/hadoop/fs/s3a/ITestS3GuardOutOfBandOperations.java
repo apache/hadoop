@@ -459,7 +459,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
       // WRITE TO DELETED DIRECTORY
       // - FAIL ON AUTH = TRUE
-      // - SUCCESS ON AUTH = FLASE
+      // - SUCCESS ON AUTH = FALSE
       if (authoritative) {
         intercept(FileNotFoundException.class, filePath.getParent().toString(),
             "Parent does not exist, so in authoritative mode this should fail.",
@@ -563,10 +563,15 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       when(mockTimeProvider.getNow()).thenReturn(100L + 2 * ttl);
 
       // DELETE IN GUARDED FS
+      // NOTE: in auth this will be ineffective:
+      //  we already have the tombstone marker on the item, it won't expire,
+      //  so we don't delete the raw S3 file.
       guardedFs.delete(filePath, true);
 
       // FILE MUST NOT EXIST IN RAW
-      // If authoritative, the file status can be retrieved
+      // If authoritative, the file status can be retrieved raw:
+      //    deleting with guarded FS won't do anything because the tombstone
+      //    marker won't expire in auth mode.
       // If not authoritative, we go to the S3 bucket and get an FNFE
       if (authoritative) {
         rawFS.getFileStatus(filePath);
