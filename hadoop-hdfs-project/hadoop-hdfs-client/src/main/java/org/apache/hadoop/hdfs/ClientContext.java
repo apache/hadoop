@@ -150,7 +150,7 @@ public class ClientContext {
         conf.getWriteByteArrayManagerConf());
     this.deadNodeDetectionEnabled = conf.isDeadNodeDetectionEnabled();
     if (deadNodeDetectionEnabled && deadNodeDetector == null) {
-      deadNodeDetector = new DeadNodeDetector(name);
+      deadNodeDetector = new DeadNodeDetector(name, config);
       deadNodeDetectorThr = new Daemon(deadNodeDetector);
       deadNodeDetectorThr.start();
     }

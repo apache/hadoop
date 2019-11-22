@@ -17,19 +17,24 @@
  */
 package org.apache.hadoop.hdfs;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_DEAD_NODE_QUEUE_MAX_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_DEAD_NODE_INTERVAL_MS_KEY;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -121,21 +126,7 @@ public class TestDeadNodeDetection {
 
     FileSystem fs = cluster.getFileSystem();
     Path filePath = new Path("/testDeadNodeMultipleDFSInputStream");
-
-    // 256 bytes data chunk for writes
-    byte[] bytes = new byte[256];
-    for (int index = 0; index < bytes.length; index++) {
-      bytes[index] = '0';
-    }
-
-    // File with a 512 bytes block size
-    FSDataOutputStream out = fs.create(filePath, true, 4096, (short) 3, 512);
-
-    // Write a block to DN (2x256bytes).
-    out.write(bytes);
-    out.write(bytes);
-    out.hflush();
-    out.close();
+    createFile(fs, filePath);
 
     String datanodeUuid = cluster.getDataNodes().get(0).getDatanodeUuid();
     FSDataInputStream in1 = fs.open(filePath);
@@ -170,7 +161,7 @@ public class TestDeadNodeDetection {
     } finally {
       in1.close();
       in2.close();
-      fs.delete(new Path("/testDeadNodeMultipleDFSInputStream"), true);
+      deleteFile(fs, filePath);
       // check the dead node again here, the dead node is expected be removed
       assertEquals(0, dfsClient1.getDeadNodes(din1).size());
       assertEquals(0, dfsClient2.getDeadNodes(din2).size());
@@ -179,5 +170,136 @@ public class TestDeadNodeDetection {
       assertEquals(0, dfsClient2.getClientContext().getDeadNodeDetector()
           .clearAndGetDetectedDeadNodes().size());
     }
+  }
+
+  @Test
+  public void testDeadNodeDetectionDeadNodeRecovery() throws Exception {
+    conf.setBoolean(DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY, true);
+    conf.setLong(DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_DEAD_NODE_INTERVAL_MS_KEY,
+        1000);
+    // We'll be using a 512 bytes block size just for tests
+    // so making sure the checksum bytes too match it.
+    conf.setInt("io.bytes.per.checksum", 512);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster.waitActive();
+
+    FileSystem fs = cluster.getFileSystem();
+    Path filePath = new Path("/testDeadNodeDetectionDeadNodeRecovery");
+    createFile(fs, filePath);
+
+    // Remove three DNs,
+    MiniDFSCluster.DataNodeProperties one = cluster.stopDataNode(0);
+    cluster.stopDataNode(0);
+    cluster.stopDataNode(0);
+
+    FSDataInputStream in = fs.open(filePath);
+    DFSInputStream din = (DFSInputStream) in.getWrappedStream();
+    DFSClient dfsClient = din.getDFSClient();
+    try {
+      try {
+        in.read();
+      } catch (BlockMissingException e) {
+      }
+
+      assertEquals(3, dfsClient.getDeadNodes(din).size());
+      assertEquals(3, dfsClient.getClientContext().getDeadNodeDetector()
+          .clearAndGetDetectedDeadNodes().size());
+
+      cluster.restartDataNode(one, true);
+      waitForDeadNodeRecovery(din);
+      assertEquals(2, dfsClient.getDeadNodes(din).size());
+      assertEquals(2, dfsClient.getClientContext().getDeadNodeDetector()
+          .clearAndGetDetectedDeadNodes().size());
+    } finally {
+      in.close();
+      deleteFile(fs, filePath);
+      assertEquals(0, dfsClient.getDeadNodes(din).size());
+      assertEquals(0, dfsClient.getClientContext().getDeadNodeDetector()
+          .clearAndGetDetectedDeadNodes().size());
+    }
+  }
+
+  @Test
+  public void testDeadNodeDetectionMaxDeadNodesProbeQueue() throws Exception {
+    conf.setBoolean(DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY, true);
+    conf.setLong(DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_DEAD_NODE_INTERVAL_MS_KEY,
+        1000);
+    conf.setInt(DFS_CLIENT_DEAD_NODE_DETECTION_DEAD_NODE_QUEUE_MAX_KEY, 1);
+
+    // We'll be using a 512 bytes block size just for tests
+    // so making sure the checksum bytes too match it.
+    conf.setInt("io.bytes.per.checksum", 512);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster.waitActive();
+
+    FileSystem fs = cluster.getFileSystem();
+    Path filePath = new Path("testDeadNodeDetectionMaxDeadNodesProbeQueue");
+    createFile(fs, filePath);
+
+    // Remove three DNs,
+    cluster.stopDataNode(0);
+    cluster.stopDataNode(0);
+    cluster.stopDataNode(0);
+
+    FSDataInputStream in = fs.open(filePath);
+    DFSInputStream din = (DFSInputStream) in.getWrappedStream();
+    DFSClient dfsClient = din.getDFSClient();
+    try {
+      try {
+        in.read();
+      } catch (BlockMissingException e) {
+      }
+
+      Thread.sleep(1500);
+      Assert.assertTrue((dfsClient.getClientContext().getDeadNodeDetector()
+          .getDeadNodesProbeQueue().size()
+          + dfsClient.getDeadNodes(din).size()) <= 4);
+    } finally {
+      in.close();
+      deleteFile(fs, filePath);
+    }
+  }
+
+  private void createFile(FileSystem fs, Path filePath) throws IOException {
+    FSDataOutputStream out = null;
+    try {
+      // 256 bytes data chunk for writes
+      byte[] bytes = new byte[256];
+      for (int index = 0; index < bytes.length; index++) {
+        bytes[index] = '0';
+      }
+
+      // File with a 512 bytes block size
+      out = fs.create(filePath, true, 4096, (short) 3, 512);
+
+      // Write a block to all 3 DNs (2x256bytes).
+      out.write(bytes);
+      out.write(bytes);
+      out.hflush();
+
+    } finally {
+      out.close();
+    }
+  }
+
+  private void deleteFile(FileSystem fs, Path filePath) throws IOException {
+    fs.delete(filePath, true);
+  }
+
+  private void waitForDeadNodeRecovery(DFSInputStream din) throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          if (din.getDFSClient().getDeadNodes(din).size() == 2) {
+            return true;
+          }
+        } catch (Exception e) {
+          // Ignore the exception
+        }
+
+        return false;
+      }
+    }, 5000, 100000);
   }
 }
