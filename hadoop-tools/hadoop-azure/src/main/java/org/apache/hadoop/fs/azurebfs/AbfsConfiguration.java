@@ -62,6 +62,7 @@ import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.ReflectionUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -553,9 +554,9 @@ public class AbfsConfiguration{
         if (azureTokenProvider == null) {
           throw new IllegalArgumentException("Failed to initialize " + customTokenProviderClass);
         }
-        LOG.trace("Initializing " + customTokenProviderClass.getName());
+        LOG.trace("Initializing {}", customTokenProviderClass.getName());
         azureTokenProvider.initialize(rawConfig, accountName);
-        LOG.trace(customTokenProviderClass.getName() + " init complete");
+        LOG.trace("{} init complete", customTokenProviderClass.getName());
         return new CustomTokenProviderAdapter(azureTokenProvider);
       } catch(IllegalArgumentException e) {
         throw e;
@@ -582,9 +583,9 @@ public class AbfsConfiguration{
         @SuppressWarnings("unchecked")
         Class<AbfsAuthorizer> authClass = (Class<AbfsAuthorizer>) rawConfig.getClassByName(authClassName);
         authorizer = authClass.getConstructor(new Class[] {Configuration.class}).newInstance(rawConfig);
-        LOG.trace("Initializing " + authClassName);
+        LOG.trace("Initializing {}", authClassName);
         authorizer.init();
-        LOG.trace(authClassName + " init complete");
+        LOG.trace("{} init complete", authClassName);
       }
     } catch (
         IllegalAccessException
