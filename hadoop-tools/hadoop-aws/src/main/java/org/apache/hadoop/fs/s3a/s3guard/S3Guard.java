@@ -48,13 +48,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
+import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createUploadFileStatus;
+import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.emptyDirectoryMarker;
 
 /**
  * Logic for integrating MetadataStore with S3A.
@@ -182,6 +183,29 @@ public final class S3Guard {
       ms.getInstrumentation().entryAdded((System.nanoTime() - startTimeNano));
     }
     return status;
+  }
+
+  /**
+   * Creates an authoritative directory marker for the store.
+   * @param ms MetadataStore to {@code put()} into.
+   * @param status status to store
+   * @param timeProvider Time provider to use when writing entries
+   * @param operationState possibly-null metastore state tracker.
+   * @throws IOException if metadata store update failed
+   */
+  @RetryTranslated
+  public static void putAuthDirectoryMarker(
+      final MetadataStore ms,
+      final S3AFileStatus status,
+      final ITtlTimeProvider timeProvider,
+      @Nullable final BulkOperationState operationState) throws IOException {
+    long startTimeNano = System.nanoTime();
+    try {
+      final PathMetadata fileMeta = emptyDirectoryMarker(status);
+      putWithTtl(ms, fileMeta, timeProvider, operationState);
+    } finally {
+      ms.getInstrumentation().entryAdded((System.nanoTime() - startTimeNano));
+    }
   }
 
   /**

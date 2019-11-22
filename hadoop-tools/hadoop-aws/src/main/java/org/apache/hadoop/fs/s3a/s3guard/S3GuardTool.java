@@ -46,6 +46,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
@@ -369,12 +370,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         "Expected bucket option to be %s but was %s",
         S3GUARD_METASTORE_NULL, updatedBucketOption);
 
-    FileSystem fs = FileSystem.newInstance(uri, conf);
-    if (!(fs instanceof S3AFileSystem)) {
-      throw invalidArgs("URI %s is not a S3A file system: %s",
-          uri, fs.getClass().getName());
-    }
-    filesystem = (S3AFileSystem) fs;
+    setFilesystem(FileSystem.newInstance(uri, conf));
   }
 
   /**
@@ -414,8 +410,21 @@ public abstract class S3GuardTool extends Configured implements Tool {
     return filesystem;
   }
 
-  protected void setFilesystem(S3AFileSystem filesystem) {
-    this.filesystem = filesystem;
+  /**
+   * Sets the filesystem; it must be an S3A FS instance, or a FilterFS
+   * around an S3A Filesystem.
+   * @param filesystem filesystem to bind to
+   */
+  protected void setFilesystem(FileSystem filesystem) {
+    FileSystem fs = filesystem;
+    if (fs instanceof FilterFileSystem) {
+      fs = ((FilterFileSystem) fs).getRawFileSystem();
+    }
+    if (!(fs instanceof S3AFileSystem)) {
+      throw invalidArgs("URI %s is not a S3A file system: %s",
+          fs.getUri(), fs.getClass().getName());
+    }
+    this.filesystem = (S3AFileSystem) fs;
   }
 
   @VisibleForTesting
@@ -1165,9 +1174,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
         unguardedConf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
       }
 
-      S3AFileSystem fs = (S3AFileSystem) FileSystem.newInstance(
-          fsURI, unguardedConf);
-      setFilesystem(fs);
+      setFilesystem(FileSystem.newInstance(fsURI, unguardedConf));
+      S3AFileSystem fs = getFilesystem();
       Configuration conf = fs.getConf();
       URI fsUri = fs.getUri();
       MetadataStore store = fs.getMetadataStore();

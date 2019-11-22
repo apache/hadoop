@@ -747,7 +747,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     if (wantEmptyDirectoryFlag && meta != null && !meta.isDeleted()) {
       final FileStatus status = meta.getFileStatus();
-      // for a non-deleted directory, we query its direct children to determine isEmpty bit
+      // for a non-deleted directory, we query its direct undeleted children
+      // to determine the isEmpty bit. There's no TTL checking going on here.
       if (status.isDirectory()) {
         final QuerySpec spec = new QuerySpec()
             .withHashKey(pathToParentKeyAttribute(path))
@@ -761,12 +762,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
               // issue the query
               final IteratorSupport<Item, QueryOutcome> it = table.query(
                   spec).iterator();
-              // if non empty, log the first entry to aid with some debugging
+              // if non empty, log the result to aid with some debugging
               if (it.hasNext()) {
                 if (LOG.isDebugEnabled()) {
-                  LOG.debug("Dir {} is non-empty, first child is {}",
-                      status.getPath(),
-                      itemToPathMetadata(it.next(), username));
+                  LOG.debug("Dir {} is non-empty", status.getPath());
+                  while(it.hasNext()) {
+                    LOG.debug("{}", itemToPathMetadata(it.next(), username));
+                  }
                 }
                 return true;
               } else {
@@ -955,7 +957,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
           // insert into the ancestor state to avoid further checks
           ancestorState.put(parent, md);
           ancestry.put(parent, newEntry);
-
         }
         parent = parent.getParent();
       }
@@ -1538,7 +1539,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
-   * Prune files, in batches. There's a sleep between each batch.
+   * Prune files, in batches. There's optionally a sleep between each batch.
    *
    * @param pruneMode The mode of operation for the prune For details see
    *                  {@link MetadataStore#prune(PruneMode, long)}
@@ -1558,10 +1559,24 @@ public class DynamoDBMetadataStore implements MetadataStore,
         keyPrefix, cutoff);
     final ItemCollection<ScanOutcome> items =
         expiredFiles(pruneMode, cutoff, keyPrefix);
-    return innerPrune(keyPrefix, items);
+    return innerPrune(pruneMode, cutoff, keyPrefix, items);
   }
 
-  private int innerPrune(String keyPrefix, ItemCollection<ScanOutcome> items)
+  /**
+   * Prune files, in batches. There's optionally a sleep between each batch.
+   *
+   * @param pruneMode The mode of operation for the prune For details see
+   *                  {@link MetadataStore#prune(PruneMode, long)}
+   * @param cutoff Oldest modification time to allow
+   * @param keyPrefix The prefix for the keys that should be removed
+   * @param items expired items
+   * @throws IOException Any IO/DDB failure.
+   * @throws InterruptedIOException if the prune was interrupted
+   * @return count of pruned items.
+   */
+  private int innerPrune(
+      final PruneMode pruneMode, final long cutoff, final String keyPrefix,
+      final ItemCollection<ScanOutcome> items)
       throws IOException {
     int itemCount = 0;
     try (AncestorState state = initiateBulkWrite(
@@ -1586,7 +1601,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
             // set authoritative false for each pruned dir listing
             // if at least one entry was not a tombstone
-            removeAuthoritativeDirFlag(parentPathSet, state);
+            removeAuthoritativeDirFlag(parentPathSet, state, pruneMode, cutoff);
             // already cleared parent paths.
             clearedParentPathSet.addAll(parentPathSet);
             parentPathSet.clear();
@@ -1608,6 +1623,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         Path parentPath = path.getParent();
         if (!tombstone
             && parentPath != null
+            && !parentPath.isRoot()
             && !clearedParentPathSet.contains(parentPath)) {
           parentPathSet.add(parentPath);
         }
@@ -1659,16 +1675,25 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * This is to ensure a best-effort attempt to update the store.
    * @param pathSet set of paths.
    * @param state ongoing operation state.
+   * @param pruneMode The mode of operation for the prune.
+   * @param cutoff cutoff time of prune -ignore files older than this as they
+   * are also in the cutoff list.
    * @throws IOException only after a best effort is made to update the store.
    */
   private void removeAuthoritativeDirFlag(
       final Set<Path> pathSet,
-      final AncestorState state) throws IOException {
+      final AncestorState state,
+      final PruneMode pruneMode,
+      final long cutoff) throws IOException {
 
     AtomicReference<IOException> rIOException = new AtomicReference<>();
 
     Set<DDBPathMetadata> metas = pathSet.stream().map(path -> {
       try {
+        if (path.isRoot()) {
+          LOG.debug("ignoring root path");
+          return null;
+        }
         if (state != null && state.get(path) != null) {
           // there's already an entry for this path
           LOG.debug("Ignoring update of entry already in the state map");
@@ -1688,6 +1713,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
         if (!ddbPathMetadata.getFileStatus().isDirectory()) {
           // the parent itself is deleted
           LOG.debug("Parent is not a directory {}; skipping", path);
+          return null;
+        }
+        if (pruneMode == PruneMode.ALL_BY_MODTIME &&
+            ddbPathMetadata.getLastUpdated() < cutoff) {
+          // the parent is being pruned itself
+          LOG.debug("Parent is also being pruned {}; skipping", path);
           return null;
         }
         LOG.debug("Setting isAuthoritativeDir==false on {}", ddbPathMetadata);

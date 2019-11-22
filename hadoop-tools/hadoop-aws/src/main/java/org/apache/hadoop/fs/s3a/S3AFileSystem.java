@@ -1222,7 +1222,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     } catch (AmazonClientException e) {
       throw translateException("rename(" + src +", " + dst + ")", src, e);
     } catch (RenameFailedException e) {
-      LOG.debug(e.getMessage());
+      LOG.info("{}", e.getMessage());
+      LOG.debug("rename failure", e);
       return e.getExitCode();
     } catch (FileNotFoundException e) {
       LOG.debug(e.toString());
@@ -1275,8 +1276,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       dstStatus = innerGetFileStatus(dst, true, StatusProbeEnum.ALL);
       // if there is no destination entry, an exception is raised.
       // hence this code sequence can assume that there is something
-      // at the end of the path; the only detail being what it is and
-      // whether or not it can be the destination of the rename.
+      // at the end of the path; the only detail
       if (srcStatus.isDirectory()) {
         if (dstStatus.isFile()) {
           throw new RenameFailedException(src, dst,
@@ -3505,12 +3505,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           activeState = stateToClose;
         }
         S3Guard.addAncestors(metadataStore, p, ttlTimeProvider, activeState);
+        final boolean isDir = objectRepresentsDirectory(key, length);
         S3AFileStatus status = createUploadFileStatus(p,
-            S3AUtils.objectRepresentsDirectory(key, length), length,
+            isDir, length,
             getDefaultBlockSize(p), username, eTag, versionId);
-        S3Guard.putAndReturn(metadataStore, status,
-            ttlTimeProvider,
-            activeState);
+        if (!isDir) {
+          S3Guard.putAndReturn(metadataStore, status,
+              ttlTimeProvider,
+              activeState);
+        } else {
+          // this is a directory marker so put it as such.
+          status.setIsEmptyDirectory(Tristate.TRUE);
+          S3Guard.putAuthDirectoryMarker(metadataStore, status,
+              ttlTimeProvider,
+              activeState);
+        }
       }
     } catch (IOException e) {
       if (failOnMetadataWriteError) {

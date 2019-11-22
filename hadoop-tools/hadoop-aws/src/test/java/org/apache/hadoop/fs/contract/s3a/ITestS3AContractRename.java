@@ -47,6 +47,9 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
 /**
  * S3A contract tests covering rename.
+ * Parameterized for auth mode as testRenameWithNonEmptySubDir was failing
+ * during HADOOP-16697 development; this lets us ensure that when S3Guard
+ * is enabled, both auth and nonauth paths work
  */
 @RunWith(Parameterized.class)
 public class ITestS3AContractRename extends AbstractContractRenameTest {
