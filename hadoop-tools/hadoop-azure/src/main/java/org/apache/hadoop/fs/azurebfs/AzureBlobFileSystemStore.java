@@ -1337,4 +1337,3 @@ public class AzureBlobFileSystemStore implements Closeable {
     return this.client;
   }
 }
-
