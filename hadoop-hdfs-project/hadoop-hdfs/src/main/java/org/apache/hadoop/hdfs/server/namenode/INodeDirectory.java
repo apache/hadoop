@@ -296,9 +296,17 @@ public class INodeDirectory extends INodeWithAdditionalFields
         reclaimContext, this, snapshotName);
   }
 
-  public void renameSnapshot(String path, String oldName, String newName)
-      throws SnapshotException {
-    getDirectorySnapshottableFeature().renameSnapshot(path, oldName, newName);
+  /**
+   * Rename a snapshot.
+   * @param path The directory path where the snapshot was taken.
+   * @param oldName Old name of the snapshot
+   * @param newName New name the snapshot will be renamed to
+   * @param mtime The snapshot modification time set by Time.now().
+   */
+  public void renameSnapshot(String path, String oldName, String newName,
+      long mtime) throws SnapshotException {
+    getDirectorySnapshottableFeature().renameSnapshot(path, oldName, newName,
+        mtime);
   }
 
   /** add DirectorySnapshottableFeature */
