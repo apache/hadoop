@@ -214,6 +214,7 @@ class FSDirConcatOp {
         }
       }
     }
+    deltas.addNameSpace(-srcList.length);
     return deltas;
   }
 
