@@ -56,7 +56,6 @@ import org.slf4j.LoggerFactory;
  *
  * After acquiring the token, it queries the Graph API using this
  * token to retrieve a list of groups of the requested user.
- *
  */
 public class MicrosoftGraphGroupsMapping
     implements GroupMappingServiceProvider, Configurable {
