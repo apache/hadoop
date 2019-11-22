@@ -112,12 +112,14 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    *          Old name of the snapshot
    * @param newName
    *          New name the snapshot will be renamed to
+   * @param mtime The snapshot modification time set by Time.now().
    * @throws SnapshotException
    *           Throw SnapshotException when either the snapshot with the old
    *           name does not exist or a snapshot with the new name already
    *           exists
    */
-  public void renameSnapshot(String path, String oldName, String newName)
+  public void renameSnapshot(String path, String oldName, String newName,
+      long mtime)
       throws SnapshotException {
     final int indexOfOld = searchSnapshot(DFSUtil.string2Bytes(oldName));
     if (indexOfOld < 0) {
@@ -137,6 +139,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       Snapshot snapshot = snapshotsByNames.remove(indexOfOld);
       final INodeDirectory ssRoot = snapshot.getRoot();
       ssRoot.setLocalName(newNameBytes);
+      ssRoot.setModificationTime(mtime, Snapshot.CURRENT_STATE_ID);
       indexOfNew = -indexOfNew - 1;
       if (indexOfNew <= indexOfOld) {
         snapshotsByNames.add(indexOfNew, snapshot);

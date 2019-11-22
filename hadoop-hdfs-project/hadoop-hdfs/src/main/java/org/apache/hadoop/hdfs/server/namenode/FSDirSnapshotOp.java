@@ -129,15 +129,17 @@ class FSDirSnapshotOp {
       fsd.checkOwner(pc, iip);
     }
     verifySnapshotName(fsd, snapshotNewName, path);
+    // time of snapshot modification
+    final long now = Time.now();
     fsd.writeLock();
     try {
       snapshotManager.renameSnapshot(iip, path, snapshotOldName,
-          snapshotNewName);
+          snapshotNewName, now);
     } finally {
       fsd.writeUnlock();
     }
     fsd.getEditLog().logRenameSnapshot(path, snapshotOldName,
-        snapshotNewName, logRetryCache);
+        snapshotNewName, logRetryCache, now);
   }
 
   static SnapshottableDirectoryStatus[] getSnapshottableDirListing(
