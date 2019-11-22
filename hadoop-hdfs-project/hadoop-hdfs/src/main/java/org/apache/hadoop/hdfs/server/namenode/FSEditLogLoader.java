@@ -841,7 +841,7 @@ public class FSEditLogLoader {
       INodesInPath iip = fsDir.getINodesInPath(snapshotRoot, DirOp.WRITE);
       fsNamesys.getSnapshotManager().renameSnapshot(iip,
           snapshotRoot, renameSnapshotOp.snapshotOldName,
-          renameSnapshotOp.snapshotNewName);
+          renameSnapshotOp.snapshotNewName, renameSnapshotOp.mtime);
       
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(renameSnapshotOp.rpcClientId,
