@@ -89,20 +89,24 @@ public class MicrosoftGraphGroupsMapping
   /** Number of attempts to get the groups. */
   public static final String MS_GRAPH_GROUPS_API_ATTEMPTS_KEY =
       "hadoop.security.ms-graph.groups.api.attempts";
+  /** By default we try twice. */
   public static final Integer MS_GRAPH_GROUPS_API_ATTEMPTS_DEFAULT = 2;
   /** Timeout to get the groups in milliseconds. */
   public static final String MS_GRAPH_GROUPS_API_TIMEOUT_MS_KEY =
       "hadoop.security.ms-graph.groups.api.timeout";
+  /** By default, we timeout after 20 seconds. */
   public static final Integer MS_GRAPH_GROUPS_API_TIMEOUT_MS_DEFAULT =
       (int) TimeUnit.SECONDS.toMillis(20);
   /** Field to extract the groups. */
   public static final String MS_GRAPH_GROUPS_API_GROUP_FIELD_EXTRACT_KEY =
       "hadoop.security.ms-graph.groups.api.group.field.extract";
+  /** By default we use the display name. */
   public static final String MS_GRAPH_GROUPS_API_GROUP_FIELD_EXTRACT_DEFAULT =
       "displayName";
   /** Format of the user names. */
   public static final String MS_GRAPH_GROUPS_API_USERNAME_FORMAT_KEY =
       "hadoop.security.ms-graph.groups.api.username-format";
+  /** By default we just use the name. */
   public static final String MS_GRAPH_GROUPS_API_USERNAME_FORMAT_DEFAULT = "%s";
 
 
@@ -200,7 +204,6 @@ public class MicrosoftGraphGroupsMapping
    */
   @Override // GroupMappingServiceProvider
   public List<String> getGroups(final String user) throws IOException {
-
     try {
       List<String> groups = doGetGroups(user);
       LOG.debug("doGetGroups({}) returned {}", user, groups);
@@ -209,7 +212,6 @@ public class MicrosoftGraphGroupsMapping
       LOG.warn("Exception in getting groups for {}, exception message: {}.",
           user, e);
     }
-
     return Collections.emptyList();
   }
 

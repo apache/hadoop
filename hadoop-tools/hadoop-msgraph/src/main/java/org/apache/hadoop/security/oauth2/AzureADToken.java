@@ -28,7 +28,9 @@ import org.apache.hadoop.util.Time;
  */
 public class AzureADToken {
 
+  /** Access token. */
   private final String accessToken;
+  /** Expiration date. */
   private final Date expiry;
 
   public AzureADToken(String accessToken, Date expiry) {

@@ -73,8 +73,8 @@ public abstract class AccessTokenProvider implements IAuthenticationProvider {
       LOG.debug("AADToken: no token. Returning expiring=true.");
       return true;
     }
-    Date expiry = this.token.getExpiry();
 
+    Date expiry = this.token.getExpiry();
     if (expiry == null) {
       LOG.debug("AADToken: no token expiry set. Returning expiring=true.");
       return true;
@@ -84,7 +84,6 @@ public abstract class AccessTokenProvider implements IAuthenticationProvider {
     c.add(Calendar.MILLISECOND, (int) TimeUnit.MINUTES.toMillis(5));
 
     boolean expiring = c.getTime().after(expiry);
-
     if (expiring) {
       LOG.debug("AADToken: token expiring: {} : Five-minute window: {}.",
           expiry, c.getTime());
