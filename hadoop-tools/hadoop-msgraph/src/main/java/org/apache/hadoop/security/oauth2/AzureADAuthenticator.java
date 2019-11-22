@@ -19,15 +19,8 @@
 package org.apache.hadoop.security.oauth2;
 
 import com.fasterxml.jackson.core.JsonFactory;
-
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import org.eclipse.jetty.http.HttpHeader;
-import org.eclipse.jetty.http.HttpMethod;
-import org.eclipse.jetty.http.HttpStatus;
-import org.eclipse.jetty.http.MimeTypes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -38,6 +31,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.jetty.http.HttpHeader;
+import org.eclipse.jetty.http.HttpMethod;
+import org.eclipse.jetty.http.HttpStatus;
+import org.eclipse.jetty.http.MimeTypes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
 /**
  * Utility class for constructing token requests to Azure AD.
  */
@@ -46,6 +47,9 @@ public class AzureADAuthenticator {
   private static final Logger LOG = LoggerFactory.getLogger(
       AzureADAuthenticator.class.getName());
 
+  /**
+   * Get a token using the client credentials.
+   */
   public static AzureADToken getTokenUsingClientCreds(
       String authEndpoint, String clientId, String clientSecret,
       String grantType, String resource)
@@ -60,6 +64,11 @@ public class AzureADAuthenticator {
     return getToken(authEndpoint, qp.serialize());
   }
 
+  /**
+   * Get a token.
+   * @param authEndpoint Endpoint of the auth service.
+   * @param body
+   */
   private static AzureADToken getToken(String authEndpoint, String body)
       throws IOException {
     AzureADToken token = null;
@@ -91,7 +100,6 @@ public class AzureADAuthenticator {
 
     return token;
   }
-
 
   private static AzureADToken getTokenImpl(
       String authEndpoint, String payload) throws IOException {
@@ -171,6 +179,9 @@ public class AzureADAuthenticator {
     return new String(bytes.toByteArray(), 0, totalBytesRead);
   }
 
+  /**
+   * Parse a token from an HTTP stream.
+   */
   private static AzureADToken parseTokenFromStream(
       InputStream httpResponseStream) throws IOException {
     AzureADToken token;
@@ -223,8 +234,13 @@ public class AzureADAuthenticator {
     return token;
   }
 
+  /**
+   * HTTP exception.
+   */
   private static class HttpException extends IOException {
+    /** Error code. */
     int httpErrorCode;
+    /** Request identifier. */
     String requestId;
 
     HttpException(int httpErrorCode, String requestId, String message) {

@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.security.oauth2;
 
+import java.util.Date;
+
 import org.apache.hadoop.util.Time;
 
-import java.util.Date;
 
 /**
  * Class representing an Azure AD token used to access resources in Azure.

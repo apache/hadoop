@@ -19,13 +19,15 @@
 package org.apache.hadoop.security.oauth2;
 
 import com.microsoft.graph.authentication.IAuthenticationProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 /**
  * Abstract class for retrieving AzureADTokens to access Azure resources.
@@ -38,11 +40,16 @@ public abstract class AccessTokenProvider implements IAuthenticationProvider {
   private static final Logger LOG = LoggerFactory.getLogger(
       AccessTokenProvider.class);
 
+  /** The cached token. */
   protected AzureADToken token;
 
   public AccessTokenProvider() {
+    // Empty constructor
   }
 
+  /**
+   * Get a token.
+   */
   public synchronized AzureADToken getToken() throws IOException {
     if (this.isTokenAboutToExpire()) {
       LOG.debug("AAD Token is missing or expired: Calling refresh-token " +
@@ -53,8 +60,14 @@ public abstract class AccessTokenProvider implements IAuthenticationProvider {
     return this.token;
   }
 
+  /**
+   * Refresh the token.
+   */
   protected abstract AzureADToken refreshToken() throws IOException;
 
+  /**
+   * Check if the token is about to expire.
+   */
   private boolean isTokenAboutToExpire() {
     if (this.token == null) {
       LOG.debug("AADToken: no token. Returning expiring=true.");

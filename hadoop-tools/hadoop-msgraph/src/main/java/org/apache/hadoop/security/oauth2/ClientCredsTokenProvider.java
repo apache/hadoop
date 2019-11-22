@@ -19,6 +19,7 @@
 package org.apache.hadoop.security.oauth2;
 
 import com.microsoft.graph.http.IHttpRequest;
+
 import org.eclipse.jetty.http.HttpHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

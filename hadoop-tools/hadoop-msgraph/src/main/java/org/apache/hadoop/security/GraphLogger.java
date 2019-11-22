@@ -16,19 +16,44 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security.oauth2;
+package org.apache.hadoop.security;
+
+import com.microsoft.graph.logger.ILogger;
+import com.microsoft.graph.logger.LoggerLevel;
+
+import org.slf4j.Logger;
 
 
 /**
- * Policy to retry a call for OAuth2.
+ * Utility class so that we can pass log4j Logger to the graph client.
  */
-public interface RetryPolicy {
+public class GraphLogger implements ILogger {
 
-  /**
-   * Check whether should retry the request.
-   * @param httpResponseCode HTTP response code
-   * @param lastException last exception encountered during the request
-   * @return true if the request should be retried
-   */
-  boolean shouldRetry(int httpResponseCode, Exception lastException);
+  private Logger logger;
+
+  public GraphLogger(Logger plogger) {
+    logger = plogger;
+  }
+
+  @Override
+  public void setLoggingLevel(LoggerLevel loggerLevel) {
+  }
+
+  @Override
+  public LoggerLevel getLoggingLevel() {
+    if (logger.isDebugEnabled()) {
+      return LoggerLevel.DEBUG;
+    }
+    return LoggerLevel.ERROR;
+  }
+
+  @Override
+  public void logDebug(String s) {
+    logger.debug(s);
+  }
+
+  @Override
+  public void logError(String s, Throwable throwable) {
+    logger.error(s, throwable);
+  }
 }

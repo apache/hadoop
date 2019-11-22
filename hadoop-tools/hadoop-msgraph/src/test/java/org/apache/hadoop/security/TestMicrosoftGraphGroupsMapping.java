@@ -18,31 +18,6 @@
 
 package org.apache.hadoop.security;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.microsoft.graph.core.ClientException;
-import com.microsoft.graph.core.IConnectionConfig;
-import com.microsoft.graph.models.extensions.DirectoryObject;
-import com.microsoft.graph.models.extensions.IGraphServiceClient;
-import com.microsoft.graph.requests.extensions.IDirectoryObjectCollectionWithReferencesPage;
-import com.microsoft.graph.requests.extensions.IDirectoryObjectCollectionWithReferencesRequest;
-import com.microsoft.graph.requests.extensions.IDirectoryObjectCollectionWithReferencesRequestBuilder;
-import com.microsoft.graph.requests.extensions.IUserRequestBuilder;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Time;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.apache.hadoop.security.MicrosoftGraphGroupsMapping.MS_GRAPH_GROUPS_API_ATTEMPTS_KEY;
 import static org.apache.hadoop.security.MicrosoftGraphGroupsMapping.MS_GRAPH_GROUPS_API_GROUP_FIELD_EXTRACT_KEY;
 import static org.apache.hadoop.security.MicrosoftGraphGroupsMapping.MS_GRAPH_GROUPS_API_TIMEOUT_MS_KEY;
@@ -58,6 +33,36 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.microsoft.graph.core.ClientException;
+import com.microsoft.graph.core.IConnectionConfig;
+import com.microsoft.graph.models.extensions.DirectoryObject;
+import com.microsoft.graph.models.extensions.IGraphServiceClient;
+import com.microsoft.graph.requests.extensions.IDirectoryObjectCollectionWithReferencesPage;
+import com.microsoft.graph.requests.extensions.IDirectoryObjectCollectionWithReferencesRequest;
+import com.microsoft.graph.requests.extensions.IDirectoryObjectCollectionWithReferencesRequestBuilder;
+import com.microsoft.graph.requests.extensions.IUserRequestBuilder;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+
+
+/**
+ * Test the Microsoft Graph Groups Mapping.
+ */
 public class TestMicrosoftGraphGroupsMapping {
 
   private Configuration conf;

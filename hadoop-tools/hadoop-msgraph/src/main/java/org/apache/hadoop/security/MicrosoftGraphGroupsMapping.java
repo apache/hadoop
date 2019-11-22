@@ -23,13 +23,17 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.microsoft.graph.core.ClientException;
 import com.microsoft.graph.core.DefaultConnectionConfig;
-import com.microsoft.graph.logger.ILogger;
-import com.microsoft.graph.logger.LoggerLevel;
 import com.microsoft.graph.models.extensions.DirectoryObject;
 import com.microsoft.graph.models.extensions.IGraphServiceClient;
 import com.microsoft.graph.requests.extensions.GraphServiceClient;
 import com.microsoft.graph.requests.extensions.IDirectoryObjectCollectionWithReferencesPage;
 import com.microsoft.graph.requests.extensions.IDirectoryObjectCollectionWithReferencesRequestBuilder;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -38,11 +42,6 @@ import org.apache.hadoop.security.oauth2.ClientCredsTokenProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * An implementation of GroupMappingServiceProvider that uses the
@@ -64,56 +63,62 @@ public class MicrosoftGraphGroupsMapping
   private static final Logger LOG = LoggerFactory.getLogger(
       MicrosoftGraphGroupsMapping.class);
 
-  /** TODO Javadoc the constants. */
+  /** The URL of the Microsoft Graph OAuth2 endpoint. */
   public static final String MS_GRAPH_GROUPS_OAUTH2_URL_KEY =
       "hadoop.security.ms-graph.groups.oauth2.url";
   public static final String MS_GRAPH_GROUPS_OAUTH2_URL_DEFAULT = "";
-
+  /** Identifier of the client to use to get the tokens. */
   public static final String MS_GRAPH_GROUPS_OAUTH2_CLIENT_ID_KEY =
       "hadoop.security.ms-graph.groups.oauth2.client-id";
   public static final String MS_GRAPH_GROUPS_OAUTH2_CLIENT_ID_DEFAULT = "";
-
+  /** The alias of the secret. */
   public static final String MS_GRAPH_GROUPS_OAUTH2_CLIENT_SECRET_ALIAS_KEY =
       "hadoop.security.ms-graph.groups.oauth2.client-secret.alias";
   public static final String
       MS_GRAPH_GROUPS_OAUTH2_CLIENT_SECRET_ALIAS_DEFAULT = "";
-
+  /** Type of the credentials to use to get access. */
   public static final String MS_GRAPH_GROUPS_OAUTH2_GRANT_TYPE_KEY =
       "hadoop.security.ms-graph.groups.oauth2.grant-type";
   public static final String MS_GRAPH_GROUPS_OAUTH2_GRANT_TYPE_DEFAULT =
       "client_credentials";
-
+  /** The URL of the Microsoft Graph groups endpoint. */
   public static final String MS_GRAPH_GROUPS_API_URL_KEY =
       "hadoop.security.ms-graph.groups.api.url";
   public static final String MS_GRAPH_GROUPS_API_URL_DEFAULT =
       "https://graph.microsoft.com";
-
+  /** Number of attempts to get the groups. */
   public static final String MS_GRAPH_GROUPS_API_ATTEMPTS_KEY =
       "hadoop.security.ms-graph.groups.api.attempts";
   public static final Integer MS_GRAPH_GROUPS_API_ATTEMPTS_DEFAULT = 2;
-
+  /** Timeout to get the groups in milliseconds. */
   public static final String MS_GRAPH_GROUPS_API_TIMEOUT_MS_KEY =
       "hadoop.security.ms-graph.groups.api.timeout";
   public static final Integer MS_GRAPH_GROUPS_API_TIMEOUT_MS_DEFAULT =
       (int) TimeUnit.SECONDS.toMillis(20);
-
+  /** Field to extract the groups. */
   public static final String MS_GRAPH_GROUPS_API_GROUP_FIELD_EXTRACT_KEY =
       "hadoop.security.ms-graph.groups.api.group.field.extract";
   public static final String MS_GRAPH_GROUPS_API_GROUP_FIELD_EXTRACT_DEFAULT =
       "displayName";
-
+  /** Format of the user names. */
   public static final String MS_GRAPH_GROUPS_API_USERNAME_FORMAT_KEY =
       "hadoop.security.ms-graph.groups.api.username-format";
   public static final String MS_GRAPH_GROUPS_API_USERNAME_FORMAT_DEFAULT = "%s";
 
-  private Configuration conf;
 
+  /** Configuration. */
+  private Configuration conf;
+  /** Client to Microsoft Graph. */
   private IGraphServiceClient graphClient;
 
+  /** Group field to extract.*/
   private String apiGroupFieldExtract;
+  /** Format of the user name. */
   private String usernameFormat;
 
+
   public MicrosoftGraphGroupsMapping() {
+    // Empty constructor
   }
 
   @Override // Configurable
@@ -161,7 +166,7 @@ public class MicrosoftGraphGroupsMapping
     // Create the client
     this.graphClient = GraphServiceClient.builder()
         .authenticationProvider(accessTokenProvider)
-        .logger(new GraphLogger())
+        .logger(new GraphLogger(LOG))
         .buildClient();
 
     // Set configuration
@@ -190,8 +195,8 @@ public class MicrosoftGraphGroupsMapping
    * Retrieves an AzureADToken first and then queries the
    * Microsoft Graph API to get the groups.
    *
-   * @param user get groups for this user
-   * @return list of groups for a given user
+   * @param user Get groups for this user
+   * @return List of groups for a given user
    */
   @Override // GroupMappingServiceProvider
   public List<String> getGroups(final String user) throws IOException {
@@ -208,7 +213,12 @@ public class MicrosoftGraphGroupsMapping
     return Collections.emptyList();
   }
 
-  private List<String> doGetGroups(String user) throws ClientException {
+  /**
+   * Get the groups for a user.
+   * @param user User to query.
+   * @return List of groups for this user.
+   */
+  private List<String> doGetGroups(final String user) throws ClientException {
     final List<String> groups = new ArrayList<>();
 
     String username = String.format(usernameFormat, user);
@@ -234,6 +244,11 @@ public class MicrosoftGraphGroupsMapping
     return groups;
   }
 
+  /**
+   * Get the groups from a page.
+   * @param page Page to check.
+   * @return List of groups in this page.
+   */
   private List<String> getGroupsFromPage(
       IDirectoryObjectCollectionWithReferencesPage page) {
     List<String> groups = new ArrayList<>();
@@ -276,34 +291,6 @@ public class MicrosoftGraphGroupsMapping
   @VisibleForTesting
   void setGraphClient(IGraphServiceClient graphClient) {
     this.graphClient = graphClient;
-  }
-
-  /**
-   * Utility class so that we can pass log4j Logger to the graph client.
-   */
-  private static class GraphLogger implements ILogger {
-
-    @Override
-    public void setLoggingLevel(LoggerLevel loggerLevel) {
-    }
-
-    @Override
-    public LoggerLevel getLoggingLevel() {
-      if (LOG.isDebugEnabled()) {
-        return LoggerLevel.DEBUG;
-      }
-      return LoggerLevel.ERROR;
-    }
-
-    @Override
-    public void logDebug(String s) {
-      LOG.debug(s);
-    }
-
-    @Override
-    public void logError(String s, Throwable throwable) {
-      LOG.error(s, throwable);
-    }
   }
 
   /**

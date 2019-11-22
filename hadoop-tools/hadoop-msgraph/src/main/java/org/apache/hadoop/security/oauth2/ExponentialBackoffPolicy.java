@@ -24,15 +24,24 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
+
+/**
+ * Policy to retry a call for OAuth2 using exponential backoff.
+ */
 public class ExponentialBackoffPolicy implements RetryPolicy {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       ExponentialBackoffPolicy.class);
 
+  /** Number of retries. */
   private int retryCount = 0;
+  /** Maximum retries.*/
   private int maxRetries;
+  /** Exponential retry interval in milliseconds.*/
   private int exponentialRetryInterval;
+  /** Exponential factor. */
   private int exponentialFactor;
+  /** Last attempt start time in milliseconds. */
   private long lastAttemptStartTime;
 
   public ExponentialBackoffPolicy(
@@ -77,7 +86,7 @@ public class ExponentialBackoffPolicy implements RetryPolicy {
   private void setLastAttemptStartTime() {
     long now = System.nanoTime();
     if (now < 0) {
-      LOG.error("System.nanoTime() returned " + now + ", resetting to 0.");
+      LOG.error("System.nanoTime() returned {}, resetting to 0.", now);
       now = 0;
     }
     this.lastAttemptStartTime = now;

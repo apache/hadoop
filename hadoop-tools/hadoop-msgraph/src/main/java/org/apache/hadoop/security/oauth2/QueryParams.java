@@ -23,17 +23,23 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
+
 
 /**
  * Utility class for constructing parameterized requests.
  */
 public class QueryParams {
 
+  /** Map with the parameters. */
   private Map<String, String> params = new HashMap<>();
+  /** Separator among parameters. At the beginning is empty. */
   private String separator = "";
+  /** Cached string containing all the parameters. */
   private String serializedString = null;
 
   public QueryParams() {
+    // Empty constructor
   }
 
   /**
@@ -54,12 +60,14 @@ public class QueryParams {
       StringBuilder sb = new StringBuilder();
       String encoding = StandardCharsets.UTF_8.name();
 
-      for (String name : this.params.keySet()) {
+      for (Entry<String, String> entry : this.params.entrySet()) {
+        String name = entry.getKey();
+        String value = entry.getValue();
         try {
-          sb.append(this.separator);
-          sb.append(URLEncoder.encode(name, encoding));
-          sb.append('=');
-          sb.append(URLEncoder.encode(this.params.get(name), encoding));
+          sb.append(this.separator)
+              .append(URLEncoder.encode(name, encoding))
+              .append('=')
+              .append(URLEncoder.encode(value, encoding));
           this.separator = "&";
         } catch (UnsupportedEncodingException ignored) {
         }
