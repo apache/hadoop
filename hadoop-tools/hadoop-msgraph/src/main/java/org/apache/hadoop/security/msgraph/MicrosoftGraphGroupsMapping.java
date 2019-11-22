@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security;
+package org.apache.hadoop.security.msgraph;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.gson.JsonElement;
@@ -37,8 +37,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.oauth2.AccessTokenProvider;
-import org.apache.hadoop.security.oauth2.ClientCredsTokenProvider;
+import org.apache.hadoop.security.GroupMappingServiceProvider;
+import org.apache.hadoop.security.msgraph.oauth2.AccessTokenProvider;
+import org.apache.hadoop.security.msgraph.oauth2.ClientCredsTokenProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +49,7 @@ import org.slf4j.LoggerFactory;
  * Microsoft Graph API (https://developer.microsoft.com/en-us/graph)
  * to retrieve user's groups.
  *
- * It does this by first requesting an Oauth2 token using the
+ * It does this by first requesting an OAuth2 token using the
  * credentials of the application registered in Azure.
  * This application has to have the Directory.Read.All application
  * permission for this to work.
@@ -268,7 +269,7 @@ public class MicrosoftGraphGroupsMapping
   }
 
   /**
-   * Caches groups, no need to do that for this provider
+   * Caches groups, no need to do that for this provider.
    */
   @Override // GroupMappingServiceProvider
   public void cacheGroupsRefresh() {
@@ -276,8 +277,7 @@ public class MicrosoftGraphGroupsMapping
   }
 
   /**
-   * Adds groups to cache, no need to do that for this provider
-   *
+   * Adds groups to cache, no need to do that for this provider.
    * @param groups unused
    */
   @Override // GroupMappingServiceProvider
@@ -296,7 +296,7 @@ public class MicrosoftGraphGroupsMapping
   }
 
   /**
-   * Workaround for:
+   * Workaround for
    * https://github.com/microsoftgraph/msgraph-sdk-java/issues/317
    */
   private static class WorkaroundConnectionConfig

@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security;
+package org.apache.hadoop.security.msgraph;
 
-import static org.apache.hadoop.security.MicrosoftGraphGroupsMapping.MS_GRAPH_GROUPS_API_ATTEMPTS_KEY;
-import static org.apache.hadoop.security.MicrosoftGraphGroupsMapping.MS_GRAPH_GROUPS_API_GROUP_FIELD_EXTRACT_KEY;
-import static org.apache.hadoop.security.MicrosoftGraphGroupsMapping.MS_GRAPH_GROUPS_API_TIMEOUT_MS_KEY;
-import static org.apache.hadoop.security.MicrosoftGraphGroupsMapping.MS_GRAPH_GROUPS_API_USERNAME_FORMAT_DEFAULT;
-import static org.apache.hadoop.security.MicrosoftGraphGroupsMapping.MS_GRAPH_GROUPS_API_USERNAME_FORMAT_KEY;
+import static org.apache.hadoop.security.msgraph.MicrosoftGraphGroupsMapping.MS_GRAPH_GROUPS_API_ATTEMPTS_KEY;
+import static org.apache.hadoop.security.msgraph.MicrosoftGraphGroupsMapping.MS_GRAPH_GROUPS_API_GROUP_FIELD_EXTRACT_KEY;
+import static org.apache.hadoop.security.msgraph.MicrosoftGraphGroupsMapping.MS_GRAPH_GROUPS_API_TIMEOUT_MS_KEY;
+import static org.apache.hadoop.security.msgraph.MicrosoftGraphGroupsMapping.MS_GRAPH_GROUPS_API_USERNAME_FORMAT_DEFAULT;
+import static org.apache.hadoop.security.msgraph.MicrosoftGraphGroupsMapping.MS_GRAPH_GROUPS_API_USERNAME_FORMAT_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
@@ -105,10 +105,12 @@ public class TestMicrosoftGraphGroupsMapping {
     groupsMapping.getGroups("bob");
     groupsMapping.getGroups("alice");
 
-    verify(graphClient, atLeastOnce()).users(
-        eq(String.format(MS_GRAPH_GROUPS_API_USERNAME_FORMAT_DEFAULT, "bob")));
-    verify(graphClient, atLeastOnce()).users(
-        eq(String.format(MS_GRAPH_GROUPS_API_USERNAME_FORMAT_DEFAULT, "alice")));
+    String bobUserFormatted = String.format(
+        MS_GRAPH_GROUPS_API_USERNAME_FORMAT_DEFAULT, "bob");
+    String aliceUserFormatted = String.format(
+        MS_GRAPH_GROUPS_API_USERNAME_FORMAT_DEFAULT, "alice");
+    verify(graphClient, atLeastOnce()).users(eq(bobUserFormatted));
+    verify(graphClient, atLeastOnce()).users(eq(aliceUserFormatted));
 
     // 2. Change the format
     conf.set(MS_GRAPH_GROUPS_API_USERNAME_FORMAT_KEY, "format_%s");

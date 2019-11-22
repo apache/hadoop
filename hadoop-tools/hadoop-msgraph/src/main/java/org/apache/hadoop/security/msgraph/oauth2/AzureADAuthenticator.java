@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security.oauth2;
+package org.apache.hadoop.security.msgraph.oauth2;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
@@ -46,6 +46,11 @@ public class AzureADAuthenticator {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       AzureADAuthenticator.class.getName());
+
+
+  private AzureADAuthenticator() {
+    // Utility class
+  }
 
   /**
    * Get a token using the client credentials.
@@ -86,7 +91,7 @@ public class AzureADAuthenticator {
         token = getTokenImpl(authEndpoint, body);
       } catch (HttpException httpException) {
         lastException = httpException;
-        httperror = httpException.httpErrorCode;
+        httperror = httpException.getHttpErrorCode();
       } catch (IOException e) {
         lastException = e;
       }
@@ -239,14 +244,30 @@ public class AzureADAuthenticator {
    */
   private static class HttpException extends IOException {
     /** Error code. */
-    int httpErrorCode;
+    private int httpErrorCode;
     /** Request identifier. */
-    String requestId;
+    private String requestId;
 
     HttpException(int httpErrorCode, String requestId, String message) {
       super(message);
       this.httpErrorCode = httpErrorCode;
       this.requestId = requestId;
+    }
+
+    /**
+     * Get the HTTP error code for the exception.
+     * @return HTTP error code.
+     */
+    public int getHttpErrorCode() {
+      return this.httpErrorCode;
+    }
+
+    /**
+     * Get the request identifier.
+     * @return Request identifier.
+     */
+    public String getRequestId() {
+      return this.requestId;
     }
   }
 }

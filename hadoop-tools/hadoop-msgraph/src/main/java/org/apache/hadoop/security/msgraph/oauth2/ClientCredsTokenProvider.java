@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security.oauth2;
+package org.apache.hadoop.security.msgraph.oauth2;
 
 import com.microsoft.graph.http.IHttpRequest;
 

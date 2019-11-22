@@ -16,44 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security;
-
-import com.microsoft.graph.logger.ILogger;
-import com.microsoft.graph.logger.LoggerLevel;
-
-import org.slf4j.Logger;
-
-
 /**
- * Utility class so that we can pass log4j Logger to the graph client.
+ * Microsoft Graph OAuth2.
  */
-public class GraphLogger implements ILogger {
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+package org.apache.hadoop.security.msgraph.oauth2;
 
-  private Logger logger;
-
-  public GraphLogger(Logger plogger) {
-    logger = plogger;
-  }
-
-  @Override
-  public void setLoggingLevel(LoggerLevel loggerLevel) {
-  }
-
-  @Override
-  public LoggerLevel getLoggingLevel() {
-    if (logger.isDebugEnabled()) {
-      return LoggerLevel.DEBUG;
-    }
-    return LoggerLevel.ERROR;
-  }
-
-  @Override
-  public void logDebug(String s) {
-    logger.debug(s);
-  }
-
-  @Override
-  public void logError(String s, Throwable throwable) {
-    logger.error(s, throwable);
-  }
-}
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

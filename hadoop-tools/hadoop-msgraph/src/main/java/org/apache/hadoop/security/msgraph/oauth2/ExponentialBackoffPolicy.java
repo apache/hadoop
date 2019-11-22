@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security.oauth2;
+package org.apache.hadoop.security.msgraph.oauth2;
 
 import org.eclipse.jetty.http.HttpStatus;
 import org.slf4j.Logger;
