@@ -987,8 +987,10 @@ public class ResourceLocalizationService extends CompositeService
                 getLocalResourcesTracker(LocalResourceVisibility.APPLICATION, user, applicationId);
               final String diagnostics = "Failed to download resource " +
                   assoc.getResource() + " " + e.getCause();
-              tracker.handle(new ResourceFailedLocalizationEvent(
-                  assoc.getResource().getRequest(), diagnostics));
+              if(tracker != null) {
+                tracker.handle(new ResourceFailedLocalizationEvent(
+                    assoc.getResource().getRequest(), diagnostics));
+              }
               publicRsrc.handle(new ResourceFailedLocalizationEvent(
                   assoc.getResource().getRequest(), diagnostics));
               LOG.error(diagnostics);
