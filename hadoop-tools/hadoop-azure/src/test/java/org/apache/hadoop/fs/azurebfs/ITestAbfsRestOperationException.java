@@ -26,16 +26,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider;
-import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
 
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -104,15 +97,15 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     // Stop filesystem creation as it will lead to calls to store.
     config.set("fs.azure.createRemoteFileSystemDuringInitialization", "false");
 
-    fs = (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(), config);
+    final AzureBlobFileSystem fs1 =
+        (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(),
+        config);
     RetryTestTokenProvider.ResetStatusToFirstTokenFetch();
 
-    try {
-      fs.getFileStatus(new Path("/"));
-    } catch (Exception ex) {
-      // Expected to fail as the RetryTestTokenProvider is expected to throw
-      // exception
-    }
+    intercept(Exception.class,
+        ()-> {
+          fs1.getFileStatus(new Path("/"));
+        });
 
     // Number of retries done should be as configured
     Assert.assertTrue(
