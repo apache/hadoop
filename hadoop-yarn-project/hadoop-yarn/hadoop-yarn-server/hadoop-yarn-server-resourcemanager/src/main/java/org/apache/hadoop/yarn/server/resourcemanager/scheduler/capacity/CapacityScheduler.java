@@ -2472,6 +2472,11 @@ public class CapacityScheduler extends
           // attach the Container to another queue
           dest.attachContainer(getClusterResource(), app, rmContainer);
         }
+        // Move all reserved containers
+        for (RMContainer rmContainer : app.getReservedContainers()) {
+          source.detachContainer(getClusterResource(), app, rmContainer);
+          dest.attachContainer(getClusterResource(), app, rmContainer);
+        }
         if (!app.isStopped()) {
           source.finishApplicationAttempt(app, sourceQueueName);
           // Submit to a new queue
