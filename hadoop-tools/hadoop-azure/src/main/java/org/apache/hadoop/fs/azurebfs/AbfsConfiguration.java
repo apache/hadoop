@@ -686,6 +686,12 @@ public class AbfsConfiguration{
     this.disableOutputStreamFlush = disableOutputStreamFlush;
   }
 
+  @VisibleForTesting
+  public boolean setAlwaysReadAhead(boolean alwaysReadAhead){
+    this.alwaysReadAhead = alwaysReadAhead;
+  }
+
+
   private String getTrimmedPasswordString(String key, String defaultValue) throws IOException {
     String value = getPasswordString(key);
     if (StringUtils.isBlank(value)) {
