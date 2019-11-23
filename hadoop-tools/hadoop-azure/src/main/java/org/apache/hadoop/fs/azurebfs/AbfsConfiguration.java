@@ -687,7 +687,7 @@ public class AbfsConfiguration{
   }
 
   @VisibleForTesting
-  public boolean setAlwaysReadAhead(boolean alwaysReadAhead){
+  void setAlwaysReadAhead(boolean alwaysReadAhead){
     this.alwaysReadAhead = alwaysReadAhead;
   }
 
