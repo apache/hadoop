@@ -119,26 +119,25 @@ public class ConfiguredFailoverProxyProvider<T> extends
     }
 
     synchronized (cacheActiveFile) {
-      boolean exist = cacheActiveFile.exists();
       try (RandomAccessFile raf = new RandomAccessFile(cacheActiveFile, "rw");
           FileChannel fc = raf.getChannel();
           FileLock lock = fc.tryLock(0, Long.MAX_VALUE, false)) {
         if (lock != null) {
           raf.setLength(0);
           raf.writeBytes(String.valueOf(index));
-          if (!exist) {
-            boolean ret = cacheActiveFile.setWritable(true, false)
-                && cacheActiveFile.setReadable(true, false);
-            if (!ret) {
+          boolean ret = cacheActiveFile.setWritable(true, false)
+                        && cacheActiveFile.setReadable(true, false);
+          if (!ret) {
               throw new IOException("Cannot set file rw mode.");
-            }
           }
           LOG.debug("Succeed in writing active index " + index
               + " to cache file " + cacheActiveFile);
         }
       } catch (Throwable e) {
-        LOG.warn("Filed to write active index " + index + " to cache file "
-            + cacheActiveFile, e);
+        LOG.warn("Failed to write active index " + index + " to cache file "
+            + cacheActiveFile + ", It may be due to permission issues, the "
+            + "dfs.client.failover.cache-active.dir must be properly "
+            + "configured!", e);
       }
     }
   }
@@ -165,7 +164,9 @@ public class ConfiguredFailoverProxyProvider<T> extends
         }
       } catch (Throwable e) {
         LOG.warn("Failed to read active index from cache file "
-            + cacheActiveFile + ", will begin from index 0.", e);
+            + cacheActiveFile + ", It may be due to permission issues, the "
+            + "dfs.client.failover.cache-active.dir must be properly "
+            + "configured! Now we will begin from index 0.", e);
       }
     }
     return index;
