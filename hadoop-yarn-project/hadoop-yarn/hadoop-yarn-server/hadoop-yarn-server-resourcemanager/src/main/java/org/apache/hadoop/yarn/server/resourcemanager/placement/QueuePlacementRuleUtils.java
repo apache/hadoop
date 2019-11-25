@@ -39,8 +39,9 @@ public final class QueuePlacementRuleUtils {
   private QueuePlacementRuleUtils() {
   }
 
-  private static void validateQueueMappingUnderParentQueue(CSQueue parentQueue,
-      String parentQueueName, String leafQueueName) throws IOException {
+  public static void validateQueueMappingUnderParentQueue(
+            CSQueue parentQueue, String parentQueueName,
+            String leafQueueName) throws IOException {
     if (parentQueue == null) {
       throw new IOException(
           "mapping contains invalid or non-leaf queue [" + leafQueueName
