@@ -1275,8 +1275,27 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
       final long time,
       BulkOperationState operationState) throws IOException {
     PathMetadata meta = new PathMetadata(makeFileStatus(key, 1, time));
-    ms.put(meta,
-        operationState);
+    meta.setLastUpdated(time);
+    ms.put(meta, operationState);
+    return meta;
+  }
+
+  /**
+   * Put a dir to the shared DDB table.
+   * @param key key
+   * @param time timestamp.
+   * @param operationState ongoing state
+   * @return the entry
+   * @throws IOException IO failure
+   */
+  protected PathMetadata putDir(
+      final String key,
+      final long time,
+      BulkOperationState operationState) throws IOException {
+    PathMetadata meta = new PathMetadata(
+        basicFileStatus(strToPath(key), 0, true, time));
+    meta.setLastUpdated(time);
+    ms.put(meta, operationState);
     return meta;
   }
 

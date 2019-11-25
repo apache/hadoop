@@ -1275,6 +1275,84 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     assertNotFound(dir);
   }
 
+
+  @Test
+  public void testPruneFilesNotDirs() throws Throwable {
+    describe("HADOOP-16725: directories cannot be pruned");
+    String base = "/" + getMethodName();
+    final long now = getTime();
+    // round it off for ease of interpreting results
+    final long t0 = now - (now % 100_000);
+    long interval = 1_000;
+    long t1 = t0 + interval;
+    long t2 = t1 + interval;
+    String dir = base + "/dir";
+    String dir2 = base + "/dir2";
+    String child1 = dir + "/file1";
+    String child2 = dir + "/file2";
+    final Path basePath = strToPath(base);
+    // put the dir at age t0
+    final DynamoDBMetadataStore ms = getDynamoMetadataStore();
+    final AncestorState ancestorState
+        = ms.initiateBulkWrite(
+            BulkOperationState.OperationType.Put,
+            basePath);
+    putDir(base, t0, ancestorState);
+    assertLastUpdated(base, t0);
+
+    putDir(dir, t0, ancestorState);
+    assertLastUpdated(dir, t0);
+    // base dir is unchanged
+    assertLastUpdated(base, t0);
+
+    // this directory will not have any children, so
+    // will be excluded from any ancestor re-creation
+    putDir(dir2, t0, ancestorState);
+
+    // child1 has age t0 and so will be pruned
+    putFile(child1, t0, ancestorState);
+
+    // child2 has age t2
+    putFile(child2, t2, ancestorState);
+
+    // close the ancestor state
+    ancestorState.close();
+
+    // make some assertions about state before the prune
+    assertLastUpdated(base, t0);
+    assertLastUpdated(dir, t0);
+    assertLastUpdated(dir2, t0);
+    assertLastUpdated(child1, t0);
+    assertLastUpdated(child2, t2);
+
+    // prune all entries older than t1 must delete child1 but
+    // not the directory, even though it is of the same age
+    LOG.info("Starting prune of all entries older than {}", t1);
+    ms.prune(PruneMode.ALL_BY_MODTIME, t1);
+    // child1 is gone
+    assertNotFound(child1);
+
+    // *AND* the parent dir has not been created
+    assertCached(dir);
+    assertCached(child2);
+    assertCached(dir2);
+
+  }
+
+  /**
+   * A cert that there is an entry for the given key and that its
+   * last updated timestamp matches that passed in.
+   * @param key Key to look up.
+   * @param lastUpdated Timestamp to expect.
+   * @throws IOException I/O failure.
+   */
+  protected void assertLastUpdated(final String key, final long lastUpdated)
+      throws IOException {
+    PathMetadata dirMD = verifyCached(key);
+    assertEquals("Last updated timestamp in MD " + dirMD,
+        lastUpdated, dirMD.getLastUpdated());
+  }
+
   /**
    * Keep in sync with code changes in S3AFileSystem.finishedWrite() so that
    * the production code can be tested here.

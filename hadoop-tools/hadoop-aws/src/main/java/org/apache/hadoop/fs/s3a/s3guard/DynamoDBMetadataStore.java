@@ -1504,11 +1504,15 @@ public class DynamoDBMetadataStore implements MetadataStore,
     switch (pruneMode) {
     case ALL_BY_MODTIME:
       filterExpression =
-          "mod_time < :mod_time and begins_with(parent, :parent)";
+          "mod_time < :mod_time and begins_with(parent, :parent)"
+//              + " and is_dir = :is_dir"
+      ;
       projectionExpression = "parent,child";
       map = new ValueMap()
           .withLong(":mod_time", cutoff)
-          .withString(":parent", keyPrefix);
+          .withString(":parent", keyPrefix)
+//          .withBoolean(":is_dir", false)
+      ;
       break;
     case TOMBSTONES_BY_LASTUPDATED:
       filterExpression =
