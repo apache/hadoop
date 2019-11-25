@@ -113,7 +113,7 @@ public class ConfiguredFailoverProxyProvider<T> extends
   /**
    * Write active NameNode index to cache file.
    */
-  public void writeActiveCache(int index) {
+  private void writeActiveCache(int index) {
     if (!cacheActiveEnabled) {
       return;
     }
@@ -145,7 +145,7 @@ public class ConfiguredFailoverProxyProvider<T> extends
   /**
    * Read active NameNode index from cache file.
    */
-  public int readActiveCache() {
+  private int readActiveCache() {
     if (!cacheActiveEnabled) {
       return 0;
     }
@@ -161,6 +161,10 @@ public class ConfiguredFailoverProxyProvider<T> extends
           FileLock lock = fc.tryLock(0, Long.MAX_VALUE, true)) {
         if (lock != null) {
           index = Integer.parseInt(raf.readLine()) % proxies.size();
+          // sanity check
+          if (index < 0) {
+            return 0;
+          }
         }
       } catch (Throwable e) {
         LOG.warn("Failed to read active index from cache file "
