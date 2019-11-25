@@ -44,8 +44,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
-
 public class UserGroupMappingPlacementRule extends PlacementRule {
   private static final Log LOG = LogFactory
       .getLog(UserGroupMappingPlacementRule.class);
@@ -257,7 +255,8 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
     // check if mappings refer to valid queues
     for (QueueMapping mapping : queueMappings) {
 
-      QueuePath queuePath = extractQueuePath(mapping.getQueue());
+      QueuePath queuePath = QueuePlacementRuleUtils
+              .extractQueuePath(mapping.getQueue());
       if (isStaticQueueMapping(mapping)) {
         //Try getting queue by its leaf queue name
         // without splitting into parent/leaf queues
@@ -355,7 +354,8 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
     if (queuePath.hasParentQueue()) {
       //if parent queue is specified,
       // then it should exist and be an instance of ManagedParentQueue
-      validateParentQueue(queueManager.getQueue(queuePath.getParentQueue()),
+      QueuePlacementRuleUtils.validateQueueMappingUnderParentQueue(
+              queueManager.getQueue(queuePath.getParentQueue()),
           queuePath.getParentQueue(), queuePath.getLeafQueue());
       return new QueueMapping(mapping.getType(), mapping.getSource(),
           queuePath.getLeafQueue(), queuePath.getParentQueue());
@@ -369,74 +369,6 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
         UserGroupMappingPlacementRule.CURRENT_USER_MAPPING) && !mapping
         .getQueue().contains(
             UserGroupMappingPlacementRule.PRIMARY_GROUP_MAPPING);
-  }
-
-  private static class QueuePath {
-
-    public String parentQueue;
-    public String leafQueue;
-
-    public QueuePath(final String leafQueue) {
-      this.leafQueue = leafQueue;
-    }
-
-    public QueuePath(final String parentQueue, final String leafQueue) {
-      this.parentQueue = parentQueue;
-      this.leafQueue = leafQueue;
-    }
-
-    public String getParentQueue() {
-      return parentQueue;
-    }
-
-    public String getLeafQueue() {
-      return leafQueue;
-    }
-
-    public boolean hasParentQueue() {
-      return parentQueue != null;
-    }
-
-    @Override
-    public String toString() {
-      return parentQueue + DOT + leafQueue;
-    }
-  }
-
-  private static QueuePath extractQueuePath(String queueName)
-      throws IOException {
-    int parentQueueNameEndIndex = queueName.lastIndexOf(DOT);
-
-    if (parentQueueNameEndIndex > -1) {
-      final String parentQueue = queueName.substring(0, parentQueueNameEndIndex)
-          .trim();
-      final String leafQueue = queueName.substring(parentQueueNameEndIndex + 1)
-          .trim();
-      return new QueuePath(parentQueue, leafQueue);
-    }
-
-    return new QueuePath(queueName);
-  }
-
-  private static void validateParentQueue(CSQueue parentQueue,
-      String parentQueueName, String leafQueueName) throws IOException {
-    if (parentQueue == null) {
-      throw new IOException(
-          "mapping contains invalid or non-leaf queue [" + leafQueueName
-              + "] and invalid parent queue [" + parentQueueName + "]");
-    } else if (!(parentQueue instanceof ManagedParentQueue)) {
-      throw new IOException("mapping contains leaf queue [" + leafQueueName
-          + "] and invalid parent queue which "
-          + "does not have auto creation of leaf queues enabled ["
-          + parentQueueName + "]");
-    } else if (!parentQueue.getQueueName().equals(parentQueueName)) {
-      throw new IOException(
-          "mapping contains invalid or non-leaf queue [" + leafQueueName
-              + "] and invalid parent queue "
-              + "which does not match existing leaf queue's parent : ["
-              + parentQueueName + "] does not match [ " + parentQueue
-              .getQueueName() + "]");
-    }
   }
 
   @VisibleForTesting
