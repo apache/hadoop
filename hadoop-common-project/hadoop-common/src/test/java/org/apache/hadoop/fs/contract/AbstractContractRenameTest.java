@@ -205,7 +205,7 @@ public abstract class AbstractContractRenameTest extends
         new Path(srcSubDir, "subfile.txt"));
 
     boolean rename = fs.rename(srcDir, finalDir);
-    assertTrue("rename(" + srcDir +", " + finalDir + ") failed",
+    assertTrue("rename(" + srcDir + ", " + finalDir + ") failed",
         rename);
 
     // Accept both POSIX rename behavior and CLI rename behavior
