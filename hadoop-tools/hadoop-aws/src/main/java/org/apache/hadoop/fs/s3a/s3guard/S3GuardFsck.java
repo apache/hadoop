@@ -458,7 +458,7 @@ public class S3GuardFsck {
       if (baseMeta == null) {
         throw new FileNotFoundException(
             "Base element metadata is null. " +
-                "This means the base path element is missing, or wrong path is " +
+                "This means the base path element is missing, or wrong path was " +
                 "passed as base path to the internal ddb consistency checker.");
       }
     } else {
@@ -588,12 +588,12 @@ public class S3GuardFsck {
   /**
    * Tree node for DDBTree
    */
-  public static class DDBTreeNode {
+  private static class DDBTreeNode {
     final DDBPathMetadata val;
     DDBTreeNode parent;
-    List<DDBPathMetadata> children;
+    final List<DDBPathMetadata> children;
 
-    public DDBTreeNode (DDBPathMetadata pm) {
+    private DDBTreeNode (DDBPathMetadata pm) {
       this.val = pm;
       this.parent = null;
       this.children = new ArrayList<>();
@@ -613,10 +613,6 @@ public class S3GuardFsck {
 
     public List<DDBPathMetadata> getChildren() {
       return children;
-    }
-
-    public void setChildren(List<DDBPathMetadata> children) {
-      this.children = children;
     }
 
     public boolean isDirectory() {

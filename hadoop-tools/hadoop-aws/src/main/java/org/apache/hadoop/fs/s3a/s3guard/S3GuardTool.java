@@ -1544,7 +1544,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
    */
   static class Fsck extends S3GuardTool {
     public static final String CHECK_FLAG = "check";
-    public static final String DDB_MS_CONSISTENCY_FLAG = "ddbIC";
+    public static final String DDB_MS_CONSISTENCY_FLAG = "internal";
 
     public static final String NAME = "fsck";
     public static final String PURPOSE = "Compares S3 with MetadataStore, and "
@@ -1581,6 +1581,21 @@ public abstract class S3GuardTool extends Configured implements Tool {
       }
       int exitValue = EXIT_SUCCESS;
 
+      final CommandFormat commandFormat = getCommandFormat();
+
+      // check if there's more than one arguments
+      int flags = 0;
+      if (commandFormat.getOpt(CHECK_FLAG)) {
+        flags++;
+      }
+      if (commandFormat.getOpt(DDB_MS_CONSISTENCY_FLAG)) {
+        flags++;
+      }
+      if (flags > 1) {
+        out.println(USAGE);
+        throw invalidArgs("There should be only one parameter used for checking.");
+      }
+
       String s3Path = paths.get(0);
       try {
         initS3AFileSystem(s3Path);
@@ -1608,8 +1623,6 @@ public abstract class S3GuardTool extends Configured implements Tool {
         errorln(USAGE);
         return ERROR;
       }
-
-      final CommandFormat commandFormat = getCommandFormat();
 
       if (commandFormat.getOpt(CHECK_FLAG)) {
         // do the check

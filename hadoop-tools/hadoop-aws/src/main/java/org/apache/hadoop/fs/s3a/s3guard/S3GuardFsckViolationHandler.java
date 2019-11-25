@@ -370,7 +370,7 @@ public class S3GuardFsckViolationHandler {
 
     @Override
     public String getError() {
-      return "";
+      return "No lastUpdated field provided for the entry.";
     }
   }
 }
