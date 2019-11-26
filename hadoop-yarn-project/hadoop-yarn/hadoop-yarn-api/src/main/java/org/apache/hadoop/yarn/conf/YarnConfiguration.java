@@ -1860,7 +1860,7 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_PROCFS_USE_SMAPS_BASED_RSS_ENABLED =
       false;
   private static final String APPLICATION_TAG_BASED_PLACEMENT_PREFIX =
-          "application-tag-based-placement";
+      RM_PREFIX + "application-tag-based-placement";
   public static final String APPLICATION_TAG_BASED_PLACEMENT_ENABLED =
           APPLICATION_TAG_BASED_PLACEMENT_PREFIX + ".enable";
   public static final boolean DEFAULT_APPLICATION_TAG_BASED_PLACEMENT_ENABLED =
