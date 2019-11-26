@@ -31,8 +31,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Test class to verify all resource utility methods.
@@ -150,6 +154,47 @@ public class TestResourceUtils {
       }
       dest.delete();
     }
+  }
+
+  @Test
+  public void testGetRequestedResourcesFromConfig() {
+    Configuration conf = new Configuration();
+
+    //these resource type configurations should be recognised
+    String propertyPrefix = "mapreduce.mapper.proper.rt.";
+    String[] expectedKeys = {
+        "yarn.io/gpu",
+        "yarn.io/fpga",
+        "yarn.io/anything_without_a_dot",
+        "regular_rt",
+        "regular_rt/with_slash"};
+
+    String[] invalidKeys = {
+        propertyPrefix + "too.many_parts",
+        propertyPrefix + "yarn.notio/gpu",
+        "incorrect.prefix.yarn.io/gpu",
+        propertyPrefix + "yarn.io/",
+        propertyPrefix};
+
+    for (String s : expectedKeys) {
+      //setting the properties which are expected to be in the resource list
+      conf.set(propertyPrefix + s, "42");
+    }
+
+    for (String s : invalidKeys) {
+      //setting the properties which are expected to be in the resource list
+      conf.set(s, "24");
+    }
+
+    List<ResourceInformation> properList =
+        ResourceUtils.getRequestedResourcesFromConfig(conf, propertyPrefix);
+    Set<String> expectedSet =
+        new HashSet<>(Arrays.asList(expectedKeys));
+
+    Assert.assertEquals(properList.size(), expectedKeys.length);
+    properList.forEach(
+        item -> Assert.assertTrue(expectedSet.contains(item.getName())));
+
   }
 
   @Test
