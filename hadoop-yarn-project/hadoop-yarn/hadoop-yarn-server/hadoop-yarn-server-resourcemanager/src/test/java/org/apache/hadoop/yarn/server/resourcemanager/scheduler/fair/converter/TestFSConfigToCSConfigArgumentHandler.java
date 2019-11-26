@@ -17,7 +17,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import com.google.common.collect.Lists;
-import org.apache.commons.cli.MissingOptionException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -116,12 +115,12 @@ public class TestFSConfigToCSConfigArgumentHandler {
     String[] args = new String[] {"-o",
         FSConfigConverterTestCommons.OUTPUT_DIR};
 
-    expectedException.expect(MissingOptionException.class);
-    expectedException.expectMessage("Missing required option: y");
+    int retVal = argumentHandler.parseAndConvert(args);
+    assertEquals("Return value", -1, retVal);
 
-    argumentHandler.parseAndConvert(args);
+    assertTrue("Error content missing", fsTestCommons.getErrContent()
+        .toString().contains("Missing yarn-site.xml parameter"));
   }
-
 
   @Test
   public void testMissingFairSchedulerXmlArgument() throws Exception {
@@ -142,10 +141,12 @@ public class TestFSConfigToCSConfigArgumentHandler {
     String[] args = new String[] {"-y",
         FSConfigConverterTestCommons.YARN_SITE_XML};
 
-    expectedException.expect(MissingOptionException.class);
-    expectedException.expectMessage("Missing required option: o");
+    int retVal = argumentHandler.parseAndConvert(args);
+    assertEquals("Return value", -1, retVal);
 
-    argumentHandler.parseAndConvert(args);
+    assertTrue("Error content missing", fsTestCommons.getErrContent()
+        .toString()
+        .contains("Output directory or console mode was not defined"));
   }
 
   @Test
@@ -183,8 +184,8 @@ public class TestFSConfigToCSConfigArgumentHandler {
         FSConfigConverterTestCommons.YARN_SITE_XML, "-o",
         FSConfigConverterTestCommons.YARN_SITE_XML);
 
-    argumentHandler.parseAndConvert(args);
-    System.out.println(fsTestCommons.getErrContent());
+    int retVal = argumentHandler.parseAndConvert(args);
+    assertEquals("Return value", -1, retVal);
     assertTrue("Error content missing", fsTestCommons.getErrContent()
         .toString()
         .contains("Cannot start FS config conversion due to the following " +
@@ -355,7 +356,8 @@ public class TestFSConfigToCSConfigArgumentHandler {
     Mockito.doThrow(UnsupportedPropertyException.class)
       .when(mockConverter)
       .convert(ArgumentMatchers.any(FSConfigToCSConfigConverterParams.class));
-    argumentHandler.parseAndConvert(args);
+    int retVal = argumentHandler.parseAndConvert(args);
+    assertEquals("Return value", -1, retVal);
     assertTrue("Error content missing", fsTestCommons.getErrContent()
         .toString().contains("Unsupported property/setting encountered"));
   }
@@ -372,7 +374,8 @@ public class TestFSConfigToCSConfigArgumentHandler {
 
     Mockito.doThrow(ConversionException.class).when(mockConverter)
       .convert(ArgumentMatchers.any(FSConfigToCSConfigConverterParams.class));
-    argumentHandler.parseAndConvert(args);
+    int retVal = argumentHandler.parseAndConvert(args);
+    assertEquals("Return value", -1, retVal);
     assertTrue("Error content missing", fsTestCommons.getErrContent()
         .toString().contains("Fatal error during FS config conversion"));
   }

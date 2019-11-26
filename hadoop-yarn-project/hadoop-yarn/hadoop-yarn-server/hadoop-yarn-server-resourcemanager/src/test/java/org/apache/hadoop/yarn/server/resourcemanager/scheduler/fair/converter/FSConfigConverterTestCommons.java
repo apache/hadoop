@@ -88,7 +88,11 @@ public class FSConfigConverterTestCommons {
     return errContent;
   }
 
-  private void deleteTestFiles() {
+  ByteArrayOutputStream getStdOutContent() {
+    return outContent;
+  }
+
+  public void deleteTestFiles() {
     //Files may not be created so we are not strict here!
     deleteFile(FS_ALLOC_FILE, false);
     deleteFile(YARN_SITE_XML, false);
