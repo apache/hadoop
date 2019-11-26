@@ -128,7 +128,7 @@ public class ConfiguredFailoverProxyProvider<T> extends
           boolean ret = cacheActiveFile.setWritable(true, false)
                         && cacheActiveFile.setReadable(true, false);
           if (!ret) {
-              throw new IOException("Cannot set file rw mode.");
+            throw new IOException("Cannot set file rw mode.");
           }
           LOG.debug("Succeed in writing active index " + index
               + " to cache file " + cacheActiveFile);
