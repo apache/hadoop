@@ -18,10 +18,7 @@
 package org.apache.hadoop.fs.sftp;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.hadoop.util.StringUtils;
 
@@ -45,7 +42,7 @@ class SFTPConnectionPool {
   private int liveConnectionCount = 0;
   private HashMap<ConnectionInfo, HashSet<ChannelSftp>> idleConnections =
       new HashMap<ConnectionInfo, HashSet<ChannelSftp>>();
-  private HashMap<ChannelSftp, ConnectionInfo> con2infoMap =
+  protected HashMap<ChannelSftp, ConnectionInfo> con2infoMap =
       new HashMap<ChannelSftp, ConnectionInfo>();
 
   SFTPConnectionPool(int maxConnection) {
@@ -60,7 +57,7 @@ class SFTPConnectionPool {
       Iterator<ChannelSftp> it = cons.iterator();
       if (it.hasNext()) {
         channel = it.next();
-        idleConnections.remove(info);
+        it.remove();
         return channel;
       } else {
         throw new IOException("Connection pool error.");
@@ -211,7 +208,13 @@ class SFTPConnectionPool {
   }
 
   public int getIdleCount() {
-    return this.idleConnections.size();
+    int c = 0;
+    for (Map.Entry<ConnectionInfo, HashSet<ChannelSftp>> entry : this.idleConnections.entrySet()) {
+      if (entry.getValue() != null) {
+        c += entry.getValue().size();
+      }
+    }
+    return c;
   }
 
   public int getLiveConnCount() {
