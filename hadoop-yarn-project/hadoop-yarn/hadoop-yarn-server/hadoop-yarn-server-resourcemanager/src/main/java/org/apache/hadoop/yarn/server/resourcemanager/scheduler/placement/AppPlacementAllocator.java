@@ -34,6 +34,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * <p>
@@ -57,6 +58,7 @@ public abstract class AppPlacementAllocator<N extends SchedulerNode> {
   protected AppSchedulingInfo appSchedulingInfo;
   protected SchedulerRequestKey schedulerRequestKey;
   protected RMContext rmContext;
+  private AtomicInteger placementAttempt = new AtomicInteger(0);
 
   /**
    * Get iterator of preferred node depends on requirement and/or availability.
@@ -205,4 +207,12 @@ public abstract class AppPlacementAllocator<N extends SchedulerNode> {
    * @return SchedulingRequest
    */
   public abstract SchedulingRequest getSchedulingRequest();
+
+  public int getPlacementAttempt() {
+    return placementAttempt.get();
+  }
+
+  public void incrementPlacementAttempt() {
+    placementAttempt.getAndIncrement();
+  }
 }

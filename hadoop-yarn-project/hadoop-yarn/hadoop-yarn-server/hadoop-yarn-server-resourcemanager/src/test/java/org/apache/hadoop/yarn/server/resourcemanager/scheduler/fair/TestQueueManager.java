@@ -571,6 +571,7 @@ public class TestQueueManager {
     ActiveUsersManager activeUsersManager =
         Mockito.mock(ActiveUsersManager.class);
     RMContext rmContext = Mockito.mock(RMContext.class);
+    doReturn(scheduler.getConfig()).when(rmContext).getYarnConfiguration();
 
     // the appAttempt is created
     // removeEmptyDynamicQueues() should not remove the queue
