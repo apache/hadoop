@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.RejectedSchedulingRequest;
 
 public class Allocation {
 
@@ -40,7 +41,7 @@ public class Allocation {
   final List<Container> demotedContainers;
   private final List<Container> previousAttemptContainers;
   private Resource resourceLimit;
-
+  private List<RejectedSchedulingRequest> rejectedRequest;
 
   public Allocation(List<Container> containers, Resource resourceLimit,
       Set<ContainerId> strictContainers, Set<ContainerId> fungibleContainers,
@@ -52,17 +53,17 @@ public class Allocation {
   public Allocation(List<Container> containers, Resource resourceLimit,
       Set<ContainerId> strictContainers, Set<ContainerId> fungibleContainers,
       List<ResourceRequest> fungibleResources, List<NMToken> nmTokens) {
-    this(containers,  resourceLimit,strictContainers,  fungibleContainers,
-      fungibleResources, nmTokens, null, null, null, null, null);
+    this(containers, resourceLimit, strictContainers, fungibleContainers,
+        fungibleResources, nmTokens, null, null, null, null, null, null);
   }
 
   public Allocation(List<Container> containers, Resource resourceLimit,
       Set<ContainerId> strictContainers, Set<ContainerId> fungibleContainers,
       List<ResourceRequest> fungibleResources, List<NMToken> nmTokens,
       List<Container> increasedContainers, List<Container> decreasedContainer) {
-    this(containers,  resourceLimit,strictContainers,  fungibleContainers,
+    this(containers, resourceLimit, strictContainers, fungibleContainers,
         fungibleResources, nmTokens, increasedContainers, decreasedContainer,
-        null, null, null);
+        null, null, null, null);
   }
 
   public Allocation(List<Container> containers, Resource resourceLimit,
@@ -70,7 +71,8 @@ public class Allocation {
       List<ResourceRequest> fungibleResources, List<NMToken> nmTokens,
       List<Container> increasedContainers, List<Container> decreasedContainer,
       List<Container> promotedContainers, List<Container> demotedContainer,
-      List<Container> previousAttemptContainers) {
+      List<Container> previousAttemptContainers, List<RejectedSchedulingRequest>
+      rejectedRequest) {
     this.containers = containers;
     this.resourceLimit = resourceLimit;
     this.strictContainers = strictContainers;
@@ -82,6 +84,7 @@ public class Allocation {
     this.promotedContainers = promotedContainers;
     this.demotedContainers = demotedContainer;
     this.previousAttemptContainers = previousAttemptContainers;
+    this.rejectedRequest = rejectedRequest;
   }
 
   public List<Container> getContainers() {
@@ -126,6 +129,10 @@ public class Allocation {
 
   public List<Container> getPreviousAttemptContainers() {
     return previousAttemptContainers;
+  }
+
+  public List<RejectedSchedulingRequest> getRejectedRequest() {
+    return rejectedRequest;
   }
 
   @VisibleForTesting
