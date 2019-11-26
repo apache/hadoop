@@ -18,9 +18,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.MissingArgumentException;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,69 +48,76 @@ public class FSConfigToCSConfigArgumentHandler {
    */
   public enum CliOption {
     YARN_SITE("yarn-site.xml", "y", "yarnsiteconfig",
-        "Path to a valid yarn-site.xml config file", true, true),
+        "Path to a valid yarn-site.xml config file", true),
 
     // fair-scheduler.xml is not mandatory
     // if FairSchedulerConfiguration.ALLOCATION_FILE is defined in yarn-site.xml
     FAIR_SCHEDULER("fair-scheduler.xml", "f", "fsconfig",
-        "Path to a valid fair-scheduler.xml config file", false, true),
+        "Path to a valid fair-scheduler.xml config file", true),
     CONVERSION_RULES("conversion rules config file", "r", "rulesconfig",
         "Optional parameter. If given, should specify a valid path to the " +
-            "conversion rules file (property format).", false, true),
+            "conversion rules file (property format).", true),
     CONSOLE_MODE("console mode", "p", "print",
         "If defined, the converted configuration will " +
-            "only be emitted to the console.", false, false),
+            "only be emitted to the console.", false),
     CLUSTER_RESOURCE("cluster resource", "c", "cluster-resource",
         "Needs to be given if maxResources is defined as percentages " +
             "for any queue, otherwise this parameter can be omitted.",
-            false, true),
+              true),
     OUTPUT_DIR("output directory", "o", "output-directory",
         "Output directory for yarn-site.xml and" +
             " capacity-scheduler.xml files." +
             "Must have write permission for user who is running this script.",
-            true, true);
+            true),
+    HELP("help", "h", "help", "Displays the list of options", false);
 
     private final String name;
     private final String shortSwitch;
     private final String longSwitch;
     private final String description;
-    private final boolean required;
     private final boolean hasArg;
 
     CliOption(String name, String shortSwitch, String longSwitch,
-        String description, boolean required, boolean hasArg) {
+        String description, boolean hasArg) {
       this.name = name;
       this.shortSwitch = shortSwitch;
       this.longSwitch = longSwitch;
       this.description = description;
-      this.required = required;
       this.hasArg = hasArg;
     }
 
     public Option createCommonsCliOption() {
       Option option = new Option(shortSwitch, longSwitch, hasArg, description);
-      option.setRequired(required);
       return option;
-    }
-
-    public String getAsArgumentString() {
-      return shortSwitch + "|" + longSwitch + ": " + description;
     }
   }
 
-  public int parseAndConvert(String[] args) throws Exception {
+  int parseAndConvert(String[] args) throws Exception {
     Options opts = createOptions();
 
     try {
+      if (args.length == 0) {
+        LOG.info("Missing command line arguments");
+        printHelp(opts);
+        return 0;
+      }
+
       CommandLine cliParser = new GnuParser().parse(opts, args);
+
+      if (cliParser.hasOption(CliOption.HELP.shortSwitch)) {
+        printHelp(opts);
+        return 0;
+      }
+
       checkOptionPresent(cliParser, CliOption.YARN_SITE);
-      checkOptionPresent(cliParser, CliOption.OUTPUT_DIR);
+      checkOutputDefined(cliParser);
 
       FSConfigToCSConfigConverterParams params = validateInputFiles(cliParser);
       converter.convert(params);
-    } catch (MissingArgumentException e) {
-      String msg = "Missing argument for options" + e.getMessage();
+    } catch (ParseException e) {
+      String msg = "Options parsing failed: " + e.getMessage();
       logAndStdErr(e, msg);
+      printHelp(opts);
       return -1;
     } catch (PreconditionException e) {
       String msg = "Cannot start FS config conversion due to the following"
@@ -131,7 +139,8 @@ public class FSConfigToCSConfigArgumentHandler {
   }
 
   private void logAndStdErr(Exception e, String msg) {
-    LOG.error(msg, e);
+    LOG.debug("Stack trace", e);
+    LOG.error(msg);
     System.err.println(msg);
   }
 
@@ -172,12 +181,31 @@ public class FSConfigToCSConfigArgumentHandler {
         .build();
   }
 
+  private void printHelp(Options opts) {
+    HelpFormatter formatter = new HelpFormatter();
+    formatter.printHelp("General options are: ", opts);
+  }
+
   private static void checkOptionPresent(CommandLine cliParser,
       CliOption cliOption) {
     if (!cliParser.hasOption(cliOption.shortSwitch)) {
       throw new PreconditionException(
           String.format("Missing %s parameter " + "(switch: %s|%s).",
               cliOption.name, cliOption.shortSwitch, cliOption.longSwitch));
+    }
+  }
+
+  private static void checkOutputDefined(CommandLine cliParser) {
+    boolean hasOutputDir =
+        cliParser.hasOption(CliOption.OUTPUT_DIR.shortSwitch);
+
+    boolean console =
+        cliParser.hasOption(CliOption.CONSOLE_MODE.shortSwitch);
+
+    if (!console && !hasOutputDir) {
+      throw new PreconditionException(
+         "Output directory or console mode was not defined. Please" +
+          " use -h or --help to see command line switches");
     }
   }
 
