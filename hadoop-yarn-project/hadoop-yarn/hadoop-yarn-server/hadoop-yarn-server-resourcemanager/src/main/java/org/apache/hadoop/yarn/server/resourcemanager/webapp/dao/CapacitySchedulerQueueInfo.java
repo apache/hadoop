@@ -131,7 +131,7 @@ public class CapacitySchedulerQueueInfo {
     CapacitySchedulerConfiguration conf = cs.getConfiguration();
     queueAcls = new QueueAclsInfo();
     for (Map.Entry<AccessType, AccessControlList> e : conf
-        .getAcls(queueName).entrySet()) {
+        .getAcls(queuePath).entrySet()) {
       QueueAclInfo queueAcl = new QueueAclInfo(e.getKey().toString(),
           e.getValue().getAclString());
       queueAcls.add(queueAcl);
@@ -139,8 +139,8 @@ public class CapacitySchedulerQueueInfo {
 
     String aclApplicationMaxPriority = "acl_" +
         StringUtils.toLowerCase(AccessType.APPLICATION_MAX_PRIORITY.toString());
-    String priorityAcls = conf.get(queuePath + aclApplicationMaxPriority,
-        conf.ALL_ACL);
+    String priorityAcls = conf.get(CapacitySchedulerConfiguration
+        .getQueuePrefix(queuePath) + aclApplicationMaxPriority, conf.ALL_ACL);
 
     QueueAclInfo queueAcl = new QueueAclInfo(
         AccessType.APPLICATION_MAX_PRIORITY.toString(), priorityAcls);
