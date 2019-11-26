@@ -712,21 +712,32 @@ public final class S3Guard {
 
   /**
    * Get a path entry provided it is not considered expired.
+   * If the allowAuthoritative flag is true, return without
+   * checking for TTL expiry.
    * @param ms metastore
    * @param path path to look up.
    * @param timeProvider nullable time provider
    * @param needEmptyDirectoryFlag if true, implementation will
    * return known state of directory emptiness.
+   * @param allowAuthoritative if this flag is true, the ttl won't apply to the
+   * metadata - so it will be returned regardless of it's expiry.
    * @return the metadata or null if there as no entry.
    * @throws IOException failure.
    */
   public static PathMetadata getWithTtl(MetadataStore ms, Path path,
       @Nullable ITtlTimeProvider timeProvider,
-      final boolean needEmptyDirectoryFlag) throws IOException {
+      final boolean needEmptyDirectoryFlag,
+      final boolean allowAuthoritative) throws IOException {
     final PathMetadata pathMetadata = ms.get(path, needEmptyDirectoryFlag);
     // if timeProvider is null let's return with what the ms has
     if (timeProvider == null) {
       LOG.debug("timeProvider is null, returning pathMetadata as is");
+      return pathMetadata;
+    }
+
+    // authoritative mode is enabled for this directory, return what the ms has
+    if (allowAuthoritative) {
+      LOG.debug("allowAuthoritative is true, returning pathMetadata as is");
       return pathMetadata;
     }
 
@@ -755,15 +766,21 @@ public final class S3Guard {
 
   /**
    * List children; mark the result as non-auth if the TTL has expired.
+   * If the allowAuthoritative flag is true, return without filtering or
+   * checking for TTL expiry.
    * @param ms metastore
    * @param path path to look up.
    * @param timeProvider nullable time provider
+   * @param allowAuthoritative if this flag is true, the ttl won't apply to the
+   * metadata - so it will be returned regardless of it's expiry.
    * @return the listing of entries under a path, or null if there as no entry.
    * @throws IOException failure.
    */
-  @Retries.RetryTranslated
+  @RetryTranslated
   public static DirListingMetadata listChildrenWithTtl(MetadataStore ms,
-      Path path, @Nullable ITtlTimeProvider timeProvider)
+      Path path,
+      @Nullable ITtlTimeProvider timeProvider,
+      boolean allowAuthoritative)
       throws IOException {
     DirListingMetadata dlm = ms.listChildren(path);
 
@@ -772,12 +789,18 @@ public final class S3Guard {
       return dlm;
     }
 
-    long ttl = timeProvider.getMetadataTtl();
-
-    if (dlm != null && dlm.isAuthoritative()
-        && dlm.isExpired(ttl, timeProvider.getNow())) {
-      dlm.setAuthoritative(false);
+    if (allowAuthoritative) {
+      LOG.debug("allowAuthoritative is true, returning pathMetadata as is");
+      return dlm;
     }
+
+    // filter expired entries
+    if (dlm != null) {
+      dlm.removeExpiredEntriesFromListing(
+          timeProvider.getMetadataTtl(),
+          timeProvider.getNow());
+    }
+
     return dlm;
   }
 

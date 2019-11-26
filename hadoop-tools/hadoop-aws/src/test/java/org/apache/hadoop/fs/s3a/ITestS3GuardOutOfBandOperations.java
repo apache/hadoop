@@ -365,16 +365,25 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
           testTimeProvider.getNow(), testTimeProvider.getMetadataTtl());
 
       // READ GUARDED
-      String newRead = readBytesToString(guardedFs, testFilePath,
-          newText.length());
+      // This should fail in authoritative mode since we trust the metadatastore
+      // despite of the expiry. The metadata will not expire.
+      if (authoritative) {
+        intercept(FileNotFoundException.class, testFilePath.toString(),
+            "File should not be present in the metedatastore in authoritative mode.",
+            () -> readBytesToString(guardedFs, testFilePath, newText.length()));
+      } else {
+        String newRead = readBytesToString(guardedFs, testFilePath,
+            newText.length());
 
-      // CHECK LISTING - THE FILE SHOULD BE THERE, TOMBSTONE EXPIRED
-      checkListingContainsPath(guardedFs, testFilePath);
+        // CHECK LISTING - THE FILE SHOULD BE THERE, TOMBSTONE EXPIRED
+        checkListingContainsPath(guardedFs, testFilePath);
 
-      // we can assert that the originalText is the new one, which created raw
-      LOG.info("Old: {}, New: {}, Read: {}", originalText, newText, newRead);
-      assertEquals("The text should be modified with a new.", newText,
-          newRead);
+        // we can assert that the originalText is the new one, which created raw
+        LOG.info("Old: {}, New: {}, Read: {}", originalText, newText, newRead);
+        assertEquals("The text should be modified with a new.", newText,
+            newRead);
+      }
+
     } finally {
       guardedFs.delete(testFilePath, true);
       guardedFs.setTtlTimeProvider(originalTimeProvider);
@@ -448,8 +457,16 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       // SET TIME SO METADATA EXPIRES
       when(mockTimeProvider.getNow()).thenReturn(110L);
 
-      // WRITE TO DELETED DIRECTORY - SUCCESS
-      createNonRecursive(guardedFs, filePath);
+      // WRITE TO DELETED DIRECTORY
+      // - FAIL ON AUTH = TRUE
+      // - SUCCESS ON AUTH = FALSE
+      if (authoritative) {
+        intercept(FileNotFoundException.class, filePath.getParent().toString(),
+            "Parent does not exist, so in authoritative mode this should fail.",
+            () -> createNonRecursive(guardedFs, filePath));
+      } else {
+        createNonRecursive(guardedFs, filePath);
+      }
 
     } finally {
       guardedFs.delete(filePath, true);
@@ -546,13 +563,24 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       when(mockTimeProvider.getNow()).thenReturn(100L + 2 * ttl);
 
       // DELETE IN GUARDED FS
+      // NOTE: in auth this will be ineffective:
+      //  we already have the tombstone marker on the item, it won't expire,
+      //  so we don't delete the raw S3 file.
       guardedFs.delete(filePath, true);
 
       // FILE MUST NOT EXIST IN RAW
-      intercept(FileNotFoundException.class, filePath.toString(),
-          "This file should throw FNFE when reading through "
-              + "the raw fs, and the guarded fs deleted the file.",
-          () -> rawFS.getFileStatus(filePath));
+      // If authoritative, the file status can be retrieved raw:
+      //    deleting with guarded FS won't do anything because the tombstone
+      //    marker won't expire in auth mode.
+      // If not authoritative, we go to the S3 bucket and get an FNFE
+      if (authoritative) {
+        rawFS.getFileStatus(filePath);
+      } else {
+        intercept(FileNotFoundException.class, filePath.toString(),
+            "This file should throw FNFE when reading through "
+                + "the raw fs, and the guarded fs deleted the file.",
+            () -> rawFS.getFileStatus(filePath));
+      }
 
     } finally {
       guardedFs.delete(filePath, true);
@@ -592,8 +620,13 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       checkListingDoesNotContainPath(guardedFs, testFile);
 
       // the tombstone is expired, so we should detect the file
+      // in non-authoritative mode
       when(mockTimeProvider.getNow()).thenReturn(100 + ttl);
-      checkListingContainsPath(guardedFs, testFile);
+      if (authoritative) {
+        checkListingDoesNotContainPath(guardedFs, testFile);
+      } else {
+        checkListingContainsPath(guardedFs, testFile);
+      }
     } finally {
       // cleanup
       guardedFs.delete(base, true);
