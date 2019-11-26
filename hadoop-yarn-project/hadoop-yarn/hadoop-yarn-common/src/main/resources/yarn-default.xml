@@ -1291,11 +1291,12 @@
   <property>
     <description>
       Whether to enable application placement based on user ID passed via
-      application tags. When it is enabled, u=&lt;userId&gt; pattern will be checked
-      and if found, the application will be placed onto the found user's queue,
+      application tags. When it is enabled, userid=&lt;userId&gt;
+      pattern will be checked and if found, the application will be placed
+      onto the found user's queue,
       if the original user has enough rights on the passed user's queue.
     </description>
-    <name>application-tag-based-placement.enable</name>
+    <name>yarn.resourcemanager.application-tag-based-placement.enable</name>
     <value>false</value>
   </property>
 
@@ -1304,7 +1305,7 @@
       Comma separated list of users who can use the application tag based
       placement, if it is enabled.
     </description>
-    <name>application-tag-based-placement.username.whitelist</name>
+    <name>yarn.resourcemanager.application-tag-based-placement.username.whitelist</name>
     <value></value>
   </property>
 
