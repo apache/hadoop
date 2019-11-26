@@ -448,6 +448,59 @@ public class TestSchedulingRequestContainerAllocation {
     rm1.close();
   }
 
+  @Test(timeout = 30000L)
+  public void testInvalidSchedulingRequest() throws Exception {
+
+    Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(conf);
+    MockRM rm1 = new MockRM(csConf) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+
+    // 4 NMs.
+    MockNM[] nms = new MockNM[4];
+    RMNode[] rmNodes = new RMNode[4];
+    for (int i = 0; i < 4; i++) {
+      nms[i] = rm1.registerNode("192.168.0." + i + ":1234", 10 * GB);
+      rmNodes[i] = rm1.getRMContext().getRMNodes().get(nms[i].getNodeId());
+    }
+
+    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms[0]);
+
+    // Constraint with Invalid Allocation Tag Namespace
+    PlacementConstraint constraint = targetNotIn("node",
+        allocationTagWithNamespace("invalid", "t1")).build();
+    SchedulingRequest sc = SchedulingRequest
+        .newInstance(1, Priority.newInstance(1),
+        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED),
+        ImmutableSet.of("t1"),
+        ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)),
+        constraint);
+    AllocateRequest request = AllocateRequest.newBuilder()
+        .schedulingRequests(ImmutableList.of(sc)).build();
+    am1.allocate(request);
+
+    try {
+      GenericTestUtils.waitFor(() -> {
+        try {
+          doNodeHeartbeat(nms);
+          AllocateResponse response = am1.schedule();
+          return response.getRejectedSchedulingRequests().size() == 1;
+        } catch (Exception e) {
+          return false;
+        }
+      }, 500, 20000);
+    } catch (Exception e) {
+      Assert.fail("Failed to reject invalid scheduling request");
+    }
+  }
+
   private static void doNodeHeartbeat(MockNM... nms) throws Exception {
     for (MockNM nm : nms) {
       nm.nodeHeartbeat(true);

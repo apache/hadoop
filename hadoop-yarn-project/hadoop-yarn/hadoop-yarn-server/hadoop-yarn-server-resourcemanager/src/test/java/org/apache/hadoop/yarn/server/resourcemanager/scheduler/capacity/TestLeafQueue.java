@@ -4130,6 +4130,7 @@ public class TestLeafQueue {
     RMNodeLabelsManager nlm = mock(RMNodeLabelsManager.class);
     when(nlm.getResourceByLabel(any(), any())).thenReturn(res);
     when(rmContext.getNodeLabelManager()).thenReturn(nlm);
+    when(rmContext.getYarnConfiguration()).thenReturn(csConf);
 
     // Queue "test" consumes 100% of the cluster, so its capacity and absolute
     // capacity are both 1.0f.

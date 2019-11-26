@@ -193,6 +193,7 @@ public class TestFifoScheduler {
 
     Configuration conf = new Configuration();
     ((RMContextImpl) rmContext).setScheduler(scheduler);
+    ((RMContextImpl) rmContext).setYarnConfiguration(conf);
     scheduler.setRMContext(rmContext);
     scheduler.init(conf);
     scheduler.start();
