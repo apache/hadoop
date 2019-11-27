@@ -40,11 +40,12 @@ class SFTPInputStream extends FSInputStream {
 
   private InputStream wrappedStream;
   private ChannelSftp channel;
+  private SFTPFileSystem fs;
   private FileSystem.Statistics stats;
   private boolean closed;
   private long pos;
 
-  SFTPInputStream(InputStream stream, ChannelSftp channel,
+  SFTPInputStream(InputStream stream, ChannelSftp channel, SFTPFileSystem fs,
       FileSystem.Statistics stats) {
 
     if (stream == null) {
@@ -55,6 +56,7 @@ class SFTPInputStream extends FSInputStream {
     }
     this.wrappedStream = stream;
     this.channel = channel;
+    this.fs = fs;
     this.stats = stats;
 
     this.pos = 0;
@@ -113,18 +115,16 @@ class SFTPInputStream extends FSInputStream {
     if (closed) {
       return;
     }
-    super.close();
-    closed = true;
-    if (!channel.isConnected()) {
-      throw new IOException(E_CLIENT_NOTCONNECTED);
-    }
-
     try {
-      Session session = channel.getSession();
-      channel.disconnect();
-      session.disconnect();
-    } catch (JSchException e) {
-      throw new IOException(StringUtils.stringifyException(e));
+      super.close();
+      wrappedStream.close();
+      closed = true;
+      if (!channel.isConnected()) {
+        throw new IOException(E_CLIENT_NOTCONNECTED);
+      }
+    } finally {
+      // return the connection to the pool
+      fs.disconnect(channel);
     }
   }
 }

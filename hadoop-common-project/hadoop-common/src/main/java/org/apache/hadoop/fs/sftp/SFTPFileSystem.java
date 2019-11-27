@@ -158,7 +158,7 @@ public class SFTPFileSystem extends FileSystem {
    * @param client
    * @throws IOException
    */
-  private void disconnect(ChannelSftp channel) throws IOException {
+  void disconnect(ChannelSftp channel) throws IOException {
     connectionPool.disconnect(channel);
   }
 
@@ -507,6 +507,7 @@ public class SFTPFileSystem extends FileSystem {
     try {
       workDir = new Path(channel.pwd());
     } catch (SftpException e) {
+      disconnect(channel);
       throw new IOException(e);
     }
     Path absolute = makeAbsolute(workDir, f);
@@ -522,11 +523,12 @@ public class SFTPFileSystem extends FileSystem {
 
       is = channel.get(absolute.toUri().getPath());
     } catch (SftpException e) {
+      disconnect(channel);
       throw new IOException(e);
     }
 
     FSDataInputStream fis =
-        new FSDataInputStream(new SFTPInputStream(is, channel, statistics));
+        new FSDataInputStream(new SFTPInputStream(is, channel, this, statistics));
     return fis;
   }
 

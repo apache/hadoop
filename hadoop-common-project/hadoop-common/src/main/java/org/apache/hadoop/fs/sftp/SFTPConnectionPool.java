@@ -70,14 +70,17 @@ class SFTPConnectionPool {
    * @param channel
    */
   synchronized void returnToPool(ChannelSftp channel) {
-    ConnectionInfo info = con2infoMap.get(channel);
-    HashSet<ChannelSftp> cons = idleConnections.get(info);
-    if (cons == null) {
-      cons = new HashSet<ChannelSftp>();
-      idleConnections.put(info, cons);
-    }
-    cons.add(channel);
 
+    // do not return closed channels into the pool.
+    if (!channel.isClosed()) {
+      ConnectionInfo info = con2infoMap.get(channel);
+      HashSet<ChannelSftp> cons = idleConnections.get(info);
+      if (cons == null) {
+        cons = new HashSet<ChannelSftp>();
+        idleConnections.put(info, cons);
+      }
+      cons.add(channel);
+    }
   }
 
   /** Shutdown the connection pool and close all open connections. */
