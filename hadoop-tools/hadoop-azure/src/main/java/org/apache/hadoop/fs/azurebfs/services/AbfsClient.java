@@ -507,6 +507,28 @@ public class AbfsClient {
     return op;
   }
 
+  /**
+   * Talks to the server to check whether the permission specified in
+   * the rwx parameter is present for the path specified in the path parameter.
+   *
+   * @param path  Path for which access check needs to be performed
+   * @param rwx   The permission to be checked on the path
+   * @return      The {@link AbfsRestOperation} object for the operation
+   * @throws AzureBlobFileSystemException in case of bad requests
+   */
+  public AbfsRestOperation checkAccess(String path, String rwx)
+      throws AzureBlobFileSystemException {
+    AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, CHECK_ACCESS);
+    abfsUriQueryBuilder.addQuery(QUERY_FS_ACTION, rwx);
+    URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
+    AbfsRestOperation op = new AbfsRestOperation(
+        AbfsRestOperationType.CheckAccess, this,
+        AbfsHttpConstants.HTTP_METHOD_HEAD, url, createDefaultHeaders());
+    op.execute();
+    return op;
+  }
+
   private URL createRequestUrl(final String query) throws AzureBlobFileSystemException {
     return createRequestUrl(EMPTY_STRING, query);
   }

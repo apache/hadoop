@@ -854,9 +854,14 @@ public class AzureBlobFileSystem extends FileSystem {
    * @throws IOException                   see specific implementation
    */
   @Override
-  public void access(final Path path, FsAction mode) throws IOException {
-    // TODO: make it no-op to unblock hive permission issue for now.
-    // Will add a long term fix similar to the implementation in AdlFileSystem.
+  public void access(final Path path, final FsAction mode) throws IOException {
+    LOG.debug("AzureBlobFileSystem.access path : {}, mode : {}", path, mode);
+    Path qualifiedPath = makeQualified(path);
+    try {
+      this.abfsStore.access(qualifiedPath, mode);
+    } catch (AzureBlobFileSystemException ex) {
+      checkCheckAccessException(path, ex);
+    }
   }
 
   private FileStatus tryGetFileStatus(final Path f) {
@@ -967,6 +972,18 @@ public class AzureBlobFileSystem extends FileSystem {
           = new FileSystemOperationUnhandledException(exception);
       throw new IOException(fileSystemOperationUnhandledException);
     }
+  }
+
+  private void checkCheckAccessException(final Path path,
+      final AzureBlobFileSystemException exception) throws IOException {
+    if (exception instanceof AbfsRestOperationException) {
+      AbfsRestOperationException ere = (AbfsRestOperationException) exception;
+      if (ere.getStatusCode() == HttpURLConnection.HTTP_FORBIDDEN) {
+        throw (IOException) new AccessControlException(ere.getMessage())
+            .initCause(exception);
+      }
+    }
+    checkException(path, exception);
   }
 
   /**
