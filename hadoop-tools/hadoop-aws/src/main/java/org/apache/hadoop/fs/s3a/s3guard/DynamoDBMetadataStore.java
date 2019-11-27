@@ -100,7 +100,6 @@ import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowAllDynamoDBOperations;
@@ -1503,16 +1502,21 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     switch (pruneMode) {
     case ALL_BY_MODTIME:
+      // filter all files under the given parent older than the modtime.
+      // this implicitly skips directories, because they lack a modtime field.
+      // however we explicitly exclude directories to make clear that
+      // directories are to be excluded and avoid any confusion
+      // see: HADOOP-16725.
+      // note: files lack the is_dir field entirely, so we use a `not` to
+      // filter out the directories.
       filterExpression =
           "mod_time < :mod_time and begins_with(parent, :parent)"
-//              + " and is_dir = :is_dir"
-      ;
+              + " and not is_dir = :is_dir";
       projectionExpression = "parent,child";
       map = new ValueMap()
           .withLong(":mod_time", cutoff)
           .withString(":parent", keyPrefix)
-//          .withBoolean(":is_dir", false)
-      ;
+          .withBoolean(":is_dir", true);
       break;
     case TOMBSTONES_BY_LASTUPDATED:
       filterExpression =
@@ -1605,7 +1609,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
             // set authoritative false for each pruned dir listing
             // if at least one entry was not a tombstone
-            removeAuthoritativeDirFlag(parentPathSet, state, pruneMode, cutoff);
+            removeAuthoritativeDirFlag(parentPathSet, state);
             // already cleared parent paths.
             clearedParentPathSet.addAll(parentPathSet);
             parentPathSet.clear();
@@ -1679,16 +1683,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * This is to ensure a best-effort attempt to update the store.
    * @param pathSet set of paths.
    * @param state ongoing operation state.
-   * @param pruneMode The mode of operation for the prune.
-   * @param cutoff cutoff time of prune -ignore files older than this as they
-   * are also in the cutoff list.
    * @throws IOException only after a best effort is made to update the store.
    */
   private void removeAuthoritativeDirFlag(
       final Set<Path> pathSet,
-      final AncestorState state,
-      final PruneMode pruneMode,
-      final long cutoff) throws IOException {
+      final AncestorState state) throws IOException {
 
     AtomicReference<IOException> rIOException = new AtomicReference<>();
 
@@ -1719,14 +1718,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
           LOG.debug("Parent is not a directory {}; skipping", path);
           return null;
         }
-        if (pruneMode == PruneMode.ALL_BY_MODTIME &&
-            ddbPathMetadata.getLastUpdated() < cutoff) {
-          // the parent is being pruned itself
-          LOG.debug("Parent is also being pruned {}; skipping", path);
-          return null;
-        }
         LOG.debug("Setting isAuthoritativeDir==false on {}", ddbPathMetadata);
         ddbPathMetadata.setAuthoritativeDir(false);
+        ddbPathMetadata.setLastUpdated(ttlTimeProvider.getNow());
         return ddbPathMetadata;
       } catch (IOException e) {
         String msg = String.format("IOException while getting PathMetadata "
@@ -2091,16 +2085,19 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Override
   public int markAsAuthoritative(final Path dest,
       final BulkOperationState operationState) throws IOException {
-    AncestorState state = (AncestorState) requireNonNull(operationState);
+    if (operationState == null) {
+      return 0;
+    }
+    AncestorState state = (AncestorState)operationState;
     // only mark paths under the dest as auth
     final String simpleDestKey = pathToParentKey(dest);
-    String destPathKey = simpleDestKey + "/";
+    final String destPathKey = simpleDestKey + "/";
     final String opId = AncestorState.stateAsString(state);
     LOG.debug("{}: marking directories under {} as authoritative",
         opId, destPathKey);
 
     // the list of dirs to build up.
-    List<DDBPathMetadata> dirsToUpdate = new ArrayList<>();
+    final List<DDBPathMetadata> dirsToUpdate = new ArrayList<>();
     synchronized (state) {
       for (Map.Entry<Path, DDBPathMetadata> entry :
           state.getAncestry().entrySet()) {
@@ -2111,6 +2108,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
             && (key.equals(simpleDestKey) || key.startsWith(destPathKey))) {
           // the updated entry is under the destination.
           md.setAuthoritativeDir(true);
+          md.setLastUpdated(ttlTimeProvider.getNow());
           LOG.debug("{}: added {}", opId, key);
           dirsToUpdate.add(md);
         }
@@ -2119,7 +2117,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
           null, pathMetadataToItem(dirsToUpdate));
     }
     return dirsToUpdate.size();
-
   }
 
   @Override
@@ -2155,12 +2152,15 @@ public class DynamoDBMetadataStore implements MetadataStore,
       String stateStr = AncestorState.stateAsString(state);
       for (Item item : items) {
         boolean tombstone = !itemExists(item);
+
+        boolean isDir = hasBoolAttribute(item, IS_DIR, false);
         boolean auth = hasBoolAttribute(item, IS_AUTHORITATIVE, false);
-        OPERATIONS_LOG.debug("{} {} {}{}",
+        OPERATIONS_LOG.debug("{} {} {}{}{}",
             stateStr,
             tombstone ? "TOMBSTONE" : "PUT",
             itemPrimaryKeyToString(item),
-            auth ? " [auth]" : "");
+            auth ? " [auth] " : "",
+            isDir ? " directory" : "");
       }
     }
   }

@@ -366,7 +366,7 @@ public interface MetadataStore extends Closeable {
    * @return the number of directories marked.
    */
   default int markAsAuthoritative(Path dest,
-      @Nonnull BulkOperationState operationState)
+      BulkOperationState operationState)
       throws IOException {
     return 0;
   }
