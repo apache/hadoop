@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
@@ -27,6 +28,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.authentication.AbfsStoreAuthenticator;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
@@ -62,6 +64,7 @@ public class AbfsRestOperation {
   private int bufferLength;
 
   private AbfsHttpOperation result;
+  private AbfsStoreAuthenticator storeAuthenticator;
 
   public AbfsHttpOperation getResult() {
     return result;
@@ -75,18 +78,21 @@ public class AbfsRestOperation {
    * @param url The full URL including query string parameters.
    * @param requestHeaders The HTTP request headers.
    */
-  AbfsRestOperation(final AbfsRestOperationType operationType,
-                    final AbfsClient client,
-                    final String method,
-                    final URL url,
-                    final List<AbfsHttpHeader> requestHeaders) {
+  AbfsRestOperation(
+      final AbfsRestOperationType operationType,
+      final AbfsClient client,
+      final String method,
+      final URL url,
+      final List<AbfsHttpHeader> requestHeaders,
+      final AbfsStoreAuthenticator abfsStoreAuthenticator) {
     this.operationType = operationType;
     this.client = client;
     this.method = method;
     this.url = url;
     this.requestHeaders = requestHeaders;
     this.hasRequestBody = (AbfsHttpConstants.HTTP_METHOD_PUT.equals(method)
-            || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
+        || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
+    this.storeAuthenticator = abfsStoreAuthenticator;
   }
 
   /**
@@ -109,8 +115,9 @@ public class AbfsRestOperation {
                     List<AbfsHttpHeader> requestHeaders,
                     byte[] buffer,
                     int bufferOffset,
-                    int bufferLength) {
-    this(operationType, client, method, url, requestHeaders);
+                    int bufferLength,
+                    AbfsStoreAuthenticator abfsStoreAuthenticator) {
+    this(operationType, client, method, url, requestHeaders, abfsStoreAuthenticator);
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
@@ -130,7 +137,13 @@ public class AbfsRestOperation {
     }
 
     int retryCount = 0;
-    while (!executeHttpOperation(retryCount++)) {
+    while (true) {
+      try {
+        if (!!executeHttpOperation(retryCount++))
+          break;
+      } catch (URISyntaxException e) {
+        e.printStackTrace();
+      }
       try {
         Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
       } catch (InterruptedException ex) {
@@ -149,24 +162,13 @@ public class AbfsRestOperation {
    * fails, there may be a retry.  The retryCount is incremented with each
    * attempt.
    */
-  private boolean executeHttpOperation(final int retryCount) throws AzureBlobFileSystemException {
+  private boolean executeHttpOperation(final int retryCount)
+      throws AzureBlobFileSystemException, URISyntaxException {
     AbfsHttpOperation httpOperation = null;
     try {
-      // initialize the HTTP request and open the connection
-      httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
+      httpOperation = getHttpOperationWithAuthInfoApplied(url, method,
+          requestHeaders);
 
-      // sign the HTTP request
-      if (client.getAccessToken() == null) {
-        LOG.debug("Signing request with shared key");
-        // sign the HTTP request
-        client.getSharedKeyCredentials().signRequest(
-                httpOperation.getConnection(),
-                hasRequestBody ? bufferLength : 0);
-      } else {
-        LOG.debug("Authenticating request with OAuth2 access token");
-        httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
-                client.getAccessToken());
-      }
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
@@ -216,5 +218,35 @@ public class AbfsRestOperation {
     result = httpOperation;
 
     return true;
+  }
+
+  private AbfsHttpOperation getHttpOperationWithAuthInfoApplied(URL url, String method,
+      List<AbfsHttpHeader> requestHeaders)
+      throws IOException {
+    AbfsHttpOperation httpOperation = null;
+
+    switch (storeAuthenticator.getAuthType())
+    {
+    case OAuth:
+    case Custom:
+      httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
+      httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+          storeAuthenticator.getAccessToken());
+      break;
+    case SharedKey:
+      httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
+      httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+          storeAuthenticator.getSharedKeyCredentials().getRequestSignature(
+              httpOperation.getConnection(),
+              hasRequestBody ? bufferLength : 0));
+      break;
+    default:
+    case UserDelegationSAS:
+      httpOperation = new AbfsHttpOperation(storeAuthenticator.getSasUrl(),
+          method, requestHeaders);
+      break;
+    }
+
+    return httpOperation;
   }
 }

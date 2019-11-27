@@ -22,6 +22,7 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.URL;
 
 import com.google.common.base.Preconditions;
 
@@ -53,6 +54,7 @@ public class AbfsInputStream extends FSInputStream {
   private int limit = 0;     // offset of next byte to be read into buffer from service (i.e., upper marker+1
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
+  private URL dSASUrl;
 
   public AbfsInputStream(
       final AbfsClient client,
@@ -62,7 +64,8 @@ public class AbfsInputStream extends FSInputStream {
       final int bufferSize,
       final int readAheadQueueDepth,
       final boolean tolerateOobAppends,
-      final String eTag) {
+      final String eTag,
+      final URL dSASUrl) {
     this.client = client;
     this.statistics = statistics;
     this.path = path;
@@ -72,6 +75,7 @@ public class AbfsInputStream extends FSInputStream {
     this.tolerateOobAppends = tolerateOobAppends;
     this.eTag = eTag;
     this.readAheadEnabled = true;
+    this.dSASUrl = dSASUrl;
   }
 
   public String getPath() {
@@ -228,7 +232,8 @@ public class AbfsInputStream extends FSInputStream {
     final AbfsRestOperation op;
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
-      op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag);
+      op = client.read(path, position, b, offset, length, tolerateOobAppends
+          ? "*" : eTag, dSASUrl);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {

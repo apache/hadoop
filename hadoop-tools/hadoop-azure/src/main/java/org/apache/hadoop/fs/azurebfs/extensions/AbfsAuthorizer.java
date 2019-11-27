@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.extensions;
 
 import java.io.IOException;
+import java.net.URL;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -54,4 +55,9 @@ public interface AbfsAuthorizer {
   boolean isAuthorized(FsAction action, Path... absolutePaths)
       throws AbfsAuthorizationException, IOException;
 
+  /**
+   * Will return User Delegation SAS URI as string for path that was authorized
+   * @return
+   */
+  URL getDSASUrl();
 }
