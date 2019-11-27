@@ -178,6 +178,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_USE_UPN)
   private boolean useUpn;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_CHECK_ACCESS, DefaultValue = DEFAULT_ENABLE_CHECK_ACCESS)
+  private boolean isCheckAccessEnabled;
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_LATENCY_TRACK,
           DefaultValue = DEFAULT_ABFS_LATENCY_TRACK)
   private boolean trackLatency;
@@ -401,6 +405,10 @@ public class AbfsConfiguration{
 
   public long getAzureBlockSize() {
     return this.azureBlockSize;
+  }
+
+  public boolean isCheckAccessEnabled() {
+    return this.isCheckAccessEnabled;
   }
 
   public String getAzureBlockLocationHost() {
