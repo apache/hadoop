@@ -28,20 +28,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.authentication.AbfsStoreAuthenticator;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
-import org.apache.hadoop.io.IOUtils;
+
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
@@ -54,7 +55,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.*;
 public class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   private final URL baseUrl;
-  private final SharedKeyCredentials sharedKeyCredentials;
   private final String xMsVersion = "2018-11-09";
   private final ExponentialRetryPolicy retryPolicy;
   private final String filesystem;
@@ -62,20 +62,20 @@ public class AbfsClient implements Closeable {
   private final String userAgent;
   private final AbfsPerfTracker abfsPerfTracker;
 
-  private final AccessTokenProvider tokenProvider;
+  private final AbfsStoreAuthenticator abfsStoreAuthenticator;
 
 
-  public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
-                    final AbfsConfiguration abfsConfiguration,
-                    final ExponentialRetryPolicy exponentialRetryPolicy,
-                    final AccessTokenProvider tokenProvider,
-                    final AbfsPerfTracker abfsPerfTracker) {
+  public AbfsClient(final URL baseUrl,
+      final AbfsConfiguration abfsConfiguration,
+      final ExponentialRetryPolicy exponentialRetryPolicy,
+      final AbfsPerfTracker abfsPerfTracker,
+      final AbfsStoreAuthenticator abfsStoreAuthenticator) {
     this.baseUrl = baseUrl;
-    this.sharedKeyCredentials = sharedKeyCredentials;
     String baseUrlString = baseUrl.toString();
     this.filesystem = baseUrlString.substring(baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
     this.abfsConfiguration = abfsConfiguration;
     this.retryPolicy = exponentialRetryPolicy;
+    this.abfsStoreAuthenticator = abfsStoreAuthenticator;
 
     String sslProviderName = null;
 
@@ -89,15 +89,27 @@ public class AbfsClient implements Closeable {
     }
 
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
-    this.tokenProvider = tokenProvider;
     this.abfsPerfTracker = abfsPerfTracker;
+  }
+
+  /**
+   * Gets a AbfsStoreAuthenticator instance that will carry the DSAS
+   * @param dSASUrl
+   * @return
+   */
+  private AbfsStoreAuthenticator getStoreAuthenticator(URL dSASUrl)
+  {
+    if (dSASUrl != null)
+    {
+      return abfsStoreAuthenticator.getAbfsStoreAuthenticatorForDSAS(dSASUrl);
+    }
+
+    return abfsStoreAuthenticator;
   }
 
   @Override
   public void close() throws IOException {
-    if (tokenProvider instanceof Closeable) {
-      IOUtils.cleanupWithLogger(LOG, (Closeable) tokenProvider);
-    }
+    abfsStoreAuthenticator.close();
   }
 
   public String getFileSystem() {
@@ -110,10 +122,6 @@ public class AbfsClient implements Closeable {
 
   ExponentialRetryPolicy getRetryPolicy() {
     return retryPolicy;
-  }
-
-  SharedKeyCredentials getSharedKeyCredentials() {
-    return sharedKeyCredentials;
   }
 
   List<AbfsHttpHeader> createDefaultHeaders() {
@@ -141,17 +149,22 @@ public class AbfsClient implements Closeable {
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
+
+    // TODO: Sneha: How to handle FileSystem APIs - None should get called in
+    //  secure environment
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.CreateFileSystem,
-            this,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.CreateFileSystem,
+        this,
+        HTTP_METHOD_PUT,
+        url,
+        requestHeaders,
+        getStoreAuthenticator(null));
     op.execute();
     return op;
   }
 
-  public AbfsRestOperation setFilesystemProperties(final String properties) throws AzureBlobFileSystemException {
+  public AbfsRestOperation setFilesystemProperties(final String properties,
+      final URL dSASUrl) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
@@ -166,17 +179,20 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.SetFileSystemProperties,
-            this,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.SetFileSystemProperties,
+        this,
+        HTTP_METHOD_PUT,
+        url,
+        requestHeaders,
+        getStoreAuthenticator(dSASUrl));
     op.execute();
     return op;
   }
 
-  public AbfsRestOperation listPath(final String relativePath, final boolean recursive, final int listMaxResults,
-                                    final String continuation) throws AzureBlobFileSystemException {
+  public AbfsRestOperation listPath(final String relativePath,
+      final boolean recursive, final int listMaxResults,
+      final String continuation, final URL dSASUrl)
+      throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -190,11 +206,12 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.ListPaths,
-            this,
-            HTTP_METHOD_GET,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.ListPaths,
+        this,
+        HTTP_METHOD_GET,
+        url,
+        requestHeaders,
+        getStoreAuthenticator(dSASUrl));
     op.execute();
     return op;
   }
@@ -207,16 +224,18 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.GetFileSystemProperties,
-            this,
-            HTTP_METHOD_HEAD,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.GetFileSystemProperties,
+        this,
+        HTTP_METHOD_HEAD,
+        url,
+        requestHeaders,
+        getStoreAuthenticator(null));
     op.execute();
     return op;
   }
 
-  public AbfsRestOperation deleteFilesystem() throws AzureBlobFileSystemException {
+  public AbfsRestOperation deleteFilesystem(final URL dSASUrl)
+      throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -224,17 +243,19 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.DeleteFileSystem,
-            this,
-            HTTP_METHOD_DELETE,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.DeleteFileSystem,
+        this,
+        HTTP_METHOD_DELETE,
+        url,
+        requestHeaders,
+        getStoreAuthenticator(dSASUrl));
     op.execute();
     return op;
   }
 
-  public AbfsRestOperation createPath(final String path, final boolean isFile, final boolean overwrite,
-                                      final String permission, final String umask) throws AzureBlobFileSystemException {
+  public AbfsRestOperation createPath(final String path, final boolean isFile,
+      final boolean overwrite, final String permission, final String umask,
+      final URL dSASUrl) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     if (!overwrite) {
       requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, AbfsHttpConstants.STAR));
@@ -253,17 +274,19 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.CreatePath,
-            this,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.CreatePath,
+        this,
+        HTTP_METHOD_PUT,
+        url,
+        requestHeaders,
+        getStoreAuthenticator(dSASUrl));
     op.execute();
     return op;
   }
 
-  public AbfsRestOperation renamePath(final String source, final String destination, final String continuation)
-          throws AzureBlobFileSystemException {
+  public AbfsRestOperation renamePath(final String source,
+      final String destination, final String continuation, final URL dSASUrl)
+      throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final String encodedRenameSource = urlEncode(FORWARD_SLASH + this.getFileSystem() + source);
@@ -275,17 +298,19 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(destination, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.RenamePath,
-            this,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.RenamePath,
+        this,
+        HTTP_METHOD_PUT,
+        url,
+        requestHeaders,
+        getStoreAuthenticator(dSASUrl));
     op.execute();
     return op;
   }
 
-  public AbfsRestOperation append(final String path, final long position, final byte[] buffer, final int offset,
-                                  final int length) throws AzureBlobFileSystemException {
+  public AbfsRestOperation append(final String path, final long position,
+      final byte[] buffer, final int offset, final int length,
+      final URL dSASUrl) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
@@ -299,15 +324,20 @@ public class AbfsClient implements Closeable {
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
         AbfsRestOperationType.Append,
-            this,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders, buffer, offset, length);
+        this,
+        HTTP_METHOD_PUT,
+        url,
+        requestHeaders,
+        buffer,
+        offset,
+        length,
+        getStoreAuthenticator(dSASUrl));
     op.execute();
     return op;
   }
 
-  public AbfsRestOperation flush(final String path, final long position, boolean retainUncommittedData, boolean isClose)
+  public AbfsRestOperation flush(final String path, final long position,
+      boolean retainUncommittedData, boolean isClose, final URL dSASUrl)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
@@ -323,16 +353,18 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.Flush,
-            this,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.Flush,
+        this,
+        HTTP_METHOD_PUT,
+        url,
+        requestHeaders,
+        getStoreAuthenticator(dSASUrl));
     op.execute();
     return op;
   }
 
-  public AbfsRestOperation setPathProperties(final String path, final String properties)
+  public AbfsRestOperation setPathProperties(final String path,
+      final String properties, final URL dSASUrl)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
@@ -347,16 +379,18 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.SetPathProperties,
-            this,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.SetPathProperties,
+        this,
+        HTTP_METHOD_PUT,
+        url,
+        requestHeaders,
+        getStoreAuthenticator(dSASUrl));
     op.execute();
     return op;
   }
 
-  public AbfsRestOperation getPathStatus(final String path) throws AzureBlobFileSystemException {
+  public AbfsRestOperation getPathStatus(final String path, final URL dSASUrl)
+      throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -364,17 +398,20 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.GetPathStatus,
-            this,
-            HTTP_METHOD_HEAD,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.GetPathStatus,
+        this,
+        HTTP_METHOD_HEAD,
+        url,
+        requestHeaders,
+        getStoreAuthenticator(dSASUrl));
     op.execute();
     return op;
   }
 
-  public AbfsRestOperation read(final String path, final long position, final byte[] buffer, final int bufferOffset,
-                                final int bufferLength, final String eTag) throws AzureBlobFileSystemException {
+  public AbfsRestOperation read(final String path, final long position,
+      final byte[] buffer, final int bufferOffset, final int bufferLength,
+      final String eTag, final URL dSASUrl)
+      throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     requestHeaders.add(new AbfsHttpHeader(RANGE,
             String.format("bytes=%d-%d", position, position + bufferLength - 1)));
@@ -385,21 +422,23 @@ public class AbfsClient implements Closeable {
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
 
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.ReadFile,
-            this,
-            HTTP_METHOD_GET,
-            url,
-            requestHeaders,
-            buffer,
-            bufferOffset,
-            bufferLength);
+        AbfsRestOperationType.ReadFile,
+        this,
+        HTTP_METHOD_GET,
+        url,
+        requestHeaders,
+        buffer,
+        bufferOffset,
+        bufferLength,
+        getStoreAuthenticator(dSASUrl));
     op.execute();
 
     return op;
   }
 
-  public AbfsRestOperation deletePath(final String path, final boolean recursive, final String continuation)
-          throws AzureBlobFileSystemException {
+  public AbfsRestOperation deletePath(final String path,
+      final boolean recursive, final String continuation, final URL dSASUrl)
+      throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -408,16 +447,18 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.DeletePath,
-            this,
-            HTTP_METHOD_DELETE,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.DeletePath,
+        this,
+        HTTP_METHOD_DELETE,
+        url,
+        requestHeaders,
+        getStoreAuthenticator(dSASUrl));
     op.execute();
     return op;
   }
 
-  public AbfsRestOperation setOwner(final String path, final String owner, final String group)
+  public AbfsRestOperation setOwner(final String path, final String owner,
+      final String group, final URL dSASUrl)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
@@ -441,12 +482,14 @@ public class AbfsClient implements Closeable {
         this,
         AbfsHttpConstants.HTTP_METHOD_PUT,
         url,
-        requestHeaders);
+        requestHeaders,
+        getStoreAuthenticator(dSASUrl));
     op.execute();
     return op;
   }
 
-  public AbfsRestOperation setPermission(final String path, final String permission)
+  public AbfsRestOperation setPermission(final String path,
+      final String permission, final URL dSASUrl)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
@@ -465,16 +508,19 @@ public class AbfsClient implements Closeable {
         this,
         AbfsHttpConstants.HTTP_METHOD_PUT,
         url,
-        requestHeaders);
+        requestHeaders,
+        getStoreAuthenticator(dSASUrl));
     op.execute();
     return op;
   }
 
-  public AbfsRestOperation setAcl(final String path, final String aclSpecString) throws AzureBlobFileSystemException {
-    return setAcl(path, aclSpecString, AbfsHttpConstants.EMPTY_STRING);
+  public AbfsRestOperation setAcl(final String path, final String aclSpecString,
+      final URL dSASUrl) throws AzureBlobFileSystemException {
+    return setAcl(path, aclSpecString, AbfsHttpConstants.EMPTY_STRING, dSASUrl);
   }
 
-  public AbfsRestOperation setAcl(final String path, final String aclSpecString, final String eTag)
+  public AbfsRestOperation setAcl(final String path, final String aclSpecString,
+      final String eTag, final URL dSASUrl)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
@@ -497,16 +543,19 @@ public class AbfsClient implements Closeable {
         this,
         AbfsHttpConstants.HTTP_METHOD_PUT,
         url,
-        requestHeaders);
+        requestHeaders,
+        getStoreAuthenticator(dSASUrl));
     op.execute();
     return op;
   }
 
-  public AbfsRestOperation getAclStatus(final String path) throws AzureBlobFileSystemException {
-    return getAclStatus(path, abfsConfiguration.isUpnUsed());
+  public AbfsRestOperation getAclStatus(final String path, final URL dSASUrl)
+      throws AzureBlobFileSystemException {
+    return getAclStatus(path, abfsConfiguration.isUpnUsed(), dSASUrl);
   }
 
-  public AbfsRestOperation getAclStatus(final String path, final boolean useUPN) throws AzureBlobFileSystemException {
+  public AbfsRestOperation getAclStatus(final String path, final boolean useUPN,
+      final URL dSASUrl) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -519,7 +568,8 @@ public class AbfsClient implements Closeable {
         this,
         AbfsHttpConstants.HTTP_METHOD_HEAD,
         url,
-        requestHeaders);
+        requestHeaders,
+        getStoreAuthenticator(dSASUrl));
     op.execute();
     return op;
   }
@@ -588,14 +638,6 @@ public class AbfsClient implements Closeable {
     return encodedString;
   }
 
-  public synchronized String getAccessToken() throws IOException {
-    if (tokenProvider != null) {
-      return "Bearer " + tokenProvider.getToken().getAccessToken();
-    } else {
-      return null;
-    }
-  }
-
   @VisibleForTesting
   String initializeUserAgent(final AbfsConfiguration abfsConfiguration,
                              final String sslProviderName) {
@@ -612,7 +654,7 @@ public class AbfsClient implements Closeable {
       sb.append(sslProviderName);
     }
     String tokenProviderField =
-        ExtensionHelper.getUserAgentSuffix(tokenProvider, "");
+        ExtensionHelper.getUserAgentSuffix(abfsStoreAuthenticator.getTokenProvider(), "");
     if (!tokenProviderField.isEmpty()) {
       sb.append("; ").append(tokenProviderField);
     }

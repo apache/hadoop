@@ -80,21 +80,22 @@ public class SharedKeyCredentials {
     initializeMac();
   }
 
-  public void signRequest(HttpURLConnection connection, final long contentLength) throws UnsupportedEncodingException {
+  public String getRequestSignature(HttpURLConnection connection,
+      final long contentLength) throws UnsupportedEncodingException {
 
     String gmtTime = getGMTTime();
     connection.setRequestProperty(HttpHeaderConfigurations.X_MS_DATE, gmtTime);
 
-    final String stringToSign = canonicalize(connection, accountName, contentLength);
+    final String stringToSign = canonicalize(connection, accountName,
+        contentLength);
 
     final String computedBase64Signature = computeHmac256(stringToSign);
 
-    String signature = String.format("%s %s:%s", "SharedKey", accountName,
-        computedBase64Signature);
-    connection.setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+    String signature = String
+        .format("%s %s:%s", "SharedKey", accountName, computedBase64Signature);
+    LOG.debug("Signing request with timestamp of {} and signature {}", gmtTime,
         signature);
-    LOG.debug("Signing request with timestamp of {} and signature {}",
-        gmtTime, signature);
+    return signature;
   }
 
   private String computeHmac256(final String stringToSign) {

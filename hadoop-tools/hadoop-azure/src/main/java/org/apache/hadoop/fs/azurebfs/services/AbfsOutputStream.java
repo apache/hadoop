@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -67,6 +68,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private final ThreadPoolExecutor threadExecutor;
   private final ExecutorCompletionService<Void> completionService;
 
+  private final URL dSASUrl;
   /**
    * Queue storing buffers with the size of the Azure block ready for
    * reuse. The pool allows reusing the blocks instead of allocating new
@@ -82,7 +84,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       final long position,
       final int bufferSize,
       final boolean supportFlush,
-      final boolean disableOutputStreamFlush) {
+      final boolean disableOutputStreamFlush,
+      final URL dSASUrl) {
     this.client = client;
     this.path = path;
     this.position = position;
@@ -105,6 +108,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         TimeUnit.SECONDS,
         new LinkedBlockingQueue<>());
     this.completionService = new ExecutorCompletionService<>(this.threadExecutor);
+
+    this.dSASUrl = dSASUrl;
   }
 
   /**
@@ -293,7 +298,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
                 "writeCurrentBufferToService", "append")) {
           AbfsRestOperation op = client.append(path, offset, bytes, 0,
-                  bytesLength);
+                  bytesLength, dSASUrl);
           perfInfo.registerResult(op.getResult());
           byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
           perfInfo.registerSuccess(true);
@@ -343,7 +348,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "flushWrittenBytesToServiceInternal", "flush")) {
-      AbfsRestOperation op = client.flush(path, offset, retainUncommitedData, isClose);
+      AbfsRestOperation op = client.flush(path, offset, retainUncommitedData,
+          isClose, dSASUrl);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
