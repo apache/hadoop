@@ -90,7 +90,12 @@ Hflush() being the only documented API that can provide persistent data
 transfer, Flush() also attempting to persist buffered data will lead to
 performance issues.
 
+
 ## Testing ABFS
+
+### <a name="flushconfigoptions"></a> Access Options
+Config `fs.azure.enable.check.access` needs to be set true to enable
+ the AzureBlobFileSystem.access().
 
 See the relevant section in [Testing Azure](testing_azure.html).
 
