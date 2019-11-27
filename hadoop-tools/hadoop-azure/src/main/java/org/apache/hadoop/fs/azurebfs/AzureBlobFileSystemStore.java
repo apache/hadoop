@@ -1072,6 +1072,25 @@ public class AzureBlobFileSystemStore implements Closeable {
     }
   }
 
+  public void access(final Path path, final FsAction mode)
+      throws AzureBlobFileSystemException {
+    LOG.debug("access for filesystem: {}, path: {}, mode: {}",
+        this.client.getFileSystem(), path, mode);
+    if (!this.abfsConfiguration.isCheckAccessEnabled()
+        || !getIsNamespaceEnabled()) {
+      LOG.debug("Returning; either check access is not enabled or the account"
+          + " used is not namespace enabled");
+      return;
+    }
+    try (AbfsPerfInfo perfInfo = startTracking("access", "checkAccess")) {
+      String relativePath =
+          AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true);
+      final AbfsRestOperation op = this.client
+          .checkAccess(relativePath, mode.SYMBOL);
+      perfInfo.registerResult(op.getResult()).registerSuccess(true);
+    }
+  }
+
   public boolean isAtomicRenameKey(String key) {
     return isKeyForDirectorySet(key, azureAtomicRenameDirSet);
   }
