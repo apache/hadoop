@@ -1118,7 +1118,9 @@ public class AzureBlobFileSystemStore {
       tokenProvider = abfsConfiguration.getTokenProvider();
     }
 
-    this.client =  new AbfsClient(baseUrl, creds, abfsConfiguration, new ExponentialRetryPolicy(), tokenProvider, abfsPerfTracker);
+    this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
+        new ExponentialRetryPolicy(abfsConfiguration.getMaxIoRetries()),
+        tokenProvider, abfsPerfTracker);
   }
 
   private String getOctalNotation(FsPermission fsPermission) {
