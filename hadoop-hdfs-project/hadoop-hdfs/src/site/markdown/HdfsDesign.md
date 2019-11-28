@@ -139,6 +139,9 @@ then that replica is preferred to satisfy the read request.
 If HDFS cluster spans multiple data centers,
 then a replica that is resident in the local data center is preferred over any remote replica.
 
+### Block Placement Policies
+As mentioned above when the replication factor is three, HDFS’s placement policy is to put one replica on the local machine if the writer is on a datanode, otherwise on a random datanode in the same rack as that of the writer, another replica on a node in a different (remote) rack, and the last on a different node in the same remote rack. If the replication factor is greater than 3, the placement of the 4th and following replicas are determined randomly while keeping the number of replicas per rack below the upper limit (which is basically (replicas - 1) / racks + 2). Additional to this HDFS supports 4 different pluggable [Block Placement Policies](HdfsBlockPlacementPolicies.html). Users can choose the policy based on their infrastructre and use case. By default HDFS supports BlockPlacementPolicyDefault.
+
 ### Safemode
 
 On startup, the NameNode enters a special state called Safemode. Replication of data blocks does not occur when the NameNode is in the Safemode state. The NameNode receives Heartbeat and Blockreport messages from the DataNodes. A Blockreport contains the list of data blocks that a DataNode is hosting. Each block has a specified minimum number of replicas. A block is considered safely replicated when the minimum number of replicas of that data block has checked in with the NameNode. After a configurable percentage of safely replicated data blocks checks in with the NameNode (plus an additional 30 seconds), the NameNode exits the Safemode state. It then determines the list of data blocks (if any) that still have fewer than the specified number of replicas. The NameNode then replicates these blocks to other DataNodes.
