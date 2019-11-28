@@ -316,27 +316,35 @@ public class SecureModeLocalUserAllocator {
       String localUser = appUserToLocalUser.remove(appUser).localUser;
       allocated.set(localUserInfo.localUserIndex, false);
       if (delService != null) {
-        // check if node manager usercache/<appUser>/appcache folder exists
+        // check and delete these node manager folders, which will cause permission issues later:
+        //   usercache/<appUser>/appcache
+        //   usercache/<appUser>/filecche
         for (String localDir : nmLocalDirs) {
           Path usersDir = new Path(localDir, ContainerLocalizer.USERCACHE);
           Path userDir = new Path(usersDir, appUser);
           Path userAppCacheDir = new Path(userDir, ContainerLocalizer.APPCACHE);
-          FileStatus status;
-          try {
-            status = lfs.getFileStatus(userAppCacheDir);
-          }
-          catch(FileNotFoundException fs) {
-            status = null;
-          }
-          catch(IOException ie) {
-            String msg = "Could not get file status for local dir " + userDir;
-            LOG.warn(msg, ie);
-            throw new YarnRuntimeException(msg, ie);
-          }
-          if (status != null) {
-            FileDeletionTask delTask = new FileDeletionTask(delService, localUser,
-                userAppCacheDir, null);
-            delService.delete(delTask);
+          Path userFileCacheDir = new Path(userDir, ContainerLocalizer.FILECACHE);
+          ArrayList<Path> toDelete = new ArrayList<Path>();
+          toDelete.add(userAppCacheDir);
+          toDelete.add(userFileCacheDir);
+
+          for (Path dir : toDelete) {
+            FileStatus status = null;
+            try {
+              status = lfs.getFileStatus(userAppCacheDir);
+            }
+            catch(FileNotFoundException fs) {
+            }
+            catch(IOException ie) {
+              String msg = "Could not get file status for local dir " + dir;
+              LOG.warn(msg, ie);
+              throw new YarnRuntimeException(msg, ie);
+            }
+            if (status != null) {
+              FileDeletionTask delTask = new FileDeletionTask(delService, localUser,
+                dir, null);
+              delService.delete(delTask);
+            }
           }
         }
       }
