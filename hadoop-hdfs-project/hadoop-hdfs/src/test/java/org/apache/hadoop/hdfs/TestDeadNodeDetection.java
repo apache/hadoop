@@ -51,6 +51,11 @@ public class TestDeadNodeDetection {
   public void setUp() {
     cluster = null;
     conf = new HdfsConfiguration();
+    conf.setBoolean(DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY, true);
+    conf.setLong(
+        DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_DEAD_NODE_INTERVAL_MS_KEY, 1000);
+    conf.setLong(
+        DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_SUSPECT_NODE_INTERVAL_MS_KEY, 100);
   }
 
   @After
@@ -62,15 +67,6 @@ public class TestDeadNodeDetection {
 
   @Test
   public void testDeadNodeDetectionInBackground() throws Exception {
-    conf = new HdfsConfiguration();
-    conf.setBoolean(DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY, true);
-    conf.setLong(DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_DEAD_NODE_INTERVAL_MS_KEY,
-        1000);
-    conf.setLong(
-        DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_SUSPECT_NODE_INTERVAL_MS_KEY, 100);
-    // We'll be using a 512 bytes block size just for tests
-    // so making sure the checksum bytes match it too.
-    conf.setInt("io.bytes.per.checksum", 512);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
 
@@ -123,10 +119,6 @@ public class TestDeadNodeDetection {
   @Test
   public void testDeadNodeDetectionInMultipleDFSInputStream()
       throws IOException {
-    conf.setBoolean(DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY, true);
-    // We'll be using a 512 bytes block size just for tests
-    // so making sure the checksum bytes match it too.
-    conf.setInt("io.bytes.per.checksum", 512);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
 
@@ -149,8 +141,9 @@ public class TestDeadNodeDetection {
       } catch (BlockMissingException e) {
       }
 
-      din2 = (DFSInputStream) in1.getWrappedStream();
+      din2 = (DFSInputStream) in2.getWrappedStream();
       dfsClient2 = din2.getDFSClient();
+      assertEquals(dfsClient1.toString(), dfsClient2.toString());
       assertEquals(1, dfsClient1.getDeadNodes(din1).size());
       assertEquals(1, dfsClient2.getDeadNodes(din2).size());
       assertEquals(1, dfsClient1.getClientContext().getDeadNodeDetector()
@@ -180,12 +173,6 @@ public class TestDeadNodeDetection {
 
   @Test
   public void testDeadNodeDetectionDeadNodeRecovery() throws Exception {
-    conf.setBoolean(DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY, true);
-    conf.setLong(DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_DEAD_NODE_INTERVAL_MS_KEY,
-        1000);
-    // We'll be using a 512 bytes block size just for tests
-    // so making sure the checksum bytes match it too.
-    conf.setInt("io.bytes.per.checksum", 512);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
 
@@ -228,13 +215,7 @@ public class TestDeadNodeDetection {
 
   @Test
   public void testDeadNodeDetectionMaxDeadNodesProbeQueue() throws Exception {
-    conf.setBoolean(DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY, true);
-    conf.setLong(DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_DEAD_NODE_INTERVAL_MS_KEY,
-        1000);
     conf.setInt(DFS_CLIENT_DEAD_NODE_DETECTION_DEAD_NODE_QUEUE_MAX_KEY, 1);
-    // We'll be using a 512 bytes block size just for tests
-    // so making sure the checksum bytes match it too.
-    conf.setInt("io.bytes.per.checksum", 512);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
 
@@ -268,12 +249,7 @@ public class TestDeadNodeDetection {
 
   @Test
   public void testDeadNodeDetectionSuspectNode() throws Exception {
-    conf = new HdfsConfiguration();
-    conf.setBoolean(DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY, true);
     conf.setInt(DFS_CLIENT_DEAD_NODE_DETECTION_SUSPECT_NODE_QUEUE_MAX_KEY, 1);
-    // We'll be using a 512 bytes block size just for tests
-    // so making sure the checksum bytes match it too.
-    conf.setInt("io.bytes.per.checksum", 512);
     DeadNodeDetector.disabledProbeThreadForTest();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
