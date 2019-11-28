@@ -475,12 +475,16 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptStateInternal.COMMIT_PENDING,
          TaskAttemptEventType.TA_COMMIT_PENDING)
 
-     // Transitions from SUCCESS_CONTAINER_CLEANUP state
-     // kill and cleanup the container
-     .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
-         TaskAttemptStateInternal.SUCCEEDED,
-         TaskAttemptEventType.TA_CONTAINER_CLEANED)
-     .addTransition(
+      // Transitions from SUCCESS_CONTAINER_CLEANUP state
+      // kill and cleanup the container
+      .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
+          TaskAttemptStateInternal.SUCCEEDED,
+          TaskAttemptEventType.TA_CONTAINER_CLEANED)
+      .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
+          TaskAttemptStateInternal.FAILED,
+          TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE,
+          new TooManyFetchFailureTransition())
+      .addTransition(
           TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
           TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
           TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
