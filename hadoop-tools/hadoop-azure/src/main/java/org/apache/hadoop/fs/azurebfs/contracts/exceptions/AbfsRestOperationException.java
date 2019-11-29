@@ -25,6 +25,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 
+import java.io.IOException;
+
 /**
  * Exception to wrap Azure service error responses.
  */
@@ -100,4 +102,24 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
             // Remove break line to ensure the request id and timestamp can be shown in console.
             abfsHttpOperation.getStorageErrorMessage().replaceAll("\\n", " "));
   }
+
+/*  /**
+   * Exception raised on ABFS Authorization failures.
+   *//*
+  public static class AbfsAuthorizationException extends IOException {
+
+    private static final long serialVersionUID = 1L;
+
+    public AbfsAuthorizationException(String message, Exception e) {
+      super(message, e);
+    }
+
+    public AbfsAuthorizationException(String message) {
+      super(message);
+    }
+
+    public AbfsAuthorizationException(Throwable e) {
+      super(e);
+    }
+  }*/
 }

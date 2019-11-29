@@ -47,7 +47,7 @@ public class AbfsStoreAuthenticator {
   public static final Logger LOG = LoggerFactory
       .getLogger(AbfsStoreAuthenticator.class);
   private AuthType authType;
-  private URL dSASUrl;
+  private String sasToken;
   private SharedKeyCredentials creds;
   private AccessTokenProvider tokenProvider;
 
@@ -60,10 +60,11 @@ public class AbfsStoreAuthenticator {
    * @param uri
    * @throws IOException
    */
+  // TODO: get accountname from baseUrl
   public AbfsStoreAuthenticator(AbfsConfiguration abfsConfiguration,
       String accountName, URI uri) throws IOException {
     this.authType = abfsConfiguration.getAuthType(accountName);
-    dSASUrl = null;
+    sasToken = null;
 
     switch (this.authType) {
     case OAuth:
@@ -80,7 +81,7 @@ public class AbfsStoreAuthenticator {
       creds = new SharedKeyCredentials(accountName.substring(0, dotIndex),
           abfsConfiguration.getStorageAccountKey());
       break;
-    case UserDelegationSAS:
+    case SAS: // new type - "SAS"
       if (abfsConfiguration.getAbfsAuthorizer().getClass() == null) {
         throw new UnsupportedOperationException(
             "There is no " + "Authorizer configured");
@@ -95,24 +96,20 @@ public class AbfsStoreAuthenticator {
    *
    * @param storeAuthenticator
    */
-  private AbfsStoreAuthenticator(AbfsStoreAuthenticator storeAuthenticator) {
-    this.authType = storeAuthenticator.authType;
-    this.dSASUrl = storeAuthenticator.dSASUrl;
-    this.creds = storeAuthenticator.creds;
-    this.tokenProvider = storeAuthenticator.tokenProvider;
+  private AbfsStoreAuthenticator() {
   }
 
   /**
    * Gets an instance of AbfsStoreAuthenticator for DSAS
    *
-   * @param dSASUrl
+   * @param sasToken
    * @return
    */
-  public AbfsStoreAuthenticator getAbfsStoreAuthenticatorForDSAS(
-      final URL dSASUrl) {
-    AbfsStoreAuthenticator instance = new AbfsStoreAuthenticator(this);
-    instance.authType = AuthType.UserDelegationSAS;
-    instance.dSASUrl = dSASUrl;
+  public static AbfsStoreAuthenticator getAbfsStoreAuthenticatorForSAS(
+      final String sasToken) {
+    AbfsStoreAuthenticator instance = new AbfsStoreAuthenticator();
+    instance.authType = AuthType.SAS;
+    instance.sasToken = sasToken;
     return instance;
   }
 
@@ -154,8 +151,8 @@ public class AbfsStoreAuthenticator {
     }
   }
 
-  public URL getSasUrl() {
-    return dSASUrl;
+  public String getSasToken() {
+    return this.sasToken;
   }
 
   public void close() {

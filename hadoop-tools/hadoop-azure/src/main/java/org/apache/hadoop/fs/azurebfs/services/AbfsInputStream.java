@@ -29,6 +29,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.fs.azurebfs.authentication.AbfsAuthorizerResult;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 
@@ -54,7 +55,7 @@ public class AbfsInputStream extends FSInputStream {
   private int limit = 0;     // offset of next byte to be read into buffer from service (i.e., upper marker+1
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
-  private URL dSASUrl;
+  private AbfsAuthorizerResult authorizerResult;
 
   public AbfsInputStream(
       final AbfsClient client,
@@ -64,8 +65,7 @@ public class AbfsInputStream extends FSInputStream {
       final int bufferSize,
       final int readAheadQueueDepth,
       final boolean tolerateOobAppends,
-      final String eTag,
-      final URL dSASUrl) {
+      final String eTag) {
     this.client = client;
     this.statistics = statistics;
     this.path = path;
@@ -75,7 +75,7 @@ public class AbfsInputStream extends FSInputStream {
     this.tolerateOobAppends = tolerateOobAppends;
     this.eTag = eTag;
     this.readAheadEnabled = true;
-    this.dSASUrl = dSASUrl;
+    this.authorizerResult.setAuthorizationStatusFetched(false);
   }
 
   public String getPath() {
@@ -233,8 +233,12 @@ public class AbfsInputStream extends FSInputStream {
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       op = client.read(path, position, b, offset, length, tolerateOobAppends
-          ? "*" : eTag, dSASUrl);
+          ? "*" : eTag, authorizerResult);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
+        AbfsAuthorizerResult authorizerResult = op.getAuthorizerResult();
+        if (authorizerResult.isAuthorizationStatusFetched()) {
+          this.authorizerResult = authorizerResult;
+        }
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
         AbfsRestOperationException ere = (AbfsRestOperationException) ex;

@@ -24,5 +24,5 @@ public enum AuthType {
     SharedKey,
     OAuth,
     Custom,
-    UserDelegationSAS
+    SAS
 }

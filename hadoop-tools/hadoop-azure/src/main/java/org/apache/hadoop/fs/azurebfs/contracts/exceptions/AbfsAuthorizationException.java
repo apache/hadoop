@@ -16,26 +16,18 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.extensions;
+package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
 
 import java.io.IOException;
 
 /**
  * Exception raised on ABFS Authorization failures.
  */
-public class AbfsAuthorizationException extends IOException {
+public class AbfsAuthorizationException extends AzureBlobFileSystemException {
 
   private static final long serialVersionUID = 1L;
 
   public AbfsAuthorizationException(String message, Exception e) {
     super(message, e);
-  }
-
-  public AbfsAuthorizationException(String message) {
-    super(message);
-  }
-
-  public AbfsAuthorizationException(Throwable e) {
-    super(e);
   }
 }

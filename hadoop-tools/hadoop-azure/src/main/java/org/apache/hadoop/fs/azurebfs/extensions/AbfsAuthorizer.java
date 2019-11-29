@@ -19,11 +19,12 @@
 package org.apache.hadoop.fs.azurebfs.extensions;
 
 import java.io.IOException;
-import java.net.URL;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 import org.apache.hadoop.fs.permission.FsAction;
 
 /**
@@ -36,11 +37,11 @@ public interface AbfsAuthorizer {
   /**
    * Initialize authorizer for Azure Blob File System.
    *
-   * @throws AbfsAuthorizationException if unable to initialize the authorizer.
+   * @throws AbfsRestOperationException.AbfsAuthorizationException if unable to initialize the authorizer.
    * @throws IOException network problems or similar.
    * @throws IllegalArgumentException if the required parameters are not provided.
    */
-  void init() throws AbfsAuthorizationException, IOException;
+  void init() throws AbfsRestOperationException.AbfsAuthorizationException, IOException;
 
   /**
    * Checks if the provided {@link FsAction} is allowed on the provided {@link Path}s.
@@ -48,16 +49,17 @@ public interface AbfsAuthorizer {
    * @param action the {@link FsAction} being requested on the provided {@link Path}s.
    * @param absolutePaths The absolute paths of the storage being accessed.
    * @return true if authorized, otherwise false.
-   * @throws AbfsAuthorizationException on authorization failure.
+   * @throws AbfsRestOperationException.AbfsAuthorizationException on authorization failure.
    * @throws IOException network problems or similar.
    * @throws IllegalArgumentException if the required parameters are not provided.
    */
-  boolean isAuthorized(FsAction action, Path... absolutePaths)
-      throws AbfsAuthorizationException, IOException;
+  boolean isAuthorized(AbfsRestOperationType operationType,
+      String relativePathFromAbfsFileSystemRoot)
+      throws AbfsRestOperationException.AbfsAuthorizationException, IOException;
 
   /**
    * Will return User Delegation SAS URI as string for path that was authorized
    * @return
    */
-  URL getDSASUrl();
+  String getSASToken();//TODO: Qp string
 }

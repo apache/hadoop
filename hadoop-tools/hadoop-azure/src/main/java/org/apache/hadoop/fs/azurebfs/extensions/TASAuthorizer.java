@@ -19,8 +19,11 @@
 package org.apache.hadoop.fs.azurebfs.extensions;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 import org.apache.hadoop.fs.permission.FsAction;
 
+import java.io.IOException;
 import java.net.URL;
 
 /**
@@ -38,6 +41,16 @@ public class TASAuthorizer implements AbfsAuthorizer {
   }
 
   @Override
+  public boolean isAuthorized(AbfsRestOperationType operationType,
+      String relativePathFromAbfsFileSystemRoot) {
+    return false;
+  }
+
+  @Override
+  public String getSASToken() {
+    return null;
+  }
+
   public boolean isAuthorized(FsAction action, Path... absolutePaths) {
     // Trigger request to TAS
     // 1. Save isAuthorized
@@ -82,8 +95,4 @@ public class TASAuthorizer implements AbfsAuthorizer {
     return isAuthorized;
   }
 
-  @Override
-  public URL getDSASUrl() {
-    return dSASUrl;
-  }
 }

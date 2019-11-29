@@ -37,12 +37,17 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.fs.azurebfs.authentication.AbfsAuthorizerResult;
+import org.apache.hadoop.fs.azurebfs.authentication.AbfsStoreAuthenticator;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The BlobFsOutputStream for Rest AbfsClient.
@@ -66,9 +71,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   private ConcurrentLinkedDeque<WriteOperation> writeOperations;
   private final ThreadPoolExecutor threadExecutor;
-  private final ExecutorCompletionService<Void> completionService;
+  private final ExecutorCompletionService<AbfsAuthorizerResult> completionService;
+  private AbfsAuthorizerResult authorizerResult;
 
-  private final URL dSASUrl;
   /**
    * Queue storing buffers with the size of the Azure block ready for
    * reuse. The pool allows reusing the blocks instead of allocating new
@@ -77,6 +82,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
    */
   private final ElasticByteBufferPool byteBufferPool
           = new ElasticByteBufferPool();
+  public static final Logger LOG = LoggerFactory.getLogger(AbfsOutputStream.class);
 
   public AbfsOutputStream(
       final AbfsClient client,
@@ -84,9 +90,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       final long position,
       final int bufferSize,
       final boolean supportFlush,
-      final boolean disableOutputStreamFlush,
-      final URL dSASUrl) {
+      final boolean disableOutputStreamFlush) {
     this.client = client;
+
     this.path = path;
     this.position = position;
     this.closed = false;
@@ -107,9 +113,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         10L,
         TimeUnit.SECONDS,
         new LinkedBlockingQueue<>());
-    this.completionService = new ExecutorCompletionService<>(this.threadExecutor);
-
-    this.dSASUrl = dSASUrl;
+    this.completionService =
+        new ExecutorCompletionService<AbfsAuthorizerResult>(this.threadExecutor);
+    authorizerResult.setAuthorizationStatusFetched(false);
   }
 
   /**
@@ -291,18 +297,24 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       waitForTaskToComplete();
     }
 
-    final Future<Void> job = completionService.submit(new Callable<Void>() {
+    final Future<AbfsAuthorizerResult> job = completionService.submit(new Callable<AbfsAuthorizerResult>() {
       @Override
-      public Void call() throws Exception {
+      public AbfsAuthorizerResult call() throws Exception {
         AbfsPerfTracker tracker = client.getAbfsPerfTracker();
         try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
                 "writeCurrentBufferToService", "append")) {
           AbfsRestOperation op = client.append(path, offset, bytes, 0,
-                  bytesLength, dSASUrl);
+                  bytesLength, authorizerResult);
           perfInfo.registerResult(op.getResult());
           byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
           perfInfo.registerSuccess(true);
-          return null;
+          if (op.getAuthorizerResult().isAuthorizationStatusFetched())
+          {
+            return op.getAuthorizerResult();
+          }
+          else {
+            return null;
+          }
         }
       }
     });
@@ -316,7 +328,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private synchronized void flushWrittenBytesToService(boolean isClose) throws IOException {
     for (WriteOperation writeOperation : writeOperations) {
       try {
-        writeOperation.task.get();
+        AbfsAuthorizerResult authorizerResult = writeOperation.task.get();
+        if (authorizerResult.isAuthorizationStatusFetched())
+        {
+          this.authorizerResult = authorizerResult;
+        }
       } catch (Exception ex) {
         if (ex.getCause() instanceof AbfsRestOperationException) {
           if (((AbfsRestOperationException) ex.getCause()).getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
@@ -349,7 +365,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "flushWrittenBytesToServiceInternal", "flush")) {
       AbfsRestOperation op = client.flush(path, offset, retainUncommitedData,
-          isClose, dSASUrl);
+          isClose, authorizerResult);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
@@ -400,11 +416,12 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   }
 
   private static class WriteOperation {
-    private final Future<Void> task;
+    private final Future<AbfsAuthorizerResult> task;
     private final long startOffset;
     private final long length;
 
-    WriteOperation(final Future<Void> task, final long startOffset, final long length) {
+    WriteOperation(final Future<AbfsAuthorizerResult> task, final long startOffset,
+        final long length) {
       Preconditions.checkNotNull(task, "task");
       Preconditions.checkArgument(startOffset >= 0, "startOffset");
       Preconditions.checkArgument(length >= 0, "length");
