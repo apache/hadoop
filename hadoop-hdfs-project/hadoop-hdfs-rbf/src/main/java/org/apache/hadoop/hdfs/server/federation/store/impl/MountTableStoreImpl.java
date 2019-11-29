@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.store.impl;
 
+import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
@@ -25,7 +27,6 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.hdfs.server.federation.router.FederationUtil;
 import org.apache.hadoop.hdfs.server.federation.router.RouterAdminServer;
 import org.apache.hadoop.hdfs.server.federation.router.RouterPermissionChecker;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
@@ -140,7 +141,7 @@ public class MountTableStoreImpl extends MountTableStore {
       while (it.hasNext()) {
         MountTable record = it.next();
         String srcPath = record.getSourcePath();
-        if (!FederationUtil.isParentEntry(srcPath, reqSrcPath)) {
+        if (!isParentEntry(srcPath, reqSrcPath)) {
           it.remove();
         } else if (pc != null) {
           // do the READ permission check

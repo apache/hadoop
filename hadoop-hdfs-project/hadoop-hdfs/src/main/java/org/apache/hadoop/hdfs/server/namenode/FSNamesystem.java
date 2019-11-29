@@ -89,6 +89,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
@@ -5665,7 +5666,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         skip++;
         if (inode != null) {
           String src = inode.getFullPathName();
-          if (src.startsWith(path)){
+          if (isParentEntry(src, path)) {
             corruptFiles.add(new CorruptFileBlockInfo(src, blk));
             count++;
             if (count >= maxCorruptFileBlocksReturn)
