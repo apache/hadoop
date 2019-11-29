@@ -1171,8 +1171,14 @@ public class TestFsck {
     outStr = runFsck(conf, 0, true, "/goodData", "-list-corruptfileblocks");
     System.out.println("3. good fsck out: " + outStr);
     assertTrue(outStr.contains("has 0 CORRUPT files"));
-    util.cleanup(fs, "/corruptData");
     util.cleanup(fs, "/goodData");
+
+    // validate if a directory have any invalid entries
+    util.createFiles(fs, "/corruptDa");
+    outStr = runFsck(conf, 0, true, "/corruptDa", "-list-corruptfileblocks");
+    assertTrue(outStr.contains("has 0 CORRUPT files"));
+    util.cleanup(fs, "/corruptData");
+    util.cleanup(fs, "/corruptDa");
   }
   
   /**

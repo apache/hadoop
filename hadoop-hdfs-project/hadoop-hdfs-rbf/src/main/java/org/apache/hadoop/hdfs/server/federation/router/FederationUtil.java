@@ -27,7 +27,6 @@ import java.net.URLConnection;
 import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -222,25 +221,6 @@ public final class FederationUtil {
         RBFConfigKeys.DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS_DEFAULT,
         AbstractDelegationTokenSecretManager.class);
     return newInstance(conf, null, null, clazz);
-  }
-
-  /**
-   * Check if the given path is the child of parent path.
-   * @param path Path to be check.
-   * @param parent Parent path.
-   * @return True if parent path is parent entry for given path.
-   */
-  public static boolean isParentEntry(final String path, final String parent) {
-    if (!path.startsWith(parent)) {
-      return false;
-    }
-
-    if (path.equals(parent)) {
-      return true;
-    }
-
-    return path.charAt(parent.length()) == Path.SEPARATOR_CHAR
-        || parent.equals(Path.SEPARATOR);
   }
 
   /**

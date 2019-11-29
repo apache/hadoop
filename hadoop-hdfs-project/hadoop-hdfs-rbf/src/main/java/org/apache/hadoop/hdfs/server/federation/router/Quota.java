@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -217,7 +219,7 @@ public class Quota {
       boolean isChildPath = false;
 
       for (RemoteLocation d : dests) {
-        if (FederationUtil.isParentEntry(loc.getDest(), d.getDest())) {
+        if (isParentEntry(loc.getDest(), d.getDest())) {
           isChildPath = true;
           break;
         }
