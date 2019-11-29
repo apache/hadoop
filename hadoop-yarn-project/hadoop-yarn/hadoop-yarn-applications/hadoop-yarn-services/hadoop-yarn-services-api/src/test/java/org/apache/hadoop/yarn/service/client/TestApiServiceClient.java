@@ -91,7 +91,7 @@ public class TestApiServiceClient {
   @BeforeClass
   public static void setup() throws Exception {
     server = new Server(8088);
-    ((QueuedThreadPool)server.getThreadPool()).setMaxThreads(10);
+    ((QueuedThreadPool)server.getThreadPool()).setMaxThreads(20);
     ServletContextHandler context = new ServletContextHandler();
     context.setContextPath("/app");
     server.setHandler(context);
