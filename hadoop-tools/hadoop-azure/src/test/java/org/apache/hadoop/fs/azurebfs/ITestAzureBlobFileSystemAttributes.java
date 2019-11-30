@@ -18,16 +18,15 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.IOException;
+import java.util.EnumSet;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.junit.Assume;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.util.EnumSet;
-
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.XMS_PROPERTIES_ENCODING;
-import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
