@@ -651,8 +651,7 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public void setXAttr(Path path, String name, byte[] value, EnumSet<XAttrSetFlag> flag)
       throws IOException {
-    LOG.debug(
-        "AzureBlobFileSystem.setXAttr path: {}", path);
+    LOG.debug("AzureBlobFileSystem.setXAttr path: {}", path);
 
     if (name == null || name.isEmpty() || value == null) {
       throw new IllegalArgumentException("A valid name and value must be specified.");
@@ -688,8 +687,7 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public byte[] getXAttr(Path path, String name)
       throws IOException {
-    LOG.debug(
-        "AzureBlobFileSystem.getXAttr path: {}", path);
+    LOG.debug("AzureBlobFileSystem.getXAttr path: {}", path);
 
     if (name == null || name.isEmpty()) {
       throw new IllegalArgumentException("A valid name must be specified.");
