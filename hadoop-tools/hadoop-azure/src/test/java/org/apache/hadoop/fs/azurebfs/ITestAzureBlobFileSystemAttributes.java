@@ -28,6 +28,7 @@ import java.util.EnumSet;
 
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.XMS_PROPERTIES_ENCODING;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test attribute operations.
@@ -78,12 +79,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     assertArrayEquals(attributeValue, fs.getXAttr(testFile, attributeName));
 
     // however after the xAttr is created, creating it again must fail
-    try {
-      fs.setXAttr(testFile, attributeName, attributeValue, CREATE_FLAG);
-      fail("Creating an existing xAttr should fail");
-    } catch (IOException ex) {
-      assertExceptionContains("XAttr: " + attributeName + " already exists.", ex);
-    }
+    intercept(IOException.class, () -> fs.setXAttr(testFile, attributeName, attributeValue, CREATE_FLAG));
   }
 
   @Test
@@ -96,13 +92,10 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     Path testFile = path("replaceXAttr");
 
     // after creating a file, it must not be possible to replace an xAttr
-    try {
+    intercept(IOException.class, () -> {
       touch(testFile);
       fs.setXAttr(testFile, attributeName, attributeValue1, REPLACE_FLAG);
-      fail("Replacing a non-existing xAttr should fail");
-    } catch (IOException ex) {
-      assertExceptionContains("XAttr: " + attributeName + " does not exist.", ex);
-    }
+    });
 
     // however after the xAttr is created, replacing it must succeed
     fs.setXAttr(testFile, attributeName, attributeValue1, CREATE_FLAG);

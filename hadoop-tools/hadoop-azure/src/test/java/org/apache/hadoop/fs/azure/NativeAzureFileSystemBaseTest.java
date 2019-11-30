@@ -54,6 +54,7 @@ import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.readStringFr
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.writeStringToFile;
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.writeStringToStream;
 import static org.apache.hadoop.test.GenericTestUtils.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /*
  * Tests the Native Azure file system (WASB) against an actual blob store if
@@ -158,12 +159,7 @@ public abstract class NativeAzureFileSystemBaseTest
     assertArrayEquals(attributeValue, fs.getXAttr(testFile, attributeName));
 
     // however after the xAttr is created, creating it again must fail
-    try {
-      fs.setXAttr(testFile, attributeName, attributeValue, CREATE_FLAG);
-      fail("Creating an existing xAttr should fail");
-    } catch (IOException ex) {
-      assertExceptionContains("XAttr: " + attributeName + " already exists.", ex);
-    }
+    intercept(IOException.class, () -> fs.setXAttr(testFile, attributeName, attributeValue, CREATE_FLAG));
   }
 
   @Test
@@ -175,12 +171,7 @@ public abstract class NativeAzureFileSystemBaseTest
 
     // after creating a file, it must not be possible to replace an xAttr
     createEmptyFile(testFile, FsPermission.createImmutable(READ_WRITE_PERMISSIONS));
-    try {
-      fs.setXAttr(testFile, attributeName, attributeValue1, REPLACE_FLAG);
-      fail("Replacing a non-existing xAttr should fail");
-    } catch (IOException ex) {
-      assertExceptionContains("XAttr: " + attributeName + " does not exist.", ex);
-    }
+    intercept(IOException.class, () -> fs.setXAttr(testFile, attributeName, attributeValue1, REPLACE_FLAG));
 
     // however after the xAttr is created, replacing it must succeed
     fs.setXAttr(testFile, attributeName, attributeValue1, CREATE_FLAG);
