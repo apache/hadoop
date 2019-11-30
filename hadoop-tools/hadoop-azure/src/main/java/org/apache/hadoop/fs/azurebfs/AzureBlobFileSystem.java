@@ -649,7 +649,7 @@ public class AzureBlobFileSystem extends FileSystem {
    * @throws IllegalArgumentException If name is null or empty or if value is null
    */
   @Override
-  public void setXAttr(Path path, String name, byte[] value, EnumSet<XAttrSetFlag> flag)
+  public void setXAttr(final Path path, final String name, final byte[] value, final EnumSet<XAttrSetFlag> flag)
       throws IOException {
     LOG.debug("AzureBlobFileSystem.setXAttr path: {}", path);
 
@@ -685,7 +685,7 @@ public class AzureBlobFileSystem extends FileSystem {
    * @throws IllegalArgumentException If name is null or empty
    */
   @Override
-  public byte[] getXAttr(Path path, String name)
+  public byte[] getXAttr(final Path path, final String name)
       throws IOException {
     LOG.debug("AzureBlobFileSystem.getXAttr path: {}", path);
 
