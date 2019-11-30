@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -123,7 +124,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   private String primaryUserGroup;
   private static final String DATE_TIME_PATTERN = "E, dd MMM yyyy HH:mm:ss z";
   private static final String TOKEN_DATE_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS'Z'";
-  static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
+  private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int LIST_MAX_RESULTS = 500;
   private static final int GET_SET_AGGREGATE_COUNT = 2;
 
@@ -195,6 +196,14 @@ public class AzureBlobFileSystemStore implements Closeable {
   @Override
   public void close() throws IOException {
     IOUtils.cleanupWithLogger(LOG, client);
+  }
+
+  byte[] encodeAttribute(String value) throws UnsupportedEncodingException {
+    return value.getBytes(XMS_PROPERTIES_ENCODING);
+  }
+
+  String decodeAttribute(byte[] value) throws UnsupportedEncodingException {
+    return new String(value, XMS_PROPERTIES_ENCODING);
   }
 
   private String[] authorityParts(URI uri) throws InvalidUriAuthorityException, InvalidUriException {

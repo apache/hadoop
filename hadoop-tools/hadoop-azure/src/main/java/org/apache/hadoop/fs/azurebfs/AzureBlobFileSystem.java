@@ -666,7 +666,7 @@ public class AzureBlobFileSystem extends FileSystem {
       boolean xAttrExists = properties.containsKey(xAttrName);
       XAttrSetFlag.validate(name, xAttrExists, flag);
 
-      String xAttrValue = new String(value, AzureBlobFileSystemStore.XMS_PROPERTIES_ENCODING);
+      String xAttrValue = abfsStore.decodeAttribute(value);
       properties.put(xAttrName, xAttrValue);
       abfsStore.setPathProperties(path, properties);
     } catch (AzureBlobFileSystemException ex) {
@@ -702,7 +702,7 @@ public class AzureBlobFileSystem extends FileSystem {
       String xAttrName = ensureValidAttributeName(name);
       if (properties.containsKey(xAttrName)) {
         String xAttrValue = properties.get(xAttrName);
-        value = xAttrValue.getBytes(AzureBlobFileSystemStore.XMS_PROPERTIES_ENCODING);
+        value = abfsStore.encodeAttribute(xAttrValue);
       }
     } catch (AzureBlobFileSystemException ex) {
       checkException(path, ex);

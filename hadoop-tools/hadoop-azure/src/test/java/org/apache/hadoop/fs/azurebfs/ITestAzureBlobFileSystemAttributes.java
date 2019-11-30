@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.junit.Assume;
 import org.junit.Test;
 
-import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.XMS_PROPERTIES_ENCODING;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -44,8 +43,9 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
   public void testSetGetXAttr() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     Assume.assumeTrue(fs.getIsNamespaceEnabled());
-    byte[] attributeValue1 = "hi".getBytes(XMS_PROPERTIES_ENCODING);
-    byte[] attributeValue2 = "你好".getBytes(XMS_PROPERTIES_ENCODING);
+
+    byte[] attributeValue1 = fs.getAbfsStore().encodeAttribute("hi");
+    byte[] attributeValue2 = fs.getAbfsStore().encodeAttribute("你好");
     String attributeName1 = "user.asciiAttribute";
     String attributeName2 = "user.unicodeAttribute";
     Path testFile = path("setGetXAttr");
@@ -68,7 +68,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
   public void testSetGetXAttrCreateReplace() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     Assume.assumeTrue(fs.getIsNamespaceEnabled());
-    byte[] attributeValue = "one".getBytes(XMS_PROPERTIES_ENCODING);
+    byte[] attributeValue = fs.getAbfsStore().encodeAttribute("one");
     String attributeName = "user.someAttribute";
     Path testFile = path("createReplaceXAttr");
 
@@ -85,8 +85,8 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
   public void testSetGetXAttrReplace() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     Assume.assumeTrue(fs.getIsNamespaceEnabled());
-    byte[] attributeValue1 = "one".getBytes(XMS_PROPERTIES_ENCODING);
-    byte[] attributeValue2 = "two".getBytes(XMS_PROPERTIES_ENCODING);
+    byte[] attributeValue1 = fs.getAbfsStore().encodeAttribute("one");
+    byte[] attributeValue2 = fs.getAbfsStore().encodeAttribute("two");
     String attributeName = "user.someAttribute";
     Path testFile = path("replaceXAttr");
 
