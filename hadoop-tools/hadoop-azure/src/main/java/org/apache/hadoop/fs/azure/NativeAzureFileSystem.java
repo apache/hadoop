@@ -3576,13 +3576,10 @@ public class NativeAzureFileSystem extends FileSystem {
   @Override
   public void setXAttr(Path path, String xAttrName, byte[] value, EnumSet<XAttrSetFlag> flag) throws IOException {
     Path absolutePath = makeAbsolute(path);
-
     performAuthCheck(absolutePath, WasbAuthorizationOperations.WRITE, "setXAttr", absolutePath);
 
     String key = pathToKey(absolutePath);
-
     FileMetadata metadata;
-
     try {
       metadata = store.retrieveMetadata(key);
     } catch (IOException ex) {
@@ -3590,7 +3587,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
       if (innerException instanceof StorageException
           && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
-
         throw new FileNotFoundException("File " + path + " doesn't exists.");
       }
 
@@ -3602,7 +3598,6 @@ public class NativeAzureFileSystem extends FileSystem {
     }
 
     boolean xAttrExists = store.retrieveAttribute(key, xAttrName) != null;
-
     XAttrSetFlag.validate(xAttrName, xAttrExists, flag);
 
     store.storeAttribute(key, xAttrName, value);
@@ -3620,13 +3615,10 @@ public class NativeAzureFileSystem extends FileSystem {
   @Override
   public byte[] getXAttr(Path path, String xAttrName) throws IOException {
     Path absolutePath = makeAbsolute(path);
-
     performAuthCheck(absolutePath, WasbAuthorizationOperations.READ, "getXAttr", absolutePath);
 
     String key = pathToKey(absolutePath);
-
     FileMetadata metadata;
-
     try {
       metadata = store.retrieveMetadata(key);
     } catch (IOException ex) {
@@ -3634,7 +3626,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
       if (innerException instanceof StorageException
               && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
-
         throw new FileNotFoundException("File " + path + " doesn't exists.");
       }
 
