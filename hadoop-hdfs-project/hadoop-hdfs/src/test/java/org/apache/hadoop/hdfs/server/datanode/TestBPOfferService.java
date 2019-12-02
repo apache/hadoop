@@ -998,7 +998,8 @@ public class TestBPOfferService {
         Mockito.any(VolumeFailureSummary.class),
         Mockito.anyBoolean(),
         Mockito.any(SlowPeerReports.class),
-        Mockito.any(SlowDiskReports.class)))
+        Mockito.any(SlowDiskReports.class),
+        Mockito.any(BulkSyncTaskExecutionFeedback.class)))
         //heartbeat to old NN instance
         .thenAnswer(new HeartbeatAnswer(0))
         //heartbeat to new NN instance with Register Command
