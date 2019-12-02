@@ -176,8 +176,8 @@ public class TestBatchedListDirectories {
     List<Path> paths = Lists.newArrayList(EMPTY_DIR_PATH);
     List<PartialListing<FileStatus>> listings = getListings(paths);
     assertEquals(1, listings.size());
-    PartialListing listing = listings.get(0);
-    assertEquals(EMPTY_DIR_PATH, listing.getParent());
+    PartialListing<FileStatus> listing = listings.get(0);
+    assertEquals(EMPTY_DIR_PATH, listing.getListedPath());
     assertEquals(0, listing.get().size());
   }
   @Test
@@ -207,8 +207,8 @@ public class TestBatchedListDirectories {
     paths.add(new Path("/does/not/exist"));
     List<PartialListing<FileStatus>> listings = getListings(paths);
     for (int i = 0; i < listings.size(); i++) {
-      PartialListing partial = listings.get(i);
-      if (partial.getParent().toString().equals("/does/not/exist")) {
+      PartialListing<FileStatus> partial = listings.get(i);
+      if (partial.getListedPath().toString().equals("/does/not/exist")) {
         try {
           partial.get();
           fail("Expected exception");
@@ -284,10 +284,10 @@ public class TestBatchedListDirectories {
     List<PartialListing<FileStatus>> listings = getListings(paths);
 
     LinkedHashMap<Path, List<FileStatus>> listing = new LinkedHashMap<>();
-    for (PartialListing partialListing : listings) {
-      Path parent = partialListing.getParent();
+    for (PartialListing<FileStatus> partialListing : listings) {
+      Path parent = partialListing.getListedPath();
       if (!listing.containsKey(parent)) {
-        listing.put(parent, Lists.<FileStatus>newArrayList());
+        listing.put(parent, Lists.newArrayList());
       }
       listing.get(parent).addAll(partialListing.get());
     }
@@ -399,7 +399,6 @@ public class TestBatchedListDirectories {
     thrown.expect(AccessControlException.class);
     List<Path> paths = Lists.newArrayList(INACCESSIBLE_DIR_PATH);
     listAsNormalUser(paths);
-    return;
   }
 
   @Test

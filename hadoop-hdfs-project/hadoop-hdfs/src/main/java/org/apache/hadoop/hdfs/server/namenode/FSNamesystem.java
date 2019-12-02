@@ -133,6 +133,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.file.Files;
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -613,6 +614,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   private final Object metaSaveLock = new Object();
 
+  private final MessageDigest digest;
+
   /**
    * Notify that loading of this FSDirectory is complete, and
    * it is imageLoaded for use
@@ -836,6 +839,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             + DFS_CHECKSUM_TYPE_KEY + ": " + checksumTypeStr);
       }
 
+      try {
+        digest = MessageDigest.getInstance("MD5");
+      } catch (NoSuchAlgorithmException e) {
+        throw new IOException("Algorithm 'MD5' not found");
+      }
+
       this.serverDefaults = new FsServerDefaults(
           conf.getLongBytes(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT),
           conf.getInt(DFS_BYTES_PER_CHECKSUM_KEY, DFS_BYTES_PER_CHECKSUM_DEFAULT),
@@ -918,7 +927,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       alwaysUseDelegationTokensForTests = conf.getBoolean(
           DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
           DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_DEFAULT);
-      
+
       this.dtSecretManager = createDelegationTokenSecretManager(conf);
       this.dir = new FSDirectory(this, conf);
       this.snapshotManager = new SnapshotManager(conf, dir);
@@ -3946,17 +3955,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   public byte[] getSrcPathsHash(String[] srcs) {
-    MessageDigest md;
-    try {
-      md = MessageDigest.getInstance("MD5");
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
+    synchronized (digest) {
+      for (String src : srcs) {
+        digest.update(src.getBytes(Charsets.UTF_8));
+      }
+      byte[] result = digest.digest();
+      digest.reset();
+      return result;
     }
-
-    for (String src: srcs) {
-      md.update(src.getBytes(Charsets.UTF_8));
-    }
-    return md.digest();
   }
 
   BatchedDirectoryListing getBatchedListing(String[] srcs, byte[] startAfter,
@@ -4000,6 +4006,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(NameNode.OperationCategory.READ);
 
+      // List all directories from the starting index until we've reached
+      // ls limit OR finished listing all srcs.
       LinkedHashMap<Integer, HdfsPartialListing> listings =
           Maps.newLinkedHashMap();
       DirectoryListing lastListing = null;
@@ -4046,6 +4054,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       HdfsPartialListing[] partialListingArray =
           listings.values().toArray(new HdfsPartialListing[] {});
 
+      // Check whether there are more dirs/files to be listed, and if so setting
+      // up the index to start within the first dir to be listed next time.
       if (srcsIndex >= srcs.length) {
         // If the loop finished normally, there are no more srcs and we're done.
         bdl = new BatchedDirectoryListing(

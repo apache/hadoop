@@ -28,7 +28,7 @@ import java.util.List;
 
 /**
  * A partial listing of the children of a parent directory. Since it is a
- * partial listing, multiple ListingBatches may need to be combined to obtain
+ * partial listing, multiple PartialListing may need to be combined to obtain
  * the full listing of a parent directory.
  * <p/>
  * ListingBatch behaves similar to a Future, in that getting the result via
@@ -37,28 +37,29 @@ import java.util.List;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class PartialListing<T extends FileStatus> {
-  private final Path parent;
+  private final Path listedPath;
   private final List<T> partialListing;
   private final RemoteException exception;
 
-  public PartialListing(Path parent, List<T> partialListing) {
-    this(parent, partialListing, null);
+  public PartialListing(Path listedPath, List<T> partialListing) {
+    this(listedPath, partialListing, null);
   }
 
-  public PartialListing(Path parent, RemoteException exception) {
-    this(parent, null, exception);
+  public PartialListing(Path listedPath, RemoteException exception) {
+    this(listedPath, null, exception);
   }
 
-  private PartialListing(Path parent, List<T> partialListing,
+  private PartialListing(Path listedPath, List<T> partialListing,
       RemoteException exception) {
     Preconditions.checkArgument(partialListing == null ^ exception == null);
     this.partialListing = partialListing;
-    this.parent = parent;
+    this.listedPath = listedPath;
     this.exception = exception;
   }
 
   /**
-   * Partial listing of the path being listed.
+   * Partial listing of the path being listed. In the case where the path is
+   * a file. The list will be a singleton with the file itself.
    *
    * @return Partial listing of the path being listed.
    * @throws IOException if there was an exception getting the listing.
@@ -73,16 +74,16 @@ public class PartialListing<T extends FileStatus> {
   /**
    * Path being listed.
    *
-   * @return parent path.
+   * @return the path being listed.
    */
-  public Path getParent() {
-    return parent;
+  public Path getListedPath() {
+    return listedPath;
   }
 
   @Override
   public String toString() {
     return new ToStringBuilder(this)
-        .append("parent", parent)
+        .append("listedPath", listedPath)
         .append("partialListing", partialListing)
         .append("exception", exception)
         .toString();

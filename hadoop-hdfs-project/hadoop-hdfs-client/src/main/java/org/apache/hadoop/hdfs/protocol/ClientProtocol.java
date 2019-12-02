@@ -697,7 +697,19 @@ public interface ClientProtocol {
   DirectoryListing getListing(String src, byte[] startAfter,
       boolean needLocation) throws IOException;
 
+  /**
+   * Get a partial listing of the input directories
+   *
+   * @param srcs the input directories
+   * @param startAfter the name to start listing after encoded in Java UTF8
+   * @param needLocation if the FileStatus should contain block locations
+   *
+   * @return a partial listing starting after startAfter. null if the input is
+   *   empty
+   * @throws IOException if an I/O error occurred
+   */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   BatchedDirectoryListing getBatchedListing(
       String[] srcs,
       byte[] startAfter,

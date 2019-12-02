@@ -1301,8 +1301,7 @@ public class DistributedFileSystem extends FileSystem
 
   @Override
   public RemoteIterator<PartialListing<FileStatus>> batchedListStatusIterator(
-      final List<Path> paths)
-      throws IOException {
+      final List<Path> paths) throws IOException {
     List<Path> absPaths = Lists.newArrayListWithCapacity(paths.size());
     for (Path p : paths) {
       absPaths.add(fixRelativePart(p));
@@ -1312,8 +1311,7 @@ public class DistributedFileSystem extends FileSystem
 
   @Override
   public RemoteIterator<PartialListing<LocatedFileStatus>> batchedListLocatedStatusIterator(
-      final List<Path> paths)
-      throws IOException {
+      final List<Path> paths) throws IOException {
     List<Path> absPaths = Lists.newArrayListWithCapacity(paths.size());
     for (Path p : paths) {
       absPaths.add(fixRelativePart(p));
@@ -1337,7 +1335,7 @@ public class DistributedFileSystem extends FileSystem
         throws IOException {
       this.paths = paths;
       this.srcs = new String[paths.size()];
-      for (int i = 0; i<paths.size(); i++) {
+      for (int i = 0; i < paths.size(); i++) {
         this.srcs[i] = getPathName(paths.get(i));
       }
       this.needLocation = needLocation;
@@ -1378,8 +1376,7 @@ public class DistributedFileSystem extends FileSystem
       if (!hasNext()) {
         throw new NoSuchElementException("No more entries");
       }
-      HdfsPartialListing listing =
-          batchedListing.getListings()[listingIdx];
+      HdfsPartialListing listing = batchedListing.getListings()[listingIdx];
       listingIdx++;
 
       Path parent = paths.get(listing.getParentIdx());

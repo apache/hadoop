@@ -21,7 +21,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
- * A struct-like class for holding partial listings returned by the batchd
+ * A struct-like class for holding partial listings returned by the batched
  * listing API. This class is used internally by the HDFS client and namenode
  * and is not meant for public consumption.
  */
