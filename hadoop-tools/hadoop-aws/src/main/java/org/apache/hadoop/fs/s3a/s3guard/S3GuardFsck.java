@@ -64,6 +64,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.p
  * Functions:
  * <ul>
  *   <li>Checking metadata consistency between S3 and metadatastore</li>
+ *   <li>Checking the internal metadata consistency</li>
  * </ul>
  */
 public class S3GuardFsck {
@@ -319,7 +320,7 @@ public class S3GuardFsck {
     }
 
     if(msPathMetadata.getFileStatus().getVersionId() == null
-        || s3FileStatus.getVersionId() == null ) {
+        || s3FileStatus.getVersionId() == null) {
       LOG.debug("Missing versionIDs skipped. A HEAD request is "
           + "required for each object to get the versionID.");
     } else if(!s3FileStatus.getVersionId().equals(msFileStatus.getVersionId())) {
@@ -423,7 +424,7 @@ public class S3GuardFsck {
    *  - warn: no lastUpdated field.
    * </pre>
    */
-  public List<ComparePair> checkDdbInternalConsistency (Path basePath)
+  public List<ComparePair> checkDdbInternalConsistency(Path basePath)
       throws IOException {
     Preconditions.checkArgument(basePath.isAbsolute(), "path must be absolute");
 
@@ -551,11 +552,11 @@ public class S3GuardFsck {
   }
 
   /**
-   * DDBTree is the tree that represents the structure of items in the DynamoDB
+   * DDBTree is the tree that represents the structure of items in the DynamoDB.
    */
   public static class DDBTree {
-    final Map<Path, DDBTreeNode> contentMap = new HashMap<>();
-    DDBTreeNode root;
+    private final Map<Path, DDBTreeNode> contentMap = new HashMap<>();
+    private DDBTreeNode root;
 
     public DDBTree() {
     }
@@ -586,14 +587,14 @@ public class S3GuardFsck {
   }
 
   /**
-   * Tree node for DDBTree
+   * Tree node for DDBTree.
    */
-  private static class DDBTreeNode {
-    final DDBPathMetadata val;
-    DDBTreeNode parent;
-    final List<DDBPathMetadata> children;
+  private static final class DDBTreeNode {
+    private final DDBPathMetadata val;
+    private DDBTreeNode parent;
+    private final List<DDBPathMetadata> children;
 
-    private DDBTreeNode (DDBPathMetadata pm) {
+    private DDBTreeNode(DDBPathMetadata pm) {
       this.val = pm;
       this.parent = null;
       this.children = new ArrayList<>();
@@ -678,7 +679,7 @@ public class S3GuardFsck {
     AUTHORITATIVE_DIRECTORY_CONTENT_MISMATCH(1,
         S3GuardFsckViolationHandler.AuthDirContentMismatch.class),
     /**
-     * An entry in the MS is tombstoned, but the object is not deleted on S3
+     * An entry in the MS is tombstoned, but the object is not deleted on S3.
      */
     TOMBSTONED_IN_MS_NOT_DELETED_IN_S3(0,
         S3GuardFsckViolationHandler.TombstonedInMsNotDeletedInS3.class),
@@ -707,7 +708,7 @@ public class S3GuardFsck {
     /**
      * The entry does not have a parent in ddb.
      */
-    ORPHAN_DDB_ENTRY (0, S3GuardFsckViolationHandler.OrphanDDBEntry.class),
+    ORPHAN_DDB_ENTRY(0, S3GuardFsckViolationHandler.OrphanDDBEntry.class),
     /**
      * The entry's lastUpdated field is empty.
      */

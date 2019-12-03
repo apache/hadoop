@@ -1618,7 +1618,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
       if (ms == null ||
           !(ms instanceof DynamoDBMetadataStore)) {
-        errorln(s3Path + " path uses MS: " + ms);
+        errorln(s3Path + " path uses metadata store: " + ms);
         errorln(NAME + " can be only used with a DynamoDB backed s3a bucket.");
         errorln(USAGE);
         return ERROR;
