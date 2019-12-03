@@ -3789,4 +3789,12 @@
       fs space usage statistics refresh jitter in msec.
     </description>
   </property>
+
+  <property>
+    <name>hadoop.http.sni.host.check.enabled</name>
+    <value>false</value>
+    <description>
+      Enable Server Name Indication (SNI) host check for HTTPS enabled server.
+    </description>
+  </property>
 </configuration>
