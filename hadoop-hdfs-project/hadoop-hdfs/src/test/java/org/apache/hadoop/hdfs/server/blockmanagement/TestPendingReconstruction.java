@@ -42,10 +42,12 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -74,6 +76,8 @@ public class TestPendingReconstruction {
 
   @Test
   public void testPendingReconstruction() {
+    NameNode.initMetrics(new Configuration(),
+        HdfsServerConstants.NamenodeRole.NAMENODE);
     PendingReconstructionBlocks pendingReconstructions;
     pendingReconstructions = new PendingReconstructionBlocks(TIMEOUT * 1000);
     pendingReconstructions.start();
