@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -131,6 +132,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String POLICY_NAME_PARAM = "storagepolicy";
   public static final String SNAPSHOT_NAME_PARAM = "snapshotname";
   public static final String OLD_SNAPSHOT_NAME_PARAM = "oldsnapshotname";
+  public static final String FSACTION_MODE_PARAM = "fsaction";
 
   public static final Short DEFAULT_PERMISSION = 0755;
   public static final String ACLSPEC_DEFAULT = "";
@@ -254,7 +256,8 @@ public class HttpFSFileSystem extends FileSystem
     ALLOWSNAPSHOT(HTTP_PUT), DISALLOWSNAPSHOT(HTTP_PUT),
     CREATESNAPSHOT(HTTP_PUT), DELETESNAPSHOT(HTTP_DELETE),
     RENAMESNAPSHOT(HTTP_PUT), GETSNAPSHOTDIFF(HTTP_GET),
-    GETSNAPSHOTTABLEDIRECTORYLIST(HTTP_GET), GETSERVERDEFAULTS(HTTP_GET);
+    GETSNAPSHOTTABLEDIRECTORYLIST(HTTP_GET), GETSERVERDEFAULTS(HTTP_GET),
+    CHECKACCESS(HTTP_GET);
 
     private String httpMethod;
 
@@ -1608,5 +1611,15 @@ public class HttpFSFileSystem extends FileSystem
   @Override
   public FsServerDefaults getServerDefaults(Path p) throws IOException {
     return getServerDefaults();
+  }
+
+  @Override
+  public void access(final Path path, final FsAction mode) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.CHECKACCESS.toString());
+    params.put(FSACTION_MODE_PARAM, mode.SYMBOL);
+    HttpURLConnection conn =
+        getConnection(Operation.CHECKACCESS.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 }
