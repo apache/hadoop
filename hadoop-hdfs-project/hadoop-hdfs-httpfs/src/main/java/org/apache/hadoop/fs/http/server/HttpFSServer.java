@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.BlockSizeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DataParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DestinationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.FilterParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.FsActionParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.GroupParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.LenParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ModifiedTimeParam;
@@ -53,6 +54,7 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrEncodingPa
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrNameParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrSetFlagParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrValueParam;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
@@ -424,6 +426,16 @@ public class HttpFSServer {
       String js = fsExecute(user, command);
       AUDIT_LOG.info("[{}]", "/");
       response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
+    case CHECKACCESS: {
+      String mode = params.get(FsActionParam.NAME, FsActionParam.class);
+      FsActionParam fsparam = new FsActionParam(mode);
+      FSOperations.FSAccess command = new FSOperations.FSAccess(path,
+          FsAction.getFsAction(fsparam.value()));
+      fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", "/");
+      response = Response.ok().build();
       break;
     }
     default: {

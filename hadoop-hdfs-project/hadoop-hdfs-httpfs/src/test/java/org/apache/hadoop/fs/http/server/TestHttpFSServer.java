@@ -1667,4 +1667,25 @@ public class TestHttpFSServer extends HFSTestCase {
         .get(path1.toUri(), TestHdfsHelper.getHdfsConf());
     verifyGetServerDefaults(dfs);
   }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testAccess() throws Exception {
+    createHttpFSServer(false, false);
+    final String dir = "/xattrTest";
+    Path path1 = new Path(dir);
+
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .get(path1.toUri(), TestHdfsHelper.getHdfsConf());
+    dfs.mkdirs(new Path(dir));
+
+    HttpURLConnection conn =
+        sendRequestToHttpFSServer(dir, "CHECKACCESS", "fsaction=r--");
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    HttpURLConnection conn1 =
+        sendRequestToHttpFSServer(dir, "CHECKACCESS", "fsaction=-w-");
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn1.getResponseCode());
+  }
 }

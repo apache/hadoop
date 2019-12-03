@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -1854,6 +1855,43 @@ public class FSOperations {
             + ". Please check your fs.defaultFS configuration");
       }
       return JsonUtil.toJsonString(sds);
+    }
+  }
+
+  /**
+   * Executor that performs a check access operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSAccess
+      implements FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+    private FsAction mode;
+
+    /**
+     * Creates a access executor.
+     */
+    public FSAccess(String path, FsAction mode) {
+      this.path = new Path(path);
+      this.mode = mode;
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        dfs.access(path, mode);
+      } else {
+        throw new UnsupportedOperationException("checkaccess is "
+            + "not supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      return null;
     }
   }
 }

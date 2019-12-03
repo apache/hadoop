@@ -33,7 +33,6 @@ import org.apache.hadoop.lib.wsrs.ParametersProvider;
 import org.apache.hadoop.lib.wsrs.ShortParam;
 import org.apache.hadoop.lib.wsrs.StringParam;
 import org.apache.hadoop.util.StringUtils;
-
 import javax.ws.rs.ext.Provider;
 import java.util.HashMap;
 import java.util.Map;
@@ -118,6 +117,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
             SnapshotNameParam.class});
     PARAMS_DEF.put(Operation.GETSNAPSHOTTABLEDIRECTORYLIST, new Class[] {});
     PARAMS_DEF.put(Operation.GETSERVERDEFAULTS, new Class[] {});
+    PARAMS_DEF.put(Operation.CHECKACCESS, new Class[] {FsActionParam.class});
   }
 
   public HttpFSParametersProvider() {
@@ -664,4 +664,34 @@ public class HttpFSParametersProvider extends ParametersProvider {
     }
   }
 
+  /**
+   * Class for FsAction parameter.
+   */
+  @InterfaceAudience.Private
+  public static class FsActionParam extends StringParam {
+
+    private static final String FILE_SYSTEM_ACTION = "[r-][w-][x-]";
+    private static final Pattern FSACTION_PATTERN =
+        Pattern.compile(FILE_SYSTEM_ACTION);
+
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = HttpFSFileSystem.FSACTION_MODE_PARAM;
+
+    /**
+     * Constructor.
+     */
+    public FsActionParam() {
+      super(NAME, null);
+    }
+
+    /**
+     * Constructor.
+     * @param str a string representation of the parameter value.
+     */
+    public FsActionParam(final String str) {
+      super(NAME, str, FSACTION_PATTERN);
+    }
+  }
 }
