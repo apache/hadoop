@@ -1143,7 +1143,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT,
     ALLOW_SNAPSHOT, DISALLOW_SNAPSHOT, DISALLOW_SNAPSHOT_EXCEPTION,
     FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST,
-    GET_SERVERDEFAULTS
+    GET_SERVERDEFAULTS, CHECKACCESS
   }
 
   private void operation(Operation op) throws Exception {
@@ -1266,6 +1266,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case GET_SERVERDEFAULTS:
       testGetServerDefaults();
+      break;
+    case CHECKACCESS:
+      testAccess();
       break;
     }
 
@@ -1735,6 +1738,34 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
           .get(path1.toUri(), this.getProxiedFSConf());
       verifyGetServerDefaults(fs, dfs);
+    }
+  }
+
+  private void testAccess() throws Exception {
+    if (!this.isLocalFS()) {
+      FileSystem fs = this.getHttpFSFileSystem();
+      Path path1 = new Path("/");
+      DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+          .get(path1.toUri(), this.getProxiedFSConf());
+      verifyAccess(fs, dfs);
+    }
+  }
+
+  private void verifyAccess(FileSystem fs, DistributedFileSystem dfs)
+      throws Exception {
+    Path p1 = new Path("/p1");
+    dfs.mkdirs(p1);
+    dfs.setOwner(p1, "user1", "group1");
+    dfs.setPermission(p1, new FsPermission((short) 0444));
+
+    if (fs instanceof HttpFSFileSystem) {
+      HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+      httpFS.access(p1, FsAction.READ);
+    } else if (fs instanceof WebHdfsFileSystem) {
+      WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+      webHdfsFileSystem.access(p1, FsAction.READ);
+    } else {
+      Assert.fail(fs.getClass().getSimpleName() + " doesn't support access");
     }
   }
 }
