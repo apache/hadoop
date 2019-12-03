@@ -49,6 +49,10 @@ public class MockNodes {
   private static int NODE_ID = 0;
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
+  public static void resetHostIds() {
+    NODE_ID = 0;
+  }
+
   public static List<RMNode> newNodes(int racks, int nodesPerRack,
                                         Resource perNode) {
     List<RMNode> list = Lists.newArrayList();

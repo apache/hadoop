@@ -18,8 +18,14 @@
 package org.apache.hadoop.hdfs.server.balancer;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,9 +38,13 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology.NNConf;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider;
+import org.mockito.Matchers;
 import org.junit.Test;
 
 /**
@@ -128,12 +138,24 @@ public class TestBalancerWithHANameNodes {
       cluster = qjmhaCluster.getDfsCluster();
       cluster.waitClusterUp();
       cluster.waitActive();
+      List<FSNamesystem> namesystemSpies = new ArrayList<>();
+      for (int i = 0; i < cluster.getNumNameNodes(); i++) {
+        namesystemSpies.add(
+            NameNodeAdapter.spyOnNamesystem(cluster.getNameNode(i)));
+      }
 
       DistributedFileSystem dfs = HATestUtil.configureObserverReadFs(
           cluster, conf, ObserverReadProxyProvider.class, true);
       client = dfs.getClient().getNamenode();
 
       doTest(conf);
+      for (int i = 0; i < cluster.getNumNameNodes(); i++) {
+        // First observer node is at idx 2 so it should get both getBlocks calls
+        // all other NameNodes should see 0 getBlocks calls
+        int expectedCount = (i == 2) ? 2 : 0;
+        verify(namesystemSpies.get(i), times(expectedCount))
+            .getBlocks(Matchers.<DatanodeID>any(), anyLong());
+      }
     } finally {
       if (qjmhaCluster != null) {
         qjmhaCluster.shutdown();

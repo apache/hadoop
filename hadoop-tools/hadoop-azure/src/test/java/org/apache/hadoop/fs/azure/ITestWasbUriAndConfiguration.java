@@ -18,30 +18,16 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
-import static org.junit.Assume.assumeNotNull;
-
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.util.Date;
 import java.util.EnumSet;
-import java.io.File;
 
-import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
-import org.apache.hadoop.security.ProviderUtils;
-import org.apache.hadoop.security.alias.CredentialProvider;
-import org.apache.hadoop.security.alias.CredentialProviderFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.AbstractFileSystem;
-import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.UnsupportedFileSystemException;
-import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.CreateOptions;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -49,9 +35,23 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.AbstractFileSystem;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.CreateOptions;
+import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
+import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.security.alias.CredentialProvider;
+import org.apache.hadoop.security.alias.CredentialProviderFactory;
+
+import static org.junit.Assume.assumeNotNull;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.fs.azure.NativeAzureFileSystem.RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME;
 
 public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
 
@@ -581,4 +581,33 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
       FileSystem.closeAll();
     }
   }
+
+  @Test
+  public void testCanonicalServiceName() throws Exception {
+    AzureBlobStorageTestAccount testAccount = AzureBlobStorageTestAccount.createMock();
+    Configuration conf = testAccount.getFileSystem().getConf();
+    String authority = testAccount.getFileSystem().getUri().getAuthority();
+    URI defaultUri = new URI("wasbs", authority, null, null, null);
+    conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
+    try (FileSystem fs =  FileSystem.get(conf)){
+      // Default getCanonicalServiceName() will try to resolve the host to IP,
+      // because the mock container does not exist, this call is expected to fail.
+      fs.getCanonicalServiceName();
+      Assert.assertTrue("Excepting exception", false);
+    } catch (IllegalArgumentException ex) {
+      if (!ex.getMessage().contains("java.net.UnknownHostException")) {
+        throw ex;
+      }
+    }
+    conf.setBoolean(RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME, true);
+
+    try (FileSystem fs = FileSystem.newInstance(defaultUri, conf)) {
+      Assert.assertEquals("getCanonicalServiceName() should return URI",
+          fs.getUri().toString(), fs.getCanonicalServiceName());
+    } finally {
+      testAccount.cleanup();
+      FileSystem.closeAll();
+    }
+  }
+
 }

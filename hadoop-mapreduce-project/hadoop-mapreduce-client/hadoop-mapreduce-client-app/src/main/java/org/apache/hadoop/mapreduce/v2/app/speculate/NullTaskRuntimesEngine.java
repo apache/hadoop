@@ -69,4 +69,9 @@ public class NullTaskRuntimesEngine implements TaskRuntimeEstimator {
     return -1L;
   }
 
+  @Override
+  public boolean hasStagnatedProgress(TaskAttemptId id, long timeStamp) {
+    return false;
+  }
+
 }

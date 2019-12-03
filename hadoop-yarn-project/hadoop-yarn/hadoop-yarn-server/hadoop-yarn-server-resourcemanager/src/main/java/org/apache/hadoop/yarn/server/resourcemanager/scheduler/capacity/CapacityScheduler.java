@@ -1727,7 +1727,8 @@ public class CapacityScheduler extends
   private void updateQueuePreemptionMetrics(
       CSQueue queue, RMContainer rmc) {
     QueueMetrics qMetrics = queue.getMetrics();
-    long usedMillis = rmc.getFinishTime() - rmc.getCreationTime();
+    final long usedMillis = rmc.getFinishTime() - rmc.getCreationTime();
+    final long usedSeconds = usedMillis / DateUtils.MILLIS_PER_SECOND;
     Resource containerResource = rmc.getAllocatedResource();
     qMetrics.preemptContainer();
     long mbSeconds = (containerResource.getMemorySize() * usedMillis)
@@ -1736,6 +1737,8 @@ public class CapacityScheduler extends
         / DateUtils.MILLIS_PER_SECOND;
     qMetrics.updatePreemptedMemoryMBSeconds(mbSeconds);
     qMetrics.updatePreemptedVcoreSeconds(vcSeconds);
+    qMetrics.updatePreemptedSecondsForCustomResources(containerResource,
+        usedSeconds);
     qMetrics.updatePreemptedResources(containerResource);
   }
 
@@ -2091,6 +2094,11 @@ public class CapacityScheduler extends
         for (RMContainer rmContainer : app.getLiveContainers()) {
           source.detachContainer(getClusterResource(), app, rmContainer);
           // attach the Container to another queue
+          dest.attachContainer(getClusterResource(), app, rmContainer);
+        }
+        // Move all reserved containers
+        for (RMContainer rmContainer : app.getReservedContainers()) {
+          source.detachContainer(getClusterResource(), app, rmContainer);
           dest.attachContainer(getClusterResource(), app, rmContainer);
         }
         if (!app.isStopped()) {

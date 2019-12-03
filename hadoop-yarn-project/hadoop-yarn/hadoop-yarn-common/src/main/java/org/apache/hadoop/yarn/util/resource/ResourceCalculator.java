@@ -125,7 +125,19 @@ public abstract class ResourceCalculator {
    */
   public abstract Resource multiplyAndNormalizeUp(
       Resource r, double by, Resource stepFactor);
-  
+
+  /**
+   * Multiply resource <code>r</code> by factor <code>by</code> 
+   * and normalize up using step-factor <code>stepFactor</code>.
+   * 
+   * @param r resource to be multiplied
+   * @param by multiplier array for all resource types
+   * @param stepFactor factor by which to normalize up 
+   * @return resulting normalized resource
+   */
+  public abstract Resource multiplyAndNormalizeUp(
+      Resource r, double[] by, Resource stepFactor);
+
   /**
    * Multiply resource <code>r</code> by factor <code>by</code> 
    * and normalize down using step-factor <code>stepFactor</code>.
