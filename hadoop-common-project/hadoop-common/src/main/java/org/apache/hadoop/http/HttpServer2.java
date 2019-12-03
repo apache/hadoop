@@ -154,6 +154,10 @@ public final class HttpServer2 implements FilterContainer {
   public static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
 
+  public static final String HTTP_SNI_HOST_CHECK_ENABLED_KEY
+      = "hadoop.http.sni.host.check.enabled";
+  public static final boolean HTTP_SNI_HOST_CHECK_ENABLED_DEFAULT = false;
+
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
   public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
@@ -232,6 +236,8 @@ public final class HttpServer2 implements FilterContainer {
 
     private boolean xFrameEnabled;
     private XFrameOption xFrameOption = XFrameOption.SAMEORIGIN;
+
+    private boolean sniHostCheckEnabled;
 
     public Builder setName(String name){
       this.name = name;
@@ -378,6 +384,17 @@ public final class HttpServer2 implements FilterContainer {
     }
 
     /**
+     * Enable or disable sniHostCheck.
+     *
+     * @param sniHostCheckEnabled Enable sniHostCheck if true, else disable it.
+     * @return Builder.
+     */
+    public Builder setSniHostCheckEnabled(boolean sniHostCheckEnabled) {
+      this.sniHostCheckEnabled = sniHostCheckEnabled;
+      return this;
+    }
+
+    /**
      * A wrapper of {@link Configuration#getPassword(String)}. It returns
      * <code>String</code> instead of <code>char[]</code>.
      *
@@ -471,6 +488,13 @@ public final class HttpServer2 implements FilterContainer {
       int backlogSize = conf.getInt(HTTP_SOCKET_BACKLOG_SIZE_KEY,
           HTTP_SOCKET_BACKLOG_SIZE_DEFAULT);
 
+      // If setSniHostCheckEnabled() is used to enable SNI hostname check,
+      // configuration lookup is skipped.
+      if (!sniHostCheckEnabled) {
+        sniHostCheckEnabled = conf.getBoolean(HTTP_SNI_HOST_CHECK_ENABLED_KEY,
+            HTTP_SNI_HOST_CHECK_ENABLED_DEFAULT);
+      }
+
       for (URI ep : endpoints) {
         final ServerConnector connector;
         String scheme = ep.getScheme();
@@ -514,7 +538,8 @@ public final class HttpServer2 implements FilterContainer {
     private ServerConnector createHttpsChannelConnector(
         Server server, HttpConfiguration httpConfig) {
       httpConfig.setSecureScheme(HTTPS_SCHEME);
-      httpConfig.addCustomizer(new SecureRequestCustomizer());
+      httpConfig.addCustomizer(
+          new SecureRequestCustomizer(sniHostCheckEnabled));
       ServerConnector conn = createHttpChannelConnector(server, httpConfig);
 
       SslContextFactory.Server sslContextFactory =
