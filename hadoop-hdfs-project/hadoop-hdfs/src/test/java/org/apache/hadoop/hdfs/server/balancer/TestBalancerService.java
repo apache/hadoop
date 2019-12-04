@@ -62,6 +62,9 @@ public class TestBalancerService {
     MiniDFSNNTopology.NNConf nn1Conf = new MiniDFSNNTopology.NNConf("nn1");
     nn1Conf.setIpcPort(HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
     Configuration copiedConf = new Configuration(conf);
+    // Limit the number of failover retries to avoid the test taking too long
+    conf.setInt(HdfsClientConfigKeys.Failover.MAX_ATTEMPTS_KEY, 2);
+    conf.setInt(HdfsClientConfigKeys.Failover.SLEEPTIME_BASE_KEY, 0);
     cluster = new MiniDFSCluster.Builder(copiedConf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .numDataNodes(TEST_CAPACITIES.length).racks(TEST_RACKS)
