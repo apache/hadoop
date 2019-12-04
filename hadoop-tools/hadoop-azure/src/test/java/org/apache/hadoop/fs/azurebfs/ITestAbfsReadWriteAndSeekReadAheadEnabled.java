@@ -40,7 +40,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.M
  */
 @RunWith(Parameterized.class)
 public class ITestAbfsReadWriteAndSeekReadAheadEnabled extends AbstractAbfsScaleTest {
-  private static final Path TEST_PATH = new Path("/testfile");
+  private static final Path TEST_PATH = new Path("/testfileReadAhead");
 
   @Parameterized.Parameters(name = "Size={0}")
   public static Iterable<Object[]> sizes() {
@@ -81,7 +81,8 @@ public class ITestAbfsReadWriteAndSeekReadAheadEnabled extends AbstractAbfsScale
       inputStreamForReadAhead.seek(bufferSize);
       resultForReadAhead = inputStreamForReadAhead.read(readBufferForReadAhead, bufferSize, bufferSize);
       assertNotEquals(-1, resultForReadAhead);
-      assertArrayEquals(readBufferForReadAhead, Arrays.copyOfRange(b, bufferSize, bufferSize));
+      assertArrayEquals(Arrays.copyOfRange(readBufferForReadAhead, bufferSize, 2 * bufferSize), 
+		      Arrays.copyOfRange(b, bufferSize, 2 * bufferSize));
       inputStreamForReadAhead.seek(0);
       resultForReadAhead = inputStreamForReadAhead.read(readBufferForReadAhead, 0, bufferSize);
     }
