@@ -3153,12 +3153,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     HadoopExecutors.shutdown(unboundedThreadPool, LOG,
         THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
     unboundedThreadPool = null;
-    closeAutocloseables(LOG, credentials);
     cleanupWithLogger(LOG,
         metadataStore,
         instrumentation,
         delegationTokens.orElse(null),
         signerManager);
+    closeAutocloseables(LOG, credentials);
     delegationTokens = Optional.empty();
     signerManager = null;
     credentials = null;

@@ -166,7 +166,7 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
         // instead we merge them
         if (!isDirectory) {
           final PathMetadata existingEntry = S3Guard.getWithTtl(ms, path, null,
-              false);
+              false, true);
           if (existingEntry != null) {
             final S3AFileStatus existingStatus = existingEntry.getFileStatus();
             if (existingStatus.isFile()) {
@@ -239,7 +239,7 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
       final ITtlTimeProvider timeProvider
           = getFilesystem().getTtlTimeProvider();
       final PathMetadata pmd = S3Guard.getWithTtl(getStore(), parent,
-          timeProvider, false);
+          timeProvider, false, true);
       if (pmd == null || pmd.isDeleted()) {
         S3AFileStatus dir = DynamoDBMetadataStore.makeDirStatus(parent,
             f.getOwner());

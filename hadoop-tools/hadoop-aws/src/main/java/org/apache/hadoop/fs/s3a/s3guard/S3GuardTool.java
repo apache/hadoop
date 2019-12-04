@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -58,7 +59,9 @@ import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.select.SelectTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
@@ -75,7 +78,8 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
 /**
  * CLI to manage S3Guard Metadata Store.
  */
-public abstract class S3GuardTool extends Configured implements Tool {
+public abstract class S3GuardTool extends Configured implements Tool,
+    Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(S3GuardTool.class);
 
   private static final String NAME = "s3guard";
@@ -114,6 +118,10 @@ public abstract class S3GuardTool extends Configured implements Tool {
   static final int E_BAD_STATE = EXIT_NOT_ACCEPTABLE;
   static final int E_NOT_FOUND = EXIT_NOT_FOUND;
 
+  /**
+   * The FS we close when we are closed.
+   */
+  private FileSystem baseFS;
   private S3AFileSystem filesystem;
   private MetadataStore store;
   private final CommandFormat commandFormat;
@@ -157,9 +165,22 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
   /**
    * Return sub-command name.
-   * @return sub-dommand name.
+   * @return sub-command name.
    */
   public abstract String getName();
+
+  /**
+   * Close the FS and metastore.
+   * @throws IOException on failure.
+   */
+  @Override
+  public void close() throws IOException {
+    IOUtils.cleanupWithLogger(LOG,
+        baseFS, store);
+    baseFS = null;
+    filesystem = null;
+    store = null;
+  }
 
   /**
    * Parse DynamoDB region from either -m option or a S3 path.
@@ -417,7 +438,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
    */
   protected void setFilesystem(FileSystem filesystem) {
     FileSystem fs = filesystem;
-    if (fs instanceof FilterFileSystem) {
+    baseFS = filesystem;
+    while (fs instanceof FilterFileSystem) {
       fs = ((FilterFileSystem) fs).getRawFileSystem();
     }
     if (!(fs instanceof S3AFileSystem)) {
@@ -727,12 +749,12 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public static final String NAME = "import";
     public static final String PURPOSE = "import metadata from existing S3 " +
         "data";
-
     public static final String AUTH_FLAG = "auth";
     private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
         "\t" + PURPOSE + "\n\n" +
         "Common options:\n" +
-        "  -" + AUTH_FLAG + " Mark imported directory data as authoritative." +
+        "  -" + AUTH_FLAG + " Mark imported directory data as authoritative.\n" +
+        "  -" + VERBOSE + " Verbose Output.\n" +
         "  -" + META_FLAG + " URL - Metadata repository details " +
         "(implementation-specific)\n" +
         "\n" +
@@ -1651,14 +1673,17 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
     public static final String PURPOSE = "Audits a DynamoDB S3Guard "
         + "repository for all the entries being 'authoritative'";
-    private static final String USAGE = NAME
-        + " [-" + CHECK_FLAG + "]"
-        + " [-" + REQUIRE_AUTH + "]"
-        + " [s3a://BUCKET/PATH]\n" +
-        "\t" + PURPOSE + "\n\n";
+
+    private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n"
+        + "\t" + PURPOSE + "\n\n"
+        + "Options:\n"
+        + "  -" + REQUIRE_AUTH + " Require directories under the path to"
+        + " be authoritative.\n"
+        +  " -" + CHECK_FLAG + " Check the configuration for the path to be authoritative"
+        + "  -" + VERBOSE + " Verbose Output.\n";
 
     Authoritative(Configuration conf) {
-      super(conf, CHECK_FLAG, REQUIRE_AUTH);
+      super(conf, CHECK_FLAG, REQUIRE_AUTH, VERBOSE);
     }
 
     @Override
@@ -1706,7 +1731,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         if (!fs.allowAuthoritative(auditPath)) {
           // path isn't considered auth in the S3A bucket info
           errorln("Path " + auditPath
-              + " is not confiugured to be authoritative");
+              + " is not configured to be authoritative");
           errorln(USAGE);
           return AuthoritativeAuditOperation.ERROR_PATH_NOT_AUTH_IN_FS;
         }
@@ -1715,7 +1740,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
       final AuthoritativeAuditOperation audit = new AuthoritativeAuditOperation(
           fs.createStoreContext(),
           (DynamoDBMetadataStore) ms,
-          commandFormat.getOpt(REQUIRE_AUTH));
+          commandFormat.getOpt(REQUIRE_AUTH),
+          commandFormat.getOpt(VERBOSE));
       audit.audit(fs.qualify(auditPath));
 
       out.flush();
@@ -1913,7 +1939,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
       throw new ExitUtil.ExitException(E_USAGE,
           "Unknown command " + subCommand);
     }
-    return ToolRunner.run(conf, command, otherArgs);
+    try {
+      return ToolRunner.run(conf, command, otherArgs);
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, command);
+    }
   }
 
   /**
@@ -1930,6 +1960,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       exit(E_USAGE, e.getMessage());
     } catch (ExitUtil.ExitException e) {
       // explicitly raised exit code
+      LOG.debug("Exception raised", e);
       exit(e.getExitCode(), e.toString());
     } catch (FileNotFoundException e) {
       // Bucket doesn't exist or similar - return code of 44, "404".
@@ -1937,8 +1968,15 @@ public abstract class S3GuardTool extends Configured implements Tool {
       LOG.debug("Not found:", e);
       exit(EXIT_NOT_FOUND, e.toString());
     } catch (Throwable e) {
-      e.printStackTrace(System.err);
-      exit(ERROR, e.toString());
+      if (e instanceof ExitCodeProvider) {
+        // this exception provides its own exit code
+        final ExitCodeProvider ec = (ExitCodeProvider) e;
+        LOG.debug("Exception raised", e);
+        exit(ec.getExitCode(), e.toString());
+      } else {
+        e.printStackTrace(System.err);
+        exit(ERROR, e.toString());
+      }
     }
   }
 

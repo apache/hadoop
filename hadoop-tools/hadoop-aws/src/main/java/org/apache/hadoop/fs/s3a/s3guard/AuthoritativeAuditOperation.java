@@ -34,7 +34,10 @@ import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
+
+import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
 
 /**
  * Audit a directory tree for being authoritative.
@@ -48,9 +51,9 @@ public class AuthoritativeAuditOperation extends AbstractStoreOperation {
       AuthoritativeAuditOperation.class);
 
   /**
-   * Exception error code when a path is nonauth in the DB: {@value}.
+   * Exception error code when a path is non-auth in the DB}.
    */
-  public static final int ERROR_ENTRY_NOT_AUTH_IN_DDB = 4;
+  public static final int ERROR_ENTRY_NOT_AUTH_IN_DDB = EXIT_NOT_ACCEPTABLE;
 
   /**
    * Exception error code when a path is not configured to be
@@ -71,18 +74,26 @@ public class AuthoritativeAuditOperation extends AbstractStoreOperation {
   private final boolean requireAuthoritative;
 
   /**
+   * Verbose switch.
+   */
+  private final boolean verbose;
+
+  /**
    * Constructor.
    * @param storeContext store context.
    * @param metastore metastore
    * @param requireAuthoritative require all directories to be authoritative
+   * @param verbose verbose output
    */
   public AuthoritativeAuditOperation(
       final StoreContext storeContext,
       final DynamoDBMetadataStore metastore,
-      final boolean requireAuthoritative) {
+      final boolean requireAuthoritative,
+      final boolean verbose) {
     super(storeContext);
     this.metastore = metastore;
     this.requireAuthoritative = requireAuthoritative;
+    this.verbose = verbose;
   }
 
   /**
@@ -122,11 +133,6 @@ public class AuthoritativeAuditOperation extends AbstractStoreOperation {
     try (DurationInfo ignored =
              new DurationInfo(LOG, "audit %s", path)) {
       return executeAudit(path, requireAuthoritative, true);
-    } catch (NonAuthoritativeDirException p) {
-      throw new ExitUtil.ExitException(
-          ERROR_ENTRY_NOT_AUTH_IN_DDB,
-          p.toString(),
-          p);
     }
   }
 
@@ -142,7 +148,8 @@ public class AuthoritativeAuditOperation extends AbstractStoreOperation {
    * @throws NonAuthoritativeDirException if a non-auth dir was found.
    */
   @VisibleForTesting
-  Pair<Integer, Integer> executeAudit(final Path path,
+  Pair<Integer, Integer> executeAudit(
+      final Path path,
       final boolean requireAuth,
       final boolean recursive) throws IOException {
     int dirs = 0;
@@ -166,16 +173,24 @@ public class AuthoritativeAuditOperation extends AbstractStoreOperation {
     while (!queue.isEmpty()) {
       dirs++;
       final DDBPathMetadata dir = queue.poll();
-      LOG.info("Directory {} {} authoritative",
-          dir.getFileStatus().getPath(),
-          dir.isAuthoritativeDir() ? "is" : "is not");
+      final Path p = dir.getFileStatus().getPath();
+      // log a message about the dir state, with root treated specially
+      if (!p.isRoot()) {
+        LOG.info("Directory {} {} authoritative",
+            p,
+            dir.isAuthoritativeDir() ? "is" : "is not");
+      } else {
+        // this is done to avoid the confusing message about root not being
+        // authoritative
+        LOG.info("Root directory {}", p);
+      }
       LOG.debug("Directory {}", dir);
       verifyAuthDir(dir, requireAuth);
 
       // list its children
       if (recursive) {
         final DirListingMetadata entry = metastore.listChildren(
-            dir.getFileStatus().getPath());
+            p);
 
         if (entry != null) {
           final Collection<PathMetadata> listing = entry.getListing();
@@ -196,16 +211,41 @@ public class AuthoritativeAuditOperation extends AbstractStoreOperation {
         }
       }
     }
+    // end of scan
+    if (dirs == 1 && isRoot) {
+      LOG.info("The store has no directories to scan");
+    } else {
+      LOG.info("Scanned {} directories - {} were not marked as authoritative",
+          dirs, nonauth);
+    }
     return Pair.of(dirs, nonauth);
   }
 
   /**
    * A directory was found which was non-authoritative.
+   * The exit code for this operation is
+   * {@link LauncherExitCodes#EXIT_NOT_ACCEPTABLE} -This is what the S3Guard
+   * will return.
    */
-  public static class NonAuthoritativeDirException extends PathIOException {
+  public static class NonAuthoritativeDirException extends PathIOException
+      implements ExitCodeProvider {
 
-    public NonAuthoritativeDirException(final Path path) {
+    /**
+     * Instantiate.
+     * @param path the path which is non-authoritative.
+     */
+    private NonAuthoritativeDirException(final Path path) {
       super(path.toString(), E_NONAUTH);
+    }
+
+    @Override
+    public int getExitCode() {
+      return ERROR_ENTRY_NOT_AUTH_IN_DDB;
+    }
+
+    @Override
+    public String toString() {
+      return getMessage();
     }
   }
 

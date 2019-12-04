@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -41,7 +43,6 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
-import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.rm;
@@ -55,7 +56,16 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUESTS;
 import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED;
+import static org.apache.hadoop.fs.s3a.s3guard.AuthoritativeAuditOperation.ERROR_PATH_NOT_AUTH_IN_FS;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.emptyDirectoryMarker;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Authoritative.CHECK_FLAG;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Authoritative.REQUIRE_AUTH;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Import.AUTH_FLAG;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.VERBOSE;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.expectExecResult;
+import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
+import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_FOUND;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -82,11 +92,11 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestDynamoDBMetadataStoreAuthoritativeMode.class);
 
-  private StoreContext storeContext;
+  public static final String AUDIT = S3GuardTool.Authoritative.NAME;
+
+  public static final String IMPORT = S3GuardTool.Import.NAME;
 
   private String fsUriStr;
-
-  private DynamoDBMetadataStore metastore;
 
   /**
    * Authoritative FS.
@@ -98,22 +108,48 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
    */
   private static S3AFileSystem unguardedFS;
 
+  /**
+   * Base path in the store for auth and nonauth paths.
+   */
   private static Path basePath;
 
+  /**
+   * Path under basePath which will be declared as authoritative.
+   */
   private static Path authPath;
 
+  /**
+   * Path under basePath which will be declared as non-authoritative.
+   */
   private static Path nonauthPath;
 
+  /**
+   * test method specific auth path.
+   */
   private Path methodAuthPath;
 
+  /**
+   * test method specific non-auth path.
+   */
   private Path methodNonauthPath;
 
+  /**
+   * Auditor of store state.
+   */
   private AuthoritativeAuditOperation auditor;
 
   private Path dir;
 
   private Path dirFile;
 
+  /**
+   * List of tools to close in test teardown.
+   */
+  private final List<S3GuardTool> toolsToClose = new ArrayList<>();
+
+  /**
+   * After all tests have run, close the filesystems.
+   */
   @AfterClass
   public static void closeFileSystems() {
     IOUtils.cleanupWithLogger(LOG, authFS, unguardedFS);
@@ -133,23 +169,23 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
     return conf;
   }
 
+  /**
+   * Test case setup will on-demand create the class-level fields
+   * of the authFS and the auth/non-auth paths.
+   */
   @Override
   public void setup() throws Exception {
     super.setup();
     S3AFileSystem fs = getFileSystem();
     Configuration conf = fs.getConf();
     S3ATestUtils.assumeS3GuardState(true, conf);
-    storeContext = fs.createStoreContext();
     assume("Filesystem isn't running DDB",
-        storeContext.getMetadataStore() instanceof DynamoDBMetadataStore);
-    metastore = (DynamoDBMetadataStore) storeContext.getMetadataStore();
-    URI fsURI = storeContext.getFsURI();
+        fs.getMetadataStore() instanceof DynamoDBMetadataStore);
+    URI fsURI = fs.getUri();
     fsUriStr = fsURI.toString();
     if (!fsUriStr.endsWith("/")) {
       fsUriStr = fsUriStr + "/";
     }
-    auditor = new AuthoritativeAuditOperation(storeContext,
-        metastore, true);
 
 
     if (authFS == null) {
@@ -160,7 +196,6 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
       final Configuration authconf = new Configuration(conf);
       final URI uri = authPath.toUri();
       authconf.set(AUTHORITATIVE_PATH, uri.toString());
-      authconf.setBoolean(METADATASTORE_AUTHORITATIVE, true);
       authFS = (S3AFileSystem) FileSystem.newInstance(uri, authconf);
 
       // and create the unguarded at the same time
@@ -169,6 +204,12 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
           S3_METADATA_STORE_IMPL);
       unguardedFS = (S3AFileSystem) FileSystem.newInstance(uri, unguardedConf);
     }
+    auditor = new AuthoritativeAuditOperation(
+        authFS.createStoreContext(),
+        (DynamoDBMetadataStore) authFS.getMetadataStore(),
+        true,
+        true);
+
     cleanupMethodPaths();
     dir = new Path(methodAuthPath, "dir");
     dirFile = new Path(dir, "file");
@@ -176,6 +217,7 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
 
   @Override
   public void teardown() throws Exception {
+    toolsToClose.forEach(t -> IOUtils.cleanupWithLogger(LOG, t));
     try {
       cleanupMethodPaths();
     } catch (IOException ignored) {
@@ -198,6 +240,24 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
     }
   }
 
+  /**
+   * Declare that the tool is to be closed in teardown.
+   * @param tool tool to close
+   * @return the tool.
+   */
+  protected <T extends S3GuardTool> T toClose(T tool) {
+    toolsToClose.add(tool);
+    return tool;
+  }
+
+  /**
+   * Get the conf of the auth FS.
+   * @return the auth FS config.
+   */
+  private Configuration getAuthConf() {
+    return authFS.getConf();
+  }
+
   @Test
   public void testEmptyDirMarkerIsAuth() {
     final S3AFileStatus st = new S3AFileStatus(true, dir, "root");
@@ -210,7 +270,7 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
   }
 
   @Test
-  @Ignore("Needs mkdir to be authoritative")
+  @Ignore("HADOOP-16697. Needs mkdir to be authoritative")
   public void testMkDirAuth() throws Throwable {
     describe("create an empty dir and assert it is tagged as authoritative");
     authFS.mkdirs(dir);
@@ -260,7 +320,7 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
    * marker is added. This must be auth.
    */
   @Test
-  @Ignore("Needs mkdir to be authoritative")
+  @Ignore("HADOOP-16697. Needs mkdir to be authoritative")
   public void testDeleteSingleFileLeavesMarkersAlone() throws Throwable {
     describe("Deleting a file with no peers makes no changes to ancestors");
     mkAuthDir(methodAuthPath);
@@ -299,7 +359,7 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
     String keyPrefix
         = PathMetadataDynamoDBTranslation.pathToParentKey(path);
     Assertions.assertThat(
-        metastore.prune(
+        authFS.getMetadataStore().prune(
             mode,
             limit,
             keyPrefix))
@@ -445,9 +505,8 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
         true, true);
     final Long count = importer.execute();
     expectAuthRecursive(dir);
-    //the parent dir shouldn't have changed
-    // TODO: re-enable
-    expectAuthNonRecursive(methodAuthPath);
+    // the parent dir shouldn't have changed
+    expectAuthRecursive(methodAuthPath);
 
     // file entry
     final S3AFileStatus status2 = (S3AFileStatus) authFS.getFileStatus(subdirfile);
@@ -463,6 +522,115 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
     Assertions.assertThat(count)
         .describedAs("Count of imports under %s", dir)
         .isEqualTo(expected);
+  }
+
+  /**
+   * Given a flag, add a - prefix.
+   * @param flag flag to wrap
+   * @return a flag for use in the CLI
+   */
+  private String f(String flag) {
+    return "-" + flag;
+  }
+
+  @Test
+  public void testAuditS3GuardTool() throws Throwable {
+    describe("Test the s3guard audit CLI");
+    authFS.mkdirs(methodAuthPath);
+    final String path = methodAuthPath.toString();
+    // this is non-auth, so the scan is rejected
+    expectExecResult(EXIT_NOT_ACCEPTABLE,
+        authTool(),
+        AUDIT,
+        f(CHECK_FLAG),
+        f(REQUIRE_AUTH),
+        f(VERBOSE),
+        path);
+    // a non-auth audit is fine
+    exec(authTool(),
+        AUDIT,
+        f(VERBOSE),
+        path);
+    // non-auth import
+    exec(importTool(),
+        IMPORT,
+        f(VERBOSE),
+        path);
+    // which will leave the result unchanged
+    expectExecResult(EXIT_NOT_ACCEPTABLE,
+        authTool(),
+        AUDIT,
+        f(CHECK_FLAG),
+        f(REQUIRE_AUTH),
+        f(VERBOSE),
+        path);
+    // auth import
+    exec(importTool(),
+        IMPORT,
+        f(AUTH_FLAG),
+        f(VERBOSE),
+        path);
+    // so now the audit succeeds
+    exec(authTool(),
+        AUDIT,
+        f(REQUIRE_AUTH),
+        path);
+  }
+
+  /**
+   * Create an import tool instance with the auth FS Config.
+   * It will be closed in teardown.
+   * @return a new instance.
+   */
+  protected S3GuardTool.Import importTool() {
+    return toClose(new S3GuardTool.Import(getAuthConf()));
+  }
+
+  /**
+   * Create an auth tool instance with the auth FS Config.
+   * It will be closed in teardown.
+   * @return a new instance.
+   */
+  protected S3GuardTool.Authoritative authTool() {
+    return toClose(new S3GuardTool.Authoritative(getAuthConf()));
+  }
+
+  @Test
+  public void testAuditS3GuardToolNonauthDir() throws Throwable {
+    describe("Test the s3guard audit -check-conf against a nonauth path");
+    mkdirs(methodNonauthPath);
+    expectExecResult(ERROR_PATH_NOT_AUTH_IN_FS,
+        authTool(),
+        AUDIT,
+        f(CHECK_FLAG),
+        methodNonauthPath.toString());
+  }
+
+  @Test
+  public void testImportNonauthDir() throws Throwable {
+    describe("s3guard import against a nonauth path marks the dirs as auth");
+    final String path = methodNonauthPath.toString();
+    mkdirs(methodNonauthPath);
+    // auth import
+    exec(importTool(),
+        IMPORT,
+        f(AUTH_FLAG),
+        f(VERBOSE),
+        path);
+    exec(authTool(),
+        AUDIT,
+        f(REQUIRE_AUTH),
+        f(VERBOSE),
+        path);
+  }
+
+  @Test
+  public void testAuditS3GuardTooMissingDir() throws Throwable {
+    describe("Test the s3guard audit against a missing path");
+    expectExecResult(EXIT_NOT_FOUND,
+        authTool(),
+        AUDIT,
+        methodAuthPath.toString());
   }
 
   /**
@@ -484,7 +652,8 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
    * @return Result of the function call
    * @throws Exception Failure
    */
-  private <T> T expectAuthoritativeUpdate(int updates,
+  private <T> T expectAuthoritativeUpdate(
+      int updates,
       int lists,
       Callable<T> fn)
       throws Exception {
@@ -547,12 +716,15 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
 
   /**
    * Performed a recursive audit of the directory
-   * -require everything to be non-authoritative.
+   * -expect a failure
    * @param dir directory
+   * @return the path returned by the exception
    */
-  private void expectNonauthRecursive(Path dir) throws Exception {
-    intercept(AuthoritativeAuditOperation.NonAuthoritativeDirException.class,
-        () -> auditor.executeAudit(dir, true, true));
+  private Path expectNonauthRecursive(Path dir) throws Exception {
+    return intercept(
+        AuthoritativeAuditOperation.NonAuthoritativeDirException.class,
+        () -> auditor.executeAudit(dir, true, true))
+        .getPath();
   }
 
 }

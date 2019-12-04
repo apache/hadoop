@@ -635,7 +635,7 @@ Example
 hadoop s3guard import s3a://ireland-1
 ```
 
-### Audit a table: `s3guard diff`
+### Compare a S3Guard table and the S3 Store: `s3guard diff`
 
 ```bash
 hadoop s3guard diff [-meta URI] s3a://BUCKET
@@ -856,8 +856,12 @@ the table associated with `s3a://ireland-1` and with the prefix `path_prefix`
 hadoop s3guard prune -hours 1 -minutes 30 -meta dynamodb://ireland-team -region eu-west-1
 ```
 
-Delete all entries more than 90 minutes old from the table "`ireland-team"` in
+Delete all file entries more than 90 minutes old from the table "`ireland-team"` in
 the region `eu-west-1`.
+
+
+### Audit the "authoritative state of a DynamoDB Table, `s3guard authoritative`
+
 
 
 ### Tune the I/O capacity of the DynamoDB Table, `s3guard set-capacity`

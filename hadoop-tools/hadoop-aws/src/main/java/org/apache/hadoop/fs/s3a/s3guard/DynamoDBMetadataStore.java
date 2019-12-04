@@ -393,7 +393,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       throws IOException {
     Preconditions.checkNotNull(fs, "Null filesystem");
     Preconditions.checkArgument(fs instanceof S3AFileSystem,
-        "DynamoDBMetadataStore only supports S3A filesystem.");
+        "DynamoDBMetadataStore only supports S3A filesystem - not %s", fs );
     bindToOwnerFilesystem((S3AFileSystem) fs);
     final String bucket = owner.getBucket();
     String confRegion = conf.getTrimmed(S3GUARD_DDB_REGION_KEY);
@@ -776,7 +776,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
         // If directory is authoritative, we can set the empty directory flag
         // to TRUE or FALSE. Otherwise FALSE, or UNKNOWN.
-        if(meta.isAuthoritativeDir()) {
+        if (meta.isAuthoritativeDir()) {
           meta.setIsEmptyDirectory(
               hasChildren ? Tristate.FALSE : Tristate.TRUE);
         } else {
@@ -928,7 +928,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
               path, entry);
         }
       }
-      // add the entry to the ancestry map as a requested value.
+      // add the entry to the ancestry map as an explicitly requested entry.
       ancestry.put(path, Pair.of(EntryOrigin.Requested, entry));
       Path parent = path.getParent();
       while (!parent.isRoot() && !ancestry.containsKey(parent)) {
@@ -940,7 +940,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
           final Item item = getConsistentItem(parent);
           if (item != null && !itemToPathMetadata(item, username).isDeleted()) {
             // This is an undeleted entry found in the database.
-            // register it in ancestor state and map of entries to create
+            // register it in ancestor state and in the map of entries to create
+            // as a retrieved entry
             md = itemToPathMetadata(item, username);
             LOG.debug("Found existing entry for parent: {}", md);
             newEntry = Pair.of(EntryOrigin.Retrieved, md);
@@ -951,6 +952,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
             final S3AFileStatus status = makeDirStatus(parent, username);
             md = new DDBPathMetadata(status, Tristate.FALSE,
                 false, false, ttlTimeProvider.getNow());
+            // declare to be a generated entry
             newEntry =  Pair.of(EntryOrigin.Generated, md);
           }
           // insert into the ancestor state to avoid further checks
@@ -961,7 +963,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
       }
     }
     // we now have a list of entries which were not in the operation state.
-    // sort in reverse order of existence
+    // Filter out those which were retrieved, to produce a list of those
+    // which must be written to the database.
+    // TODO sort in reverse order of existence
     return ancestry.values().stream()
         .filter(p -> p.getLeft() != EntryOrigin.Retrieved)
         .map(Pair::getRight)
@@ -2076,19 +2080,28 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   /**
    * Mark the directories instantiated under the destination path
-   * as authoritative.
+   * as authoritative. That is: all entries in the
+   * operationState (which must be an AncestorState instance),
+   * that are under the destination path.
+   *
+   * The database update synchronized on the operationState, so all other
+   * threads trying to update that state will be blocked until completion.
+   *
+   * This operation is only used in import and at the end of a rename,
+   * so this is not considered an issue.
    * @param dest destination path.
    * @param operationState active state.
    * @throws IOException failure.
    * @return the number of directories marked.
    */
   @Override
-  public int markAsAuthoritative(final Path dest,
+  public int markAsAuthoritative(
+      final Path dest,
       final BulkOperationState operationState) throws IOException {
     if (operationState == null) {
       return 0;
     }
-    AncestorState state = (AncestorState)operationState;
+    final AncestorState state = (AncestorState)operationState;
     // only mark paths under the dest as auth
     final String simpleDestKey = pathToParentKey(dest);
     final String destPathKey = simpleDestKey + "/";
@@ -2152,7 +2165,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
       String stateStr = AncestorState.stateAsString(state);
       for (Item item : items) {
         boolean tombstone = !itemExists(item);
-
         boolean isDir = hasBoolAttribute(item, IS_DIR, false);
         boolean auth = hasBoolAttribute(item, IS_AUTHORITATIVE, false);
         OPERATIONS_LOG.debug("{} {} {}{}{}",
