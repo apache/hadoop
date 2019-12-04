@@ -170,6 +170,27 @@ public class RouterQuotaManager {
   }
 
   /**
+   * Update quota in cache. The usage will be preserved.
+   * @param path Mount table path.
+   * @param quota Corresponding quota value.
+   */
+  public void updateQuota(String path, RouterQuotaUsage quota) {
+    writeLock.lock();
+    try {
+      RouterQuotaUsage.Builder builder = new RouterQuotaUsage.Builder()
+          .quota(quota.getQuota()).spaceQuota(quota.getSpaceQuota());
+      RouterQuotaUsage current = this.cache.get(path);
+      if (current != null) {
+        builder.fileAndDirectoryCount(current.getFileAndDirectoryCount())
+            .spaceConsumed(current.getSpaceConsumed());
+      }
+      this.cache.put(path, builder.build());
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  /**
    * Remove the entity from cache.
    * @param path Mount table path.
    */
