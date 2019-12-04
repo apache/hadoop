@@ -125,10 +125,25 @@ public class TestBalancerWithHANameNodes {
   /**
    * Test Balancer with ObserverNodes.
    */
-  @Test(timeout = 60000)
+  @Test(timeout = 120000)
   public void testBalancerWithObserver() throws Exception {
+    testBalancerWithObserver(false);
+  }
+
+  /**
+   * Test Balancer with ObserverNodes when one has failed.
+   */
+  @Test(timeout = 180000)
+  public void testBalancerWithObserverWithFailedNode() throws Exception {
+    testBalancerWithObserver(true);
+  }
+
+  private void testBalancerWithObserver(boolean withObserverFailure)
+      throws Exception {
     final Configuration conf = new HdfsConfiguration();
     TestBalancer.initConf(conf);
+    // Avoid the same FS being reused between tests
+    conf.setBoolean("fs.hdfs.impl.disable.cache", true);
 
     MiniQJMHACluster qjmhaCluster = null;
     try {
@@ -142,6 +157,10 @@ public class TestBalancerWithHANameNodes {
         namesystemSpies.add(
             NameNodeAdapter.spyOnNamesystem(cluster.getNameNode(i)));
       }
+      if (withObserverFailure) {
+        // First observer NN is at index 2
+        cluster.shutdownNameNode(2);
+      }
 
       DistributedFileSystem dfs = HATestUtil.configureObserverReadFs(
           cluster, conf, ObserverReadProxyProvider.class, true);
@@ -149,9 +168,10 @@ public class TestBalancerWithHANameNodes {
 
       doTest(conf);
       for (int i = 0; i < cluster.getNumNameNodes(); i++) {
-        // First observer node is at idx 2 so it should get both getBlocks calls
-        // all other NameNodes should see 0 getBlocks calls
-        int expectedCount = (i == 2) ? 2 : 0;
+        // First observer node is at idx 2, or 3 if 2 has been shut down
+        // It should get both getBlocks calls, all other NNs should see 0 calls
+        int expectedObserverIdx = withObserverFailure ? 3 : 2;
+        int expectedCount = (i == expectedObserverIdx) ? 2 : 0;
         verify(namesystemSpies.get(i), times(expectedCount))
             .getBlocks(any(), anyLong(), anyLong());
       }
