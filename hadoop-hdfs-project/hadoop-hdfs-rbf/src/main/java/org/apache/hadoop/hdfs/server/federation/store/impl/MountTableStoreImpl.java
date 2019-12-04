@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.server.federation.router.RouterAdminServer;
 import org.apache.hadoop.hdfs.server.federation.router.RouterPermissionChecker;
+import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
@@ -151,6 +152,20 @@ public class MountTableStoreImpl extends MountTableStore {
             // Remove this mount table entry if it cannot
             // be accessed by current user.
             it.remove();
+          }
+        }
+        // If quota manager is not null, update quota usage from quota cache.
+        if (this.getQuotaManager() != null) {
+          RouterQuotaUsage quota =
+              this.getQuotaManager().getQuotaUsage(record.getSourcePath());
+          if (quota != null) {
+            RouterQuotaUsage oldquota = record.getQuota();
+            RouterQuotaUsage newQuota = new RouterQuotaUsage.Builder()
+                .fileAndDirectoryCount(quota.getFileAndDirectoryCount())
+                .quota(oldquota.getQuota())
+                .spaceConsumed(quota.getSpaceConsumed())
+                .spaceQuota(oldquota.getSpaceQuota()).build();
+            record.setQuota(newQuota);
           }
         }
       }
