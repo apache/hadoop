@@ -1140,11 +1140,19 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
   
+  /**
+   * Log that a snapshot is renamed.
+   * @param path Root of the snapshot.
+   * @param snapOldName Old name of the snapshot.
+   * @param snapNewName New name the snapshot will be renamed to.
+   * @param toLogRpcIds If it is logging RPC ids.
+   * @param mtime The snapshot modification time set by Time.now().
+   */
   void logRenameSnapshot(String path, String snapOldName, String snapNewName,
-      boolean toLogRpcIds) {
+      boolean toLogRpcIds, long mtime) {
     RenameSnapshotOp op = RenameSnapshotOp.getInstance(cache.get())
         .setSnapshotRoot(path).setSnapshotOldName(snapOldName)
-        .setSnapshotNewName(snapNewName);
+        .setSnapshotNewName(snapNewName).setSnapshotMTime(mtime);
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }

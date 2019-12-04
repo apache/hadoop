@@ -210,7 +210,7 @@ class BlockManagerSafeMode {
     switch (status) {
     case PENDING_THRESHOLD:
       if (areThresholdsMet()) {
-        if (extension > 0) {
+        if (blockTotal > 0 && extension > 0) {
           // PENDING_THRESHOLD -> EXTENSION
           status = BMSafeModeStatus.EXTENSION;
           reachedTime.set(monotonicNow());
@@ -532,11 +532,13 @@ class BlockManagerSafeMode {
 
   /**
    * Get time (counting in milliseconds) left to leave extension period.
+   * It should leave safemode at once if blockTotal = 0 rather than wait
+   * extension time (30s by default).
    *
    * Negative value indicates the extension period has passed.
    */
   private long timeToLeaveExtension() {
-    return reachedTime.get() + extension - monotonicNow();
+    return blockTotal > 0 ? reachedTime.get() + extension - monotonicNow() : 0;
   }
 
   /**

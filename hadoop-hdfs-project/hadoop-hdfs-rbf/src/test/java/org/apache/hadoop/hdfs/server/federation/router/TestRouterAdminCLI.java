@@ -159,6 +159,8 @@ public class TestRouterAdminCLI {
     String dest = "/addmounttable";
     String[] argv = new String[] {"-add", src, nsId, dest};
     assertEquals(0, ToolRunner.run(admin, argv));
+    assertEquals(-1, ToolRunner.run(admin, argv));
+
 
     stateStore.loadCache(MountTableStoreImpl.class, true);
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
@@ -744,9 +746,7 @@ public class TestRouterAdminCLI {
 
     // verify multi args ClrQuota
     String dest1 = "/QuotaMounttable1";
-    // Add mount table entries.
-    argv = new String[] {"-add", src, nsId, dest};
-    assertEquals(0, ToolRunner.run(admin, argv));
+    // Add one more mount table entry.
     argv = new String[] {"-add", src1, nsId, dest1};
     assertEquals(0, ToolRunner.run(admin, argv));
 

@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
@@ -44,10 +45,12 @@ public class TestAppSchedulingInfo {
         ApplicationAttemptId.newInstance(appIdImpl, 1);
 
     FSLeafQueue queue = mock(FSLeafQueue.class);
+    RMContext rmContext = mock(RMContext.class);
     doReturn("test").when(queue).getQueueName();
+    doReturn(new YarnConfiguration()).when(rmContext).getYarnConfiguration();
     AppSchedulingInfo appSchedulingInfo = new AppSchedulingInfo(appAttemptId,
         "test", queue, null, 0, new ResourceUsage(),
-        new HashMap<String, String>(), null);
+        new HashMap<String, String>(), rmContext);
 
     appSchedulingInfo.updatePlacesBlacklistedByApp(new ArrayList<String>(),
         new ArrayList<String>());
@@ -117,9 +120,11 @@ public class TestAppSchedulingInfo {
 
     Queue queue = mock(Queue.class);
     doReturn(mock(QueueMetrics.class)).when(queue).getMetrics();
+    RMContext rmContext = mock(RMContext.class);
+    doReturn(new YarnConfiguration()).when(rmContext).getYarnConfiguration();
     AppSchedulingInfo  info = new AppSchedulingInfo(
         appAttemptId, "test", queue, mock(ActiveUsersManager.class), 0,
-        new ResourceUsage(), new HashMap<>(), mock(RMContext.class));
+        new ResourceUsage(), new HashMap<>(), rmContext);
     Assert.assertEquals(0, info.getSchedulerKeys().size());
 
     Priority pri1 = Priority.newInstance(1);

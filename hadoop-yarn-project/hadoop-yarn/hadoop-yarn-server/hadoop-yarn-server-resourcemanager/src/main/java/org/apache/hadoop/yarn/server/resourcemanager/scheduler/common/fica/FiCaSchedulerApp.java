@@ -821,7 +821,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
           currentContPreemption, Collections.singletonList(rr), updatedNMTokens,
           newlyIncreasedContainers, newlyDecreasedContainers,
           newlyPromotedContainers, newlyDemotedContainers,
-          previousAttemptContainers);
+          previousAttemptContainers, appSchedulingInfo.getRejectedRequest());
     } finally {
       writeLock.unlock();
     }

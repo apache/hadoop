@@ -30,7 +30,6 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -66,6 +65,7 @@ import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * Manage datanodes, include decommission and other activities.
@@ -133,6 +133,9 @@ public class DatanodeManager {
   
   /** Whether or not to avoid using stale DataNodes for reading */
   private final boolean avoidStaleDataNodesForRead;
+
+  /** Whether or not to consider lad for reading. */
+  private final boolean readConsiderLoad;
 
   /**
    * Whether or not to avoid using stale DataNodes for writing.
@@ -314,6 +317,9 @@ public class DatanodeManager {
     this.avoidStaleDataNodesForRead = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY,
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_DEFAULT);
+    this.readConsiderLoad = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERLOAD_KEY,
+        DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERLOAD_DEFAULT);
     this.avoidStaleDataNodesForWrite = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY,
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT);
@@ -530,14 +536,26 @@ public class DatanodeManager {
     int activeLen = lastActiveIndex + 1;
     if(nonDatanodeReader) {
       networktopology.sortByDistanceUsingNetworkLocation(client,
-          lb.getLocations(), activeLen);
+          lb.getLocations(), activeLen, createSecondaryNodeSorter());
     } else {
-      networktopology.sortByDistance(client, lb.getLocations(), activeLen);
+      networktopology.sortByDistance(client, lb.getLocations(), activeLen,
+          createSecondaryNodeSorter());
     }
     // move PROVIDED storage to the end to prefer local replicas.
     lb.moveProvidedToEnd(activeLen);
     // must update cache since we modified locations array
     lb.updateCachedStorageInfo();
+  }
+
+  private Consumer<List<DatanodeInfo>> createSecondaryNodeSorter() {
+    Consumer<List<DatanodeInfo>> secondarySort =
+        list -> Collections.shuffle(list);
+    if (readConsiderLoad) {
+      Comparator<DatanodeInfo> comp =
+          Comparator.comparingInt(DatanodeInfo::getXceiverCount);
+      secondarySort = list -> Collections.sort(list, comp);
+    }
+    return secondarySort;
   }
 
   /** @return the datanode descriptor for the host. */

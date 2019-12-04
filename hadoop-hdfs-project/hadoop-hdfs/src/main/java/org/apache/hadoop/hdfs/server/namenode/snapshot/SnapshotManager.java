@@ -362,6 +362,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    *          Old name of the snapshot
    * @param newSnapshotName
    *          New name of the snapshot
+   * @param now is the snapshot modification time set by Time.now().
    * @throws IOException
    *           Throw IOException when 1) the given path does not lead to an
    *           existing snapshottable directory, and/or 2) the snapshot with the
@@ -369,10 +370,10 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    *           a snapshot with the new name for the directory
    */
   public void renameSnapshot(final INodesInPath iip, final String snapshotRoot,
-      final String oldSnapshotName, final String newSnapshotName)
+      final String oldSnapshotName, final String newSnapshotName, long now)
       throws IOException {
     final INodeDirectory srcRoot = getSnapshottableRoot(iip);
-    srcRoot.renameSnapshot(snapshotRoot, oldSnapshotName, newSnapshotName);
+    srcRoot.renameSnapshot(snapshotRoot, oldSnapshotName, newSnapshotName, now);
   }
   
   public int getNumSnapshottableDirs() {

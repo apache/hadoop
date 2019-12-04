@@ -178,6 +178,14 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_USE_UPN)
   private boolean useUpn;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_CHECK_ACCESS, DefaultValue = DEFAULT_ENABLE_CHECK_ACCESS)
+  private boolean isCheckAccessEnabled;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_LATENCY_TRACK,
+          DefaultValue = DEFAULT_ABFS_LATENCY_TRACK)
+  private boolean trackLatency;
+
   private Map<String, String> storageAccountKeys;
 
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
@@ -399,6 +407,10 @@ public class AbfsConfiguration{
     return this.azureBlockSize;
   }
 
+  public boolean isCheckAccessEnabled() {
+    return this.isCheckAccessEnabled;
+  }
+
   public String getAzureBlockLocationHost() {
     return this.azureBlockLocationHost;
   }
@@ -469,6 +481,15 @@ public class AbfsConfiguration{
 
   public boolean isUpnUsed() {
     return this.useUpn;
+  }
+
+  /**
+   * Whether {@code AbfsClient} should track and send latency info back to storage servers.
+   *
+   * @return a boolean indicating whether latency should be tracked.
+   */
+  public boolean shouldTrackLatency() {
+    return this.trackLatency;
   }
 
   public AccessTokenProvider getTokenProvider() throws TokenAccessProviderException {

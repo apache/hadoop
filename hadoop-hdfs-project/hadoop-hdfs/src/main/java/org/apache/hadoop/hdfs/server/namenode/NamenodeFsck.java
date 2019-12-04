@@ -94,7 +94,8 @@ import com.google.common.annotations.VisibleForTesting;
  * This class provides rudimentary checking of DFS volumes for errors and
  * sub-optimal conditions.
  * <p>The tool scans all files and directories, starting from an indicated
- *  root path. The following abnormal conditions are detected and handled:</p>
+ *  root path and its descendants. The following abnormal conditions are
+ *  detected and handled:</p>
  * <ul>
  * <li>files with blocks that are completely missing from all datanodes.<br>
  * In this case the tool can perform one of the following actions:

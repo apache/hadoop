@@ -73,7 +73,7 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
       Configuration conf = new Configuration();
       conf.setClass(YarnConfiguration.RM_SCHEDULER, FifoScheduler.class,
           ResourceScheduler.class);
-      conf.set(YarnConfiguration.YARN_ADMIN_ACL, userName);
+      conf.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
       serve("/*").with(GuiceContainer.class);
@@ -141,13 +141,25 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
     assertTrue(
         response.getEntity(String.class).contains("Invalid ContainerId"));
 
-    // test correct signal
+    // test correct signal by owner
     response =
         r.path("ws").path("v1").path("cluster").path("containers").path(
             app.getCurrentAppAttempt().getMasterContainer().getId().toString())
             .path("signal")
             .path(SignalContainerCommand.OUTPUT_THREAD_DUMP.name())
             .queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    assertEquals(Response.SC_OK, response.getStatus());
+
+    // test correct signal by admin
+    response =
+        r.path("ws").path("v1").path("cluster").path("containers").path(
+            app.getCurrentAppAttempt().getMasterContainer().getId().toString())
+            .path("signal")
+            .path(SignalContainerCommand.OUTPUT_THREAD_DUMP.name())
+            .queryParam("user.name", "admin")
             .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());

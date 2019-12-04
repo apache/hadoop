@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.store.impl;
 
+import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
@@ -25,9 +27,9 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.hdfs.server.federation.router.FederationUtil;
 import org.apache.hadoop.hdfs.server.federation.router.RouterAdminServer;
 import org.apache.hadoop.hdfs.server.federation.router.RouterPermissionChecker;
+import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
@@ -140,7 +142,7 @@ public class MountTableStoreImpl extends MountTableStore {
       while (it.hasNext()) {
         MountTable record = it.next();
         String srcPath = record.getSourcePath();
-        if (!FederationUtil.isParentEntry(srcPath, reqSrcPath)) {
+        if (!isParentEntry(srcPath, reqSrcPath)) {
           it.remove();
         } else if (pc != null) {
           // do the READ permission check
@@ -150,6 +152,20 @@ public class MountTableStoreImpl extends MountTableStore {
             // Remove this mount table entry if it cannot
             // be accessed by current user.
             it.remove();
+          }
+        }
+        // If quota manager is not null, update quota usage from quota cache.
+        if (this.getQuotaManager() != null) {
+          RouterQuotaUsage quota =
+              this.getQuotaManager().getQuotaUsage(record.getSourcePath());
+          if (quota != null) {
+            RouterQuotaUsage oldquota = record.getQuota();
+            RouterQuotaUsage newQuota = new RouterQuotaUsage.Builder()
+                .fileAndDirectoryCount(quota.getFileAndDirectoryCount())
+                .quota(oldquota.getQuota())
+                .spaceConsumed(quota.getSpaceConsumed())
+                .spaceQuota(oldquota.getSpaceQuota()).build();
+            record.setQuota(newQuota);
           }
         }
       }

@@ -904,7 +904,7 @@
   <name>fs.protected.directories</name>
   <value></value>
   <description>A comma-separated list of directories which cannot
-    be deleted even by the superuser unless they are empty. This
+    be deleted or renamed even by the superuser unless they are empty. This
     setting can be used to guard important system directories
     against accidental deletion due to administrator error.
   </description>
@@ -3018,6 +3018,14 @@
 </property>
 
 <property>
+  <name>ha.failover-controller.active-standby-elector.zk.op.retries</name>
+  <value>3</value>
+  <description>
+    The number of zookeeper operation retry times in ActiveStandbyElector
+  </description>
+</property>
+
+<property>
   <name>ha.failover-controller.cli-check.rpc-timeout.ms</name>
   <value>20000</value>
   <description>
@@ -3779,6 +3787,14 @@
     <value>60000</value>
     <description>
       fs space usage statistics refresh jitter in msec.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.http.sni.host.check.enabled</name>
+    <value>false</value>
+    <description>
+      Enable Server Name Indication (SNI) host check for HTTPS enabled server.
     </description>
   </property>
 </configuration>

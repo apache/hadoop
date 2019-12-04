@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceSet;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 
 import java.util.List;
 import java.util.Map;
@@ -111,6 +112,11 @@ public interface Container extends EventHandler<ContainerEvent> {
   void sendKillEvent(int exitStatus, String description);
 
   boolean isRecovering();
+
+  void setContainerRuntimeData(Object containerRuntimeData);
+
+  <T> T getContainerRuntimeData(Class<T> runtimeClazz)
+      throws ContainerExecutionException;
 
   /**
    * Get assigned resource mappings to the container.
