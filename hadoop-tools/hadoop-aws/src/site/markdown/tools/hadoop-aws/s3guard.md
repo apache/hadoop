@@ -939,10 +939,10 @@ hadoop s3guard fsck [-check | -internal] (s3a://BUCKET | s3a://PATH_PREFIX)
 does not fix any issues.
 The consistency issues will be logged in ERROR loglevel.
 
-`-internal` operation check the internal consistency of the metadata store,
+`-internal` operation checks the internal consistency of the metadata store,
 but does not fix any issues.
 
-The errors found will be logged on ERROR log level.
+The errors found will be logged at the ERROR log level.
 
 *Note*: `-check` and `-internal` operations can be used only as separate
 commands. Running `fsck` with both will result in an error.

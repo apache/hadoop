@@ -1624,21 +1624,19 @@ public abstract class S3GuardTool extends Configured implements Tool {
         return ERROR;
       }
 
+      List<S3GuardFsck.ComparePair> violations;
+
       if (commandFormat.getOpt(CHECK_FLAG)) {
         // do the check
         S3GuardFsck s3GuardFsck = new S3GuardFsck(fs, ms);
         try {
-          final List<S3GuardFsck.ComparePair> comparePairs
-              = s3GuardFsck.compareS3ToMs(fs.qualify(root));
-          if (comparePairs.size() > 0) {
-            exitValue = EXIT_FAIL;
-          }
+          violations = s3GuardFsck.compareS3ToMs(fs.qualify(root));
         } catch (IOException e) {
           throw e;
         }
       } else if (commandFormat.getOpt(DDB_MS_CONSISTENCY_FLAG)) {
         S3GuardFsck s3GuardFsck = new S3GuardFsck(fs, ms);
-        s3GuardFsck.checkDdbInternalConsistency(fs.qualify(root));
+        violations = s3GuardFsck.checkDdbInternalConsistency(fs.qualify(root));
       } else {
         errorln("No supported operation is selected.");
         errorln(USAGE);
@@ -1646,6 +1644,12 @@ public abstract class S3GuardTool extends Configured implements Tool {
       }
 
       out.flush();
+
+      // We fail if there were compare pairs, as the returned compare pairs
+      // contain issues.
+      if (violations == null || violations.size() > 0) {
+        exitValue = EXIT_FAIL;
+      }
       return exitValue;
     }
   }
