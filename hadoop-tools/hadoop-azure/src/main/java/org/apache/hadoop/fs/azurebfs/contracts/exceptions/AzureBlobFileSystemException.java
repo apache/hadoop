@@ -29,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class AzureBlobFileSystemException extends IOException {
-  public AzureBlobFileSystemException(final Throwable message) {
+  public AzureBlobFileSystemException(final String message) {
     super(message);
   }
 
