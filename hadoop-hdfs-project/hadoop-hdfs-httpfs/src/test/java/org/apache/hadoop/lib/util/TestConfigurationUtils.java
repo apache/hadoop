@@ -21,9 +21,11 @@ package org.apache.hadoop.lib.util;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringWriter;
 
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
@@ -44,11 +46,12 @@ public class TestConfigurationUtils {
   }
 
 
-  @Test(expected = IOException.class)
-  public void constructorsFail3() throws Exception {
-    InputStream is = new ByteArrayInputStream("<xonfiguration></xonfiguration>".getBytes());
+  @Test
+  public void constructors3() throws Exception {
+    InputStream is = new ByteArrayInputStream("<xonfiguration><property name=\"key1\" value=\"val1\"/></xonfiguration>".getBytes());
     Configuration conf = new Configuration(false);
     ConfigurationUtils.load(conf, is);
+    assertEquals(conf.get("key1"), "val1");
   }
 
   @Test
@@ -124,4 +127,22 @@ public class TestConfigurationUtils {
     assertEquals(conf.get("user.name"), "foo");
   }
 
+  @Test
+  public void testCompactFormatProperty() throws IOException {
+    Configuration conf = new Configuration(false);
+    assertEquals(conf.size(), 0);
+    StringWriter writer = new StringWriter();
+    BufferedWriter out = new BufferedWriter(writer);
+    out.write("<?xml version=\"1.0\"?>\n");
+    out.write("<configuration>\n");
+    out.write("<property name=\"key1\" value=\"val1\"/>");
+    out.write("</configuration>\n");
+    out.flush();
+    out.close();
+    InputStream is = new ByteArrayInputStream(writer.toString().getBytes());
+    conf = new Configuration(false);
+    ConfigurationUtils.load(conf, is);
+    assertEquals(conf.size(), 1);
+    assertEquals(conf.get("key1"), "val1");
+  }
 }
