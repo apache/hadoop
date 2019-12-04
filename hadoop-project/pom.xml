@@ -76,8 +76,9 @@
     <httpclient.version>4.5.6</httpclient.version>
     <httpcore.version>4.4.10</httpcore.version>
 
-    <!-- SLF4J version -->
+    <!-- SLF4J/LOG4J version -->
     <slf4j.version>1.7.25</slf4j.version>
+    <log4j.version>1.2.17</log4j.version>
 
     <!-- com.google.re2j version -->
     <re2j.version>1.1</re2j.version>
@@ -103,6 +104,14 @@
     <apacheds.version>2.0.0-M21</apacheds.version>
     <ldap-api.version>1.0.0-M33</ldap-api.version>
 
+    <!-- Apache Commons dependencies -->
+    <commons-beanutils.version>1.9.4</commons-beanutils.version>
+    <commons-cli.version>1.2</commons-cli.version>
+    <commons-collections.version>3.2.2</commons-collections.version>
+    <commons-io.version>2.5</commons-io.version>
+    <commons-lang3.version>3.7</commons-lang3.version>
+    <commons-math3.version>3.1.1</commons-math3.version>
+
     <kerby.version>1.0.1</kerby.version>
     <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
@@ -110,6 +119,9 @@
     <mssql.version>6.2.1.jre7</mssql.version>
     <okhttp.version>2.7.5</okhttp.version>
     <jna.version>5.2.0</jna.version>
+    <gson.version>2.2.4</gson.version>
+    <netty3.version>3.10.6.Final</netty3.version>
+    <netty4.version>4.1.42.Final</netty4.version>
 
     <!-- Maven protoc compiler -->
     <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
@@ -623,17 +635,17 @@
       <dependency>
         <groupId>com.google.code.gson</groupId>
         <artifactId>gson</artifactId>
-        <version>2.2.4</version>
+        <version>${gson.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-cli</groupId>
         <artifactId>commons-cli</artifactId>
-        <version>1.2</version>
+        <version>${commons-cli.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-math3</artifactId>
-        <version>3.1.1</version>
+        <version>${commons-math3.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
@@ -837,19 +849,19 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty</artifactId>
-        <version>3.10.6.Final</version>
+        <version>${netty3.version}</version>
       </dependency>
 
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
-        <version>4.1.42.Final</version>
+        <version>${netty4.version}</version>
       </dependency>
 
       <dependency>
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
-        <version>2.5</version>
+        <version>${commons-io.version}</version>
       </dependency>
 
       <dependency>
@@ -884,7 +896,7 @@
       <dependency>
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
-        <version>1.2.17</version>
+        <version>${log4j.version}</version>
         <exclusions>
           <exclusion>
             <groupId>com.sun.jdmk</groupId>
@@ -993,12 +1005,12 @@
       <dependency>
         <groupId>commons-collections</groupId>
         <artifactId>commons-collections</artifactId>
-        <version>3.2.2</version>
+        <version>${commons-collections.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-beanutils</groupId>
         <artifactId>commons-beanutils</artifactId>
-        <version>1.9.4</version>
+        <version>${commons-beanutils.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
@@ -1014,7 +1026,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
-        <version>3.7</version>
+        <version>${commons-lang3.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
