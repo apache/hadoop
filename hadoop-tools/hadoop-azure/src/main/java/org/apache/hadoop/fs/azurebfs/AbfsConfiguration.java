@@ -178,10 +178,6 @@ public class AbfsConfiguration{
       FS_AZURE_ENABLE_CHECK_ACCESS, DefaultValue = DEFAULT_ENABLE_CHECK_ACCESS)
   private boolean isCheckAccessEnabled;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_LATENCY_TRACK,
-          DefaultValue = DEFAULT_ABFS_LATENCY_TRACK)
-  private boolean trackLatency;
-
   private Map<String, String> storageAccountKeys;
 
   public AbfsConfiguration(final Configuration rawConfig, String accountName)

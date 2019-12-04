@@ -894,13 +894,14 @@ public class AzureBlobFileSystemStore {
           + " used is not namespace enabled");
       return;
     }
-    try (AbfsPerfInfo perfInfo = startTracking("access", "checkAccess")) {
+    //  Uncomment when cherry-picking HADOOP-16612
+    // try (AbfsPerfInfo perfInfo = startTracking("access", "checkAccess")) {
       String relativePath =
           AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true);
       final AbfsRestOperation op = this.client
           .checkAccess(relativePath, mode.SYMBOL);
-      perfInfo.registerResult(op.getResult()).registerSuccess(true);
-    }
+    //  perfInfo.registerResult(op.getResult()).registerSuccess(true);
+    //}
   }
 
   public boolean isAtomicRenameKey(String key) {
