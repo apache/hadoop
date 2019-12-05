@@ -30,6 +30,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy;
@@ -121,7 +123,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(1 * GB, "app", user1, null, queue1);
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser(user1)
+            .withAcls(null)
+            .withQueue(queue1)
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     am1.allocate("*", 1 * GB, 32, new ArrayList<ContainerId>());
@@ -144,7 +154,15 @@ public class TestCapacitySchedulerSurgicalPreemption
 
 
     // Submit app2 to queue-c and asks for a 1G container for AM
-    RMApp app2 = rm1.submitApp(1 * GB, "app", user2, null, queue2);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser(user2)
+            .withAcls(null)
+            .withQueue(queue2)
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
 
     // NM1/NM2 has available resource = 2G/4G
@@ -229,7 +247,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     am1.allocate("*", 1 * GB, 38, new ArrayList<ContainerId>());
@@ -252,7 +278,15 @@ public class TestCapacitySchedulerSurgicalPreemption
 
 
     // Submit app2 to queue-c and asks for a 4G container for AM
-    RMApp app2 = rm1.submitApp(4 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(4 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
         ApplicationAttemptId.newInstance(app2.getApplicationId(), 1));
 
@@ -333,7 +367,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "b");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     am1.allocate("*", 1 * GB, 6, new ArrayList<>());
@@ -356,7 +398,15 @@ public class TestCapacitySchedulerSurgicalPreemption
         am1.getApplicationAttemptId(), 3);
 
     // Submit app2 to queue-c and asks for a 1G container for AM
-    RMApp app2 = rm1.submitApp(18 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(18 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
         ApplicationAttemptId.newInstance(app2.getApplicationId(), 1));
 
@@ -442,7 +492,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     RMNode rmNode3 = rm1.getRMContext().getRMNodes().get(nm3.getNodeId());
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(2 * GB, "app", "user", null, "b");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     am1.allocate("*", 2 * GB, 2, new ArrayList<>());
@@ -464,7 +522,15 @@ public class TestCapacitySchedulerSurgicalPreemption
         am1.getApplicationAttemptId(), 2);
 
     // Submit app2 to queue-c and asks for a 2G container for AM, on n3
-    RMApp app2 = rm1.submitApp(2 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm3);
     FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
         ApplicationAttemptId.newInstance(app2.getApplicationId(), 1));
@@ -567,7 +633,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     }
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "b");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, mockNMs[0]);
 
     am1.allocate("*", 1 * GB, 8, new ArrayList<>());
@@ -588,7 +662,15 @@ public class TestCapacitySchedulerSurgicalPreemption
 
     // Submit app2 to queue-c and asks for a 10G container for AM
     // Launch AM in NM9
-    RMApp app2 = rm1.submitApp(10 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(10 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, mockNMs[9]);
     FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
         ApplicationAttemptId.newInstance(app2.getApplicationId(), 1));
@@ -711,7 +793,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     }
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(1 * GB, "app", users[2], null, queues[2]);
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser(users[2])
+            .withAcls(null)
+            .withQueue(queues[2])
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data2);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, mockNMs[4]);
 
     am1.allocate("*", 1 * GB, 4, new ArrayList<>());
@@ -731,7 +821,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     }
 
     // Submit app2 to queue-a and asks for a 0.5G container for AM (on n0)
-    RMApp app2 = rm1.submitApp(512, "app", users[0], null, queues[0]);
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(512, rm1)
+            .withAppName("app")
+            .withUser(users[0])
+            .withAcls(null)
+            .withQueue(queues[0])
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, mockNMs[0]);
     FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
         ApplicationAttemptId.newInstance(app2.getApplicationId(), 1));
@@ -753,7 +851,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     }
 
     // Submit app3 to queue-b and asks for a 0.5G container for AM (on n2)
-    RMApp app3 = rm1.submitApp(512, "app", users[1], null, queues[1]);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(512, rm1)
+            .withAppName("app")
+            .withUser(users[1])
+            .withAcls(null)
+            .withQueue(queues[1])
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, mockNMs[2]);
     FiCaSchedulerApp schedulerApp3 = cs.getApplicationAttempt(
         ApplicationAttemptId.newInstance(app3.getApplicationId(), 1));
@@ -943,7 +1049,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     }
 
     // launch an app to queue B, AM container launched in nm4
-    RMApp app1 = rm1.submitApp(4096, "app", "user", null, "B");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(4096, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("B")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data2);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, mockNMs[4]);
 
     am1.allocate("*", 4096, NUM_NM-1, new ArrayList<>());
@@ -963,7 +1077,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     }
 
     // Submit app2 to queue A and asks for a 750MB container for AM (on n0)
-    RMApp app2 = rm1.submitApp(1024, "app", "user", null, "A");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("A")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, mockNMs[0]);
     FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
         ApplicationAttemptId.newInstance(app2.getApplicationId(), 1));
@@ -980,7 +1102,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     rm1.killApp(app1.getApplicationId());
 
     // Submit app3 to queue B and asks for a 5000MB container for AM (on n2)
-    RMApp app3 = rm1.submitApp(1024, "app", "user", null, "B");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("B")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, mockNMs[2]);
     FiCaSchedulerApp schedulerApp3 = cs.getApplicationAttempt(
         ApplicationAttemptId.newInstance(app3.getApplicationId(), 1));
@@ -1056,7 +1186,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(3 * GB, "app", "user", null, "a");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(3 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms.get(0));
 
     am1.allocate("*", 21 * GB, 4, new ArrayList<ContainerId>());
@@ -1074,7 +1212,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     Assert.assertEquals(5, schedulerApp1.getLiveContainers().size());
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app2 = rm1.submitApp(3 * GB, "app", "user", null, "b");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(3 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nms.get(2));
 
     am2.allocate("*", 21 * GB, 4, new ArrayList<ContainerId>());
@@ -1162,7 +1308,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     am1.allocate("*", 1 * GB, 38, new ArrayList<ContainerId>());
@@ -1185,7 +1339,15 @@ public class TestCapacitySchedulerSurgicalPreemption
 
 
     // Submit app2 to queue-c and asks for a 4G container for AM
-    RMApp app2 = rm1.submitApp(4 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(4 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
         ApplicationAttemptId.newInstance(app2.getApplicationId(), 1));
 

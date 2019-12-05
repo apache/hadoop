@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManager;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEventType;
@@ -72,12 +73,12 @@ public class TestNodesListManager {
     RMNode rmnode = MockNodes.newNodeInfo(1, clusterResource);
 
     // Create killing APP
-    RMApp killrmApp = rm.submitApp(200);
+    RMApp killrmApp = MockRMAppSubmitter.submitWithMemory(200, rm);
     rm.killApp(killrmApp.getApplicationId());
     rm.waitForState(killrmApp.getApplicationId(), RMAppState.KILLED);
 
     // Create finish APP
-    RMApp finshrmApp = rm.submitApp(2000);
+    RMApp finshrmApp = MockRMAppSubmitter.submitWithMemory(2000, rm);
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt = finshrmApp.getCurrentAppAttempt();
     MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
@@ -87,7 +88,7 @@ public class TestNodesListManager {
     rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
 
     // Create submitted App
-    RMApp subrmApp = rm.submitApp(200);
+    RMApp subrmApp = MockRMAppSubmitter.submitWithMemory(200, rm);
 
     // Fire Event for NODE_USABLE
     nodesListManager.handle(new NodesListManagerEvent(
