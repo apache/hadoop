@@ -81,8 +81,8 @@ public class ITestAbfsReadWriteAndSeekReadAheadEnabled extends AbstractAbfsScale
       inputStreamForReadAhead.seek(bufferSize);
       resultForReadAhead = inputStreamForReadAhead.read(readBufferForReadAhead, bufferSize, bufferSize);
       assertNotEquals(-1, resultForReadAhead);
-      assertArrayEquals(Arrays.copyOfRange(readBufferForReadAhead, bufferSize, 2 * bufferSize), 
-		      Arrays.copyOfRange(b, bufferSize, 2 * bufferSize));
+      assertArrayEquals(Arrays.copyOfRange(readBufferForReadAhead, bufferSize, 2 * bufferSize),
+                        Arrays.copyOfRange(b, bufferSize, 2 * bufferSize));
       inputStreamForReadAhead.seek(0);
       resultForReadAhead = inputStreamForReadAhead.read(readBufferForReadAhead, 0, bufferSize);
     }
