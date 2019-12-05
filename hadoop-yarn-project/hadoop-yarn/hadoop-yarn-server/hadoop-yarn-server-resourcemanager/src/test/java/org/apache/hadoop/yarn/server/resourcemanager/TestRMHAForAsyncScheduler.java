@@ -136,11 +136,22 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
   }
 
   private RMApp submitAppAndCheckLaunched(MockRM rm) throws Exception {
-    RMApp app = rm.submitApp(200, "",
-        UserGroupInformation.getCurrentUser().getShortUserName(), null, false,
-        "default", configuration.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, false,
-        false);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm)
+        .withAppName("")
+        .withUser(UserGroupInformation.getCurrentUser().getShortUserName())
+        .withAcls(null)
+        .withUnmanagedAM(false)
+        .withQueue("default")
+            .withMaxAppAttempts(
+                configuration.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS))
+        .withCredentials(null)
+        .withAppType(null)
+        .withWaitForAppAcceptedState(false)
+        .withKeepContainers(false)
+        .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     rm.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
     RMAppAttempt attempt = app.getCurrentAppAttempt();
     rm.sendAMLaunched(attempt.getAppAttemptId());

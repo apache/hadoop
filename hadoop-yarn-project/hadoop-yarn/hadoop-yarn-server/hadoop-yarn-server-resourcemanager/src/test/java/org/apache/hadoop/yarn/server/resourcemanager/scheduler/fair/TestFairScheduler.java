@@ -55,6 +55,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.NodeManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
@@ -5217,7 +5219,15 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     rm2.getAdminService().transitionToActive(requestInfo);
 
     // 4. submit a app to the new added queue "test_queue"
-    RMApp app = rm2.submitApp(200, "test_app", "user", null, "test_queue");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm2)
+            .withAppName("test_app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("test_queue")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm2, data);
     RMAppAttempt attempt0 = app.getCurrentAppAttempt();
     nm.nodeHeartbeat(true);
     MockAM am0 = rm2.sendAMLaunched(attempt0.getAppAttemptId());

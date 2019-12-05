@@ -60,14 +60,14 @@ public class TestRMHATimelineCollectors extends RMHATestBase {
         = new MockNM("127.0.0.1:1234", 15120, rm2.getResourceTrackerService());
     MockNM nm2
         = new MockNM("127.0.0.1:5678", 15121, rm2.getResourceTrackerService());
-    RMApp app1 = rm1.submitApp(1024);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     String collectorAddr1 = "1.2.3.4:5";
     AppCollectorData data1 = AppCollectorData.newInstance(
         app1.getApplicationId(), collectorAddr1);
     nm1.addRegisteringCollector(app1.getApplicationId(), data1);
 
     String collectorAddr2 = "5.4.3.2:1";
-    RMApp app2 = rm1.submitApp(1024);
+    RMApp app2 = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     AppCollectorData data2 = AppCollectorData.newInstance(
         app2.getApplicationId(), collectorAddr2, rm1.getStartTime(), 1);
     nm1.addRegisteringCollector(app2.getApplicationId(), data2);
