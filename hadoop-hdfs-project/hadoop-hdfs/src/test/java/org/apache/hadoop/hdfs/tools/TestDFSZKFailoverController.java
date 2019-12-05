@@ -253,6 +253,32 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     waitForHAState(1, HAServiceState.STANDBY);
   }
 
+  @Test(timeout=30000)
+  public void testElectionOnObserver() throws Exception{
+    InputStream inOriginial = System.in;
+    try {
+      DFSHAAdmin tool = new DFSHAAdmin();
+      tool.setConf(conf);
+
+      // Transition nn2 to Observer
+      System.setIn(new ByteArrayInputStream("yes\n".getBytes()));
+      int result = tool.run(
+          new String[]{"-transitionToObserver", "-forcemanual", "nn2"});
+      assertEquals("State transition returned: " + result, 0, result);
+      waitForHAState(1, HAServiceState.OBSERVER);
+      waitForZKFCState(thr2.zkfc, HAServiceState.OBSERVER);
+
+      // Call recheckElectability
+      thr2.zkfc.getLocalTarget().getZKFCProxy(conf, 15000).cedeActive(-1);
+
+      // This namenode is in observer state, it shouldn't join election
+      assertEquals(false,
+          thr2.zkfc.getElectorForTests().getWantToBeInElection());
+    } finally {
+      System.setIn(inOriginial);
+    }
+  }
+
   private void waitForHAState(int nnidx, final HAServiceState state)
       throws TimeoutException, InterruptedException {
     final NameNode nn = cluster.getNameNode(nnidx);
@@ -267,6 +293,14 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
         }
       }
     }, 50, 15000);
+  }
+
+  private void waitForZKFCState(DFSZKFailoverController zkfc,
+      final HAServiceState state)
+      throws TimeoutException, InterruptedException{
+    GenericTestUtils.waitFor(
+        () -> zkfc.getServiceState() == state,
+        50, 15000);
   }
 
   /**
