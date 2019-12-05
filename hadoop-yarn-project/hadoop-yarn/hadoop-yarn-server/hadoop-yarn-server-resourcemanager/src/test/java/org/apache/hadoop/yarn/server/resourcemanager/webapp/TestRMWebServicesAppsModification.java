@@ -26,9 +26,7 @@ import static org.junit.Assume.assumeTrue;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URI;
@@ -83,6 +81,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
@@ -204,23 +207,15 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
   private class FairTestServletModule extends TestServletModule {
     @Override
     public void configureScheduler() {
-      try {
-        PrintWriter out = new PrintWriter(new FileWriter(FS_ALLOC_FILE));
-        out.println("<?xml version=\"1.0\"?>");
-        out.println("<allocations>");
-        out.println("<queue name=\"root\">");
-        out.println("  <aclAdministerApps>someuser </aclAdministerApps>");
-        out.println("  <queue name=\"default\">");
-        out.println("    <aclAdministerApps>someuser </aclAdministerApps>");
-        out.println("  </queue>");
-        out.println("  <queue name=\"test\">");
-        out.println("    <aclAdministerApps>someuser </aclAdministerApps>");
-        out.println("  </queue>");
-        out.println("</queue>");
-        out.println("</allocations>");
-        out.close();
-      } catch(IOException e) {
-      }
+      AllocationFileWriter.create()
+          .addQueue(new AllocationFileQueue.Builder("root")
+              .aclAdministerApps("someuser ")
+              .subQueue(new AllocationFileQueue.Builder("default")
+                  .aclAdministerApps("someuser ").build())
+              .subQueue(new AllocationFileQueue.Builder("test")
+                  .aclAdministerApps("someuser ").build())
+              .build())
+          .writeToFile(FS_ALLOC_FILE);
       conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, FS_ALLOC_FILE);
       conf.set(YarnConfiguration.RM_SCHEDULER, FairScheduler.class.getName());
     }

@@ -16,27 +16,31 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile;
 
+
+import com.google.common.collect.Lists;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.List;
 
 /**
- * Value class that stores user settings and can render data in XML format,
- * see {@link #render()}.
+ * Helper class to manage {@link AllocationFileQueuePlacementRule}
+ * instances for {@link AllocationFileWriter}.
  */
-public class UserSettings {
-  private final String username;
-  private final Integer maxRunningApps;
+public class AllocationFileQueuePlacementPolicy {
+  private List<AllocationFileQueuePlacementRule> rules = Lists.newArrayList();
 
-  UserSettings(Builder builder) {
-    this.username = builder.username;
-    this.maxRunningApps = builder.maxRunningApps;
+  public AllocationFileQueuePlacementPolicy addRule(
+      AllocationFileQueuePlacementRule rule) {
+    this.rules.add(rule);
+    return this;
   }
 
   public String render() {
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);
     addStartTag(pw);
-    AllocationFileWriter.addIfPresent(pw, "maxRunningApps", maxRunningApps);
+    addRules(pw);
     addEndTag(pw);
     pw.close();
 
@@ -44,31 +48,16 @@ public class UserSettings {
   }
 
   private void addStartTag(PrintWriter pw) {
-    pw.println("<user name=\"" + username + "\">");
+    pw.println("<queuePlacementPolicy>");
+  }
+
+  private void addRules(PrintWriter pw) {
+    for (AllocationFileQueuePlacementRule rule : rules) {
+      pw.println(rule.render());
+    }
   }
 
   private void addEndTag(PrintWriter pw) {
-    pw.println("</user>");
-  }
-
-  /**
-   * Builder class for {@link UserSettings}
-   */
-  public static class Builder {
-    private final String username;
-    private Integer maxRunningApps;
-
-    public Builder(String username) {
-      this.username = username;
-    }
-
-    public Builder maxRunningApps(int value) {
-      this.maxRunningApps = value;
-      return this;
-    }
-
-    public UserSettings build() {
-      return new UserSettings(this);
-    }
+    pw.println("</queuePlacementPolicy>");
   }
 }

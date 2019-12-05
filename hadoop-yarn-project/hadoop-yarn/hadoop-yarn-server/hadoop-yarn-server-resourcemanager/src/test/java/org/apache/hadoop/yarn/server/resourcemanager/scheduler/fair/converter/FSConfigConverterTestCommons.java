@@ -17,8 +17,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileWriter;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -113,38 +114,23 @@ public class FSConfigConverterTestCommons {
     configureDummyConversionRulesFile();
   }
 
-  @SuppressWarnings("checkstyle:linelength")
-  public static void configureFairSchedulerXml() throws IOException {
-    PrintWriter out = new PrintWriter(new FileWriter(FS_ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queueMaxAMShareDefault>-1.0</queueMaxAMShareDefault>");
-    out.println("<defaultQueueSchedulingPolicy>fair</defaultQueueSchedulingPolicy>");
-    addQueue(out, "");
-    out.println("</allocations>");
-    out.close();
+  public static void configureFairSchedulerXml() {
+    AllocationFileWriter.create()
+        .disableQueueMaxAMShareDefault()
+        .fairDefaultQueueSchedulingPolicy()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .schedulingPolicy("fair")
+            .weight(1.0f)
+            .fairSharePreemptionTimeout(100)
+            .minSharePreemptionTimeout(120)
+            .fairSharePreemptionThreshold(0.5f)
+            .build())
+        .writeToFile(FS_ALLOC_FILE);
   }
 
-  @SuppressWarnings("checkstyle:linelength")
-  private static void addQueue(PrintWriter out, String additionalConfig) {
-    out.println("<queue name=\"root\">");
-    out.println("  <schedulingPolicy>fair</schedulingPolicy>");
-    out.println("  <weight>1.0</weight>");
-    out.println("  <fairSharePreemptionTimeout>100</fairSharePreemptionTimeout>");
-    out.println("  <minSharePreemptionTimeout>120</minSharePreemptionTimeout>");
-    out.println("  <fairSharePreemptionThreshold>.5</fairSharePreemptionThreshold>");
-
-    if (StringUtils.isNotEmpty(additionalConfig)) {
-      out.println(additionalConfig);
-    }
-    out.println("</queue>");
-  }
-
-  public static void configureEmptyFairSchedulerXml() throws IOException {
-    PrintWriter out = new PrintWriter(new FileWriter(FS_ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations></allocations>");
-    out.close();
+  public static void configureEmptyFairSchedulerXml() {
+    AllocationFileWriter.create()
+        .writeToFile(FS_ALLOC_FILE);
   }
 
   public static void configureYarnSiteXmlWithFsAllocFileDefined()
