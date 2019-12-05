@@ -234,11 +234,13 @@ class DistCpSync {
               list.add(new DiffInfo(source, target, dt));
             } else {
               list = diffMap.get(SnapshotDiffReport.DiffType.DELETE);
-              list.add(new DiffInfo(source, target, SnapshotDiffReport.DiffType.DELETE));
+              list.add(new DiffInfo(source, target,
+                      SnapshotDiffReport.DiffType.DELETE));
             }
           } else if (copyFilter.shouldCopy(relativeTarget)) {
             list = diffMap.get(SnapshotDiffReport.DiffType.CREATE);
-            list.add(new DiffInfo(target, null, SnapshotDiffReport.DiffType.CREATE));
+            list.add(new DiffInfo(target, null,
+                    SnapshotDiffReport.DiffType.CREATE));
           }
         }
       }

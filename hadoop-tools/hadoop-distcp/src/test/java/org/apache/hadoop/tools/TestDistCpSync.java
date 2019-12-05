@@ -757,12 +757,12 @@ public class TestDistCpSync {
 
   private void initData10(Path dir) throws Exception {
     final Path staging = new Path(dir, ".staging");
-    final Path staging_f1 = new Path(staging, "f1");
+    final Path stagingF1 = new Path(staging, "f1");
     final Path data = new Path(dir, "data");
-    final Path data_f1 = new Path(data, "f1");
+    final Path dataF1 = new Path(data, "f1");
 
-    DFSTestUtil.createFile(dfs, staging_f1, BLOCK_SIZE, DATA_NUM, 0L);
-    DFSTestUtil.createFile(dfs, data_f1, BLOCK_SIZE, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, stagingF1, BLOCK_SIZE, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, dataF1, BLOCK_SIZE, DATA_NUM, 0L);
   }
 
   private void changeData10(Path dir) throws Exception {
@@ -771,16 +771,19 @@ public class TestDistCpSync {
     dfs.rename(staging, prod);
   }
 
-  private java.nio.file.Path generateFilterFile(String fileName) throws IOException {
+  private java.nio.file.Path generateFilterFile(String fileName)
+          throws IOException {
     java.nio.file.Path tmpFile = Files.createTempFile(fileName, "txt");
     String str = ".*\\.staging.*";
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(tmpFile.toString()))) {
+    try (BufferedWriter writer = new BufferedWriter(
+            new FileWriter(tmpFile.toString()))) {
       writer.write(str);
     }
     return tmpFile;
   }
 
-  private void deleteFilterFile(java.nio.file.Path filePath) throws IOException {
+  private void deleteFilterFile(java.nio.file.Path filePath)
+          throws IOException {
     Files.delete(filePath);
   }
 
@@ -823,12 +826,12 @@ public class TestDistCpSync {
 
   private void initData11(Path dir) throws Exception {
     final Path staging = new Path(dir, "prod");
-    final Path staging_f1 = new Path(staging, "f1");
+    final Path stagingF1 = new Path(staging, "f1");
     final Path data = new Path(dir, "data");
-    final Path data_f1 = new Path(data, "f1");
+    final Path dataF1 = new Path(data, "f1");
 
-    DFSTestUtil.createFile(dfs, staging_f1, BLOCK_SIZE, DATA_NUM, 0L);
-    DFSTestUtil.createFile(dfs, data_f1, BLOCK_SIZE, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, stagingF1, BLOCK_SIZE, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, dataF1, BLOCK_SIZE, DATA_NUM, 0L);
   }
 
   private void changeData11(Path dir) throws Exception {
@@ -837,7 +840,8 @@ public class TestDistCpSync {
     dfs.rename(staging, prod);
   }
 
-  private void verifySync(FileStatus s, FileStatus t, boolean compareName, String deletedName)
+  private void verifySync(FileStatus s, FileStatus t, boolean compareName,
+                          String deletedName)
           throws Exception {
     Assert.assertEquals(s.isDirectory(), t.isDirectory());
     if (compareName) {
