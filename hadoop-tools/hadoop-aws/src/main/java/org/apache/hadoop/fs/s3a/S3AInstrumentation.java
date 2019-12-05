@@ -564,11 +564,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
   }
 
   /**
-   * Create a S3Guard instrumentation instance.
+   * Create a MetastoreInstrumentation instrumentation instance.
    * There's likely to be at most one instance of this per FS instance.
    * @return the S3Guard instrumentation point.
    */
-  public S3GuardInstrumentation getS3GuardInstrumentation() {
+  public MetastoreInstrumentation getS3GuardInstrumentation() {
     return s3GuardInstrumentation;
   }
 
@@ -1129,10 +1129,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
   /**
    * Instrumentation exported to S3Guard.
    */
-  public final class S3GuardInstrumentation
+  private final class S3GuardInstrumentation
       implements MetastoreInstrumentation {
 
-    /** Initialized event. */
     @Override
     public void initialized() {
       incrementCounter(S3GUARD_METADATASTORE_INITIALIZATION, 1);
@@ -1143,35 +1142,21 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
 
     }
 
-    /**
-     * Throttled request.
-     */
     @Override
     public void throttled() {
       // counters are incremented by owner.
     }
 
-    /**
-     * S3Guard is retrying after a (retryable) failure.
-     */
     @Override
     public void retrying() {
       // counters are incremented by owner.
     }
 
-    /**
-     * Records have been read.
-     * @param count the number of records read
-     */
     @Override
     public void recordsDeleted(int count) {
       incrementCounter(S3GUARD_METADATASTORE_RECORD_DELETES, count);
     }
 
-    /**
-     * Records have been read.
-     * @param count the number of records read
-     */
     @Override
     public void recordsRead(int count) {
       incrementCounter(S3GUARD_METADATASTORE_RECORD_READS, count);

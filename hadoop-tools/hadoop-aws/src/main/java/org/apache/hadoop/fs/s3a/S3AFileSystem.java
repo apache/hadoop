@@ -1276,7 +1276,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       dstStatus = innerGetFileStatus(dst, true, StatusProbeEnum.ALL);
       // if there is no destination entry, an exception is raised.
       // hence this code sequence can assume that there is something
-      // at the end of the path; the only detail
+      // at the end of the path; the only detail being what it is and
+      // whether or not it can be the destination of the rename.
       if (srcStatus.isDirectory()) {
         if (dstStatus.isFile()) {
           throw new RenameFailedException(src, dst,
@@ -4445,6 +4446,5 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public String getBucketLocation() throws IOException {
       return S3AFileSystem.this.getBucketLocation();
     }
-
   }
 }

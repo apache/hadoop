@@ -772,7 +772,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
                 return true;
               } else {
                 return false;
-              } });
+              }
+        });
 
         // If directory is authoritative, we can set the empty directory flag
         // to TRUE or FALSE. Otherwise FALSE, or UNKNOWN.

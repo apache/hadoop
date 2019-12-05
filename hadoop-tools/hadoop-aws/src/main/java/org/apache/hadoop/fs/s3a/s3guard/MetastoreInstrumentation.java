@@ -18,23 +18,53 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+/**
+ * Instrumentation exported to S3Guard.
+ */
 public interface MetastoreInstrumentation {
 
+  /** Initialized event. */
   void initialized();
 
+  /** Store has been closed. */
   void storeClosed();
 
+  /**
+   * Throttled request.
+   */
   void throttled();
 
+  /**
+   * S3Guard is retrying after a (retryable) failure.
+   */
   void retrying();
 
+  /**
+   * Records have been deleted.
+   * @param count the number of records deleted.
+   */
   void recordsDeleted(int count);
 
+  /**
+   * Records have been read.
+   * @param count the number of records read
+   */
   void recordsRead(int count);
 
+  /**
+   * records have been written (including tombstones).
+   * @param count number of records written.
+   */
   void recordsWritten(int count);
 
+  /**
+   * A directory has been tagged as authoritative.
+   */
   void directoryMarkedAuthoritative();
 
+  /**
+   * An entry was added.
+   * @param durationNanos time to add
+   */
   void entryAdded(long durationNanos);
 }
