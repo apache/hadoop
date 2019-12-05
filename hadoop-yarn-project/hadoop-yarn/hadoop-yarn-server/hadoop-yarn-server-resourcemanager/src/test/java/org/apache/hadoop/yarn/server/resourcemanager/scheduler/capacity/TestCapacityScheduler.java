@@ -53,6 +53,7 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
 import com.google.common.collect.Sets;
+import org.apache.hadoop.service.ServiceStateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -5409,9 +5410,10 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     try {
       setUpCSQueue(maxLifetime, defaultLifetime);
       Assert.fail("Expected to fails since maxLifetime < defaultLifetime.");
-    } catch (YarnRuntimeException ye) {
+    } catch (ServiceStateException sse) {
+      Throwable rootCause = sse.getCause().getCause();
       Assert.assertTrue(
-          ye.getMessage().contains("can't exceed maximum lifetime"));
+          rootCause.getMessage().contains("can't exceed maximum lifetime"));
     }
 
     maxLifetime = -1;

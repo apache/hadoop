@@ -323,7 +323,7 @@ public class CapacityScheduler extends
 
   @VisibleForTesting
   void initScheduler(Configuration configuration) throws
-      IOException {
+      IOException, YarnException {
     writeLock.lock();
     try {
       String confProviderStr = configuration.get(
@@ -768,16 +768,19 @@ public class CapacityScheduler extends
 
   @Lock(CapacityScheduler.class)
   private void initializeQueues(CapacitySchedulerConfiguration conf)
-    throws IOException {
+    throws YarnException {
+    try {
+      this.queueManager.initializeQueues(conf);
 
-    this.queueManager.initializeQueues(conf);
+      updatePlacementRules();
 
-    updatePlacementRules();
+      this.workflowPriorityMappingsMgr.initialize(this);
 
-    this.workflowPriorityMappingsMgr.initialize(this);
-
-    // Notify Preemption Manager
-    preemptionManager.refreshQueues(null, this.getRootQueue());
+      // Notify Preemption Manager
+      preemptionManager.refreshQueues(null, this.getRootQueue());
+    } catch (Exception e) {
+      throw new YarnException("Failed to initialize queues", e);
+    }
   }
 
   @Lock(CapacityScheduler.class)
