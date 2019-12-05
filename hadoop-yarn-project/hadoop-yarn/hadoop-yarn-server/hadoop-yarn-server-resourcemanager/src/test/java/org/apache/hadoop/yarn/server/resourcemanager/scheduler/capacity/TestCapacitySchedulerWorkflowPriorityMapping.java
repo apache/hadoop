@@ -28,6 +28,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.WorkflowPriorityMappingsManager.WorkflowPriorityMapping;
@@ -97,10 +99,15 @@ public class TestCapacitySchedulerWorkflowPriorityMapping
         .getWorkflowPriorityMappings());
 
     // Maps to rule corresponding to parent queue "a" for workflow3.
-    mockRM.submitApp(1, "a2", true, ApplicationId.newInstance(0,1),
-        Priority.newInstance(0), ImmutableSet.of(
-            YarnConfiguration.DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX
-            + "workflow3"));
+    MockRMAppSubmitter.submit(mockRM,
+        MockRMAppSubmissionData.Builder.createWithMemory(1, mockRM)
+            .withQueue("a2")
+            .withApplicationId(ApplicationId.newInstance(0, 1))
+            .withAppPriority(Priority.newInstance(0))
+            .withApplicationTags(ImmutableSet.of(
+                YarnConfiguration.DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX
+                    + "workflow3"))
+            .build());
     RMApp app =
         mockRM.getRMContext().getRMApps().get(ApplicationId.newInstance(0,1));
     assertEquals(4, app.getApplicationSubmissionContext().getPriority()
@@ -108,30 +115,45 @@ public class TestCapacitySchedulerWorkflowPriorityMapping
 
     // Does not match any rule as rule for queue + workflow does not exist.
     // Priority passed in the app is taken up.
-    mockRM.submitApp(1, "a1", true, ApplicationId.newInstance(0,2),
-        Priority.newInstance(6), ImmutableSet.of(
-            YarnConfiguration.DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX
-            + "workflow1"));
+    MockRMAppSubmitter.submit(mockRM,
+        MockRMAppSubmissionData.Builder.createWithMemory(1, mockRM)
+            .withQueue("a1")
+            .withApplicationId(ApplicationId.newInstance(0, 2))
+            .withAppPriority(Priority.newInstance(6))
+            .withApplicationTags(ImmutableSet.of(
+                YarnConfiguration.DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX
+                    + "workflow1"))
+            .build());
     app =
         mockRM.getRMContext().getRMApps().get(ApplicationId.newInstance(0,2));
     assertEquals(6, app.getApplicationSubmissionContext().getPriority()
         .getPriority());
 
     // Maps to rule corresponding to parent queue "a1" for workflow2.
-    mockRM.submitApp(1, "a1", true, ApplicationId.newInstance(0,3),
-        Priority.newInstance(0), ImmutableSet.of(
-            YarnConfiguration.DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX
-            + "workflow2"));
+    MockRMAppSubmitter.submit(mockRM,
+        MockRMAppSubmissionData.Builder.createWithMemory(1, mockRM)
+            .withQueue("a1")
+            .withApplicationId(ApplicationId.newInstance(0, 3))
+            .withAppPriority(Priority.newInstance(0))
+            .withApplicationTags(ImmutableSet.of(
+                YarnConfiguration.DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX
+                    + "workflow2"))
+            .build());
     app =
         mockRM.getRMContext().getRMApps().get(ApplicationId.newInstance(0,3));
     assertEquals(3, app.getApplicationSubmissionContext().getPriority()
         .getPriority());
 
     // Maps to rule corresponding to parent queue "b" for workflow1.
-    mockRM.submitApp(1, "b3", true, ApplicationId.newInstance(0,4),
-        Priority.newInstance(0), ImmutableSet.of(
-            YarnConfiguration.DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX
-            + "workflow1"));
+    MockRMAppSubmitter.submit(mockRM,
+        MockRMAppSubmissionData.Builder.createWithMemory(1, mockRM)
+            .withQueue("b3")
+            .withApplicationId(ApplicationId.newInstance(0, 4))
+            .withAppPriority(Priority.newInstance(0))
+            .withApplicationTags(ImmutableSet.of(
+                YarnConfiguration.DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX
+                    + "workflow1"))
+            .build());
     app = mockRM.getRMContext().getRMApps().get(ApplicationId.newInstance(0,4));
     assertEquals(2, app.getApplicationSubmissionContext().getPriority()
         .getPriority());
@@ -140,10 +162,16 @@ public class TestCapacitySchedulerWorkflowPriorityMapping
     conf.setBoolean(CapacitySchedulerConfiguration
         .ENABLE_WORKFLOW_PRIORITY_MAPPINGS_OVERRIDE, false);
     cs.reinitialize(conf, mockRM.getRMContext());
-    mockRM.submitApp(1, "a2", true, ApplicationId.newInstance(0,5),
-        Priority.newInstance(0), ImmutableSet.of(
-            YarnConfiguration.DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX
-            + "workflow3"));
+
+    MockRMAppSubmitter.submit(mockRM,
+        MockRMAppSubmissionData.Builder.createWithMemory(1, mockRM)
+            .withQueue("a2")
+            .withApplicationId(ApplicationId.newInstance(0, 5))
+            .withAppPriority(Priority.newInstance(0))
+            .withApplicationTags(ImmutableSet.of(
+                YarnConfiguration.DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX
+                    + "workflow3"))
+            .build());
     app = mockRM.getRMContext().getRMApps().get(ApplicationId.newInstance(0,5));
     assertEquals(0, app.getApplicationSubmissionContext().getPriority()
         .getPriority());

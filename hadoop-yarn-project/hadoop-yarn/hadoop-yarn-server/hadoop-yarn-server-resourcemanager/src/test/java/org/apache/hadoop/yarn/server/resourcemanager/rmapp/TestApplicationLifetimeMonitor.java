@@ -49,6 +49,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart;
 import org.apache.hadoop.yarn.server.resourcemanager.TestWorkPreservingRMRestart;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
@@ -125,18 +127,34 @@ public class TestApplicationLifetimeMonitor {
       Map<ApplicationTimeoutType, Long> timeouts =
           new HashMap<ApplicationTimeoutType, Long>();
       timeouts.put(ApplicationTimeoutType.LIFETIME, 10L);
-      RMApp app1 = rm.submitApp(1024, appPriority, timeouts);
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppPriority(appPriority)
+              .withApplicationTimeouts(timeouts)
+              .build());
 
       // 20L seconds
       timeouts.put(ApplicationTimeoutType.LIFETIME, 20L);
-      RMApp app2 = rm.submitApp(1024, appPriority, timeouts);
+      RMApp app2 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppPriority(appPriority)
+              .withApplicationTimeouts(timeouts)
+              .build());
 
       // user not set lifetime, so queue max lifetime will be considered.
-      RMApp app3 = rm.submitApp(1024, appPriority, Collections.emptyMap());
+      RMApp app3 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppPriority(appPriority)
+              .withApplicationTimeouts(Collections.emptyMap())
+              .build());
 
       // asc lifetime exceeds queue max lifetime
       timeouts.put(ApplicationTimeoutType.LIFETIME, 40L);
-      RMApp app4 = rm.submitApp(1024, appPriority, timeouts);
+      RMApp app4 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppPriority(appPriority)
+              .withApplicationTimeouts(timeouts)
+              .build());
 
       nm1.nodeHeartbeat(true);
       // Send launch Event
@@ -235,7 +253,11 @@ public class TestApplicationLifetimeMonitor {
     Map<ApplicationTimeoutType, Long> timeouts =
         new HashMap<ApplicationTimeoutType, Long>();
     timeouts.put(ApplicationTimeoutType.LIFETIME, appLifetime);
-    RMApp app1 = rm1.submitApp(200, Priority.newInstance(0), timeouts);
+    RMApp app1 = MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+            .withAppPriority(Priority.newInstance(0))
+            .withApplicationTimeouts(timeouts)
+            .build());
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // Re-start RM
@@ -319,7 +341,11 @@ public class TestApplicationLifetimeMonitor {
       Map<ApplicationTimeoutType, Long> timeouts =
           new HashMap<ApplicationTimeoutType, Long>();
       timeouts.put(ApplicationTimeoutType.LIFETIME, appLifetime);
-      RMApp app1 = rm1.submitApp(200, Priority.newInstance(0), timeouts);
+      RMApp app1 = MockRMAppSubmitter.submit(rm1,
+          MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+              .withAppPriority(Priority.newInstance(0))
+              .withApplicationTimeouts(timeouts)
+              .build());
 
       Map<ApplicationTimeoutType, String> updateTimeout =
           new HashMap<ApplicationTimeoutType, String>();

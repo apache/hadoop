@@ -605,8 +605,12 @@ public class TestClientRMService {
     GetApplicationsRequest getRequest = GetApplicationsRequest.newInstance(
         EnumSet.of(YarnApplicationState.KILLED));
 
-    RMApp app1 = rm.submitApp(1024);
-    RMApp app2 = rm.submitApp(1024, true);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+            .withUnmanagedAM(true)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data);
 
     assertEquals("Incorrect number of apps in the RM", 0,
         rmService.getApplications(getRequest).getApplicationList().size());
@@ -2437,7 +2441,11 @@ public class TestClientRMService {
     MockRM rm = new MockRM(conf);
     rm.init(conf);
     rm.start();
-    RMApp app1 = rm.submitApp(1024, Priority.newInstance(appPriority));
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder
+        .createWithMemory(1024, rm)
+        .withAppPriority(Priority.newInstance(appPriority))
+        .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     ClientRMService rmService = rm.getClientRMService();
     testApplicationPriorityUpdation(rmService, app1, appPriority, appPriority);
     rm.killApp(app1.getApplicationId());
@@ -2460,7 +2468,11 @@ public class TestClientRMService {
     rm.start();
     rm.registerNode("host1:1234", 1024);
     // Start app1 with appPriority 5
-    RMApp app1 = rm.submitApp(1024, Priority.newInstance(appPriority));
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder
+        .createWithMemory(1024, rm)
+        .withAppPriority(Priority.newInstance(appPriority))
+        .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
     Assert.assertEquals("Incorrect priority has been set to application",
         appPriority, app1.getApplicationPriority().getPriority());

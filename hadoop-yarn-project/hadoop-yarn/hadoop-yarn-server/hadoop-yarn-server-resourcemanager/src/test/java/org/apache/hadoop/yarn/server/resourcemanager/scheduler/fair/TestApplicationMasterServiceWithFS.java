@@ -33,6 +33,8 @@ import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -97,7 +99,11 @@ public class TestApplicationMasterServiceWithFS {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
 
     // Submit an application
-    RMApp app1 = rm.submitApp(2 * GB, "queueA");
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder
+        .createWithMemory(2 * GB, rm)
+        .withQueue("queueA")
+        .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
     // kick the scheduling
     nm1.nodeHeartbeat(true);
@@ -139,7 +145,9 @@ public class TestApplicationMasterServiceWithFS {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
 
     // Submit an application
-    RMApp app1 = rm.submitApp(2 * GB, queueName);
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder
+        .createWithMemory(2 * GB, rm).withQueue(queueName).build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
     // kick the scheduling
     nm1.nodeHeartbeat(true);

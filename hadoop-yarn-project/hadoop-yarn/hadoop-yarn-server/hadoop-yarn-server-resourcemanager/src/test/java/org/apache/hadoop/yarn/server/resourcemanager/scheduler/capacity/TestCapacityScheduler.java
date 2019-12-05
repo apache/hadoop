@@ -109,6 +109,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.NodeManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
@@ -1334,7 +1336,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     MockNM nm = rm.registerNode("127.0.0.1:1234", 4 * GB);
     NodeId nmId = nm.getNodeId();
-    RMApp app = rm.submitApp(2048);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2048, rm);
     // kick the scheduling, 2 GB given to AM1, remaining 2GB on nm
     nm.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app.getCurrentAppAttempt();
@@ -1578,7 +1580,13 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     Map<ApplicationAccessType, String> acls =
         new HashMap<ApplicationAccessType, String>(2);
     acls.put(ApplicationAccessType.VIEW_APP, "*");
-    RMApp app = rm.submitApp(1024, "appname", "appuser", acls);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+            .withAppName("appname")
+            .withUser("appuser")
+            .withAcls(acls)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
 
     nm1.nodeHeartbeat(true);
 
@@ -1724,7 +1732,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     nm1.registerNode();
 
     // create app and launch the AM
-    RMApp app0 = rm1.submitApp(CONTAINER_MEMORY);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(CONTAINER_MEMORY, rm1);
     MockAM am0 = MockRM.launchAM(app0, rm1, nm1);
     am0.registerAppAttempt();
 
@@ -1790,7 +1798,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 8000);
-    RMApp app1 = rm1.submitApp(1024);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
 
@@ -1870,7 +1878,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     QueueMetrics metrics = scheduler.getRootQueueMetrics();
     Assert.assertEquals(0, metrics.getAppsPending());
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
@@ -1942,8 +1958,20 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     Assert.assertEquals(0, metrics.getAppsPending());
 
     // submit two apps in a1
-    RMApp app1 = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
-    RMApp app2 = rm.submitApp(GB, "test-move-2", "user_0", null, "a1");
+    RMApp app1 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .build());
+    RMApp app2 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-2")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .build());
 
     appsInA1 = scheduler.getAppsInQueue("a1");
     appsInB1 = scheduler.getAppsInQueue("b1");
@@ -1952,7 +1980,13 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     assertEquals(2, metrics.getAppsPending());
 
     // submit one app in b1
-    RMApp app3 = rm.submitApp(GB, "test-move-2", "user_0", null, "b1");
+    RMApp app3 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-2")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("b1")
+            .build());
 
     appsInA1 = scheduler.getAppsInQueue("a1");
     appsInB1 = scheduler.getAppsInQueue("b1");
@@ -1996,7 +2030,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         (AbstractYarnScheduler) rm.getResourceScheduler();
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
@@ -2512,7 +2554,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         (AbstractYarnScheduler) rm.getResourceScheduler();
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
@@ -2574,7 +2624,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     YarnScheduler scheduler = rm.getResourceScheduler();
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
@@ -2632,7 +2690,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     YarnScheduler scheduler = rm.getResourceScheduler();
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
@@ -2890,7 +2956,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         (AbstractYarnScheduler) rm.getResourceScheduler();
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
@@ -2935,7 +3009,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     YarnScheduler scheduler = rm.getResourceScheduler();
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
@@ -2996,7 +3078,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     MockNM nm2 = rm.registerNode("127.0.0.1:1235", 10 * GB, 4);
     rm.registerNode("127.0.0.1:1236", 10 * GB, 4);
 
-    RMApp app1 = rm.submitApp(1024);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm);
     // kick the scheduling
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -3568,7 +3650,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     nm3.registerNode();
     nm4.registerNode();
 
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId attemptId =
         app1.getCurrentAppAttempt().getAppAttemptId();
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
@@ -3719,7 +3809,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         new MockNM("127.0.0.1:1234", 100 * GB, rm1.getResourceTrackerService());
     nm1.registerNode();
 
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "b1");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data2);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     waitContainerAllocated(am1, 1 * GB, 1, 2, rm1, nm1);
@@ -3729,7 +3827,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     Assert.assertEquals(69 * GB,
         am1.doHeartbeat().getAvailableResources().getMemorySize());
 
-    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "b2");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b2")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
 
     // Allocate 5 containers, each one is 8 GB in am2 (40 GB in total)
@@ -3747,7 +3853,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     // Now we submit app3 to a1 (in higher level hierarchy), to see if headroom
     // of app1 (in queue b1) updated correctly
-    RMApp app3 = rm1.submitApp(1 * GB, "app", "user", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nm1);
 
     // Allocate 3 containers, each one is 8 GB in am3 (24 GB in total)
@@ -3800,12 +3914,28 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     nm1.registerNode();
 
     // Launch app1 in a1, resource usage is 1GB (am) + 4GB * 2 = 9GB 
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     waitContainerAllocated(am1, 4 * GB, 2, 2, rm1, nm1);
 
     // Try to launch app2 in a2, asked 2GB, should success 
-    RMApp app2 = rm1.submitApp(2 * GB, "app", "user", null, "a2");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a2")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
     try {
       // Try to allocate a container, a's usage=11G/max=12
@@ -3848,11 +3978,27 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     nm2.registerNode();
 
     // Launch app1 in queue=a1
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "a1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
 
     // Launch app2 in queue=b1  
-    RMApp app2 = rm.submitApp(8 * GB, "app", "user", null, "b1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(8 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm2);
 
     // am1 asks for 8 * 1GB container for no label
@@ -3968,7 +4114,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         amMemory < minAllocMb);
     Resource minAllocResource = Resource.newInstance(minAllocMb, 1);
     String queueName = "a1";
-    RMApp rmApp = rm.submitApp(amMemory, "app-1", "user_0", null, queueName);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(amMemory, rm)
+            .withAppName("app-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue(queueName)
+            .withUnmanagedAM(false)
+            .build();
+    RMApp rmApp = MockRMAppSubmitter.submit(rm, data);
 
     assertEquals("RMApp does not containes minimum allocation",
         minAllocResource, rmApp.getAMResourceRequests().get(0).getCapability());
@@ -4237,7 +4391,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     nm1.registerNode();
 
     // Launch app1 in queue=a1
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
     // Allocate two more containers
@@ -4344,9 +4506,23 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         }
       }, 100, 60 * 1000);
 
-    rm.submitApp(amResource1, "app-1", userName, null, queueName);
+    MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithResource(amResource1, rm)
+        .withResource(amResource1)
+        .withAppName("app-1")
+        .withUser(userName)
+        .withAcls(null)
+        .withQueue(queueName)
+        .build());
 
-    rm.submitApp(amResource2, "app-2", userName, null, queueName);
+    MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithResource(amResource2, rm)
+        .withResource(amResource2)
+        .withAppName("app-2")
+        .withUser(userName)
+        .withAcls(null)
+        .withQueue(queueName)
+        .build());
 
     // When AM limit is exceeded, 1 applications will be activated.Rest all
     // applications will be in pending
@@ -4532,7 +4708,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     MockRM rm = new MockRM(conf);
     rm.start();
-    RMApp app = rm.submitApp(100);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(100, rm);
     rm.drainEvents();
 
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10240, 10);
@@ -4814,7 +4990,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     nm1.registerNode();
 
     // Launch app1 in queue=a1
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "a");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
     // Got one offswitch request and offswitch allocation
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
@@ -5148,7 +5332,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     CapacityScheduler cs = ((CapacityScheduler) rm.getResourceScheduler());
     cs.start();
 
-    RMApp app = rm.submitApp(GB, "appname", "a1", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("appname")
+            .withUser("a1")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     List<ApplicationAttemptId> appsInA1 = cs.getAppsInQueue("a1");
     assertEquals(1, appsInA1.size());
   }
@@ -5265,7 +5457,12 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     final MockNM nm = rm.registerNode("h1:1234", 200 * GB);
 
     // submit app
-    final RMApp app = rm.submitApp(200, "app", "user");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm)
+            .withAppName("app")
+            .withUser("user")
+            .build();
+    final RMApp app = MockRMAppSubmitter.submit(rm, data);
     MockRM.launchAndRegisterAM(app, rm, nm);
 
     // spy capacity scheduler to handle CapacityScheduler#apply
@@ -5329,7 +5526,12 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     // submit app and request resource
     // container2 is larger than nm1 total resource, will trigger locality skip
-    final RMApp app = rm.submitApp(1 * GB, "app", "user");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .build();
+    final RMApp app = MockRMAppSubmitter.submit(rm, data);
     final MockAM am = MockRM.launchAndRegisterAM(app, rm, nm1);
     am.addRequests(new String[] {"*"}, 5 * GB, 1, 1, 2);
     am.schedule();
@@ -5391,19 +5593,51 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     MockNM nm1 = rm.registerNode("h1:1234", 16 * GB);
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "u1", null, "a1");
+    MockRMAppSubmissionData data3 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("u1")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data3);
     MockAM am1 = MockRM.launchAndRegisterAM(app, rm, nm1);
 
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
 
-    RMApp app2 = rm.submitApp(1 * GB, "app", "u2", null, "a1");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("u2")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data2);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm1);
 
-    RMApp app3 = rm.submitApp(1 * GB, "app", "u3", null, "a1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("u3")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm, data1);
 
-    RMApp app4 = rm.submitApp(1 * GB, "app", "u4", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("u4")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app4 = MockRMAppSubmitter.submit(rm, data);
 
     // Each application asks 50 * 1GB containers
     am1.allocate("*", 1 * GB, 50, null);
@@ -5571,11 +5805,25 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
      * app2: (1 AM,1 reserved container)
      */
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(1 * GB, "app_1", "user_1", null, "a");
+    MockRMAppSubmissionData submissionData =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app_1")
+            .withUser("user_1")
+            .withAcls(null)
+            .withQueue("a")
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, submissionData);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // launch another app to queue, AM container should be launched in nm1
-    RMApp app2 = rm1.submitApp(1 * GB, "app_2", "user_1", null, "a");
+    submissionData =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app_2")
+            .withUser("user_1")
+            .withAcls(null)
+            .withQueue("a")
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, submissionData);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
 
     am1.allocate("*", 4 * GB, 1, new ArrayList<ContainerId>());

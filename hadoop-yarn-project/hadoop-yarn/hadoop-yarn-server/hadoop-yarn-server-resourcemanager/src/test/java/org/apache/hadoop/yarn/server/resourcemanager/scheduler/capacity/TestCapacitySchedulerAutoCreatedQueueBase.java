@@ -24,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.TestGroupsCaching;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -39,6 +38,8 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels
     .NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -64,8 +65,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
     .AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
     .SchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
-    .SimpleGroupsMapping;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
@@ -469,8 +468,15 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     CapacityScheduler capacityScheduler =
         (CapacityScheduler) rm.getResourceScheduler();
     // submit an app
-    RMApp rmApp = rm.submitApp(GB, "test-auto-queue-activation", user, null,
-        leafQueueName);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-auto-queue-activation")
+            .withUser(user)
+            .withAcls(null)
+            .withQueue(leafQueueName)
+            .withUnmanagedAM(false)
+            .build();
+    RMApp rmApp = MockRMAppSubmitter.submit(rm, data);
 
     // check preconditions
     List<ApplicationAttemptId> appsInParentQueue =
@@ -564,9 +570,15 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
   protected RMApp submitApp(String user, String queue, String nodeLabel)
       throws Exception {
-    RMApp app = mockRM.submitApp(GB,
-        "test-auto-queue-creation" + RandomUtils.nextInt(0, 100), user, null,
-        queue, nodeLabel);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, mockRM)
+            .withAppName("test-auto-queue-creation" + RandomUtils.nextInt(0, 100))
+            .withUser(user)
+            .withAcls(null)
+            .withQueue(queue)
+            .withAmLabel(nodeLabel)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(mockRM, data);
     Assert.assertEquals(app.getAmNodeLabelExpression(), nodeLabel);
     // check preconditions
     List<ApplicationAttemptId> appsInC = cs.getAppsInQueue(PARENT_QUEUE);

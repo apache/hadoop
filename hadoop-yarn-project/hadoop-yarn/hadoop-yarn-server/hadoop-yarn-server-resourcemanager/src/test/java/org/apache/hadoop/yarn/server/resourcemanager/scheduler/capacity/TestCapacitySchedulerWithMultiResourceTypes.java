@@ -29,6 +29,8 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
@@ -285,7 +287,13 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     rm.registerNode("127.0.0.1:1235",
         TestUtils.createResource(10 * GB, 4, nameToValues));
 
-    RMApp app1 = rm.submitApp(1024, "app-1", "user1", null, "a");
+    RMApp app1 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+            .withAppName("app-1")
+            .withUser("user1")
+            .withAcls(null)
+            .withQueue("a")
+            .build());
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
     SchedulerNodeReport report_nm1 =

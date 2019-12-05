@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -107,7 +109,8 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
   public void testSignalContainer() throws Exception {
     rm.start();
     MockNM nm = rm.registerNode("127.0.0.1:1234", 2048);
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm).build());
     nm.nodeHeartbeat(true);
     MockRM
         .waitForState(app.getCurrentAppAttempt(), RMAppAttemptState.ALLOCATED);
