@@ -19,9 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Stack;
@@ -32,6 +30,10 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
@@ -319,22 +321,16 @@ public class TestSchedulingPolicy {
   @Test
   public void testSchedulingPolicyViolation() throws IOException {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\">");
-    out.println("<schedulingPolicy>fair</schedulingPolicy>");
-    out.println("    <queue name=\"child1\">");
-    out.println("    <schedulingPolicy>drf</schedulingPolicy>");
-    out.println("    </queue>");
-    out.println("    <queue name=\"child2\">");
-    out.println("    <schedulingPolicy>fair</schedulingPolicy>");
-    out.println("    </queue>");
-    out.println("</queue>");
-    out.println("<defaultQueueSchedulingPolicy>drf" +
-        "</defaultQueueSchedulingPolicy>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .drfDefaultQueueSchedulingPolicy()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .schedulingPolicy("fair")
+            .subQueue(new AllocationFileQueue.Builder("child1")
+                .schedulingPolicy("drf").build())
+            .subQueue(new AllocationFileQueue.Builder("child2")
+                .schedulingPolicy("fair").build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
 
@@ -349,22 +345,16 @@ public class TestSchedulingPolicy {
         + " policy if its parent policy is 'fair'.", dynamicQueue);
 
     // Set child1 to 'fair' and child2 to 'drf', the reload the allocation file.
-    out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\">");
-    out.println("<schedulingPolicy>fair</schedulingPolicy>");
-    out.println("    <queue name=\"child1\">");
-    out.println("    <schedulingPolicy>fair</schedulingPolicy>");
-    out.println("    </queue>");
-    out.println("    <queue name=\"child2\">");
-    out.println("    <schedulingPolicy>drf</schedulingPolicy>");
-    out.println("    </queue>");
-    out.println("</queue>");
-    out.println("<defaultQueueSchedulingPolicy>drf" +
-        "</defaultQueueSchedulingPolicy>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .drfDefaultQueueSchedulingPolicy()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .schedulingPolicy("fair")
+            .subQueue(new AllocationFileQueue.Builder("child1")
+                .schedulingPolicy("fair").build())
+            .subQueue(new AllocationFileQueue.Builder("child2")
+                .schedulingPolicy("drf").build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.reinitialize(conf, null);
     child1 = scheduler.getQueueManager().getQueue("child1");
@@ -379,26 +369,21 @@ public class TestSchedulingPolicy {
   }
 
   @Test
-  public void testSchedulingPolicyViolationInTheMiddleLevel()
-      throws IOException {
+  public void testSchedulingPolicyViolationInTheMiddleLevel() {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\">");
-    out.println("<schedulingPolicy>fair</schedulingPolicy>");
-    out.println("  <queue name=\"level2\">");
-    out.println("    <schedulingPolicy>fair</schedulingPolicy>");
-    out.println("    <queue name=\"level3\">");
-    out.println("    <schedulingPolicy>drf</schedulingPolicy>");
-    out.println("       <queue name=\"leaf\">");
-    out.println("       <schedulingPolicy>fair</schedulingPolicy>");
-    out.println("       </queue>");
-    out.println("    </queue>");
-    out.println("  </queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .schedulingPolicy("fair")
+            .subQueue(new AllocationFileQueue.Builder("level2")
+                .schedulingPolicy("fair")
+                .subQueue(new AllocationFileQueue.Builder("level3")
+                    .schedulingPolicy("drf")
+                    .subQueue(new AllocationFileQueue.Builder("leaf")
+                        .schedulingPolicy("fair").build())
+                    .build())
+                .build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
 
@@ -417,19 +402,16 @@ public class TestSchedulingPolicy {
   public void testFIFOPolicyOnlyForLeafQueues()
       throws IOException {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\">");
-    out.println("  <queue name=\"intermediate\">");
-    out.println("    <schedulingPolicy>fifo</schedulingPolicy>");
-    out.println("    <queue name=\"leaf\">");
-    out.println("    <schedulingPolicy>fair</schedulingPolicy>");
-    out.println("    </queue>");
-    out.println("  </queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(new AllocationFileQueue.Builder("intermediate")
+                .schedulingPolicy("fifo")
+                .subQueue(new AllocationFileQueue.Builder("leaf")
+                    .schedulingPolicy("fair").build())
+                .build())
+            .build())
+            .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
 
@@ -437,19 +419,15 @@ public class TestSchedulingPolicy {
     assertNull("Queue 'intermediate' should be null since 'fifo' is only for "
         + "leaf queue.", intermediate);
 
-    out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\">");
-    out.println("  <queue name=\"intermediate\">");
-    out.println("    <schedulingPolicy>fair</schedulingPolicy>");
-    out.println("    <queue name=\"leaf\">");
-    out.println("    <schedulingPolicy>fifo</schedulingPolicy>");
-    out.println("    </queue>");
-    out.println("  </queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(new AllocationFileQueue.Builder("intermediate")
+                .schedulingPolicy("fair")
+                .subQueue(new AllocationFileQueue.Builder("leaf")
+                    .schedulingPolicy("fifo").build())
+                .build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.reinitialize(conf, null);
 
@@ -461,41 +439,30 @@ public class TestSchedulingPolicy {
   }
 
   @Test
-  public void testPolicyReinitilization() throws IOException {
+  public void testPolicyReinitialization() throws IOException {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\">");
-    out.println("<schedulingPolicy>fair</schedulingPolicy>");
-    out.println("    <queue name=\"child1\">");
-    out.println("    <schedulingPolicy>fair</schedulingPolicy>");
-    out.println("    </queue>");
-    out.println("    <queue name=\"child2\">");
-    out.println("    <schedulingPolicy>fair</schedulingPolicy>");
-    out.println("    </queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .schedulingPolicy("fair")
+            .subQueue(new AllocationFileQueue.Builder("child1")
+                .schedulingPolicy("fair").build())
+            .subQueue(new AllocationFileQueue.Builder("child2")
+                .schedulingPolicy("fair").build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
 
     // Set child1 to 'drf' which is not allowed, then reload the allocation file
-    out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\">");
-    out.println("<schedulingPolicy>fair</schedulingPolicy>");
-    out.println("    <queue name=\"child1\">");
-    out.println("    <schedulingPolicy>drf</schedulingPolicy>");
-    out.println("    </queue>");
-    out.println("    <queue name=\"child2\">");
-    out.println("    <schedulingPolicy>fifo</schedulingPolicy>");
-    out.println("    </queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
-
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .schedulingPolicy("fair")
+            .subQueue(new AllocationFileQueue.Builder("child1")
+                .schedulingPolicy("drf").build())
+            .subQueue(new AllocationFileQueue.Builder("child2")
+                .schedulingPolicy("fifo").build())
+            .build())
+        .writeToFile(ALLOC_FILE);
     scheduler.reinitialize(conf, null);
 
     FSQueue child1 = scheduler.getQueueManager().getQueue("child1");
@@ -508,20 +475,15 @@ public class TestSchedulingPolicy {
         child2.getPolicy() instanceof FairSharePolicy);
 
     // Set both child1 and root to 'drf', then reload the allocation file
-    out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\">");
-    out.println("<schedulingPolicy>drf</schedulingPolicy>");
-    out.println("    <queue name=\"child1\">");
-    out.println("    <schedulingPolicy>drf</schedulingPolicy>");
-    out.println("    </queue>");
-    out.println("    <queue name=\"child2\">");
-    out.println("    <schedulingPolicy>fifo</schedulingPolicy>");
-    out.println("    </queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .schedulingPolicy("drf")
+            .subQueue(new AllocationFileQueue.Builder("child1")
+                .schedulingPolicy("drf").build())
+            .subQueue(new AllocationFileQueue.Builder("child2")
+                .schedulingPolicy("fifo").build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.reinitialize(conf, null);
 
