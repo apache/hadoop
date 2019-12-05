@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 
 public class UserGroupMappingPlacementRule extends PlacementRule {
   private static final Logger LOG = LoggerFactory
@@ -178,18 +179,20 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
           if (mapping.getParentQueue() != null
               && mapping.getParentQueue().equals(PRIMARY_GROUP_MAPPING)
               && mapping.getQueue().equals(CURRENT_USER_MAPPING)) {
-            return getPlacementContext(
+            QueueMapping queueMapping =
                 new QueueMapping(mapping.getType(), mapping.getSource(),
-                    CURRENT_USER_MAPPING, groups.getGroups(user).get(0)),
-                user);
+                    user, groups.getGroups(user).get(0));
+            validateQueueMapping(queueMapping);
+            return getPlacementContext(queueMapping, user);
           } else if (mapping.getParentQueue() != null
               && mapping.getParentQueue().equals(SECONDARY_GROUP_MAPPING)
               && mapping.getQueue().equals(CURRENT_USER_MAPPING)) {
             String secondaryGroup = getSecondaryGroup(user);
             if (secondaryGroup != null) {
-              return getPlacementContext(new QueueMapping(mapping.getType(),
-                  mapping.getSource(), CURRENT_USER_MAPPING, secondaryGroup),
-                  user);
+              QueueMapping queueMapping = new QueueMapping(mapping.getType(),
+                  mapping.getSource(), user, secondaryGroup);
+              validateQueueMapping(queueMapping);
+              return getPlacementContext(queueMapping, user);
             } else {
               if (LOG.isDebugEnabled()) {
                 LOG.debug("User {} is not associated with any Secondary Group. "
@@ -427,6 +430,28 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
             .contains(UserGroupMappingPlacementRule.PRIMARY_GROUP_MAPPING)
         && !mapping.getQueue()
             .contains(UserGroupMappingPlacementRule.SECONDARY_GROUP_MAPPING);
+  }
+
+  private void validateQueueMapping(QueueMapping queueMapping)
+      throws IOException {
+    String parentQueueName = queueMapping.getParentQueue();
+    String leafQueueName = queueMapping.getQueue();
+    CSQueue parentQueue = queueManager.getQueue(parentQueueName);
+    CSQueue leafQueue = queueManager.getQueue(leafQueueName);
+
+    if (leafQueue == null || (!(leafQueue instanceof LeafQueue))) {
+      throw new IOException("mapping contains invalid or non-leaf queue : "
+          + leafQueueName);
+    } else if (parentQueue == null || (!(parentQueue instanceof ParentQueue))) {
+      throw new IOException(
+          "mapping contains invalid parent queue [" + parentQueueName + "]");
+    } else if (!parentQueue.getQueueName()
+        .equals(leafQueue.getParent().getQueueName())) {
+      throw new IOException("mapping contains invalid parent queue "
+          + "which does not match existing leaf queue's parent : ["
+          + parentQueue.getQueueName() + "] does not match [ "
+          + leafQueue.getParent().getQueueName() + "]");
+    }
   }
 
   @VisibleForTesting
