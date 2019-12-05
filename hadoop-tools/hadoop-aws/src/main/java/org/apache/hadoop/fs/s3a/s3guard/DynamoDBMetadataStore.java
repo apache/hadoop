@@ -2101,6 +2101,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
     if (operationState == null) {
       return 0;
     }
+    Preconditions.checkArgument(operationState instanceof AncestorState,
+        "Not an AncestorState %s", operationState);
     final AncestorState state = (AncestorState)operationState;
     // only mark paths under the dest as auth
     final String simpleDestKey = pathToParentKey(dest);
