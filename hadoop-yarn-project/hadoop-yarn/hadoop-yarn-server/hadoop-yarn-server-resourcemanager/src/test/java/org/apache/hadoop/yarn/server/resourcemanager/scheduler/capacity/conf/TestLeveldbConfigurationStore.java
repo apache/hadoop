@@ -31,13 +31,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.junit.Before;
 import org.junit.Test;
+import org.iq80.leveldb.DB;
+import org.iq80.leveldb.DBIterator;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 
 /**
@@ -109,6 +113,33 @@ public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
     // Should ignore passed-in scheduler configuration.
     confStore.initialize(conf, schedConf, rmContext);
     assertEquals("val", confStore.retrieve().get("key"));
+    confStore.close();
+  }
+
+  @Test
+  public void testDisableAuditLogs() throws Exception {
+    conf.setLong(YarnConfiguration.RM_SCHEDCONF_MAX_LOGS, 0);
+    confStore.initialize(conf, schedConf, rmContext);
+
+    Map<String, String> update = new HashMap<>();
+    update.put("key1", "val1");
+    YarnConfigurationStore.LogMutation mutation =
+        new YarnConfigurationStore.LogMutation(update, TEST_USER);
+    confStore.logMutation(mutation);
+
+    boolean logKeyPresent = false;
+    DB db = ((LeveldbConfigurationStore) confStore).getDB();
+    DBIterator itr = db.iterator();
+    itr.seekToFirst();
+    while (itr.hasNext()) {
+      Map.Entry<byte[], byte[]> entry = itr.next();
+      String key = new String(entry.getKey(), StandardCharsets.UTF_8);
+      if (key.equals("log")) {
+        logKeyPresent = true;
+        break;
+      }
+    }
+    assertFalse("Audit Log is not disabled", logKeyPresent);
     confStore.close();
   }
 
