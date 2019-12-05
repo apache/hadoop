@@ -869,7 +869,6 @@ public class TestDistCpSync {
 
   @Test
   public void testSync11() throws Exception {
-
     java.nio.file.Path filterFile = null;
     try {
       Path sourcePath = new Path(dfs.getWorkingDirectory(), "source");
