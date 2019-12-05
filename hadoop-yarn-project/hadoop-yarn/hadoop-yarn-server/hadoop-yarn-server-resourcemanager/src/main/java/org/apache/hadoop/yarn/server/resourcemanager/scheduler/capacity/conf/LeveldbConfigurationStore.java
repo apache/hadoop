@@ -224,12 +224,14 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
 
   @Override
   public void logMutation(LogMutation logMutation) throws IOException {
-    LinkedList<LogMutation> logs = deserLogMutations(db.get(bytes(LOG_KEY)));
-    logs.add(logMutation);
-    if (logs.size() > maxLogs) {
-      logs.removeFirst();
+    if (maxLogs > 0) {
+      LinkedList<LogMutation> logs = deserLogMutations(db.get(bytes(LOG_KEY)));
+      logs.add(logMutation);
+      if (logs.size() > maxLogs) {
+        logs.removeFirst();
+      }
+      db.put(bytes(LOG_KEY), serLogMutations(logs));
     }
-    db.put(bytes(LOG_KEY), serLogMutations(logs));
     pendingMutation = logMutation;
   }
 
@@ -335,6 +337,11 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
   @VisibleForTesting
   protected LinkedList<LogMutation> getLogs() throws Exception {
     return deserLogMutations(db.get(bytes(LOG_KEY)));
+  }
+
+  @VisibleForTesting
+  protected DB getDB() {
+    return db;
   }
 
   @Override
