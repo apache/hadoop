@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
@@ -226,7 +227,23 @@ public class TestCapacitySchedulerQueueMappingFactory {
     queueMappingsForUG.add(userQueueMapping1);
     queueMappingsForUG.add(userQueueMapping2);
 
-    testNestedUserQueueWithDynamicParentQueue(queueMappingsForUG, true);
+    testNestedUserQueueWithDynamicParentQueue(queueMappingsForUG, true, "f");
+
+    try {
+      testNestedUserQueueWithDynamicParentQueue(queueMappingsForUG, true, "h");
+      fail("Leaf Queue 'h' doesn't exists");
+    } catch (YarnException e) {
+      // Exception is expected as there is no such leaf queue
+    }
+
+    try {
+      testNestedUserQueueWithDynamicParentQueue(queueMappingsForUG, true, "a1");
+      fail("Actual Parent Queue of Leaf Queue 'a1' is 'a', but as per queue "
+          + "mapping it returns primary queue as 'a1group'");
+    } catch (YarnException e) {
+      // Exception is expected as there is mismatch in expected and actual
+      // parent queue
+    }
   }
 
   @Test
@@ -259,12 +276,12 @@ public class TestCapacitySchedulerQueueMappingFactory {
     queueMappingsForUG.add(userQueueMapping2);
     queueMappingsForUG.add(userQueueMapping1);
 
-    testNestedUserQueueWithDynamicParentQueue(queueMappingsForUG, false);
+    testNestedUserQueueWithDynamicParentQueue(queueMappingsForUG, false, "e");
   }
 
   private void testNestedUserQueueWithDynamicParentQueue(
-      List<UserGroupMappingPlacementRule.QueueMapping> mapping,
-      boolean primary)
+      List<UserGroupMappingPlacementRule.QueueMapping> mapping, boolean primary,
+      String user)
       throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
@@ -301,13 +318,13 @@ public class TestCapacitySchedulerQueueMappingFactory {
 
     UserGroupMappingPlacementRule r =
         (UserGroupMappingPlacementRule) rules.get(0);
-    ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "a");
-    assertEquals("Queue", "a", ctx.getQueue());
+    ApplicationPlacementContext ctx = r.getPlacementForApp(asc, user);
+    assertEquals("Queue", user, ctx.getQueue());
 
     if (primary) {
-      assertEquals("Primary Group", "agroup", ctx.getParentQueue());
+      assertEquals("Primary Group", user + "group", ctx.getParentQueue());
     } else {
-      assertEquals("Secondary Group", "asubgroup1", ctx.getParentQueue());
+      assertEquals("Secondary Group", user + "subgroup1", ctx.getParentQueue());
     }
     mockRM.close();
   }

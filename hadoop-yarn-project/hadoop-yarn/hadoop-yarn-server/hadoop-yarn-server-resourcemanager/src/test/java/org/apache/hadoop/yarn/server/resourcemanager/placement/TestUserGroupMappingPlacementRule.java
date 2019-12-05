@@ -31,8 +31,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping.MappingType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.PrimaryGroupMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
 import org.apache.hadoop.yarn.util.Records;
@@ -69,7 +70,26 @@ public class TestUserGroupMappingPlacementRule {
         overwrite, Arrays.asList(queueMapping), groups);
     CapacitySchedulerQueueManager queueManager =
         mock(CapacitySchedulerQueueManager.class);
-    when(queueManager.getQueue("asubgroup2")).thenReturn(mock(CSQueue.class));
+
+    ParentQueue agroup = mock(ParentQueue.class);
+    when(agroup.getQueueName()).thenReturn("agroup");
+    ParentQueue bsubgroup2 = mock(ParentQueue.class);
+    when(bsubgroup2.getQueueName()).thenReturn("bsubgroup2");
+
+    LeafQueue a = mock(LeafQueue.class);
+    when(a.getQueueName()).thenReturn("a");
+    when(a.getParent()).thenReturn(agroup);
+    LeafQueue b = mock(LeafQueue.class);
+    when(b.getQueueName()).thenReturn("b");
+    when(b.getParent()).thenReturn(bsubgroup2);
+    LeafQueue asubgroup2 = mock(LeafQueue.class);
+    when(asubgroup2.getQueueName()).thenReturn("asubgroup2");
+
+    when(queueManager.getQueue("a")).thenReturn(a);
+    when(queueManager.getQueue("b")).thenReturn(b);
+    when(queueManager.getQueue("agroup")).thenReturn(agroup);
+    when(queueManager.getQueue("bsubgroup2")).thenReturn(bsubgroup2);
+    when(queueManager.getQueue("asubgroup2")).thenReturn(asubgroup2);
     rule.setQueueManager(queueManager);
     ApplicationSubmissionContext asc = Records.newRecord(
         ApplicationSubmissionContext.class);
@@ -117,7 +137,7 @@ public class TestUserGroupMappingPlacementRule {
     verifyQueueMapping(
         new QueueMapping(MappingType.USER, "%user", "%user",
             "%secondary_group"),
-        "a", YarnConfiguration.DEFAULT_QUEUE_NAME, "a", false, "asubgroup2");
+        "b", YarnConfiguration.DEFAULT_QUEUE_NAME, "b", false, "bsubgroup2");
     verifyQueueMapping(new QueueMapping(MappingType.GROUP, "asubgroup1", "q1"),
         "a", "q1");
     
