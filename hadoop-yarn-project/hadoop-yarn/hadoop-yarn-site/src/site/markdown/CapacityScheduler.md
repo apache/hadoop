@@ -167,20 +167,56 @@ Configuration
 
 Example:
 
-```
+Below example covers single mapping separately. In case of multiple mappings with comma separated values, evaluation would be from left to right, and the first valid mapping will be used. Below example order has been documented based on actual order of execution at runtime in case of multiple mappings.
+``` 
  <property>
-   <name>yarn.scheduler.capacity.queue-mappings</name>
-   <value>u:user1:queue1,g:group1:queue2,u:%user:%user,u:user2:%primary_group,u:user3:%secondary_group,u:%user:%primary_group.%user,u:%user:%secondary_group.%user</value>
-   <description>
-     Here, <user1> is mapped to <queue1>, <group1> is mapped to <queue2>, 
-     maps users to queues with the same name as user, <user2> is mapped 
-     to queue name same as <primary group>, maps users to queue with the
-     same name as user but parent queue name should be same as <primary group>
-     of the user, maps users to queue with the same name as user but parent
-     queue name should be same as any <secondary group> of the user
-     respectively. The mappings will be evaluated from left to
-     right, and the first valid mapping will be used.
-   </description>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:%user:%primary_group.%user</value>
+    <description>Maps users to queue with the same name as user but
+    parent queue name should be same as primary group of the user</description>
+ </property>
+ ...
+ <property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:%user:%secondary_group.%user</value>
+    <description>Maps users to queue with the same name as user but
+    parent queue name should be same as any secondary group of the user</description>
+ </property>
+ ...
+ <property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:%user:%user</value>
+    <description>Maps users to queues with the same name as user</description>
+ </property>
+ ...
+ <property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:user2:%primary_group</value>
+    <description>user2 is mapped to queue name same as primary group</description>
+ </property>
+ ...
+ <property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:user3:%secondary_group</value>
+    <description>user3 is mapped to queue name same as secondary group</description>
+ </property>
+ ...
+ <property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:user1:queue1</value>
+    <description>user1 is mapped to queue1</description>
+ </property>
+ ...
+ <property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>g:group1:queue2</value>
+    <description>group1 is mapped to queue2</description>
+ </property>
+ ...
+ <property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:user1:queue1,u:user2:queue2</value>
+    <description>Here, <user1> is mapped to <queue1>, <user2> is mapped to <queue2> respectively</description>
  </property>
 
   <property>
