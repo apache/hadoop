@@ -85,7 +85,7 @@ Optional packages:
 * Linux FUSE
   $ sudo apt-get install fuse libfuse-dev
 * ZStandard compression
-    $ sudo apt-get install zstd
+  $ sudo apt-get install libzstd1-dev
 * PMDK library for storage class memory(SCM) as HDFS cache backend
   Please refer to http://pmem.io/ and https://github.com/pmem/pmdk
 
