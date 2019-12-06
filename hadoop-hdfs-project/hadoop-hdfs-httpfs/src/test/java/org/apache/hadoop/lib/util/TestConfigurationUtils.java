@@ -21,11 +21,9 @@ package org.apache.hadoop.lib.util;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringWriter;
 
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
@@ -129,20 +127,14 @@ public class TestConfigurationUtils {
 
   @Test
   public void testCompactFormatProperty() throws IOException {
+    final String TESTFILE = "test-compact-format-property.xml";
     Configuration conf = new Configuration(false);
     assertEquals(conf.size(), 0);
-    StringWriter writer = new StringWriter();
-    BufferedWriter out = new BufferedWriter(writer);
-    out.write("<?xml version=\"1.0\"?>\n");
-    out.write("<configuration>\n");
-    out.write("<property name=\"key1\" value=\"val1\"/>");
-    out.write("</configuration>\n");
-    out.flush();
-    out.close();
-    InputStream is = new ByteArrayInputStream(writer.toString().getBytes());
-    conf = new Configuration(false);
-    ConfigurationUtils.load(conf, is);
-    assertEquals(conf.size(), 1);
-    assertEquals(conf.get("key1"), "val1");
+    ConfigurationUtils.load(conf,
+        Thread.currentThread()
+            .getContextClassLoader().getResource(TESTFILE).openStream());
+    assertEquals(conf.size(), 2);
+    assertEquals("val1", conf.get("key.1"));
+    assertEquals("val2", conf.get("key.2"));
   }
 }
