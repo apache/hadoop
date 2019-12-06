@@ -349,7 +349,9 @@ public class DirectoryScanner implements Runnable {
    * Clear the current cache of diffs and statistics.
    */
   private void clear() {
-    diffs.clear();
+    synchronized (diffs) {
+      diffs.clear();
+    }
     stats.clear();
   }
 
@@ -430,17 +432,19 @@ public class DirectoryScanner implements Runnable {
     // HDFS-14476: run checkAndUpadte with batch to avoid holding the lock too
     // long
     int loopCount = 0;
-    for (final Map.Entry<String, ScanInfo> entry : diffs.getEntries()) {
-      dataset.checkAndUpdate(entry.getKey(), entry.getValue());
+    synchronized (diffs) {
+      for (final Map.Entry<String, ScanInfo> entry : diffs.getEntries()) {
+        dataset.checkAndUpdate(entry.getKey(), entry.getValue());
 
-      if (loopCount % RECONCILE_BLOCKS_BATCH_SIZE == 0) {
-        try {
-          Thread.sleep(2000);
-        } catch (InterruptedException e) {
-          // do nothing
+        if (loopCount % RECONCILE_BLOCKS_BATCH_SIZE == 0) {
+          try {
+            Thread.sleep(2000);
+          } catch (InterruptedException e) {
+            // do nothing
+          }
         }
+        loopCount++;
       }
-      loopCount++;
     }
 
     if (!retainDiffs) {
@@ -545,7 +549,9 @@ public class DirectoryScanner implements Runnable {
           }
           d++;
         }
-        diffs.addAll(bpid, diffRecord);
+        synchronized (diffs) {
+          diffs.addAll(bpid, diffRecord);
+        }
         LOG.info("Scan Results: {}", statsRecord);
       }
     }
