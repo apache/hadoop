@@ -100,9 +100,7 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics.TOPMETRICS_METRICS_SOURCE_NAME;
 
 import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -5212,6 +5210,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
+    final String operationName = "getDelegationToken";
+    final boolean success;
+    final String tokenId;
     Token<DelegationTokenIdentifier> token;
     checkOperation(OperationCategory.WRITE);
     writeLock();
@@ -5240,11 +5241,23 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         dtId, dtSecretManager);
       long expiryTime = dtSecretManager.getTokenExpiryTime(dtId);
       getEditLog().logGetDelegationToken(dtId, expiryTime);
+      tokenId = makeTokenId(dtId);
+      success = true;
     } finally {
       writeUnlock("getDelegationToken");
     }
     getEditLog().logSync();
+    logAuditEvent(success, operationName, tokenId);
     return token;
+  }
+
+  private String makeTokenId(DelegationTokenIdentifier dtId) {
+    return dtId.getKind() +
+        " token " +
+        dtId.getSequenceNumber() +
+        " for " +
+        dtId.getUser().getShortUserName() +
+        " with renewer " + dtId.getRenewer();
   }
 
   /**
@@ -5256,6 +5269,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
+    final String operationName = "renewDelegationToken";
+    boolean success = false;
+    String tokenId;
     long expiryTime;
     checkOperation(OperationCategory.WRITE);
     writeLock();
@@ -5269,15 +5285,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
       String renewer = getRemoteUser().getShortUserName();
       expiryTime = dtSecretManager.renewToken(token, renewer);
-      DelegationTokenIdentifier id = new DelegationTokenIdentifier();
-      ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
-      DataInputStream in = new DataInputStream(buf);
-      id.readFields(in);
+      final DelegationTokenIdentifier id = DFSUtil.decodeDelegationToken(token);
       getEditLog().logRenewDelegationToken(id, expiryTime);
+      tokenId = makeTokenId(id);
+      success = true;
+    } catch (AccessControlException ace) {
+      final DelegationTokenIdentifier id = DFSUtil.decodeDelegationToken(token);
+      tokenId = makeTokenId(id);
+      logAuditEvent(success, operationName, tokenId);
+      throw ace;
     } finally {
       writeUnlock("renewDelegationToken");
     }
     getEditLog().logSync();
+    logAuditEvent(success, operationName, tokenId);
     return expiryTime;
   }
 
@@ -5288,6 +5309,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
+    final String operationName = "cancelDelegationToken";
+    boolean success = false;
+    String tokenId;
     checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
@@ -5298,10 +5322,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       DelegationTokenIdentifier id = dtSecretManager
         .cancelToken(token, canceller);
       getEditLog().logCancelDelegationToken(id);
+      tokenId = makeTokenId(id);
+      success = true;
+    } catch (AccessControlException ace) {
+      final DelegationTokenIdentifier id = DFSUtil.decodeDelegationToken(token);
+      tokenId = makeTokenId(id);
+      logAuditEvent(success, operationName, tokenId);
+      throw ace;
     } finally {
       writeUnlock("cancelDelegationToken");
     }
     getEditLog().logSync();
+    logAuditEvent(success, operationName, tokenId);
   }
 
   /**
