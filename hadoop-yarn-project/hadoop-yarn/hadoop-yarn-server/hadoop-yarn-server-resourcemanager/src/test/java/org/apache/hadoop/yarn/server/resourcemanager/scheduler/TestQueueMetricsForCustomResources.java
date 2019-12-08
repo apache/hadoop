@@ -93,8 +93,8 @@ public class TestQueueMetricsForCustomResources {
 
   public static final long GB = 1024; // MB
   private static final Configuration CONF = new Configuration();
-  private static final String CUSTOM_RES_1 = "custom_res_1";
-  private static final String CUSTOM_RES_2 = "custom_res_2";
+  public static final String CUSTOM_RES_1 = "custom_res_1";
+  public static final String CUSTOM_RES_2 = "custom_res_2";
   public static final String USER = "alice";
   private Resource defaultResource;
   private MetricsSystem ms;
