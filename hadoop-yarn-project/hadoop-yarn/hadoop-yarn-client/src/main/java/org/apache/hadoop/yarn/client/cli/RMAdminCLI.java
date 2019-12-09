@@ -251,7 +251,8 @@ public class RMAdminCLI extends HAAdmin {
     if (isHAEnabled) {
       for (Map.Entry<String,UsageInfo> cmdEntry : USAGE.entrySet()) {
         String cmdKey = cmdEntry.getKey();
-        if (!cmdKey.equals("-help")) {
+        if (!cmdKey.equals("-help") && !cmdKey.equals("-failover")
+            && !cmdKey.equals("-transitionToObserver")) {
           UsageInfo usageInfo = cmdEntry.getValue();
           if (usageInfo.args == null) {
             builder.append("   " + cmdKey + "\n");
@@ -323,7 +324,8 @@ public class RMAdminCLI extends HAAdmin {
    */
   private static void printUsage(String cmd, boolean isHAEnabled) {
     StringBuilder usageBuilder = new StringBuilder();
-    if (ADMIN_USAGE.containsKey(cmd) || USAGE.containsKey(cmd)) {
+    if (ADMIN_USAGE.containsKey(cmd) || USAGE.containsKey(cmd)
+        && (!cmd.equals("-failover") && !cmd.equals("-transitionToObserver"))) {
       buildIndividualUsageMsg(cmd, usageBuilder);
     } else {
       buildUsageMsg(usageBuilder, isHAEnabled);
@@ -730,7 +732,8 @@ public class RMAdminCLI extends HAAdmin {
       return exitCode;
     }
 
-    if (USAGE.containsKey(cmd)) {
+    if (USAGE.containsKey(cmd) && !cmd.equals("-failover")
+        && !cmd.equals("-transitionToObserver")) {
       if (isHAEnabled) {
         return super.run(args);
       }
