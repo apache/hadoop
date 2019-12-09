@@ -159,7 +159,11 @@ public class QueueMetrics implements MetricsSource {
     this.conf = conf;
     runningTime = buildBuckets(conf);
 
-    createQueueMetricsForCustomResources();
+    if (ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
+      this.queueMetricsForCustomResources =
+          new QueueMetricsForCustomResources();
+      registerCustomResources();
+    }
   }
 
   protected QueueMetrics tag(MetricsInfo info, String value) {
@@ -445,33 +449,25 @@ public class QueueMetrics implements MetricsSource {
     }
   }
 
-  protected Map<String, Long> initAndGetCustomResources() {
-    Map<String, Long> customResources = new HashMap<String, Long>();
-    ResourceInformation[] resources = ResourceUtils.getResourceTypesArray();
-
-    for (int i = 2; i < resources.length; i++) {
-      ResourceInformation resource = resources[i];
-      customResources.put(resource.getName(), Long.valueOf(0));
-    }
-    return customResources;
-  }
-
-  protected void createQueueMetricsForCustomResources() {
-    if (ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
-      this.queueMetricsForCustomResources =
-          new QueueMetricsForCustomResources();
-      registerCustomResources();
-    }
-  }
-
   /**
    * Register all custom resources metrics as part of initialization. As and
    * when this metric object construction happens for any queue, all custom
    * resource metrics value would be initialized with '0' like any other
    * mandatory resources metrics
    */
-  protected void registerCustomResources() {
-    Map<String, Long> customResources = initAndGetCustomResources();
+  private void registerCustomResources() {
+    Map<String, Long> customResources =
+      new HashMap<String, Long>();
+    ResourceInformation[] resources =
+      ResourceUtils.getResourceTypesArray();
+
+    for (int i =
+      2; i < resources.length; i++) {
+      ResourceInformation resource =
+        resources[i];
+      customResources.put(resource.getName(), Long.valueOf(0));
+    }
+
     registerCustomResources(customResources, ALLOCATED_RESOURCE_METRIC_PREFIX,
         ALLOCATED_RESOURCE_METRIC_DESC);
     registerCustomResources(customResources, AVAILABLE_RESOURCE_METRIC_PREFIX,
@@ -485,7 +481,7 @@ public class QueueMetrics implements MetricsSource {
         AGGREGATE_PREEMPTED_SECONDS_METRIC_DESC);
   }
 
-  protected void registerCustomResources(Map<String, Long> customResources,
+  private void registerCustomResources(Map<String, Long> customResources,
       String metricPrefix, String metricDesc) {
     for (Entry<String, Long> entry : customResources.entrySet()) {
       String resourceName = entry.getKey();
@@ -1010,15 +1006,5 @@ public class QueueMetrics implements MetricsSource {
         }
       }
     }
-  }
-
-  @VisibleForTesting
-  public QueueMetricsForCustomResources getQueueMetricsForCustomResources() {
-    return this.queueMetricsForCustomResources;
-  }
-
-  public void setQueueMetricsForCustomResources(
-      QueueMetricsForCustomResources metrics) {
-    this.queueMetricsForCustomResources = metrics;
   }
 }
