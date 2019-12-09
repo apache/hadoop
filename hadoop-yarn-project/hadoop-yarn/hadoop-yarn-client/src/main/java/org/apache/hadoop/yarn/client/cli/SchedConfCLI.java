@@ -131,10 +131,12 @@ public class SchedConfCLI extends Configured implements Tool {
     }
 
     if (parsedCli.hasOption(FORMAT_CONF)) {
-      return WebAppUtils.execOnActiveRM(getConf(), this::formatSchedulerConf, null);
+      return WebAppUtils.execOnActiveRM(getConf(), this::formatSchedulerConf,
+          null);
     }
     if (parsedCli.hasOption(GET_SCHEDULER_CONF)) {
-      return WebAppUtils.execOnActiveRM(getConf(), this::getSchedulerConf, null);
+      return WebAppUtils.execOnActiveRM(getConf(), this::getSchedulerConf,
+          null);
     }
     if (!parsedCli.hasOption(ADD_QUEUES_OPTION)
         && !parsedCli.hasOption(REMOVE_QUEUES_OPTION)
