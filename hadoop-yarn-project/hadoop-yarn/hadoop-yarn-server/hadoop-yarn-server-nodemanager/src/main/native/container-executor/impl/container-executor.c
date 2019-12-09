@@ -21,6 +21,7 @@
 #include "utils/docker-util.h"
 #include "utils/path-utils.h"
 #include "utils/string-utils.h"
+#include "runc/runc.h"
 #include "util.h"
 #include "config.h"
 
@@ -78,6 +79,7 @@ static const int DEFAULT_DOCKER_SUPPORT_ENABLED = 0;
 static const int DEFAULT_TC_SUPPORT_ENABLED = 0;
 static const int DEFAULT_MOUNT_CGROUP_SUPPORT_ENABLED = 0;
 static const int DEFAULT_YARN_SYSFS_SUPPORT_ENABLED = 0;
+static const int DEFAULT_RUNC_SUPPORT_ENABLED = 0;
 
 static const char* PROC_PATH = "/proc";
 
@@ -191,7 +193,7 @@ int check_executor_permissions(char *executable_file) {
 /**
  * Change the effective user id to limit damage.
  */
-static int change_effective_user(uid_t user, gid_t group) {
+int change_effective_user(uid_t user, gid_t group) {
   if (geteuid() == user) {
     return 0;
   }
@@ -209,6 +211,10 @@ static int change_effective_user(uid_t user, gid_t group) {
     return -1;
   }
   return 0;
+}
+
+int change_effective_user_to_nm() {
+  return change_effective_user(nm_uid, nm_gid);
 }
 
 #ifdef __linux
@@ -408,7 +414,7 @@ static int wait_and_get_exit_code(pid_t pid) {
  * the exit code file.
  * Returns the exit code of the container process.
  */
-static int wait_and_write_exit_code(pid_t pid, const char* exit_code_file) {
+int wait_and_write_exit_code(pid_t pid, const char* exit_code_file) {
   int exit_code = -1;
 
   exit_code = wait_and_get_exit_code(pid);
@@ -508,6 +514,12 @@ int is_mount_cgroups_support_enabled() {
 int is_yarn_sysfs_support_enabled() {
   return is_feature_enabled(YARN_SYSFS_SUPPORT_ENABLED_KEY,
                             DEFAULT_YARN_SYSFS_SUPPORT_ENABLED, &executor_cfg);
+}
+
+int is_runc_support_enabled() {
+  return is_feature_enabled(RUNC_SUPPORT_ENABLED_KEY,
+                            DEFAULT_RUNC_SUPPORT_ENABLED, &executor_cfg)
+      || runc_module_enabled(&CFG);
 }
 
 /**
@@ -640,6 +652,20 @@ char* get_app_log_directory(const char *log_root, const char* app_id) {
  */
 char *get_tmp_directory(const char *work_dir) {
   return concatenate("%s/%s", "tmp dir", 2, work_dir, TMP_DIR);
+}
+
+/**
+ * Get the private /tmp directory under the working directory
+ */
+char *get_privatetmp_directory(const char *work_dir) {
+  return concatenate("%s/%s", "private /tmp dir", 2, work_dir, ROOT_TMP_DIR);
+}
+
+/**
+ * Get the private /tmp directory under the working directory
+ */
+char *get_private_var_tmp_directory(const char *work_dir) {
+  return concatenate("%s/%s", "private /var/tmp dir", 2, work_dir, ROOT_VAR_TMP_DIR);
 }
 
 /**
@@ -810,17 +836,51 @@ static int create_container_directories(const char* user, const char *app_id,
     return result;
   }
 
-  result = COULD_NOT_CREATE_TMP_DIRECTORIES;
   // also make the tmp directory
   char *tmp_dir = get_tmp_directory(work_dir);
+  char *private_tmp_dir = get_privatetmp_directory(work_dir);
+  char *private_var_tmp_dir = get_private_var_tmp_directory(work_dir);
 
-  if (tmp_dir == NULL) {
+  if (tmp_dir == NULL || private_tmp_dir == NULL || private_var_tmp_dir == NULL) {
     return OUT_OF_MEMORY;
   }
-  if (mkdirs(tmp_dir, perms) == 0) {
-    result = 0;
+
+  if (mkdirs(tmp_dir, perms) != 0) {
+    fprintf(ERRORFILE, "Could not create tmp_dir: %s\n", tmp_dir);
+    result = COULD_NOT_CREATE_TMP_DIRECTORIES;
+    goto cleanup;
   }
+
+  if (mkdirs(private_tmp_dir, perms) != 0) {
+    fprintf(ERRORFILE, "Could not create private_tmp_dir: %s\n", private_tmp_dir);
+    result = COULD_NOT_CREATE_TMP_DIRECTORIES;
+    goto cleanup;
+  }
+
+  // clear group sticky bit on private_tmp_dir
+  if (chmod(private_tmp_dir, perms) != 0) {
+    fprintf(ERRORFILE, "Could not chmod private_tmp_dir: %s\n", private_tmp_dir);
+    result = COULD_NOT_CREATE_TMP_DIRECTORIES;
+    goto cleanup;
+  }
+
+  if (mkdirs(private_var_tmp_dir, perms) != 0) {
+    fprintf(ERRORFILE, "Could not create private_var_tmp_dir: %s\n", private_var_tmp_dir);
+    result = COULD_NOT_CREATE_TMP_DIRECTORIES;
+    goto cleanup;
+  }
+
+  // clear group sticky bit on private_tmp_dir
+  if (chmod(private_var_tmp_dir, perms) != 0) {
+    fprintf(ERRORFILE, "Could not chmod private_var_tmp_dir: %s\n", private_var_tmp_dir);
+    result = COULD_NOT_CREATE_TMP_DIRECTORIES;
+    goto cleanup;
+  }
+
+cleanup:
   free(tmp_dir);
+  free(private_tmp_dir);
+  free(private_var_tmp_dir);
 
   return result;
 }
@@ -1045,6 +1105,36 @@ static int open_file_as_nm(const char* filename) {
     fprintf(LOGFILE, "Can't open file %s as node manager - %s\n", filename,
 	    strerror(errno));
   }
+  if (change_effective_user(user, group)) {
+    result = -1;
+  }
+  return result;
+}
+
+/**
+ * Check the pidfile as the node manager. File should not exist.
+ * Returns 0 on file doesn't exist and -1 on file does exist.
+ */
+int check_pidfile_as_nm(const char* pidfile) {
+  int result = 0;
+  uid_t user = geteuid();
+  gid_t group = getegid();
+  if (change_effective_user(nm_uid, nm_gid) != 0) {
+    return -1;
+  }
+
+  struct stat statbuf;
+  if (stat(pidfile, &statbuf) == 0) {
+    fprintf(ERRORFILE, "pid file already exists: %s\n", pidfile);
+    result = -1;
+  }
+
+  if (errno != ENOENT) {
+    fprintf(ERRORFILE, "Error accessing %s : %s\n", pidfile,
+            strerror(errno));
+    result = -1;
+  }
+
   if (change_effective_user(user, group)) {
     result = -1;
   }
@@ -1861,6 +1951,61 @@ int create_yarn_sysfs(const char* user, const char *app_id,
     free(container_dir);
   }
   return result;
+}
+
+int setup_container_paths(const char* user, const char* app_id,
+    const char *container_id, const char *work_dir, const char *script_name,
+    const char *cred_file, int https, const char *keystore_file, const char *truststore_file,
+    char* const* local_dirs, char* const* log_dirs) {
+  char *script_file_dest = NULL;
+  char *cred_file_dest = NULL;
+  char *keystore_file_dest = NULL;
+  char *truststore_file_dest = NULL;
+  int container_file_source = -1;
+  int cred_file_source = -1;
+  int keystore_file_source = -1;
+  int truststore_file_source = -1;
+
+  int result = initialize_user(user, local_dirs);
+  if (result != 0) {
+    return result;
+  }
+
+  int rc = create_script_paths(
+    work_dir, script_name, cred_file, https, keystore_file, truststore_file, &script_file_dest, &cred_file_dest,
+    &keystore_file_dest, &truststore_file_dest, &container_file_source, &cred_file_source, &keystore_file_source, &truststore_file_source);
+
+  if (rc != 0) {
+    fputs("Could not create script path\n", ERRORFILE);
+    goto cleanup;
+  }
+
+  rc = create_log_dirs(app_id, log_dirs);
+  if (rc != 0) {
+    fputs("Could not create log files and directories\n", ERRORFILE);
+    goto cleanup;
+  }
+
+  rc = create_local_dirs(user, app_id, container_id,
+    work_dir, script_name, cred_file, https, keystore_file, truststore_file, local_dirs, log_dirs,
+    1, script_file_dest, cred_file_dest, keystore_file_dest, truststore_file_dest,
+    container_file_source, cred_file_source, keystore_file_source, truststore_file_source);
+
+  if (rc != 0) {
+    fputs("Could not create local files and directories\n", ERRORFILE);
+    goto cleanup;
+  }
+
+  rc = create_yarn_sysfs(user, app_id, container_id, work_dir, local_dirs);
+  if (rc != 0) {
+    fputs("Could not create user yarn sysfs directory\n", ERRORFILE);
+    goto cleanup;
+  }
+
+cleanup:
+  free(script_file_dest);
+  free(cred_file_dest);
+  return rc;
 }
 
 int launch_docker_container_as_user(const char * user, const char *app_id,
