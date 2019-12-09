@@ -541,9 +541,9 @@ bower-shrinkwrap-resolver-ext@0.1.0:
     semver "^5.3.0"
     string.prototype.endswith "^0.2.0"
 
-bower@1.7.7, bower@^1.3.12:
-  version "1.7.7"
-  resolved "https://registry.yarnpkg.com/bower/-/bower-1.7.7.tgz#2fd7ff3ebdcba5a8ffcd84c397c8fdfe9f825f92"
+bower@1.8.8, bower@^1.3.12:
+  version "1.8.8"
+  resolved "https://registry.yarnpkg.com/bower/-/bower-1.8.8.tgz#82544be34a33aeae7efb8bdf9905247b2cffa985"
 
 brace-expansion@^1.0.0:
   version "1.1.7"
