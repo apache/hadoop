@@ -36,6 +36,12 @@ public class FSExceptionMessages {
     "Cannot seek to a negative offset";
 
   /**
+   * Negative offset read forbidden : {@value}
+   */
+  public static final String NEGATIVE_POSITION_READ =
+    "Cannot read from a negative position";
+
+  /**
    * Seeks : {@value}
    */
   public static final String CANNOT_SEEK_PAST_EOF =
