@@ -21,14 +21,15 @@ package org.apache.hadoop.ipc;
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.ipc.WeightedRoundRobinMultiplexer.IPC_CALLQUEUE_WRRMUX_WEIGHTS_KEY;
 
 public class TestWeightedRoundRobinMultiplexer {
-  public static final Log LOG = LogFactory.getLog(TestWeightedRoundRobinMultiplexer.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestWeightedRoundRobinMultiplexer.class);
 
   private WeightedRoundRobinMultiplexer mux;
 

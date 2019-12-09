@@ -53,6 +53,12 @@ public class ITestS3AFileContextMainOperations
 
   @Test
   @Ignore
+  public void testBuilderCreateAppendExistingFile() throws IOException {
+    // not supported
+  }
+
+  @Test
+  @Ignore
   public void testSetVerifyChecksum() throws IOException {
     //checksums ignored, so test removed
   }

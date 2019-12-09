@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -288,8 +289,7 @@ public class TestFail {
       if (attemptID.getTaskId().getId() == 0) {//check if it is first task
         // send the Fail event
         getContext().getEventHandler().handle(
-            new TaskAttemptEvent(attemptID, 
-                TaskAttemptEventType.TA_FAILMSG));
+            new TaskAttemptFailEvent(attemptID));
       } else {
         getContext().getEventHandler().handle(
             new TaskAttemptEvent(attemptID,
@@ -310,8 +310,7 @@ public class TestFail {
         //check if it is first task's first attempt
         // send the Fail event
         getContext().getEventHandler().handle(
-            new TaskAttemptEvent(attemptID, 
-                TaskAttemptEventType.TA_FAILMSG));
+            new TaskAttemptFailEvent(attemptID));
       } else {
         getContext().getEventHandler().handle(
             new TaskAttemptEvent(attemptID,

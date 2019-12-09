@@ -30,6 +30,9 @@ Existing sequence files can be appended.
 
 ---
 
-* [HDFS-7645](https://issues.apache.org/jira/browse/HDFS-7645) | *Major* | **Rolling upgrade is restoring blocks from trash multiple times**
+* [YARN-4087](https://issues.apache.org/jira/browse/YARN-4087) | *Major* | **Followup fixes after YARN-2019 regarding RM behavior when state-store error occurs**
 
-**WARNING: No release note provided for this incompatible change.**
+Set YARN\_FAIL\_FAST to be false by default. If HA is enabled and if there's any state-store error, after the retry operation failed, we always transition RM to standby state.
+
+
+

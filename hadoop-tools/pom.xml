@@ -15,16 +15,16 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+                      https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.2.1</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-tools</artifactId>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
+  <version>3.2.1</version>
   <description>Apache Hadoop Tools</description>
   <name>Apache Hadoop Tools</name>
   <packaging>pom</packaging>
@@ -42,11 +42,13 @@
     <module>hadoop-pipes</module>
     <module>hadoop-openstack</module>
     <module>hadoop-sls</module>
+    <module>hadoop-resourceestimator</module>
     <module>hadoop-azure</module>
     <module>hadoop-aws</module>
     <module>hadoop-kafka</module>
     <module>hadoop-azure-datalake</module>
     <module>hadoop-aliyun</module>
+    <module>hadoop-fs2img</module>
   </modules>
 
   <build>
@@ -65,5 +67,4 @@
       </plugin>
     </plugins>
   </build>
-
 </project>

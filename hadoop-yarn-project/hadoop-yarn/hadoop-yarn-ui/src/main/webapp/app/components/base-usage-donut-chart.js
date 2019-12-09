@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
 import DonutChart from 'yarn-ui/components/donut-chart';
 
 export default DonutChart.extend({
@@ -29,15 +28,15 @@ export default DonutChart.extend({
     var others = {
       label: "Used by others",
       value: 0
-    }
+    };
 
-    for (var i = nItemsKept; i < usages.length; i++) {
+    for (i = nItemsKept; i < usages.length; i++) {
       others.value += Number(usages[i].value);
     }
     others.value = others.value.toFixed(2);
 
-    arr.push(others)
+    arr.push(others);
 
     return arr;
-  },
-})
+  }
+});

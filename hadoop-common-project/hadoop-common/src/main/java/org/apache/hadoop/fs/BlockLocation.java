@@ -18,18 +18,50 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
+import java.io.Serializable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.StringInterner;
 
 /**
  * Represents the network location of a block, information about the hosts
  * that contain block replicas, and other block metadata (E.g. the file
  * offset associated with the block, length, whether it is corrupt, etc).
+ *
+ * For a single BlockLocation, it will have different meanings for replicated
+ * and erasure coded files.
+ *
+ * If the file is 3-replicated, offset and length of a BlockLocation represent
+ * the absolute value in the file and the hosts are the 3 datanodes that
+ * holding the replicas. Here is an example:
+ * <pre>
+ * BlockLocation(offset: 0, length: BLOCK_SIZE,
+ *   hosts: {"host1:9866", "host2:9866, host3:9866"})
+ * </pre>
+ *
+ * And if the file is erasure-coded, each BlockLocation represents a logical
+ * block groups. Value offset is the offset of a block group in the file and
+ * value length is the total length of a block group. Hosts of a BlockLocation
+ * are the datanodes that holding all the data blocks and parity blocks of a
+ * block group.
+ * Suppose we have a RS_3_2 coded file (3 data units and 2 parity units).
+ * A BlockLocation example will be like:
+ * <pre>
+ * BlockLocation(offset: 0, length: 3 * BLOCK_SIZE, hosts: {"host1:9866",
+ *   "host2:9866","host3:9866","host4:9866","host5:9866"})
+ * </pre>
+ *
+ * Please refer to
+ * {@link FileSystem#getFileBlockLocations(FileStatus, long, long)} or
+ * {@link FileContext#getFileBlockLocations(Path, long, long)}
+ * for more examples.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class BlockLocation {
+public class BlockLocation implements Serializable {
+  private static final long serialVersionUID = 0x22986f6d;
+
   private String[] hosts; // Datanode hostnames
   private String[] cachedHosts; // Datanode hostnames with a cached replica
   private String[] names; // Datanode IP:xferPort for accessing the block
@@ -111,27 +143,27 @@ public class BlockLocation {
     if (names == null) {
       this.names = EMPTY_STR_ARRAY;
     } else {
-      this.names = names;
+      this.names = StringInterner.internStringsInArray(names);
     }
     if (hosts == null) {
       this.hosts = EMPTY_STR_ARRAY;
     } else {
-      this.hosts = hosts;
+      this.hosts = StringInterner.internStringsInArray(hosts);
     }
     if (cachedHosts == null) {
       this.cachedHosts = EMPTY_STR_ARRAY;
     } else {
-      this.cachedHosts = cachedHosts;
+      this.cachedHosts = StringInterner.internStringsInArray(cachedHosts);
     }
     if (topologyPaths == null) {
       this.topologyPaths = EMPTY_STR_ARRAY;
     } else {
-      this.topologyPaths = topologyPaths;
+      this.topologyPaths = StringInterner.internStringsInArray(topologyPaths);
     }
     if (storageIds == null) {
       this.storageIds = EMPTY_STR_ARRAY;
     } else {
-      this.storageIds = storageIds;
+      this.storageIds = StringInterner.internStringsInArray(storageIds);
     }
     if (storageTypes == null) {
       this.storageTypes = EMPTY_STORAGE_TYPE_ARRAY;
@@ -235,7 +267,7 @@ public class BlockLocation {
     if (hosts == null) {
       this.hosts = EMPTY_STR_ARRAY;
     } else {
-      this.hosts = hosts;
+      this.hosts = StringInterner.internStringsInArray(hosts);
     }
   }
 
@@ -246,7 +278,7 @@ public class BlockLocation {
     if (cachedHosts == null) {
       this.cachedHosts = EMPTY_STR_ARRAY;
     } else {
-      this.cachedHosts = cachedHosts;
+      this.cachedHosts = StringInterner.internStringsInArray(cachedHosts);
     }
   }
 
@@ -257,7 +289,7 @@ public class BlockLocation {
     if (names == null) {
       this.names = EMPTY_STR_ARRAY;
     } else {
-      this.names = names;
+      this.names = StringInterner.internStringsInArray(names);
     }
   }
 
@@ -268,7 +300,7 @@ public class BlockLocation {
     if (topologyPaths == null) {
       this.topologyPaths = EMPTY_STR_ARRAY;
     } else {
-      this.topologyPaths = topologyPaths;
+      this.topologyPaths = StringInterner.internStringsInArray(topologyPaths);
     }
   }
 
@@ -276,7 +308,7 @@ public class BlockLocation {
     if (storageIds == null) {
       this.storageIds = EMPTY_STR_ARRAY;
     } else {
-      this.storageIds = storageIds;
+      this.storageIds = StringInterner.internStringsInArray(storageIds);
     }
   }
 

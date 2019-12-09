@@ -34,6 +34,7 @@ public class TempAppPerPartition extends AbstractPreemptionEntity {
   // Following fields are settled and used by candidate selection policies
   private final int priority;
   private final ApplicationId applicationId;
+  private TempUserPerPartition tempUser;
 
   FiCaSchedulerApp app;
 
@@ -91,11 +92,23 @@ public class TempAppPerPartition extends AbstractPreemptionEntity {
     return applicationId;
   }
 
+  public String getUser() {
+    return this.app.getUser();
+  }
+
   public void deductActuallyToBePreempted(ResourceCalculator resourceCalculator,
-      Resource cluster, Resource toBeDeduct, String partition) {
+      Resource cluster, Resource toBeDeduct) {
     if (Resources.greaterThan(resourceCalculator, cluster,
         getActuallyToBePreempted(), toBeDeduct)) {
       Resources.subtractFrom(getActuallyToBePreempted(), toBeDeduct);
     }
+  }
+
+  public void setTempUserPerPartition(TempUserPerPartition tu) {
+    tempUser = tu;
+  }
+
+  public TempUserPerPartition getTempUserPerPartition() {
+    return tempUser;
   }
 }

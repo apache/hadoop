@@ -35,13 +35,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
@@ -50,7 +54,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestClusterId {
-  private static final Log LOG = LogFactory.getLog(TestClusterId.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestClusterId.class);
   File hdfsDir;
   Configuration config;
 
@@ -64,7 +69,10 @@ public class TestClusterId {
       fsImage.getStorage().dirIterator(NNStorage.NameNodeDirType.IMAGE);
     StorageDirectory sd = sdit.next();
     Properties props = Storage.readPropertiesFile(sd.getVersionFile());
-    String cid = props.getProperty("clusterID");
+    String cid = null;
+    if (props != null) {
+      cid = props.getProperty("clusterID");
+    }
     LOG.info("successfully formated : sd="+sd.getCurrentDir() + ";cid="+cid);
     return cid;
   }
@@ -451,5 +459,35 @@ public class TestClusterId {
     // check if the version file does not exists.
     File version = new File(hdfsDir, "current/VERSION");
     assertFalse("Check version should not exist", version.exists());
+  }
+
+  /**
+   * Test NameNode format failure when reformat is disabled and metadata
+   * directories exist.
+   */
+  @Test
+  public void testNNFormatFailure() throws Exception {
+    NameNode.initMetrics(config, NamenodeRole.NAMENODE);
+    DFSTestUtil.formatNameNode(config);
+    config.setBoolean(DFSConfigKeys.DFS_REFORMAT_DISABLED, true);
+    // Call to NameNode format will fail as name dir is not empty
+    try {
+      NameNode.format(config);
+      fail("NN format should fail.");
+    } catch (NameNodeFormatException e) {
+      GenericTestUtils.assertExceptionContains("NameNode format aborted as "
+          + "reformat is disabled for this cluster", e);
+    }
+  }
+
+  /**
+   * Test NameNode format when reformat is disabled and metadata directories do
+   * not exist.
+   */
+  @Test
+  public void testNNFormatSuccess() throws Exception {
+    NameNode.initMetrics(config, NamenodeRole.NAMENODE);
+    config.setBoolean(DFSConfigKeys.DFS_REFORMAT_DISABLED, true);
+    DFSTestUtil.formatNameNode(config);
   }
 }

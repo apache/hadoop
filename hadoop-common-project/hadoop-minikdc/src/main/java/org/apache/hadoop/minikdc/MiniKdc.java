@@ -365,8 +365,11 @@ public class MiniKdc {
         LOG.warn("WARNING: cannot delete file " + f.getAbsolutePath());
       }
     } else {
-      for (File c: f.listFiles()) {
-        delete(c);
+      File[] fileList = f.listFiles();
+      if (fileList != null) {
+        for (File c : fileList) {
+          delete(c);
+        }
       }
       if (! f.delete()) {
         LOG.warn("WARNING: cannot delete directory " + f.getAbsolutePath());

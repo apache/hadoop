@@ -56,9 +56,6 @@ public class CapacityOverTimePolicy extends NoOverCommitPolicy {
   private float maxInst;
   private float maxAvg;
 
-  // For now this is CapacityScheduler specific, but given a hierarchy in the
-  // configuration structure of the schedulers (e.g., SchedulerConfiguration)
-  // it should be easy to remove this limitation
   @Override
   public void init(String reservationQueuePath,
       ReservationSchedulerConfiguration conf) {
@@ -95,26 +92,29 @@ public class CapacityOverTimePolicy extends NoOverCommitPolicy {
       throw new PlanningQuotaException(p);
     }
 
+    long checkStart = reservation.getStartTime() - validWindow;
+    long checkEnd = reservation.getEndTime() + validWindow;
+
     //---- check for integral violations of capacity --------
 
     // Gather a view of what to check (curr allocation of user, minus old
     // version of this reservation, plus new version)
     RLESparseResourceAllocation consumptionForUserOverTime =
         plan.getConsumptionForUserOverTime(reservation.getUser(),
-            reservation.getStartTime() - validWindow,
-            reservation.getEndTime() + validWindow);
+            checkStart, checkEnd);
 
     ReservationAllocation old =
         plan.getReservationById(reservation.getReservationId());
     if (old != null) {
-      consumptionForUserOverTime = RLESparseResourceAllocation
-          .merge(plan.getResourceCalculator(), plan.getTotalCapacity(),
-              consumptionForUserOverTime, old.getResourcesOverTime(),
-              RLEOperator.add, reservation.getStartTime() - validWindow,
-              reservation.getEndTime() + validWindow);
+      consumptionForUserOverTime =
+          RLESparseResourceAllocation.merge(plan.getResourceCalculator(),
+              plan.getTotalCapacity(), consumptionForUserOverTime,
+              old.getResourcesOverTime(checkStart, checkEnd), RLEOperator.add,
+              checkStart, checkEnd);
     }
 
-    RLESparseResourceAllocation resRLE = reservation.getResourcesOverTime();
+    RLESparseResourceAllocation resRLE =
+        reservation.getResourcesOverTime(checkStart, checkEnd);
 
     RLESparseResourceAllocation toCheck = RLESparseResourceAllocation
         .merge(plan.getResourceCalculator(), plan.getTotalCapacity(),
@@ -191,11 +191,11 @@ public class CapacityOverTimePolicy extends NoOverCommitPolicy {
 
     // compare using merge() limit with integral
     try {
-      RLESparseResourceAllocation
-          .merge(plan.getResourceCalculator(), plan.getTotalCapacity(),
-              targetLimit, integral, RLEOperator.subtractTestNonNegative,
-              reservation.getStartTime() - validWindow,
-              reservation.getEndTime() + validWindow);
+
+      RLESparseResourceAllocation.merge(plan.getResourceCalculator(),
+          plan.getTotalCapacity(), targetLimit, integral,
+          RLEOperator.subtractTestNonNegative, checkStart, checkEnd);
+
     } catch (PlanningException p) {
       throw new PlanningQuotaException(
           "Integral (avg over time) quota capacity " + maxAvg
@@ -240,7 +240,8 @@ public class CapacityOverTimePolicy extends NoOverCommitPolicy {
     if (old != null) {
       used = RLESparseResourceAllocation.merge(plan.getResourceCalculator(),
           Resources.clone(plan.getTotalCapacity()), used,
-          old.getResourcesOverTime(), RLEOperator.subtract, start, end);
+          old.getResourcesOverTime(start, end), RLEOperator.subtract, start,
+          end);
     }
 
     instRLEQuota = RLESparseResourceAllocation

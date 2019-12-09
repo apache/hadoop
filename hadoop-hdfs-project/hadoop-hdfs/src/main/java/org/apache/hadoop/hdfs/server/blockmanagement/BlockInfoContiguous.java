@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 
 /**
  * Subclass of {@link BlockInfo}, used for a block with replication scheme.
@@ -54,6 +56,9 @@ public class BlockInfoContiguous extends BlockInfo {
 
   @Override
   boolean addStorage(DatanodeStorageInfo storage, Block reportedBlock) {
+    Preconditions.checkArgument(this.getBlockId() == reportedBlock.getBlockId(),
+        "reported blk_%s is different from stored blk_%s",
+        reportedBlock.getBlockId(), this.getBlockId());
     // find the last null node
     int lastNode = ensureCapacity(1);
     setStorageInfo(lastNode, storage);
@@ -90,6 +95,11 @@ public class BlockInfoContiguous extends BlockInfo {
   @Override
   public final boolean isStriped() {
     return false;
+  }
+
+  @Override
+  public BlockType getBlockType() {
+    return BlockType.CONTIGUOUS;
   }
 
   @Override

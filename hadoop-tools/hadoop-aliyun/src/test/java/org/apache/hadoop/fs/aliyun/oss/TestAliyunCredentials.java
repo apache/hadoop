@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.aliyun.oss;
 
 import com.aliyun.oss.common.auth.Credentials;
+import com.aliyun.oss.common.auth.CredentialsProvider;
 import com.aliyun.oss.common.auth.InvalidCredentialsException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.aliyun.oss.contract.AliyunOSSContract;
@@ -27,6 +28,8 @@ import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
 
 import static org.apache.hadoop.fs.aliyun.oss.Constants.ACCESS_KEY_ID;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.ACCESS_KEY_SECRET;
@@ -63,16 +66,30 @@ public class TestAliyunCredentials extends AbstractFSContractTestBase {
     validateCredential(conf);
   }
 
-  private void validateCredential(Configuration conf) {
+  private void validateCredential(URI uri, Configuration conf) {
     try {
-      AliyunCredentialsProvider provider
-          = new AliyunCredentialsProvider(conf);
+      CredentialsProvider provider =
+          AliyunOSSUtils.getCredentialsProvider(uri, conf);
       Credentials credentials = provider.getCredentials();
       fail("Expected a CredentialInitializationException, got " + credentials);
     } catch (InvalidCredentialsException expected) {
       // expected
     } catch (IOException e) {
-      fail("Unexpected exception.");
+      Throwable cause = e.getCause();
+      if (cause instanceof InvocationTargetException) {
+        boolean isInstance =
+            ((InvocationTargetException)cause).getTargetException()
+                instanceof InvalidCredentialsException;
+        if (!isInstance) {
+          fail("Unexpected exception.");
+        }
+      } else {
+        fail("Unexpected exception.");
+      }
     }
+  }
+
+  private void validateCredential(Configuration conf) {
+    validateCredential(null, conf);
   }
 }

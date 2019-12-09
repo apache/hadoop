@@ -22,7 +22,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * Support the Syncable interface on top of a DataOutputStream.
@@ -30,18 +32,35 @@ import org.apache.hadoop.fs.Syncable;
  * wrapped stream passed in to the constructor. This is required
  * for HBase when wrapping a PageBlobOutputStream used as a write-ahead log.
  */
-public class SyncableDataOutputStream extends DataOutputStream implements Syncable {
+public class SyncableDataOutputStream extends DataOutputStream
+    implements Syncable, StreamCapabilities {
 
   public SyncableDataOutputStream(OutputStream out) {
     super(out);
+  }
+
+  /**
+   * Get a reference to the wrapped output stream.
+   *
+   * @return the underlying output stream
+   */
+  @InterfaceAudience.LimitedPrivate({"HDFS"})
+  public OutputStream getOutStream() {
+    return out;
+  }
+
+  @Override
+  public boolean hasCapability(String capability) {
+    if (out instanceof StreamCapabilities) {
+      return ((StreamCapabilities) out).hasCapability(capability);
+    }
+    return false;
   }
 
   @Override
   public void hflush() throws IOException {
     if (out instanceof Syncable) {
       ((Syncable) out).hflush();
-    } else {
-      out.flush();
     }
   }
 
@@ -49,8 +68,6 @@ public class SyncableDataOutputStream extends DataOutputStream implements Syncab
   public void hsync() throws IOException {
     if (out instanceof Syncable) {
       ((Syncable) out).hsync();
-    } else {
-      out.flush();
     }
   }
 }

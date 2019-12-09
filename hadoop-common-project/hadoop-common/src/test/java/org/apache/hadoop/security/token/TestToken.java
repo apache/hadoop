@@ -21,15 +21,18 @@ package org.apache.hadoop.security.token;
 import java.io.*;
 import java.util.Arrays;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenSecretManager;
+import org.junit.Test;
 
-import junit.framework.TestCase;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.Assert.*;
 
 /** Unit tests for Token */
-public class TestToken extends TestCase {
+public class TestToken {
 
   static boolean isEqual(Object a, Object b) {
     return a == null ? b == null : a.equals(b);
@@ -45,6 +48,7 @@ public class TestToken extends TestCase {
   /**
    * Test token serialization
    */
+  @Test
   public void testTokenSerialization() throws IOException {
     // Get a token
     Token<TokenIdentifier> sourceToken = new Token<TokenIdentifier>();
@@ -76,19 +80,19 @@ public class TestToken extends TestCase {
     }
   }
 
-  public static void testEncodeWritable() throws Exception {
+  @Test
+  public void testEncodeWritable() throws Exception {
     String[] values = new String[]{"", "a", "bb", "ccc", "dddd", "eeeee",
         "ffffff", "ggggggg", "hhhhhhhh", "iiiiiiiii",
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLM" +
              "NOPQRSTUVWXYZ01234567890!@#$%^&*()-=_+[]{}|;':,./<>?"};
     Token<AbstractDelegationTokenIdentifier> orig;
-    Token<AbstractDelegationTokenIdentifier> copy = 
-      new Token<AbstractDelegationTokenIdentifier>();
+    Token<AbstractDelegationTokenIdentifier> copy = new Token<>();
     // ensure that for each string the input and output values match
     for(int i=0; i< values.length; ++i) {
       String val = values[i];
-      System.out.println("Input = " + val);
-      orig = new Token<AbstractDelegationTokenIdentifier>(val.getBytes(),
+      Token.LOG.info("Input = {}", val);
+      orig = new Token<>(val.getBytes(),
           val.getBytes(), new Text(val), new Text(val));
       String encode = orig.encodeToUrlString();
       copy.decodeFromUrlString(encode);
@@ -96,7 +100,19 @@ public class TestToken extends TestCase {
       checkUrlSafe(encode);
     }
   }
-  
+
+  /*
+   * Test decodeWritable() with null newValue string argument,
+   * should throw HadoopIllegalArgumentException.
+   */
+  @Test
+  public void testDecodeWritableArgSanityCheck() throws Exception {
+    Token<AbstractDelegationTokenIdentifier> token = new Token<>();
+    intercept(HadoopIllegalArgumentException.class,
+        () -> token.decodeFromUrlString(null));
+  }
+
+  @Test
   public void testDecodeIdentifier() throws IOException {
     TestDelegationTokenSecretManager secretManager =
       new TestDelegationTokenSecretManager(0, 0, 0, 0);
@@ -105,7 +121,7 @@ public class TestToken extends TestCase {
         new Text("owner"), new Text("renewer"), new Text("realUser"));
     
     Token<TestDelegationTokenIdentifier> token =
-      new Token<TestDelegationTokenIdentifier>(id, secretManager);
+        new Token<>(id, secretManager);
     TokenIdentifier idCopy = token.decodeIdentifier();
     
     assertNotSame(id, idCopy);

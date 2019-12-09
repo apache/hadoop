@@ -188,10 +188,11 @@ public class LocatedBlocks {
 
   @Override
   public String toString() {
-    return getClass().getSimpleName() + "{" + "\n  fileLength=" + fileLength
-        + "\n  underConstruction=" + underConstruction
-        + "\n  blocks=" + blocks
-        + "\n  lastLocatedBlock=" + lastLocatedBlock
-        + "\n  isLastBlockComplete=" + isLastBlockComplete + "}";
+    return getClass().getSimpleName() + "{" + ";  fileLength=" + fileLength
+        + ";  underConstruction=" + underConstruction
+        + ";  blocks=" + blocks
+        + ";  lastLocatedBlock=" + lastLocatedBlock
+        + ";  isLastBlockComplete=" + isLastBlockComplete
+        + ";  ecPolicy=" + ecPolicy + "}";
   }
 }

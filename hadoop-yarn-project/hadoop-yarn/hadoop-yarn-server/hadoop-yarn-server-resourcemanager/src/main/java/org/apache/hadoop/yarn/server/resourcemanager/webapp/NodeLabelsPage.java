@@ -26,10 +26,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -53,7 +53,7 @@ public class NodeLabelsPage extends RmView {
           th(".type", "Label Type").
           th(".numOfActiveNMs", "Num Of Active NMs").
           th(".totalResource", "Total Resource").
-          _()._().
+          __().__().
           tbody();
   
       RMNodeLabelsManager nlm = rm.getRMContext().getNodeLabelManager();
@@ -71,17 +71,17 @@ public class NodeLabelsPage extends RmView {
           .a(url("nodes",
               "?" + YarnWebParams.NODE_LABEL + "=" + info.getLabelName()),
               String.valueOf(nActiveNMs))
-           ._();
+           .__();
         } else {
           row = row.td(String.valueOf(nActiveNMs));
         }
-        row.td(info.getResource().toString())._();
+        row.td(info.getResource().toString()).__();
       }
-      tbody._()._();
+      tbody.__().__();
     }
   }
 
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
     String title = "Node labels of the cluster";
     setTitle(title);

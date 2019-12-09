@@ -34,6 +34,8 @@ public class TestAclCLI extends CLITestHelperDFS {
 
   protected void initConf() {
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_POSIX_ACL_INHERITANCE_ENABLED_KEY, false);
   }
 
   @Before

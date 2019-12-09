@@ -37,7 +37,7 @@ import org.apache.hadoop.mapreduce.JobContext;
  *  of the field); if omitted from pos2, it defaults to 0 (the end of the
  *  field). opts are ordering options (any of 'nr' as described above). 
  * We assume that the fields in the key are separated by
- * {@link JobContext#MAP_OUTPUT_KEY_FIELD_SEPERATOR} 
+ * {@link JobContext#MAP_OUTPUT_KEY_FIELD_SEPARATOR}
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

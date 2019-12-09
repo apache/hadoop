@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web;
 
-import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
+import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaders.Values.CLOSE;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
@@ -30,7 +30,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 
-import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
@@ -46,7 +46,7 @@ import org.apache.hadoop.security.http.RestCsrfPreventionFilter.HttpInteraction;
 final class RestCsrfPreventionFilterHandler
     extends SimpleChannelInboundHandler<HttpRequest> {
 
-  private static final Log LOG = DatanodeHttpServer.LOG;
+  private static final Logger LOG = DatanodeHttpServer.LOG;
 
   private final RestCsrfPreventionFilter restCsrfPreventionFilter;
 
@@ -119,7 +119,7 @@ final class RestCsrfPreventionFilterHandler
 
     @Override
     public String getMethod() {
-      return req.method().name();
+      return req.getMethod().name();
     }
 
     @Override

@@ -23,8 +23,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
@@ -42,13 +40,16 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 
 @RunWith(value = Parameterized.class)
 public class TestFileInputFormat {
   
-  private static final Log LOG = LogFactory.getLog(TestFileInputFormat.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFileInputFormat.class);
   
   private static String testTmpDir = System.getProperty("test.build.data", "/tmp");
   private static final Path TEST_ROOT_DIR = new Path(testTmpDir, "TestFIF");
@@ -101,7 +102,22 @@ public class TestFileInputFormat {
         1, mockFs.numListLocatedStatusCalls);
     FileSystem.closeAll();
   }
-  
+
+  @Test
+  public void testIgnoreDirs() throws Exception {
+    Configuration conf = getConfiguration();
+    conf.setBoolean(FileInputFormat.INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, true);
+    conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
+    conf.set(org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR, "test:///a1");
+    MockFileSystem mockFs = (MockFileSystem) new Path("test:///").getFileSystem(conf);
+    JobConf job = new JobConf(conf);
+    TextInputFormat fileInputFormat = new TextInputFormat();
+    fileInputFormat.configure(job);
+    InputSplit[] splits = fileInputFormat.getSplits(job, 1);
+    Assert.assertEquals("Input splits are not correct", 1, splits.length);
+    FileSystem.closeAll();
+  }
+
   @Test
   public void testSplitLocationInfo() throws Exception {
     Configuration conf = getConfiguration();

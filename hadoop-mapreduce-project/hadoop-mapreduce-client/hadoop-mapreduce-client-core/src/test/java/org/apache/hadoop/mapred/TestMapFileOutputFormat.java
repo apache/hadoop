@@ -24,6 +24,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.MapFile.Reader;
+import org.junit.After;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -40,9 +41,10 @@ public class TestMapFileOutputFormat {
     assertTrue(!MyPartitioner.isGetPartitionCalled());
   }
 
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     MyPartitioner.setGetPartitionCalled(false);
-  };
+  }
   private static class MyPartitioner
       implements
         Partitioner<WritableComparable, Writable> {

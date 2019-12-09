@@ -20,13 +20,13 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -34,8 +34,8 @@ import java.util.Arrays;
 import java.util.List;
 
 public class TestPrivilegedOperationExecutor {
-  private static final Log LOG = LogFactory
-      .getLog(TestPrivilegedOperationExecutor.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TestPrivilegedOperationExecutor.class);
   private String localDataDir;
   private String customExecutorPath;
   private Configuration nullConf = null;

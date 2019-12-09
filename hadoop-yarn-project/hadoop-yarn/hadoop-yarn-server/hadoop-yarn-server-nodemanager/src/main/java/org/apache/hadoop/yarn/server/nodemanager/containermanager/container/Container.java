@@ -37,11 +37,21 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   ContainerId getContainerId();
 
+  /**
+   * The timestamp when the container start request is received.
+   */
+  long getContainerStartTime();
+
+  /**
+   * The timestamp when the container is allowed to be launched.
+   */
+  long getContainerLaunchTime();
+
   Resource getResource();
 
-  void setResource(Resource targetResource);
-
   ContainerTokenIdentifier getContainerTokenIdentifier();
+
+  void setContainerTokenIdentifier(ContainerTokenIdentifier token);
 
   String getUser();
   
@@ -92,4 +102,21 @@ public interface Container extends EventHandler<ContainerEvent> {
   void sendLaunchEvent();
 
   void sendKillEvent(int exitStatus, String description);
+
+  boolean isRecovering();
+
+  /**
+   * Get assigned resource mappings to the container.
+   *
+   * @return Resource Mappings of the container
+   */
+  ResourceMappings getResourceMappings();
+
+  void sendPauseEvent(String description);
+
+  /**
+   * Verify container is in final states.
+   * @return true/false based on container's state
+   */
+  boolean isContainerInFinalStates();
 }

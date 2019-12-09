@@ -23,17 +23,17 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
-* [HADOOP-8352](https://issues.apache.org/jira/browse/HADOOP-8352) | *Major* | **We should always generate a new configure script for the c++ code**
+* [HADOOP-5528](https://issues.apache.org/jira/browse/HADOOP-5528) | *Major* | **Binary partitioner**
 
-If you are compiling c++, the configure script will now be automatically regenerated as it should be.
-This requires autoconf version 2.61 or greater.
+New BinaryPartitioner that partitions BinaryComparable keys by hashing a configurable part of the bytes array corresponding to the key.
 
 
 ---
 
-* [HADOOP-5528](https://issues.apache.org/jira/browse/HADOOP-5528) | *Major* | **Binary partitioner**
+* [HADOOP-8352](https://issues.apache.org/jira/browse/HADOOP-8352) | *Major* | **We should always generate a new configure script for the c++ code**
 
-New BinaryPartitioner that partitions BinaryComparable keys by hashing a configurable part of the bytes array corresponding to the key.
+If you are compiling c++, the configure script will now be automatically regenerated as it should be.
+This requires autoconf version 2.61 or greater.
 
 
 

@@ -20,8 +20,8 @@ package org.apache.hadoop.streaming.mapreduce;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,8 +40,8 @@ import org.apache.hadoop.streaming.StreamUtil;
  */
 public abstract class StreamBaseRecordReader extends RecordReader<Text, Text> {
 
-  protected static final Log LOG = LogFactory
-      .getLog(StreamBaseRecordReader.class.getName());
+  protected static final Logger LOG = LoggerFactory
+      .getLogger(StreamBaseRecordReader.class.getName());
 
   // custom JobConf properties for this class are prefixed with this namespace
   final static String CONF_NS = "stream.recordreader.";

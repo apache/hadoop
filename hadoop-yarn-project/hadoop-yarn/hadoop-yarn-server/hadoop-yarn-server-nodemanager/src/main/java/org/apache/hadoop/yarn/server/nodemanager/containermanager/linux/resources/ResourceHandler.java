@@ -61,7 +61,7 @@ public interface ResourceHandler {
   /**
    * Require state for container that was already launched
    *
-   * @param containerId if of the container being reacquired.
+   * @param containerId id of the container being reacquired.
    * @return (possibly empty) list of operations that require elevated
    * privileges
    * @throws ResourceHandlerException
@@ -71,7 +71,19 @@ public interface ResourceHandler {
       throws ResourceHandlerException;
 
   /**
-   * Perform any tasks necessary after container completion
+   * Update state for container that was already launched
+   *
+   * @param container the container being updated.
+   * @return (possibly empty) list of operations that require elevated
+   * privileges
+   * @throws ResourceHandlerException
+   */
+
+  List<PrivilegedOperation> updateContainer(Container container)
+      throws ResourceHandlerException;
+
+  /**
+   * Perform any tasks necessary after container completion.
    * @param containerId of the container that was completed.
    * @return (possibly empty) list of operations that require elevated
    * privileges

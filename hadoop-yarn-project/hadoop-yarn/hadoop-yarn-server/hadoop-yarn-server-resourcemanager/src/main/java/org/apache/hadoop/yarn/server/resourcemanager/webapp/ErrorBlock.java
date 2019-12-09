@@ -34,6 +34,6 @@ public class ErrorBlock extends HtmlBlock {
 
   @Override
   protected void render(Block html) {
-    html.p()._($(ERROR_MESSAGE))._();
+    html.p().__($(ERROR_MESSAGE)).__();
   }
 }

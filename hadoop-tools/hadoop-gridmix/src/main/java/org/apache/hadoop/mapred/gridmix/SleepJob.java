@@ -50,11 +50,12 @@ import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.ReduceTaskAttemptInfo;
 import org.apache.hadoop.tools.rumen.TaskAttemptInfo;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.util.Time;
 
 public class SleepJob extends GridmixJob {
-  public static final Log LOG = LogFactory.getLog(SleepJob.class);
+  public static final Logger LOG = LoggerFactory.getLogger(SleepJob.class);
   private static final ThreadLocal <Random> rand = 
     new ThreadLocal <Random> () {
         @Override protected Random initialValue() {
@@ -184,7 +185,7 @@ public class SleepJob extends GridmixJob {
         TimeUnit.MILLISECONDS.convert(sleepInterval, TimeUnit.SECONDS);
       //This is to stop accumulating deviation from expected sleep time
       //over a period of time.
-      long start = System.currentTimeMillis();
+      long start = Time.monotonicNow();
       long slept = 0L;
       long sleep = 0L;
       while (slept < duration) {
@@ -192,7 +193,7 @@ public class SleepJob extends GridmixJob {
         sleep = Math.min(rem, RINTERVAL);
         context.setStatus("Sleeping... " + rem + " ms left");
         TimeUnit.MILLISECONDS.sleep(sleep);
-        slept = System.currentTimeMillis() - start;
+        slept = Time.monotonicNow() - start;
       }
     }
 

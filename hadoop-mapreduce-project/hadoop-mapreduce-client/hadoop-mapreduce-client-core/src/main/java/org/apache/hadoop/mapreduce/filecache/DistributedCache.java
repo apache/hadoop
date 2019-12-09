@@ -85,11 +85,11 @@ import java.net.URI;
  *     JobConf job = new JobConf();
  *     DistributedCache.addCacheFile(new URI("/myapp/lookup.dat#lookup.dat"),
  *                                   job);
- *     DistributedCache.addCacheArchive(new URI("/myapp/map.zip", job);
+ *     DistributedCache.addCacheArchive(new URI("/myapp/map.zip"), job);
  *     DistributedCache.addFileToClassPath(new Path("/myapp/mylib.jar"), job);
- *     DistributedCache.addCacheArchive(new URI("/myapp/mytar.tar", job);
- *     DistributedCache.addCacheArchive(new URI("/myapp/mytgz.tgz", job);
- *     DistributedCache.addCacheArchive(new URI("/myapp/mytargz.tar.gz", job);
+ *     DistributedCache.addCacheArchive(new URI("/myapp/mytar.tar"), job);
+ *     DistributedCache.addCacheArchive(new URI("/myapp/mytgz.tgz"), job);
+ *     DistributedCache.addCacheArchive(new URI("/myapp/mytargz.tar.gz"), job);
  *
  *     3. Use the cached files in the {@link org.apache.hadoop.mapred.Mapper}
  *     or {@link org.apache.hadoop.mapred.Reducer}:

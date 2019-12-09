@@ -21,14 +21,14 @@ package org.apache.hadoop.yarn.applications.distributedshell;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ContainerLaunchFailAppMaster extends ApplicationMaster {
 
-  private static final Log LOG =
-    LogFactory.getLog(ContainerLaunchFailAppMaster.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(ContainerLaunchFailAppMaster.class);
 
   public ContainerLaunchFailAppMaster() {
     super();
@@ -69,7 +69,7 @@ public class ContainerLaunchFailAppMaster extends ApplicationMaster {
       appMaster.run();
       result = appMaster.finish();
     } catch (Throwable t) {
-      LOG.fatal("Error running ApplicationMaster", t);
+      LOG.error("Error running ApplicationMaster", t);
       System.exit(1);
     }
     if (result) {

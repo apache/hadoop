@@ -19,12 +19,13 @@ package org.apache.hadoop.yarn.server.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPLICATION_ATTEMPT_ID;
+
+import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+import java.util.List;
 
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
@@ -34,19 +35,22 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
-import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 import com.google.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AppAttemptBlock extends HtmlBlock {
 
-  private static final Log LOG = LogFactory.getLog(AppAttemptBlock.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AppAttemptBlock.class);
   protected ApplicationBaseProtocol appBaseProt;
   protected ApplicationAttemptId appAttemptId = null;
 
@@ -78,15 +82,13 @@ public class AppAttemptBlock extends HtmlBlock {
           GetApplicationAttemptReportRequest.newInstance(appAttemptId);
       if (callerUGI == null) {
         appAttemptReport =
-            appBaseProt.getApplicationAttemptReport(request)
-              .getApplicationAttemptReport();
+            getApplicationAttemptReport(request);
       } else {
         appAttemptReport = callerUGI.doAs(
             new PrivilegedExceptionAction<ApplicationAttemptReport> () {
           @Override
           public ApplicationAttemptReport run() throws Exception {
-            return appBaseProt.getApplicationAttemptReport(request)
-                .getApplicationAttemptReport();
+            return getApplicationAttemptReport(request);
           }
         });
       }
@@ -94,7 +96,7 @@ public class AppAttemptBlock extends HtmlBlock {
       String message =
           "Failed to read the application attempt " + appAttemptId + ".";
       LOG.error(message, e);
-      html.p()._(message)._();
+      html.p().__(message).__();
       return;
     }
 
@@ -109,13 +111,13 @@ public class AppAttemptBlock extends HtmlBlock {
       final GetContainersRequest request =
           GetContainersRequest.newInstance(appAttemptId);
       if (callerUGI == null) {
-        containers = appBaseProt.getContainers(request).getContainerList();
+        containers = getContainers(request);
       } else {
         containers = callerUGI.doAs(
             new PrivilegedExceptionAction<Collection<ContainerReport>> () {
           @Override
           public Collection<ContainerReport> run() throws Exception {
-            return  appBaseProt.getContainers(request).getContainerList();
+            return  getContainers(request);
           }
         });
       }
@@ -140,14 +142,14 @@ public class AppAttemptBlock extends HtmlBlock {
     if (exceptionWhenGetContainerReports) {
       html
         .p()
-        ._(
+        .__(
           "Sorry, Failed to get containers for application attempt" + attemptid
-              + ".")._();
+              + ".").__();
       return;
     }
 
     createAttemptHeadRoomTable(html);
-    html._(InfoBlock.class);
+    html.__(InfoBlock.class);
 
     createTablesForAttemptMetrics(html);
 
@@ -155,7 +157,7 @@ public class AppAttemptBlock extends HtmlBlock {
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#containers").thead().tr().th(".id", "Container ID")
           .th(".node", "Node").th(".exitstatus", "Container Exit Status")
-          .th(".logs", "Logs")._()._().tbody();
+          .th(".logs", "Logs").__().__().tbody();
 
     StringBuilder containersTableData = new StringBuilder("[\n");
     for (ContainerReport containerReport : containers) {
@@ -171,8 +173,8 @@ public class AppAttemptBlock extends HtmlBlock {
               + container.getNodeHttpAddress())
         .append("'>")
         .append(container.getNodeHttpAddress() == null ? "N/A" :
-            StringEscapeUtils.escapeJavaScript(StringEscapeUtils
-                .escapeHtml(container.getNodeHttpAddress())))
+            StringEscapeUtils.escapeEcmaScript(StringEscapeUtils
+                .escapeHtml4(container.getNodeHttpAddress())))
         .append("</a>\",\"")
         .append(container.getContainerExitStatus()).append("\",\"<a href='")
         .append(container.getLogUrl() == null ?
@@ -186,9 +188,21 @@ public class AppAttemptBlock extends HtmlBlock {
     }
     containersTableData.append("]");
     html.script().$type("text/javascript")
-      ._("var containersTableData=" + containersTableData)._();
+      .__("var containersTableData=" + containersTableData).__();
 
-    tbody._()._();
+    tbody.__().__();
+  }
+
+  protected List<ContainerReport> getContainers(
+      final GetContainersRequest request) throws YarnException, IOException {
+    return appBaseProt.getContainers(request).getContainerList();
+  }
+
+  protected ApplicationAttemptReport getApplicationAttemptReport(
+      final GetApplicationAttemptReportRequest request)
+      throws YarnException, IOException {
+    return appBaseProt.getApplicationAttemptReport(request)
+        .getApplicationAttemptReport();
   }
 
   protected void generateOverview(ApplicationAttemptReport appAttemptReport,
@@ -196,18 +210,18 @@ public class AppAttemptBlock extends HtmlBlock {
       String node) {
     String amContainerId = appAttempt.getAmContainerId();
     info("Application Attempt Overview")
-      ._(
+      .__(
         "Application Attempt State:",
         appAttempt.getAppAttemptState() == null ? UNAVAILABLE : appAttempt
           .getAppAttemptState())
-      ._("AM Container:",
+      .__("AM Container:",
           amContainerId == null
               || containers == null
               || !hasAMContainer(appAttemptReport.getAMContainerId(),
                   containers) ? null : root_url("container", amContainerId),
           amContainerId == null ? "N/A" : amContainerId)
-      ._("Node:", node)
-      ._(
+      .__("Node:", node)
+      .__(
         "Tracking URL:",
         appAttempt.getTrackingUrl() == null
             || appAttempt.getTrackingUrl().equals(UNAVAILABLE) ? null
@@ -219,7 +233,7 @@ public class AppAttemptBlock extends HtmlBlock {
                 || appAttempt.getAppAttemptState() == YarnApplicationAttemptState.FAILED
                 || appAttempt.getAppAttemptState() == YarnApplicationAttemptState.KILLED
                 ? "History" : "ApplicationMaster")
-      ._(
+      .__(
         "Diagnostics Info:",
         appAttempt.getDiagnosticsInfo() == null ? "" : appAttempt
           .getDiagnosticsInfo());

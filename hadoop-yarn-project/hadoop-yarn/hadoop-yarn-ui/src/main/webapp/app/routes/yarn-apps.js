@@ -23,13 +23,11 @@ import AbstractRoute from './abstract';
 export default AbstractRoute.extend({
   model() {
     return Ember.RSVP.hash({
-      apps: this.store.findAll('yarn-app'),
-      clusterMetrics: this.store.findAll('ClusterMetric'),
+      clusterMetrics: this.store.findAll('ClusterMetric', {reload: true}),
     });
   },
 
   unloadAll() {
-    this.store.unloadAll('yarn-app');
     this.store.unloadAll('ClusterMetric');
   }
 });

@@ -51,6 +51,8 @@ public class TestErasureCodeBenchmarkThroughput {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDN).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
+    ((DistributedFileSystem)fs).enableErasureCodingPolicy(
+        ErasureCodeBenchmarkThroughput.getEcPolicy().getName());
   }
 
   @AfterClass

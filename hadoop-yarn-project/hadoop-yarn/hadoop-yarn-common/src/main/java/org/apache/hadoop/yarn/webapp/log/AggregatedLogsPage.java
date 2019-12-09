@@ -37,7 +37,7 @@ public class AggregatedLogsPage extends TwoColumnLayout {
    * @see org.apache.hadoop.yarn.server.nodemanager.webapp.NMView#preHead(org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML)
    */
   @Override
-  protected void preHead(Page.HTML<_> html) {
+  protected void preHead(Page.HTML<__> html) {
     String logEntity = $(ENTITY_STRING);
     if (logEntity == null || logEntity.isEmpty()) {
       logEntity = $(CONTAINER_ID);

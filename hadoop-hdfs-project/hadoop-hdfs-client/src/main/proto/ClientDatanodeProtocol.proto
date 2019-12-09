@@ -131,6 +131,12 @@ message GetDatanodeInfoResponseProto {
   required DatanodeLocalInfoProto localInfo = 1;
 }
 
+message GetVolumeReportRequestProto {
+}
+
+message GetVolumeReportResponseProto {
+  repeated DatanodeVolumeInfoProto volumeInfo = 1;
+}
 
 message TriggerBlockReportRequestProto {
   required bool incremental = 1;
@@ -254,6 +260,9 @@ service ClientDatanodeProtocolService {
 
   rpc getDatanodeInfo(GetDatanodeInfoRequestProto)
       returns(GetDatanodeInfoResponseProto);
+
+  rpc getVolumeReport(GetVolumeReportRequestProto)
+      returns(GetVolumeReportResponseProto);
 
   rpc getReconfigurationStatus(GetReconfigurationStatusRequestProto)
       returns(GetReconfigurationStatusResponseProto);

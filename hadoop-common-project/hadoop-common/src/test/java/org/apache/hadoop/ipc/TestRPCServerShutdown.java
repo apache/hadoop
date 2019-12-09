@@ -19,11 +19,11 @@
 package org.apache.hadoop.ipc;
 
 import com.google.protobuf.ServiceException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,7 +42,8 @@ import static org.junit.Assert.fail;
 @SuppressWarnings("deprecation")
 public class TestRPCServerShutdown extends TestRpcBase {
 
-  public static final Log LOG = LogFactory.getLog(TestRPCServerShutdown.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestRPCServerShutdown.class);
 
   @Before
   public void setup() {

@@ -27,7 +27,9 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.ServiceLoader;
 import java.util.concurrent.TimeUnit;
@@ -36,8 +38,6 @@ import javax.annotation.Nullable;
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.kerberos.KerberosTicket;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -50,13 +50,15 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.ZKUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xbill.DNS.Name;
+import org.xbill.DNS.ResolverConfig;
 
-
-//this will need to be replaced someday when there is a suitable replacement
-import sun.net.dns.ResolverConfiguration;
-import sun.net.util.IPAddressUtil;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.net.InetAddresses;
 
 /**
  * Security Utils.
@@ -64,7 +66,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class SecurityUtil {
-  public static final Log LOG = LogFactory.getLog(SecurityUtil.class);
+  public static final Logger LOG = LoggerFactory.getLogger(SecurityUtil.class);
   public static final String HOSTNAME_PATTERN = "_HOST";
   public static final String FAILED_TO_GET_UGI_MSG_HEADER = 
       "Failed to obtain user group information:";
@@ -473,7 +475,7 @@ public final class SecurityUtil {
       try { 
         ugi = UserGroupInformation.getLoginUser();
       } catch (IOException e) {
-        LOG.fatal("Exception while getting login user", e);
+        LOG.error("Exception while getting login user", e);
         e.printStackTrace();
         Runtime.getRuntime().exit(-1);
       }
@@ -584,10 +586,17 @@ public final class SecurityUtil {
    *       hadoop.security.token.service.use_ip=false 
    */
   protected static class QualifiedHostResolver implements HostResolver {
-    @SuppressWarnings("unchecked")
-    private List<String> searchDomains =
-        ResolverConfiguration.open().searchlist();
-    
+    private List<String> searchDomains = new ArrayList<>();
+    {
+      ResolverConfig resolverConfig = ResolverConfig.getCurrentConfig();
+      Name[] names = resolverConfig.searchPath();
+      if (names != null) {
+        for (Name name : names) {
+          searchDomains.add(name.toString());
+        }
+      }
+    }
+
     /**
      * Create an InetAddress with a fully qualified hostname of the given
      * hostname.  InetAddress does not qualify an incomplete hostname that
@@ -604,14 +613,11 @@ public final class SecurityUtil {
     public InetAddress getByName(String host) throws UnknownHostException {
       InetAddress addr = null;
 
-      if (IPAddressUtil.isIPv4LiteralAddress(host)) {
-        // use ipv4 address as-is
-        byte[] ip = IPAddressUtil.textToNumericFormatV4(host);
-        addr = InetAddress.getByAddress(host, ip);
-      } else if (IPAddressUtil.isIPv6LiteralAddress(host)) {
-        // use ipv6 address as-is
-        byte[] ip = IPAddressUtil.textToNumericFormatV6(host);
-        addr = InetAddress.getByAddress(host, ip);
+      if (InetAddresses.isInetAddress(host)) {
+        // valid ip address. use it as-is
+        addr = InetAddresses.forString(host);
+        // set hostname
+        addr = InetAddress.getByAddress(host, addr.getAddress());
       } else if (host.endsWith(".")) {
         // a rooted host ends with a dot, ex. "host."
         // rooted hosts never use the search path, so only try an exact lookup
@@ -719,5 +725,29 @@ public final class SecurityUtil {
    */
   public static boolean isPrivilegedPort(final int port) {
     return port < 1024;
+  }
+
+  /**
+   * Utility method to fetch ZK auth info from the configuration.
+   * @throws java.io.IOException if the Zookeeper ACLs configuration file
+   * cannot be read
+   * @throws ZKUtil.BadAuthFormatException if the auth format is invalid
+   */
+  public static List<ZKUtil.ZKAuthInfo> getZKAuthInfos(Configuration conf,
+      String configKey) throws IOException {
+    char[] zkAuthChars = conf.getPassword(configKey);
+    String zkAuthConf =
+        zkAuthChars != null ? String.valueOf(zkAuthChars) : null;
+    try {
+      zkAuthConf = ZKUtil.resolveConfIndirection(zkAuthConf);
+      if (zkAuthConf != null) {
+        return ZKUtil.parseAuth(zkAuthConf);
+      } else {
+        return Collections.emptyList();
+      }
+    } catch (IOException | ZKUtil.BadAuthFormatException e) {
+      LOG.error("Couldn't read Auth based on {}", configKey);
+      throw e;
+    }
   }
 }

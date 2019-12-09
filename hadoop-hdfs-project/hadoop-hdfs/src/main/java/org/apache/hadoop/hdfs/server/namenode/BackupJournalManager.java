@@ -42,7 +42,7 @@ class BackupJournalManager implements JournalManager {
   }
 
   @Override
-  public void format(NamespaceInfo nsInfo) {
+  public void format(NamespaceInfo nsInfo, boolean force) {
     // format() should only get called at startup, before any BNs
     // can register with the NN.
     throw new UnsupportedOperationException(
@@ -59,7 +59,7 @@ class BackupJournalManager implements JournalManager {
   public EditLogOutputStream startLogSegment(long txId, int layoutVersion)
       throws IOException {
     EditLogBackupOutputStream stm = new EditLogBackupOutputStream(bnReg,
-        journalInfo);
+        journalInfo, layoutVersion);
     stm.startLogSegment(txId);
     return stm;
   }

@@ -28,9 +28,4 @@ public class CapacitySchedulerMetrics extends SchedulerMetrics {
   public CapacitySchedulerMetrics() {
     super();
   }
-
-  @Override
-  public void trackQueue(String queueName) {
-    trackedQueues.add(queueName);
-  }
 }

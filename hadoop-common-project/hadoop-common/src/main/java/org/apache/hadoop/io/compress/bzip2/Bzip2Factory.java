@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.io.compress.bzip2;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A collection of factories to create the right 
@@ -31,7 +31,7 @@ import org.apache.hadoop.util.NativeCodeLoader;
  * 
  */
 public class Bzip2Factory {
-  private static final Log LOG = LogFactory.getLog(Bzip2Factory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Bzip2Factory.class);
 
   private static String bzip2LibraryName = "";
   private static boolean nativeBzip2Loaded;

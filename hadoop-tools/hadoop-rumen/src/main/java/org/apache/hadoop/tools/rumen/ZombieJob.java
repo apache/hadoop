@@ -23,8 +23,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.HashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TaskStatus.State;
@@ -49,7 +49,7 @@ import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants.Values;
  */
 @SuppressWarnings("deprecation")
 public class ZombieJob implements JobStory {
-  static final Log LOG = LogFactory.getLog(ZombieJob.class);
+  static final Logger LOG = LoggerFactory.getLogger(ZombieJob.class);
   private final LoggedJob job;
   private Map<TaskID, LoggedTask> loggedTaskMap;
   private Map<TaskAttemptID, LoggedTaskAttempt> loggedTaskAttemptMap;
@@ -426,7 +426,7 @@ public class ZombieJob implements JobStory {
     LoggedTask loggedTask = getLoggedTask(taskType, taskNumber);
     if (loggedTask == null) {
       // TODO insert parameters
-      TaskInfo taskInfo = new TaskInfo(0, 0, 0, 0, 0);
+      TaskInfo taskInfo = new TaskInfo(0, 0, 0, 0, 0, 0);
       return makeUpTaskAttemptInfo(taskType, taskInfo, taskAttemptNumber,
           taskNumber, locality);
     }
@@ -473,7 +473,7 @@ public class ZombieJob implements JobStory {
     LoggedTask loggedTask = getLoggedTask(taskType, taskNumber);
     if (loggedTask == null) {
       // TODO insert parameters
-      TaskInfo taskInfo = new TaskInfo(0, 0, 0, 0, 0);
+      TaskInfo taskInfo = new TaskInfo(0, 0, 0, 0, 0, 0);
       return makeUpTaskAttemptInfo(taskType, taskInfo, taskAttemptNumber,
           taskNumber, locality);
     }
@@ -639,7 +639,7 @@ public class ZombieJob implements JobStory {
 
   private TaskInfo getTaskInfo(LoggedTask loggedTask) {
     if (loggedTask == null) {
-      return new TaskInfo(0, 0, 0, 0, 0);
+      return new TaskInfo(0, 0, 0, 0, 0, 0);
     }
     List<LoggedTaskAttempt> attempts = loggedTask.getAttempts();
 
@@ -688,9 +688,10 @@ public class ZombieJob implements JobStory {
       break;
     }
 
+    //note: hardcoding vCores, as they are not collected
     TaskInfo taskInfo =
         new TaskInfo(inputBytes, (int) inputRecords, outputBytes,
-            (int) outputRecords, (int) heapMegabytes,
+            (int) outputRecords, (int) heapMegabytes, 1,
             metrics);
     return taskInfo;
   }

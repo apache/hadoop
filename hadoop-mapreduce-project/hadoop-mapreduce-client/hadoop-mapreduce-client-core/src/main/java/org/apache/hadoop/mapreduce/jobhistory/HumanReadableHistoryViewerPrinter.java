@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import org.apache.commons.lang.time.FastDateFormat;
+import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapred.JobStatus;
@@ -148,7 +148,8 @@ class HumanReadableHistoryViewerPrinter implements HistoryViewerPrinter {
           "Total Value"));
       buff.append("\n------------------------------------------" +
           "---------------------------------------------");
-      for (String groupName : totalCounters.getGroupNames()) {
+      for (CounterGroup counterGroup : totalCounters) {
+        String groupName = counterGroup.getName();
         CounterGroup totalGroup = totalCounters.getGroup(groupName);
         CounterGroup mapGroup = mapCounters.getGroup(groupName);
         CounterGroup reduceGroup = reduceCounters.getGroup(groupName);
@@ -236,7 +237,7 @@ class HumanReadableHistoryViewerPrinter implements HistoryViewerPrinter {
     taskSummary.append("\t").append(StringUtils.getFormattedTimeWithDiff(
         dateFormat, ts.setupFinished, ts.setupStarted));
     taskSummary.append("\nMap\t").append(ts.totalMaps);
-    taskSummary.append("\t").append(job.getFinishedMaps());
+    taskSummary.append("\t").append(job.getSucceededMaps());
     taskSummary.append("\t\t").append(ts.numFailedMaps);
     taskSummary.append("\t").append(ts.numKilledMaps);
     taskSummary.append("\t").append(StringUtils.getFormattedTimeWithDiff(
@@ -244,7 +245,7 @@ class HumanReadableHistoryViewerPrinter implements HistoryViewerPrinter {
     taskSummary.append("\t").append(StringUtils.getFormattedTimeWithDiff(
         dateFormat, ts.mapFinished, ts.mapStarted));
     taskSummary.append("\nReduce\t").append(ts.totalReduces);
-    taskSummary.append("\t").append(job.getFinishedReduces());
+    taskSummary.append("\t").append(job.getSucceededReduces());
     taskSummary.append("\t\t").append(ts.numFailedReduces);
     taskSummary.append("\t").append(ts.numKilledReduces);
     taskSummary.append("\t").append(StringUtils.getFormattedTimeWithDiff(

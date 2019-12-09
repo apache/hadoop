@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.google.protobuf.ByteString;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -29,16 +30,15 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.LayoutFlags;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.common.HttpGetFailedException;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
-import org.apache.hadoop.hdfs.server.namenode.TransferFsImage.HttpGetFailedException;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.SecurityUtil;
@@ -72,7 +72,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
   private FSEditLogOp.Reader reader = null;
   private FSEditLogLoader.PositionTrackingInputStream tracker = null;
   private DataInputStream dataIn = null;
-  static final Log LOG = LogFactory.getLog(EditLogInputStream.class);
+  static final Logger LOG = LoggerFactory.getLogger(EditLogInputStream.class);
   
   /**
    * Open an EditLogInputStream for the given file.
@@ -120,6 +120,23 @@ public class EditLogFileInputStream extends EditLogInputStream {
     return new EditLogFileInputStream(new URLLog(connectionFactory, url),
         startTxId, endTxId, inProgress);
   }
+
+  /**
+   * Create an EditLogInputStream from a {@link ByteString}, i.e. an in-memory
+   * collection of bytes.
+   *
+   * @param bytes The byte string to read from
+   * @param startTxId the expected starting transaction ID
+   * @param endTxId the expected ending transaction ID
+   * @param inProgress whether the log is in-progress
+   * @return An edit stream to read from
+   */
+  public static EditLogInputStream fromByteString(ByteString bytes,
+      long startTxId, long endTxId, boolean inProgress) {
+    return new EditLogFileInputStream(new ByteStringLog(bytes,
+        String.format("ByteStringEditLog[%d, %d]", startTxId, endTxId)),
+        startTxId, endTxId, inProgress);
+  }
   
   private EditLogFileInputStream(LogSource log,
       long firstTxId, long lastTxId,
@@ -146,6 +163,16 @@ public class EditLogFileInputStream extends EditLogInputStream {
       } catch (EOFException eofe) {
         throw new LogHeaderCorruptException("No header found in log");
       }
+      if (logVersion == -1) {
+        // The edits in progress file is pre-allocated with 1MB of "-1" bytes
+        // when it is created, then the header is written. If the header is
+        // -1, it indicates the an exception occurred pre-allocating the file
+        // and the header was never written. Therefore this is effectively a
+        // corrupt and empty log.
+        throw new LogHeaderCorruptException("No header present in log (value " +
+            "is -1), probably due to disk space issues when it was created. " +
+            "The log has no transactions and will be sidelined.");
+      }
       // We assume future layout will also support ADD_LAYOUT_FLAGS
       if (NameNodeLayoutVersion.supports(
           LayoutVersion.Feature.ADD_LAYOUT_FLAGS, logVersion) ||
@@ -162,7 +189,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
       state = State.OPEN;
     } finally {
       if (reader == null) {
-        IOUtils.cleanup(LOG, dataIn, tracker, bin, fStream);
+        IOUtils.cleanupWithLogger(LOG, dataIn, tracker, bin, fStream);
         state = State.CLOSED;
       }
     }
@@ -376,6 +403,32 @@ public class EditLogFileInputStream extends EditLogInputStream {
     public InputStream getInputStream() throws IOException;
     public long length();
     public String getName();
+  }
+
+  private static class ByteStringLog implements LogSource {
+    private final ByteString bytes;
+    private final String name;
+
+    public ByteStringLog(ByteString bytes, String name) {
+      this.bytes = bytes;
+      this.name = name;
+    }
+
+    @Override
+    public InputStream getInputStream() {
+      return bytes.newInput();
+    }
+
+    @Override
+    public long length() {
+      return bytes.size();
+    }
+
+    @Override
+    public String getName() {
+      return name;
+    }
+
   }
   
   private static class FileLog implements LogSource {

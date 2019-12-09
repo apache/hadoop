@@ -20,22 +20,28 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
+
+import java.util.Map;
+
 /**
  * Encapsulates the docker inspect command and its command
  * line arguments.
  */
 public class DockerInspectCommand extends DockerCommand {
   private static final String INSPECT_COMMAND = "inspect";
-  private String containerName;
+  private String commandArguments;
 
   public DockerInspectCommand(String containerName) {
     super(INSPECT_COMMAND);
-    this.containerName = containerName;
+    super.addCommandArguments("name", containerName);
   }
 
   public DockerInspectCommand getContainerStatus() {
-    super.addCommandArguments("--format='{{.State.Status}}'");
-    super.addCommandArguments(containerName);
+    super.addCommandArguments("format", STATUS_TEMPLATE);
+    this.commandArguments = String.format("--format=%s", STATUS_TEMPLATE);
     return this;
   }
 
@@ -43,9 +49,30 @@ public class DockerInspectCommand extends DockerCommand {
     // Be sure to not use space in the argument, otherwise the
     // extract_values_delim method in container-executor binary
     // cannot parse the arguments correctly.
-    super.addCommandArguments("--format='{{range(.NetworkSettings.Networks)}}"
-        + "{{.IPAddress}},{{end}}{{.Config.Hostname}}'");
-    super.addCommandArguments(containerName);
+    super.addCommandArguments("format", "{{range(.NetworkSettings.Networks)}}"
+        + "{{.IPAddress}},{{end}}{{.Config.Hostname}}");
+    this.commandArguments = "--format={{range(.NetworkSettings.Networks)}}"
+        + "{{.IPAddress}},{{end}}{{.Config.Hostname}}";
     return this;
   }
+
+  public DockerInspectCommand get(String[] templates, char delimiter) {
+    String format = StringUtils.join(delimiter, templates);
+    super.addCommandArguments("format", format);
+    this.commandArguments = String.format("--format=%s", format);
+    return this;
+  }
+
+  @Override
+  public PrivilegedOperation preparePrivilegedOperation(
+      DockerCommand dockerCommand, String containerName, Map<String,
+      String> env, Context nmContext) {
+    PrivilegedOperation dockerOp = new PrivilegedOperation(
+        PrivilegedOperation.OperationType.INSPECT_DOCKER_CONTAINER);
+    dockerOp.appendArgs(commandArguments, containerName);
+    return dockerOp;
+  }
+
+  public static final String STATUS_TEMPLATE = "{{.State.Status}}";
+  public static final String STOPSIGNAL_TEMPLATE = "{{.Config.StopSignal}}";
 }

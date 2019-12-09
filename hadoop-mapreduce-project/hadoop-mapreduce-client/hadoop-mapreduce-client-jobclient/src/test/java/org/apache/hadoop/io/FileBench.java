@@ -170,7 +170,7 @@ public class FileBench extends Configured implements Tool {
     for(int i = 0; i < argv.length; ++i) {
       try {
         if ("-dir".equals(argv[i])) {
-          root = new Path(argv[++i]).makeQualified(fs);
+          root = fs.makeQualified(new Path(argv[++i]));
           System.out.println("DIR: " + root.toString());
         } else if ("-seed".equals(argv[i])) {
           job.setLong("filebench.seed", Long.valueOf(argv[++i]));

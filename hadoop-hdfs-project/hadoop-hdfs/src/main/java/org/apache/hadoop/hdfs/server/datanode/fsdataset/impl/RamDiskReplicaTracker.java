@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import com.google.common.base.Preconditions;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -36,7 +36,8 @@ import java.util.concurrent.atomic.AtomicLong;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public abstract class RamDiskReplicaTracker {
-  static final Log LOG = LogFactory.getLog(RamDiskReplicaTracker.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(RamDiskReplicaTracker.class);
 
   FsDatasetImpl fsDataset;
 

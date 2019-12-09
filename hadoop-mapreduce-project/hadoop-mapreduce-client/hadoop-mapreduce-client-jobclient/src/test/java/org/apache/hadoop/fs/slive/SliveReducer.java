@@ -21,8 +21,6 @@ package org.apache.hadoop.fs.slive;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
@@ -30,6 +28,8 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The slive reducer which iterates over the given input values and merges them
@@ -38,7 +38,7 @@ import org.apache.hadoop.util.StringUtils;
 public class SliveReducer extends MapReduceBase implements
     Reducer<Text, Text, Text, Text> {
 
-  private static final Log LOG = LogFactory.getLog(SliveReducer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SliveReducer.class);
 
   private ConfigExtractor config;
 

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapreduce.v2.hs;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -32,10 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
@@ -43,7 +39,6 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TypeConverter;
-import org.apache.hadoop.mapreduce.counters.Limits;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
@@ -59,7 +54,6 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -67,6 +61,8 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.Records;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -74,8 +70,12 @@ import org.apache.hadoop.yarn.util.Records;
  * Data from job history file is loaded lazily.
  */
 public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
-  
-  static final Log LOG = LogFactory.getLog(CompletedJob.class);
+  // Backward compatibility: if the failed or killed map/reduce
+  // count is -1, that means the value was not recorded
+  // so we count it as 0
+  private static final int UNDEFINED_VALUE = -1;
+
+  private static final Logger LOG = LoggerFactory.getLogger(CompletedJob.class);
   private final Configuration conf;
   private final JobId jobId; //Can be picked from JobInfo with a conversion.
   private final String user; //Can be picked up from JobInfo
@@ -107,12 +107,36 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
 
   @Override
   public int getCompletedMaps() {
-    return (int) jobInfo.getFinishedMaps();
+    int killedMaps = (int) jobInfo.getKilledMaps();
+    int failedMaps = (int) jobInfo.getFailedMaps();
+
+    if (killedMaps == UNDEFINED_VALUE) {
+      killedMaps = 0;
+    }
+
+    if (failedMaps == UNDEFINED_VALUE) {
+      failedMaps = 0;
+    }
+
+    return (int) (jobInfo.getSucceededMaps() +
+        killedMaps + failedMaps);
   }
 
   @Override
   public int getCompletedReduces() {
-    return (int) jobInfo.getFinishedReduces();
+    int killedReduces = (int) jobInfo.getKilledReduces();
+    int failedReduces = (int) jobInfo.getFailedReduces();
+
+    if (killedReduces == UNDEFINED_VALUE) {
+      killedReduces = 0;
+    }
+
+    if (failedReduces == UNDEFINED_VALUE) {
+      failedReduces = 0;
+    }
+
+    return (int) (jobInfo.getSucceededReduces() +
+        killedReduces + failedReduces);
   }
 
   @Override
@@ -353,32 +377,23 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     if (historyFileAbsolute != null) {
       JobHistoryParser parser = null;
       try {
-        final FileSystem fs = historyFileAbsolute.getFileSystem(conf);
         parser = createJobHistoryParser(historyFileAbsolute);
-        final Path jobConfPath = new Path(historyFileAbsolute.getParent(),
-            JobHistoryUtils.getIntermediateConfFileName(jobId));
-        final Configuration conf = new Configuration();
-        try {
-          conf.addResource(fs.open(jobConfPath), jobConfPath.toString());
-          Limits.reset(conf);
-        } catch (FileNotFoundException fnf) {
-          if (LOG.isWarnEnabled()) {
-            LOG.warn("Missing job conf in history", fnf);
-          }
-        }
         this.jobInfo = parser.parse();
       } catch (IOException e) {
-        throw new YarnRuntimeException("Could not load history file "
-            + historyFileAbsolute, e);
+        String errorMsg = "Could not load history file " + historyFileAbsolute;
+        LOG.warn(errorMsg, e);
+        throw new YarnRuntimeException(errorMsg, e);
       }
       IOException parseException = parser.getParseException(); 
       if (parseException != null) {
-        throw new YarnRuntimeException(
-            "Could not parse history file " + historyFileAbsolute, 
-            parseException);
+        String errorMsg = "Could not parse history file " + historyFileAbsolute;
+        LOG.warn(errorMsg, parseException);
+        throw new YarnRuntimeException(errorMsg, parseException);
       }
     } else {
-      throw new IOException("History file not found");
+      String errorMsg = "History file not found";
+      LOG.warn(errorMsg);
+      throw new IOException(errorMsg);
     }
     if (loadTasks) {
       loadAllTasks();
@@ -495,5 +510,25 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   public void setJobPriority(Priority priority) {
     throw new UnsupportedOperationException(
         "Can't set job's priority in history");
+  }
+
+  @Override
+  public int getFailedMaps() {
+    return (int) jobInfo.getFailedMaps();
+  }
+
+  @Override
+  public int getFailedReduces() {
+    return (int) jobInfo.getFailedReduces();
+  }
+
+  @Override
+  public int getKilledMaps() {
+    return (int) jobInfo.getKilledMaps();
+  }
+
+  @Override
+  public int getKilledReduces() {
+    return (int) jobInfo.getKilledReduces();
   }
 }

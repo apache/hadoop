@@ -134,11 +134,11 @@ public class TestMultipleInputs extends HadoopTestCase {
     BufferedReader output = new BufferedReader(new InputStreamReader(fs
         .open(new Path(outDir, "part-r-00000"))));
     // reducer should have counted one key from each file
-    assertTrue(output.readLine().equals("a 2"));
-    assertTrue(output.readLine().equals("b 2"));
-    assertTrue(output.readLine().equals("c 2"));
-    assertTrue(output.readLine().equals("d 2"));
-    assertTrue(output.readLine().equals("e 2"));
+    assertEquals("a 2", output.readLine());
+    assertEquals("b 2", output.readLine());
+    assertEquals("c 2", output.readLine());
+    assertEquals("d 2", output.readLine());
+    assertEquals("e 2", output.readLine());
   }
 
   @Test

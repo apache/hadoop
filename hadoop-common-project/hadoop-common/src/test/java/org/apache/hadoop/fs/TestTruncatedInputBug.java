@@ -20,16 +20,17 @@ package org.apache.hadoop.fs;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Test;
 
 /**
  * test for the input truncation bug when mark/reset is used.
  * HADOOP-1489
  */
-public class TestTruncatedInputBug extends TestCase {
+public class TestTruncatedInputBug {
   private static String TEST_ROOT_DIR =
       GenericTestUtils.getTestDir().getAbsolutePath();
   
@@ -49,6 +50,7 @@ public class TestTruncatedInputBug extends TestCase {
    * checksum file system currently depends on the request size
    * >= bytesPerSum to work properly.
    */
+  @Test
   public void testTruncatedInputBug() throws IOException {
     final int ioBufSize = 512;
     final int fileSize = ioBufSize*4;

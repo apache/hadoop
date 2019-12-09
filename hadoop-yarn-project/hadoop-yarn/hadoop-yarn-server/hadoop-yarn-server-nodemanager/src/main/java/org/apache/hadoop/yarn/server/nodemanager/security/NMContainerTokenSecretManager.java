@@ -25,8 +25,10 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.RecoveryIterator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager;
@@ -48,8 +50,8 @@ import org.apache.hadoop.yarn.server.security.MasterKeyData;
 public class NMContainerTokenSecretManager extends
     BaseContainerTokenSecretManager {
 
-  private static final Log LOG = LogFactory
-      .getLog(NMContainerTokenSecretManager.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(NMContainerTokenSecretManager.class);
   
   private MasterKeyData previousMasterKey;
   private final TreeMap<Long, List<ContainerId>> recentlyStartedContainerTracker;
@@ -90,17 +92,20 @@ public class NMContainerTokenSecretManager extends
       super.serialNo = super.currentMasterKey.getMasterKey().getKeyId() + 1;
     }
 
-    for (Entry<ContainerId, Long> entry : state.getActiveTokens().entrySet()) {
-      ContainerId containerId = entry.getKey();
-      Long expTime = entry.getValue();
-      List<ContainerId> containerList =
-          recentlyStartedContainerTracker.get(expTime);
-      if (containerList == null) {
-        containerList = new ArrayList<ContainerId>();
-        recentlyStartedContainerTracker.put(expTime, containerList);
-      }
-      if (!containerList.contains(containerId)) {
-        containerList.add(containerId);
+    try (RecoveryIterator<Entry<ContainerId, Long>> it = state.getIterator()) {
+      while (it.hasNext()) {
+        Entry<ContainerId, Long> entry = it.next();
+        ContainerId containerId = entry.getKey();
+        Long expTime = entry.getValue();
+        List<ContainerId> containerList =
+            recentlyStartedContainerTracker.get(expTime);
+        if (containerList == null) {
+          containerList = new ArrayList<ContainerId>();
+          recentlyStartedContainerTracker.put(expTime, containerList);
+        }
+        if (!containerList.contains(containerId)) {
+          containerList.add(containerId);
+        }
       }
     }
   }

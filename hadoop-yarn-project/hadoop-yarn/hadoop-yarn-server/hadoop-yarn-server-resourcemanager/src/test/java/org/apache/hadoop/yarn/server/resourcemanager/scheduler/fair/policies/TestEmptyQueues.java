@@ -39,17 +39,17 @@ public class TestEmptyQueues {
     policy.computeShares(schedulables, Resources.none());
   }
 
-  @Test (timeout = 1000)
+  @Test (timeout = 10000)
   public void testFifoPolicy() {
     testComputeShares(SchedulingPolicy.getInstance(FifoPolicy.class));
   }
 
-  @Test (timeout = 1000)
+  @Test (timeout = 10000)
   public void testFairSharePolicy() {
     testComputeShares(SchedulingPolicy.getInstance(FairSharePolicy.class));
   }
 
-  @Test (timeout = 1000)
+  @Test (timeout = 10000)
   public void testDRFPolicy() {
     testComputeShares(
         SchedulingPolicy.getInstance(DominantResourceFairnessPolicy.class));

@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileExistsException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.DF;
@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
+import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
@@ -67,8 +68,8 @@ import java.util.Random;
 @InterfaceStability.Unstable
 @InterfaceAudience.Private
 public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
-  private static final Log LOG =
-      LogFactory.getLog(FsDatasetImplTestUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FsDatasetImplTestUtils.class);
   private final FsDatasetImpl dataset;
 
   private static final DataChecksum DEFAULT_CHECKSUM =
@@ -302,6 +303,15 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
     rbw.getBlockFile().createNewFile();
     rbw.getMetaFile().createNewFile();
     dataset.volumeMap.add(bpid, rbw);
+
+    FileIoProvider fileIoProvider = rbw.getFileIoProvider();
+
+    try (RandomAccessFile blockRAF = fileIoProvider.getRandomAccessFile(
+        volume, rbw.getBlockFile(), "rw")) {
+      //extend blockFile
+      blockRAF.setLength(eb.getNumBytes());
+    }
+    saveMetaFileHeader(rbw.getMetaFile());
     return rbw;
   }
 
@@ -490,6 +500,7 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
    * @param level the level to set
    */
   public static void setFsDatasetImplLogLevel(Level level) {
-    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG, level);
+    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG,
+        org.slf4j.event.Level.valueOf(level.toString()));
   }
 }

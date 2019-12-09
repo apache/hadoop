@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 /**
- * Plugin to derive a tracking URL from a Yarn Application ID
+ * Plugin to derive a tracking URL from a YARN Application ID
  *
  */
 @InterfaceAudience.LimitedPrivate({"MapReduce"})

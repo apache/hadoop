@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.security.ssl;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
@@ -47,7 +47,8 @@ public final class ReloadingX509TrustManager
   implements X509TrustManager, Runnable {
 
   @VisibleForTesting
-  static final Log LOG = LogFactory.getLog(ReloadingX509TrustManager.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(ReloadingX509TrustManager.class);
   @VisibleForTesting
   static final String RELOAD_ERROR_MESSAGE =
       "Could not load truststore (keep using existing one) : ";

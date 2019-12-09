@@ -51,6 +51,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.util.ApplicationClassLoader;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -260,7 +261,7 @@ public class TestMRApps {
     }
     String env_str = env.get("CLASSPATH");
     String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-      Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/job.jar",
+        Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/*",
         "job.jar/classes/", "job.jar/lib/*",
         ApplicationConstants.Environment.PWD.$$() + "/*"));
     assertTrue("MAPREDUCE_JOB_USER_CLASSPATH_FIRST set, but not taking effect!",
@@ -280,7 +281,7 @@ public class TestMRApps {
     }
     String env_str = env.get("CLASSPATH");
     String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-      Arrays.asList("job.jar/job.jar", "job.jar/classes/", "job.jar/lib/*",
+        Arrays.asList("job.jar/*", "job.jar/classes/", "job.jar/lib/*",
         ApplicationConstants.Environment.PWD.$$() + "/*"));
     assertTrue("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, and job.jar is not in"
       + " the classpath!", env_str.contains(expectedClasspath));
@@ -302,7 +303,7 @@ public class TestMRApps {
     assertFalse("MAPREDUCE_JOB_CLASSLOADER true, but PWD is in the classpath!",
       cp.contains("PWD"));
     String expectedAppClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-      Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/job.jar",
+        Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/*",
         "job.jar/classes/", "job.jar/lib/*",
         ApplicationConstants.Environment.PWD.$$() + "/*"));
     assertEquals("MAPREDUCE_JOB_CLASSLOADER true, but job.jar is not in the app"
@@ -331,7 +332,7 @@ public class TestMRApps {
     conf.set(MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH, FRAMEWORK_CLASSPATH);
     MRApps.setClasspath(env, conf);
     final String stdClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-        Arrays.asList("job.jar/job.jar", "job.jar/classes/", "job.jar/lib/*",
+        Arrays.asList("job.jar/*", "job.jar/classes/", "job.jar/lib/*",
             ApplicationConstants.Environment.PWD.$$() + "/*"));
     String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
         Arrays.asList(ApplicationConstants.Environment.PWD.$$(),
@@ -359,7 +360,7 @@ public class TestMRApps {
   }
   
   @SuppressWarnings("deprecation")
-  @Test(timeout = 120000, expected = InvalidJobConfException.class)
+  @Test(timeout = 120000)
   public void testSetupDistributedCacheConflicts() throws Exception {
     Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
@@ -387,10 +388,18 @@ public class TestMRApps {
     Map<String, LocalResource> localResources = 
       new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);
+
+    assertEquals(1, localResources.size());
+    LocalResource lr = localResources.get("something");
+    //Archive wins
+    assertNotNull(lr);
+    assertEquals(10l, lr.getSize());
+    assertEquals(10l, lr.getTimestamp());
+    assertEquals(LocalResourceType.ARCHIVE, lr.getType());
   }
   
   @SuppressWarnings("deprecation")
-  @Test(timeout = 120000, expected = InvalidJobConfException.class)
+  @Test(timeout = 120000)
   public void testSetupDistributedCacheConflictsFiles() throws Exception {
     Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
@@ -415,6 +424,14 @@ public class TestMRApps {
     Map<String, LocalResource> localResources = 
       new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);
+
+    assertEquals(1, localResources.size());
+    LocalResource lr = localResources.get("something");
+    //First one wins
+    assertNotNull(lr);
+    assertEquals(10l, lr.getSize());
+    assertEquals(10l, lr.getTimestamp());
+    assertEquals(LocalResourceType.FILE, lr.getType());
   }
   
   @SuppressWarnings("deprecation")
@@ -526,5 +543,13 @@ public class TestMRApps {
     }
     assertFalse("/fake/Klass must not be a system class",
         ApplicationClassLoader.isSystemClass("/fake/Klass", systemClasses));
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidWebappAddress() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS, "19888");
+    MRWebAppUtil.getApplicationWebURLOnJHSWithScheme(
+         conf, ApplicationId.newInstance(0, 1));
   }
 }

@@ -29,6 +29,10 @@ import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
  * <ul>
  *   <li>{@link #RUNNING} - normal state.</li>
  *   <li>{@link #STOPPED} - not accepting new application submissions.</li>
+ *   <li>
+ *     {@link #DRAINING} - not accepting new application submissions
+ *     and waiting for applications finish.
+ *   </li>
  * </ul>
  * 
  * @see QueueInfo
@@ -41,7 +45,12 @@ public enum QueueState {
    * Stopped - Not accepting submissions of new applications.
    */
   STOPPED,
-  
+
+  /**
+   * Draining - Not accepting submissions of new applications,
+   * and waiting for applications finish.
+   */
+  DRAINING,
   /**
    * Running - normal operation.
    */

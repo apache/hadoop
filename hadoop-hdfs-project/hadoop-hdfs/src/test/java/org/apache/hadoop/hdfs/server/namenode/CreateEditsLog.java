@@ -199,9 +199,9 @@ public class CreateEditsLog {
         System.exit(-1);
       }
     }
-    
 
     FileNameGenerator nameGenerator = new FileNameGenerator(BASE_PATH, 100);
+    EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
     FSEditLog editLog = FSImageTestUtil.createStandaloneEditLog(editsLogDir);
     editLog.openForWrite(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     addFiles(editLog, numFiles, replication, numBlocksPerFile, startingBlockId,

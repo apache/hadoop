@@ -18,14 +18,11 @@
 package org.apache.hadoop.util;
 
 import java.io.IOException;
+import org.junit.Test;
 
-import org.apache.hadoop.util.CacheableIPList;
-import org.apache.hadoop.util.FileBasedIPList;
+import static org.junit.Assert.*;
 
-
-import junit.framework.TestCase;
-
-public class TestCacheableIPList extends TestCase {
+public class TestCacheableIPList {
 
   /**
    * Add a bunch of subnets and IPSs to the file
@@ -37,6 +34,7 @@ public class TestCacheableIPList extends TestCase {
    * test for inclusion
    * Check for exclusion
    */
+  @Test
   public void testAddWithSleepForCacheTimeout() throws IOException, InterruptedException {
 
     String[] ips = {"10.119.103.112", "10.221.102.0/23", "10.113.221.221"};
@@ -76,6 +74,7 @@ public class TestCacheableIPList extends TestCase {
    * test for inclusion
    * Check for exclusion
    */
+  @Test
   public void testRemovalWithSleepForCacheTimeout() throws IOException, InterruptedException {
 
     String[] ips = {"10.119.103.112", "10.221.102.0/23",
@@ -115,6 +114,7 @@ public class TestCacheableIPList extends TestCase {
    * test for inclusion
    * Check for exclusion
    */
+  @Test
   public void testAddWithRefresh() throws IOException, InterruptedException {
 
     String[] ips = {"10.119.103.112", "10.221.102.0/23", "10.113.221.221"};
@@ -154,6 +154,7 @@ public class TestCacheableIPList extends TestCase {
    * test for inclusion
    * Check for exclusion
    */
+  @Test
   public void testRemovalWithRefresh() throws IOException, InterruptedException {
 
     String[] ips = {"10.119.103.112", "10.221.102.0/23",

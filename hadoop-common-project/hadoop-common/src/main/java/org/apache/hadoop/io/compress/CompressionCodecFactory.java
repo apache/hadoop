@@ -19,8 +19,6 @@ package org.apache.hadoop.io.compress;
 
 import java.util.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -28,6 +26,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A factory that will find the correct codec for a given filename.
@@ -36,8 +36,8 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceStability.Evolving
 public class CompressionCodecFactory {
 
-  public static final Log LOG =
-    LogFactory.getLog(CompressionCodecFactory.class.getName());
+  public static final Logger LOG =
+      LoggerFactory.getLogger(CompressionCodecFactory.class.getName());
   
   private static final ServiceLoader<CompressionCodec> CODEC_PROVIDERS =
     ServiceLoader.load(CompressionCodec.class);

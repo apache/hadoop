@@ -19,13 +19,13 @@ package org.apache.hadoop.tracing;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.tracing.SpanReceiverInfo.ConfigurationPair;
 import org.apache.htrace.core.SpanReceiver;
 import org.apache.htrace.core.TracerPool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class provides functions for managing the tracer configuration at
@@ -33,8 +33,8 @@ import org.apache.htrace.core.TracerPool;
  */
 @InterfaceAudience.Private
 public class TracerConfigurationManager implements TraceAdminProtocol {
-  private static final Log LOG =
-      LogFactory.getLog(TracerConfigurationManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TracerConfigurationManager.class);
 
   private final String confPrefix;
   private final Configuration conf;

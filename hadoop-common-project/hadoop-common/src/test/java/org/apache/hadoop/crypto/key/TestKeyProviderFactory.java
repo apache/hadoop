@@ -189,8 +189,10 @@ public class TestKeyProviderFactory {
     assertTrue("Returned Keys should have included key4.", keys.contains("key4"));
 
     List<KeyVersion> kvl = provider.getKeyVersions("key3");
-    assertTrue("KeyVersions should have been returned for key3.", kvl.size() == 1);
-    assertTrue("KeyVersions should have included key3@0.", kvl.get(0).getVersionName().equals("key3@0"));
+    assertEquals("KeyVersions should have been returned for key3.",
+        1, kvl.size());
+    assertEquals("KeyVersions should have included key3@0.",
+        "key3@0", kvl.get(0).getVersionName());
     assertArrayEquals(key3, kvl.get(0).getMaterial());
   }
 
@@ -267,7 +269,7 @@ public class TestKeyProviderFactory {
     Path path = ProviderUtils.unnestUri(new URI(ourUrl));
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
-    assertTrue(s.getPermission().toString().equals("rw-------"));
+    assertEquals("rw-------", s.getPermission().toString());
     assertTrue(file + " should exist", file.isFile());
 
     // Corrupt file and Check if JKS can reload from _OLD file
@@ -371,7 +373,8 @@ public class TestKeyProviderFactory {
 
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
-    assertTrue("Permissions should have been retained from the preexisting keystore.", s.getPermission().toString().equals("rwxrwxrwx"));
+    assertEquals("Permissions should have been retained from the preexisting "
+        + "keystore.", "rwxrwxrwx", s.getPermission().toString());
   }
 
   @Test

@@ -56,13 +56,9 @@ public class TestWindowsBasedProcessTree {
     pTree.infoStr = "3524,1024,1024,500\r\n2844,1024,1024,500\r\n";
     pTree.updateProcessTree();
     assertTrue(pTree.getVirtualMemorySize() == 2048);
-    assertTrue(pTree.getCumulativeVmem() == 2048);
     assertTrue(pTree.getVirtualMemorySize(0) == 2048);
-    assertTrue(pTree.getCumulativeVmem(0) == 2048);
     assertTrue(pTree.getRssMemorySize() == 2048);
-    assertTrue(pTree.getCumulativeRssmem() == 2048);
     assertTrue(pTree.getRssMemorySize(0) == 2048);
-    assertTrue(pTree.getCumulativeRssmem(0) == 2048);
     assertTrue(pTree.getCumulativeCpuTime() == 1000);
     assertTrue(pTree.getCpuUsagePercent() == ResourceCalculatorProcessTree.UNAVAILABLE);
 
@@ -71,13 +67,9 @@ public class TestWindowsBasedProcessTree {
     testClock.setTime(elapsedTimeBetweenUpdatesMsec);
     pTree.updateProcessTree();
     assertTrue(pTree.getVirtualMemorySize() == 3072);
-    assertTrue(pTree.getCumulativeVmem() == 3072);
     assertTrue(pTree.getVirtualMemorySize(1) == 2048);
-    assertTrue(pTree.getCumulativeVmem(1) == 2048);
     assertTrue(pTree.getRssMemorySize() == 3072);
-    assertTrue(pTree.getCumulativeRssmem() == 3072);
     assertTrue(pTree.getRssMemorySize(1) == 2048);
-    assertTrue(pTree.getCumulativeRssmem(1) == 2048);
     assertTrue(pTree.getCumulativeCpuTime() == 3000);
     assertTrue(pTree.getCpuUsagePercent() == 200);
     Assert.assertEquals("Percent CPU time is not correct",
@@ -88,13 +80,9 @@ public class TestWindowsBasedProcessTree {
     testClock.setTime(elapsedTimeBetweenUpdatesMsec);
     pTree.updateProcessTree();
     assertTrue(pTree.getVirtualMemorySize() == 2048);
-    assertTrue(pTree.getCumulativeVmem() == 2048);
     assertTrue(pTree.getVirtualMemorySize(2) == 2048);
-    assertTrue(pTree.getCumulativeVmem(2) == 2048);
     assertTrue(pTree.getRssMemorySize() == 2048);
-    assertTrue(pTree.getCumulativeRssmem() == 2048);
     assertTrue(pTree.getRssMemorySize(2) == 2048);
-    assertTrue(pTree.getCumulativeRssmem(2) == 2048);
     assertTrue(pTree.getCumulativeCpuTime() == 4000);
     Assert.assertEquals("Percent CPU time is not correct",
         pTree.getCpuUsagePercent(), 0, 0.01);

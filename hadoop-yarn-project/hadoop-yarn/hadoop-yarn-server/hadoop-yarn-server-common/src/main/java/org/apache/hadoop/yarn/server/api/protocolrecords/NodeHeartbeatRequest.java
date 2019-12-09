@@ -24,9 +24,11 @@ import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 
 public abstract class NodeHeartbeatRequest {
   
@@ -47,7 +49,7 @@ public abstract class NodeHeartbeatRequest {
   public static NodeHeartbeatRequest newInstance(NodeStatus nodeStatus,
       MasterKey lastKnownContainerTokenMasterKey,
       MasterKey lastKnownNMTokenMasterKey, Set<NodeLabel> nodeLabels,
-      Map<ApplicationId, String> registeredCollectors) {
+      Map<ApplicationId, AppCollectorData> registeringCollectors) {
     NodeHeartbeatRequest nodeHeartbeatRequest =
         Records.newRecord(NodeHeartbeatRequest.class);
     nodeHeartbeatRequest.setNodeStatus(nodeStatus);
@@ -56,8 +58,20 @@ public abstract class NodeHeartbeatRequest {
     nodeHeartbeatRequest
         .setLastKnownNMTokenMasterKey(lastKnownNMTokenMasterKey);
     nodeHeartbeatRequest.setNodeLabels(nodeLabels);
-    nodeHeartbeatRequest.setRegisteredCollectors(registeredCollectors);
+    nodeHeartbeatRequest.setRegisteringCollectors(registeringCollectors);
     return nodeHeartbeatRequest;
+  }
+
+  public static NodeHeartbeatRequest newInstance(NodeStatus nodeStatus,
+      MasterKey lastKnownContainerTokenMasterKey,
+      MasterKey lastKnownNMTokenMasterKey, Set<NodeLabel> nodeLabels,
+      Set<NodeAttribute> nodeAttributes,
+      Map<ApplicationId, AppCollectorData> registeringCollectors) {
+    NodeHeartbeatRequest request = NodeHeartbeatRequest
+        .newInstance(nodeStatus, lastKnownContainerTokenMasterKey,
+            lastKnownNMTokenMasterKey, nodeLabels, registeringCollectors);
+    request.setNodeAttributes(nodeAttributes);
+    return request;
   }
 
   public abstract NodeStatus getNodeStatus();
@@ -79,7 +93,13 @@ public abstract class NodeHeartbeatRequest {
       List<LogAggregationReport> logAggregationReportsForApps);
 
   // This tells RM registered collectors' address info on this node
-  public abstract Map<ApplicationId, String> getRegisteredCollectors();
-  public abstract void setRegisteredCollectors(Map<ApplicationId,
-      String> appCollectorsMap);
+  public abstract Map<ApplicationId, AppCollectorData>
+      getRegisteringCollectors();
+
+  public abstract void setRegisteringCollectors(Map<ApplicationId,
+      AppCollectorData> appCollectorsMap);
+
+  public abstract Set<NodeAttribute> getNodeAttributes();
+
+  public abstract void setNodeAttributes(Set<NodeAttribute> nodeAttributes);
 }

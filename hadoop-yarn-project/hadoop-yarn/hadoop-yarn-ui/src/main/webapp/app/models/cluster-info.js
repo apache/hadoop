@@ -27,5 +27,8 @@ export default DS.Model.extend({
   resourceManagerBuildVersion: DS.attr('string'),
   hadoopVersion: DS.attr('string'),
   hadoopBuildVersion: DS.attr('string'),
-  hadoopVersionBuiltOn: DS.attr('string')
+  hadoopVersionBuiltOn: DS.attr('string'),
+  getYARNBuildHash: function() {
+	return this.get("hadoopVersion") + " from " +  this.get("resourceManagerBuildVersion").split(" ")[2];
+  }.property("yarnHash")
 });

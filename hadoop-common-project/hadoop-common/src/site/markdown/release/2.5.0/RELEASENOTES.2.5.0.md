@@ -23,14 +23,23 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
-* [HADOOP-10568](https://issues.apache.org/jira/browse/HADOOP-10568) | *Major* | **Add s3 server-side encryption**
+* [HADOOP-10342](https://issues.apache.org/jira/browse/HADOOP-10342) | *Major* | **Extend UserGroupInformation to return a UGI given a preauthenticated kerberos Subject**
 
-s3 server-side encryption is now supported.
+Add getUGIFromSubject to leverage an external kerberos authentication
 
-To enable this feature, specify the following in your client-side configuration:
 
-name: fs.s3n.server-side-encryption-algorithm
-value: AES256
+---
+
+* [HDFS-6164](https://issues.apache.org/jira/browse/HDFS-6164) | *Major* | **Remove lsr in OfflineImageViewer**
+
+The offlineimageviewer no longer generates lsr-style outputs. The functionality has been superseded by a tool that takes the fsimage and exposes WebHDFS-like API for user queries.
+
+
+---
+
+* [HDFS-6168](https://issues.apache.org/jira/browse/HDFS-6168) | *Major* | **Remove deprecated methods in DistributedFileSystem**
+
+**WARNING: No release note provided for this change.**
 
 
 ---
@@ -45,9 +54,9 @@ Map\<String, String\> sasl\_props = saslPropsResolver.getDefaultProperties();
 
 ---
 
-* [HADOOP-10342](https://issues.apache.org/jira/browse/HADOOP-10342) | *Major* | **Extend UserGroupInformation to return a UGI given a preauthenticated kerberos Subject**
+* [HDFS-6153](https://issues.apache.org/jira/browse/HDFS-6153) | *Minor* | **Document "fileId" and "childrenNum" fields in the FileStatus Json schema**
 
-Add getUGIFromSubject to leverage an external kerberos authentication
+**WARNING: No release note provided for this change.**
 
 
 ---
@@ -55,13 +64,6 @@ Add getUGIFromSubject to leverage an external kerberos authentication
 * [HADOOP-9919](https://issues.apache.org/jira/browse/HADOOP-9919) | *Major* | **Update hadoop-metrics2.properties examples to Yarn**
 
 Remove MRv1 settings from hadoop-metrics2.properties, add YARN settings instead.
-
-
----
-
-* [HDFS-6293](https://issues.apache.org/jira/browse/HDFS-6293) | *Blocker* | **Issues with OIV processing PB-based fsimages**
-
-Set "dfs.namenode.legacy-oiv-image.dir" to an appropriate directory to make standby name node or secondary name node save its file system state in the old fsimage format during checkpointing. This image can be used for offline analysis using the OfflineImageViewer.  Use the "hdfs oiv\_legacy" command to process the old fsimage format.
 
 
 ---
@@ -83,23 +85,21 @@ These keys complement the existing NameNode options:
 
 ---
 
-* [HDFS-6168](https://issues.apache.org/jira/browse/HDFS-6168) | *Major* | **Remove deprecated methods in DistributedFileSystem**
+* [HADOOP-10568](https://issues.apache.org/jira/browse/HADOOP-10568) | *Major* | **Add s3 server-side encryption**
 
-**WARNING: No release note provided for this incompatible change.**
+s3 server-side encryption is now supported.
 
+To enable this feature, specify the following in your client-side configuration:
 
----
-
-* [HDFS-6164](https://issues.apache.org/jira/browse/HDFS-6164) | *Major* | **Remove lsr in OfflineImageViewer**
-
-The offlineimageviewer no longer generates lsr-style outputs. The functionality has been superseded by a tool that takes the fsimage and exposes WebHDFS-like API for user queries.
+name: fs.s3n.server-side-encryption-algorithm
+value: AES256
 
 
 ---
 
-* [HDFS-6153](https://issues.apache.org/jira/browse/HDFS-6153) | *Minor* | **Document "fileId" and "childrenNum" fields in the FileStatus Json schema**
+* [HDFS-6293](https://issues.apache.org/jira/browse/HDFS-6293) | *Blocker* | **Issues with OIV processing PB-based fsimages**
 
-**WARNING: No release note provided for this incompatible change.**
+Set "dfs.namenode.legacy-oiv-image.dir" to an appropriate directory to make standby name node or secondary name node save its file system state in the old fsimage format during checkpointing. This image can be used for offline analysis using the OfflineImageViewer.  Use the "hdfs oiv\_legacy" command to process the old fsimage format.
 
 
 ---
@@ -114,16 +114,16 @@ dfs.datanode.slow.io.warning.threshold.ms (Default 300ms)
 
 ---
 
-* [MAPREDUCE-5777](https://issues.apache.org/jira/browse/MAPREDUCE-5777) | *Major* | **Support utf-8 text with BOM (byte order marker)**
+* [YARN-2107](https://issues.apache.org/jira/browse/YARN-2107) | *Major* | **Refactor timeline classes into server.timeline package**
 
-**WARNING: No release note provided for this incompatible change.**
+**WARNING: No release note provided for this change.**
 
 
 ---
 
-* [YARN-2107](https://issues.apache.org/jira/browse/YARN-2107) | *Major* | **Refactor timeline classes into server.timeline package**
+* [MAPREDUCE-5777](https://issues.apache.org/jira/browse/MAPREDUCE-5777) | *Major* | **Support utf-8 text with BOM (byte order marker)**
 
-**WARNING: No release note provided for this incompatible change.**
+**WARNING: No release note provided for this change.**
 
 
 

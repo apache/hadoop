@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.diskbalancer.planner;
 /**
  * Planner takes a DiskBalancerVolumeSet, threshold and
  * computes a series of steps that lead to an even data
@@ -44,3 +43,4 @@ package org.apache.hadoop.hdfs.server.diskbalancer.planner;
  * //when we are done , return the list of steps
  * return planner;
  */
+package org.apache.hadoop.hdfs.server.diskbalancer.planner;

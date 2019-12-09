@@ -102,12 +102,14 @@ public class TestWebHdfsContentLength {
   public void testGetOpWithRedirect() {
     Future<String> future1 = contentLengthFuture(redirectResponse);
     Future<String> future2 = contentLengthFuture(errResponse);
+    Future<String> future3 = contentLengthFuture(errResponse);
     try {
       fs.open(p).read();
       Assert.fail();
     } catch (IOException ioe) {} // expected
     Assert.assertEquals(null, getContentLength(future1));
     Assert.assertEquals(null, getContentLength(future2));
+    Assert.assertEquals(null, getContentLength(future3));
   }
   
   @Test

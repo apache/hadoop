@@ -28,8 +28,6 @@ import java.util.Set;
 
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsException;
@@ -38,6 +36,8 @@ import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.impl.MsInfo;
 import org.apache.hadoop.metrics2.util.MetricsCache;
 import org.apache.hadoop.metrics2.util.MetricsCache.Record;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This code supports Ganglia 3.0
@@ -45,7 +45,7 @@ import org.apache.hadoop.metrics2.util.MetricsCache.Record;
  */
 public class GangliaSink30 extends AbstractGangliaSink {
 
-  public final Log LOG = LogFactory.getLog(this.getClass());
+  public final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
   private static final String TAGS_FOR_PREFIX_PROPERTY_PREFIX = "tagsForPrefix.";
   

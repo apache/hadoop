@@ -33,6 +33,8 @@ import java.util.List;
  */
 public class TestNodeQueueLoadMonitor {
 
+  private final static int DEFAULT_MAX_QUEUE_LENGTH = 200;
+
   static class FakeNodeId extends NodeId {
     final String host;
     final int port;
@@ -132,6 +134,17 @@ public class TestNodeQueueLoadMonitor {
     Assert.assertEquals("h2:2", nodeIds.get(1).toString());
     Assert.assertEquals("h1:1", nodeIds.get(2).toString());
     Assert.assertEquals("h4:4", nodeIds.get(3).toString());
+
+    // Now update h3 and fill its queue.
+    selector.updateNode(createRMNode("h3", 3, -1,
+        DEFAULT_MAX_QUEUE_LENGTH));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
+    System.out.println("4-> "+ nodeIds);
+    Assert.assertEquals(3, nodeIds.size());
+    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
+    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
+    Assert.assertEquals("h4:4", nodeIds.get(2).toString());
   }
 
   @Test
@@ -180,6 +193,12 @@ public class TestNodeQueueLoadMonitor {
 
   private RMNode createRMNode(String host, int port,
       int waitTime, int queueLength) {
+    return createRMNode(host, port, waitTime, queueLength,
+        DEFAULT_MAX_QUEUE_LENGTH);
+  }
+
+  private RMNode createRMNode(String host, int port,
+      int waitTime, int queueLength, int queueCapacity) {
     RMNode node1 = Mockito.mock(RMNode.class);
     NodeId nID1 = new FakeNodeId(host, port);
     Mockito.when(node1.getNodeID()).thenReturn(nID1);
@@ -189,6 +208,8 @@ public class TestNodeQueueLoadMonitor {
         .thenReturn(waitTime);
     Mockito.when(status1.getWaitQueueLength())
         .thenReturn(queueLength);
+    Mockito.when(status1.getOpportQueueCapacity())
+        .thenReturn(queueCapacity);
     Mockito.when(node1.getOpportunisticContainersStatus()).thenReturn(status1);
     return node1;
   }

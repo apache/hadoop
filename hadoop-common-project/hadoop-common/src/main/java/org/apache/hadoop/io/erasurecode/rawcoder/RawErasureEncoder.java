@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -62,8 +63,10 @@ public abstract class RawErasureEncoder {
    *               be 0 after encoding
    * @param outputs output buffers to put the encoded data into, ready to read
    *                after the call
+   * @throws IOException if the encoder is closed.
    */
-  public void encode(ByteBuffer[] inputs, ByteBuffer[] outputs) {
+  public void encode(ByteBuffer[] inputs, ByteBuffer[] outputs)
+      throws IOException {
     ByteBufferEncodingState bbeState = new ByteBufferEncodingState(
         this, inputs, outputs);
 
@@ -99,7 +102,8 @@ public abstract class RawErasureEncoder {
    * Perform the real encoding work using direct ByteBuffer.
    * @param encodingState the encoding state
    */
-  protected abstract void doEncode(ByteBufferEncodingState encodingState);
+  protected abstract void doEncode(ByteBufferEncodingState encodingState)
+      throws IOException;
 
   /**
    * Encode with inputs and generates outputs. More see above.
@@ -108,7 +112,7 @@ public abstract class RawErasureEncoder {
    * @param outputs output buffers to put the encoded data into, read to read
    *                after the call
    */
-  public void encode(byte[][] inputs, byte[][] outputs) {
+  public void encode(byte[][] inputs, byte[][] outputs) throws IOException {
     ByteArrayEncodingState baeState = new ByteArrayEncodingState(
         this, inputs, outputs);
 
@@ -125,7 +129,8 @@ public abstract class RawErasureEncoder {
    * and lengths.
    * @param encodingState the encoding state
    */
-  protected abstract void doEncode(ByteArrayEncodingState encodingState);
+  protected abstract void doEncode(ByteArrayEncodingState encodingState)
+      throws IOException;
 
   /**
    * Encode with inputs and generates outputs. More see above.
@@ -133,8 +138,9 @@ public abstract class RawErasureEncoder {
    * @param inputs input buffers to read data from
    * @param outputs output buffers to put the encoded data into, read to read
    *                after the call
+   * @throws IOException if the encoder is closed.
    */
-  public void encode(ECChunk[] inputs, ECChunk[] outputs) {
+  public void encode(ECChunk[] inputs, ECChunk[] outputs) throws IOException {
     ByteBuffer[] newInputs = ECChunk.toBuffers(inputs);
     ByteBuffer[] newOutputs = ECChunk.toBuffers(outputs);
     encode(newInputs, newOutputs);

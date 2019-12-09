@@ -26,13 +26,20 @@ import org.junit.After;
 
 import static org.junit.Assert.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT;
@@ -40,18 +47,24 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DEFAULT;
 
 public class TestNameNodeReconfigure {
 
-  public static final Log LOG = LogFactory
-      .getLog(TestNameNodeReconfigure.class);
+  public static final Logger LOG = LoggerFactory
+      .getLogger(TestNameNodeReconfigure.class);
 
   private MiniDFSCluster cluster;
+  private final int customizedBlockInvalidateLimit = 500;
 
   @Before
   public void setUp() throws IOException {
     Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFS_BLOCK_INVALIDATE_LIMIT_KEY,
+        customizedBlockInvalidateLimit);
     cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
   }
@@ -182,6 +195,17 @@ public class TestNameNodeReconfigure {
         + " has wrong value", 10 * 60 * 1000,
         datanodeManager.getHeartbeatRecheckInterval());
 
+    // change to a value with time unit
+    nameNode.reconfigureProperty(DFS_HEARTBEAT_INTERVAL_KEY, "1m");
+
+    assertEquals(
+        DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value",
+        60,
+        nameNode.getConf().getLong(DFS_HEARTBEAT_INTERVAL_KEY,
+            DFS_HEARTBEAT_INTERVAL_DEFAULT));
+    assertEquals(DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value", 60,
+        datanodeManager.getHeartbeatInterval());
+
     // revert to defaults
     nameNode.reconfigureProperty(DFS_HEARTBEAT_INTERVAL_KEY, null);
     nameNode.reconfigureProperty(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
@@ -199,6 +223,159 @@ public class TestNameNodeReconfigure {
     assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY
         + " has wrong value", DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT,
         datanodeManager.getHeartbeatRecheckInterval());
+  }
+
+  /**
+   * Tests enable/disable Storage Policy Satisfier dynamically when
+   * "dfs.storage.policy.enabled" feature is disabled.
+   *
+   * @throws ReconfigurationException
+   * @throws IOException
+   */
+  @Test(timeout = 30000)
+  public void testReconfigureSPSWithStoragePolicyDisabled()
+      throws ReconfigurationException, IOException {
+    // shutdown cluster
+    cluster.shutdown();
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, false);
+    cluster = new MiniDFSCluster.Builder(conf).build();
+    cluster.waitActive();
+
+    final NameNode nameNode = cluster.getNameNode();
+    verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE, false);
+
+    // enable SPS internally by keeping DFS_STORAGE_POLICY_ENABLED_KEY
+    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.EXTERNAL.toString());
+
+    // Since DFS_STORAGE_POLICY_ENABLED_KEY is disabled, SPS can't be enabled.
+    assertNull("SPS shouldn't start as "
+        + DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY + " is disabled",
+            nameNode.getNamesystem().getBlockManager().getSPSManager());
+    verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.EXTERNAL, false);
+
+    assertEquals(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY + " has wrong value",
+        StoragePolicySatisfierMode.EXTERNAL.toString(), nameNode.getConf()
+            .get(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+            DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT));
+  }
+
+  /**
+   * Tests enable/disable Storage Policy Satisfier dynamically.
+   */
+  @Test(timeout = 30000)
+  public void testReconfigureStoragePolicySatisfierEnabled()
+      throws ReconfigurationException {
+    final NameNode nameNode = cluster.getNameNode();
+
+    verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE, false);
+    // try invalid values
+    try {
+      nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+          "text");
+      fail("ReconfigurationException expected");
+    } catch (ReconfigurationException e) {
+      GenericTestUtils.assertExceptionContains(
+          "For enabling or disabling storage policy satisfier, must "
+              + "pass either internal/external/none string value only",
+          e.getCause());
+    }
+
+    // disable SPS
+    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
+    verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE, false);
+
+    // enable external SPS
+    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.EXTERNAL.toString());
+    assertEquals(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY + " has wrong value",
+        false, nameNode.getNamesystem().getBlockManager().getSPSManager()
+            .isSatisfierRunning());
+    assertEquals(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY + " has wrong value",
+        StoragePolicySatisfierMode.EXTERNAL.toString(),
+        nameNode.getConf().get(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+            DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT));
+  }
+
+  /**
+   * Test to satisfy storage policy after disabled storage policy satisfier.
+   */
+  @Test(timeout = 30000)
+  public void testSatisfyStoragePolicyAfterSatisfierDisabled()
+      throws ReconfigurationException, IOException {
+    final NameNode nameNode = cluster.getNameNode();
+
+    // disable SPS
+    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
+    verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE, false);
+
+    Path filePath = new Path("/testSPS");
+    DistributedFileSystem fileSystem = cluster.getFileSystem();
+    fileSystem.create(filePath);
+    fileSystem.setStoragePolicy(filePath, "COLD");
+    try {
+      fileSystem.satisfyStoragePolicy(filePath);
+      fail("Expected to fail, as storage policy feature has disabled.");
+    } catch (RemoteException e) {
+      GenericTestUtils
+          .assertExceptionContains("Cannot request to satisfy storage policy "
+              + "when storage policy satisfier feature has been disabled"
+              + " by admin. Seek for an admin help to enable it "
+              + "or use Mover tool.", e);
+    }
+  }
+
+  void verifySPSEnabled(final NameNode nameNode, String property,
+      StoragePolicySatisfierMode expected, boolean isSatisfierRunning) {
+    StoragePolicySatisfyManager spsMgr = nameNode
+            .getNamesystem().getBlockManager().getSPSManager();
+    boolean isSPSRunning = spsMgr != null ? spsMgr.isSatisfierRunning()
+        : false;
+    assertEquals(property + " has wrong value", isSPSRunning, isSPSRunning);
+    String actual = nameNode.getConf().get(property,
+        DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT);
+    assertEquals(property + " has wrong value", expected,
+        StoragePolicySatisfierMode.fromString(actual));
+  }
+
+  @Test
+  public void testBlockInvalidateLimitAfterReconfigured()
+      throws ReconfigurationException {
+    final NameNode nameNode = cluster.getNameNode();
+    final DatanodeManager datanodeManager = nameNode.namesystem
+        .getBlockManager().getDatanodeManager();
+
+    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY + " is not correctly set",
+        customizedBlockInvalidateLimit,
+        datanodeManager.getBlockInvalidateLimit());
+
+    nameNode.reconfigureProperty(DFS_HEARTBEAT_INTERVAL_KEY,
+        Integer.toString(6));
+
+    // 20 * 6 = 120 < 500
+    // Invalid block limit should stay same as before after reconfiguration.
+    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY
+            + " is not honored after reconfiguration",
+        customizedBlockInvalidateLimit,
+        datanodeManager.getBlockInvalidateLimit());
+
+    nameNode.reconfigureProperty(DFS_HEARTBEAT_INTERVAL_KEY,
+        Integer.toString(50));
+
+    // 20 * 50 = 1000 > 500
+    // Invalid block limit should be reset to 1000
+    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY
+            + " is not reconfigured correctly",
+        1000,
+        datanodeManager.getBlockInvalidateLimit());
   }
 
   @After

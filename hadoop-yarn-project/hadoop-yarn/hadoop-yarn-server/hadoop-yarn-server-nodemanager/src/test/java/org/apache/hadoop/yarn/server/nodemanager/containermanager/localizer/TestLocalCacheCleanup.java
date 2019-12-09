@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalCacheCleaner.LocalCacheCleanerStats;
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.junit.Test;
 
 /**
@@ -80,8 +81,12 @@ public class TestLocalCacheCleanup {
         ((StubbedLocalResourcesTrackerImpl) privateRsrc.get("user2"))
             .getLocalRsrc().size());
     assertEquals(100, stats.getTotalDelSize());
+    assertEquals(100, rls.metrics.getTotalBytesDeleted());
     assertEquals(60, stats.getPublicDelSize());
+    assertEquals(60, rls.metrics.getPublicBytesDeleted());
     assertEquals(40, stats.getPrivateDelSize());
+    assertEquals(40, rls.metrics.getPrivateBytesDeleted());
+    assertEquals(100, rls.metrics.getCacheSizeBeforeClean());
   }
 
   @Test
@@ -105,8 +110,12 @@ public class TestLocalCacheCleanup {
     assertEquals(1, resources.getLocalRsrc().size());
     assertTrue(resources.getLocalRsrc().containsKey(survivor));
     assertEquals(20, stats.getTotalDelSize());
+    assertEquals(20, rls.metrics.getTotalBytesDeleted());
     assertEquals(20, stats.getPublicDelSize());
+    assertEquals(20, rls.metrics.getPublicBytesDeleted());
     assertEquals(0, stats.getPrivateDelSize());
+    assertEquals(0, rls.metrics.getPrivateBytesDeleted());
+    assertEquals(40, rls.metrics.getCacheSizeBeforeClean());
   }
 
   @Test
@@ -164,8 +173,12 @@ public class TestLocalCacheCleanup {
     assertTrue(usr2LocalRsrc.containsKey(usr2Surviver1));
 
     assertEquals(80, stats.getTotalDelSize());
+    assertEquals(80, rls.metrics.getTotalBytesDeleted());
     assertEquals(20, stats.getPublicDelSize());
+    assertEquals(20, rls.metrics.getPublicBytesDeleted());
     assertEquals(60, stats.getPrivateDelSize());
+    assertEquals(60, rls.metrics.getPrivateBytesDeleted());
+    assertEquals(160, rls.metrics.getCacheSizeBeforeClean());
   }
 
   private ResourceLocalizationService createLocService(
@@ -174,8 +187,10 @@ public class TestLocalCacheCleanup {
       long targetCacheSize) {
     Context mockedContext = mock(Context.class);
     when(mockedContext.getNMStateStore()).thenReturn(null);
+    NodeManagerMetrics metrics = NodeManagerMetrics.create();
     ResourceLocalizationService rls =
-        new ResourceLocalizationService(null, null, null, null, mockedContext);
+        new ResourceLocalizationService(null, null, null, null, mockedContext,
+            metrics);
     // We set the following members directly so we don't have to deal with
     // mocking out the service init method.
     rls.publicRsrc = new StubbedLocalResourcesTrackerImpl(null, publicRsrcs);

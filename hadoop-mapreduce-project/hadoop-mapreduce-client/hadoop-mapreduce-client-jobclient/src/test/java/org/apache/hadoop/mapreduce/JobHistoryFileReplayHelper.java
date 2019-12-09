@@ -24,19 +24,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class JobHistoryFileReplayHelper {
-  private static final Log LOG =
-      LogFactory.getLog(JobHistoryFileReplayHelper.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(JobHistoryFileReplayHelper.class);
   static final String PROCESSING_PATH = "processing path";
   static final String REPLAY_MODE = "replay mode";
   static final int WRITE_ALL_AT_ONCE = 1;

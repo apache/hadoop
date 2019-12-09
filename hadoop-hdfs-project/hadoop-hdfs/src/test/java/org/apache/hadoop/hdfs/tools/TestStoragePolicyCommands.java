@@ -18,14 +18,18 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.junit.After;
 import org.junit.Before;
@@ -38,14 +42,19 @@ public class TestStoragePolicyCommands {
   private static final short REPL = 1;
   private static final int SIZE = 128;
 
-  private static Configuration conf;
-  private static MiniDFSCluster cluster;
-  private static DistributedFileSystem fs;
+  protected static Configuration conf;
+  protected static MiniDFSCluster cluster;
+  protected static FileSystem fs;
 
   @Before
-  public void clusterSetUp() throws IOException {
+  public void clusterSetUp() throws IOException, URISyntaxException {
     conf = new HdfsConfiguration();
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL).build();
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.EXTERNAL.toString());
+    StorageType[][] newtypes = new StorageType[][] {
+        {StorageType.ARCHIVE, StorageType.DISK}};
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL)
+        .storageTypes(newtypes).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
   }
@@ -74,8 +83,9 @@ public class TestStoragePolicyCommands {
      * test: set storage policy
      */
     final StoragePolicyAdmin admin = new StoragePolicyAdmin(conf);
-    DFSTestUtil.toolRun(admin, "-setStoragePolicy -path /foo -policy WARM", 0,
-        "Set storage policy WARM on " + foo.toString());
+    DFSTestUtil.toolRun(admin, "-setStoragePolicy -path " + fs.getUri()
+        + "/foo -policy WARM", 0, "Set storage policy WARM on " + fs.getUri()
+        + "/foo");
     DFSTestUtil.toolRun(admin, "-setStoragePolicy -path /foo/bar -policy COLD",
         0, "Set storage policy COLD on " + bar.toString());
     DFSTestUtil.toolRun(admin, "-setStoragePolicy -path /foo/bar/wow -policy HOT",
@@ -91,8 +101,9 @@ public class TestStoragePolicyCommands {
     final BlockStoragePolicy warm = suite.getPolicy("WARM");
     final BlockStoragePolicy cold = suite.getPolicy("COLD");
     final BlockStoragePolicy hot = suite.getPolicy("HOT");
-    DFSTestUtil.toolRun(admin, "-getStoragePolicy -path /foo", 0,
-        "The storage policy of " + foo.toString() + ":\n" + warm);
+    DFSTestUtil.toolRun(admin, "-getStoragePolicy -path " + fs.getUri()
+        + "/foo", 0, "The storage policy of " + fs.getUri() + "/foo:\n"
+        + warm);
     DFSTestUtil.toolRun(admin, "-getStoragePolicy -path /foo/bar", 0,
         "The storage policy of " + bar.toString() + ":\n" + cold);
     DFSTestUtil.toolRun(admin, "-getStoragePolicy -path /foo/bar/wow", 0,
@@ -103,8 +114,8 @@ public class TestStoragePolicyCommands {
     /*
      * test: unset storage policy
      */
-    DFSTestUtil.toolRun(admin, "-unsetStoragePolicy -path /foo", 0,
-        "Unset storage policy from " + foo.toString());
+    DFSTestUtil.toolRun(admin, "-unsetStoragePolicy -path " + fs.getUri()
+        + "/foo", 0, "Unset storage policy from " + fs.getUri() + "/foo");
     DFSTestUtil.toolRun(admin, "-unsetStoragePolicy -path /foo/bar", 0,
         "Unset storage policy from " + bar.toString());
     DFSTestUtil.toolRun(admin, "-unsetStoragePolicy -path /foo/bar/wow", 0,

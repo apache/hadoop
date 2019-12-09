@@ -26,21 +26,24 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import org.junit.Test;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class TestFileStatus {
 
-  private static final Log LOG =
-    LogFactory.getLog(TestFileStatus.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFileStatus.class);
   
   /** Values for creating {@link FileStatus} in some tests */
   static final int LENGTH = 1;
@@ -216,6 +219,23 @@ public class TestFileStatus {
         MTIME, ATIME, PERMISSION, OWNER, GROUP, symlink, PATH);  
     validateToString(fileStatus);
   }
+
+  @Test
+  public void testSerializable() throws Exception {
+    Path p = new Path("uqsf://ybpnyubfg:8020/sbb/one/onm");
+    FsPermission perm = FsPermission.getFileDefault();
+    FileStatus stat = new FileStatus(4344L, false, 4, 512L << 20, 12345678L,
+        87654321L, perm, "yak", "dingo", p);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
+    try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+      oos.writeObject(stat);
+    }
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    try (ObjectInputStream ois = new ObjectInputStream(bais)) {
+      FileStatus deser = (FileStatus) ois.readObject();
+      assertEquals(stat, deser);
+    }
+  }
   
   /**
    * Validate the accessors for FileStatus.
@@ -276,11 +296,15 @@ public class TestFileStatus {
     expected.append("permission=").append(fileStatus.getPermission()).append("; ");
     if(fileStatus.isSymlink()) {
       expected.append("isSymlink=").append(true).append("; ");
-      expected.append("symlink=").append(fileStatus.getSymlink()).append("}");
+      expected.append("symlink=").append(fileStatus.getSymlink()).append("; ");
     } else {
-      expected.append("isSymlink=").append(false).append("}");
+      expected.append("isSymlink=").append(false).append("; ");
     }
-    
+    expected.append("hasAcl=").append(fileStatus.hasAcl()).append("; ");
+    expected.append("isEncrypted=").append(
+        fileStatus.isEncrypted()).append("; ");
+    expected.append("isErasureCoded=").append(
+        fileStatus.isErasureCoded()).append("}");
     assertEquals(expected.toString(), fileStatus.toString());
   }
 }

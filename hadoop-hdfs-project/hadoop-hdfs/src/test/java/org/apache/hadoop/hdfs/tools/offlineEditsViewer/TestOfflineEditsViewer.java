@@ -31,8 +31,8 @@ import java.nio.channels.FileChannel;
 import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
@@ -50,8 +50,8 @@ import org.junit.rules.TemporaryFolder;
 import com.google.common.collect.ImmutableSet;
 
 public class TestOfflineEditsViewer {
-  private static final Log LOG = LogFactory
-      .getLog(TestOfflineEditsViewer.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestOfflineEditsViewer.class);
 
   private static final String buildDir = PathUtils
       .getTestDirName(TestOfflineEditsViewer.class);
@@ -182,7 +182,7 @@ public class TestOfflineEditsViewer {
         hasAllOpCodes(editsStored));
     assertTrue("Reference XML edits and parsed to XML should be same",
         FileUtils.contentEqualsIgnoreEOL(new File(editsStoredXml),
-          new File(editsStoredParsedXml), "UTF-8"));
+            new File(editsStoredParsedXml), "UTF-8"));
     assertTrue(
         "Reference edits and reparsed (bin to XML to bin) should be same",
         filesEqualIgnoreTrailingZeros(editsStored, editsStoredReparsed));
@@ -337,5 +337,23 @@ public class TestOfflineEditsViewer {
         assertTrue(statisticsStr.contains(str));
       }
     }
+  }
+
+  @Test
+  public void testProcessorWithSameTypeFormatFile() throws IOException {
+    String edits = nnHelper.generateEdits();
+    LOG.info("Generated edits=" + edits);
+    String binaryEdits = folder.newFile("binaryEdits").getAbsolutePath();
+    String editsParsedXml = folder.newFile("editsParsed.xml").getAbsolutePath();
+    String editsReparsedXml = folder.newFile("editsReparsed.xml")
+        .getAbsolutePath();
+
+    // Binary format input file is not allowed to be processed
+    // by Binary processor.
+    assertEquals(-1, runOev(edits, binaryEdits, "binary", false));
+    // parse to XML then back to XML
+    assertEquals(0, runOev(edits, editsParsedXml, "xml", false));
+    // XML format input file is not allowed to be processed by XML processor.
+    assertEquals(-1, runOev(editsParsedXml, editsReparsedXml, "xml", false));
   }
 }

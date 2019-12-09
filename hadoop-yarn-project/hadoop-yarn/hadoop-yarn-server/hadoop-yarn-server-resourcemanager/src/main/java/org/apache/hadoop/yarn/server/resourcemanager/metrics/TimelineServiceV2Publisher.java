@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -48,7 +49,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.metrics.AppAttemptMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector;
+import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -75,9 +76,10 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
   private RMTimelineCollectorManager rmTimelineCollectorManager;
   private boolean publishContainerEvents;
 
-  public TimelineServiceV2Publisher(RMContext rmContext) {
+  public TimelineServiceV2Publisher(
+      RMTimelineCollectorManager timelineCollectorManager) {
     super("TimelineserviceV2Publisher");
-    rmTimelineCollectorManager = rmContext.getRMTimelineCollectorManager();
+    rmTimelineCollectorManager = timelineCollectorManager;
   }
 
   @Override
@@ -138,6 +140,8 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
         app.getApplicationSubmissionContext().getAMContainerSpec();
     entityInfo.put(ApplicationMetricsConstants.AM_CONTAINER_LAUNCH_COMMAND,
         amContainerSpec.getCommands());
+    entityInfo.put(ApplicationMetricsConstants.STATE_EVENT_INFO,
+        RMServerUtils.createApplicationState(app.getState()).toString());
 
     entity.setInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
@@ -179,8 +183,9 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
         getTimelinelineAppMetrics(appMetrics, finishedTime);
     entity.setMetrics(entityMetrics);
 
-    getDispatcher().getEventHandler().handle(new TimelineV2PublishEvent(
-        SystemMetricsEventType.PUBLISH_ENTITY, entity, app.getApplicationId()));
+    getDispatcher().getEventHandler().handle(
+        new ApplicationFinishPublishEvent(SystemMetricsEventType.
+            PUBLISH_APPLICATION_FINISHED_ENTITY, entity, app));
   }
 
   private Set<TimelineMetric> getTimelinelineAppMetrics(
@@ -293,8 +298,8 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
   @Override
   public void appAttemptRegistered(RMAppAttempt appAttempt,
       long registeredTime) {
-    TimelineEntity entity =
-        createAppAttemptEntity(appAttempt.getAppAttemptId());
+    ApplicationAttemptId attemptId = appAttempt.getAppAttemptId();
+    TimelineEntity entity = createAppAttemptEntity(attemptId);
     entity.setCreatedTime(registeredTime);
 
     TimelineEvent tEvent = new TimelineEvent();
@@ -314,8 +319,14 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
     if (appAttempt.getMasterContainer() != null) {
       entityInfo.put(AppAttemptMetricsConstants.MASTER_CONTAINER_INFO,
           appAttempt.getMasterContainer().getId().toString());
+      entityInfo.put(AppAttemptMetricsConstants.MASTER_NODE_ADDRESS,
+          appAttempt.getMasterContainer().getNodeHttpAddress());
+      entityInfo.put(AppAttemptMetricsConstants.MASTER_NODE_ID,
+          appAttempt.getMasterContainer().getNodeId().toString());
     }
     entity.setInfo(entityInfo);
+    entity.setIdPrefix(
+        TimelineServiceHelper.invertLong(attemptId.getAttemptId()));
 
     getDispatcher().getEventHandler().handle(
         new TimelineV2PublishEvent(SystemMetricsEventType.PUBLISH_ENTITY,
@@ -326,7 +337,7 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
   @Override
   public void appAttemptFinished(RMAppAttempt appAttempt,
       RMAppAttemptState appAttemtpState, RMApp app, long finishedTime) {
-
+    ApplicationAttemptId attemptId = appAttempt.getAppAttemptId();
     ApplicationAttemptEntity entity =
         createAppAttemptEntity(appAttempt.getAppAttemptId());
 
@@ -345,7 +356,8 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
     entityInfo.put(AppAttemptMetricsConstants.STATE_INFO, RMServerUtils
         .createApplicationAttemptState(appAttemtpState).toString());
     entity.setInfo(entityInfo);
-
+    entity.setIdPrefix(
+        TimelineServiceHelper.invertLong(attemptId.getAttemptId()));
 
     getDispatcher().getEventHandler().handle(
         new TimelineV2PublishEvent(SystemMetricsEventType.PUBLISH_ENTITY,
@@ -429,6 +441,8 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
       ContainerId containerId) {
     ContainerEntity entity = new ContainerEntity();
     entity.setId(containerId.toString());
+    entity.setIdPrefix(TimelineServiceHelper.invertLong(
+        containerId.getContainerId()));
     entity.setParent(new Identifier(TimelineEntityType.YARN_APPLICATION_ATTEMPT
         .name(), containerId.getApplicationAttemptId().toString()));
     return entity;
@@ -442,26 +456,34 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
       }
       TimelineCollector timelineCollector =
           rmTimelineCollectorManager.get(appId);
-      TimelineEntities entities = new TimelineEntities();
-      entities.addEntity(entity);
-      timelineCollector.putEntities(entities,
-          UserGroupInformation.getCurrentUser());
-    } catch (Exception e) {
-      LOG.error("Error when publishing entity " + entity, e);
+      if (timelineCollector != null) {
+        TimelineEntities entities = new TimelineEntities();
+        entities.addEntity(entity);
+        timelineCollector.putEntities(entities,
+                UserGroupInformation.getCurrentUser());
+      } else {
+        LOG.debug("Cannot find active collector while publishing entity "
+            + entity);
+      }
+    } catch (IOException e) {
+      LOG.error("Error when publishing entity " + entity);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Error when publishing entity " + entity, e);
+      }
     }
   }
 
   private class ApplicationFinishPublishEvent extends TimelineV2PublishEvent {
-    private RMAppImpl app;
+    private RMApp app;
 
     public ApplicationFinishPublishEvent(SystemMetricsEventType type,
-        TimelineEntity entity, RMAppImpl app) {
+        TimelineEntity entity, RMApp app) {
       super(type, entity, app.getApplicationId());
       this.app = app;
     }
 
     public RMAppImpl getRMAppImpl() {
-      return app;
+      return (RMAppImpl) app;
     }
   }
 

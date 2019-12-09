@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.common.Util;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.net.HttpURLConnection;
@@ -34,8 +35,8 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.security.SecurityUtil;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -71,7 +72,7 @@ public class ImageServlet extends HttpServlet {
 
   private static final long serialVersionUID = -7669068179452648952L;
 
-  private static final Log LOG = LogFactory.getLog(ImageServlet.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ImageServlet.class);
 
   public final static String CONTENT_DISPOSITION = "Content-Disposition";
   public final static String HADOOP_IMAGE_EDITS_HEADER = "X-Image-Edits-Name";
@@ -304,11 +305,12 @@ public class ImageServlet extends HttpServlet {
    */
   public static void setVerificationHeadersForGet(HttpServletResponse response,
       File file) throws IOException {
-    response.setHeader(TransferFsImage.CONTENT_LENGTH,
+    response.setHeader(
+        Util.CONTENT_LENGTH,
         String.valueOf(file.length()));
     MD5Hash hash = MD5FileUtils.readStoredMd5ForFile(file);
     if (hash != null) {
-      response.setHeader(TransferFsImage.MD5_HEADER, hash.toString());
+      response.setHeader(Util.MD5_HEADER, hash.toString());
     }
   }
   
@@ -437,12 +439,13 @@ public class ImageServlet extends HttpServlet {
    */
   static void setVerificationHeadersForPut(HttpURLConnection connection,
       File file) throws IOException {
-    connection.setRequestProperty(TransferFsImage.CONTENT_LENGTH,
+    connection.setRequestProperty(
+        Util.CONTENT_LENGTH,
         String.valueOf(file.length()));
     MD5Hash hash = MD5FileUtils.readStoredMd5ForFile(file);
     if (hash != null) {
       connection
-          .setRequestProperty(TransferFsImage.MD5_HEADER, hash.toString());
+          .setRequestProperty(Util.MD5_HEADER, hash.toString());
     }
   }
 
@@ -462,7 +465,7 @@ public class ImageServlet extends HttpServlet {
     params.put(STORAGEINFO_PARAM, storage.toColonSeparatedString());
     // setting the length of the file to be uploaded in separate property as
     // Content-Length only supports up to 2GB
-    params.put(TransferFsImage.FILE_LENGTH, Long.toString(imageFileSize));
+    params.put(Util.FILE_LENGTH, Long.toString(imageFileSize));
     params.put(IMAGE_FILE_TYPE, nnf.name());
     return params;
   }
@@ -586,7 +589,7 @@ public class ImageServlet extends HttpServlet {
       txId = ServletUtil.parseLongParam(request, TXID_PARAM);
       storageInfoString = ServletUtil.getParameter(request, STORAGEINFO_PARAM);
       fileSize = ServletUtil.parseLongParam(request,
-          TransferFsImage.FILE_LENGTH);
+          Util.FILE_LENGTH);
       String imageType = ServletUtil.getParameter(request, IMAGE_FILE_TYPE);
       nnf = imageType == null ? NameNodeFile.IMAGE : NameNodeFile
           .valueOf(imageType);

@@ -31,7 +31,7 @@ Setting up tracing is quite simple, however it requires some very minor changes 
 
 The tracing system works by collecting information in structs called 'Spans'.
 It is up to you to choose how you want to receive this information
-by using implementation of [SpanReceiver](http://htrace.incubator.apache.org/#Span_Receivers)
+by using implementation of [SpanReceiver](http://htrace.incubator.apache.org/developer_guide.html#SpanReceivers)
 interface bundled with HTrace or implementing it by yourself.
 
 [HTrace](http://htrace.incubator.apache.org/) provides options such as

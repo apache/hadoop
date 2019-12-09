@@ -20,21 +20,24 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
+import static org.mockito.Mockito.mock;
+
 public class TestResourceHandlerModule {
-  private static final Log LOG = LogFactory.
-      getLog(TestResourceHandlerModule.class);
-  Configuration emptyConf;
-  Configuration networkEnabledConf;
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TestResourceHandlerModule.class);
+  private Configuration emptyConf;
+  private Configuration networkEnabledConf;
 
   @Before
   public void setup() throws Exception {
@@ -43,9 +46,6 @@ public class TestResourceHandlerModule {
 
     networkEnabledConf.setBoolean(YarnConfiguration.NM_NETWORK_RESOURCE_ENABLED,
         true);
-    //We need to bypass mtab parsing for figuring out cgroups mount locations
-    networkEnabledConf.setBoolean(YarnConfiguration
-        .NM_LINUX_CONTAINER_CGROUPS_MOUNT, true);
     ResourceHandlerModule.nullifyResourceHandlerChain();
   }
 
@@ -55,23 +55,28 @@ public class TestResourceHandlerModule {
       //This resourceHandler should be non-null only if network as a resource
       //is explicitly enabled
       OutboundBandwidthResourceHandler resourceHandler = ResourceHandlerModule
-          .getOutboundBandwidthResourceHandler(emptyConf);
+          .initOutboundBandwidthResourceHandler(emptyConf);
       Assert.assertNull(resourceHandler);
 
       //When network as a resource is enabled this should be non-null
       resourceHandler = ResourceHandlerModule
-          .getOutboundBandwidthResourceHandler(networkEnabledConf);
+          .initOutboundBandwidthResourceHandler(networkEnabledConf);
       Assert.assertNotNull(resourceHandler);
 
       //Ensure that outbound bandwidth resource handler is present in the chain
       ResourceHandlerChain resourceHandlerChain = ResourceHandlerModule
-          .getConfiguredResourceHandlerChain(networkEnabledConf);
-      List<ResourceHandler> resourceHandlers = resourceHandlerChain
-          .getResourceHandlerList();
-      //Exactly one resource handler in chain
-      Assert.assertEquals(resourceHandlers.size(), 1);
-      //Same instance is expected to be in the chain.
-      Assert.assertTrue(resourceHandlers.get(0) == resourceHandler);
+          .getConfiguredResourceHandlerChain(networkEnabledConf,
+              mock(Context.class));
+      if (resourceHandlerChain != null) {
+        List<ResourceHandler> resourceHandlers = resourceHandlerChain
+            .getResourceHandlerList();
+        //Exactly one resource handler in chain
+        Assert.assertEquals(resourceHandlers.size(), 1);
+        //Same instance is expected to be in the chain.
+        Assert.assertTrue(resourceHandlers.get(0) == resourceHandler);
+      } else {
+        Assert.fail("Null returned");
+      }
     } catch (ResourceHandlerException e) {
       Assert.fail("Unexpected ResourceHandlerException: " + e);
     }
@@ -81,22 +86,27 @@ public class TestResourceHandlerModule {
   public void testDiskResourceHandler() throws Exception {
 
     DiskResourceHandler handler =
-        ResourceHandlerModule.getDiskResourceHandler(emptyConf);
+        ResourceHandlerModule.initDiskResourceHandler(emptyConf);
     Assert.assertNull(handler);
 
     Configuration diskConf = new YarnConfiguration();
     diskConf.setBoolean(YarnConfiguration.NM_DISK_RESOURCE_ENABLED, true);
 
-    handler = ResourceHandlerModule.getDiskResourceHandler(diskConf);
+    handler = ResourceHandlerModule.initDiskResourceHandler(diskConf);
     Assert.assertNotNull(handler);
 
     ResourceHandlerChain resourceHandlerChain =
-        ResourceHandlerModule.getConfiguredResourceHandlerChain(diskConf);
-    List<ResourceHandler> resourceHandlers =
-        resourceHandlerChain.getResourceHandlerList();
-    // Exactly one resource handler in chain
-    Assert.assertEquals(resourceHandlers.size(), 1);
-    // Same instance is expected to be in the chain.
-    Assert.assertTrue(resourceHandlers.get(0) == handler);
+        ResourceHandlerModule.getConfiguredResourceHandlerChain(diskConf,
+            mock(Context.class));
+    if (resourceHandlerChain != null) {
+      List<ResourceHandler> resourceHandlers =
+          resourceHandlerChain.getResourceHandlerList();
+      // Exactly one resource handler in chain
+      Assert.assertEquals(resourceHandlers.size(), 1);
+      // Same instance is expected to be in the chain.
+      Assert.assertTrue(resourceHandlers.get(0) == handler);
+    } else {
+      Assert.fail("Null returned");
+    }
   }
 }

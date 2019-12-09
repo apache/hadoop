@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import org.apache.hadoop.yarn.api.records.Resource;
+
 /**
  * Helper class that holds basic information to be passed around
  * FairScheduler classes. Think of this as a glorified map that holds key
@@ -27,28 +29,37 @@ public class FSContext {
   private boolean preemptionEnabled = false;
   private float preemptionUtilizationThreshold;
   private FSStarvedApps starvedApps;
+  private final FairScheduler scheduler;
 
-  public boolean isPreemptionEnabled() {
+  FSContext(FairScheduler scheduler) {
+    this.scheduler = scheduler;
+  }
+
+  boolean isPreemptionEnabled() {
     return preemptionEnabled;
   }
 
-  public void setPreemptionEnabled() {
+  void setPreemptionEnabled() {
     this.preemptionEnabled = true;
     if (starvedApps == null) {
       starvedApps = new FSStarvedApps();
     }
   }
 
-  public FSStarvedApps getStarvedApps() {
+  FSStarvedApps getStarvedApps() {
     return starvedApps;
   }
 
-  public float getPreemptionUtilizationThreshold() {
+  float getPreemptionUtilizationThreshold() {
     return preemptionUtilizationThreshold;
   }
 
-  public void setPreemptionUtilizationThreshold(
+  void setPreemptionUtilizationThreshold(
       float preemptionUtilizationThreshold) {
     this.preemptionUtilizationThreshold = preemptionUtilizationThreshold;
+  }
+
+  public Resource getClusterResource() {
+    return scheduler.getClusterResource();
   }
 }

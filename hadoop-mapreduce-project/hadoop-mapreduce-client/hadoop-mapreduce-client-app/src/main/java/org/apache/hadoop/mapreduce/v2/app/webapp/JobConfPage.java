@@ -27,7 +27,6 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.postInitID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
-import org.apache.hadoop.mapreduce.v2.app.webapp.ConfBlock;
 import org.apache.hadoop.yarn.webapp.SubView;
 
 /**
@@ -39,7 +38,7 @@ public class JobConfPage extends AppView {
    * (non-Javadoc)
    * @see org.apache.hadoop.mapreduce.v2.hs.webapp.HsView#preHead(org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML)
    */
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
     String jobID = $(JOB_ID);
     set(TITLE, jobID.isEmpty() ? "Bad request: missing job ID"
         : join("Configuration for MapReduce Job ", $(JOB_ID)));

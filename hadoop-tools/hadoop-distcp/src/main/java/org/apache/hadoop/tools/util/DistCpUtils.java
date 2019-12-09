@@ -19,9 +19,11 @@
 package org.apache.hadoop.tools.util;
 
 import com.google.common.collect.Maps;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -29,14 +31,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclUtil;
-import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.tools.CopyListing.AclsNotSupportedException;
 import org.apache.hadoop.tools.CopyListing.XAttrsNotSupportedException;
 import org.apache.hadoop.tools.CopyListingFileStatus;
-import org.apache.hadoop.tools.DistCpOptions;
+import org.apache.hadoop.tools.DistCpContext;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.tools.mapred.UniformSizeInputFormat;
 import org.apache.hadoop.util.StringUtils;
@@ -44,6 +46,7 @@ import org.apache.hadoop.util.StringUtils;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.EnumSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -53,7 +56,7 @@ import java.util.Map.Entry;
  */
 public class DistCpUtils {
 
-  private static final Log LOG = LogFactory.getLog(DistCpUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DistCpUtils.class);
 
   /**
    * Retrieves size of the file at the specified path.
@@ -112,13 +115,13 @@ public class DistCpUtils {
    * a particular strategy from distcp-default.xml
    *
    * @param conf - Configuration object
-   * @param options - Handle to input options
+   * @param context - Distcp context with associated input options
    * @return Class implementing the strategy specified in options.
    */
   public static Class<? extends InputFormat> getStrategy(Configuration conf,
-                                                                 DistCpOptions options) {
+      DistCpContext context) {
     String confLabel = "distcp."
-        + StringUtils.toLowerCase(options.getCopyStrategy())
+        + StringUtils.toLowerCase(context.getCopyStrategy())
         + ".strategy" + ".impl";
     return conf.getClass(confLabel, UniformSizeInputFormat.class, InputFormat.class);
   }
@@ -208,6 +211,7 @@ public class DistCpUtils {
       List<AclEntry> srcAcl = srcFileStatus.getAclEntries();
       List<AclEntry> targetAcl = getAcl(targetFS, targetFileStatus);
       if (!srcAcl.equals(targetAcl)) {
+        targetFS.removeAcl(path);
         targetFS.setAcl(path, srcAcl);
       }
       // setAcl doesn't preserve sticky bit, so also call setPermission if needed.
@@ -236,8 +240,13 @@ public class DistCpUtils {
       }
     }
 
-    if (attributes.contains(FileAttribute.REPLICATION) && !targetFileStatus.isDirectory() &&
-        (srcFileStatus.getReplication() != targetFileStatus.getReplication())) {
+    // The replication factor can only be preserved for replicated files.
+    // It is ignored when either the source or target file are erasure coded.
+    if (attributes.contains(FileAttribute.REPLICATION) &&
+        !targetFileStatus.isDirectory() &&
+        !targetFileStatus.isErasureCoded() &&
+        !srcFileStatus.isErasureCoded() &&
+        srcFileStatus.getReplication() != targetFileStatus.getReplication()) {
       targetFS.setReplication(path, srcFileStatus.getReplication());
     }
 
@@ -293,6 +302,86 @@ public class DistCpUtils {
   }
 
   /**
+   * Converts FileStatus to a list of CopyListingFileStatus.
+   * The resulted list contains either one CopyListingFileStatus per chunk of
+   * file-blocks (if file-size exceeds blockSize * blocksPerChunk, and there
+   * are more blocks in the file than blocksperChunk), or a single
+   * CopyListingFileStatus for the entire file (if file-size is too small to
+   * split).
+   * If preserving ACLs, populates the CopyListingFileStatus with the ACLs.
+   * If preserving XAttrs, populates the CopyListingFileStatus with the XAttrs.
+   *
+   * @param fileSystem FileSystem containing the file
+   * @param fileStatus FileStatus of file
+   * @param preserveAcls boolean true if preserving ACLs
+   * @param preserveXAttrs boolean true if preserving XAttrs
+   * @param preserveRawXAttrs boolean true if preserving raw.* XAttrs
+   * @param blocksPerChunk size of chunks when copying chunks in parallel
+   * @return list of CopyListingFileStatus
+   * @throws IOException if there is an I/O error
+   */
+  public static LinkedList<CopyListingFileStatus> toCopyListingFileStatus(
+      FileSystem fileSystem, FileStatus fileStatus, boolean preserveAcls,
+      boolean preserveXAttrs, boolean preserveRawXAttrs, int blocksPerChunk)
+          throws IOException {
+    LinkedList<CopyListingFileStatus> copyListingFileStatus =
+        new LinkedList<CopyListingFileStatus>();
+
+    final CopyListingFileStatus clfs = toCopyListingFileStatusHelper(
+        fileSystem, fileStatus, preserveAcls,
+        preserveXAttrs, preserveRawXAttrs,
+        0, fileStatus.getLen());
+    final long blockSize = fileStatus.getBlockSize();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("toCopyListing: " + fileStatus + " chunkSize: "
+          + blocksPerChunk + " isDFS: " +
+          (fileSystem instanceof DistributedFileSystem));
+    }
+    if ((blocksPerChunk > 0) &&
+        !fileStatus.isDirectory() &&
+        (fileStatus.getLen() > blockSize * blocksPerChunk)) {
+      // split only when the file size is larger than the intended chunk size
+      final BlockLocation[] blockLocations;
+      blockLocations = fileSystem.getFileBlockLocations(fileStatus, 0,
+            fileStatus.getLen());
+
+      int numBlocks = blockLocations.length;
+      long curPos = 0;
+      if (numBlocks <= blocksPerChunk) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("  add file " + clfs);
+        }
+        copyListingFileStatus.add(clfs);
+      } else {
+        int i = 0;
+        while (i < numBlocks) {
+          long curLength = 0;
+          for (int j = 0; j < blocksPerChunk && i < numBlocks; ++j, ++i) {
+            curLength += blockLocations[i].getLength();
+          }
+          if (curLength > 0) {
+            CopyListingFileStatus clfs1 = new CopyListingFileStatus(clfs);
+            clfs1.setChunkOffset(curPos);
+            clfs1.setChunkLength(curLength);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("  add file chunk " + clfs1);
+            }
+            copyListingFileStatus.add(clfs1);
+            curPos += curLength;
+          }
+        }
+      }
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("  add file/dir " + clfs);
+      }
+      copyListingFileStatus.add(clfs);
+    }
+
+    return copyListingFileStatus;
+  }
+
+  /**
    * Converts a FileStatus to a CopyListingFileStatus.  If preserving ACLs,
    * populates the CopyListingFileStatus with the ACLs. If preserving XAttrs,
    * populates the CopyListingFileStatus with the XAttrs.
@@ -302,16 +391,19 @@ public class DistCpUtils {
    * @param preserveAcls boolean true if preserving ACLs
    * @param preserveXAttrs boolean true if preserving XAttrs
    * @param preserveRawXAttrs boolean true if preserving raw.* XAttrs
+   * @param chunkOffset chunk offset in bytes
+   * @param chunkLength chunk length in bytes
+   * @return CopyListingFileStatus
    * @throws IOException if there is an I/O error
    */
-  public static CopyListingFileStatus toCopyListingFileStatus(
+  public static CopyListingFileStatus toCopyListingFileStatusHelper(
       FileSystem fileSystem, FileStatus fileStatus, boolean preserveAcls, 
-      boolean preserveXAttrs, boolean preserveRawXAttrs) throws IOException {
+      boolean preserveXAttrs, boolean preserveRawXAttrs,
+      long chunkOffset, long chunkLength) throws IOException {
     CopyListingFileStatus copyListingFileStatus =
-      new CopyListingFileStatus(fileStatus);
+        new CopyListingFileStatus(fileStatus, chunkOffset, chunkLength);
     if (preserveAcls) {
-      FsPermission perm = fileStatus.getPermission();
-      if (perm.getAclBit()) {
+      if (fileStatus.hasAcl()) {
         List<AclEntry> aclEntries = fileSystem.getAclStatus(
           fileStatus.getPath()).getEntries();
         copyListingFileStatus.setAclEntries(aclEntries);
@@ -342,24 +434,45 @@ public class DistCpUtils {
   }
 
   /**
-   * Sort sequence file containing FileStatus and Text as key and value respecitvely
+   * Sort sequence file containing FileStatus and Text as key and value
+   * respectively.
    *
-   * @param fs - File System
    * @param conf - Configuration
    * @param sourceListing - Source listing file
    * @return Path of the sorted file. Is source file with _sorted appended to the name
    * @throws IOException - Any exception during sort.
    */
-  public static Path sortListing(FileSystem fs, Configuration conf, Path sourceListing)
+  public static Path sortListing(Configuration conf,
+      Path sourceListing)
       throws IOException {
+    Path output = new Path(sourceListing.toString() +  "_sorted");
+    sortListing(conf, sourceListing, output);
+    return output;
+  }
+
+  /**
+   * Sort sequence file containing FileStatus and Text as key and value
+   * respectively, saving the result to the {@code output} path, which
+   * will be deleted first.
+   *
+   * @param conf - Configuration
+   * @param sourceListing - Source listing file
+   * @param output output path
+   * @throws IOException - Any exception during sort.
+   */
+
+  public static void sortListing(final Configuration conf,
+      final Path sourceListing,
+      final Path output) throws IOException {
+    FileSystem fs = sourceListing.getFileSystem(conf);
+    // force verify that the destination FS matches the input
+    fs.makeQualified(output);
     SequenceFile.Sorter sorter = new SequenceFile.Sorter(fs, Text.class,
       CopyListingFileStatus.class, conf);
-    Path output = new Path(sourceListing.toString() +  "_sorted");
 
     fs.delete(output, false);
 
     sorter.sort(sourceListing, output);
-    return output;
   }
 
   /**
@@ -436,7 +549,7 @@ public class DistCpUtils {
   /**
    * Utility to compare checksums for the paths specified.
    *
-   * If checksums's can't be retrieved, it doesn't fail the test
+   * If checksums can't be retrieved, it doesn't fail the test
    * Only time the comparison would fail is when checksums are
    * available and they don't match
    *
@@ -456,13 +569,92 @@ public class DistCpUtils {
       throws IOException {
     FileChecksum targetChecksum = null;
     try {
-      sourceChecksum = sourceChecksum != null ? sourceChecksum : sourceFS
-          .getFileChecksum(source);
-      targetChecksum = targetFS.getFileChecksum(target);
+      sourceChecksum = sourceChecksum != null
+          ? sourceChecksum
+          : sourceFS.getFileChecksum(source);
+      if (sourceChecksum != null) {
+        // iff there's a source checksum, look for one at the destination.
+        targetChecksum = targetFS.getFileChecksum(target);
+      }
     } catch (IOException e) {
       LOG.error("Unable to retrieve checksum for " + source + " or " + target, e);
     }
     return (sourceChecksum == null || targetChecksum == null ||
             sourceChecksum.equals(targetChecksum));
+  }
+
+  /**
+   * Utility to compare file lengths and checksums for source and target.
+   *
+   * @param sourceFS FileSystem for the source path.
+   * @param source The source path.
+   * @param sourceChecksum The checksum of the source file. If it is null we
+   * still need to retrieve it through sourceFS.
+   * @param targetFS FileSystem for the target path.
+   * @param target The target path.
+   * @param skipCrc The flag to indicate whether to skip checksums.
+   * @throws IOException if there's a mismatch in file lengths or checksums.
+   */
+  public static void compareFileLengthsAndChecksums(
+      FileSystem sourceFS, Path source, FileChecksum sourceChecksum,
+      FileSystem targetFS, Path target, boolean skipCrc) throws IOException {
+    long srcLen = sourceFS.getFileStatus(source).getLen();
+    long tgtLen = targetFS.getFileStatus(target).getLen();
+    if (srcLen != tgtLen) {
+      throw new IOException(
+          "Mismatch in length of source:" + source + " (" + srcLen
+              + ") and target:" + target + " (" + tgtLen + ")");
+    }
+
+    //At this point, src & dest lengths are same. if length==0, we skip checksum
+    if ((srcLen != 0) && (!skipCrc)) {
+      if (!checksumsAreEqual(sourceFS, source, sourceChecksum,
+          targetFS, target)) {
+        StringBuilder errorMessage =
+            new StringBuilder("Checksum mismatch between ")
+                .append(source).append(" and ").append(target).append(".");
+        boolean addSkipHint = false;
+        String srcScheme = sourceFS.getScheme();
+        String targetScheme = targetFS.getScheme();
+        if (!srcScheme.equals(targetScheme)) {
+          // the filesystems are different and they aren't both hdfs connectors
+          errorMessage.append("Source and destination filesystems are of"
+              + " different types\n")
+              .append("Their checksum algorithms may be incompatible");
+          addSkipHint = true;
+        } else if (sourceFS.getFileStatus(source).getBlockSize() !=
+            targetFS.getFileStatus(target).getBlockSize()) {
+          errorMessage.append(" Source and target differ in block-size.\n")
+              .append(" Use -pb to preserve block-sizes during copy.");
+          addSkipHint = true;
+        }
+        if (addSkipHint) {
+          errorMessage
+              .append(" You can choose file-level checksum validation via "
+                  + "-Ddfs.checksum.combine.mode=COMPOSITE_CRC when block-sizes"
+                  + " or filesystems are different.")
+              .append(" Or you can skip checksum-checks altogether "
+                  + " with -skipcrccheck.\n")
+              .append(" (NOTE: By skipping checksums, one runs the risk of " +
+                  "masking data-corruption during file-transfer.)\n");
+        }
+        throw new IOException(errorMessage.toString());
+      }
+    }
+  }
+
+  /*
+   * Return the Path for a given chunk.
+   * Used when splitting large file into chunks to copy in parallel.
+   * @param targetFile path to target file
+   * @param srcFileStatus source file status in copy listing
+   * @return path to the chunk specified by the parameters to store
+   * in target cluster temporarily
+   */
+  public static Path getSplitChunkPath(Path targetFile,
+      CopyListingFileStatus srcFileStatus) {
+    return new Path(targetFile.toString()
+        + ".____distcpSplit____" + srcFileStatus.getChunkOffset()
+        + "." + srcFileStatus.getChunkLength());
   }
 }

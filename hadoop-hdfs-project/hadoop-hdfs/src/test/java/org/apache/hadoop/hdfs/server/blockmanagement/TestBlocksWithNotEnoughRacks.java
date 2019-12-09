@@ -23,8 +23,8 @@ import static org.junit.Assert.assertArrayEquals;
 
 import java.util.ArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,14 +40,15 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 public class TestBlocksWithNotEnoughRacks {
-  public static final Log LOG = LogFactory.getLog(TestBlocksWithNotEnoughRacks.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestBlocksWithNotEnoughRacks.class);
   static {
-    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(LOG, Level.TRACE);
   }
 
   /*

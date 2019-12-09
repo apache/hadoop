@@ -34,8 +34,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -49,7 +49,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf;
 import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
+import org.apache.hadoop.hdfs.server.namenode.SerialNumberManager;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.resources.XAttrEncodingParam;
 import org.apache.hadoop.io.IOUtils;
@@ -64,9 +66,10 @@ import com.google.common.collect.Maps;
  * file status of the namespace of the fsimage.
  */
 class FSImageLoader {
-  public static final Log LOG = LogFactory.getLog(FSImageHandler.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FSImageHandler.class);
 
-  private final String[] stringTable;
+  private final SerialNumberManager.StringTable stringTable;
   // byte representation of inodes, sorted by id
   private final byte[][] inodes;
   private final Map<Long, long[]> dirmap;
@@ -92,8 +95,8 @@ class FSImageLoader {
     }
   };
 
-  private FSImageLoader(String[] stringTable, byte[][] inodes,
-                        Map<Long, long[]> dirmap) {
+  private FSImageLoader(SerialNumberManager.StringTable stringTable,
+                        byte[][] inodes, Map<Long, long[]> dirmap) {
     this.stringTable = stringTable;
     this.inodes = inodes;
     this.dirmap = dirmap;
@@ -118,7 +121,7 @@ class FSImageLoader {
     try (FileInputStream fin = new FileInputStream(file.getFD())) {
       // Map to record INodeReference to the referred id
       ImmutableList<Long> refIdList = null;
-      String[] stringTable = null;
+      SerialNumberManager.StringTable stringTable = null;
       byte[][] inodes = null;
       Map<Long, long[]> dirmap = null;
 
@@ -241,16 +244,17 @@ class FSImageLoader {
     return inodes;
   }
 
-  static String[] loadStringTable(InputStream in) throws
-  IOException {
+  static SerialNumberManager.StringTable loadStringTable(InputStream in)
+        throws IOException {
     FsImageProto.StringTableSection s = FsImageProto.StringTableSection
         .parseDelimitedFrom(in);
     LOG.info("Loading " + s.getNumEntry() + " strings");
-    String[] stringTable = new String[s.getNumEntry() + 1];
+    SerialNumberManager.StringTable stringTable =
+        SerialNumberManager.newStringTable(s.getNumEntry(), s.getMaskBits());
     for (int i = 0; i < s.getNumEntry(); ++i) {
       FsImageProto.StringTableSection.Entry e = FsImageProto
           .StringTableSection.Entry.parseDelimitedFrom(in);
-      stringTable[e.getId()] = e.getStr();
+      stringTable.put(e.getId(), e.getStr());
     }
     return stringTable;
   }
@@ -589,7 +593,11 @@ class FSImageLoader {
         map.put("pathSuffix",
             printSuffix ? inode.getName().toStringUtf8() : "");
         map.put("permission", toString(p.getPermission()));
-        map.put("replication", f.getReplication());
+        if (f.hasErasureCodingPolicyID()) {
+          map.put("replication", INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS);
+        } else {
+          map.put("replication", f.getReplication());
+        }
         map.put("type", inode.getType());
         map.put("fileId", inode.getId());
         map.put("childrenNum", 0);

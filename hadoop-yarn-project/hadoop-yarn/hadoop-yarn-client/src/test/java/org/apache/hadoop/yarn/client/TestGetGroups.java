@@ -23,8 +23,6 @@ import java.io.PrintStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.Service.STATE;
@@ -37,10 +35,13 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestGetGroups extends GetGroupsTestBase {
   
-  private static final Log LOG = LogFactory.getLog(TestGetGroups.class);
+  private static final Logger LOG =
+          LoggerFactory.getLogger(TestGetGroups.class);
   
   private static ResourceManager resourceManager;
   

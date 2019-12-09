@@ -146,7 +146,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     config.setUserLimitFactor(B2, 100.0f);
     config.setCapacity(B3, 0.5f);
     config.setUserLimitFactor(B3, 100.0f);
-    
+
     config.setQueues(A1, new String[] {"a1a", "a1b"});
     final String A1A = A1 + ".a1a";
     config.setCapacity(A1A, 85);
@@ -254,7 +254,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     }
   }
 
-  public void verifySubQueueXML(Element qElem, String q, 
+  public void verifySubQueueXML(Element qElem, String q,
       float parentAbsCapacity, float parentAbsMaxCapacity)
       throws Exception {
     NodeList children = qElem.getChildNodes();
@@ -317,26 +317,34 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
   private void verifyClusterScheduler(JSONObject json) throws JSONException,
       Exception {
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals("incorrect number of elements in: " + json, 1, json.length());
     JSONObject info = json.getJSONObject("scheduler");
-    assertEquals("incorrect number of elements", 1, info.length());
+    assertEquals("incorrect number of elements in: " + info, 1, info.length());
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements", 8, info.length());
+    assertEquals("incorrect number of elements in: " + info, 8, info.length());
     verifyClusterSchedulerGeneric(info.getString("type"),
         (float) info.getDouble("usedCapacity"),
         (float) info.getDouble("capacity"),
         (float) info.getDouble("maxCapacity"), info.getString("queueName"));
     JSONObject health = info.getJSONObject("health");
     assertNotNull(health);
-    assertEquals("incorrect number of elements", 3, health.length());
+    assertEquals("incorrect number of elements in: " + health, 3,
+        health.length());
+    JSONArray operationsInfo = health.getJSONArray("operationsInfo");
+    assertEquals("incorrect number of elements in: " + health, 4,
+        operationsInfo.length());
+    JSONArray lastRunDetails = health.getJSONArray("lastRunDetails");
+    assertEquals("incorrect number of elements in: " + health, 3,
+        lastRunDetails.length());
 
     JSONArray arr = info.getJSONObject("queues").getJSONArray("queue");
-    assertEquals("incorrect number of elements", 2, arr.length());
+    assertEquals("incorrect number of elements in: " + arr, 2, arr.length());
 
     // test subqueues
     for (int i = 0; i < arr.length(); i++) {
       JSONObject obj = arr.getJSONObject(i);
-      String q = CapacitySchedulerConfiguration.ROOT + "." + obj.getString("queueName");
+      String q = CapacitySchedulerConfiguration.ROOT + "." +
+              obj.getString("queueName");
       verifySubQueue(obj, q, 100, 100);
     }
   }
@@ -351,13 +359,13 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     assertTrue("queueName doesn't match", "root".matches(queueName));
   }
 
-  private void verifySubQueue(JSONObject info, String q, 
+  private void verifySubQueue(JSONObject info, String q,
       float parentAbsCapacity, float parentAbsMaxCapacity)
       throws JSONException, Exception {
-    int numExpectedElements = 18;
+    int numExpectedElements = 20;
     boolean isParentQueue = true;
     if (!info.has("queues")) {
-      numExpectedElements = 31;
+      numExpectedElements = 35;
       isParentQueue = false;
     }
     assertEquals("incorrect number of elements", numExpectedElements, info.length());
@@ -460,7 +468,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
         csConf.getUserLimitFactor(q), info.userLimitFactor, 1e-3f);
   }
 
-  //Return a child Node of node with the tagname or null if none exists 
+  //Return a child Node of node with the tagname or null if none exists
   private Node getChildNodeByName(Node node, String tagname) {
     NodeList nodeList = node.getChildNodes();
     for (int i=0; i < nodeList.getLength(); ++i) {
@@ -510,7 +518,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
           for (int j=0; j<users.getLength(); ++j) {
             Node user = users.item(j);
             String username = getChildNodeByName(user, "username")
-              .getTextContent(); 
+                .getTextContent();
             assertTrue(username.equals("user1") || username.equals("user2"));
             //Should be a parsable integer
             Integer.parseInt(getChildNodeByName(getChildNodeByName(user,

@@ -32,6 +32,7 @@ import java.io.IOException;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.getFileStatusEventually;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 
@@ -46,24 +47,37 @@ public abstract class AbstractContractCreateTest extends
    */
   public static final int CREATE_TIMEOUT = 15000;
 
-  @Test
-  public void testCreateNewFile() throws Throwable {
-    describe("Foundational 'create a file' test");
-    Path path = path("testCreateNewFile");
+  protected Path path(String filepath, boolean useBuilder) throws IOException {
+    return super.path(filepath  + (useBuilder ? "" : "-builder"));
+  }
+
+  private void testCreateNewFile(boolean useBuilder) throws Throwable {
+    describe("Foundational 'create a file' test, using builder API=" +
+        useBuilder);
+    Path path = path("testCreateNewFile", useBuilder);
     byte[] data = dataset(256, 'a', 'z');
-    writeDataset(getFileSystem(), path, data, data.length, 1024 * 1024, false);
+    writeDataset(getFileSystem(), path, data, data.length, 1024 * 1024, false,
+        useBuilder);
     ContractTestUtils.verifyFileContents(getFileSystem(), path, data);
   }
 
   @Test
-  public void testCreateFileOverExistingFileNoOverwrite() throws Throwable {
-    describe("Verify overwriting an existing file fails");
-    Path path = path("testCreateFileOverExistingFileNoOverwrite");
+  public void testCreateNewFile() throws Throwable {
+    testCreateNewFile(true);
+    testCreateNewFile(false);
+  }
+
+  private void testCreateFileOverExistingFileNoOverwrite(boolean useBuilder)
+      throws Throwable {
+    describe("Verify overwriting an existing file fails, using builder API=" +
+        useBuilder);
+    Path path = path("testCreateFileOverExistingFileNoOverwrite", useBuilder);
     byte[] data = dataset(256, 'a', 'z');
     writeDataset(getFileSystem(), path, data, data.length, 1024, false);
     byte[] data2 = dataset(10 * 1024, 'A', 'Z');
     try {
-      writeDataset(getFileSystem(), path, data2, data2.length, 1024, false);
+      writeDataset(getFileSystem(), path, data2, data2.length, 1024, false,
+          useBuilder);
       fail("writing without overwrite unexpectedly succeeded");
     } catch (FileAlreadyExistsException expected) {
       //expected
@@ -75,6 +89,26 @@ public abstract class AbstractContractCreateTest extends
     }
   }
 
+  @Test
+  public void testCreateFileOverExistingFileNoOverwrite() throws Throwable {
+    testCreateFileOverExistingFileNoOverwrite(false);
+    testCreateFileOverExistingFileNoOverwrite(true);
+  }
+
+  private void testOverwriteExistingFile(boolean useBuilder) throws Throwable {
+    describe("Overwrite an existing file and verify the new data is there, " +
+        "use builder API=" + useBuilder);
+    Path path = path("testOverwriteExistingFile", useBuilder);
+    byte[] data = dataset(256, 'a', 'z');
+    writeDataset(getFileSystem(), path, data, data.length, 1024, false,
+        useBuilder);
+    ContractTestUtils.verifyFileContents(getFileSystem(), path, data);
+    byte[] data2 = dataset(10 * 1024, 'A', 'Z');
+    writeDataset(getFileSystem(), path, data2, data2.length, 1024, true,
+        useBuilder);
+    ContractTestUtils.verifyFileContents(getFileSystem(), path, data2);
+  }
+
   /**
    * This test catches some eventual consistency problems that blobstores exhibit,
    * as we are implicitly verifying that updates are consistent. This
@@ -83,25 +117,21 @@ public abstract class AbstractContractCreateTest extends
    */
   @Test
   public void testOverwriteExistingFile() throws Throwable {
-    describe("Overwrite an existing file and verify the new data is there");
-    Path path = path("testOverwriteExistingFile");
-    byte[] data = dataset(256, 'a', 'z');
-    writeDataset(getFileSystem(), path, data, data.length, 1024, false);
-    ContractTestUtils.verifyFileContents(getFileSystem(), path, data);
-    byte[] data2 = dataset(10 * 1024, 'A', 'Z');
-    writeDataset(getFileSystem(), path, data2, data2.length, 1024, true);
-    ContractTestUtils.verifyFileContents(getFileSystem(), path, data2);
+    testOverwriteExistingFile(false);
+    testOverwriteExistingFile(true);
   }
 
-  @Test
-  public void testOverwriteEmptyDirectory() throws Throwable {
-    describe("verify trying to create a file over an empty dir fails");
+  private void testOverwriteEmptyDirectory(boolean useBuilder)
+      throws Throwable {
+    describe("verify trying to create a file over an empty dir fails, " +
+        "use builder API=" + useBuilder);
     Path path = path("testOverwriteEmptyDirectory");
     mkdirs(path);
     assertIsDirectory(path);
     byte[] data = dataset(256, 'a', 'z');
     try {
-      writeDataset(getFileSystem(), path, data, data.length, 1024, true);
+      writeDataset(getFileSystem(), path, data, data.length, 1024, true,
+          useBuilder);
       assertIsDirectory(path);
       fail("write of file over empty dir succeeded");
     } catch (FileAlreadyExistsException expected) {
@@ -120,8 +150,15 @@ public abstract class AbstractContractCreateTest extends
   }
 
   @Test
-  public void testOverwriteNonEmptyDirectory() throws Throwable {
-    describe("verify trying to create a file over a non-empty dir fails");
+  public void testOverwriteEmptyDirectory() throws Throwable {
+    testOverwriteEmptyDirectory(false);
+    testOverwriteEmptyDirectory(true);
+  }
+
+  private void testOverwriteNonEmptyDirectory(boolean useBuilder)
+      throws Throwable {
+    describe("verify trying to create a file over a non-empty dir fails, " +
+        "use builder API=" + useBuilder);
     Path path = path("testOverwriteNonEmptyDirectory");
     mkdirs(path);
     try {
@@ -139,7 +176,7 @@ public abstract class AbstractContractCreateTest extends
     byte[] data = dataset(256, 'a', 'z');
     try {
       writeDataset(getFileSystem(), path, data, data.length, 1024,
-                   true);
+                   true, useBuilder);
       FileStatus status = getFileSystem().getFileStatus(path);
 
       boolean isDir = status.isDirectory();
@@ -163,6 +200,12 @@ public abstract class AbstractContractCreateTest extends
     }
     assertIsDirectory(path);
     assertIsFile(child);
+  }
+
+  @Test
+  public void testOverwriteNonEmptyDirectory() throws Throwable {
+    testOverwriteNonEmptyDirectory(false);
+    testOverwriteNonEmptyDirectory(true);
   }
 
   @Test
@@ -201,12 +244,12 @@ public abstract class AbstractContractCreateTest extends
       out.write('a');
       out.flush();
       if (!fs.exists(path)) {
-
-        if (isSupported(IS_BLOBSTORE)) {
-          // object store: downgrade to a skip so that the failure is visible
-          // in test results
-          skip("Filesystem is an object store and newly created files are not "
-              + "immediately visible");
+        if (isSupported(IS_BLOBSTORE) ||
+            isSupported(CREATE_VISIBILITY_DELAYED)) {
+          // object store or some file systems: downgrade to a skip so that the
+          // failure is visible in test results
+          skip("For object store or some file systems, newly created files are"
+              + " not immediately visible");
         }
         assertPathExists("expected path to be visible before file closed",
             path);
@@ -272,4 +315,21 @@ public abstract class AbstractContractCreateTest extends
         defaultBlockSize >= minValue);
   }
 
+  @Test
+  public void testCreateMakesParentDirs() throws Throwable {
+    describe("check that after creating a file its parent directories exist");
+    FileSystem fs = getFileSystem();
+    Path grandparent = path("testCreateCreatesAndPopulatesParents");
+    Path parent = new Path(grandparent, "parent");
+    Path child = new Path(parent, "child");
+    touch(fs, child);
+    assertEquals("List status of parent should include the 1 child file",
+        1, fs.listStatus(parent).length);
+    assertTrue("Parent directory does not appear to be a directory",
+        fs.getFileStatus(parent).isDirectory());
+    assertEquals("List status of grandparent should include the 1 parent dir",
+        1, fs.listStatus(grandparent).length);
+    assertTrue("Grandparent directory does not appear to be a directory",
+        fs.getFileStatus(grandparent).isDirectory());
+  }
 }

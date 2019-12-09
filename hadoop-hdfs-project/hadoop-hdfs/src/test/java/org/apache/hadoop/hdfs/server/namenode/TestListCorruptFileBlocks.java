@@ -63,7 +63,6 @@ public class TestListCorruptFileBlocks {
   @Test (timeout=300000)
   public void testListCorruptFilesCorruptedBlock() throws Exception {
     MiniDFSCluster cluster = null;
-    Random random = new Random();
     
     try {
       Configuration conf = new HdfsConfiguration();
@@ -74,10 +73,13 @@ public class TestListCorruptFileBlocks {
       cluster = new MiniDFSCluster.Builder(conf).build();
       FileSystem fs = cluster.getFileSystem();
 
+      // Files are corrupted with 2 bytes before the end of the file,
+      // so that's the minimum length.
+      final int corruptionLength = 2;
       // create two files with one block each
       DFSTestUtil util = new DFSTestUtil.Builder().
           setName("testCorruptFilesCorruptedBlock").setNumFiles(2).
-          setMaxLevels(1).setMaxSize(512).build();
+          setMaxLevels(1).setMinSize(corruptionLength).setMaxSize(512).build();
       util.createFiles(fs, "/srcdat10");
 
       // fetch bad file list from namenode. There should be none.
@@ -92,20 +94,19 @@ public class TestListCorruptFileBlocks {
       File storageDir = cluster.getInstanceStorageDir(0, 1);
       File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
       assertTrue("data directory does not exist", data_dir.exists());
-      List<File> metaFiles = MiniDFSCluster.getAllBlockMetadataFiles(data_dir);
+      List<File> metaFiles = MiniDFSCluster.getAllBlockFiles(data_dir);
       assertTrue("Data directory does not contain any blocks or there was an "
           + "IO error", metaFiles != null && !metaFiles.isEmpty());
       File metaFile = metaFiles.get(0);
       RandomAccessFile file = new RandomAccessFile(metaFile, "rw");
       FileChannel channel = file.getChannel();
-      long position = channel.size() - 2;
-      int length = 2;
-      byte[] buffer = new byte[length];
-      random.nextBytes(buffer);
+      long position = channel.size() - corruptionLength;
+      byte[] buffer = new byte[corruptionLength];
+      new Random(13L).nextBytes(buffer);
       channel.write(ByteBuffer.wrap(buffer), position);
       file.close();
       LOG.info("Deliberately corrupting file " + metaFile.getName() +
-          " at offset " + position + " length " + length);
+          " at offset " + position + " length " + corruptionLength);
 
       // read all files to trigger detection of corrupted replica
       try {
@@ -134,7 +135,6 @@ public class TestListCorruptFileBlocks {
   @Test (timeout=300000)
   public void testListCorruptFileBlocksInSafeMode() throws Exception {
     MiniDFSCluster cluster = null;
-    Random random = new Random();
 
     try {
       Configuration conf = new HdfsConfiguration();
@@ -155,10 +155,13 @@ public class TestListCorruptFileBlocks {
           HdfsConstants.SafeModeAction.SAFEMODE_LEAVE, false);
       FileSystem fs = cluster.getFileSystem();
 
+      // Files are corrupted with 2 bytes before the end of the file,
+      // so that's the minimum length.
+      final int corruptionLength = 2;
       // create two files with one block each
       DFSTestUtil util = new DFSTestUtil.Builder().
           setName("testListCorruptFileBlocksInSafeMode").setNumFiles(2).
-          setMaxLevels(1).setMaxSize(512).build();
+          setMaxLevels(1).setMinSize(corruptionLength).setMaxSize(512).build();
       util.createFiles(fs, "/srcdat10");
 
       // fetch bad file list from namenode. There should be none.
@@ -172,20 +175,19 @@ public class TestListCorruptFileBlocks {
       File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, 
           cluster.getNamesystem().getBlockPoolId());
       assertTrue("data directory does not exist", data_dir.exists());
-      List<File> metaFiles = MiniDFSCluster.getAllBlockMetadataFiles(data_dir);
+      List<File> metaFiles = MiniDFSCluster.getAllBlockFiles(data_dir);
       assertTrue("Data directory does not contain any blocks or there was an "
           + "IO error", metaFiles != null && !metaFiles.isEmpty());
       File metaFile = metaFiles.get(0);
       RandomAccessFile file = new RandomAccessFile(metaFile, "rw");
       FileChannel channel = file.getChannel();
-      long position = channel.size() - 2;
-      int length = 2;
-      byte[] buffer = new byte[length];
-      random.nextBytes(buffer);
+      long position = channel.size() - corruptionLength;
+      byte[] buffer = new byte[corruptionLength];
+      new Random(13L).nextBytes(buffer);
       channel.write(ByteBuffer.wrap(buffer), position);
       file.close();
       LOG.info("Deliberately corrupting file " + metaFile.getName() +
-          " at offset " + position + " length " + length);
+          " at offset " + position + " length " + corruptionLength);
 
       // read all files to trigger detection of corrupted replica
       try {
@@ -452,7 +454,7 @@ public class TestListCorruptFileBlocks {
       cluster = new MiniDFSCluster.Builder(conf).build();
       FileSystem fs = cluster.getFileSystem();
       final int maxCorruptFileBlocks = 
-        FSNamesystem.DEFAULT_MAX_CORRUPT_FILEBLOCKS_RETURNED;
+        conf.getInt(DFSConfigKeys.DFS_NAMENODE_MAX_CORRUPT_FILE_BLOCKS_RETURNED_KEY, 100);
 
       // create 110 files with one block each
       DFSTestUtil util = new DFSTestUtil.Builder().setName("testMaxCorruptFiles").

@@ -27,8 +27,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -52,7 +52,8 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 
 public class TestDFSHAAdmin {
-  private static final Log LOG = LogFactory.getLog(TestDFSHAAdmin.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDFSHAAdmin.class);
   
   private DFSHAAdmin tool;
   private final ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();
@@ -173,7 +174,18 @@ public class TestDFSHAAdmin {
     assertEquals(0, runTool("-help", "transitionToActive"));
     assertOutputContains("Transitions the service into Active");
   }
-  
+
+  @Test
+  public void testGetAllServiceState() throws Exception {
+    Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol)
+        .getServiceStatus();
+    assertEquals(0, runTool("-getAllServiceState"));
+    assertOutputContains(String.format("%-50s %-10s", (HOST_A + ":" + 12345),
+        STANDBY_READY_RESULT.getState()));
+    assertOutputContains(String.format("%-50s %-10s", (HOST_B + ":" + 12345),
+        STANDBY_READY_RESULT.getState()));
+  }
+
   @Test
   public void testTransitionToActive() throws Exception {
     Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol).getServiceStatus();
@@ -204,11 +216,16 @@ public class TestDFSHAAdmin {
     assertTrue(errOutput.contains("Refusing to manually manage"));
     assertEquals(-1, runTool("-transitionToStandby", "nn1"));
     assertTrue(errOutput.contains("Refusing to manually manage"));
+    assertEquals(-1, runTool("-transitionToObserver", "nn1"));
+    assertTrue(errOutput.contains("Refusing to manually manage"));
 
     Mockito.verify(mockProtocol, Mockito.never())
       .transitionToActive(anyReqInfo());
     Mockito.verify(mockProtocol, Mockito.never())
-      .transitionToStandby(anyReqInfo());
+        .transitionToStandby(anyReqInfo());
+    Mockito.verify(mockProtocol, Mockito.never())
+        .transitionToObserver(anyReqInfo());
+
 
     // Force flag should bypass the check and change the request source
     // for the RPC
@@ -216,12 +233,16 @@ public class TestDFSHAAdmin {
     assertEquals(0, runTool("-transitionToActive", "-forcemanual", "nn1"));
     setupConfirmationOnSystemIn();
     assertEquals(0, runTool("-transitionToStandby", "-forcemanual", "nn1"));
+    setupConfirmationOnSystemIn();
+    assertEquals(0, runTool("-transitionToObserver", "-forcemanual", "nn1"));
 
     Mockito.verify(mockProtocol, Mockito.times(1)).transitionToActive(
         reqInfoCaptor.capture());
     Mockito.verify(mockProtocol, Mockito.times(1)).transitionToStandby(
         reqInfoCaptor.capture());
-    
+    Mockito.verify(mockProtocol, Mockito.times(1)).transitionToObserver(
+        reqInfoCaptor.capture());
+
     // All of the RPCs should have had the "force" source
     for (StateChangeRequestInfo ri : reqInfoCaptor.getAllValues()) {
       assertEquals(RequestSource.REQUEST_BY_USER_FORCED, ri.getSource());
@@ -261,6 +282,12 @@ public class TestDFSHAAdmin {
   public void testTransitionToStandby() throws Exception {
     assertEquals(0, runTool("-transitionToStandby", "nn1"));
     Mockito.verify(mockProtocol).transitionToStandby(anyReqInfo());
+  }
+
+  @Test
+  public void testTransitionToObserver() throws Exception {
+    assertEquals(0, runTool("-transitionToObserver", "nn1"));
+    Mockito.verify(mockProtocol).transitionToObserver(anyReqInfo());
   }
 
   @Test

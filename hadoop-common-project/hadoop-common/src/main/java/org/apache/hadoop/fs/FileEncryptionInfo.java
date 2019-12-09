@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.Serializable;
+
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.crypto.CipherSuite;
@@ -30,7 +32,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * an encrypted file.
  */
 @InterfaceAudience.Private
-public class FileEncryptionInfo {
+public class FileEncryptionInfo implements Serializable {
+
+  private static final long serialVersionUID = 0x156abe03;
 
   private final CipherSuite cipherSuite;
   private final CryptoProtocolVersion version;

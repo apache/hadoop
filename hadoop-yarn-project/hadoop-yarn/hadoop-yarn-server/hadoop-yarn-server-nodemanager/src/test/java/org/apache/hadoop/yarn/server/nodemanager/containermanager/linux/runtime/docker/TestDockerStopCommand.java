@@ -21,6 +21,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
 import static org.junit.Assert.assertEquals;
+
+import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -48,8 +50,13 @@ public class TestDockerStopCommand {
   @Test
   public void testSetGracePeriod() throws Exception {
     dockerStopCommand.setGracePeriod(GRACE_PERIOD);
-    assertEquals("stop foo --time=10",
-        dockerStopCommand.getCommandWithArguments());
-
+    assertEquals("stop", StringUtils.join(",",
+        dockerStopCommand.getDockerCommandWithArguments()
+            .get("docker-command")));
+    assertEquals("foo", StringUtils.join(",",
+        dockerStopCommand.getDockerCommandWithArguments().get("name")));
+    assertEquals("10", StringUtils.join(",",
+        dockerStopCommand.getDockerCommandWithArguments().get("time")));
+    assertEquals(3, dockerStopCommand.getDockerCommandWithArguments().size());
   }
 }

@@ -29,27 +29,55 @@ export default Ember.Controller.extend({
   outputMainMenu: function(){
     var path = this.get('currentPath');
     var html = '<li';
-    if (path == 'yarn-queue') {
+    if (path === 'yarn-queue') {
       html = html + ' class="active"';
     }
     html = html + '><a href="yarn-queue/root">Queues<span class="sr-only">' +
         '(current)</span></a></li><li';
-    if (path.lastIndexOf('yarn-app', 0) == 0) {
+    if (path.lastIndexOf('yarn-app', 0) === 0) {
       html = html + ' class="active"';
     }
     html = html + '><a href="yarn-apps">Applications<span class="sr-only">' +
         '(current)</span></a></li><li';
-    if (path == 'cluster-overview') {
+    if (path === 'cluster-overview') {
       html = html + ' class="active"';
     }
     html = html + '><a href="cluster-overview">Cluster Overview<span class=' +
         '"sr-only">(current)</span></a></li><li';
-    if (path.lastIndexOf('yarn-node', 0) == 0) {
+    if (path.lastIndexOf('yarn-node', 0) === 0) {
       html = html + ' class="active"';
     }
     html = html + '><a href="yarn-nodes">Nodes<span class="sr-only">' +
         '(current)</span></a></li>';
     return Ember.String.htmlSafe(html);
-  }.property('currentPath')
-});
+  }.property('currentPath'),
 
+  isQueuesTabActive: function() {
+    var path = this.get('currentPath');
+    if (path === 'yarn-queues') {
+      return true;
+    }
+    return false;
+  }.property('currentPath'),
+
+  clusterInfo: function() {
+    if (this.model && this.model.clusterInfo) {
+      return this.model.clusterInfo.get('firstObject');
+    }
+    return null;
+  }.property('model.clusterInfo'),
+
+  userInfo: function() {
+    if (this.model && this.model.userInfo) {
+      return this.model.userInfo.get('firstObject');
+    }
+    return null;
+  }.property('model.userInfo'),
+
+  isTimelineUnHealthy: function() {
+    if (this.model && this.model.timelineHealth) {
+      return this.model.timelineHealth.get('isTimelineUnHealthy');
+    }
+    return true;
+  }.property('model.timelineHealth')
+});

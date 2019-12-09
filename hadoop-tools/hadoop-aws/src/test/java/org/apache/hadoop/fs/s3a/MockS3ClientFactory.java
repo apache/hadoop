@@ -21,8 +21,12 @@ package org.apache.hadoop.fs.s3a;
 import static org.mockito.Mockito.*;
 
 import java.net.URI;
+import java.util.ArrayList;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.MultipartUploadListing;
+import com.amazonaws.services.s3.model.Region;
 
 /**
  * An {@link S3ClientFactory} that returns Mockito mocks of the {@link AmazonS3}
@@ -31,10 +35,19 @@ import com.amazonaws.services.s3.AmazonS3;
 public class MockS3ClientFactory implements S3ClientFactory {
 
   @Override
-  public AmazonS3 createS3Client(URI name, URI uri) {
-    String bucket = name.getHost();
+  public AmazonS3 createS3Client(URI name,
+      final String bucket,
+      final AWSCredentialsProvider credentialSet) {
     AmazonS3 s3 = mock(AmazonS3.class);
     when(s3.doesBucketExist(bucket)).thenReturn(true);
+    // this listing is used in startup if purging is enabled, so
+    // return a stub value
+    MultipartUploadListing noUploads = new MultipartUploadListing();
+    noUploads.setMultipartUploads(new ArrayList<>(0));
+    when(s3.listMultipartUploads(anyObject()))
+        .thenReturn(noUploads);
+    when(s3.getBucketLocation(anyString()))
+        .thenReturn(Region.US_West.toString());
     return s3;
   }
 }

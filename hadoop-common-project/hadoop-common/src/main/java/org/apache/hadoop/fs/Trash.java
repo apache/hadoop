@@ -19,11 +19,12 @@ package org.apache.hadoop.fs;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** 
  * Provides a trash facility which supports pluggable Trash policies. 
@@ -34,8 +35,8 @@ import org.apache.hadoop.conf.Configured;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Trash extends Configured {
-  private static final org.apache.commons.logging.Log LOG =
-      LogFactory.getLog(Trash.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(Trash.class);
 
   private TrashPolicy trashPolicy; // configured trash policy instance
 
@@ -117,6 +118,12 @@ public class Trash extends Configured {
   /** Delete old checkpoint(s). */
   public void expunge() throws IOException {
     trashPolicy.deleteCheckpoint();
+  }
+
+  /** Delete all trash immediately. */
+  public void expungeImmediately() throws IOException {
+    trashPolicy.createCheckpoint();
+    trashPolicy.deleteCheckpointsImmediately();
   }
 
   /** get the current working directory */

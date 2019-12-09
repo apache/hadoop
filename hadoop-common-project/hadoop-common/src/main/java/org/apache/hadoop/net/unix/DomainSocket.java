@@ -28,13 +28,13 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.ByteBuffer;
 
-import org.apache.commons.lang.SystemUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.CloseableReferenceCount;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The implementation of UNIX domain sockets in Java.
@@ -60,7 +60,7 @@ public class DomainSocket implements Closeable {
     }
   }
 
-  static Log LOG = LogFactory.getLog(DomainSocket.class);
+  static final Logger LOG = LoggerFactory.getLogger(DomainSocket.class);
 
   /**
    * True only if we should validate the paths used in
@@ -459,13 +459,13 @@ public class DomainSocket implements Closeable {
             try {
               closeFileDescriptor0(descriptors[i]);
             } catch (Throwable t) {
-              LOG.warn(t);
+              LOG.warn(t.toString());
             }
           } else if (streams[i] != null) {
             try {
               streams[i].close();
             } catch (Throwable t) {
-              LOG.warn(t);
+              LOG.warn(t.toString());
             } finally {
               streams[i] = null; }
           }

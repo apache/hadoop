@@ -77,12 +77,14 @@ public class ITUseMiniCluster {
 
   @After
   public void clusterDown() {
-    cluster.close();
+    if (cluster != null) {
+      cluster.close();
+    }
   }
 
   @Test
   public void useHdfsFileSystem() throws IOException {
-    try (final FileSystem fs = cluster.getFileSystem()) {
+    try (FileSystem fs = cluster.getFileSystem()) {
       simpleReadAfterWrite(fs);
     }
   }
@@ -94,10 +96,10 @@ public class ITUseMiniCluster {
       throw new IOException("Mkdirs failed to create " +
           TEST_PATH);
     }
-    try (final FSDataOutputStream out = fs.create(path)) {
+    try (FSDataOutputStream out = fs.create(path)) {
       out.writeUTF(TEXT);
     }
-    try (final FSDataInputStream in = fs.open(path)) {
+    try (FSDataInputStream in = fs.open(path)) {
       final String result = in.readUTF();
       Assert.assertEquals("Didn't read back text we wrote.", TEXT, result);
     }
@@ -105,7 +107,7 @@ public class ITUseMiniCluster {
 
   @Test
   public void useWebHDFS() throws IOException, URISyntaxException {
-    try (final FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(
+    try (FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(
         cluster.getConfiguration(0), WebHdfsConstants.WEBHDFS_SCHEME)) {
       simpleReadAfterWrite(fs);
     }

@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web;
 
-import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
-import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -34,14 +31,17 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import org.slf4j.Logger;
 
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.Log;
+import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaders.Values;
+import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
  * Dead simple session-layer HTTP proxy. It gets the HTTP responses
@@ -53,7 +53,7 @@ class SimpleHttpProxyHandler extends SimpleChannelInboundHandler<HttpRequest> {
   private String uri;
   private Channel proxiedChannel;
   private final InetSocketAddress host;
-  static final Log LOG = DatanodeHttpServer.LOG;
+  static final Logger LOG = DatanodeHttpServer.LOG;
 
   SimpleHttpProxyHandler(InetSocketAddress host) {
     this.host = host;
@@ -98,7 +98,7 @@ class SimpleHttpProxyHandler extends SimpleChannelInboundHandler<HttpRequest> {
   @Override
   public void channelRead0
     (final ChannelHandlerContext ctx, final HttpRequest req) {
-    uri = req.uri();
+    uri = req.getUri();
     final Channel client = ctx.channel();
     Bootstrap proxiedServer = new Bootstrap()
       .group(client.eventLoop())
@@ -118,14 +118,14 @@ class SimpleHttpProxyHandler extends SimpleChannelInboundHandler<HttpRequest> {
         if (future.isSuccess()) {
           ctx.channel().pipeline().remove(HttpResponseEncoder.class);
           HttpRequest newReq = new DefaultFullHttpRequest(HTTP_1_1,
-            req.method(), req.uri());
+            req.getMethod(), req.getUri());
           newReq.headers().add(req.headers());
-          newReq.headers().set(CONNECTION, HttpHeaderValues.CLOSE);
+          newReq.headers().set(CONNECTION, Values.CLOSE);
           future.channel().writeAndFlush(newReq);
         } else {
           DefaultHttpResponse resp = new DefaultHttpResponse(HTTP_1_1,
             INTERNAL_SERVER_ERROR);
-          resp.headers().set(CONNECTION, HttpHeaderValues.CLOSE);
+          resp.headers().set(CONNECTION, Values.CLOSE);
           LOG.info("Proxy " + uri + " failed. Cause: ", future.cause());
           ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE);
           client.close();
@@ -144,7 +144,9 @@ class SimpleHttpProxyHandler extends SimpleChannelInboundHandler<HttpRequest> {
 
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-    LOG.info("Proxy for " + uri + " failed. cause: ", cause);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Proxy for " + uri + " failed. cause: ", cause);
+    }
     if (proxiedChannel != null) {
       proxiedChannel.close();
       proxiedChannel = null;

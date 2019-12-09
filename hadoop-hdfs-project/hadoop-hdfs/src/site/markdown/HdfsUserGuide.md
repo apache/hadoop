@@ -15,28 +15,7 @@
 HDFS Users Guide
 ================
 
-* [HDFS Users Guide](#HDFS_Users_Guide)
-    * [Purpose](#Purpose)
-    * [Overview](#Overview)
-    * [Prerequisites](#Prerequisites)
-    * [Web Interface](#Web_Interface)
-    * [Shell Commands](#Shell_Commands)
-        * [DFSAdmin Command](#DFSAdmin_Command)
-    * [Secondary NameNode](#Secondary_NameNode)
-    * [Checkpoint Node](#Checkpoint_Node)
-    * [Backup Node](#Backup_Node)
-    * [Import Checkpoint](#Import_Checkpoint)
-    * [Balancer](#Balancer)
-    * [Rack Awareness](#Rack_Awareness)
-    * [Safemode](#Safemode)
-    * [fsck](#fsck)
-    * [fetchdt](#fetchdt)
-    * [Recovery Mode](#Recovery_Mode)
-    * [Upgrade and Rollback](#Upgrade_and_Rollback)
-    * [DataNode Hot Swap Drive](#DataNode_Hot_Swap_Drive)
-    * [File Permissions and Security](#File_Permissions_and_Security)
-    * [Scalability](#Scalability)
-    * [Related Documentation](#Related_Documentation)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Purpose
 -------
@@ -278,7 +257,7 @@ During start up the NameNode loads the file system state from the fsimage and th
 fsck
 ----
 
-HDFS supports the fsck command to check for various inconsistencies. It it is designed for reporting problems with various files, for example, missing blocks for a file or under-replicated blocks. Unlike a traditional fsck utility for native file systems, this command does not correct the errors it detects. Normally NameNode automatically corrects most of the recoverable failures. By default fsck ignores open files but provides an option to select all files during reporting. The HDFS fsck command is not a Hadoop shell command. It can be run as `bin/hdfs fsck`. For command usage, see [fsck](./HDFSCommands.html#fsck). fsck can be run on the whole file system or on a subset of files.
+HDFS supports the fsck command to check for various inconsistencies. It is designed for reporting problems with various files, for example, missing blocks for a file or under-replicated blocks. Unlike a traditional fsck utility for native file systems, this command does not correct the errors it detects. Normally NameNode automatically corrects most of the recoverable failures. By default fsck ignores open files but provides an option to select all files during reporting. The HDFS fsck command is not a Hadoop shell command. It can be run as `bin/hdfs fsck`. For command usage, see [fsck](./HDFSCommands.html#fsck). fsck can be run on the whole file system or on a subset of files.
 
 fetchdt
 -------

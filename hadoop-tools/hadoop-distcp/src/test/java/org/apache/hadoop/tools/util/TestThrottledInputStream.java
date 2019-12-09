@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.tools.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -27,7 +27,7 @@ import org.junit.Test;
 import java.io.*;
 
 public class TestThrottledInputStream {
-  private static final Log LOG = LogFactory.getLog(TestThrottledInputStream.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestThrottledInputStream.class);
   private static final int BUFF_SIZE = 1024;
 
   private enum CB {ONE_C, BUFFER, BUFF_OFFSET}
@@ -89,7 +89,7 @@ public class TestThrottledInputStream {
         copyByteByByte(in, out);
       }
 
-      LOG.info(in);
+      LOG.info("{}", in);
       bandwidth = in.getBytesPerSec();
       Assert.assertEquals(in.getTotalBytesRead(), tmpFile.length());
       Assert.assertTrue(in.getBytesPerSec() > maxBandwidth / (factor * 1.2));

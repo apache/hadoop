@@ -18,17 +18,17 @@
 
 package org.apache.hadoop.io.erasurecode;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Erasure code native libraries (for now, Intel ISA-L) related utilities.
  */
 public final class ErasureCodeNative {
 
-  private static final Log LOG =
-      LogFactory.getLog(ErasureCodeNative.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ErasureCodeNative.class.getName());
 
   /**
    * The reason why ISA-L library is not available, or null if it is available.
@@ -46,9 +46,14 @@ public final class ErasureCodeNative {
         loadLibrary();
       } catch (Throwable t) {
         problem = "Loading ISA-L failed: " + t.getMessage();
-        LOG.error("Loading ISA-L failed", t);
+        LOG.warn(problem);
       }
       LOADING_FAILURE_REASON = problem;
+    }
+
+    if (LOADING_FAILURE_REASON != null) {
+      LOG.warn("ISA-L support is not available in your platform... " +
+              "using builtin-java codec where applicable");
     }
   }
 

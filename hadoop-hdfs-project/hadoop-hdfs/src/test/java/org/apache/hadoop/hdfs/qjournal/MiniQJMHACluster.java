@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hdfs.qjournal;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 
 import java.io.IOException;
@@ -38,7 +39,8 @@ public class MiniQJMHACluster {
   private MiniDFSCluster cluster;
   private MiniJournalCluster journalCluster;
   private final Configuration conf;
-  private static final Log LOG = LogFactory.getLog(MiniQJMHACluster.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MiniQJMHACluster.class);
 
   public static final String NAMESERVICE = "ns1";
   private static final Random RANDOM = new Random();
@@ -48,6 +50,8 @@ public class MiniQJMHACluster {
     private StartupOption startOpt = null;
     private int numNNs = 2;
     private final MiniDFSCluster.Builder dfsBuilder;
+    private boolean forceRemoteEditsOnly = false;
+    private String baseDir;
 
     public Builder(Configuration conf) {
       this.conf = conf;
@@ -68,8 +72,18 @@ public class MiniQJMHACluster {
       this.startOpt = startOpt;
     }
 
+    public Builder baseDir(String d) {
+      this.baseDir = d;
+      return this;
+    }
+
     public Builder setNumNameNodes(int nns) {
       this.numNNs = nns;
+      return this;
+    }
+
+    public Builder setForceRemoteEditsOnly(boolean val) {
+      this.forceRemoteEditsOnly = val;
       return this;
     }
   }
@@ -98,15 +112,16 @@ public class MiniQJMHACluster {
         basePort = 10000 + RANDOM.nextInt(1000) * 4;
         LOG.info("Set MiniQJMHACluster basePort to " + basePort);
         // start 3 journal nodes
-        journalCluster = new MiniJournalCluster.Builder(conf).format(true)
-            .build();
+        journalCluster = new MiniJournalCluster.Builder(conf)
+            .baseDir(builder.baseDir).format(true).build();
         journalCluster.waitActive();
+        journalCluster.setNamenodeSharedEditsConf(NAMESERVICE);
         URI journalURI = journalCluster.getQuorumJournalURI(NAMESERVICE);
 
         // start cluster with specified NameNodes
         MiniDFSNNTopology topology = createDefaultTopology(builder.numNNs, basePort);
 
-        initHAConf(journalURI, builder.conf, builder.numNNs, basePort);
+        initHAConf(journalURI, builder, basePort);
 
         // First start up the NNs just to format the namespace. The MinIDFSCluster
         // has no way to just format the NameNodes without also starting them.
@@ -138,21 +153,27 @@ public class MiniQJMHACluster {
     }
   }
 
-  private Configuration initHAConf(URI journalURI, Configuration conf,
-      int numNNs, int basePort) {
+  private Configuration initHAConf(URI journalURI, Builder builder,
+      int basePort) {
     conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
         journalURI.toString());
+    if (builder.forceRemoteEditsOnly) {
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, journalURI.toString());
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY,
+          journalURI.toString());
+    }
 
-    List<String> nns = new ArrayList<String>(numNNs);
+    List<String> nns = new ArrayList<>(builder.numNNs);
     int port = basePort;
-    for (int i = 0; i < numNNs; i++) {
+    for (int i = 0; i < builder.numNNs; i++) {
       nns.add("127.0.0.1:" + port);
       // increment by 2 each time to account for the http port in the config setting
       port += 2;
     }
 
     // use standard failover configurations
-    HATestUtil.setFailoverConfigurations(conf, NAMESERVICE, nns);
+    HATestUtil.setFailoverConfigurations(conf, NAMESERVICE, nns,
+        ConfiguredFailoverProxyProvider.class);
     return conf;
   }
 

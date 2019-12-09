@@ -24,15 +24,15 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -65,7 +65,7 @@ public class TasksBlock extends HtmlBlock {
             th("State").
             th("Start Time").
             th("Finish Time").
-            th("Elapsed Time")._()._().
+            th("Elapsed Time").__().__().
         tbody();
     StringBuilder tasksTableData = new StringBuilder("[\n");
 
@@ -103,8 +103,8 @@ public class TasksBlock extends HtmlBlock {
       .append(join(pct, '%')).append("'> ").append("<div class='")
       .append(C_PROGRESSBAR_VALUE).append("' style='")
       .append(join("width:", pct, '%')).append("'> </div> </div>\",\"")
-      .append(StringEscapeUtils.escapeJavaScript(
-              StringEscapeUtils.escapeHtml(info.getStatus()))).append("\",\"")
+      .append(StringEscapeUtils.escapeEcmaScript(
+              StringEscapeUtils.escapeHtml4(info.getStatus()))).append("\",\"")
 
       .append(info.getState()).append("\",\"")
       .append(info.getStartTime()).append("\",\"")
@@ -117,8 +117,8 @@ public class TasksBlock extends HtmlBlock {
     }
     tasksTableData.append("]");
     html.script().$type("text/javascript").
-    _("var tasksTableData=" + tasksTableData)._();
+        __("var tasksTableData=" + tasksTableData).__();
 
-    tbody._()._();
+    tbody.__().__();
   }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,8 +29,8 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.CreateFlag;
@@ -64,6 +65,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
+import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -101,7 +104,8 @@ import org.apache.log4j.LogManager;
  * documentation accordingly.
  */
 public class NNThroughputBenchmark implements Tool {
-  private static final Log LOG = LogFactory.getLog(NNThroughputBenchmark.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NNThroughputBenchmark.class);
   private static final int BLOCK_SIZE = 16;
   private static final String GENERAL_OPTIONS_USAGE =
       "[-keepResults] | [-logLevel L] | [-UGCacheRefreshCount G]";
@@ -143,7 +147,7 @@ public class NNThroughputBenchmark implements Tool {
   }
 
   static void setNameNodeLoggingLevel(Level logLevel) {
-    LOG.fatal("Log level = " + logLevel.toString());
+    LOG.error("Log level = " + logLevel.toString());
     // change log level to NameNode logs
     DFSTestUtil.setNameNodeLogLevel(logLevel);
     GenericTestUtils.setLogLevel(LogManager.getLogger(
@@ -284,6 +288,11 @@ public class NNThroughputBenchmark implements Tool {
           false);
       if(!keepResults)
         clientProto.delete(getBaseDir(), true);
+      else {
+        clientProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER,
+            true);
+        clientProto.saveNamespace(0, 0);
+      }
     }
 
     int getNumOpsExecuted() {
@@ -585,14 +594,16 @@ public class NNThroughputBenchmark implements Tool {
     throws IOException {
       long start = Time.now();
       // dummyActionNoSynch(fileIdx);
-      clientProto.create(fileNames[daemonId][inputIdx], FsPermission.getDefault(),
-                      clientName, new EnumSetWritable<CreateFlag>(EnumSet
-              .of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, 
-          replication, BLOCK_SIZE, CryptoProtocolVersion.supported());
+      clientProto.create(fileNames[daemonId][inputIdx],
+          FsPermission.getDefault(), clientName,
+          new EnumSetWritable<CreateFlag>(EnumSet
+              .of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true,
+          replication, BLOCK_SIZE, CryptoProtocolVersion.supported(), null);
       long end = Time.now();
-      for(boolean written = !closeUponCreate; !written; 
+      for (boolean written = !closeUponCreate; !written;
         written = clientProto.complete(fileNames[daemonId][inputIdx],
-                                    clientName, null, HdfsConstants.GRANDFATHER_INODE_ID));
+            clientName, null, HdfsConstants.GRANDFATHER_INODE_ID)) {
+      };
       return end-start;
     }
 
@@ -951,7 +962,9 @@ public class NNThroughputBenchmark implements Tool {
       StorageReport[] rep = { new StorageReport(storage, false,
           DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED, 0L) };
       DatanodeCommand[] cmds = dataNodeProto.sendHeartbeat(dnRegistration, rep,
-          0L, 0L, 0, 0, 0, null, true).getCommands();
+          0L, 0L, 0, 0, 0, null, true,
+          SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT)
+          .getCommands();
       if(cmds != null) {
         for (DatanodeCommand cmd : cmds ) {
           if(LOG.isDebugEnabled()) {
@@ -1000,7 +1013,9 @@ public class NNThroughputBenchmark implements Tool {
       StorageReport[] rep = { new StorageReport(storage,
           false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED, 0) };
       DatanodeCommand[] cmds = dataNodeProto.sendHeartbeat(dnRegistration,
-          rep, 0L, 0L, 0, 0, 0, null, true).getCommands();
+          rep, 0L, 0L, 0, 0, 0, null, true,
+          SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT)
+          .getCommands();
       if (cmds != null) {
         for (DatanodeCommand cmd : cmds) {
           if (cmd.getAction() == DatanodeProtocol.DNA_TRANSFER) {
@@ -1133,7 +1148,7 @@ public class NNThroughputBenchmark implements Tool {
         String fileName = nameGenerator.getNextFileName("ThroughputBench");
         clientProto.create(fileName, FsPermission.getDefault(), clientName,
             new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication,
-            BLOCK_SIZE, CryptoProtocolVersion.supported());
+            BLOCK_SIZE, CryptoProtocolVersion.supported(), null);
         ExtendedBlock lastBlock = addBlocks(fileName, clientName);
         clientProto.complete(fileName, clientName, lastBlock, HdfsConstants.GRANDFATHER_INODE_ID);
       }
@@ -1510,10 +1525,11 @@ public class NNThroughputBenchmark implements Tool {
         nameNodeProto = DFSTestUtil.getNamenodeProtocolProxy(config, nnUri,
             UserGroupInformation.getCurrentUser());
         clientProto = dfs.getClient().getNamenode();
+        InetSocketAddress nnAddr = DFSUtilClient.getNNAddress(nnUri);
         dataNodeProto = new DatanodeProtocolClientSideTranslatorPB(
-            DFSUtilClient.getNNAddress(nnUri), config);
+            nnAddr, config);
         refreshUserMappingsProto =
-            DFSTestUtil.getRefreshUserMappingsProtocolProxy(config, nnUri);
+            DFSTestUtil.getRefreshUserMappingsProtocolProxy(config, nnAddr);
         getBlockPoolId(dfs);
       }
       // run each benchmark

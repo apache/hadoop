@@ -36,8 +36,8 @@ import org.apache.hadoop.yarn.server.utils.Lock;
  * An active user is defined as someone with outstanding resource requests.
  */
 @Private
-public class ActiveUsersManager {
-  
+public class ActiveUsersManager implements AbstractUsersManager {
+
   private static final Log LOG = LogFactory.getLog(ActiveUsersManager.class);
   
   private final QueueMetrics metrics;
@@ -45,7 +45,7 @@ public class ActiveUsersManager {
   private int activeUsers = 0;
   private Map<String, Set<ApplicationId>> usersApplications = 
       new HashMap<String, Set<ApplicationId>>();
-  
+
   public ActiveUsersManager(QueueMetrics metrics) {
     this.metrics = metrics;
   }
@@ -57,6 +57,7 @@ public class ActiveUsersManager {
    * @param applicationId activated application
    */
   @Lock({Queue.class, SchedulerApplicationAttempt.class})
+  @Override
   synchronized public void activateApplication(
       String user, ApplicationId applicationId) {
     Set<ApplicationId> userApps = usersApplications.get(user);
@@ -65,8 +66,10 @@ public class ActiveUsersManager {
       usersApplications.put(user, userApps);
       ++activeUsers;
       metrics.incrActiveUsers();
-      LOG.debug("User " + user + " added to activeUsers, currently: " + 
-          activeUsers);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("User " + user + " added to activeUsers, currently: "
+            + activeUsers);
+      }
     }
     if (userApps.add(applicationId)) {
       metrics.activateApp(user);
@@ -80,6 +83,7 @@ public class ActiveUsersManager {
    * @param applicationId deactivated application
    */
   @Lock({Queue.class, SchedulerApplicationAttempt.class})
+  @Override
   synchronized public void deactivateApplication(
       String user, ApplicationId applicationId) {
     Set<ApplicationId> userApps = usersApplications.get(user);
@@ -91,18 +95,21 @@ public class ActiveUsersManager {
         usersApplications.remove(user);
         --activeUsers;
         metrics.decrActiveUsers();
-        LOG.debug("User " + user + " removed from activeUsers, currently: " + 
-            activeUsers);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("User " + user + " removed from activeUsers, currently: "
+              + activeUsers);
+        }
       }
     }
   }
-  
+
   /**
    * Get number of active users i.e. users with applications which have pending
    * resource requests.
    * @return number of active users
    */
   @Lock({Queue.class, SchedulerApplicationAttempt.class})
+  @Override
   synchronized public int getNumActiveUsers() {
     return activeUsers;
   }

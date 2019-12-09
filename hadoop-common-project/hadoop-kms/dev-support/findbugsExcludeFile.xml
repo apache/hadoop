@@ -39,7 +39,7 @@
     <Bug pattern="DM_EXIT"/>
   </Match>
   <!--
-    KMS wants to log the exception before it's thrown to tomcat and disappear.
+    KMS wants to log the exception before it's thrown to Jetty and disappear.
   -->
   <Match>
     <Class name="org.apache.hadoop.crypto.key.kms.server.KMS"/>

@@ -18,27 +18,43 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.server.MockResourceManagerFacade;
+import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AMRMProxyService.RequestInterceptorChainWrapper;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredAMRMProxyState;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class TestAMRMProxyService extends BaseAMRMProxyTest {
 
-  private static final Log LOG = LogFactory
-      .getLog(TestAMRMProxyService.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TestAMRMProxyService.class);
+
+  private static MockResourceManagerFacade mockRM;
 
   /**
    * Test if the pipeline is created properly.
@@ -87,6 +103,34 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
         registerApplicationMaster(testAppId);
     Assert.assertNotNull(response1);
     Assert.assertEquals(Integer.toString(testAppId), response1.getQueue());
+  }
+
+  /**
+   * Tests the case when interceptor pipeline initialization fails.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testInterceptorInitFailure() throws IOException {
+    Configuration conf = this.getConf();
+    // Override with a bad interceptor configuration
+    conf.set(YarnConfiguration.AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE,
+        "class.that.does.not.exist");
+
+    // Reinitialize instance with the new config
+    createAndStartAMRMProxyService(conf);
+    int testAppId = 1;
+    try {
+      registerApplicationMaster(testAppId);
+      Assert.fail("Should not reach here. Expecting an exception thrown");
+    } catch (Exception e) {
+      Map<ApplicationId, RequestInterceptorChainWrapper> pipelines =
+          getAMRMProxyService().getPipelines();
+      ApplicationId id = getApplicationId(testAppId);
+      Assert.assertTrue(
+          "The interceptor pipeline should be removed if initializtion fails",
+          pipelines.get(id) == null);
+    }
   }
 
   /**
@@ -380,6 +424,37 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     }
   }
 
+  @Test
+  public void testMultipleAttemptsSameNode()
+      throws YarnException, IOException, Exception {
+
+    String user = "hadoop";
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
+    ApplicationAttemptId applicationAttemptId;
+
+    // First Attempt
+
+    RegisterApplicationMasterResponse response1 =
+        registerApplicationMaster(appId.getId());
+    Assert.assertNotNull(response1);
+
+    AllocateResponse allocateResponse = allocate(appId.getId());
+    Assert.assertNotNull(allocateResponse);
+
+    // Second Attempt
+
+    applicationAttemptId = ApplicationAttemptId.newInstance(appId, 2);
+    getAMRMProxyService().initializePipeline(applicationAttemptId, user,
+        new Token<AMRMTokenIdentifier>(), null, null, false, null);
+
+    RequestInterceptorChainWrapper chain2 =
+        getAMRMProxyService().getPipelines().get(appId);
+    Assert.assertEquals(applicationAttemptId, chain2.getApplicationAttemptId());
+
+    allocateResponse = allocate(appId.getId());
+    Assert.assertNotNull(allocateResponse);
+  }
+
   private List<Container> getContainersAndAssert(int appId,
       int numberOfResourceRequests) throws Exception {
     AllocateRequest allocateRequest =
@@ -401,6 +476,9 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     AllocateResponse allocateResponse = allocate(appId, allocateRequest);
     Assert.assertNotNull("allocate() returned null response",
         allocateResponse);
+    Assert.assertNull(
+        "new AMRMToken from RM should have been nulled by AMRMProxyService",
+        allocateResponse.getAMRMToken());
 
     containers.addAll(allocateResponse.getAllocatedContainers());
 
@@ -412,6 +490,9 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
           allocate(appId, Records.newRecord(AllocateRequest.class));
       Assert.assertNotNull("allocate() returned null response",
           allocateResponse);
+      Assert.assertNull(
+          "new AMRMToken from RM should have been nulled by AMRMProxyService",
+          allocateResponse.getAMRMToken());
 
       containers.addAll(allocateResponse.getAllocatedContainers());
 
@@ -447,17 +528,18 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
 
     AllocateResponse allocateResponse = allocate(appId, allocateRequest);
     Assert.assertNotNull(allocateResponse);
+    Assert.assertNull(
+        "new AMRMToken from RM should have been nulled by AMRMProxyService",
+        allocateResponse.getAMRMToken());
 
-    // The way the mock resource manager is setup, it will return the containers
-    // that were released in the response. This is done because the UAMs run
-    // asynchronously and we need to if all the resource managers received the
-    // release it. The containers sent by the mock resource managers will be
+    // We need to make sure all the resource managers received the
+    // release list. The containers sent by the mock resource managers will be
     // aggregated and returned back to us and we can assert if all the release
     // lists reached the sub-clusters
-    List<Container> containersForReleasedContainerIds =
-        new ArrayList<Container>();
-    containersForReleasedContainerIds.addAll(allocateResponse
-        .getAllocatedContainers());
+    List<ContainerId> containersForReleasedContainerIds = new ArrayList<>();
+    List<ContainerId> newlyFinished = getCompletedContainerIds(
+        allocateResponse.getCompletedContainersStatuses());
+    containersForReleasedContainerIds.addAll(newlyFinished);
 
     // Send max 10 heart beats to receive all the containers. If not, we will
     // fail the test
@@ -467,8 +549,13 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
       allocateResponse =
           allocate(appId, Records.newRecord(AllocateRequest.class));
       Assert.assertNotNull(allocateResponse);
-      containersForReleasedContainerIds.addAll(allocateResponse
-          .getAllocatedContainers());
+      Assert.assertNull(
+          "new AMRMToken from RM should have been nulled by AMRMProxyService",
+          allocateResponse.getAMRMToken());
+
+      newlyFinished = getCompletedContainerIds(
+          allocateResponse.getCompletedContainersStatuses());
+      containersForReleasedContainerIds.addAll(newlyFinished);
 
       LOG.info("Number of containers received in this request: "
           + Integer.toString(allocateResponse.getAllocatedContainers()
@@ -481,4 +568,150 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     Assert.assertEquals(relList.size(),
         containersForReleasedContainerIds.size());
   }
+
+  /**
+   * Test AMRMProxy restart with recovery.
+   */
+  @Test
+  public void testRecovery() throws YarnException, Exception {
+
+    Configuration conf = createConfiguration();
+    // Use the MockRequestInterceptorAcrossRestart instead for the chain
+    conf.set(YarnConfiguration.AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE,
+        MockRequestInterceptorAcrossRestart.class.getName());
+
+    mockRM = new MockResourceManagerFacade(new YarnConfiguration(conf), 0);
+
+    createAndStartAMRMProxyService(conf);
+
+    int testAppId1 = 1;
+    RegisterApplicationMasterResponse registerResponse =
+        registerApplicationMaster(testAppId1);
+    Assert.assertNotNull(registerResponse);
+    Assert.assertEquals(Integer.toString(testAppId1),
+        registerResponse.getQueue());
+
+    int testAppId2 = 2;
+    registerResponse = registerApplicationMaster(testAppId2);
+    Assert.assertNotNull(registerResponse);
+    Assert.assertEquals(Integer.toString(testAppId2),
+        registerResponse.getQueue());
+
+    AllocateResponse allocateResponse = allocate(testAppId2);
+    Assert.assertNotNull(allocateResponse);
+
+    // At the time of kill, app1 just registerAM, app2 already did one allocate.
+    // Both application should be recovered
+    createAndStartAMRMProxyService(conf);
+    Assert.assertTrue(getAMRMProxyService().getPipelines().size() == 2);
+
+    allocateResponse = allocate(testAppId1);
+    Assert.assertNotNull(allocateResponse);
+
+    FinishApplicationMasterResponse finshResponse =
+        finishApplicationMaster(testAppId1, FinalApplicationStatus.SUCCEEDED);
+    Assert.assertNotNull(finshResponse);
+    Assert.assertEquals(true, finshResponse.getIsUnregistered());
+
+    allocateResponse = allocate(testAppId2);
+    Assert.assertNotNull(allocateResponse);
+
+    finshResponse =
+        finishApplicationMaster(testAppId2, FinalApplicationStatus.SUCCEEDED);
+
+    Assert.assertNotNull(finshResponse);
+    Assert.assertEquals(true, finshResponse.getIsUnregistered());
+
+    int testAppId3 = 3;
+    try {
+      // Try to finish an application master that is not registered.
+      finishApplicationMaster(testAppId3, FinalApplicationStatus.SUCCEEDED);
+      Assert
+          .fail("The Mock RM should complain about not knowing the third app");
+    } catch (Throwable ex) {
+    }
+
+    mockRM = null;
+  }
+
+  /**
+   * Test AMRMProxy restart with application recovery failure.
+   */
+  @Test
+  public void testAppRecoveryFailure() throws YarnException, Exception {
+    Configuration conf = createConfiguration();
+    // Use the MockRequestInterceptorAcrossRestart instead for the chain
+    conf.set(YarnConfiguration.AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE,
+        BadRequestInterceptorAcrossRestart.class.getName());
+
+    mockRM = new MockResourceManagerFacade(new YarnConfiguration(conf), 0);
+
+    createAndStartAMRMProxyService(conf);
+
+    // Create an app entry in NMSS
+    registerApplicationMaster(1);
+
+    RecoveredAMRMProxyState state =
+        getNMContext().getNMStateStore().loadAMRMProxyState();
+    Assert.assertEquals(1, state.getAppContexts().size());
+
+    // AMRMProxy restarts and recover
+    createAndStartAMRMProxyService(conf);
+
+    state = getNMContext().getNMStateStore().loadAMRMProxyState();
+    // The app that failed to recover should have been removed from NMSS
+    Assert.assertEquals(0, state.getAppContexts().size());
+  }
+
+  /**
+   * A mock intercepter implementation that uses the same mockRM instance across
+   * restart.
+   */
+  public static class MockRequestInterceptorAcrossRestart
+      extends AbstractRequestInterceptor {
+
+    public MockRequestInterceptorAcrossRestart() {
+    }
+
+    @Override
+    public void init(AMRMProxyApplicationContext appContext) {
+      super.init(appContext);
+      if (mockRM == null) {
+        throw new RuntimeException("mockRM not initialized yet");
+      }
+    }
+
+    @Override
+    public RegisterApplicationMasterResponse registerApplicationMaster(
+        RegisterApplicationMasterRequest request)
+        throws YarnException, IOException {
+      return mockRM.registerApplicationMaster(request);
+    }
+
+    @Override
+    public FinishApplicationMasterResponse finishApplicationMaster(
+        FinishApplicationMasterRequest request)
+        throws YarnException, IOException {
+      return mockRM.finishApplicationMaster(request);
+    }
+
+    @Override
+    public AllocateResponse allocate(AllocateRequest request)
+        throws YarnException, IOException {
+      return mockRM.allocate(request);
+    }
+  }
+
+  /**
+   * A mock intercepter implementation that throws when recovering.
+   */
+  public static class BadRequestInterceptorAcrossRestart
+      extends MockRequestInterceptorAcrossRestart {
+
+    @Override
+    public void recover(Map<String, byte[]> recoveredDataMap) {
+      throw new RuntimeException("Kaboom");
+    }
+  }
+
 }

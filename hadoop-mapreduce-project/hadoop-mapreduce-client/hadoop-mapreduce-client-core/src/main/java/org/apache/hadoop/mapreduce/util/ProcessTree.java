@@ -21,13 +21,12 @@ package org.apache.hadoop.mapreduce.util;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** 
  * Process tree related operations
@@ -36,7 +35,7 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 @InterfaceStability.Unstable
 public class ProcessTree {
 
-  private static final Log LOG = LogFactory.getLog(ProcessTree.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProcessTree.class);
 
   public static final long DEFAULT_SLEEPTIME_BEFORE_SIGKILL = 5000L;
 

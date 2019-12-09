@@ -65,6 +65,7 @@ import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.TestINodeFile;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
@@ -950,24 +951,31 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     List<DatanodeStorageInfo> replicaList = new ArrayList<>();
     final Map<String, List<DatanodeStorageInfo>> rackMap
         = new HashMap<String, List<DatanodeStorageInfo>>();
-    
-    dataNodes[0].setRemaining(4*1024*1024);
+
+    storages[0].setRemainingForTests(4*1024*1024);
+    dataNodes[0].setRemaining(calculateRemaining(dataNodes[0]));
     replicaList.add(storages[0]);
-    
-    dataNodes[1].setRemaining(3*1024*1024);
+
+    storages[1].setRemainingForTests(3*1024*1024);
+    dataNodes[1].setRemaining(calculateRemaining(dataNodes[1]));
     replicaList.add(storages[1]);
-    
-    dataNodes[2].setRemaining(2*1024*1024);
+
+    storages[2].setRemainingForTests(2*1024*1024);
+    dataNodes[2].setRemaining(calculateRemaining(dataNodes[2]));
     replicaList.add(storages[2]);
-    
-    dataNodes[5].setRemaining(1*1024*1024);
+
+    //Even if this node has the most space, because the storage[5] has
+    //the lowest it should be chosen in case of block delete.
+    storages[4].setRemainingForTests(100 * 1024 * 1024);
+    storages[5].setRemainingForTests(512 * 1024);
+    dataNodes[5].setRemaining(calculateRemaining(dataNodes[5]));
     replicaList.add(storages[5]);
-    
+
     // Refresh the last update time for all the datanodes
     for (int i = 0; i < dataNodes.length; i++) {
       DFSTestUtil.resetLastUpdatesWithOffset(dataNodes[i], 0);
     }
-    
+
     List<DatanodeStorageInfo> first = new ArrayList<>();
     List<DatanodeStorageInfo> second = new ArrayList<>();
     replicator.splitNodesWithRack(replicaList, replicaList, rackMap, first,
@@ -997,6 +1005,14 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     chosen = ((BlockPlacementPolicyDefault) replicator).chooseReplicaToDelete(
         first, second, excessTypes, rackMap);
     assertEquals(chosen, storages[1]);
+  }
+
+  private long calculateRemaining(DatanodeDescriptor dataNode) {
+    long sum = 0;
+    for (DatanodeStorageInfo storageInfo: dataNode.getStorageInfos()){
+      sum += storageInfo.getRemaining();
+    }
+    return sum;
   }
 
   @Test
@@ -1543,5 +1559,32 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
       }
     }
     assertTrue(found);
+  }
+
+  @Test
+  public void testMaxLoad() {
+    FSClusterStats statistics = mock(FSClusterStats.class);
+    DatanodeDescriptor node = mock(DatanodeDescriptor.class);
+
+    when(statistics.getInServiceXceiverAverage()).thenReturn(0.0);
+    when(node.getXceiverCount()).thenReturn(1);
+
+    final Configuration conf = new Configuration();
+    final Class<? extends BlockPlacementPolicy> replicatorClass = conf
+        .getClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+            DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_DEFAULT,
+            BlockPlacementPolicy.class);
+    BlockPlacementPolicy bpp = ReflectionUtils.
+        newInstance(replicatorClass, conf);
+    assertTrue(bpp instanceof  BlockPlacementPolicyDefault);
+
+    BlockPlacementPolicyDefault bppd = (BlockPlacementPolicyDefault) bpp;
+    bppd.initialize(conf, statistics, null, null);
+    assertFalse(bppd.excludeNodeByLoad(node));
+
+    when(statistics.getInServiceXceiverAverage()).thenReturn(1.0);
+    when(node.getXceiverCount()).thenReturn(10);
+    assertTrue(bppd.excludeNodeByLoad(node));
+
   }
 }

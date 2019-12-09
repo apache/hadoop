@@ -54,8 +54,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.hdfs.server.common.Storage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FileSystem;
@@ -64,13 +67,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSInotifyEventInputStream;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -130,7 +136,7 @@ public class TestEditLog {
 
   /**
    * A garbage mkdir op which is used for testing
-   * {@link EditLogFileInputStream#scanEditLog(File)}
+   * {@link EditLogFileInputStream#scanEditLog(File, long, boolean)}
    */
   public static class GarbageMkdirOp extends FSEditLogOp {
     public GarbageMkdirOp() {
@@ -168,7 +174,7 @@ public class TestEditLog {
     }
   }
 
-  static final Log LOG = LogFactory.getLog(TestEditLog.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestEditLog.class);
   
   static final int NUM_DATA_NODES = 0;
 
@@ -288,7 +294,8 @@ public class TestEditLog {
       long numEdits = testLoad(HADOOP20_SOME_EDITS, namesystem);
       assertEquals(3, numEdits);
       // Sanity check the edit
-      HdfsFileStatus fileInfo = namesystem.getFileInfo("/myfile", false);
+      HdfsFileStatus fileInfo =
+          namesystem.getFileInfo("/myfile", false, false, false);
       assertEquals("supergroup", fileInfo.getGroup());
       assertEquals(3, fileInfo.getReplication());
     } finally {
@@ -299,6 +306,87 @@ public class TestEditLog {
   private long testLoad(byte[] data, FSNamesystem namesys) throws IOException {
     FSEditLogLoader loader = new FSEditLogLoader(namesys, 0);
     return loader.loadFSEdits(new EditLogByteInputStream(data), 1);
+  }
+
+  @Test
+  public void testMultiStreamsLoadEditWithConfMaxTxns()
+          throws IOException {
+    Configuration conf = getConf();
+    MiniDFSCluster cluster = null;
+    FileSystem fileSystem = null;
+    FSImage writeFsImage = null;
+    try {
+      cluster = new MiniDFSCluster
+              .Builder(conf)
+              .numDataNodes(NUM_DATA_NODES)
+              .build();
+      cluster.waitActive();
+      fileSystem = cluster.getFileSystem();
+      final FSNamesystem namesystem = cluster.getNamesystem();
+      writeFsImage = namesystem.getFSImage();
+      for (Iterator<URI> it = cluster.getNameDirs(0)
+              .iterator(); it.hasNext();) {
+        File dir = new File(it.next().getPath());
+        System.out.println(dir);
+      }
+      // Roll log so new output buffer size takes effect
+      // we should now be writing to edits_inprogress_3
+      long originalLastInodeId = namesystem.dir.getLastInodeId();
+      // Reopen some files as for append
+      Transactions trans = new Transactions(
+              namesystem, NUM_TRANSACTIONS, NUM_TRANSACTIONS / 2);
+      trans.run();
+      // Roll another time to finalize edits_inprogress_3
+      writeFsImage.rollEditLog(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+      Transactions trans1 = new Transactions(
+              namesystem, NUM_TRANSACTIONS, NUM_TRANSACTIONS / 2);
+      trans1.run();
+      writeFsImage.rollEditLog(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+      namesystem.dir.resetLastInodeIdWithoutChecking(originalLastInodeId);
+      for(Iterator<StorageDirectory> it = writeFsImage.getStorage().
+              dirIterator(NameNodeDirType.EDITS); it.hasNext();){
+        long expectedTxns = (2 * NUM_TRANSACTIONS) + 2;
+        File editFile = NNStorage.getFinalizedEditsFile(it.next(),
+                1, expectedTxns);
+        File editFile1 = NNStorage.getFinalizedEditsFile(it.next(),
+                203, 404);
+        assertTrue("Expect " + editFile + " exists", editFile.exists());
+        assertTrue("Expect " + editFile1 + " exists", editFile1.exists());
+        EditLogFileInputStream editLogFileInputStream1 =
+                new EditLogFileInputStream(editFile, 1, 202, false);
+        EditLogFileInputStream editLogFileInputStream2 =
+                new EditLogFileInputStream(editFile1, 203, 404, false);
+        List<EditLogInputStream> editStreams = Lists.newArrayList();
+        editStreams.add(editLogFileInputStream1);
+        editStreams.add(editLogFileInputStream2);
+        FSImage readFsImage = new FSImage(conf);
+        try {
+          readFsImage.loadEdits(editStreams, namesystem, 100, null, null);
+        } catch (Exception e){
+          LOG.error("There appears to be an out-of-order edit in the edit log",
+              e);
+          fail("no exception should be thrown");
+        } finally {
+          if (readFsImage != null) {
+            readFsImage.close();
+          }
+        }
+      }
+    } finally {
+      try {
+        if(fileSystem != null) {
+          fileSystem.close();
+        }
+        if(cluster != null) {
+          cluster.shutdown();
+        }
+        if(writeFsImage != null){
+          writeFsImage.close();
+        }
+      } catch (Throwable t) {
+        LOG.error("Couldn't shut down cleanly", t);
+      }
+    }
   }
 
   /**
@@ -1141,7 +1229,7 @@ public class TestEditLog {
     /**
      * Construct the failure specification. 
      * @param roll number to fail after. e.g. 1 to fail after the first roll
-     * @param loginfo index of journal to fail. 
+     * @param logindex index of journal to fail.
      */
     AbortSpec(int roll, int logindex) {
       this.roll = roll;
@@ -1170,6 +1258,17 @@ public class TestEditLog {
                                       Collections.<URI>emptyList(),
                                       editUris);
     storage.format(new NamespaceInfo());
+    // Verify permissions
+    LocalFileSystem fs = LocalFileSystem.getLocal(getConf());
+    for (URI uri : editUris) {
+      String currDir = uri.getPath() + Path.SEPARATOR +
+          Storage.STORAGE_DIR_CURRENT;
+      FileStatus fileStatus = fs.getFileLinkStatus(new Path(currDir));
+      FsPermission permission = fileStatus.getPermission();
+      assertEquals(getConf().getInt(
+          DFSConfigKeys.DFS_JOURNAL_EDITS_DIR_PERMISSION_KEY, 700),
+          permission.toOctal());
+    }
     FSEditLog editlog = getFSEditLog(storage);    
     // open the edit log and add two transactions
     // logGenerationStamp is used, simply because it doesn't 
@@ -1595,7 +1694,7 @@ public class TestEditLog {
       fileSys.create(file2).close();
 
       // Restart and assert the above stated expectations.
-      IOUtils.cleanup(LOG, fileSys);
+      IOUtils.cleanupWithLogger(LOG, fileSys);
       cluster.restartNameNode();
       fileSys = cluster.getFileSystem();
       assertFalse(fileSys.getAclStatus(dir1).getEntries().isEmpty());
@@ -1604,7 +1703,7 @@ public class TestEditLog {
       assertTrue(fileSys.getAclStatus(dir3).getEntries().isEmpty());
       assertTrue(fileSys.getAclStatus(file2).getEntries().isEmpty());
     } finally {
-      IOUtils.cleanup(LOG, fileSys);
+      IOUtils.cleanupWithLogger(LOG, fileSys);
       if (cluster != null) {
         cluster.shutdown();
       }
@@ -1704,5 +1803,78 @@ public class TestEditLog {
       }
       LogManager.getRootLogger().removeAppender(appender);
     }
+  }
+
+  /**
+   * Test edits can be writen and read without ErasureCoding supported.
+   */
+  @Test
+  public void testEditLogWithoutErasureCodingSupported()
+      throws IOException {
+    Configuration conf = getConf();
+    MiniDFSCluster cluster = null;
+
+    // ERASURECODING not supported
+    int logVersion = -61;
+    assertFalse(NameNodeLayoutVersion.supports(
+        NameNodeLayoutVersion.Feature.ERASURE_CODING, logVersion));
+
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
+
+    final FSNamesystem namesystem = cluster.getNamesystem();
+    FSImage fsimage = namesystem.getFSImage();
+    FileSystem fileSys = cluster.getFileSystem();
+    final FSEditLog editLog = fsimage.getEditLog();
+    editLog.editLogStream.setCurrentLogVersion(logVersion);
+    // Write new version edit log
+    long txid = editLog.rollEditLog(logVersion);
+
+    String testDir = "/test";
+    String testFile = "testfile_001";
+    String testFilePath = testDir + "/" + testFile;
+
+    fileSys.mkdirs(new Path(testDir), new FsPermission("755"));
+
+    // Create a file
+    Path p = new Path(testFilePath);
+    DFSTestUtil.createFile(fileSys, p, 0, (short) 1, 1);
+
+    long blkId = 1;
+    long blkNumBytes = 1024;
+    long timestamp = 1426222918;
+    // Add a block to the file
+    BlockInfoContiguous blockInfo =
+        new BlockInfoContiguous(
+            new Block(blkId, blkNumBytes, timestamp),
+            (short)1);
+    INodeFile file
+        = (INodeFile)namesystem.getFSDirectory().getINode(testFilePath);
+    file.addBlock(blockInfo);
+    file.toUnderConstruction("testClient", "testMachine");
+
+    // Write edit log
+    editLog.logAddBlock(testFilePath, file);
+    editLog.rollEditLog(logVersion);
+
+    // Read edit log
+    Collection<EditLogInputStream> editStreams
+        = editLog.selectInputStreams(txid, txid + 1);
+    EditLogInputStream inputStream = null;
+    for (EditLogInputStream s : editStreams) {
+      if (s.getFirstTxId() == txid) {
+        inputStream = s;
+        break;
+      }
+    }
+    assertNotNull(inputStream);
+    int readLogVersion = inputStream.getVersion(false);
+    assertEquals(logVersion, readLogVersion);
+    FSEditLogLoader loader = new FSEditLogLoader(namesystem, 0);
+    long records = loader.loadFSEdits(inputStream, txid);
+    assertTrue(records > 0);
+
+    editLog.close();
+    cluster.shutdown();
   }
 }

@@ -208,4 +208,24 @@ public class UnparsedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
     throw new UnsupportedOperationException(
         "Can't set job's priority in history");
   }
+
+  @Override
+  public int getFailedMaps() {
+    return -1;
+  }
+
+  @Override
+  public int getFailedReduces() {
+    return -1;
+  }
+
+  @Override
+  public int getKilledMaps() {
+    return -1;
+  }
+
+  @Override
+  public int getKilledReduces() {
+    return -1;
+  }
 }

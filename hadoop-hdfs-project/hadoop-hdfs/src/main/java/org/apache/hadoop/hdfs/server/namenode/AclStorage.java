@@ -281,7 +281,8 @@ public final class AclStorage {
       // Only directories may have a default ACL.
       if (!defaultEntries.isEmpty() && !inode.isDirectory()) {
         throw new AclException(
-          "Invalid ACL: only directories may have a default ACL.");
+          "Invalid ACL: only directories may have a default ACL. "
+            + "Path: " + inode.getFullPathName());
       }
 
       // Attach entries to the feature.

@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.timeline;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -34,10 +32,11 @@ import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.Options;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -58,8 +57,8 @@ import java.util.Map;
 @Private
 @Unstable
 public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
-  private static final Log LOG
-      = LogFactory.getLog(LevelDBCacheTimelineStore.class);
+  private static final Logger LOG
+      = LoggerFactory.getLogger(LevelDBCacheTimelineStore.class);
   private static final String CACHED_LDB_FILE_PREFIX = "-timeline-cache.ldb";
   private String dbId;
   private DB entityDb;
@@ -102,7 +101,7 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
         localFS.setPermission(dbPath, LeveldbUtils.LEVELDB_DIR_UMASK);
       }
     } finally {
-      IOUtils.cleanup(LOG, localFS);
+      IOUtils.cleanupWithLogger(LOG, localFS);
     }
     LOG.info("Using leveldb path " + dbPath);
     entityDb = factory.open(new File(dbPath.toString()), options);
@@ -113,7 +112,7 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
 
   @Override
   protected synchronized void serviceStop() throws Exception {
-    IOUtils.cleanup(LOG, entityDb);
+    IOUtils.cleanupWithLogger(LOG, entityDb);
     Path dbPath = new Path(
         configuration.get(YarnConfiguration.TIMELINE_SERVICE_LEVELDB_PATH),
         dbId + CACHED_LDB_FILE_PREFIX);
@@ -125,7 +124,7 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
               "timeline store " + dbPath);
       }
     } finally {
-      IOUtils.cleanup(LOG, localFS);
+      IOUtils.cleanupWithLogger(LOG, localFS);
     }
     super.serviceStop();
   }
@@ -211,18 +210,18 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
     }
 
     @Override
-    public Iterator<V> valueSetIterator() {
+    public CloseableIterator<V> valueSetIterator() {
       return getIterator(null, Long.MAX_VALUE);
     }
 
     @Override
-    public Iterator<V> valueSetIterator(V minV) {
+    public CloseableIterator<V> valueSetIterator(V minV) {
       return getIterator(
           new EntityIdentifier(minV.getEntityId(), minV.getEntityType()),
           minV.getStartTime());
     }
 
-    private Iterator<V> getIterator(
+    private CloseableIterator<V> getIterator(
         EntityIdentifier startId, long startTimeMax) {
 
       final DBIterator internalDbIterator = entityDb.iterator();
@@ -247,7 +246,7 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
           = entityPrefixKeyBuilder.getBytesForLookup();
       internalDbIterator.seek(startPrefixBytes);
 
-      return new Iterator<V>() {
+      return new CloseableIterator<V>() {
         @Override
         public boolean hasNext() {
           if (!internalDbIterator.hasNext()) {
@@ -284,8 +283,14 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
           LOG.error("LevelDB map adapter does not support iterate-and-remove"
               + " use cases. ");
         }
+
+        @Override
+        public void close() throws IOException {
+          internalDbIterator.close();
+        }
       };
     }
+    static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @SuppressWarnings("unchecked")
     private V getEntityForKey(byte[] key) throws IOException {
@@ -293,8 +298,7 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
       if (resultRaw == null) {
         return null;
       }
-      ObjectMapper entityMapper = new ObjectMapper();
-      return (V) entityMapper.readValue(resultRaw, TimelineEntity.class);
+      return (V) OBJECT_MAPPER.readValue(resultRaw, TimelineEntity.class);
     }
 
     private byte[] getStartTimeKey(K entityId) {

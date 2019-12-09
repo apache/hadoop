@@ -37,14 +37,14 @@ export default DS.RESTAdapter.extend({
     return this.get(`env.app.namespaces.node`);
   }),
 
-  urlForFindRecord(id, modelName, snapshot) {
+  urlForFindRecord(id/*, modelName, snapshot*/) {
     var splits = Converter.splitForContainerLogs(id);
     var nodeHttpAddr = splits[0];
     var containerId = splits[1];
     var filename = splits[2];
-    this.host = this.get('host') + nodeHttpAddr;
     var url = this._buildURL();
-    url = url + "/containerlogs/" + containerId + "/" + filename;
+    url = url.replace("{nodeAddress}", nodeHttpAddr)  + "/containerlogs/"
+           + containerId + "/" + filename;
     return url;
   },
 
@@ -68,7 +68,7 @@ export default DS.RESTAdapter.extend({
     hash.context = this;
 
     var headers = Ember.get(this, 'headers');
-    if (headers != undefined) {
+    if (headers !== undefined) {
       hash.beforeSend = function (xhr) {
         Object.keys(headers).forEach(function (key) {
           return xhr.setRequestHeader(key, headers[key]);

@@ -41,6 +41,7 @@ public class DiskBalancerException extends IOException {
     UNKNOWN_KEY,
     INVALID_NODE,
     DATANODE_STATUS_NOT_REGULAR,
+    INVALID_HOST_FILE_PATH,
   }
 
   private final Result result;

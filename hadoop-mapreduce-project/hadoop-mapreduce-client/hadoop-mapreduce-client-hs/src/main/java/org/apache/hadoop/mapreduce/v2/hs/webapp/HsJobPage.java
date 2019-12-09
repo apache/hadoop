@@ -34,7 +34,7 @@ public class HsJobPage extends HsView {
    * (non-Javadoc)
    * @see org.apache.hadoop.mapreduce.v2.hs.webapp.HsView#preHead(org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML)
    */
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
     String jobID = $(JOB_ID);
     set(TITLE, jobID.isEmpty() ? "Bad request: missing job ID"
                : join("MapReduce Job ", $(JOB_ID)));

@@ -28,7 +28,7 @@ Hadoop HTTP web-consoles can be configured to require Kerberos authentication us
 
 In addition, Hadoop HTTP web-consoles support the equivalent of Hadoop's Pseudo/Simple authentication. If this option is enabled, the user name must be specified in the first browser interaction using the user.name query string parameter. e.g. `http://localhost:8088/cluster?user.name=babu`.
 
-If a custom authentication mechanism is required for the HTTP web-consoles, it is possible to implement a plugin to support the alternate authentication mechanism (refer to Hadoop hadoop-auth for details on writing an `AuthenticatorHandler`).
+If a custom authentication mechanism is required for the HTTP web-consoles, it is possible to implement a plugin to support the alternate authentication mechanism (refer to Hadoop hadoop-auth for details on writing an `AuthenticationHandler`).
 
 The next section describes how to configure Hadoop HTTP web-consoles to require user authentication.
 
@@ -60,7 +60,7 @@ Add org.apache.hadoop.security.HttpCrossOriginFilterInitializer to hadoop.http.f
 | Property                                 | Default Value                                 | Description                                                                            |
 |:---------------------------------------- |:--------------------------------------------- |:-------------------------------------------------------------------------------------  |
 | hadoop.http.cross-origin.enabled         | `false`                                       | Enables cross origin support for all web-services                                      |
-| hadoop.http.cross-origin.allowed-origins | `*`                                           | Comma separated list of origins that are allowed, wildcards (`*`) and patterns allowed |
+| hadoop.http.cross-origin.allowed-origins | `*`                                           | Comma separated list of origins that are allowed. Values prefixed with `regex:` are interpreted as regular expressions. Values containing wildcards (`*`) are possible as well, here a regular expression is generated, the use is discouraged and support is only available for backward compatibility. |
 | hadoop.http.cross-origin.allowed-methods | `GET,POST,HEAD`                               | Comma separated list of methods that are allowed                                       |
 | hadoop.http.cross-origin.allowed-headers | `X-Requested-With,Content-Type,Accept,Origin` | Comma separated list of headers that are allowed                                       |
 | hadoop.http.cross-origin.max-age         | `1800`                                        | Number of seconds a pre-flighted request can be cached                                 |

@@ -290,7 +290,7 @@ public class ConfigUtil {
       new DeprecationDelta("mapred.mapoutput.value.class",
         MRJobConfig.MAP_OUTPUT_VALUE_CLASS),
       new DeprecationDelta("map.output.key.field.separator",
-        MRJobConfig.MAP_OUTPUT_KEY_FIELD_SEPERATOR),
+        MRJobConfig.MAP_OUTPUT_KEY_FIELD_SEPARATOR),
       new DeprecationDelta("mapred.map.child.log.level",
         MRJobConfig.MAP_LOG_LEVEL),
       new DeprecationDelta("mapred.inmem.merge.threshold",
@@ -412,7 +412,7 @@ public class ConfigUtil {
                       ControlledJob.CREATE_DIR),
       new DeprecationDelta("mapred.data.field.separator",
         org.apache.hadoop.mapreduce.lib.fieldsel.
-                      FieldSelectionHelper.DATA_FIELD_SEPERATOR),
+                      FieldSelectionHelper.DATA_FIELD_SEPARATOR),
       new DeprecationDelta("map.output.key.value.fields.spec",
         org.apache.hadoop.mapreduce.lib.fieldsel.
                       FieldSelectionHelper.MAP_OUTPUT_KEY_VALUE_SPEC),
@@ -427,7 +427,7 @@ public class ConfigUtil {
                       CombineFileInputFormat.SPLIT_MINSIZE_PERRACK),
       new DeprecationDelta("key.value.separator.in.input.line",
         org.apache.hadoop.mapreduce.lib.input.
-                      KeyValueLineRecordReader.KEY_VALUE_SEPERATOR),
+                      KeyValueLineRecordReader.KEY_VALUE_SEPARATOR),
       new DeprecationDelta("mapred.linerecordreader.maxlength",
         org.apache.hadoop.mapreduce.lib.input.
                       LineRecordReader.MAX_LINE_LENGTH),
@@ -436,7 +436,7 @@ public class ConfigUtil {
                       LazyOutputFormat.OUTPUT_FORMAT),
       new DeprecationDelta("mapred.textoutputformat.separator",
         org.apache.hadoop.mapreduce.lib.output.
-                      TextOutputFormat.SEPERATOR),
+                      TextOutputFormat.SEPARATOR),
       new DeprecationDelta("mapred.join.expr",
         org.apache.hadoop.mapreduce.lib.join.
                       CompositeInputFormat.JOIN_EXPR),

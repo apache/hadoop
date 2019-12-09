@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.tools;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,7 +40,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class TestFileBasedCopyListing {
-  private static final Log LOG = LogFactory.getLog(TestFileBasedCopyListing.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFileBasedCopyListing.class);
 
   private static final Credentials CREDENTIALS = new Credentials();
 
@@ -514,10 +514,11 @@ public class TestFileBasedCopyListing {
   private void runTest(Path listFile, Path target, boolean targetExists,
       boolean sync) throws IOException {
     CopyListing listing = new FileBasedCopyListing(config, CREDENTIALS);
-    DistCpOptions options = new DistCpOptions(listFile, target);
-    options.setSyncFolder(sync);
-    options.setTargetPathExists(targetExists);
-    listing.buildListing(listFile, options);
+    final DistCpOptions options = new DistCpOptions.Builder(listFile, target)
+        .withSyncFolder(sync).build();
+    final DistCpContext context = new DistCpContext(options);
+    context.setTargetPathExists(targetExists);
+    listing.buildListing(listFile, context);
   }
 
   private void checkResult(Path listFile, int count) throws IOException {

@@ -160,7 +160,7 @@ class FsUsage extends FsCommand {
   /** show disk usage */
   public static class Du extends FsUsage {
     public static final String NAME = "du";
-    public static final String USAGE = "[-s] [-h] [-x] <path> ...";
+    public static final String USAGE = "[-s] [-h] [-v] [-x] <path> ...";
     public static final String DESCRIPTION =
         "Show the amount of space, in bytes, used by the files that match " +
             "the specified file pattern. The following flags are optional:\n" +
@@ -168,6 +168,7 @@ class FsUsage extends FsCommand {
             " matches the pattern, shows the total (summary) size.\n" +
             "-h: Formats the sizes of files in a human-readable fashion" +
             " rather than a number of bytes.\n" +
+            "-v: option displays a header line.\n" +
             "-x: Excludes snapshots from being counted.\n\n" +
             "Note that, even without the -s option, this only shows size " +
             "summaries one level deep into a directory.\n\n" +
@@ -175,14 +176,16 @@ class FsUsage extends FsCommand {
             "\tsize\tdisk space consumed\tname(full path)\n";
 
     protected boolean summary = false;
+    private boolean showHeaderLine = false;
     private boolean excludeSnapshots = false;
     
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "h", "s", "x");
+      CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "h", "s", "v", "x");
       cf.parse(args);
       setHumanReadable(cf.getOpt("h"));
       summary = cf.getOpt("s");
+      showHeaderLine = cf.getOpt("v");
       excludeSnapshots = cf.getOpt("x");
       if (args.isEmpty()) args.add(Path.CUR_DIR);
     }
@@ -190,7 +193,12 @@ class FsUsage extends FsCommand {
     @Override
     protected void processArguments(LinkedList<PathData> args)
         throws IOException {
-      setUsagesTable(new TableBuilder(3));
+      if (showHeaderLine) {
+        setUsagesTable(new TableBuilder("SIZE",
+            "DISK_SPACE_CONSUMED_WITH_ALL_REPLICAS", "FULL_PATH_NAME"));
+      } else {
+        setUsagesTable(new TableBuilder(3));
+      }
       super.processArguments(args);
       if (!getUsagesTable().isEmpty()) {
         getUsagesTable().printToStream(out);

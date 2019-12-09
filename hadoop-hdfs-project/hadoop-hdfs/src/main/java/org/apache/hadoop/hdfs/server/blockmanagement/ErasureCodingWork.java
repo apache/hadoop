@@ -58,10 +58,9 @@ class ErasureCodingWork extends BlockReconstructionWork {
       Set<Node> excludedNodes) {
     // TODO: new placement policy for EC considering multiple writers
     DatanodeStorageInfo[] chosenTargets = blockplacement.chooseTarget(
-        getBc().getName(), getAdditionalReplRequired(), getSrcNodes()[0],
-        getLiveReplicaStorages(), false, excludedNodes,
-        getBlock().getNumBytes(),
-        storagePolicySuite.getPolicy(getBc().getStoragePolicyID()), null);
+        getSrcPath(), getAdditionalReplRequired(), getSrcNodes()[0],
+        getLiveReplicaStorages(), false, excludedNodes, getBlockSize(),
+        storagePolicySuite.getPolicy(getStoragePolicyID()), null);
     setTargets(chosenTargets);
   }
 

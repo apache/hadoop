@@ -22,11 +22,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -48,6 +50,10 @@ import com.google.common.collect.Lists;
 public class MockNodes {
   private static int NODE_ID = 0;
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+
+  public static void resetHostIds() {
+    NODE_ID = 0;
+  }
 
   public static List<RMNode> newNodes(int racks, int nodesPerRack,
                                         Resource perNode) {
@@ -201,7 +207,8 @@ public class MockNodes {
     }
 
     @Override
-    public void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response) {
+    public void setAndUpdateNodeHeartbeatResponse(
+        NodeHeartbeatResponse response) {
     }
 
     @Override
@@ -242,12 +249,6 @@ public class MockNodes {
     }
 
     @Override
-    public void updateNodeHeartbeatResponseForContainersDecreasing(
-        NodeHeartbeatResponse response) {
-      
-    }
-
-    @Override
     public List<Container> pullNewlyIncreasedContainers() {
       return Collections.emptyList();
     }
@@ -263,7 +264,7 @@ public class MockNodes {
     }
 
     public OpportunisticContainersStatus getOpportunisticContainersStatus() {
-      return null;
+      return OpportunisticContainersStatus.newInstance();
     }
 
     @Override
@@ -277,6 +278,26 @@ public class MockNodes {
 
     @Override
     public Integer getDecommissioningTimeout() {
+      return null;
+    }
+
+    @Override
+    public Map<String, Long> getAllocationTagsWithCount() {
+      return null;
+    }
+
+    public void setNodeAttributes(String prefix,
+        Set<NodeAttribute> nodeAttributes) {
+
+    }
+
+    @Override
+    public Set<NodeAttribute> getAllNodeAttributes() {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public RMContext getRMContext() {
       return null;
     }
 
@@ -337,17 +358,17 @@ public class MockNodes {
   }
 
   public static RMNode newNodeInfo(int rack, final Resource perNode, int hostnum) {
-    return buildRMNode(rack, perNode, null, "localhost:0", hostnum, null, 123);
+    return buildRMNode(rack, perNode, NodeState.RUNNING, "localhost:0", hostnum, null, 123);
   }
   
   public static RMNode newNodeInfo(int rack, final Resource perNode,
       int hostnum, String hostName) {
-    return buildRMNode(rack, perNode, null, "localhost:0", hostnum, hostName, 123);
+    return buildRMNode(rack, perNode, NodeState.RUNNING, "localhost:0", hostnum, hostName, 123);
   }
 
   public static RMNode newNodeInfo(int rack, final Resource perNode,
       int hostnum, String hostName, int port) {
-    return buildRMNode(rack, perNode, null, "localhost:0", hostnum, hostName, port);
+    return buildRMNode(rack, perNode, NodeState.RUNNING, "localhost:0", hostnum, hostName, port);
   }
 
 }

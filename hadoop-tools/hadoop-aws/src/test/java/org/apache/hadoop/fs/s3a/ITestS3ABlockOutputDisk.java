@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.junit.Assume;
+
 /**
  * Use {@link Constants#FAST_UPLOAD_BUFFER_DISK} for buffering.
  */
@@ -27,4 +29,14 @@ public class ITestS3ABlockOutputDisk extends ITestS3ABlockOutputArray {
     return Constants.FAST_UPLOAD_BUFFER_DISK;
   }
 
+  /**
+   * The disk stream doesn't support mark/reset; calls
+   * {@code Assume} to skip the test.
+   * @param fileSystem source FS
+   * @return null
+   */
+  protected S3ADataBlocks.BlockFactory createFactory(S3AFileSystem fileSystem) {
+    Assume.assumeTrue("mark/reset nopt supoprted", false);
+    return null;
+  }
 }

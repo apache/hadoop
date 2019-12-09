@@ -40,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 
 abstract class LogInfo {
@@ -140,7 +141,7 @@ abstract class LogInfo {
     try {
       in.seek(offset);
       try {
-        parser = jsonFactory.createParser(in);
+        parser = jsonFactory.createParser((InputStream)in);
         parser.configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, false);
       } catch (IOException e) {
         // if app hasn't completed then there may be errors due to the

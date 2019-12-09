@@ -23,12 +23,12 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.slive.OperationOutput.OutputType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Operation which selects a random directory and attempts to list that
@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.slive.OperationOutput.OutputType;
  */
 class ListOp extends Operation {
 
-  private static final Log LOG = LogFactory.getLog(ListOp.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ListOp.class);
 
   ListOp(ConfigExtractor cfg, Random rnd) {
     super(ListOp.class.getSimpleName(), cfg, rnd);

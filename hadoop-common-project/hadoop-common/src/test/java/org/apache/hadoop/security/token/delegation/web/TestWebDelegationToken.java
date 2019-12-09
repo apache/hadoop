@@ -32,7 +32,6 @@ import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHand
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -42,6 +41,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.slf4j.event.Level;
 
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
@@ -364,7 +364,7 @@ public class TestWebDelegationToken {
         aUrl.getDelegationToken(nonAuthURL, token, FOO_USER);
         Assert.fail();
       } catch (Exception ex) {
-        Assert.assertTrue(ex.getMessage().contains("401"));
+        Assert.assertTrue(ex.getCause().getMessage().contains("401"));
       }
 
       aUrl.getDelegationToken(authURL, token, FOO_USER);
@@ -776,7 +776,7 @@ public class TestWebDelegationToken {
         aUrl.getDelegationToken(url, token, FOO_USER, doAsUser);
         Assert.fail();
       } catch (AuthenticationException ex) {
-        Assert.assertTrue(ex.getMessage().contains("GSSException"));
+        Assert.assertTrue(ex.getCause().getMessage().contains("GSSException"));
       }
 
       doAsKerberosUser("client", keytabFile.getAbsolutePath(),

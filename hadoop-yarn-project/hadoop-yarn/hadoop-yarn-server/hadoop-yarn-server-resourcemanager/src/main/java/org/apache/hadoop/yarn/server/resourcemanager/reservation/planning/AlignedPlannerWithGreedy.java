@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
@@ -35,43 +36,52 @@ import org.slf4j.LoggerFactory;
 public class AlignedPlannerWithGreedy implements ReservationAgent {
 
   // Default smoothness factor
-  private static final int DEFAULT_SMOOTHNESS_FACTOR = 10;
+  public static final int DEFAULT_SMOOTHNESS_FACTOR = 10;
+  public static final String SMOOTHNESS_FACTOR =
+      "yarn.resourcemanager.reservation-system.smoothness-factor";
+  private boolean allocateLeft = false;
+
 
   // Log
   private static final Logger LOG = LoggerFactory
       .getLogger(AlignedPlannerWithGreedy.class);
 
   // Smoothness factor
-  private final ReservationAgent planner;
+  private ReservationAgent planner;
 
   // Constructor
   public AlignedPlannerWithGreedy() {
-    this(DEFAULT_SMOOTHNESS_FACTOR);
+
   }
 
-  // Constructor
-  public AlignedPlannerWithGreedy(int smoothnessFactor) {
+  @Override
+  public void init(Configuration conf) {
+    int smoothnessFactor =
+        conf.getInt(SMOOTHNESS_FACTOR, DEFAULT_SMOOTHNESS_FACTOR);
+    allocateLeft = conf.getBoolean(FAVOR_EARLY_ALLOCATION,
+            DEFAULT_GREEDY_FAVOR_EARLY_ALLOCATION);
 
     // List of algorithms
     List<ReservationAgent> listAlg = new LinkedList<ReservationAgent>();
 
     // LowCostAligned planning algorithm
     ReservationAgent algAligned =
-        new IterativePlanner(new StageEarliestStartByDemand(),
-            new StageAllocatorLowCostAligned(smoothnessFactor), false);
+        new IterativePlanner(new StageExecutionIntervalByDemand(),
+            new StageAllocatorLowCostAligned(smoothnessFactor, allocateLeft),
+            allocateLeft);
+
     listAlg.add(algAligned);
 
     // Greedy planning algorithm
     ReservationAgent algGreedy =
-        new IterativePlanner(new StageEarliestStartByJobArrival(),
-            new StageAllocatorGreedy(), false);
+        new IterativePlanner(new StageExecutionIntervalUnconstrained(),
+            new StageAllocatorGreedyRLE(allocateLeft), allocateLeft);
     listAlg.add(algGreedy);
 
     // Set planner:
     // 1. Attempt to execute algAligned
     // 2. If failed, fall back to algGreedy
     planner = new TryManyReservationAgents(listAlg);
-
   }
 
   @Override
@@ -119,5 +129,4 @@ public class AlignedPlannerWithGreedy implements ReservationAgent {
     return planner.deleteReservation(reservationId, user, plan);
 
   }
-
 }

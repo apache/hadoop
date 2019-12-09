@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSF
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil.*;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -37,6 +38,7 @@ import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.RealmCallback;
+import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 
 import org.apache.commons.codec.binary.Base64;
@@ -78,6 +80,10 @@ public class SaslDataTransferServer {
   private final BlockPoolTokenSecretManager blockPoolTokenSecretManager;
   private final DNConf dnConf;
 
+  // Store the most recent successfully negotiated QOP,
+  // for testing purpose only
+  private String negotiatedQOP;
+
   /**
    * Creates a new SaslDataTransferServer.
    *
@@ -97,7 +103,7 @@ public class SaslDataTransferServer {
    * @param peer connection peer
    * @param underlyingOut connection output stream
    * @param underlyingIn connection input stream
-   * @param int xferPort data transfer port of DataNode accepting connection
+   * @param xferPort data transfer port of DataNode accepting connection
    * @param datanodeId ID of DataNode accepting connection
    * @return new pair of streams, wrapped after SASL negotiation
    * @throws IOException for any error
@@ -337,6 +343,11 @@ public class SaslDataTransferServer {
     return identifier;
   }
 
+  @VisibleForTesting
+  public String getNegotiatedQOP() {
+    return negotiatedQOP;
+  }
+
   /**
    * This method actually executes the server-side SASL handshake.
    *
@@ -355,9 +366,6 @@ public class SaslDataTransferServer {
     DataInputStream in = new DataInputStream(underlyingIn);
     DataOutputStream out = new DataOutputStream(underlyingOut);
 
-    SaslParticipant sasl = SaslParticipant.createServerSaslParticipant(saslProps,
-      callbackHandler);
-
     int magicNumber = in.readInt();
     if (magicNumber != SASL_TRANSFER_MAGIC_NUMBER) {
       throw new InvalidMagicNumberException(magicNumber, 
@@ -365,7 +373,19 @@ public class SaslDataTransferServer {
     }
     try {
       // step 1
-      byte[] remoteResponse = readSaslMessage(in);
+      SaslMessageWithHandshake message = readSaslMessageWithHandshakeSecret(in);
+      byte[] secret = message.getSecret();
+      String bpid = message.getBpid();
+      if (secret != null || bpid != null) {
+        // sanity check, if one is null, the other must also not be null
+        assert(secret != null && bpid != null);
+        String qop = new String(secret, Charsets.UTF_8);
+        saslProps.put(Sasl.QOP, qop);
+      }
+      SaslParticipant sasl = SaslParticipant.createServerSaslParticipant(
+          saslProps, callbackHandler);
+
+      byte[] remoteResponse = message.getPayload();
       byte[] localResponse = sasl.evaluateChallengeOrResponse(remoteResponse);
       sendSaslMessage(out, localResponse);
 
@@ -379,6 +399,7 @@ public class SaslDataTransferServer {
       checkSaslComplete(sasl, saslProps);
 
       CipherOption cipherOption = null;
+      negotiatedQOP = sasl.getNegotiatedQop();
       if (sasl.isNegotiatedQopPrivacy()) {
         // Negotiate a cipher option
         Configuration conf = dnConf.getConf();

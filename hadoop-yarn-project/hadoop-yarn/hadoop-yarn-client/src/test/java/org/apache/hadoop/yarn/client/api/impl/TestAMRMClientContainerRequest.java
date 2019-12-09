@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.client.api.impl;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -51,8 +51,10 @@ public class TestAMRMClientContainerRequest {
 
     Resource capability = Resource.newInstance(1024, 1);
     ContainerRequest request =
-        new ContainerRequest(capability, new String[] {"host1", "host2"},
-            new String[] {"/rack2"}, Priority.newInstance(1));
+        ContainerRequest.newBuilder().capability(capability)
+            .nodes(new String[] { "host1", "host2" })
+            .racks(new String[] { "/rack2" }).priority(Priority.newInstance(1))
+            .build();
     client.addContainerRequest(request);
     verifyResourceRequest(client, request, "host1", true);
     verifyResourceRequest(client, request, "host2", true);
@@ -252,7 +254,7 @@ public class TestAMRMClientContainerRequest {
 
     @Override
     public List<String> resolve(List<String> names) {
-      return Arrays.asList("/rack1");
+      return Collections.nCopies(names.size(), "/rack1");
     }
 
     @Override
@@ -274,9 +276,8 @@ public class TestAMRMClientContainerRequest {
       AMRMClientImpl<ContainerRequest> client, ContainerRequest request,
       String location, boolean expectedRelaxLocality,
       ExecutionType executionType) {
-    ResourceRequest ask = client.getTable(0)
-        .get(request.getPriority(), location, executionType,
-            request.getCapability()).remoteRequest;
+    ResourceRequest ask = client.getTable(0).get(request.getPriority(),
+        location, executionType, request.getCapability()).remoteRequest;
     assertEquals(location, ask.getResourceName());
     assertEquals(1, ask.getNumContainers());
     assertEquals(expectedRelaxLocality, ask.getRelaxLocality());

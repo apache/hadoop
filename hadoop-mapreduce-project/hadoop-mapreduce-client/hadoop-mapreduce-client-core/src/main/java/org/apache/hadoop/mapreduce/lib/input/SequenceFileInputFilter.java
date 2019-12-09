@@ -26,8 +26,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
@@ -39,6 +37,8 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A class that allows a map/red job to work on a sample of sequence files.
@@ -48,7 +48,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 @InterfaceStability.Stable
 public class SequenceFileInputFilter<K, V>
     extends SequenceFileInputFormat<K, V> {
-  public static final Log LOG = LogFactory.getLog(FileInputFormat.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FileInputFormat.class);
   
   final public static String FILTER_CLASS = 
     "mapreduce.input.sequencefileinputfilter.class";
@@ -260,7 +261,7 @@ public class SequenceFileInputFilter<K, V>
         if (hashcode / frequency * frequency == hashcode)
           return true;
       } catch(Exception e) {
-        LOG.warn(e);
+        LOG.warn(e.toString());
         throw new RuntimeException(e);
       }
       return false;

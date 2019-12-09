@@ -24,15 +24,16 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 import org.apache.commons.configuration2.Configuration;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.apache.hadoop.metrics2.impl.ConfigUtil.*;
 
 /**
  * Test metrics configuration
  */
 public class TestMetricsConfig {
-  static final Log LOG = LogFactory.getLog(TestMetricsConfig.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestMetricsConfig.class);
 
   /**
    * Common use cases

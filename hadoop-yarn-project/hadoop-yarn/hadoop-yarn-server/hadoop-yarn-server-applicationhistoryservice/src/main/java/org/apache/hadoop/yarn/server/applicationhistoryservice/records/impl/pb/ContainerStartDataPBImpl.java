@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.proto.ApplicationHistoryServerProtos.ContainerStartDataProto;
 import org.apache.hadoop.yarn.proto.ApplicationHistoryServerProtos.ContainerStartDataProtoOrBuilder;
@@ -189,9 +190,7 @@ public class ContainerStartDataPBImpl extends ContainerStartData {
           builder.getContainerId())) {
       builder.setContainerId(convertToProtoFormat(this.containerId));
     }
-    if (this.resource != null
-        && !((ResourcePBImpl) this.resource).getProto().equals(
-          builder.getAllocatedResource())) {
+    if (this.resource != null) {
       builder.setAllocatedResource(convertToProtoFormat(this.resource));
     }
     if (this.nodeId != null
@@ -232,7 +231,7 @@ public class ContainerStartDataPBImpl extends ContainerStartData {
   }
 
   private ResourceProto convertToProtoFormat(Resource resource) {
-    return ((ResourcePBImpl) resource).getProto();
+    return ProtoUtils.convertToProtoFormat(resource);
   }
 
   private ResourcePBImpl convertFromProtoFormat(ResourceProto resource) {

@@ -24,8 +24,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
@@ -35,12 +33,14 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BaseNMTokenSecretManager extends
     SecretManager<NMTokenIdentifier> {
 
-  private static Log LOG = LogFactory
-      .getLog(BaseNMTokenSecretManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BaseNMTokenSecretManager.class);
 
   protected int serialNo = new SecureRandom().nextInt();
 
@@ -71,12 +71,9 @@ public class BaseNMTokenSecretManager extends
 
   @Override
   protected byte[] createPassword(NMTokenIdentifier identifier) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("creating password for "
-          + identifier.getApplicationAttemptId() + " for user "
-          + identifier.getApplicationSubmitter() + " to run on NM "
-          + identifier.getNodeId());
-    }
+    LOG.debug("creating password for {} for user {} to run on NM {}",
+        identifier.getApplicationAttemptId(),
+        identifier.getApplicationSubmitter(), identifier.getNodeId());
     readLock.lock();
     try {
       return createPassword(identifier.getBytes(),
@@ -99,12 +96,9 @@ public class BaseNMTokenSecretManager extends
 
   protected byte[] retrivePasswordInternal(NMTokenIdentifier identifier,
       MasterKeyData masterKey) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("creating password for "
-          + identifier.getApplicationAttemptId() + " for user "
-          + identifier.getApplicationSubmitter() + " to run on NM "
-          + identifier.getNodeId());
-    }
+    LOG.debug("retriving password for {} for user {} to run on NM {}",
+        identifier.getApplicationAttemptId(),
+        identifier.getApplicationSubmitter(), identifier.getNodeId());
     return createPassword(identifier.getBytes(), masterKey.getSecretKey());
   }
   /**

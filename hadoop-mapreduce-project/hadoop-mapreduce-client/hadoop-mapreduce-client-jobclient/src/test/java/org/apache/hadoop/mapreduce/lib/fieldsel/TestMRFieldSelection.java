@@ -57,7 +57,7 @@ private static NumberFormat idFormat = NumberFormat.getInstance();
     StringBuffer expectedOutput = new StringBuffer();
     constructInputOutputData(inputData, expectedOutput, numOfInputLines);
     
-    conf.set(FieldSelectionHelper.DATA_FIELD_SEPERATOR, "-");
+    conf.set(FieldSelectionHelper.DATA_FIELD_SEPARATOR, "-");
     conf.set(FieldSelectionHelper.MAP_OUTPUT_KEY_VALUE_SPEC, "6,5,1-3:0-");
     conf.set(
       FieldSelectionHelper.REDUCE_OUTPUT_KEY_VALUE_SPEC, ":4,3,2,1,0,0-");

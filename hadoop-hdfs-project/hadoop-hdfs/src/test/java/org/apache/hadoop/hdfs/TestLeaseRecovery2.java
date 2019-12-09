@@ -25,12 +25,13 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 import com.google.common.base.Supplier;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -52,21 +53,22 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.event.Level;
 
 public class TestLeaseRecovery2 {
   
-  public static final Log LOG = LogFactory.getLog(TestLeaseRecovery2.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestLeaseRecovery2.class);
   
   {
-    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(LeaseManager.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(LeaseManager.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.TRACE);
   }
 
   static final private long BLOCK_SIZE = 1024;
@@ -161,6 +163,70 @@ public class TestLeaseRecovery2 {
     stm.write(buffer, 0, size);
     stm.close();
     verifyFile(dfs, filepath1, actual, size);
+  }
+
+  @Test
+  public void testCloseWhileRecoverLease() throws Exception {
+    // test recoverLease
+    // set the soft limit to be 1 hour but recoverLease should
+    // close the file immediately
+    cluster.setLeasePeriod(LONG_LEASE_PERIOD, LONG_LEASE_PERIOD);
+    int size = AppendTestUtil.nextInt(FILE_SIZE);
+    String filestr = "/testCloseWhileRecoverLease";
+
+    AppendTestUtil.LOG.info("filestr=" + filestr);
+    Path filepath = new Path(filestr);
+    FSDataOutputStream stm = dfs.create(filepath, true, BUF_SIZE,
+        REPLICATION_NUM, BLOCK_SIZE);
+    assertTrue(dfs.dfs.exists(filestr));
+
+    // hflush file
+    AppendTestUtil.LOG.info("hflush");
+    stm.hflush();
+
+    // Pause DN block report.
+    // Let client recover lease, and then close the file, and then let DN
+    // report blocks.
+    ArrayList<DataNode> dataNodes = cluster.getDataNodes();
+    for (DataNode dn: dataNodes) {
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, false);
+    }
+
+    LOG.info("pause IBR");
+    for (DataNode dn: dataNodes) {
+      DataNodeTestUtils.pauseIBR(dn);
+    }
+
+    AppendTestUtil.LOG.info("size=" + size);
+    stm.write(buffer, 0, size);
+
+    // hflush file
+    AppendTestUtil.LOG.info("hflush");
+    stm.hflush();
+
+    LOG.info("recover lease");
+    dfs.recoverLease(filepath);
+    try {
+      stm.close();
+      fail("close() should fail because the file is under recovery.");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains(
+          "whereas it is under recovery", ioe);
+    }
+
+    for (DataNode dn: dataNodes) {
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, false);
+    }
+
+    LOG.info("trigger heartbeats");
+    // resume DN block report
+    for (DataNode dn: dataNodes) {
+      DataNodeTestUtils.triggerHeartbeat(dn);
+    }
+
+    stm.close();
+    assertEquals(cluster.getNamesystem().getBlockManager().
+        getMissingBlocksCount(), 0);
   }
 
   @Test
@@ -465,7 +531,8 @@ public class TestLeaseRecovery2 {
         cluster.getNameNode(), fileStr);
     
     assertFalse("original lease holder should not be the NN",
-        originalLeaseHolder.equals(HdfsServerConstants.NAMENODE_LEASE_HOLDER));
+        originalLeaseHolder.startsWith(
+        HdfsServerConstants.NAMENODE_LEASE_HOLDER));
 
     // hflush file
     AppendTestUtil.LOG.info("hflush");
@@ -501,8 +568,9 @@ public class TestLeaseRecovery2 {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        return HdfsServerConstants.NAMENODE_LEASE_HOLDER.equals(
-            NameNodeAdapter.getLeaseHolderForPath(cluster.getNameNode(), path));
+        String holder =
+            NameNodeAdapter.getLeaseHolderForPath(cluster.getNameNode(), path);
+        return holder.startsWith(HdfsServerConstants.NAMENODE_LEASE_HOLDER);
       }
     }, (int)SHORT_LEASE_PERIOD, (int)SHORT_LEASE_PERIOD * 10);
 
@@ -563,8 +631,8 @@ public class TestLeaseRecovery2 {
     if (size == 0) {
       assertEquals("lease holder should null, file is closed", null, holder);
     } else {
-      assertEquals("lease holder should now be the NN",
-          HdfsServerConstants.NAMENODE_LEASE_HOLDER, holder);
+      assertTrue("lease holder should now be the NN",
+          holder.startsWith(HdfsServerConstants.NAMENODE_LEASE_HOLDER));
     }
     
   }

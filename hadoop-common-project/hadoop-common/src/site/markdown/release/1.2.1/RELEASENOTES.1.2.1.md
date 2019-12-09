@@ -23,16 +23,16 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
-* [HADOOP-10371](https://issues.apache.org/jira/browse/HADOOP-10371) | *Minor* | **The eclipse-plugin cannot work  in my environment**
+* [MAPREDUCE-3859](https://issues.apache.org/jira/browse/MAPREDUCE-3859) | *Major* | **CapacityScheduler incorrectly utilizes extra-resources of queue for high-memory jobs**
 
-fixed
+Fixed wrong CapacityScheduler resource allocation for high memory consumption jobs
 
 
 ---
 
-* [MAPREDUCE-3859](https://issues.apache.org/jira/browse/MAPREDUCE-3859) | *Major* | **CapacityScheduler incorrectly utilizes extra-resources of queue for high-memory jobs**
+* [HADOOP-10371](https://issues.apache.org/jira/browse/HADOOP-10371) | *Minor* | **The eclipse-plugin cannot work  in my environment**
 
-Fixed wrong CapacityScheduler resource allocation for high memory consumption jobs
+fixed
 
 
 

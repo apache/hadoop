@@ -33,8 +33,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -52,6 +50,8 @@ import org.apache.hadoop.yarn.server.sharedcachemanager.AppChecker;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A thread safe version of an in-memory SCM store. The thread safety is
@@ -74,7 +74,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @Private
 @Evolving
 public class InMemorySCMStore extends SCMStore {
-  private static final Log LOG = LogFactory.getLog(InMemorySCMStore.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(InMemorySCMStore.class);
 
   private final Map<String, SharedCacheResource> cachedResources =
       new ConcurrentHashMap<String, SharedCacheResource>();

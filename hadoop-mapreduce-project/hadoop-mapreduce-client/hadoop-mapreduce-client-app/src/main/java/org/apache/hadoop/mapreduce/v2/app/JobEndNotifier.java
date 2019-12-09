@@ -153,11 +153,6 @@ public class JobEndNotifier implements Configurable {
    */
   public void notify(JobReport jobReport)
     throws InterruptedException {
-    // Do we need job-end notification?
-    if (userUrl == null) {
-      Log.getLog().info("Job end notification URL not set, skipping.");
-      return;
-    }
 
     //Do string replacements for jobId and jobStatus
     if (userUrl.contains(JOB_ID)) {

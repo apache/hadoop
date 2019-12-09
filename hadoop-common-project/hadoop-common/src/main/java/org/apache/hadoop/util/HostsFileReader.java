@@ -20,67 +20,54 @@ package org.apache.hadoop.util;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.Set;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-// Keeps track of which datanodes/tasktrackers are allowed to connect to the 
-// namenode/jobtracker.
+// Keeps track of which datanodes/nodemanagers are allowed to connect to the
+// namenode/resourcemanager.
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Unstable
 public class HostsFileReader {
-  private Set<String> includes;
-  // exclude host list with optional timeout.
-  // If the value is null, it indicates default timeout.
-  private Map<String, Integer> excludes;
-  private String includesFile;
-  private String excludesFile;
-  private WriteLock writeLock;
-  private ReadLock readLock;
-  
-  private static final Log LOG = LogFactory.getLog(HostsFileReader.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HostsFileReader
+      .class);
 
-  public HostsFileReader(String inFile, 
+  private final AtomicReference<HostDetails> current;
+
+  public HostsFileReader(String inFile,
                          String exFile) throws IOException {
-    includes = new HashSet<String>();
-    excludes = new HashMap<String, Integer>();
-    includesFile = inFile;
-    excludesFile = exFile;
-    ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
-    this.writeLock = rwLock.writeLock();
-    this.readLock = rwLock.readLock();
-    refresh();
+    HostDetails hostDetails = new HostDetails(
+        inFile, Collections.emptySet(),
+        exFile, Collections.emptyMap());
+    current = new AtomicReference<>(hostDetails);
+    refresh(inFile, exFile);
   }
 
   @Private
   public HostsFileReader(String includesFile, InputStream inFileInputStream,
       String excludesFile, InputStream exFileInputStream) throws IOException {
-    includes = new HashSet<String>();
-    excludes = new HashMap<String, Integer>();
-    this.includesFile = includesFile;
-    this.excludesFile = excludesFile;
-    ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
-    this.writeLock = rwLock.writeLock();
-    this.readLock = rwLock.readLock();
+    HostDetails hostDetails = new HostDetails(
+        includesFile, Collections.emptySet(),
+        excludesFile, Collections.emptyMap());
+    current = new AtomicReference<>(hostDetails);
     refresh(inFileInputStream, exFileInputStream);
   }
 
@@ -126,12 +113,8 @@ public class HostsFileReader {
   }
 
   public void refresh() throws IOException {
-    this.writeLock.lock();
-    try {
-      refresh(includesFile, excludesFile);
-    } finally {
-      this.writeLock.unlock();
-    }
+    HostDetails hostDetails = current.get();
+    refresh(hostDetails.includesFile, hostDetails.excludesFile);
   }
 
   public static void readFileToMap(String type,
@@ -189,7 +172,7 @@ public class HostsFileReader {
         }
       }
     } catch (IOException|SAXException|ParserConfigurationException e) {
-      LOG.fatal("error parsing " + filename, e);
+      LOG.error("error parsing " + filename, e);
       throw new RuntimeException(e);
     } finally {
       fileInputStream.close();
@@ -201,128 +184,163 @@ public class HostsFileReader {
     return (nodes.getLength() == 0)? null : nodes.item(0).getTextContent();
   }
 
-  public void refresh(String includeFiles, String excludeFiles)
+  public void refresh(String includesFile, String excludesFile)
       throws IOException {
     LOG.info("Refreshing hosts (include/exclude) list");
-    this.writeLock.lock();
-    try {
-      // update instance variables
-      updateFileNames(includeFiles, excludeFiles);
-      Set<String> newIncludes = new HashSet<String>();
-      Map<String, Integer> newExcludes = new HashMap<String, Integer>();
-      boolean switchIncludes = false;
-      boolean switchExcludes = false;
-      if (includeFiles != null && !includeFiles.isEmpty()) {
-        readFileToSet("included", includeFiles, newIncludes);
-        switchIncludes = true;
-      }
-      if (excludeFiles != null && !excludeFiles.isEmpty()) {
-        readFileToMap("excluded", excludeFiles, newExcludes);
-        switchExcludes = true;
-      }
-
-      if (switchIncludes) {
-        // switch the new hosts that are to be included
-        includes = newIncludes;
-      }
-      if (switchExcludes) {
-        // switch the excluded hosts
-        excludes = newExcludes;
-      }
-    } finally {
-      this.writeLock.unlock();
+    HostDetails oldDetails = current.get();
+    Set<String> newIncludes = oldDetails.includes;
+    Map<String, Integer> newExcludes = oldDetails.excludes;
+    if (includesFile != null && !includesFile.isEmpty()) {
+      newIncludes = new HashSet<>();
+      readFileToSet("included", includesFile, newIncludes);
+      newIncludes = Collections.unmodifiableSet(newIncludes);
     }
+    if (excludesFile != null && !excludesFile.isEmpty()) {
+      newExcludes = new HashMap<>();
+      readFileToMap("excluded", excludesFile, newExcludes);
+      newExcludes = Collections.unmodifiableMap(newExcludes);
+    }
+    HostDetails newDetails = new HostDetails(includesFile, newIncludes,
+        excludesFile, newExcludes);
+    current.set(newDetails);
   }
 
   @Private
   public void refresh(InputStream inFileInputStream,
       InputStream exFileInputStream) throws IOException {
     LOG.info("Refreshing hosts (include/exclude) list");
-    this.writeLock.lock();
-    try {
-      Set<String> newIncludes = new HashSet<String>();
-      Map<String, Integer> newExcludes = new HashMap<String, Integer>();
-      boolean switchIncludes = false;
-      boolean switchExcludes = false;
-      if (inFileInputStream != null) {
-        readFileToSetWithFileInputStream("included", includesFile,
-            inFileInputStream, newIncludes);
-        switchIncludes = true;
-      }
-      if (exFileInputStream != null) {
-        readFileToMapWithFileInputStream("excluded", excludesFile,
-            exFileInputStream, newExcludes);
-        switchExcludes = true;
-      }
-      if (switchIncludes) {
-        // switch the new hosts that are to be included
-        includes = newIncludes;
-      }
-      if (switchExcludes) {
-        // switch the excluded hosts
-        excludes = newExcludes;
-      }
-    } finally {
-      this.writeLock.unlock();
+    HostDetails oldDetails = current.get();
+    Set<String> newIncludes = oldDetails.includes;
+    Map<String, Integer> newExcludes = oldDetails.excludes;
+    if (inFileInputStream != null) {
+      newIncludes = new HashSet<>();
+      readFileToSetWithFileInputStream("included", oldDetails.includesFile,
+          inFileInputStream, newIncludes);
+      newIncludes = Collections.unmodifiableSet(newIncludes);
     }
+    if (exFileInputStream != null) {
+      newExcludes = new HashMap<>();
+      readFileToMapWithFileInputStream("excluded", oldDetails.excludesFile,
+          exFileInputStream, newExcludes);
+      newExcludes = Collections.unmodifiableMap(newExcludes);
+    }
+    HostDetails newDetails = new HostDetails(
+        oldDetails.includesFile, newIncludes,
+        oldDetails.excludesFile, newExcludes);
+    current.set(newDetails);
   }
 
   public Set<String> getHosts() {
-    this.readLock.lock();
-    try {
-      return includes;
-    } finally {
-      this.readLock.unlock();
-    }
+    HostDetails hostDetails = current.get();
+    return hostDetails.getIncludedHosts();
   }
 
   public Set<String> getExcludedHosts() {
-    this.readLock.lock();
-    try {
-      return excludes.keySet();
-    } finally {
-      this.readLock.unlock();
-    }
+    HostDetails hostDetails = current.get();
+    return hostDetails.getExcludedHosts();
   }
 
+  /**
+   * Retrieve an atomic view of the included and excluded hosts.
+   *
+   * @param includes set to populate with included hosts
+   * @param excludes set to populate with excluded hosts
+   * @deprecated use {@link #getHostDetails() instead}
+   */
+  @Deprecated
   public void getHostDetails(Set<String> includes, Set<String> excludes) {
-    this.readLock.lock();
-    try {
-      includes.addAll(this.includes);
-      excludes.addAll(this.excludes.keySet());
-    } finally {
-      this.readLock.unlock();
-    }
+    HostDetails hostDetails = current.get();
+    includes.addAll(hostDetails.getIncludedHosts());
+    excludes.addAll(hostDetails.getExcludedHosts());
   }
 
+  /**
+   * Retrieve an atomic view of the included and excluded hosts.
+   *
+   * @param includeHosts set to populate with included hosts
+   * @param excludeHosts map to populate with excluded hosts
+   * @deprecated use {@link #getHostDetails() instead}
+   */
+  @Deprecated
   public void getHostDetails(Set<String> includeHosts,
                              Map<String, Integer> excludeHosts) {
-    this.readLock.lock();
-    try {
-      includeHosts.addAll(this.includes);
-      excludeHosts.putAll(this.excludes);
-    } finally {
-      this.readLock.unlock();
-    }
+    HostDetails hostDetails = current.get();
+    includeHosts.addAll(hostDetails.getIncludedHosts());
+    excludeHosts.putAll(hostDetails.getExcludedMap());
+  }
+
+  /**
+   * Retrieve an atomic view of the included and excluded hosts.
+   *
+   * @return the included and excluded hosts
+   */
+  public HostDetails getHostDetails() {
+    return current.get();
   }
 
   public void setIncludesFile(String includesFile) {
     LOG.info("Setting the includes file to " + includesFile);
-    this.includesFile = includesFile;
+    HostDetails oldDetails = current.get();
+    HostDetails newDetails = new HostDetails(includesFile, oldDetails.includes,
+        oldDetails.excludesFile, oldDetails.excludes);
+    current.set(newDetails);
   }
   
   public void setExcludesFile(String excludesFile) {
     LOG.info("Setting the excludes file to " + excludesFile);
-    this.excludesFile = excludesFile;
+    HostDetails oldDetails = current.get();
+    HostDetails newDetails = new HostDetails(
+        oldDetails.includesFile, oldDetails.includes,
+        excludesFile, oldDetails.excludes);
+    current.set(newDetails);
   }
 
-  public void updateFileNames(String includeFiles, String excludeFiles) {
-    this.writeLock.lock();
-    try {
-      setIncludesFile(includeFiles);
-      setExcludesFile(excludeFiles);
-    } finally {
-      this.writeLock.unlock();
+  public void updateFileNames(String includesFile, String excludesFile) {
+    LOG.info("Setting the includes file to " + includesFile);
+    LOG.info("Setting the excludes file to " + excludesFile);
+    HostDetails oldDetails = current.get();
+    HostDetails newDetails = new HostDetails(includesFile, oldDetails.includes,
+        excludesFile, oldDetails.excludes);
+    current.set(newDetails);
+  }
+
+  /**
+   * An atomic view of the included and excluded hosts
+   */
+  public static class HostDetails {
+    private final String includesFile;
+    private final Set<String> includes;
+    private final String excludesFile;
+    // exclude host list with optional timeout.
+    // If the value is null, it indicates default timeout.
+    private final Map<String, Integer> excludes;
+
+    HostDetails(String includesFile, Set<String> includes,
+        String excludesFile, Map<String, Integer> excludes) {
+      this.includesFile = includesFile;
+      this.includes = includes;
+      this.excludesFile = excludesFile;
+      this.excludes = excludes;
+    }
+
+    public String getIncludesFile() {
+      return includesFile;
+    }
+
+    public Set<String> getIncludedHosts() {
+      return includes;
+    }
+
+    public String getExcludesFile() {
+      return excludesFile;
+    }
+
+    public Set<String> getExcludedHosts() {
+      return excludes.keySet();
+    }
+
+    public Map<String, Integer> getExcludedMap() {
+      return excludes;
     }
   }
 }

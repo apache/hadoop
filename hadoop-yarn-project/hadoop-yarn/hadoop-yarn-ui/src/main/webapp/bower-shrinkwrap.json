@@ -1,0 +1,66 @@
+{
+  "https://github.com/DataTables/DataTables.git": {
+    "1.10.15": "84d24d41477bac7657c9ddfa1d86245f9affc879"
+  },
+  "https://github.com/components/ember-data.git": {
+    "2.1.0": "d8b4d3092f67afe22d9d374c40d719d557915fa3"
+  },
+  "https://github.com/components/ember.git": {
+    "2.2.0": "49e042ca89922ed96b27488c2a98add280ae7123"
+  },
+  "https://github.com/components/jqueryui.git": {
+    "1.11.4": "c34f8dbf3ba57b3784b93f26119f436c0e8288e1"
+  },
+  "https://github.com/dockyard/ember-qunit-notifications.git": {
+    "0.1.0": "a83277aa7a1c0545c66e6d133caebb9a620e71ad"
+  },
+  "https://github.com/dockyard/qunit-notifications.git": {
+    "0.1.1": "7a13f6dba5a340e1cb9e0b64c1c711e4d7edaca1"
+  },
+  "https://github.com/ember-cli/ember-cli-shims.git": {
+    "0.0.6": "dcab43b58d5698690050bb9a46ead5c8663c7da1"
+  },
+  "https://github.com/ember-cli/ember-cli-test-loader.git": {
+    "0.2.1": "3348d801089279296c38f31ae14d9c4d115ce154"
+  },
+  "https://github.com/ember-cli/ember-load-initializers.git": {
+    "0.1.7": "7bb21488563bd1bba23e903a812bf5815beddd1a"
+  },
+  "https://github.com/fgnass/spin.js.git": {
+    "2.3.2": "5a9ea41651105302fe76d15cb294070c5863e759"
+  },
+  "https://github.com/ivaynberg/select2.git": {
+    "4.0.0": "80eb44bec78568b152dc5547269c164cb7b5363c"
+  },
+  "https://github.com/jquery/jquery-dist.git": {
+    "2.1.4": "7751e69b615c6eca6f783a81e292a55725af6b85"
+  },
+  "https://github.com/jquery/qunit.git": {
+    "1.19.0": "467e7e34652ad7d5883ce9c568461cf8c5e172a8"
+  },
+  "https://github.com/mbostock-bower/d3-bower.git": {
+    "3.5.17": "abe0262a205c9f3755c3a757de4dfd1d49f34b24"
+  },
+  "https://github.com/moment/moment-timezone.git": {
+    "0.5.0": "74a2e9378ecf4a31a168f3049f086565c8d66814"
+  },
+  "https://github.com/moment/moment.git": {
+    "2.10.6": "446ce77eb08c5c862d7b0b11ef1d2e884d12e3d7",
+    "2.12.0": "d3d7488b4d60632854181cb0a9af325d57fb3d51"
+  },
+  "https://github.com/rwjblue/ember-qunit-builds.git": {
+    "0.4.16": "142c4066a5458bef9dfcb92b70152b9c01d79188"
+  },
+  "https://github.com/sreenaths/more-js.git": {
+    "0.8.2": "015ab7c7dad2dc9edc0049b8b65aeb020fd20c51"
+  },
+  "https://github.com/sreenaths/snippet-ss.git": {
+    "1.11.0": "c1abc566f4e001b7f1939b6dbdd911eadc969cf9"
+  },
+  "https://github.com/stefanpenner/loader.js.git": {
+    "3.3.0": "ac909550c9544325632542bbea97531cc60bc628"
+  },
+  "https://github.com/twbs/bootstrap.git": {
+    "3.3.6": "81df608a40bf0629a1dc08e584849bb1e43e0b7a"
+  }
+}

@@ -41,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -116,7 +117,9 @@ class BlockManagerSafeMode {
   private Counter awaitingReportedBlocksCounter;
 
   /** Keeps track of how many bytes are in Future Generation blocks. */
-  private final AtomicLong numberOfBytesInFutureBlocks = new AtomicLong();
+  private final LongAdder bytesInFutureBlocks = new LongAdder();
+  private final LongAdder bytesInFutureECBlockGroups = new LongAdder();
+
   /** Reports if Name node was started with Rollback option. */
   private final boolean inRollBack;
 
@@ -306,16 +309,20 @@ class BlockManagerSafeMode {
       }
     }
 
-    int numLive = blockManager.getDatanodeManager().getNumLiveDataNodes();
-    if (numLive < datanodeThreshold) {
-      msg += String.format(
-          "The number of live datanodes %d needs an additional %d live "
-              + "datanodes to reach the minimum number %d.%n",
-          numLive, (datanodeThreshold - numLive), datanodeThreshold);
+    if (datanodeThreshold > 0) {
+      int numLive = blockManager.getDatanodeManager().getNumLiveDataNodes();
+      if (numLive < datanodeThreshold) {
+        msg += String.format(
+            "The number of live datanodes %d needs an additional %d live "
+                + "datanodes to reach the minimum number %d.%n",
+            numLive, (datanodeThreshold - numLive), datanodeThreshold);
+      } else {
+        msg += String.format("The number of live datanodes %d has reached "
+                + "the minimum number %d. ",
+            numLive, datanodeThreshold);
+      }
     } else {
-      msg += String.format("The number of live datanodes %d has reached "
-              + "the minimum number %d. ",
-          numLive, datanodeThreshold);
+      msg += "The minimum number of live datanodes is not required. ";
     }
 
     if (getBytesInFuture() > 0) {
@@ -358,12 +365,13 @@ class BlockManagerSafeMode {
   boolean leaveSafeMode(boolean force) {
     assert namesystem.hasWriteLock() : "Leaving safe mode needs write lock!";
 
-    final long bytesInFuture = numberOfBytesInFutureBlocks.get();
+    final long bytesInFuture = getBytesInFuture();
     if (bytesInFuture > 0) {
       if (force) {
         LOG.warn("Leaving safe mode due to forceExit. This will cause a data "
             + "loss of {} byte(s).", bytesInFuture);
-        numberOfBytesInFutureBlocks.set(0);
+        bytesInFutureBlocks.reset();
+        bytesInFutureECBlockGroups.reset();
       } else {
         LOG.error("Refusing to leave safe mode without a force flag. " +
             "Exiting safe mode will cause a deletion of {} byte(s). Please " +
@@ -414,8 +422,10 @@ class BlockManagerSafeMode {
   }
 
   /**
-   * Increment number of safe blocks if current block has reached minimal
-   * replication.
+   * Increment number of safe blocks if the current block is contiguous
+   * and it has reached minimal replication or
+   * if the current block is striped and the number of its actual data blocks
+   * reaches the number of data units specified by the erasure coding policy.
    * If safe mode is not currently on, this is a no-op.
    * @param storageNum  current number of replicas or number of internal blocks
    *                    of a striped block group
@@ -429,9 +439,9 @@ class BlockManagerSafeMode {
       return;
     }
 
-    final int safe = storedBlock.isStriped() ?
+    final int safeNumberOfNodes = storedBlock.isStriped() ?
         ((BlockInfoStriped)storedBlock).getRealDataBlockNum() : safeReplication;
-    if (storageNum == safe) {
+    if (storageNum == safeNumberOfNodes) {
       this.blockSafe++;
 
       // Report startup progress only if we haven't completed startup yet.
@@ -449,8 +459,10 @@ class BlockManagerSafeMode {
   }
 
   /**
-   * Decrement number of safe blocks if current block has fallen below minimal
-   * replication.
+   * Decrement number of safe blocks if the current block is contiguous
+   * and it has just fallen below minimal replication or
+   * if the current block is striped and its actual data blocks has just fallen
+   * below the number of data units specified by erasure coding policy.
    * If safe mode is not currently on, this is a no-op.
    */
   synchronized void decrementSafeBlockCount(BlockInfo b) {
@@ -459,9 +471,11 @@ class BlockManagerSafeMode {
       return;
     }
 
+    final int safeNumberOfNodes = b.isStriped() ?
+        ((BlockInfoStriped)b).getRealDataBlockNum() : safeReplication;
     BlockInfo storedBlock = blockManager.getStoredBlock(b);
     if (storedBlock.isComplete() &&
-        blockManager.countNodes(b).liveReplicas() == safeReplication - 1) {
+        blockManager.countNodes(b).liveReplicas() == safeNumberOfNodes - 1) {
       this.blockSafe--;
       assert blockSafe >= 0;
       checkSafeMode();
@@ -481,9 +495,12 @@ class BlockManagerSafeMode {
     }
 
     if (!blockManager.getShouldPostponeBlocksFromFuture() &&
-        !inRollBack &&
-        blockManager.isGenStampInFuture(brr)) {
-      numberOfBytesInFutureBlocks.addAndGet(brr.getBytesOnDisk());
+        !inRollBack && blockManager.isGenStampInFuture(brr)) {
+      if (blockManager.getBlockIdManager().isStripedBlock(brr)) {
+        bytesInFutureECBlockGroups.add(brr.getBytesOnDisk());
+      } else {
+        bytesInFutureBlocks.add(brr.getBytesOnDisk());
+      }
     }
   }
 
@@ -494,7 +511,15 @@ class BlockManagerSafeMode {
    * @return Bytes in future
    */
   long getBytesInFuture() {
-    return numberOfBytesInFutureBlocks.get();
+    return getBytesInFutureBlocks() + getBytesInFutureECBlockGroups();
+  }
+
+  long getBytesInFutureBlocks() {
+    return bytesInFutureBlocks.longValue();
+  }
+
+  long getBytesInFutureECBlockGroups() {
+    return bytesInFutureECBlockGroups.longValue();
   }
 
   void close() {
@@ -546,7 +571,12 @@ class BlockManagerSafeMode {
    */
   private boolean areThresholdsMet() {
     assert namesystem.hasWriteLock();
-    int datanodeNum = blockManager.getDatanodeManager().getNumLiveDataNodes();
+    // Calculating the number of live datanodes is time-consuming
+    // in large clusters. Skip it when datanodeThreshold is zero.
+    int datanodeNum = 0;
+    if (datanodeThreshold > 0) {
+      datanodeNum = blockManager.getDatanodeManager().getNumLiveDataNodes();
+    }
     synchronized (this) {
       return blockSafe >= blockThreshold && datanodeNum >= datanodeThreshold;
     }

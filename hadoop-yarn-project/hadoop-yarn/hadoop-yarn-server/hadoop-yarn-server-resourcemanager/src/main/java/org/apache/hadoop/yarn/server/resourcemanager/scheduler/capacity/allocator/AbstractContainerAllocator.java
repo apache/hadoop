@@ -20,10 +20,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocat
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAssign
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSet;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -46,6 +46,7 @@ public abstract class AbstractContainerAllocator {
   private static final Log LOG = LogFactory.getLog(AbstractContainerAllocator.class);
 
   FiCaSchedulerApp application;
+  AppSchedulingInfo appInfo;
   final ResourceCalculator rc;
   final RMContext rmContext;
   ActivitiesManager activitiesManager;
@@ -59,6 +60,8 @@ public abstract class AbstractContainerAllocator {
       ResourceCalculator rc, RMContext rmContext,
       ActivitiesManager activitiesManager) {
     this.application = application;
+    this.appInfo =
+        application == null ? null : application.getAppSchedulingInfo();
     this.rc = rc;
     this.rmContext = rmContext;
     this.activitiesManager = activitiesManager;
@@ -90,10 +93,14 @@ public abstract class AbstractContainerAllocator {
       assignment.setType(result.getContainerNodeType());
 
       if (result.getAllocationState() == AllocationState.RESERVED) {
-        // This is a reserved container
-        LOG.info("Reserved container " + " application="
-            + application.getApplicationId() + " resource=" + allocatedResource
-            + " queue=" + this.toString() + " cluster=" + clusterResource);
+        if (LOG.isDebugEnabled()) {
+          // This is a reserved container
+          // Since re-reservation could happen again and again for already
+          // reserved containers. only do this in debug log.
+          LOG.debug("Reserved container " + " application=" + application
+              .getApplicationId() + " resource=" + allocatedResource + " queue="
+              + appInfo.getQueueName() + " cluster=" + clusterResource);
+        }
         assignment.getAssignmentInformation().addReservationDetails(
             updatedContainer, application.getCSLeafQueue().getQueuePath());
         assignment.getAssignmentInformation().incrReservations();
@@ -121,8 +128,10 @@ public abstract class AbstractContainerAllocator {
         // Inform the ordering policy
         LOG.info("assignedContainer" + " application attempt=" + application
             .getApplicationAttemptId() + " container=" + updatedContainer
-            .getContainerId() + " queue=" + this + " clusterResource="
-            + clusterResource + " type=" + assignment.getType());
+            .getContainerId() + " queue=" + appInfo.getQueueName()
+            + " clusterResource=" + clusterResource
+            + " type=" + assignment.getType() + " requestedPartition="
+            + updatedContainer.getNodeLabelExpression());
 
         assignment.getAssignmentInformation().addAllocationDetails(
             updatedContainer, application.getCSLeafQueue().getQueuePath());
@@ -170,13 +179,14 @@ public abstract class AbstractContainerAllocator {
    * </ul>
    *
    * @param clusterResource clusterResource
-   * @param ps PlacementSet
+   * @param candidates CandidateNodeSet
    * @param schedulingMode scheduling mode (exclusive or nonexclusive)
    * @param resourceLimits resourceLimits
    * @param reservedContainer reservedContainer
    * @return CSAssignemnt proposal
    */
   public abstract CSAssignment assignContainers(Resource clusterResource,
-      PlacementSet<FiCaSchedulerNode> ps, SchedulingMode schedulingMode,
-      ResourceLimits resourceLimits, RMContainer reservedContainer);
+      CandidateNodeSet<FiCaSchedulerNode> candidates,
+      SchedulingMode schedulingMode, ResourceLimits resourceLimits,
+      RMContainer reservedContainer);
 }

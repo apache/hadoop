@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -41,9 +41,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
@@ -89,14 +89,17 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
             th(".queue", "Queue").
             th(".fairshare", "Fair Share").
             th(".starttime", "StartTime").
+            th(".launchTime", "LaunchTime").
             th(".finishtime", "FinishTime").
             th(".state", "State").
             th(".finalstatus", "FinalStatus").
             th(".runningcontainer", "Running Containers").
             th(".allocatedCpu", "Allocated CPU VCores").
             th(".allocatedMemory", "Allocated Memory MB").
+            th(".reservedCpu", "Reserved CPU VCores").
+            th(".reservedMemory", "Reserved Memory MB").
             th(".progress", "Progress").
-            th(".ui", "Tracking UI")._()._().
+            th(".ui", "Tracking UI").__().__().
         tbody();
     Collection<YarnApplicationState> reqAppStates = null;
     String reqStateString = $(APP_STATE);
@@ -123,16 +126,17 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
       appsTableData.append("[\"<a href='")
       .append(url("app", appInfo.getAppId())).append("'>")
       .append(appInfo.getAppId()).append("</a>\",\"")
-      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+      .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         appInfo.getUser()))).append("\",\"")
-      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+      .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         appInfo.getName()))).append("\",\"")
-      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+      .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         appInfo.getApplicationType()))).append("\",\"")
-      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+      .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         appInfo.getQueue()))).append("\",\"")
       .append(fairShare).append("\",\"")
       .append(appInfo.getStartTime()).append("\",\"")
+      .append(appInfo.getLaunchTime()).append("\",\"")
       .append(appInfo.getFinishTime()).append("\",\"")
       .append(appInfo.getState()).append("\",\"")
       .append(appInfo.getFinalStatus()).append("\",\"")
@@ -142,6 +146,10 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
         .valueOf(appInfo.getAllocatedVCores())).append("\",\"")
       .append(appInfo.getAllocatedMB() == -1 ? "N/A" : String
         .valueOf(appInfo.getAllocatedMB())).append("\",\"")
+      .append(appInfo.getReservedVCores() == -1 ? "N/A" : String
+        .valueOf(appInfo.getReservedVCores())).append("\",\"")
+      .append(appInfo.getReservedMB() == -1 ? "N/A" : String
+        .valueOf(appInfo.getReservedMB())).append("\",\"")
       // Progress bar
       .append("<br title='").append(percent)
       .append("'> <div class='").append(C_PROGRESSBAR).append("' title='")
@@ -162,8 +170,8 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
     }
     appsTableData.append("]");
     html.script().$type("text/javascript").
-    _("var appsTableData=" + appsTableData)._();
+        __("var appsTableData=" + appsTableData).__();
 
-    tbody._()._();
+    tbody.__().__();
   }
 }

@@ -27,8 +27,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -42,8 +42,10 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpOptionSwitch;
@@ -55,8 +57,12 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+
 public class TestCopyMapper {
-  private static final Log LOG = LogFactory.getLog(TestCopyMapper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCopyMapper.class);
   private static List<Path> pathList = new ArrayList<Path>();
   private static int nFiles = 0;
   private static final int DEFAULT_FILE_SIZE = 1024;
@@ -67,20 +73,42 @@ public class TestCopyMapper {
   private static final String SOURCE_PATH = "/tmp/source";
   private static final String TARGET_PATH = "/tmp/target";
 
-  private static Configuration configuration;
-
   @BeforeClass
   public static void setup() throws Exception {
-    configuration = getConfigurationForCluster();
-    cluster = new MiniDFSCluster.Builder(configuration)
+    Configuration configuration = getConfigurationForCluster();
+    setCluster(new MiniDFSCluster.Builder(configuration)
                 .numDataNodes(1)
                 .format(true)
-                .build();
+                .build());
   }
 
-  private static Configuration getConfigurationForCluster() throws IOException {
+  /**
+   * Subclasses may override this method to indicate whether copying files with
+   * non-default block sizes without setting BLOCKSIZE as a preserved attribute
+   * is expected to succeed with CRC checks enabled.
+   */
+  protected boolean expectDifferentBlockSizesMultipleBlocksToSucceed() {
+    return false;
+  }
+
+  /**
+   * Subclasses may override this method to indicate whether copying files with
+   * non-default bytes-per-crc without setting CHECKSUMTYPE as a preserved
+   * attribute is expected to succeed with CRC checks enabled.
+   */
+  protected boolean expectDifferentBytesPerCrcToSucceed() {
+    return false;
+  }
+
+  protected static void setCluster(MiniDFSCluster c) {
+    cluster = c;
+  }
+
+  protected static Configuration getConfigurationForCluster()
+      throws IOException {
     Configuration configuration = new Configuration();
-    System.setProperty("test.build.data", "target/tmp/build/TEST_COPY_MAPPER/data");
+    System.setProperty(
+        "test.build.data", "target/tmp/build/TEST_COPY_MAPPER/data");
     configuration.set("hadoop.log.dir", "target/tmp");
     configuration.set("dfs.namenode.fs-limits.min-block-size", "0");
     LOG.debug("fs.default.name  == " + configuration.get("fs.default.name"));
@@ -130,7 +158,8 @@ public class TestCopyMapper {
     }
   }
 
-  private static void createSourceDataWithDifferentBlockSize() throws Exception {
+  private static void createSourceDataWithDifferentBlockSize()
+      throws Exception {
     mkdirs(SOURCE_PATH + "/1");
     mkdirs(SOURCE_PATH + "/2");
     mkdirs(SOURCE_PATH + "/2/3/4");
@@ -155,6 +184,21 @@ public class TestCopyMapper {
     mkdirs(SOURCE_PATH + "/7/8");
     touchFile(SOURCE_PATH + "/7/8/9", new ChecksumOpt(DataChecksum.Type.CRC32C,
         512));
+  }
+
+  private static void createSourceDataWithDifferentBytesPerCrc()
+      throws Exception {
+    mkdirs(SOURCE_PATH + "/1");
+    mkdirs(SOURCE_PATH + "/2");
+    mkdirs(SOURCE_PATH + "/2/3/4");
+    mkdirs(SOURCE_PATH + "/2/3");
+    mkdirs(SOURCE_PATH + "/5");
+    touchFile(SOURCE_PATH + "/5/6", false,
+        new ChecksumOpt(DataChecksum.Type.CRC32C, 32));
+    mkdirs(SOURCE_PATH + "/7");
+    mkdirs(SOURCE_PATH + "/7/8");
+    touchFile(SOURCE_PATH + "/7/8/9", false,
+        new ChecksumOpt(DataChecksum.Type.CRC32C, 64));
   }
 
   private static void mkdirs(String path) throws Exception {
@@ -248,26 +292,49 @@ public class TestCopyMapper {
 
     // do the distcp again with -update and -append option
     CopyMapper copyMapper = new CopyMapper();
-    StubContext stubContext = new StubContext(getConfiguration(), null, 0);
+    Configuration conf = getConfiguration();
+    // set the buffer size to 1/10th the size of the file.
+    conf.setInt(DistCpOptionSwitch.COPY_BUFFER_SIZE.getConfigLabel(),
+        DEFAULT_FILE_SIZE/10);
+    StubContext stubContext = new StubContext(conf, null, 0);
     Mapper<Text, CopyListingFileStatus, Text, Text>.Context context =
         stubContext.getContext();
     // Enable append 
     context.getConfiguration().setBoolean(
         DistCpOptionSwitch.APPEND.getConfigLabel(), true);
     copyMapper.setup(context);
+
+    int numFiles = 0;
+    MetricsRecordBuilder rb =
+        getMetrics(cluster.getDataNodes().get(0).getMetrics().name());
+    String readCounter = "ReadsFromLocalClient";
+    long readsFromClient = getLongCounter(readCounter, rb);
     for (Path path: pathList) {
+      if (fs.getFileStatus(path).isFile()) {
+        numFiles++;
+      }
+
       copyMapper.map(new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH), path)),
               new CopyListingFileStatus(cluster.getFileSystem().getFileStatus(
                   path)), context);
     }
 
-    verifyCopy(fs, false);
+    verifyCopy(fs, false, true);
     // verify that we only copied new appended data
     Assert.assertEquals(nFiles * DEFAULT_FILE_SIZE * 2, stubContext
         .getReporter().getCounter(CopyMapper.Counter.BYTESCOPIED)
         .getValue());
-    Assert.assertEquals(pathList.size(), stubContext.getReporter().
+    Assert.assertEquals(numFiles, stubContext.getReporter().
         getCounter(CopyMapper.Counter.COPY).getValue());
+    rb = getMetrics(cluster.getDataNodes().get(0).getMetrics().name());
+    /*
+     * added as part of HADOOP-15292 to ensure that multiple readBlock()
+     * operations are not performed to read a block from a single Datanode.
+     * assert assumes that there is only one block per file, and that the number
+     * of files appended to in appendSourceData() above is captured by the
+     * variable numFiles.
+     */
+    assertCounter(readCounter, readsFromClient + numFiles, rb);
   }
 
   private void testCopy(boolean preserveChecksum) throws Exception {
@@ -288,6 +355,11 @@ public class TestCopyMapper {
     EnumSet<DistCpOptions.FileAttribute> fileAttributes
             = EnumSet.of(DistCpOptions.FileAttribute.REPLICATION);
     if (preserveChecksum) {
+      // We created source files with both different checksum types and
+      // non-default block sizes; here we don't explicitly add BLOCKSIZE
+      // as a preserved attribute, but the current behavior is that
+      // preserving CHECKSUMTYPE also automatically implies preserving
+      // BLOCKSIZE.
       fileAttributes.add(DistCpOptions.FileAttribute.CHECKSUMTYPE);
     }
     configuration.set(DistCpOptionSwitch.PRESERVE_STATUS.getConfigLabel(),
@@ -295,16 +367,26 @@ public class TestCopyMapper {
 
     copyMapper.setup(context);
 
-    for (Path path: pathList) {
+    int numFiles = 0;
+    int numDirs = 0;
+    for (Path path : pathList) {
+      if (fs.getFileStatus(path).isDirectory()) {
+        numDirs++;
+      } else {
+        numFiles++;
+      }
+
       copyMapper.map(
           new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH), path)),
           new CopyListingFileStatus(fs.getFileStatus(path)), context);
     }
 
     // Check that the maps worked.
-    verifyCopy(fs, preserveChecksum);
-    Assert.assertEquals(pathList.size(), stubContext.getReporter()
+    verifyCopy(fs, preserveChecksum, true);
+    Assert.assertEquals(numFiles, stubContext.getReporter()
         .getCounter(CopyMapper.Counter.COPY).getValue());
+    Assert.assertEquals(numDirs, stubContext.getReporter()
+        .getCounter(CopyMapper.Counter.DIR_COPY).getValue());
     if (!preserveChecksum) {
       Assert.assertEquals(nFiles * DEFAULT_FILE_SIZE, stubContext
           .getReporter().getCounter(CopyMapper.Counter.BYTESCOPIED)
@@ -322,7 +404,8 @@ public class TestCopyMapper {
     }
   }
 
-  private void verifyCopy(FileSystem fs, boolean preserveChecksum)
+  private void verifyCopy(
+      FileSystem fs, boolean preserveChecksum, boolean preserveReplication)
       throws Exception {
     for (Path path : pathList) {
       final Path targetPath = new Path(path.toString().replaceAll(SOURCE_PATH,
@@ -331,8 +414,10 @@ public class TestCopyMapper {
       Assert.assertTrue(fs.isFile(targetPath) == fs.isFile(path));
       FileStatus sourceStatus = fs.getFileStatus(path);
       FileStatus targetStatus = fs.getFileStatus(targetPath);
-      Assert.assertEquals(sourceStatus.getReplication(),
-          targetStatus.getReplication());
+      if (preserveReplication) {
+        Assert.assertEquals(sourceStatus.getReplication(),
+            targetStatus.getReplication());
+      }
       if (preserveChecksum) {
         Assert.assertEquals(sourceStatus.getBlockSize(),
             targetStatus.getBlockSize());
@@ -466,7 +551,7 @@ public class TestCopyMapper {
         @Override
         public FileSystem run() {
           try {
-            return FileSystem.get(configuration);
+            return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
             LOG.error("Exception encountered ", e);
             Assert.fail("Test failed: " + e.getMessage());
@@ -535,7 +620,7 @@ public class TestCopyMapper {
         @Override
         public FileSystem run() {
           try {
-            return FileSystem.get(configuration);
+            return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
             LOG.error("Exception encountered ", e);
             Assert.fail("Test failed: " + e.getMessage());
@@ -610,7 +695,7 @@ public class TestCopyMapper {
         @Override
         public FileSystem run() {
           try {
-            return FileSystem.get(configuration);
+            return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
             LOG.error("Exception encountered ", e);
             Assert.fail("Test failed: " + e.getMessage());
@@ -691,7 +776,7 @@ public class TestCopyMapper {
         @Override
         public FileSystem run() {
           try {
-            return FileSystem.get(configuration);
+            return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
             LOG.error("Exception encountered ", e);
             Assert.fail("Test failed: " + e.getMessage());
@@ -848,7 +933,7 @@ public class TestCopyMapper {
         @Override
         public FileSystem run() {
           try {
-            return FileSystem.get(configuration);
+            return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
             LOG.error("Exception encountered when get FileSystem.", e);
             throw new RuntimeException(e);
@@ -899,12 +984,13 @@ public class TestCopyMapper {
   }
 
   @Test(timeout=40000)
-  public void testCopyFailOnBlockSizeDifference() {
+  public void testCopyWithDifferentBlockSizes() throws Exception {
     try {
       deleteState();
       createSourceDataWithDifferentBlockSize();
 
       FileSystem fs = cluster.getFileSystem();
+
       CopyMapper copyMapper = new CopyMapper();
       StubContext stubContext = new StubContext(getConfiguration(), null, 0);
       Mapper<Text, CopyListingFileStatus, Text, Text>.Context context
@@ -920,18 +1006,79 @@ public class TestCopyMapper {
 
       for (Path path : pathList) {
         final FileStatus fileStatus = fs.getFileStatus(path);
-        copyMapper.map(new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH),
-            path)), new CopyListingFileStatus(fileStatus), context);
+        copyMapper.map(
+            new Text(
+                DistCpUtils.getRelativePath(new Path(SOURCE_PATH), path)),
+            new CopyListingFileStatus(fileStatus), context);
       }
 
-      Assert.fail("Copy should have failed because of block-size difference.");
+      if (expectDifferentBlockSizesMultipleBlocksToSucceed()) {
+        verifyCopy(fs, false, false);
+      } else {
+        Assert.fail(
+            "Copy should have failed because of block-size difference.");
+      }
+    } catch (Exception exception) {
+      if (expectDifferentBlockSizesMultipleBlocksToSucceed()) {
+        throw exception;
+      } else {
+        // Check that the exception suggests the use of -pb/-skipcrccheck.
+        // This could be refactored to use LambdaTestUtils if we add support
+        // for listing multiple different independent substrings to expect
+        // in the exception message and add support for LambdaTestUtils to
+        // inspect the transitive cause and/or suppressed exceptions as well.
+        Throwable cause = exception.getCause().getCause();
+        GenericTestUtils.assertExceptionContains("-pb", cause);
+        GenericTestUtils.assertExceptionContains("-skipcrccheck", cause);
+      }
     }
-    catch (Exception exception) {
-      // Check that the exception suggests the use of -pb/-skipCrc.
-      Assert.assertTrue("Failure exception should have suggested the use of -pb.",
-          exception.getCause().getCause().getMessage().contains("pb"));
-      Assert.assertTrue("Failure exception should have suggested the use of -skipCrc.",
-          exception.getCause().getCause().getMessage().contains("skipCrc"));
+  }
+
+  @Test(timeout=40000)
+  public void testCopyWithDifferentBytesPerCrc() throws Exception {
+    try {
+      deleteState();
+      createSourceDataWithDifferentBytesPerCrc();
+
+      FileSystem fs = cluster.getFileSystem();
+
+      CopyMapper copyMapper = new CopyMapper();
+      StubContext stubContext = new StubContext(getConfiguration(), null, 0);
+      Mapper<Text, CopyListingFileStatus, Text, Text>.Context context
+          = stubContext.getContext();
+
+      Configuration configuration = context.getConfiguration();
+      EnumSet<DistCpOptions.FileAttribute> fileAttributes
+          = EnumSet.noneOf(DistCpOptions.FileAttribute.class);
+      configuration.set(DistCpOptionSwitch.PRESERVE_STATUS.getConfigLabel(),
+          DistCpUtils.packAttributes(fileAttributes));
+
+      copyMapper.setup(context);
+
+      for (Path path : pathList) {
+        final FileStatus fileStatus = fs.getFileStatus(path);
+        copyMapper.map(
+            new Text(
+                DistCpUtils.getRelativePath(new Path(SOURCE_PATH), path)),
+            new CopyListingFileStatus(fileStatus), context);
+      }
+
+      if (expectDifferentBytesPerCrcToSucceed()) {
+        verifyCopy(fs, false, false);
+      } else {
+        Assert.fail(
+            "Copy should have failed because of bytes-per-crc difference.");
+      }
+    } catch (Exception exception) {
+      if (expectDifferentBytesPerCrcToSucceed()) {
+        throw exception;
+      } else {
+        // This could be refactored to use LambdaTestUtils if we add support
+        // for LambdaTestUtils to inspect the transitive cause and/or
+        // suppressed exceptions as well.
+        Throwable cause = exception.getCause().getCause();
+        GenericTestUtils.assertExceptionContains("mismatch", cause);
+      }
     }
   }
 
@@ -942,6 +1089,7 @@ public class TestCopyMapper {
       createSourceData();
 
       FileSystem fs = cluster.getFileSystem();
+
       CopyMapper copyMapper = new CopyMapper();
       StubContext stubContext = new StubContext(getConfiguration(), null, 0);
       Mapper<Text, CopyListingFileStatus, Text, Text>.Context context
@@ -972,6 +1120,12 @@ public class TestCopyMapper {
         final FileStatus source = fs.getFileStatus(path);
         final FileStatus target = fs.getFileStatus(targetPath);
         if (!source.isDirectory() ) {
+          // The reason the checksum check succeeds despite block sizes not
+          // matching between the two is that when only one block is ever
+          // written (partial or complete), the crcPerBlock is not included
+          // in the FileChecksum algorithmName. If we had instead written
+          // a large enough file to exceed the blocksize, then the copy
+          // would not have succeeded.
           Assert.assertTrue(preserve ||
                   source.getBlockSize() != target.getBlockSize());
           Assert.assertTrue(preserve ||
@@ -982,8 +1136,7 @@ public class TestCopyMapper {
                   source.getReplication() == target.getReplication());
         }
       }
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       Assert.assertTrue("Unexpected exception: " + e.getMessage(), false);
       e.printStackTrace();
     }
@@ -1117,5 +1270,82 @@ public class TestCopyMapper {
       Assert.assertTrue("Unexpected exception: " + e.getMessage(), false);
       e.printStackTrace();
     }
+  }
+
+  @Test
+  public void testVerboseLogging() throws Exception {
+    deleteState();
+    createSourceData();
+
+    FileSystem fs = cluster.getFileSystem();
+    CopyMapper copyMapper = new CopyMapper();
+    StubContext stubContext = new StubContext(getConfiguration(), null, 0);
+    Mapper<Text, CopyListingFileStatus, Text, Text>.Context context
+            = stubContext.getContext();
+    copyMapper.setup(context);
+
+    int numFiles = 0;
+    for (Path path : pathList) {
+      if (fs.getFileStatus(path).isFile()) {
+        numFiles++;
+      }
+
+      copyMapper.map(
+          new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH), path)),
+          new CopyListingFileStatus(fs.getFileStatus(path)), context);
+    }
+
+    // Check that the maps worked.
+    Assert.assertEquals(numFiles, stubContext.getReporter()
+        .getCounter(CopyMapper.Counter.COPY).getValue());
+
+    testCopyingExistingFiles(fs, copyMapper, context);
+    // verify the verbose log
+    // we shouldn't print verbose log since this option is disabled
+    for (Text value : stubContext.getWriter().values()) {
+      Assert.assertTrue(!value.toString().startsWith("FILE_COPIED:"));
+      Assert.assertTrue(!value.toString().startsWith("FILE_SKIPPED:"));
+    }
+
+    // test with verbose logging
+    deleteState();
+    createSourceData();
+
+    stubContext = new StubContext(getConfiguration(), null, 0);
+    context = stubContext.getContext();
+    copyMapper.setup(context);
+
+    // enables verbose logging
+    context.getConfiguration().setBoolean(
+        DistCpOptionSwitch.VERBOSE_LOG.getConfigLabel(), true);
+    copyMapper.setup(context);
+
+    for (Path path : pathList) {
+      copyMapper.map(
+          new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH), path)),
+          new CopyListingFileStatus(fs.getFileStatus(path)), context);
+    }
+
+    Assert.assertEquals(numFiles, stubContext.getReporter()
+        .getCounter(CopyMapper.Counter.COPY).getValue());
+
+    // verify the verbose log of COPY log
+    int numFileCopied = 0;
+    for (Text value : stubContext.getWriter().values()) {
+      if (value.toString().startsWith("FILE_COPIED:")) {
+        numFileCopied++;
+      }
+    }
+    Assert.assertEquals(numFiles, numFileCopied);
+
+    // verify the verbose log of SKIP log
+    int numFileSkipped = 0;
+    testCopyingExistingFiles(fs, copyMapper, context);
+    for (Text value : stubContext.getWriter().values()) {
+      if (value.toString().startsWith("FILE_SKIPPED:")) {
+        numFileSkipped++;
+      }
+    }
+    Assert.assertEquals(numFiles, numFileSkipped);
   }
 }

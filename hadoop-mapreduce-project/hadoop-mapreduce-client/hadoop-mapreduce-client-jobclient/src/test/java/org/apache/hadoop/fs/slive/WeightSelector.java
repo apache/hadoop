@@ -26,12 +26,12 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.slive.Constants.Distribution;
 import org.apache.hadoop.fs.slive.Constants.OperationType;
 import org.apache.hadoop.fs.slive.Weights.UniformWeight;
 import org.apache.hadoop.fs.slive.ObserveableOp.Observer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is the main handler that selects operations to run using the
@@ -47,7 +47,8 @@ class WeightSelector {
     Double weight(int elapsed, int duration);
   }
 
-  private static final Log LOG = LogFactory.getLog(WeightSelector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(WeightSelector.class);
 
   private static class OperationInfo {
     Integer amountLeft;

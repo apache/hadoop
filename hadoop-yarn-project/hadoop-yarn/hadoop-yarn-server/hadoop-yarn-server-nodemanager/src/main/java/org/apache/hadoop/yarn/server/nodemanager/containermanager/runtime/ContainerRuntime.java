@@ -55,6 +55,16 @@ public interface ContainerRuntime {
       throws ContainerExecutionException;
 
   /**
+   * Relaunch a container.
+   *
+   * @param ctx the {@link ContainerRuntimeContext}
+   * @throws ContainerExecutionException if an error occurs while relaunching
+   * the container
+   */
+  void relaunchContainer(ContainerRuntimeContext ctx)
+      throws ContainerExecutionException;
+
+  /**
    * Signal a container. Signals may be a request to terminate, a status check,
    * etc.
    *
@@ -77,6 +87,10 @@ public interface ContainerRuntime {
 
   /**
    * Return the host and ip of the container
+   *
+   * @param container the {@link Container}
+   * @throws ContainerExecutionException if an error occurs while getting the ip
+   * and hostname
    */
-  String[] getIpAndHost(Container container);
+  String[] getIpAndHost(Container container) throws ContainerExecutionException;
 }

@@ -32,9 +32,7 @@ import java.util.TreeMap;
 import java.util.Map.Entry;
 
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang.time.FastDateFormat;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,6 +43,8 @@ import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.WriteBatch;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Contains the logic to lookup a leveldb by timestamp so that multiple smaller
@@ -54,7 +54,8 @@ import org.iq80.leveldb.WriteBatch;
 class RollingLevelDB {
 
   /** Logger for this class. */
-  private static final Log LOG = LogFactory.getLog(RollingLevelDB.class);
+  private static final Logger LOG = LoggerFactory.
+      getLogger(RollingLevelDB.class);
   /** Factory to open and create new leveldb instances. */
   private static JniDBFactory factory = new JniDBFactory();
   /** Thread safe date formatter. */
@@ -151,7 +152,7 @@ class RollingLevelDB {
     }
 
     public void close() {
-      IOUtils.cleanup(LOG, writeBatch);
+      IOUtils.cleanupWithLogger(LOG, writeBatch);
     }
   }
 
@@ -346,7 +347,7 @@ class RollingLevelDB {
         .iterator();
     while (iterator.hasNext()) {
       Entry<Long, DB> entry = iterator.next();
-      IOUtils.cleanup(LOG, entry.getValue());
+      IOUtils.cleanupWithLogger(LOG, entry.getValue());
       String dbName = fdf.format(entry.getKey());
       Path path = new Path(rollingDBPath, getName() + "." + dbName);
       try {
@@ -361,9 +362,9 @@ class RollingLevelDB {
 
   public void stop() throws Exception {
     for (DB db : rollingdbs.values()) {
-      IOUtils.cleanup(LOG, db);
+      IOUtils.cleanupWithLogger(LOG, db);
     }
-    IOUtils.cleanup(LOG, lfs);
+    IOUtils.cleanupWithLogger(LOG, lfs);
   }
 
   private long computeNextCheckMillis(long now) {

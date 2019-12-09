@@ -20,22 +20,26 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntime;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
 
@@ -48,8 +52,8 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
-  private static final Log LOG =
-      LogFactory.getLog(DefaultLinuxContainerRuntime.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DefaultLinuxContainerRuntime.class);
   private final PrivilegedOperationExecutor privilegedOperationExecutor;
   private Configuration conf;
 
@@ -66,7 +70,16 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
   }
 
   @Override
-  public void initialize(Configuration conf)
+  public boolean isRuntimeRequested(Map<String, String> env) {
+    String type = env.get(ContainerRuntimeConstants.ENV_CONTAINER_TYPE);
+    if (type == null) {
+      type = conf.get(YarnConfiguration.LINUX_CONTAINER_RUNTIME_TYPE);
+    }
+    return type == null || type.isEmpty() || type.equals("default");
+  }
+
+  @Override
+  public void initialize(Configuration conf, Context nmContext)
       throws ContainerExecutionException {
     this.conf = conf;
   }
@@ -80,7 +93,6 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
   @Override
   public void launchContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
-    Container container = ctx.getContainer();
     PrivilegedOperation launchOp = new PrivilegedOperation(
         PrivilegedOperation.OperationType.LAUNCH_CONTAINER);
 
@@ -108,6 +120,9 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
       launchOp.appendArgs(tcCommandFile);
     }
 
+    // Some failures here are acceptable. Let the calling executor decide.
+    launchOp.disableFailureLogging();
+
     //List<String> -> stored as List -> fetched/converted to List<String>
     //we can't do better here thanks to type-erasure
     @SuppressWarnings("unchecked")
@@ -116,20 +131,22 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
 
     try {
       privilegedOperationExecutor.executePrivilegedOperation(prefixCommands,
-            launchOp, null, container.getLaunchContext().getEnvironment(),
-            false, false);
+            launchOp, null, null, false, false);
     } catch (PrivilegedOperationException e) {
-      LOG.warn("Launch container failed. Exception: ", e);
-
       throw new ContainerExecutionException("Launch container failed", e
           .getExitCode(), e.getOutput(), e.getErrorOutput());
     }
   }
 
   @Override
+  public void relaunchContainer(ContainerRuntimeContext ctx)
+      throws ContainerExecutionException {
+    launchContainer(ctx);
+  }
+
+  @Override
   public void signalContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
-    Container container = ctx.getContainer();
     PrivilegedOperation signalOp = new PrivilegedOperation(
         PrivilegedOperation.OperationType.SIGNAL_CONTAINER);
 
@@ -148,8 +165,7 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
           .getInstance(conf);
 
       executor.executePrivilegedOperation(null,
-          signalOp, null, container.getLaunchContext().getEnvironment(),
-          false, true);
+          signalOp, null, null, false, false);
     } catch (PrivilegedOperationException e) {
       //Don't log the failure here. Some kinds of signaling failures are
       // acceptable. Let the calling executor decide what to do.

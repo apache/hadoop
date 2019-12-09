@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -42,13 +43,13 @@ public class ExtendedBlock {
   }
 
   public ExtendedBlock(String poolId, Block b) {
-    this.poolId = poolId;
+    this.poolId = poolId != null ? poolId.intern() : null;
     this.block = b;
   }
 
   public ExtendedBlock(final String poolId, final long blkid, final long len,
       final long genstamp) {
-    this.poolId = poolId;
+    this.poolId = poolId != null ? poolId.intern() : null;
     block = new Block(blkid, len, genstamp);
   }
 
@@ -86,7 +87,7 @@ public class ExtendedBlock {
   }
 
   public void set(String poolId, Block blk) {
-    this.poolId = poolId;
+    this.poolId = poolId != null ? poolId.intern() : null;
     this.block = blk;
   }
 
@@ -107,13 +108,16 @@ public class ExtendedBlock {
       return false;
     }
     ExtendedBlock b = (ExtendedBlock)o;
-    return b.block.equals(block) && b.poolId.equals(poolId);
+    return b.block.equals(block) &&
+        (b.poolId != null ? b.poolId.equals(poolId) : poolId == null);
   }
 
   @Override // Object
   public int hashCode() {
-    int result = 31 + poolId.hashCode();
-    return (31 * result + block.hashCode());
+    return new HashCodeBuilder(31, 17).
+        append(poolId).
+        append(block).
+        toHashCode();
   }
 
   @Override // Object

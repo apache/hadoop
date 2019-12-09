@@ -17,10 +17,21 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import org.apache.hadoop.fs.*;
+import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
+import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.ipc.RemoteException;
@@ -110,20 +121,32 @@ public class JsonUtil {
     m.put("pathSuffix", status.getLocalName());
     m.put("type", WebHdfsConstants.PathType.valueOf(status));
     if (status.isSymlink()) {
-      m.put("symlink", status.getSymlink());
+      m.put("symlink", DFSUtilClient.bytes2String(status.getSymlinkInBytes()));
     }
-
     m.put("length", status.getLen());
     m.put("owner", status.getOwner());
     m.put("group", status.getGroup());
     FsPermission perm = status.getPermission();
     m.put("permission", toString(perm));
-    if (perm.getAclBit()) {
+    if (status.hasAcl()) {
       m.put("aclBit", true);
     }
-    if (perm.getEncryptedBit()) {
+    if (status.isEncrypted()) {
       m.put("encBit", true);
     }
+    if (status.isErasureCoded()) {
+      m.put("ecBit", true);
+      if (status.getErasureCodingPolicy() != null) {
+        // to maintain backward comparability
+        m.put("ecPolicy", status.getErasureCodingPolicy().getName());
+        // to re-construct HdfsFileStatus object via WebHdfs
+        m.put("ecPolicyObj", getEcPolicyAsMap(status.getErasureCodingPolicy()));
+      }
+    }
+    if (status.isSnapshotEnabled()) {
+      m.put("snapshotEnabled", status.isSnapshotEnabled());
+    }
+
     m.put("accessTime", status.getAccessTime());
     m.put("modificationTime", status.getModificationTime());
     m.put("blockSize", status.getBlockSize());
@@ -132,6 +155,21 @@ public class JsonUtil {
     m.put("childrenNum", status.getChildrenNum());
     m.put("storagePolicy", status.getStoragePolicy());
     return m;
+  }
+
+  private static Map<String, Object> getEcPolicyAsMap(
+      final ErasureCodingPolicy ecPolicy) {
+    /** Convert an ErasureCodingPolicy to a map. */
+    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+    builder.put("name", ecPolicy.getName())
+        .put("cellSize", ecPolicy.getCellSize())
+        .put("numDataUnits", ecPolicy.getNumDataUnits())
+        .put("numParityUnits", ecPolicy.getNumParityUnits())
+        .put("codecName", ecPolicy.getCodecName())
+        .put("id", ecPolicy.getId())
+        .put("extraOptions", ecPolicy.getSchema().getExtraOptions());
+    return builder.build();
+
   }
 
   /** Convert an ExtendedBlock to a Json map. */
@@ -181,6 +219,9 @@ public class JsonUtil {
     if (datanodeinfo.getUpgradeDomain() != null) {
       m.put("upgradeDomain", datanodeinfo.getUpgradeDomain());
     }
+    m.put("lastBlockReportTime", datanodeinfo.getLastBlockReportTime());
+    m.put("lastBlockReportMonotonic",
+        datanodeinfo.getLastBlockReportMonotonic());
     return m;
   }
 
@@ -313,25 +354,44 @@ public class JsonUtil {
     m.put("length", contentsummary.getLength());
     m.put("fileCount", contentsummary.getFileCount());
     m.put("directoryCount", contentsummary.getDirectoryCount());
-    m.put("quota", contentsummary.getQuota());
-    m.put("spaceConsumed", contentsummary.getSpaceConsumed());
-    m.put("spaceQuota", contentsummary.getSpaceQuota());
-    final Map<String, Map<String, Long>> typeQuota =
-        new TreeMap<String, Map<String, Long>>();
+    // For ContentSummary we don't need this since we already have
+    // separate count for file and directory.
+    m.putAll(toJsonMap(contentsummary, false));
+    return toJsonString(ContentSummary.class, m);
+  }
+
+  /** Convert a QuotaUsage to a JSON string. */
+  public static String toJsonString(final QuotaUsage quotaUsage) {
+    if (quotaUsage == null) {
+      return null;
+    }
+    return toJsonString(QuotaUsage.class, toJsonMap(quotaUsage, true));
+  }
+
+  private static Map<String, Object> toJsonMap(
+      final QuotaUsage quotaUsage, boolean includeFileAndDirectoryCount) {
+    final Map<String, Object> m = new TreeMap<>();
+    if (includeFileAndDirectoryCount) {
+      m.put("fileAndDirectoryCount", quotaUsage.getFileAndDirectoryCount());
+    }
+    m.put("quota", quotaUsage.getQuota());
+    m.put("spaceConsumed", quotaUsage.getSpaceConsumed());
+    m.put("spaceQuota", quotaUsage.getSpaceQuota());
+    final Map<String, Map<String, Long>> typeQuota = new TreeMap<>();
     for (StorageType t : StorageType.getTypesSupportingQuota()) {
-      long tQuota = contentsummary.getTypeQuota(t);
+      long tQuota = quotaUsage.getTypeQuota(t);
       if (tQuota != HdfsConstants.QUOTA_RESET) {
         Map<String, Long> type = typeQuota.get(t.toString());
         if (type == null) {
-          type = new TreeMap<String, Long>();
+          type = new TreeMap<>();
           typeQuota.put(t.toString(), type);
         }
-        type.put("quota", contentsummary.getTypeQuota(t));
-        type.put("consumed", contentsummary.getTypeConsumed(t));
+        type.put("quota", quotaUsage.getTypeQuota(t));
+        type.put("consumed", quotaUsage.getTypeConsumed(t));
       }
     }
     m.put("typeQuota", typeQuota);
-    return toJsonString(ContentSummary.class, m);
+    return m;
   }
 
   /** Convert a MD5MD5CRC32FileChecksum to a Json string. */
@@ -367,12 +427,6 @@ public class JsonUtil {
     FsPermission perm = status.getPermission();
     if (perm != null) {
       m.put("permission", toString(perm));
-      if (perm.getAclBit()) {
-        m.put("aclBit", true);
-      }
-      if (perm.getEncryptedBit()) {
-        m.put("encBit", true);
-      }
     }
     final Map<String, Map<String, Object>> finalMap =
         new TreeMap<String, Map<String, Object>>();
@@ -462,5 +516,112 @@ public class JsonUtil {
 
   public static String toJsonString(BlockStoragePolicy storagePolicy) {
     return toJsonString(BlockStoragePolicy.class, toJsonMap(storagePolicy));
+  }
+
+  public static String toJsonString(FsServerDefaults serverDefaults) {
+    return toJsonString(FsServerDefaults.class, toJsonMap(serverDefaults));
+  }
+
+  private static Object toJsonMap(FsServerDefaults serverDefaults) {
+    final Map<String, Object> m = new HashMap<String, Object>();
+    m.put("blockSize", serverDefaults.getBlockSize());
+    m.put("bytesPerChecksum", serverDefaults.getBytesPerChecksum());
+    m.put("writePacketSize", serverDefaults.getWritePacketSize());
+    m.put("replication", serverDefaults.getReplication());
+    m.put("fileBufferSize", serverDefaults.getFileBufferSize());
+    m.put("encryptDataTransfer", serverDefaults.getEncryptDataTransfer());
+    m.put("trashInterval", serverDefaults.getTrashInterval());
+    m.put("checksumType", serverDefaults.getChecksumType().id);
+    m.put("keyProviderUri", serverDefaults.getKeyProviderUri());
+    m.put("defaultStoragePolicyId", serverDefaults.getDefaultStoragePolicyId());
+    return m;
+  }
+
+  public static String toJsonString(SnapshotDiffReport diffReport) {
+    return toJsonString(SnapshotDiffReport.class.getSimpleName(),
+        toJsonMap(diffReport));
+  }
+
+  private static Object toJsonMap(SnapshotDiffReport diffReport) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("snapshotRoot", diffReport.getSnapshotRoot());
+    m.put("fromSnapshot", diffReport.getFromSnapshot());
+    m.put("toSnapshot", diffReport.getLaterSnapshotName());
+    Object[] diffList = new Object[diffReport.getDiffList().size()];
+    for (int i = 0; i < diffReport.getDiffList().size(); i++) {
+      diffList[i] = toJsonMap(diffReport.getDiffList().get(i));
+    }
+    m.put("diffList", diffList);
+    return m;
+  }
+
+  private static Object toJsonMap(
+      SnapshotDiffReport.DiffReportEntry diffReportEntry) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("type", diffReportEntry.getType());
+    if (diffReportEntry.getSourcePath() != null) {
+      m.put("sourcePath",
+          DFSUtilClient.bytes2String(diffReportEntry.getSourcePath()));
+    }
+    if (diffReportEntry.getTargetPath() != null) {
+      m.put("targetPath",
+          DFSUtilClient.bytes2String(diffReportEntry.getTargetPath()));
+    }
+    return m;
+  }
+
+  public static String toJsonString(
+      SnapshottableDirectoryStatus[] snapshottableDirectoryList) {
+    if (snapshottableDirectoryList == null) {
+      return toJsonString("SnapshottableDirectoryList", null);
+    }
+    Object[] a = new Object[snapshottableDirectoryList.length];
+    for (int i = 0; i < snapshottableDirectoryList.length; i++) {
+      a[i] = toJsonMap(snapshottableDirectoryList[i]);
+    }
+    return toJsonString("SnapshottableDirectoryList", a);
+  }
+
+  private static Object toJsonMap(
+      SnapshottableDirectoryStatus snapshottableDirectoryStatus) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("snapshotNumber", snapshottableDirectoryStatus.getSnapshotNumber());
+    m.put("snapshotQuota", snapshottableDirectoryStatus.getSnapshotQuota());
+    m.put("parentFullPath", DFSUtilClient
+        .bytes2String(snapshottableDirectoryStatus.getParentFullPath()));
+    m.put("dirStatus", toJsonMap(snapshottableDirectoryStatus.getDirStatus()));
+    return m;
+  }
+
+  private static Map<String, Object> toJsonMap(
+      final BlockLocation blockLocation) throws IOException {
+    if (blockLocation == null) {
+      return null;
+    }
+
+    final Map<String, Object> m = new HashMap<>();
+    m.put("length", blockLocation.getLength());
+    m.put("offset", blockLocation.getOffset());
+    m.put("corrupt", blockLocation.isCorrupt());
+    m.put("storageTypes", toJsonArray(blockLocation.getStorageTypes()));
+    m.put("cachedHosts", blockLocation.getCachedHosts());
+    m.put("hosts", blockLocation.getHosts());
+    m.put("names", blockLocation.getNames());
+    m.put("topologyPaths", blockLocation.getTopologyPaths());
+    return m;
+  }
+
+  public static String toJsonString(BlockLocation[] locations)
+      throws IOException {
+    if (locations == null) {
+      return null;
+    }
+    final Map<String, Object> m = new HashMap<>();
+    Object[] blockLocations = new Object[locations.length];
+    for(int i=0; i<locations.length; i++) {
+      blockLocations[i] = toJsonMap(locations[i]);
+    }
+    m.put(BlockLocation.class.getSimpleName(), blockLocations);
+    return toJsonString("BlockLocations", m);
   }
 }

@@ -17,27 +17,27 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web.webhdfs;
 
-import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.LastHttpContent;
+import org.slf4j.Logger;
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.io.IOUtils;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.apache.commons.logging.Log;
-import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.io.IOUtils;
+import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaders.Values.CLOSE;
 
 class HdfsWriter extends SimpleChannelInboundHandler<HttpContent> {
   private final DFSClient client;
   private final OutputStream out;
   private final DefaultHttpResponse response;
-  private static final Log LOG = WebHdfsHandler.LOG;
+  private static final Logger LOG = WebHdfsHandler.LOG;
 
   HdfsWriter(DFSClient client, OutputStream out, DefaultHttpResponse response) {
     this.client = client;
@@ -55,9 +55,13 @@ class HdfsWriter extends SimpleChannelInboundHandler<HttpContent> {
     throws IOException {
     chunk.content().readBytes(out, chunk.content().readableBytes());
     if (chunk instanceof LastHttpContent) {
-      response.headers().set(CONNECTION, CLOSE);
-      ctx.write(response).addListener(ChannelFutureListener.CLOSE);
-      releaseDfsResources();
+      try {
+        releaseDfsResourcesAndThrow();
+        response.headers().set(CONNECTION, CLOSE);
+        ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+      } catch (Exception cause) {
+        exceptionCaught(ctx, cause);
+      }
     }
   }
 
@@ -71,12 +75,19 @@ class HdfsWriter extends SimpleChannelInboundHandler<HttpContent> {
     releaseDfsResources();
     DefaultHttpResponse resp = ExceptionHandler.exceptionCaught(cause);
     resp.headers().set(CONNECTION, CLOSE);
-    ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+    ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE);
+    if (LOG != null && LOG.isDebugEnabled()) {
+      LOG.debug("Exception in channel handler ", cause);
+    }
   }
 
   private void releaseDfsResources() {
-    IOUtils.cleanup(LOG, out);
-    IOUtils.cleanup(LOG, client);
+    IOUtils.cleanupWithLogger(LOG, out);
+    IOUtils.cleanupWithLogger(LOG, client);
   }
 
+  private void releaseDfsResourcesAndThrow() throws Exception {
+    out.close();
+    client.close();
+  }
 }

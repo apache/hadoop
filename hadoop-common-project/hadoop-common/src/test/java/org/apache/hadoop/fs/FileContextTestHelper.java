@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.util.EnumSet;
 
-import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.CreateOpts.BlockSize;
 import org.apache.hadoop.io.IOUtils;
@@ -43,7 +42,7 @@ public final class FileContextTestHelper {
    * Create a context with test root relative to the test directory
    */
   public FileContextTestHelper() {
-    this(GenericTestUtils.getRandomizedTestDir().getAbsolutePath());
+    this(GenericTestUtils.getRandomizedTestDir().getPath());
   }
 
   /**
@@ -83,7 +82,7 @@ public final class FileContextTestHelper {
         absTestRootDir = testRootDir;
       } else {
         absTestRootDir = fc.getWorkingDirectory().toString() + "/"
-            + testRootDir;
+            + new Path(testRootDir).toUri();
       }
     }
     return absTestRootDir;
@@ -216,7 +215,7 @@ public final class FileContextTestHelper {
     return containsPath(fc, new Path(path), dirList);
   }
   
-  public static enum fileType {isDir, isFile, isSymlink};
+  public enum fileType {isDir, isFile, isSymlink};
   
   public static void checkFileStatus(FileContext aFc, String path,
       fileType expectedType) throws IOException {

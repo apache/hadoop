@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.tools.mapred;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.IOUtils;
@@ -50,8 +50,8 @@ import java.util.ArrayList;
  */
 public class UniformSizeInputFormat
     extends InputFormat<Text, CopyListingFileStatus> {
-  private static final Log LOG
-                = LogFactory.getLog(UniformSizeInputFormat.class);
+  private static final Logger LOG
+                = LoggerFactory.getLogger(UniformSizeInputFormat.class);
 
   /**
    * Implementation of InputFormat::getSplits(). Returns a list of InputSplits,
@@ -99,7 +99,8 @@ public class UniformSizeInputFormat
       while (reader.next(srcRelPath, srcFileStatus)) {
         // If adding the current file would cause the bytes per map to exceed
         // limit. Add the current file to new split
-        if (currentSplitSize + srcFileStatus.getLen() > nBytesPerSplit && lastPosition != 0) {
+        if (currentSplitSize + srcFileStatus.getChunkLength() > nBytesPerSplit
+            && lastPosition != 0) {
           FileSplit split = new FileSplit(listingFilePath, lastSplitStart,
               lastPosition - lastSplitStart, null);
           if (LOG.isDebugEnabled()) {
@@ -109,7 +110,7 @@ public class UniformSizeInputFormat
           lastSplitStart = lastPosition;
           currentSplitSize = 0;
         }
-        currentSplitSize += srcFileStatus.getLen();
+        currentSplitSize += srcFileStatus.getChunkLength();
         lastPosition = reader.getPosition();
       }
       if (lastPosition > lastSplitStart) {

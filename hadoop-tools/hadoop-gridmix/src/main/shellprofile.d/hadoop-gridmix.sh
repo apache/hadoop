@@ -18,7 +18,7 @@
 if ! declare -f hadoop_subcommand_gridmix >/dev/null 2>/dev/null; then
 
   if [[ "${HADOOP_SHELL_EXECNAME}" = hadoop ]]; then
-    hadoop_add_subcommand "gridmix" "submit a mix of synthetic job, modeling a profiled from production load"
+    hadoop_add_subcommand "gridmix" client "submit a mix of synthetic job, modeling a profiled from production load"
   fi
 
 ## @description  gridmix command for hadoop

@@ -24,8 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
@@ -34,8 +34,8 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 
 class TimelineEntityConverterV2 {
-  private static final Log LOG =
-      LogFactory.getLog(TimelineEntityConverterV2.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineEntityConverterV2.class);
 
   static final String JOB = "MAPREDUCE_JOB";
   static final String TASK = "MAPREDUCE_TASK";

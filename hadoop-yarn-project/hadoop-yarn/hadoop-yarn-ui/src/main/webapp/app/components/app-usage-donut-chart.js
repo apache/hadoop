@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
-import DonutChart from 'yarn-ui/components/donut-chart';
 import BaseUsageDonutChart from 'yarn-ui/components/base-usage-donut-chart';
 import ColorUtils from 'yarn-ui/utils/color-utils';
 import HrefAddressUtils from 'yarn-ui/utils/href-address-utils';
@@ -38,7 +36,6 @@ export default BaseUsageDonutChart.extend({
           value: v.toFixed(2)
         });
 
-        console.log(v);
         avail = avail - v;
       }
     }.bind(this));
@@ -52,11 +49,11 @@ export default BaseUsageDonutChart.extend({
     usageByApps.push({
       label: "Available",
       value: avail.toFixed(4)
-    })
+    });
 
     this.colors = ColorUtils.getColors(usageByApps.length, ["others", "good"], true);
 
     this.renderDonutChart(usageByApps, this.get("title"), this.get("showLabels"),
       this.get("middleLabel"), "100%", "%");
   },
-})
+});

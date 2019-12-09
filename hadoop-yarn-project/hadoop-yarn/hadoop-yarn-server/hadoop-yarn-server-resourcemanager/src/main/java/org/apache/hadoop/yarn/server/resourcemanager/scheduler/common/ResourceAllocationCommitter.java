@@ -25,5 +25,15 @@ import org.apache.hadoop.yarn.api.records.Resource;
  * plus global scheduling functionality
  */
 public interface ResourceAllocationCommitter {
-  void tryCommit(Resource cluster, ResourceCommitRequest proposal);
+
+  /**
+   * Try to commit the allocation Proposal. This also gives the option of
+   * not updating a pending queued request.
+   * @param cluster Cluster Resource.
+   * @param proposal Proposal.
+   * @param updatePending Decrement pending if successful.
+   * @return Is successful or not.
+   */
+  boolean tryCommit(Resource cluster, ResourceCommitRequest proposal,
+      boolean updatePending);
 }

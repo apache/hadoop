@@ -33,7 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 /**
  * Generates the data/entities for the FlowRun and FlowActivity Tables.
  */
-final class TestFlowDataGenerator {
+public final class TestFlowDataGenerator {
   private TestFlowDataGenerator() {
   }
 
@@ -41,7 +41,8 @@ final class TestFlowDataGenerator {
   private static final String METRIC_2 = "HDFS_BYTES_READ";
   public static final long END_TS_INCR = 10000L;
 
-  static TimelineEntity getEntityMetricsApp1(long insertTs, Configuration c1) {
+  public static TimelineEntity getEntityMetricsApp1(long insertTs,
+      Configuration c1) {
     TimelineEntity entity = new TimelineEntity();
     String id = "flowRunMetrics_test";
     String type = TimelineEntityType.YARN_APPLICATION.toString();
@@ -83,7 +84,7 @@ final class TestFlowDataGenerator {
   }
 
 
-  static TimelineEntity getEntityMetricsApp1Complete(long insertTs,
+  public static TimelineEntity getEntityMetricsApp1Complete(long insertTs,
       Configuration c1) {
     TimelineEntity entity = new TimelineEntity();
     String id = "flowRunMetrics_test";
@@ -125,7 +126,7 @@ final class TestFlowDataGenerator {
   }
 
 
-  static TimelineEntity getEntityMetricsApp1(long insertTs) {
+  public static TimelineEntity getEntityMetricsApp1(long insertTs) {
     TimelineEntity entity = new TimelineEntity();
     String id = "flowRunMetrics_test";
     String type = TimelineEntityType.YARN_APPLICATION.toString();
@@ -168,8 +169,7 @@ final class TestFlowDataGenerator {
     return entity;
   }
 
-
-  static TimelineEntity getEntityMetricsApp2(long insertTs) {
+  public static TimelineEntity getEntityMetricsApp2(long insertTs) {
     TimelineEntity entity = new TimelineEntity();
     String id = "flowRunMetrics_test";
     String type = TimelineEntityType.YARN_APPLICATION.toString();
@@ -200,7 +200,7 @@ final class TestFlowDataGenerator {
     return entity;
   }
 
-  static TimelineEntity getEntity1() {
+  public static TimelineEntity getEntity1() {
     TimelineEntity entity = new TimelineEntity();
     String id = "flowRunHello";
     String type = TimelineEntityType.YARN_APPLICATION.toString();
@@ -243,7 +243,7 @@ final class TestFlowDataGenerator {
     return entity;
   }
 
-  static TimelineEntity getAFullEntity(long ts, long endTs) {
+  public static TimelineEntity getAFullEntity(long ts, long endTs) {
     TimelineEntity entity = new TimelineEntity();
     String id = "flowRunFullEntity";
     String type = TimelineEntityType.YARN_APPLICATION.toString();
@@ -292,7 +292,7 @@ final class TestFlowDataGenerator {
     return entity;
   }
 
-  static TimelineEntity getEntityGreaterStartTime(long startTs) {
+  public static TimelineEntity getEntityGreaterStartTime(long startTs) {
     TimelineEntity entity = new TimelineEntity();
     entity.setCreatedTime(startTs);
     entity.setId("flowRunHello with greater start time");
@@ -308,7 +308,7 @@ final class TestFlowDataGenerator {
     return entity;
   }
 
-  static TimelineEntity getEntityMaxEndTime(long endTs) {
+  public static TimelineEntity getEntityMaxEndTime(long endTs) {
     TimelineEntity entity = new TimelineEntity();
     entity.setId("flowRunHello Max End time");
     entity.setType(TimelineEntityType.YARN_APPLICATION.toString());
@@ -322,7 +322,7 @@ final class TestFlowDataGenerator {
     return entity;
   }
 
-  static TimelineEntity getEntityMinStartTime(long startTs) {
+  public static TimelineEntity getEntityMinStartTime(long startTs) {
     TimelineEntity entity = new TimelineEntity();
     String id = "flowRunHelloMInStartTime";
     String type = TimelineEntityType.YARN_APPLICATION.toString();
@@ -336,7 +336,7 @@ final class TestFlowDataGenerator {
     return entity;
   }
 
-  static TimelineEntity getMinFlushEntity(long startTs) {
+  public static TimelineEntity getMinFlushEntity(long startTs) {
     TimelineEntity entity = new TimelineEntity();
     String id = "flowRunHelloFlushEntityMin";
     String type = TimelineEntityType.YARN_APPLICATION.toString();
@@ -350,7 +350,7 @@ final class TestFlowDataGenerator {
     return entity;
   }
 
-  static TimelineEntity getMaxFlushEntity(long startTs) {
+  public static TimelineEntity getMaxFlushEntity(long startTs) {
     TimelineEntity entity = new TimelineEntity();
     String id = "flowRunHelloFlushEntityMax";
     String type = TimelineEntityType.YARN_APPLICATION.toString();
@@ -365,7 +365,7 @@ final class TestFlowDataGenerator {
     return entity;
   }
 
-  static TimelineEntity getFlowApp1(long appCreatedTime) {
+  public static TimelineEntity getFlowApp1(long appCreatedTime) {
     TimelineEntity entity = new TimelineEntity();
     String id = "flowActivity_test";
     String type = TimelineEntityType.YARN_APPLICATION.toString();

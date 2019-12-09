@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -26,16 +27,22 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.slf4j.event.Level;
 
 import java.io.IOException;
+import java.util.Random;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY;
 
 /**
  * This test serves a prototype to demo the idea proposed so far. It creates two
@@ -47,7 +54,7 @@ public class TestFileChecksum {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestFileChecksum.class);
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private int dataBlocks = ecPolicy.getNumDataUnits();
   private int parityBlocks = ecPolicy.getNumParityUnits();
 
@@ -70,6 +77,9 @@ public class TestFileChecksum {
   private String stripedFile2 = ecDir + "/stripedFileChecksum2";
   private String replicatedFile = "/replicatedFileChecksum";
 
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
+
   @Before
   public void setup() throws IOException {
     int numDNs = dataBlocks + parityBlocks + 2;
@@ -78,16 +88,21 @@ public class TestFileChecksum {
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
+    conf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    customizeConf(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     Path ecPath = new Path(ecDir);
     cluster.getFileSystem().mkdir(ecPath, FsPermission.getDirDefault());
-    cluster.getFileSystem().getClient().setErasureCodingPolicy(ecDir, null);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy(ecDir,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     fs = cluster.getFileSystem();
     client = fs.getClient();
-
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     bytesPerCRC = conf.getInt(
         HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY,
         HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT);
+    GenericTestUtils.setLogLevel(FileChecksumHelper.LOG, Level.DEBUG);
   }
 
   @After
@@ -96,6 +111,39 @@ public class TestFileChecksum {
       cluster.shutdown();
       cluster = null;
     }
+  }
+
+  /**
+   * Subclasses may customize the conf to run the full set of tests under
+   * different conditions.
+   */
+  protected void customizeConf(Configuration preparedConf) {
+  }
+
+  /**
+   * Subclasses may override this method to indicate whether equivalent files
+   * in striped and replicated formats are expected to have the same
+   * overall FileChecksum.
+   */
+  protected boolean expectComparableStripedAndReplicatedFiles() {
+    return false;
+  }
+
+  /**
+   * Subclasses may override this method to indicate whether equivalent files
+   * in replicated formats with different block sizes are expected to have the
+   * same overall FileChecksum.
+   */
+  protected boolean expectComparableDifferentBlockSizeReplicatedFiles() {
+    return false;
+  }
+
+  /**
+   * Subclasses may override this method to indicate whether checksums are
+   * supported for files where different blocks have different bytesPerCRC.
+   */
+  protected boolean expectSupportForSingleFileMixedBytesPerChecksum() {
+    return false;
   }
 
   @Test(timeout = 90000)
@@ -174,7 +222,30 @@ public class TestFileChecksum {
     FileChecksum replicatedFileChecksum = getFileChecksum(replicatedFile,
         10, false);
 
-    Assert.assertFalse(stripedFileChecksum1.equals(replicatedFileChecksum));
+    if (expectComparableStripedAndReplicatedFiles()) {
+      Assert.assertEquals(stripedFileChecksum1, replicatedFileChecksum);
+    } else {
+      Assert.assertNotEquals(stripedFileChecksum1, replicatedFileChecksum);
+    }
+  }
+
+  @Test(timeout = 90000)
+  public void testDifferentBlockSizeReplicatedFileChecksum() throws Exception {
+    byte[] fileData = StripedFileTestUtil.generateBytes(fileSize);
+    String replicatedFile1 = "/replicatedFile1";
+    String replicatedFile2 = "/replicatedFile2";
+    DFSTestUtil.writeFile(
+        fs, new Path(replicatedFile1), fileData, blockSize);
+    DFSTestUtil.writeFile(
+        fs, new Path(replicatedFile2), fileData, blockSize / 2);
+    FileChecksum checksum1 = getFileChecksum(replicatedFile1, -1, false);
+    FileChecksum checksum2 = getFileChecksum(replicatedFile2, -1, false);
+
+    if (expectComparableDifferentBlockSizeReplicatedFiles()) {
+      Assert.assertEquals(checksum1, checksum2);
+    } else {
+      Assert.assertNotEquals(checksum1, checksum2);
+    }
   }
 
   @Test(timeout = 90000)
@@ -463,6 +534,40 @@ public class TestFileChecksum {
         bytesPerCRC - 1);
   }
 
+  @Test(timeout = 90000)
+  public void testMixedBytesPerChecksum() throws Exception {
+    int fileLength = bytesPerCRC * 3;
+    byte[] fileData = StripedFileTestUtil.generateBytes(fileLength);
+    String replicatedFile1 = "/replicatedFile1";
+
+    // Split file into two parts.
+    byte[] fileDataPart1 = new byte[bytesPerCRC * 2];
+    System.arraycopy(fileData, 0, fileDataPart1, 0, fileDataPart1.length);
+    byte[] fileDataPart2 = new byte[fileData.length - fileDataPart1.length];
+    System.arraycopy(
+        fileData, fileDataPart1.length, fileDataPart2, 0, fileDataPart2.length);
+
+    DFSTestUtil.writeFile(fs, new Path(replicatedFile1), fileDataPart1);
+
+    // Modify bytesPerCRC for second part that we append as separate block.
+    conf.setInt(
+        HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, bytesPerCRC / 2);
+    DFSTestUtil.appendFileNewBlock(
+        ((DistributedFileSystem) FileSystem.newInstance(conf)),
+        new Path(replicatedFile1), fileDataPart2);
+
+    if (expectSupportForSingleFileMixedBytesPerChecksum()) {
+      String replicatedFile2 = "/replicatedFile2";
+      DFSTestUtil.writeFile(fs, new Path(replicatedFile2), fileData);
+      FileChecksum checksum1 = getFileChecksum(replicatedFile1, -1, false);
+      FileChecksum checksum2 = getFileChecksum(replicatedFile2, -1, false);
+      Assert.assertEquals(checksum1, checksum2);
+    } else {
+      exception.expect(IOException.class);
+      FileChecksum checksum = getFileChecksum(replicatedFile1, -1, false);
+    }
+  }
+
   private FileChecksum getFileChecksum(String filePath, int range,
                                        boolean killDn) throws Exception {
     int dnIdxToDie = -1;
@@ -517,7 +622,7 @@ public class TestFileChecksum {
 
     LocatedBlock locatedBlock = locatedBlocks.get(0);
     DatanodeInfo[] datanodes = locatedBlock.getLocations();
-    DatanodeInfo chosenDn = datanodes[0];
+    DatanodeInfo chosenDn = datanodes[new Random().nextInt(datanodes.length)];
 
     int idx = 0;
     for (DataNode dn : cluster.getDataNodes()) {

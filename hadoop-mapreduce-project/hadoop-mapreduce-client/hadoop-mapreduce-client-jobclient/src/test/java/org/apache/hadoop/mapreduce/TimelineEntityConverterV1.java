@@ -22,17 +22,17 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class TimelineEntityConverterV1 {
-  private static final Log LOG =
-      LogFactory.getLog(TimelineEntityConverterV1.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineEntityConverterV1.class);
 
   static final String JOB = "MAPREDUCE_JOB";
   static final String TASK = "MAPREDUCE_TASK";

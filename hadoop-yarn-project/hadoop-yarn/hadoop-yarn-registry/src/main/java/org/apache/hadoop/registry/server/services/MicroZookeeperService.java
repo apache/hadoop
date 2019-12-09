@@ -19,7 +19,7 @@
 package org.apache.hadoop.registry.server.services;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;

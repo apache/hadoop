@@ -47,7 +47,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -83,7 +82,7 @@ public class TestDecommissionWithStriped {
   private MiniDFSCluster cluster;
   private DistributedFileSystem dfs;
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private int numDNs;
   private final int cellSize = ecPolicy.getCellSize();
   private final int dataBlocks = ecPolicy.getNumDataUnits();
@@ -141,8 +140,11 @@ public class TestDecommissionWithStriped {
     bm = fsn.getBlockManager();
     client = getDfsClient(cluster.getNameNode(0), conf);
 
+    dfs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     dfs.mkdirs(ecDir);
-    dfs.setErasureCodingPolicy(ecDir, null);
+    dfs.setErasureCodingPolicy(ecDir,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
   }
 
   @After

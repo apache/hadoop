@@ -69,7 +69,12 @@ public interface FSNamesystemMBean {
    * @return -  used capacity in bytes
    */
   public long getCapacityUsed();
- 
+
+  /**
+   * Total PROVIDED storage capacity.
+   * @return -  total PROVIDED storage capacity in bytes
+   */
+  public long getProvidedCapacityTotal();
 
   /**
    * Total number of files and directories
@@ -78,17 +83,31 @@ public interface FSNamesystemMBean {
   public long getFilesTotal();
  
   /**
-   * Blocks pending to be replicated
-   * @return -  num of blocks to be replicated
+   * Get aggregated count of all blocks pending to be reconstructed.
+   * @deprecated Use {@link #getPendingReconstructionBlocks()} instead.
    */
+  @Deprecated
   public long getPendingReplicationBlocks();
- 
+
   /**
-   * Blocks under replicated 
-   * @return -  num of blocks under replicated
+   * Get aggregated count of all blocks pending to be reconstructed.
+   * @return Number of blocks to be replicated.
    */
+  public long getPendingReconstructionBlocks();
+
+  /**
+   * Get aggregated count of all blocks with low redundancy.
+   * @deprecated Use {@link #getLowRedundancyBlocks()} instead.
+   */
+  @Deprecated
   public long getUnderReplicatedBlocks();
- 
+
+  /**
+   * Get aggregated count of all blocks with low redundancy.
+   * @return Number of blocks with low redundancy.
+   */
+  public long getLowRedundancyBlocks();
+
   /**
    * Blocks scheduled for replication
    * @return -  num of blocks scheduled for replication

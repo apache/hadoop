@@ -24,8 +24,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -47,6 +45,8 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility for collecting samples and writing a partition file for
@@ -56,7 +56,7 @@ import org.apache.hadoop.util.ToolRunner;
 @InterfaceStability.Stable
 public class InputSampler<K,V> extends Configured implements Tool  {
 
-  private static final Log LOG = LogFactory.getLog(InputSampler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(InputSampler.class);
 
   static int printUsage() {
     System.out.println("sampler -r <reduces>\n" +

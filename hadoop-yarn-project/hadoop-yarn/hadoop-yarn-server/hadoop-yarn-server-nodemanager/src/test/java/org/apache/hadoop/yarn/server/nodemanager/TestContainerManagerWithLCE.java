@@ -20,9 +20,9 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
 import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -30,11 +30,12 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestContainerManager;
 import org.junit.After;
+import org.junit.Assume;
 
 public class TestContainerManagerWithLCE extends TestContainerManager {
 
-  private static final Log LOG = LogFactory
-      .getLog(TestContainerManagerWithLCE.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TestContainerManagerWithLCE.class);
 
   public TestContainerManagerWithLCE() throws UnsupportedFileSystemException {
     super();
@@ -51,11 +52,8 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
 
   @Override
   public void setup() throws IOException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
+    Assume.assumeTrue("LCE binary path is not passed. Not running the test",
+        shouldRunTest());
     super.setup();
     localFS.setPermission(new Path(localDir.getCanonicalPath()),
         new FsPermission(
@@ -71,297 +69,6 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
     if (shouldRunTest()) {
       super.tearDown();
     }
-  }
-
-  @Override
-  public void testContainerSetup() throws Exception, InterruptedException,
-      YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerSetup");
-    super.testContainerSetup();
-  }
-
-  @Override
-  public void testContainerManagerInitialization() throws IOException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerManagerInitialization");
-    super.testContainerManagerInitialization();
-  }
-
-  @Override
-  public void testContainerLaunchAndStop() throws IOException,
-      InterruptedException, YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerLaunchAndStop");
-    super.testContainerLaunchAndStop();
-  }
-  
-  @Override
-  public void testContainerLaunchAndExitSuccess() throws IOException,
-      InterruptedException, YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerLaunchAndExitSuccess");
-    super.testContainerLaunchAndExitSuccess();
-  }
-
-  @Override
-  public void testContainerLaunchAndExitFailure() throws IOException,
-      InterruptedException, YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerLaunchAndExitFailure");
-    super.testContainerLaunchAndExitFailure();
-  }
-
-  @Override
-  public void testLocalingResourceWhileContainerRunning()
-      throws Exception {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    super.testLocalingResourceWhileContainerRunning();
-  }
-
-  @Override
-  public void testLocalFilesCleanup() throws InterruptedException,
-      IOException, YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testLocalFilesCleanup");
-    super.testLocalFilesCleanup();
-  }
-
-  @Override
-  public void testContainerLaunchFromPreviousRM() throws InterruptedException,
-      IOException, YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerLaunchFromPreviousRM");
-    super.testContainerLaunchFromPreviousRM();
-  }
-
-  @Override
-  public void testMultipleContainersLaunch() throws Exception {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerLaunchFromPreviousRM");
-    super.testMultipleContainersLaunch();
-  }
-
-  @Override
-  public void testMultipleContainersStopAndGetStatus() throws Exception {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerLaunchFromPreviousRM");
-    super.testMultipleContainersStopAndGetStatus();
-  }
-
-  @Override
-  public void testUnauthorizedRequests() throws IOException, YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testUnauthorizedRequests");
-    super.testUnauthorizedRequests();
-  }
-
-  @Override
-  public void testStartContainerFailureWithUnknownAuxService() throws Exception {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerLaunchFromPreviousRM");
-    super.testStartContainerFailureWithUnknownAuxService();
-  }
-
-  @Override
-  public void testIncreaseContainerResourceWithInvalidRequests() throws Exception {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testIncreaseContainerResourceWithInvalidRequests");
-    super.testIncreaseContainerResourceWithInvalidRequests();
-  }
-
-  @Override
-  public void testIncreaseContainerResourceWithInvalidResource() throws Exception {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testIncreaseContainerResourceWithInvalidResource");
-    super.testIncreaseContainerResourceWithInvalidResource();
-  }
-
-  @Override
-  public void testChangeContainerResource() throws Exception {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testChangeContainerResource");
-    super.testChangeContainerResource();
-  }
-
-  @Override
-  public void testOutputThreadDumpSignal() throws IOException,
-      InterruptedException, YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testOutputThreadDumpSignal");
-    super.testOutputThreadDumpSignal();
-  }
-
-  @Override
-  public void testGracefulShutdownSignal() throws IOException,
-      InterruptedException, YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testGracefulShutdownSignal");
-    super.testGracefulShutdownSignal();
-  }
-
-  @Override
-  public void testForcefulShutdownSignal() throws IOException,
-      InterruptedException, YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testForcefulShutdownSignal");
-    super.testForcefulShutdownSignal();
-  }
-
-  @Override
-  public void testContainerUpgradeSuccessAutoCommit() throws IOException,
-      InterruptedException, YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerUpgradeSuccessAutoCommit");
-    super.testContainerUpgradeSuccessAutoCommit();
-  }
-
-  @Override
-  public void testContainerUpgradeLocalizationFailure() throws IOException,
-      InterruptedException, YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerUpgradeLocalizationFailure");
-    super.testContainerUpgradeLocalizationFailure();
-  }
-
-  @Override
-  public void testContainerUpgradeSuccessExplicitCommit() throws IOException,
-    InterruptedException, YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerUpgradeSuccessExplicitCommit");
-    super.testContainerUpgradeSuccessExplicitCommit();
-  }
-
-  @Override
-  public void testContainerUpgradeSuccessExplicitRollback() throws IOException,
-      InterruptedException, YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerUpgradeSuccessExplicitRollback");
-    super.testContainerUpgradeSuccessExplicitRollback();
-  }
-
-  @Override
-  public void testContainerUpgradeRollbackDueToFailure() throws IOException,
-      InterruptedException, YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerUpgradeRollbackDueToFailure");
-    super.testContainerUpgradeRollbackDueToFailure();
-  }
-
-  @Override
-  public void testContainerUpgradeProcessFailure() throws IOException,
-      InterruptedException, YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerUpgradeProcessFailure");
-    super.testContainerUpgradeProcessFailure();
-  }
-
-  @Override
-  public void testContainerRestart() throws IOException, InterruptedException,
-      YarnException {
-    // Don't run the test if the binary is not available.
-    if (!shouldRunTest()) {
-      LOG.info("LCE binary path is not passed. Not running the test");
-      return;
-    }
-    LOG.info("Running testContainerRestart");
-    super.testContainerRestart();
   }
 
   private boolean shouldRunTest() {

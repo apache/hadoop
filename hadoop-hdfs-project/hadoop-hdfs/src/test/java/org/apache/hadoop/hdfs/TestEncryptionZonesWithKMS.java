@@ -21,18 +21,23 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.common.base.Supplier;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
+import org.apache.hadoop.crypto.key.kms.KMSDelegationToken;
+import org.apache.hadoop.crypto.key.kms.LoadBalancingKMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.server.MiniKMS;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.web.WebHdfsConstants;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.internal.util.reflection.Whitebox;
 
 import java.io.File;
 import java.util.Arrays;
@@ -69,14 +74,21 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
   protected void setProvider() {
   }
 
+  private KMSClientProvider getKMSClientProvider() {
+    LoadBalancingKMSClientProvider lbkmscp =
+        (LoadBalancingKMSClientProvider) Whitebox
+        .getInternalState(cluster.getNamesystem().getProvider(), "extension");
+    assert lbkmscp.getProviders().length == 1;
+    return lbkmscp.getProviders()[0];
+  }
+
   @Test(timeout = 120000)
   public void testCreateEZPopulatesEDEKCache() throws Exception {
     final Path zonePath = new Path("/TestEncryptionZone");
     fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
     dfsAdmin.createEncryptionZone(zonePath, TEST_KEY, NO_TRASH);
     @SuppressWarnings("unchecked")
-    KMSClientProvider kcp = (KMSClientProvider) Whitebox
-        .getInternalState(cluster.getNamesystem().getProvider(), "extension");
+    KMSClientProvider kcp = getKMSClientProvider();
     assertTrue(kcp.getEncKeyQueueSize(TEST_KEY) > 0);
   }
 
@@ -110,8 +122,7 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
     dfsAdmin.createEncryptionZone(zonePath, anotherKey, NO_TRASH);
 
     @SuppressWarnings("unchecked")
-    KMSClientProvider spy = (KMSClientProvider) Whitebox
-        .getInternalState(cluster.getNamesystem().getProvider(), "extension");
+    KMSClientProvider spy = getKMSClientProvider();
     assertTrue("key queue is empty after creating encryption zone",
         spy.getEncKeyQueueSize(TEST_KEY) > 0);
 
@@ -122,11 +133,28 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        final KMSClientProvider kspy = (KMSClientProvider) Whitebox
-            .getInternalState(cluster.getNamesystem().getProvider(),
-                "extension");
+        final KMSClientProvider kspy = getKMSClientProvider();
         return kspy.getEncKeyQueueSize(TEST_KEY) > 0;
       }
     }, 1000, 60000);
+  }
+
+  /**
+   * This method fetches the kms delegation token
+   * for {@link WebHdfsFileSystem}.
+   * @throws Exception
+   */
+  @Test
+  public void addDelegationTokenFromWebhdfsFileSystem() throws Exception {
+    UserGroupInformation.createRemoteUser("JobTracker");
+    WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystem(
+        conf, WebHdfsConstants.WEBHDFS_SCHEME);
+    Credentials creds = new Credentials();
+    final Token<?>[] tokens = webfs.addDelegationTokens("JobTracker", creds);
+
+    Assert.assertEquals(2, tokens.length);
+    Assert.assertEquals(KMSDelegationToken.TOKEN_KIND_STR,
+        tokens[1].getKind().toString());
+    Assert.assertEquals(2, creds.numberOfTokens());
   }
 }

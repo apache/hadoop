@@ -31,7 +31,8 @@ public class IOUtilsClient {
    * @param log the log to record problems to at debug level. Can be null.
    * @param closeables the objects to close
    */
-  public static void cleanup(Logger log, java.io.Closeable... closeables) {
+  public static void cleanupWithLogger(Logger log,
+                                       java.io.Closeable... closeables) {
     for (java.io.Closeable c : closeables) {
       if (c != null) {
         try {
@@ -47,13 +48,19 @@ public class IOUtilsClient {
 
   public static void updateReadStatistics(ReadStatistics readStatistics,
                                       int nRead, BlockReader blockReader) {
+    updateReadStatistics(readStatistics, nRead, blockReader.isShortCircuit(),
+        blockReader.getNetworkDistance());
+  }
+
+  public static void updateReadStatistics(ReadStatistics readStatistics,
+      int nRead, boolean isShortCircuit, int networkDistance) {
     if (nRead <= 0) {
       return;
     }
 
-    if (blockReader.isShortCircuit()) {
+    if (isShortCircuit) {
       readStatistics.addShortCircuitBytes(nRead);
-    } else if (blockReader.getNetworkDistance() == 0) {
+    } else if (networkDistance == 0) {
       readStatistics.addLocalBytes(nRead);
     } else {
       readStatistics.addRemoteBytes(nRead);

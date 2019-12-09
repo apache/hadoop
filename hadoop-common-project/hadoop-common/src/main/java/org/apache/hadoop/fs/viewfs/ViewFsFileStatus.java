@@ -61,13 +61,7 @@ class ViewFsFileStatus extends FileStatus {
    public boolean isDirectory() {
      return  myFs.isDirectory();
    }
-   
-   @Override
-   @SuppressWarnings("deprecation")
-   public boolean isDir() {
-     return myFs.isDirectory();
-   }
-   
+
    @Override
    public boolean isSymlink() {
      return myFs.isSymlink();

@@ -27,8 +27,6 @@ import java.io.InputStreamReader;
 import java.util.Random;
 import java.util.StringTokenizer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -44,11 +42,13 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestLocalModeWithNewApis {
 
-  public static final Log LOG = 
-      LogFactory.getLog(TestLocalModeWithNewApis.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestLocalModeWithNewApis.class);
   
   Configuration conf;
   

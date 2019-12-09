@@ -21,27 +21,31 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
-import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
@@ -51,8 +55,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.log.LogThrottlingHelper;
+import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -66,8 +70,18 @@ import com.google.protobuf.TextFormat;
  */
 @InterfaceAudience.Private
 public class QuorumJournalManager implements JournalManager {
-  static final Log LOG = LogFactory.getLog(QuorumJournalManager.class);
+  static final Logger LOG = LoggerFactory.getLogger(QuorumJournalManager.class);
 
+  // This config is not publicly exposed
+  static final String QJM_RPC_MAX_TXNS_KEY =
+      "dfs.ha.tail-edits.qjm.rpc.max-txns";
+  static final int QJM_RPC_MAX_TXNS_DEFAULT = 5000;
+
+  // Maximum number of transactions to fetch at a time when using the
+  // RPC edit fetch mechanism
+  private final int maxTxnsPerRpc;
+  // Whether or not in-progress tailing is enabled in the configuration
+  private final boolean inProgressTailingEnabled;
   // Timeouts for which the QJM will wait for each of the following actions.
   private final int startSegmentTimeoutMs;
   private final int prepareRecoveryTimeoutMs;
@@ -78,46 +92,67 @@ public class QuorumJournalManager implements JournalManager {
   private final int newEpochTimeoutMs;
   private final int writeTxnsTimeoutMs;
 
-  // Since these don't occur during normal operation, we can
-  // use rather lengthy timeouts, and don't need to make them
-  // configurable.
-  private static final int FORMAT_TIMEOUT_MS            = 60000;
-  private static final int HASDATA_TIMEOUT_MS           = 60000;
-  private static final int CAN_ROLL_BACK_TIMEOUT_MS     = 60000;
-  private static final int FINALIZE_TIMEOUT_MS          = 60000;
-  private static final int PRE_UPGRADE_TIMEOUT_MS       = 60000;
-  private static final int ROLL_BACK_TIMEOUT_MS         = 60000;
-  private static final int DISCARD_SEGMENTS_TIMEOUT_MS  = 60000;
-  private static final int UPGRADE_TIMEOUT_MS           = 60000;
-  private static final int GET_JOURNAL_CTIME_TIMEOUT_MS = 60000;
+  // This timeout is used for calls that don't occur during normal operation
+  // e.g. format, upgrade operations and a few others. So we can use rather
+  // lengthy timeouts by default.
+  private final int timeoutMs;
   
   private final Configuration conf;
   private final URI uri;
   private final NamespaceInfo nsInfo;
+  private final String nameServiceId;
   private boolean isActiveWriter;
   
   private final AsyncLoggerSet loggers;
 
-  private int outputBufferCapacity = 512 * 1024;
+  private static final int OUTPUT_BUFFER_CAPACITY_DEFAULT = 512 * 1024;
+  private int outputBufferCapacity;
   private final URLConnectionFactory connectionFactory;
-  
+
+  /** Limit logging about input stream selection to every 5 seconds max. */
+  private static final long SELECT_INPUT_STREAM_LOG_INTERVAL_MS = 5000;
+  private final LogThrottlingHelper selectInputStreamLogHelper =
+      new LogThrottlingHelper(SELECT_INPUT_STREAM_LOG_INTERVAL_MS);
+
+  @VisibleForTesting
   public QuorumJournalManager(Configuration conf,
-      URI uri, NamespaceInfo nsInfo) throws IOException {
-    this(conf, uri, nsInfo, IPCLoggerChannel.FACTORY);
+                              URI uri,
+                              NamespaceInfo nsInfo) throws IOException {
+    this(conf, uri, nsInfo, null, IPCLoggerChannel.FACTORY);
   }
   
+  public QuorumJournalManager(Configuration conf,
+      URI uri, NamespaceInfo nsInfo, String nameServiceId) throws IOException {
+    this(conf, uri, nsInfo, nameServiceId, IPCLoggerChannel.FACTORY);
+  }
+
+  @VisibleForTesting
   QuorumJournalManager(Configuration conf,
-      URI uri, NamespaceInfo nsInfo,
+                       URI uri, NamespaceInfo nsInfo,
+                       AsyncLogger.Factory loggerFactory) throws IOException {
+    this(conf, uri, nsInfo, null, loggerFactory);
+
+  }
+
+  
+  QuorumJournalManager(Configuration conf,
+      URI uri, NamespaceInfo nsInfo, String nameServiceId,
       AsyncLogger.Factory loggerFactory) throws IOException {
     Preconditions.checkArgument(conf != null, "must be configured");
 
     this.conf = conf;
     this.uri = uri;
     this.nsInfo = nsInfo;
+    this.nameServiceId = nameServiceId;
     this.loggers = new AsyncLoggerSet(createLoggers(loggerFactory));
-    this.connectionFactory = URLConnectionFactory
-        .newDefaultURLConnectionFactory(conf);
 
+    this.maxTxnsPerRpc =
+        conf.getInt(QJM_RPC_MAX_TXNS_KEY, QJM_RPC_MAX_TXNS_DEFAULT);
+    Preconditions.checkArgument(maxTxnsPerRpc > 0,
+        "Must specify %s greater than 0!", QJM_RPC_MAX_TXNS_KEY);
+    this.inProgressTailingEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY,
+        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_DEFAULT);
     // Configure timeouts.
     this.startSegmentTimeoutMs = conf.getInt(
         DFSConfigKeys.DFS_QJOURNAL_START_SEGMENT_TIMEOUT_KEY,
@@ -143,11 +178,25 @@ public class QuorumJournalManager implements JournalManager {
     this.writeTxnsTimeoutMs = conf.getInt(
         DFSConfigKeys.DFS_QJOURNAL_WRITE_TXNS_TIMEOUT_KEY,
         DFSConfigKeys.DFS_QJOURNAL_WRITE_TXNS_TIMEOUT_DEFAULT);
+    this.timeoutMs = (int) conf.getTimeDuration(DFSConfigKeys
+            .DFS_QJM_OPERATIONS_TIMEOUT,
+        DFSConfigKeys.DFS_QJM_OPERATIONS_TIMEOUT_DEFAULT, TimeUnit
+            .MILLISECONDS);
+
+    int connectTimeoutMs = conf.getInt(
+        DFSConfigKeys.DFS_QJOURNAL_HTTP_OPEN_TIMEOUT_KEY,
+        DFSConfigKeys.DFS_QJOURNAL_HTTP_OPEN_TIMEOUT_DEFAULT);
+    int readTimeoutMs = conf.getInt(
+        DFSConfigKeys.DFS_QJOURNAL_HTTP_READ_TIMEOUT_KEY,
+        DFSConfigKeys.DFS_QJOURNAL_HTTP_READ_TIMEOUT_DEFAULT);
+    this.connectionFactory = URLConnectionFactory
+        .newDefaultURLConnectionFactory(connectTimeoutMs, readTimeoutMs, conf);
+    setOutputBufferCapacity(OUTPUT_BUFFER_CAPACITY_DEFAULT);
   }
   
   protected List<AsyncLogger> createLoggers(
       AsyncLogger.Factory factory) throws IOException {
-    return createLoggers(conf, uri, nsInfo, factory);
+    return createLoggers(conf, uri, nsInfo, factory, nameServiceId);
   }
 
   static String parseJournalId(URI uri) {
@@ -200,10 +249,10 @@ public class QuorumJournalManager implements JournalManager {
   }
   
   @Override
-  public void format(NamespaceInfo nsInfo) throws IOException {
-    QuorumCall<AsyncLogger,Void> call = loggers.format(nsInfo);
+  public void format(NamespaceInfo nsInfo, boolean force) throws IOException {
+    QuorumCall<AsyncLogger, Void> call = loggers.format(nsInfo, force);
     try {
-      call.waitFor(loggers.size(), loggers.size(), 0, FORMAT_TIMEOUT_MS,
+      call.waitFor(loggers.size(), loggers.size(), 0, timeoutMs,
           "format");
     } catch (InterruptedException e) {
       throw new IOException("Interrupted waiting for format() response");
@@ -222,7 +271,7 @@ public class QuorumJournalManager implements JournalManager {
         loggers.isFormatted();
 
     try {
-      call.waitFor(loggers.size(), 0, 0, HASDATA_TIMEOUT_MS, "hasSomeData");
+      call.waitFor(loggers.size(), 0, 0, timeoutMs, "hasSomeData");
     } catch (InterruptedException e) {
       throw new IOException("Interrupted while determining if JNs have data");
     } catch (TimeoutException e) {
@@ -359,43 +408,22 @@ public class QuorumJournalManager implements JournalManager {
   }
   
   static List<AsyncLogger> createLoggers(Configuration conf,
-      URI uri, NamespaceInfo nsInfo, AsyncLogger.Factory factory)
-          throws IOException {
-    List<AsyncLogger> ret = Lists.newArrayList();
-    List<InetSocketAddress> addrs = getLoggerAddresses(uri);
-    String jid = parseJournalId(uri);
-    for (InetSocketAddress addr : addrs) {
-      ret.add(factory.createLogger(conf, nsInfo, jid, addr));
-    }
-    return ret;
-  }
- 
-  private static List<InetSocketAddress> getLoggerAddresses(URI uri)
+                                         URI uri,
+                                         NamespaceInfo nsInfo,
+                                         AsyncLogger.Factory factory,
+                                         String nameServiceId)
       throws IOException {
-    String authority = uri.getAuthority();
-    Preconditions.checkArgument(authority != null && !authority.isEmpty(),
-        "URI has no authority: " + uri);
-    
-    String[] parts = StringUtils.split(authority, ';');
-    for (int i = 0; i < parts.length; i++) {
-      parts[i] = parts[i].trim();
-    }
-
-    if (parts.length % 2 == 0) {
+    List<AsyncLogger> ret = Lists.newArrayList();
+    List<InetSocketAddress> addrs = Util.getAddressesList(uri);
+    if (addrs.size() % 2 == 0) {
       LOG.warn("Quorum journal URI '" + uri + "' has an even number " +
           "of Journal Nodes specified. This is not recommended!");
     }
-    
-    List<InetSocketAddress> addrs = Lists.newArrayList();
-    for (String addr : parts) {
-      InetSocketAddress isa = NetUtils.createSocketAddr(
-          addr, DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT);
-      if (isa.isUnresolved()) {
-        throw new UnknownHostException(addr);
-      }
-      addrs.add(isa);
+    String jid = parseJournalId(uri);
+    for (InetSocketAddress addr : addrs) {
+      ret.add(factory.createLogger(conf, nsInfo, jid, nameServiceId, addr));
     }
-    return addrs;
+    return ret;
   }
   
   @Override
@@ -407,11 +435,8 @@ public class QuorumJournalManager implements JournalManager {
         layoutVersion);
     loggers.waitForWriteQuorum(q, startSegmentTimeoutMs,
         "startLogSegment(" + txId + ")");
-    boolean updateCommittedTxId = conf.getBoolean(
-        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY,
-        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_DEFAULT);
     return new QuorumOutputStream(loggers, txId, outputBufferCapacity,
-        writeTxnsTimeoutMs, updateCommittedTxId);
+        writeTxnsTimeoutMs, layoutVersion);
   }
 
   @Override
@@ -425,6 +450,15 @@ public class QuorumJournalManager implements JournalManager {
 
   @Override
   public void setOutputBufferCapacity(int size) {
+    int ipcMaxDataLength = conf.getInt(
+        CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH,
+        CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
+    if (size >= ipcMaxDataLength) {
+      throw new IllegalArgumentException("Attempted to use QJM output buffer "
+          + "capacity (" + size + ") greater than the IPC max data length ("
+          + CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH + " = "
+          + ipcMaxDataLength + "). This will cause journals to reject edits.");
+    }
     outputBufferCapacity = size;
   }
 
@@ -468,6 +502,7 @@ public class QuorumJournalManager implements JournalManager {
   @Override
   public void close() throws IOException {
     loggers.close();
+    connectionFactory.destroy();
   }
 
   public void selectInputStreams(Collection<EditLogInputStream> streams,
@@ -479,17 +514,113 @@ public class QuorumJournalManager implements JournalManager {
   public void selectInputStreams(Collection<EditLogInputStream> streams,
       long fromTxnId, boolean inProgressOk,
       boolean onlyDurableTxns) throws IOException {
+    // Some calls will use inProgressOK to get in-progress edits even if
+    // the cache used for RPC calls is not enabled; fall back to using the
+    // streaming mechanism to serve such requests
+    if (inProgressOk && inProgressTailingEnabled) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Tailing edits starting from txn ID " + fromTxnId +
+            " via RPC mechanism");
+      }
+      try {
+        Collection<EditLogInputStream> rpcStreams = new ArrayList<>();
+        selectRpcInputStreams(rpcStreams, fromTxnId, onlyDurableTxns);
+        streams.addAll(rpcStreams);
+        return;
+      } catch (IOException ioe) {
+        LOG.warn("Encountered exception while tailing edits >= " + fromTxnId +
+            " via RPC; falling back to streaming.", ioe);
+      }
+    }
+    selectStreamingInputStreams(streams, fromTxnId, inProgressOk,
+        onlyDurableTxns);
+  }
 
+  /**
+   * Select input streams from the journals, specifically using the RPC
+   * mechanism optimized for low latency.
+   *
+   * @param streams The collection to store the return streams into.
+   * @param fromTxnId Select edits starting from this transaction ID
+   * @param onlyDurableTxns Iff true, only include transactions which have been
+   *                        committed to a quorum of the journals.
+   * @throws IOException Upon issues, including cache misses on the journals.
+   */
+  private void selectRpcInputStreams(Collection<EditLogInputStream> streams,
+      long fromTxnId, boolean onlyDurableTxns) throws IOException {
+    QuorumCall<AsyncLogger, GetJournaledEditsResponseProto> q =
+        loggers.getJournaledEdits(fromTxnId, maxTxnsPerRpc);
+    Map<AsyncLogger, GetJournaledEditsResponseProto> responseMap =
+        loggers.waitForWriteQuorum(q, selectInputStreamsTimeoutMs,
+            "selectRpcInputStreams");
+    assert responseMap.size() >= loggers.getMajoritySize() :
+        "Quorum call returned without a majority";
+
+    List<Integer> responseCounts = new ArrayList<>();
+    for (GetJournaledEditsResponseProto resp : responseMap.values()) {
+      responseCounts.add(resp.getTxnCount());
+    }
+    Collections.sort(responseCounts);
+    int highestTxnCount = responseCounts.get(responseCounts.size() - 1);
+    if (LOG.isDebugEnabled() || highestTxnCount < 0) {
+      StringBuilder msg = new StringBuilder("Requested edits starting from ");
+      msg.append(fromTxnId).append("; got ").append(responseMap.size())
+          .append(" responses: <");
+      for (Map.Entry<AsyncLogger, GetJournaledEditsResponseProto> ent :
+          responseMap.entrySet()) {
+        msg.append("[").append(ent.getKey()).append(", ")
+            .append(ent.getValue().getTxnCount()).append("],");
+      }
+      msg.append(">");
+      if (highestTxnCount < 0) {
+        throw new IOException("Did not get any valid JournaledEdits " +
+            "responses: " + msg);
+      } else {
+        LOG.debug(msg.toString());
+      }
+    }
+
+    int maxAllowedTxns = !onlyDurableTxns ? highestTxnCount :
+        responseCounts.get(responseCounts.size() - loggers.getMajoritySize());
+    if (maxAllowedTxns == 0) {
+      LOG.debug("No new edits available in logs; requested starting from " +
+          "ID " + fromTxnId);
+      return;
+    }
+    LogAction logAction = selectInputStreamLogHelper.record(fromTxnId);
+    if (logAction.shouldLog()) {
+      LOG.info("Selected loggers with >= " + maxAllowedTxns + " transactions " +
+          "starting from lowest txn ID " + logAction.getStats(0).getMin() +
+          LogThrottlingHelper.getLogSupressionMessage(logAction));
+    }
+    PriorityQueue<EditLogInputStream> allStreams = new PriorityQueue<>(
+        JournalSet.EDIT_LOG_INPUT_STREAM_COMPARATOR);
+    for (GetJournaledEditsResponseProto resp : responseMap.values()) {
+      long endTxnId = fromTxnId - 1 +
+          Math.min(maxAllowedTxns, resp.getTxnCount());
+      allStreams.add(EditLogFileInputStream.fromByteString(
+          resp.getEditLog(), fromTxnId, endTxnId, true));
+    }
+    JournalSet.chainAndMakeRedundantStreams(streams, allStreams, fromTxnId);
+  }
+
+  /**
+   * Select input streams from the journals, specifically using the streaming
+   * mechanism optimized for resiliency / bulk load.
+   */
+  private void selectStreamingInputStreams(
+      Collection<EditLogInputStream> streams, long fromTxnId,
+      boolean inProgressOk, boolean onlyDurableTxns) throws IOException {
     QuorumCall<AsyncLogger, RemoteEditLogManifest> q =
         loggers.getEditLogManifest(fromTxnId, inProgressOk);
     Map<AsyncLogger, RemoteEditLogManifest> resps =
         loggers.waitForWriteQuorum(q, selectInputStreamsTimeoutMs,
-            "selectInputStreams");
-    
-    LOG.debug("selectInputStream manifests:\n" +
+            "selectStreamingInputStreams");
+
+    LOG.debug("selectStreamingInputStream manifests:\n" +
         Joiner.on("\n").withKeyValueSeparator(": ").join(resps));
-    
-    final PriorityQueue<EditLogInputStream> allStreams = 
+
+    final PriorityQueue<EditLogInputStream> allStreams =
         new PriorityQueue<EditLogInputStream>(64,
             JournalSet.EDIT_LOG_INPUT_STREAM_COMPARATOR);
     for (Map.Entry<AsyncLogger, RemoteEditLogManifest> e : resps.entrySet()) {
@@ -504,8 +635,16 @@ public class QuorumJournalManager implements JournalManager {
 
         // If it's bounded by durable Txns, endTxId could not be larger
         // than committedTxnId. This ensures the consistency.
-        if (onlyDurableTxns && inProgressOk) {
+        // We don't do the following for finalized log segments, since all
+        // edits in those are guaranteed to be committed.
+        if (onlyDurableTxns && inProgressOk && remoteLog.isInProgress()) {
           endTxId = Math.min(endTxId, committedTxnId);
+          if (endTxId < remoteLog.getStartTxId()) {
+            LOG.warn("Found endTxId (" + endTxId + ") that is less than " +
+                "the startTxId (" + remoteLog.getStartTxId() +
+                ") - setting it to startTxId.");
+            endTxId = remoteLog.getStartTxId();
+          }
         }
 
         EditLogInputStream elis = EditLogFileInputStream.fromUrl(
@@ -531,7 +670,7 @@ public class QuorumJournalManager implements JournalManager {
   public void doPreUpgrade() throws IOException {
     QuorumCall<AsyncLogger, Void> call = loggers.doPreUpgrade();
     try {
-      call.waitFor(loggers.size(), loggers.size(), 0, PRE_UPGRADE_TIMEOUT_MS,
+      call.waitFor(loggers.size(), loggers.size(), 0, timeoutMs,
           "doPreUpgrade");
       
       if (call.countExceptions() > 0) {
@@ -548,7 +687,7 @@ public class QuorumJournalManager implements JournalManager {
   public void doUpgrade(Storage storage) throws IOException {
     QuorumCall<AsyncLogger, Void> call = loggers.doUpgrade(storage);
     try {
-      call.waitFor(loggers.size(), loggers.size(), 0, UPGRADE_TIMEOUT_MS,
+      call.waitFor(loggers.size(), loggers.size(), 0, timeoutMs,
           "doUpgrade");
       
       if (call.countExceptions() > 0) {
@@ -565,7 +704,7 @@ public class QuorumJournalManager implements JournalManager {
   public void doFinalize() throws IOException {
     QuorumCall<AsyncLogger, Void> call = loggers.doFinalize();
     try {
-      call.waitFor(loggers.size(), loggers.size(), 0, FINALIZE_TIMEOUT_MS,
+      call.waitFor(loggers.size(), loggers.size(), 0, timeoutMs,
           "doFinalize");
       
       if (call.countExceptions() > 0) {
@@ -584,7 +723,7 @@ public class QuorumJournalManager implements JournalManager {
     QuorumCall<AsyncLogger, Boolean> call = loggers.canRollBack(storage,
         prevStorage, targetLayoutVersion);
     try {
-      call.waitFor(loggers.size(), loggers.size(), 0, CAN_ROLL_BACK_TIMEOUT_MS,
+      call.waitFor(loggers.size(), loggers.size(), 0, timeoutMs,
           "lockSharedStorage");
       
       if (call.countExceptions() > 0) {
@@ -617,7 +756,7 @@ public class QuorumJournalManager implements JournalManager {
   public void doRollback() throws IOException {
     QuorumCall<AsyncLogger, Void> call = loggers.doRollback();
     try {
-      call.waitFor(loggers.size(), loggers.size(), 0, ROLL_BACK_TIMEOUT_MS,
+      call.waitFor(loggers.size(), loggers.size(), 0, timeoutMs,
           "doRollback");
       
       if (call.countExceptions() > 0) {
@@ -635,7 +774,7 @@ public class QuorumJournalManager implements JournalManager {
     QuorumCall<AsyncLogger, Void> call = loggers.discardSegments(startTxId);
     try {
       call.waitFor(loggers.size(), loggers.size(), 0,
-          DISCARD_SEGMENTS_TIMEOUT_MS, "discardSegments");
+          timeoutMs, "discardSegments");
       if (call.countExceptions() > 0) {
         call.rethrowException(
             "Could not perform discardSegments of one or more JournalNodes");
@@ -654,7 +793,7 @@ public class QuorumJournalManager implements JournalManager {
     QuorumCall<AsyncLogger, Long> call = loggers.getJournalCTime();
     try {
       call.waitFor(loggers.size(), loggers.size(), 0,
-          GET_JOURNAL_CTIME_TIMEOUT_MS, "getJournalCTime");
+          timeoutMs, "getJournalCTime");
       
       if (call.countExceptions() > 0) {
         call.rethrowException("Could not journal CTime for one "

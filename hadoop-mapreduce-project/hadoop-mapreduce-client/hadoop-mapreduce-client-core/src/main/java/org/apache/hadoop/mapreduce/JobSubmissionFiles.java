@@ -30,8 +30,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A utility to manage job submission files.
@@ -39,7 +39,8 @@ import org.apache.commons.logging.LogFactory;
 @InterfaceAudience.Private
 public class JobSubmissionFiles {
 
-  private final static Log LOG = LogFactory.getLog(JobSubmissionFiles.class);
+  private final static Logger LOG =
+      LoggerFactory.getLogger(JobSubmissionFiles.class);
 
   // job submission directory is private!
   final public static FsPermission JOB_DIR_PERMISSION =

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,7 +60,8 @@ import com.google.common.collect.ComparisonChain;
  */
 @InterfaceAudience.Private
 public class FileJournalManager implements JournalManager {
-  private static final Log LOG = LogFactory.getLog(FileJournalManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FileJournalManager.class);
 
   private final Configuration conf;
   private final StorageDirectory sd;
@@ -74,7 +75,8 @@ public class FileJournalManager implements JournalManager {
   private static final Pattern EDITS_INPROGRESS_STALE_REGEX = Pattern.compile(
       NameNodeFile.EDITS_INPROGRESS.getName() + "_(\\d+).*(\\S+)");
 
-  private File currentInProgress = null;
+  @VisibleForTesting
+  File currentInProgress = null;
 
   /**
    * A FileJournalManager should maintain the largest Tx ID that has been
@@ -100,7 +102,7 @@ public class FileJournalManager implements JournalManager {
   public void close() throws IOException {}
   
   @Override
-  public void format(NamespaceInfo ns) throws IOException {
+  public void format(NamespaceInfo ns, boolean force) throws IOException {
     // Formatting file journals is done by the StorageDirectory
     // format code, since they may share their directory with
     // checkpoints, etc.
@@ -177,18 +179,48 @@ public class FileJournalManager implements JournalManager {
     this.lastReadableTxId = id;
   }
 
+  /**
+   * Purges the unnecessary edits and edits_inprogress files.
+   *
+   * Edits files that are ending before the minTxIdToKeep are purged.
+   * Edits in progress files that are starting before minTxIdToKeep are purged.
+   * Edits in progress files that are marked as empty, trash, corrupted or
+   * stale by file extension and starting before minTxIdToKeep are purged.
+   * Edits in progress files that are after minTxIdToKeep, but before the
+   * current edits in progress files are marked as stale for clarity.
+   *
+   * In case file removal or rename is failing a warning is logged, but that
+   * does not fail the operation.
+   *
+   * @param minTxIdToKeep the lowest transaction ID that should be retained
+   * @throws IOException if listing the storage directory fails.
+   */
   @Override
   public void purgeLogsOlderThan(long minTxIdToKeep)
       throws IOException {
     LOG.info("Purging logs older than " + minTxIdToKeep);
     File[] files = FileUtil.listFiles(sd.getCurrentDir());
     List<EditLogFile> editLogs = matchEditLogs(files, true);
-    for (EditLogFile log : editLogs) {
-      if (log.getFirstTxId() < minTxIdToKeep &&
-          log.getLastTxId() < minTxIdToKeep) {
-        purger.purgeLog(log);
+    synchronized (this) {
+      for (EditLogFile log : editLogs) {
+        if (log.getFirstTxId() < minTxIdToKeep &&
+            log.getLastTxId() < minTxIdToKeep) {
+          purger.purgeLog(log);
+        } else if (isStaleInProgressLog(minTxIdToKeep, log)) {
+          purger.markStale(log);
+        }
       }
     }
+  }
+
+  private boolean isStaleInProgressLog(long minTxIdToKeep, EditLogFile log) {
+    return log.isInProgress() &&
+        !log.getFile().equals(currentInProgress) &&
+        log.getFirstTxId() >= minTxIdToKeep &&
+        // at last we check if this segment is not already marked as .trash,
+        // .empty or .corrupted, in which case it does not match the strict
+        // regex pattern.
+        EDITS_INPROGRESS_REGEX.matcher(log.getFile().getName()).matches();
   }
 
   /**
@@ -451,16 +483,28 @@ public class FileJournalManager implements JournalManager {
   }
   
   public EditLogFile getLogFile(long startTxId) throws IOException {
-    return getLogFile(sd.getCurrentDir(), startTxId);
+    return getLogFile(sd.getCurrentDir(), startTxId, true);
   }
-  
+
+  public EditLogFile getLogFile(long startTxId, boolean inProgressOk)
+      throws IOException {
+    return getLogFile(sd.getCurrentDir(), startTxId, inProgressOk);
+  }
+
   public static EditLogFile getLogFile(File dir, long startTxId)
       throws IOException {
+    return getLogFile(dir, startTxId, true);
+  }
+
+  public static EditLogFile getLogFile(File dir, long startTxId,
+      boolean inProgressOk) throws IOException {
     List<EditLogFile> files = matchEditLogs(dir);
     List<EditLogFile> ret = Lists.newLinkedList();
     for (EditLogFile elf : files) {
       if (elf.getFirstTxId() == startTxId) {
-        ret.add(elf);
+        if (inProgressOk || !elf.isInProgress()) {
+          ret.add(elf);
+        }
       }
     }
     
@@ -583,7 +627,12 @@ public class FileJournalManager implements JournalManager {
       assert lastTxId == HdfsServerConstants.INVALID_TXID;
       renameSelf(".empty");
     }
-      
+
+    public void moveAsideStaleInprogressFile() throws IOException {
+      assert isInProgress;
+      renameSelf(".stale");
+    }
+
     private void renameSelf(String newSuffix) throws IOException {
       File src = file;
       File dst = new File(src.getParent(), src.getName() + newSuffix);

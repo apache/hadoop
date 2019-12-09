@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -124,6 +125,11 @@ public class ExternalVolumeImpl implements FsVolumeSpi {
 
   @Override
   public FileIoProvider getFileIoProvider() {
+    return null;
+  }
+
+  @Override
+  public DataNodeVolumeMetrics getMetrics() {
     return null;
   }
 

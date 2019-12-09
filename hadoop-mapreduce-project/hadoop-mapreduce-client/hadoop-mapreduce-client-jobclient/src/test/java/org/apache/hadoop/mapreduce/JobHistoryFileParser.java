@@ -20,19 +20,20 @@ package org.apache.hadoop.mapreduce;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Used to parse job history and configuration files.
  */
 class JobHistoryFileParser {
-  private static final Log LOG = LogFactory.getLog(JobHistoryFileParser.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(JobHistoryFileParser.class);
 
   private final FileSystem fs;
 

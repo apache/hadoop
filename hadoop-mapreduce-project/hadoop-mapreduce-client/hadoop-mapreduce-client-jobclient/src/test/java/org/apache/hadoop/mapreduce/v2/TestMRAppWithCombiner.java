@@ -23,8 +23,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.CustomOutputCommitter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -47,6 +45,8 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("deprecation")
 public class TestMRAppWithCombiner {
@@ -54,7 +54,8 @@ public class TestMRAppWithCombiner {
   protected static MiniMRYarnCluster mrCluster;
   private static Configuration conf = new Configuration();
   private static FileSystem localFs;
-  private static final Log LOG = LogFactory.getLog(TestMRAppWithCombiner.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMRAppWithCombiner.class);
 
   static {
     try {

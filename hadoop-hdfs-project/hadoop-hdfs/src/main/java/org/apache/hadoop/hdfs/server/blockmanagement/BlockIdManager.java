@@ -20,16 +20,21 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
+
 /**
  * BlockIdManager allocates the generation stamps and the block ID. The
- * {@see FSNamesystem} is responsible for persisting the allocations in the
- * {@see EditLog}.
+ * {@link FSNamesystem} is responsible for persisting the allocations in the
+ * {@link FSEditLog}.
  */
 public class BlockIdManager {
   /**
@@ -207,9 +212,14 @@ public class BlockIdManager {
   /**
    * Increments, logs and then returns the block ID
    */
-  long nextBlockId(boolean isStriped) {
-    return isStriped ? blockGroupIdGenerator.nextValue() :
-        blockIdGenerator.nextValue();
+  long nextBlockId(BlockType blockType) {
+    switch(blockType) {
+    case CONTIGUOUS: return blockIdGenerator.nextValue();
+    case STRIPED: return blockGroupIdGenerator.nextValue();
+    default:
+      throw new IllegalArgumentException(
+          "nextBlockId called with an unsupported BlockType");
+    }
   }
 
   boolean isGenStampInFuture(Block block) {
@@ -229,8 +239,25 @@ public class BlockIdManager {
     legacyGenerationStampLimit = HdfsConstants.GRANDFATHER_GENERATION_STAMP;
   }
 
+  /**
+   * Return true if the block is a striped block.
+   *
+   * Before HDFS-4645, block ID was randomly generated (legacy), so it is
+   * possible that legacy block ID to be negative, which should not be
+   * considered as striped block ID.
+   *
+   * @see #isLegacyBlock(Block) detecting legacy block IDs.
+   */
+  public boolean isStripedBlock(Block block) {
+    return isStripedBlockID(block.getBlockId()) && !isLegacyBlock(block);
+  }
+
+  /**
+   * See {@link #isStripedBlock(Block)}, we should not use this function alone
+   * to determine a block is striped block.
+   */
   public static boolean isStripedBlockID(long id) {
-    return id < 0;
+    return BlockType.fromBlockId(id) == STRIPED;
   }
 
   /**

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -31,13 +32,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.junit.Assert;
@@ -46,6 +51,9 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.google.common.base.Preconditions;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doAnswer;
 
 /**
  * An internal-facing only collection of test utilities for the DataNode. This
@@ -60,6 +68,27 @@ public class InternalDataNodeTestUtils {
   public static DatanodeRegistration
   getDNRegistrationForBP(DataNode dn, String bpid) throws IOException {
     return dn.getDNRegistrationForBP(bpid);
+  }
+
+  /**
+   * This method is used to mock the data node block pinning API.
+   *
+   * @param dn datanode
+   * @param pinned true if the block is pinned, false otherwise
+   * @throws IOException
+   */
+  public static void mockDatanodeBlkPinning(final DataNode dn,
+      final boolean pinned) throws IOException {
+    final FsDatasetSpi<? extends FsVolumeSpi> data = dn.data;
+    dn.data = Mockito.spy(data);
+
+    doAnswer(new Answer<Object>() {
+      public Object answer(InvocationOnMock invocation) throws IOException {
+        // Bypass the argument to FsDatasetImpl#getPinning to show that
+        // the block is pinned.
+        return pinned;
+      }
+    }).when(dn.data).getPinning(any(ExtendedBlock.class));
   }
 
   /**
@@ -136,7 +165,9 @@ public class InternalDataNodeTestUtils {
             Mockito.any(StorageReport[].class), Mockito.anyLong(),
             Mockito.anyLong(), Mockito.anyInt(), Mockito.anyInt(),
             Mockito.anyInt(), Mockito.any(VolumeFailureSummary.class),
-            Mockito.anyBoolean())).thenReturn(
+            Mockito.anyBoolean(),
+            Mockito.any(SlowPeerReports.class),
+            Mockito.any(SlowDiskReports.class))).thenReturn(
         new HeartbeatResponse(new DatanodeCommand[0], new NNHAStatusHeartbeat(
             HAServiceState.ACTIVE, 1), null, ThreadLocalRandom.current()
             .nextLong() | 1L));

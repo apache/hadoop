@@ -1,0 +1,51 @@
+{{!
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements. See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership. The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License. You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+}}
+
+<div class="col-md-12 margin-bottom-20">
+  {{metrics-table metrics=model.metrics type="Service"}}
+</div>
+
+{{#if model.configs}}
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <div class="panel-title">Service Configurations</div>
+  </div>
+  <div class="">
+    <table class="table table-hover table-custom-bordered table-custom-stripped table-radius-none table-border-none">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each model.configs as |config|}}
+        <tr>
+          <td>{{config.name}}</td>
+          <td>{{config.value}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{else}}
+<div class="panel panel-default">
+  <h4 class="text-center">No service configurations available!</h4>
+</div>
+{{/if}}

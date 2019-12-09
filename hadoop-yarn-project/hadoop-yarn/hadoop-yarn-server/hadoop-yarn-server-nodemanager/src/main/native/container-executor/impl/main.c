@@ -19,34 +19,25 @@
 #include "config.h"
 #include "configuration.h"
 #include "container-executor.h"
+#include "util.h"
+#include "get_executable.h"
+#include "modules/gpu/gpu-module.h"
+#include "modules/fpga/fpga-module.h"
+#include "modules/cgroups/cgroups-operations.h"
+#include "utils/string-utils.h"
 
 #include <errno.h>
 #include <grp.h>
-#include <limits.h>
 #include <unistd.h>
-#include <signal.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-
-#define CONF_FILENAME "container-executor.cfg"
-
-// When building as part of a Maven build this value gets defined by using
-// container-executor.conf.dir property. See:
-//   hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/pom.xml
-// for details.
-// NOTE: if this ends up being a relative path it gets resolved relative to
-//       the location of the container-executor binary itself, not getwd(3)
-#ifndef HADOOP_CONF_DIR
-  #error HADOOP_CONF_DIR must be defined
-#endif
+#include <signal.h>
 
 static void display_usage(FILE *stream) {
   fprintf(stream,
     "Usage: container-executor --checksetup\n"
     "       container-executor --mount-cgroups <hierarchy> "
-    "<controller=path>...\n" );
+    "<controller=path>\n" );
 
   if(is_tc_support_enabled()) {
     fprintf(stream,
@@ -62,10 +53,17 @@ static void display_usage(FILE *stream) {
 
   if(is_docker_support_enabled()) {
     fprintf(stream,
-      "       container-executor --run-docker <command-file>\n");
+      "       container-executor --run-docker <command-file>\n"
+      "       container-executor --remove-docker-container [hierarchy] "
+      "<container_id>\n"
+      "       container-executor --inspect-docker-container <container_id>\n");
   } else {
     fprintf(stream,
-      "[DISABLED] container-executor --run-docker <command-file>\n");
+      "[DISABLED] container-executor --run-docker <command-file>\n"
+      "[DISABLED] container-executor --remove-docker-container [hierarchy] "
+      "<container_id>\n"
+      "[DISABLED] container-executor --inspect-docker-container "
+      "<format> ... <container_id>\n");
   }
 
   fprintf(stream,
@@ -117,6 +115,11 @@ static void open_log_files() {
   if (ERRORFILE == NULL) {
     ERRORFILE = stderr;
   }
+
+  // There may be a process reading from stdout/stderr, and if it
+  // exits, we will crash on a SIGPIPE when we try to write to them.
+  // By ignoring SIGPIPE, we can handle the EPIPE instead of crashing.
+  signal(SIGPIPE, SIG_IGN);
 }
 
 /* Flushes and closes log files */
@@ -127,11 +130,13 @@ static void flush_and_close_log_files() {
     LOGFILE = NULL;
   }
 
-if (ERRORFILE != NULL) {
+  if (ERRORFILE != NULL) {
     fflush(ERRORFILE);
     fclose(ERRORFILE);
     ERRORFILE = NULL;
   }
+
+  free_executor_configurations();
 }
 
 /** Validates the current container-executor setup. Causes program exit
@@ -142,25 +147,21 @@ of whether an explicit checksetup operation is requested. */
 static void assert_valid_setup(char *argv0) {
   int ret;
   char *executable_file = get_executable(argv0);
-  if (!executable_file) {
-    fprintf(ERRORFILE,"realpath of executable: %s\n",
-      errno != 0 ? strerror(errno) : "unknown");
+  if (!executable_file || executable_file[0] == 0) {
+    fprintf(ERRORFILE, "realpath of executable: %s\n",
+            errno != 0 ? strerror(errno) : "unknown");
     flush_and_close_log_files();
-    exit(-1);
+    exit(INVALID_CONFIG_FILE);
   }
 
-  char *orig_conf_file = HADOOP_CONF_DIR "/" CONF_FILENAME;
-  char *conf_file = resolve_config_path(orig_conf_file, executable_file);
+  char *conf_file = get_config_path(argv0);
 
   if (conf_file == NULL) {
-    free(executable_file);
-    fprintf(ERRORFILE, "Configuration file %s not found.\n", orig_conf_file);
     flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
 
   if (check_configuration_permissions(conf_file) != 0) {
-    free(executable_file);
     flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
@@ -252,20 +253,38 @@ static int validate_arguments(int argc, char **argv , int *operation) {
     return INVALID_ARGUMENT_NUMBER;
   }
 
+  /*
+   * Check if it is a known module, if yes, redirect to module
+   */
+  if (strcmp("--module-gpu", argv[1]) == 0) {
+    return handle_gpu_request(&update_cgroups_parameters, "gpu", argc - 1,
+           &argv[1]);
+  }
+
+  if (strcmp("--module-fpga", argv[1]) == 0) {
+    return handle_fpga_request(&update_cgroups_parameters, "fpga", argc - 1,
+           &argv[1]);
+  }
+
   if (strcmp("--checksetup", argv[1]) == 0) {
     *operation = CHECK_SETUP;
     return 0;
   }
 
   if (strcmp("--mount-cgroups", argv[1]) == 0) {
-    if (argc < 4) {
-      display_usage(stdout);
-      return INVALID_ARGUMENT_NUMBER;
+    if (is_mount_cgroups_support_enabled()) {
+      if (argc < 4) {
+        display_usage(stdout);
+        return INVALID_ARGUMENT_NUMBER;
+      }
+      optind++;
+      cmd_input.cgroups_hierarchy = argv[optind++];
+      *operation = MOUNT_CGROUPS;
+      return 0;
+    } else {
+      display_feature_disabled_message("mount cgroup");
+      return FEATURE_DISABLED;
     }
-    optind++;
-    cmd_input.cgroups_hierarchy = argv[optind++];
-    *operation = MOUNT_CGROUPS;
-    return 0;
   }
 
   if (strcmp("--tc-modify-state", argv[1]) == 0) {
@@ -331,6 +350,37 @@ static int validate_arguments(int argc, char **argv , int *operation) {
         return FEATURE_DISABLED;
     }
   }
+
+  if (strcmp("--remove-docker-container", argv[1]) == 0) {
+    if(is_docker_support_enabled()) {
+      if ((argc != 3) && (argc != 4)) {
+        display_usage(stdout);
+        return INVALID_ARGUMENT_NUMBER;
+      }
+      optind++;
+      *operation = REMOVE_DOCKER_CONTAINER;
+      return 0;
+    } else {
+        display_feature_disabled_message("docker");
+        return FEATURE_DISABLED;
+    }
+  }
+
+  if (strcmp("--inspect-docker-container", argv[1]) == 0) {
+    if(is_docker_support_enabled()) {
+      if (argc != 4) {
+        display_usage(stdout);
+        return INVALID_ARGUMENT_NUMBER;
+      }
+      optind++;
+      *operation = INSPECT_DOCKER_CONTAINER;
+      return 0;
+    } else {
+        display_feature_disabled_message("docker");
+        return FEATURE_DISABLED;
+    }
+  }
+
   /* Now we have to validate 'run as user' operations that don't use
     a 'long option' - we should fix this at some point. The validation/argument
     parsing here is extensive enough that it done in a separate function */
@@ -361,13 +411,18 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
   char * resources_value = NULL;
   switch (command) {
   case INITIALIZE_CONTAINER:
-    if (argc < 9) {
-      fprintf(ERRORFILE, "Too few arguments (%d vs 9) for initialize container\n",
+    if (argc < 10) {
+      fprintf(ERRORFILE, "Too few arguments (%d vs 10) for initialize container\n",
        argc);
       fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
     cmd_input.app_id = argv[optind++];
+    cmd_input.container_id = argv[optind++];
+    if (!validate_container_id(cmd_input.container_id)) {
+      fprintf(ERRORFILE, "Invalid container id %s\n", cmd_input.container_id);
+      return INVALID_CONTAINER_ID;
+    }
     cmd_input.cred_file = argv[optind++];
     cmd_input.local_dirs = argv[optind++];// good local dirs as a comma separated list
     cmd_input.log_dirs = argv[optind++];// good log dirs as a comma separated list
@@ -377,8 +432,8 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
  case LAUNCH_DOCKER_CONTAINER:
    if(is_docker_support_enabled()) {
       //kill me now.
-      if (!(argc == 14 || argc == 15)) {
-        fprintf(ERRORFILE, "Wrong number of arguments (%d vs 14 or 15) for"
+      if (!(argc == 13 || argc == 14)) {
+        fprintf(ERRORFILE, "Wrong number of arguments (%d vs 13 or 14) for"
           " launch docker container\n", argc);
         fflush(ERRORFILE);
         return INVALID_ARGUMENT_NUMBER;
@@ -395,21 +450,8 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
       // good log dirs as a comma separated list
       cmd_input.log_dirs = argv[optind++];
       cmd_input.docker_command_file = argv[optind++];
-      // key,value pair describing resources
-      resources = argv[optind++];
-      resources_key = malloc(strlen(resources));
-      resources_value = malloc(strlen(resources));
-      if (get_kv_key(resources, resources_key, strlen(resources)) < 0 ||
-        get_kv_value(resources, resources_value, strlen(resources)) < 0) {
-        fprintf(ERRORFILE, "Invalid arguments for cgroups resources: %s",
-                           resources);
-        fflush(ERRORFILE);
-        free(resources_key);
-        free(resources_value);
-        return INVALID_ARGUMENT_NUMBER;
-      }
       //network isolation through tc
-      if (argc == 15) {
+      if (argc == 14) {
         if(is_tc_support_enabled()) {
           cmd_input.traffic_control_command_file = argv[optind++];
         } else {
@@ -418,9 +460,6 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
         }
       }
 
-      cmd_input.resources_key = resources_key;
-      cmd_input.resources_value = resources_value;
-      cmd_input.resources_values = extract_values(resources_value);
       *operation = RUN_AS_USER_LAUNCH_DOCKER_CONTAINER;
       return 0;
    } else {
@@ -471,7 +510,7 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
 
     cmd_input.resources_key = resources_key;
     cmd_input.resources_value = resources_value;
-    cmd_input.resources_values = extract_values(resources_value);
+    cmd_input.resources_values = split(resources_value);
     *operation = RUN_AS_USER_LAUNCH_CONTAINER;
     return 0;
 
@@ -521,7 +560,7 @@ int main(int argc, char **argv) {
   open_log_files();
   assert_valid_setup(argv[0]);
 
-  int operation;
+  int operation = -1;
   int ret = validate_arguments(argc, argv, &operation);
 
   if (ret != 0) {
@@ -556,6 +595,12 @@ int main(int argc, char **argv) {
   case RUN_DOCKER:
     exit_code = run_docker(cmd_input.docker_command_file);
     break;
+  case REMOVE_DOCKER_CONTAINER:
+    exit_code = remove_docker_container(argv + optind, argc - optind);
+    break;
+  case INSPECT_DOCKER_CONTAINER:
+    exit_code = exec_docker_command("inspect", argv + optind, argc - optind);
+    break;
   case RUN_AS_USER_INITIALIZE_CONTAINER:
     exit_code = set_user(cmd_input.run_as_user_name);
     if (exit_code != 0) {
@@ -564,9 +609,10 @@ int main(int argc, char **argv) {
 
     exit_code = initialize_app(cmd_input.yarn_user_name,
                             cmd_input.app_id,
+                            cmd_input.container_id,
                             cmd_input.cred_file,
-                            extract_values(cmd_input.local_dirs),
-                            extract_values(cmd_input.log_dirs),
+                            split(cmd_input.local_dirs),
+                            split(cmd_input.log_dirs),
                             argv + optind);
     break;
   case RUN_AS_USER_LAUNCH_DOCKER_CONTAINER:
@@ -591,11 +637,9 @@ int main(int argc, char **argv) {
                       cmd_input.script_file,
                       cmd_input.cred_file,
                       cmd_input.pid_file,
-                      extract_values(cmd_input.local_dirs),
-                      extract_values(cmd_input.log_dirs),
-                      cmd_input.docker_command_file,
-                      cmd_input.resources_key,
-                      cmd_input.resources_values);
+                      split(cmd_input.local_dirs),
+                      split(cmd_input.log_dirs),
+                      cmd_input.docker_command_file);
       break;
   case RUN_AS_USER_LAUNCH_CONTAINER:
     if (cmd_input.traffic_control_command_file != NULL) {
@@ -619,8 +663,8 @@ int main(int argc, char **argv) {
                     cmd_input.script_file,
                     cmd_input.cred_file,
                     cmd_input.pid_file,
-                    extract_values(cmd_input.local_dirs),
-                    extract_values(cmd_input.log_dirs),
+                    split(cmd_input.local_dirs),
+                    split(cmd_input.log_dirs),
                     cmd_input.resources_key,
                     cmd_input.resources_values);
     free(cmd_input.resources_key);

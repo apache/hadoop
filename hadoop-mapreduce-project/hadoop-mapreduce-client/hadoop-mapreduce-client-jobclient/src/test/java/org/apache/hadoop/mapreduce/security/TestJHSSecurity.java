@@ -28,8 +28,6 @@ import java.security.PrivilegedExceptionAction;
 
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.mapred.JobConf;
@@ -54,17 +52,19 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestJHSSecurity {
 
-  private static final Log LOG = LogFactory.getLog(TestJHSSecurity.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestJHSSecurity.class);
   
   @Test
   public void testDelegationToken() throws IOException, InterruptedException {
 
-    Logger rootLogger = LogManager.getRootLogger();
+    org.apache.log4j.Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
 
     final YarnConfiguration conf = new YarnConfiguration(new JobConf());

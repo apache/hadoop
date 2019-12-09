@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
-import org.junit.Assert;
+import static org.mockito.Mockito.mock;
 
+import org.junit.Assert;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalCacheDirectoryManager.Directory;
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
@@ -33,7 +35,7 @@ import org.junit.Test;
 
 public class TestLocalCacheDirectoryManager {
 
-  @Test(timeout = 10000)
+  @Test
   public void testHierarchicalSubDirectoryCreation() {
     // setting per directory file limit to 1.
     YarnConfiguration conf = new YarnConfiguration();
@@ -73,7 +75,7 @@ public class TestLocalCacheDirectoryManager {
     Assert.assertEquals(testPath2, hDir.getRelativePathForLocalization());
   }
 
-  @Test(timeout = 10000)
+  @Test
   public void testMinimumPerDirectoryFileLimit() {
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_LOCAL_CACHE_MAX_FILES_PER_DIRECTORY, "1");
@@ -83,8 +85,10 @@ public class TestLocalCacheDirectoryManager {
           new NMTokenSecretManagerInNM(), null,
           new ApplicationACLsManager(conf), new NMNullStateStoreService(),
             false, conf);
+    NodeManagerMetrics metrics = mock(NodeManagerMetrics.class);
     ResourceLocalizationService service =
-        new ResourceLocalizationService(null, null, null, null, nmContext);
+        new ResourceLocalizationService(null, null, null, null, nmContext,
+            metrics);
     try {
       service.init(conf);
     } catch (Exception e1) {
@@ -98,7 +102,7 @@ public class TestLocalCacheDirectoryManager {
 
   }
 
-  @Test(timeout = 1000)
+  @Test
   public void testDirectoryStateChangeFromFullToNonFull() {
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_LOCAL_CACHE_MAX_FILES_PER_DIRECTORY, "40");

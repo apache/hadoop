@@ -60,7 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.AMState;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -133,8 +133,6 @@ public class TestReservations {
         Resources.createResource(16 * GB, 12));
     when(csContext.getClusterResource()).thenReturn(
         Resources.createResource(100 * 16 * GB, 100 * 12));
-    when(csContext.getNonPartitionedQueueComparator()).thenReturn(
-        CapacitySchedulerQueueManager.NON_PARTITIONED_QUEUE_COMPARATOR);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
     when(csContext.getRMContext()).thenReturn(rmContext);
@@ -269,6 +267,8 @@ public class TestReservations {
     final int numNodes = 3;
     Resource clusterResource = Resources.createResource(numNodes * (8 * GB));
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     // Setup resource-requests
     Priority priorityAM = TestUtils.createMockPriority(1);
@@ -329,7 +329,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(2, app_0.getTotalRequiredResources(
+    assertEquals(2, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // try to assign reducer (5G on node 0 and should reserve)
@@ -348,7 +348,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(2, app_0.getTotalRequiredResources(
+    assertEquals(2, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // assign reducer to node 2
@@ -367,7 +367,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(5 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(1, app_0.getTotalRequiredResources(
+    assertEquals(1, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // node_1 heartbeat and unreserves from node_0 in order to allocate
@@ -386,7 +386,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(8 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(5 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(0, app_0.getTotalRequiredResources(
+    assertEquals(0, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
   }
 
@@ -456,6 +456,8 @@ public class TestReservations {
     final int numNodes = 3;
     Resource clusterResource = Resources.createResource(numNodes * (8 * GB));
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     // Setup resource-requests
     Priority priorityAM = TestUtils.createMockPriority(1);
@@ -602,6 +604,8 @@ public class TestReservations {
     final int numNodes = 3;
     Resource clusterResource = Resources.createResource(numNodes * (8 * GB));
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     // Setup resource-requests
     Priority priorityAM = TestUtils.createMockPriority(1);
@@ -662,7 +666,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(2, app_0.getTotalRequiredResources(
+    assertEquals(2, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // try to assign reducer (5G on node 0 and should reserve)
@@ -681,7 +685,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(2, app_0.getTotalRequiredResources(
+    assertEquals(2, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // assign reducer to node 2
@@ -700,7 +704,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(5 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(1, app_0.getTotalRequiredResources(
+    assertEquals(1, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // node_1 heartbeat and won't unreserve from node_0, potentially stuck
@@ -720,7 +724,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(5 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(1, app_0.getTotalRequiredResources(
+    assertEquals(1, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
   }
 
@@ -784,6 +788,8 @@ public class TestReservations {
     final int numNodes = 2;
     Resource clusterResource = Resources.createResource(numNodes * (8 * GB));
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     // Setup resource-requests
     Priority priorityAM = TestUtils.createMockPriority(1);
@@ -841,7 +847,7 @@ public class TestReservations {
     assertEquals(null, node_0.getReservedContainer());
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
-    assertEquals(2, app_0.getTotalRequiredResources(
+    assertEquals(2, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // try to assign reducer (5G on node 0 and should reserve)
@@ -859,7 +865,7 @@ public class TestReservations {
         .getMemorySize());
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
-    assertEquals(2, app_0.getTotalRequiredResources(
+    assertEquals(2, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // could allocate but told need to unreserve first
@@ -876,7 +882,7 @@ public class TestReservations {
     assertEquals(null, node_0.getReservedContainer());
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(8 * GB, node_1.getAllocatedResource().getMemorySize());
-    assertEquals(1, app_0.getTotalRequiredResources(
+    assertEquals(1, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
   }
 
@@ -898,8 +904,10 @@ public class TestReservations {
     String host_1 = "host_1";
     FiCaSchedulerNode node_1 = TestUtils.getMockNode(host_1, DEFAULT_RACK, 0,
         8 * GB);
-    
+
     Resource clusterResource = Resources.createResource(2 * 8 * GB);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     // Setup resource-requests
     Priority p = TestUtils.createMockPriority(5);
@@ -923,38 +931,39 @@ public class TestReservations {
     Container container = TestUtils.getMockContainer(containerId,
         node_1.getNodeID(), Resources.createResource(2*GB),
         priorityMap.getPriority());
-    RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
+    RMContainer rmContainer = new RMContainerImpl(container,
+        SchedulerRequestKey.extractFrom(container), appAttemptId,
         node_1.getNodeID(), "user", rmContext);
 
     Container container_1 = TestUtils.getMockContainer(containerId,
         node_0.getNodeID(), Resources.createResource(1*GB),
         priorityMap.getPriority());
-    RMContainer rmContainer_1 = new RMContainerImpl(container_1, appAttemptId,
+    RMContainer rmContainer_1 = new RMContainerImpl(container_1,
+        SchedulerRequestKey.extractFrom(container_1), appAttemptId,
         node_0.getNodeID(), "user", rmContext);
 
     // no reserved containers
-    NodeId unreserveId =
-        app_0.getNodeIdToUnreserve(priorityMap, capability,
-            cs.getResourceCalculator(), clusterResource);
+    NodeId unreserveId = app_0.getNodeIdToUnreserve(priorityMap, capability,
+            cs.getResourceCalculator());
     assertEquals(null, unreserveId);
 
     // no reserved containers - reserve then unreserve
     app_0.reserve(node_0, priorityMap, rmContainer_1, container_1);
     app_0.unreserve(priorityMap, node_0, rmContainer_1);
     unreserveId = app_0.getNodeIdToUnreserve(priorityMap, capability,
-        cs.getResourceCalculator(), clusterResource);
+        cs.getResourceCalculator());
     assertEquals(null, unreserveId);
 
     // no container large enough is reserved
     app_0.reserve(node_0, priorityMap, rmContainer_1, container_1);
     unreserveId = app_0.getNodeIdToUnreserve(priorityMap, capability,
-        cs.getResourceCalculator(), clusterResource);
+        cs.getResourceCalculator());
     assertEquals(null, unreserveId);
 
     // reserve one that is now large enough
     app_0.reserve(node_1, priorityMap, rmContainer, container);
     unreserveId = app_0.getNodeIdToUnreserve(priorityMap, capability,
-        cs.getResourceCalculator(), clusterResource);
+        cs.getResourceCalculator());
     assertEquals(node_1.getNodeID(), unreserveId);
   }
 
@@ -996,20 +1005,19 @@ public class TestReservations {
     Container container = TestUtils.getMockContainer(containerId,
         node_1.getNodeID(), Resources.createResource(2*GB),
         priorityMap.getPriority());
-    RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
+    RMContainer rmContainer = new RMContainerImpl(container,
+        SchedulerRequestKey.extractFrom(container), appAttemptId,
         node_1.getNodeID(), "user", rmContext);
 
     // nothing reserved
-    RMContainer toUnreserveContainer =
-        app_0.findNodeToUnreserve(csContext.getClusterResource(), node_1,
+    RMContainer toUnreserveContainer = app_0.findNodeToUnreserve(node_1,
             priorityMap, capability);
     assertTrue(toUnreserveContainer == null);
 
     // reserved but scheduler doesn't know about that node.
     app_0.reserve(node_1, priorityMap, rmContainer, container);
     node_1.reserveResource(app_0, priorityMap, rmContainer);
-    toUnreserveContainer =
-        app_0.findNodeToUnreserve(csContext.getClusterResource(), node_1,
+    toUnreserveContainer = app_0.findNodeToUnreserve(node_1,
             priorityMap, capability);
     assertTrue(toUnreserveContainer == null);
   }
@@ -1071,6 +1079,8 @@ public class TestReservations {
     final int numNodes = 2;
     Resource clusterResource = Resources.createResource(numNodes * (8 * GB));
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     // Setup resource-requests
     Priority priorityAM = TestUtils.createMockPriority(1);
@@ -1259,6 +1269,8 @@ public class TestReservations {
     final int numNodes = 2;
     Resource clusterResource = Resources.createResource(numNodes * (8 * GB));
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     // Setup resource-requests
     Priority priorityAM = TestUtils.createMockPriority(1);
@@ -1421,6 +1433,9 @@ public class TestReservations {
     final int numNodes = 3;
     Resource clusterResource = Resources.createResource(numNodes * (8 * GB));
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
+
 
     // Setup resource-requests
     Priority priorityAM = TestUtils.createMockPriority(1);

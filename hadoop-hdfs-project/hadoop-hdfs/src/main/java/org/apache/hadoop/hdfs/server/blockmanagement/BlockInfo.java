@@ -24,9 +24,10 @@ import java.util.NoSuchElementException;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.LightWeightGSet;
 
 import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
@@ -51,7 +52,7 @@ public abstract class BlockInfo extends Block
   /**
    * Block collection ID.
    */
-  private long bcId;
+  private volatile long bcId;
 
   /** For implementing {@link LightWeightGSet.LinkedElement} interface. */
   private LightWeightGSet.LinkedElement nextLinkedElement;
@@ -175,6 +176,8 @@ public abstract class BlockInfo extends Block
 
   public abstract boolean isStriped();
 
+  public abstract BlockType getBlockType();
+
   /** @return true if there is no datanode storage associated with the block */
   abstract boolean hasNoStorage();
 
@@ -184,13 +187,23 @@ public abstract class BlockInfo extends Block
    */
   DatanodeStorageInfo findStorageInfo(DatanodeDescriptor dn) {
     int len = getCapacity();
+    DatanodeStorageInfo providedStorageInfo = null;
     for(int idx = 0; idx < len; idx++) {
       DatanodeStorageInfo cur = getStorageInfo(idx);
-      if(cur != null && cur.getDatanodeDescriptor() == dn) {
-        return cur;
+      if(cur != null) {
+        if (cur.getStorageType() == StorageType.PROVIDED) {
+          // if block resides on provided storage, only match the storage ids
+          if (dn.getStorageInfo(cur.getStorageID()) != null) {
+            // do not return here as we have to check the other
+            // DatanodeStorageInfos for this block which could be local
+            providedStorageInfo = cur;
+          }
+        } else if (cur.getDatanodeDescriptor() == dn) {
+          return cur;
+        }
       }
     }
-    return null;
+    return providedStorageInfo;
   }
 
   /**
@@ -249,6 +262,10 @@ public abstract class BlockInfo extends Block
     return getBlockUCState().equals(BlockUCState.COMPLETE);
   }
 
+  public boolean isUnderRecovery() {
+    return getBlockUCState().equals(BlockUCState.UNDER_RECOVERY);
+  }
+
   public final boolean isCompleteOrCommitted() {
     final BlockUCState state = getBlockUCState();
     return state.equals(BlockUCState.COMPLETE) ||
@@ -262,11 +279,11 @@ public abstract class BlockInfo extends Block
       DatanodeStorageInfo[] targets) {
     if (isComplete()) {
       uc = new BlockUnderConstructionFeature(this, s, targets,
-          this.isStriped());
+          this.getBlockType());
     } else {
       // the block is already under construction
       uc.setBlockUCState(s);
-      uc.setExpectedLocations(this, targets, this.isStriped());
+      uc.setExpectedLocations(this, targets, this.getBlockType());
     }
   }
 
@@ -283,28 +300,25 @@ public abstract class BlockInfo extends Block
    * Process the recorded replicas. When about to commit or finish the
    * pipeline recovery sort out bad replicas.
    * @param genStamp  The final generation stamp for the block.
+   * @return staleReplica's List.
    */
-  public void setGenerationStampAndVerifyReplicas(long genStamp) {
+  public List<ReplicaUnderConstruction> setGenerationStampAndVerifyReplicas(
+      long genStamp) {
     Preconditions.checkState(uc != null && !isComplete());
     // Set the generation stamp for the block.
     setGenerationStamp(genStamp);
 
-    // Remove the replicas with wrong gen stamp
-    List<ReplicaUnderConstruction> staleReplicas = uc.getStaleReplicas(genStamp);
-    for (ReplicaUnderConstruction r : staleReplicas) {
-      r.getExpectedStorageLocation().removeBlock(this);
-      NameNode.blockStateChangeLog.debug("BLOCK* Removing stale replica {}"
-          + " of {}", r, Block.toString(r));
-    }
+    return uc.getStaleReplicas(genStamp);
   }
 
   /**
    * Commit block's length and generation stamp as reported by the client.
    * Set block state to {@link BlockUCState#COMMITTED}.
    * @param block - contains client reported block length and generation
+   * @return staleReplica's List.
    * @throws IOException if block ids are inconsistent.
    */
-  void commitBlock(Block block) throws IOException {
+  List<ReplicaUnderConstruction> commitBlock(Block block) throws IOException {
     if (getBlockId() != block.getBlockId()) {
       throw new IOException("Trying to commit inconsistent block: id = "
           + block.getBlockId() + ", expected id = " + getBlockId());
@@ -313,6 +327,6 @@ public abstract class BlockInfo extends Block
     uc.commit();
     this.setNumBytes(block.getNumBytes());
     // Sort out invalid replicas.
-    setGenerationStampAndVerifyReplicas(block.getGenerationStamp());
+    return setGenerationStampAndVerifyReplicas(block.getGenerationStamp());
   }
 }

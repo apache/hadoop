@@ -20,11 +20,14 @@ package org.apache.hadoop.hdfs.protocol;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
+import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
@@ -40,10 +43,13 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
+import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
@@ -124,6 +130,7 @@ public interface ClientProtocol {
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
+  @ReadOnly(atimeAffected = true, isCoordinated = true)
   LocatedBlocks getBlockLocations(String src, long offset, long length)
       throws IOException;
 
@@ -133,6 +140,7 @@ public interface ClientProtocol {
    * @throws IOException
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   FsServerDefaults getServerDefaults() throws IOException;
 
   /**
@@ -154,12 +162,20 @@ public interface ClientProtocol {
    * @param src path of the file being created.
    * @param masked masked permission.
    * @param clientName name of the current client.
-   * @param flag indicates whether the file should be
-   * overwritten if it already exists or create if it does not exist or append.
+   * @param flag indicates whether the file should be overwritten if it already
+   *             exists or create if it does not exist or append, or whether the
+   *             file should be a replicate file, no matter what its ancestor's
+   *             replication or erasure coding policy is.
    * @param createParent create missing parent directory if true
    * @param replication block replication factor.
    * @param blockSize maximum block size.
    * @param supportedVersions CryptoProtocolVersions supported by the client
+   * @param ecPolicyName the name of erasure coding policy. A null value means
+   *                     this file will inherit its parent directory's policy,
+   *                     either traditional replication or erasure coding
+   *                     policy. ecPolicyName and SHOULD_REPLICATE CreateFlag
+   *                     are mutually exclusive. It's invalid to set both
+   *                     SHOULD_REPLICATE flag and a non-null ecPolicyName.
    *
    * @return the status of the created file, it could be null if the server
    *           doesn't support returning the file status
@@ -193,7 +209,7 @@ public interface ClientProtocol {
   HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize,
-      CryptoProtocolVersion[] supportedVersions)
+      CryptoProtocolVersion[] supportedVersions, String ecPolicyName)
       throws IOException;
 
   /**
@@ -265,6 +281,7 @@ public interface ClientProtocol {
    * @return All the in-use block storage policies currently.
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   BlockStoragePolicy[] getStoragePolicies() throws IOException;
 
   /**
@@ -307,6 +324,7 @@ public interface ClientProtocol {
    *           If file/dir <code>src</code> is not found
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   BlockStoragePolicy getStoragePolicy(String path) throws IOException;
 
   /**
@@ -614,6 +632,8 @@ public interface ClientProtocol {
    * @throws org.apache.hadoop.fs.UnresolvedLinkException If <code>src</code>
    *           contains a symlink
    * @throws SnapshotAccessControlException if path is in RO snapshot
+   * @throws PathIsNotEmptyDirectoryException if path is a non-empty directory
+   *           and <code>recursive</code> is set to false
    * @throws IOException If an I/O error occurred
    */
   @AtMostOnce
@@ -671,16 +691,19 @@ public interface ClientProtocol {
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   DirectoryListing getListing(String src, byte[] startAfter,
       boolean needLocation) throws IOException;
 
   /**
-   * Get listing of all the snapshottable directories.
-   *
-   * @return Information about all the current snapshottable directory
-   * @throws IOException If an I/O error occurred
+   * Get the list of snapshottable directories that are owned
+   * by the current user. Return all the snapshottable directories if the
+   * current user is a super user.
+   * @return The list of all the current snapshottable directories.
+   * @throws IOException If an I/O error occurred.
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   SnapshottableDirectoryStatus[] getSnapshottableDirListing()
       throws IOException;
 
@@ -722,10 +745,19 @@ public interface ClientProtocol {
   @Idempotent
   boolean recoverLease(String src, String clientName) throws IOException;
 
+  /**
+   * Constants to index the array of aggregated stats returned by
+   * {@link #getStats()}.
+   */
   int GET_STATS_CAPACITY_IDX = 0;
   int GET_STATS_USED_IDX = 1;
   int GET_STATS_REMAINING_IDX = 2;
+  /**
+   * Use {@link #GET_STATS_LOW_REDUNDANCY_IDX} instead.
+   */
+  @Deprecated
   int GET_STATS_UNDER_REPLICATED_IDX = 3;
+  int GET_STATS_LOW_REDUNDANCY_IDX = 3;
   int GET_STATS_CORRUPT_BLOCKS_IDX = 4;
   int GET_STATS_MISSING_BLOCKS_IDX = 5;
   int GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX = 6;
@@ -734,25 +766,42 @@ public interface ClientProtocol {
   int STATS_ARRAY_LENGTH = 9;
 
   /**
-   * Get a set of statistics about the filesystem.
-   * Right now, only eight values are returned.
+   * Get an array of aggregated statistics combining blocks of both type
+   * {@link BlockType#CONTIGUOUS} and {@link BlockType#STRIPED} in the
+   * filesystem. Use public constants like {@link #GET_STATS_CAPACITY_IDX} in
+   * place of actual numbers to index into the array.
    * <ul>
    * <li> [0] contains the total storage capacity of the system, in bytes.</li>
    * <li> [1] contains the total used space of the system, in bytes.</li>
    * <li> [2] contains the available storage of the system, in bytes.</li>
-   * <li> [3] contains number of under replicated blocks in the system.</li>
-   * <li> [4] contains number of blocks with a corrupt replica. </li>
+   * <li> [3] contains number of low redundancy blocks in the system.</li>
+   * <li> [4] contains number of corrupt blocks. </li>
    * <li> [5] contains number of blocks without any good replicas left. </li>
    * <li> [6] contains number of blocks which have replication factor
    *          1 and have lost the only replica. </li>
-   * <li> [7] contains number of bytes  that are at risk for deletion. </li>
+   * <li> [7] contains number of bytes that are at risk for deletion. </li>
    * <li> [8] contains number of pending deletion blocks. </li>
    * </ul>
-   * Use public constants like {@link #GET_STATS_CAPACITY_IDX} in place of
-   * actual numbers to index into the array.
    */
   @Idempotent
+  @ReadOnly
   long[] getStats() throws IOException;
+
+  /**
+   * Get statistics pertaining to blocks of type {@link BlockType#CONTIGUOUS}
+   * in the filesystem.
+   */
+  @Idempotent
+  @ReadOnly
+  ReplicatedBlockStats getReplicatedBlockStats() throws IOException;
+
+  /**
+   * Get statistics pertaining to blocks of type {@link BlockType#STRIPED}
+   * in the filesystem.
+   */
+  @Idempotent
+  @ReadOnly
+  ECBlockGroupStats getECBlockGroupStats() throws IOException;
 
   /**
    * Get a report on the system's current datanodes.
@@ -761,6 +810,7 @@ public interface ClientProtocol {
    * otherwise all datanodes if type is ALL.
    */
   @Idempotent
+  @ReadOnly
   DatanodeInfo[] getDatanodeReport(HdfsConstants.DatanodeReportType type)
       throws IOException;
 
@@ -768,6 +818,7 @@ public interface ClientProtocol {
    * Get a report on the current datanode storages.
    */
   @Idempotent
+  @ReadOnly
   DatanodeStorageReport[] getDatanodeStorageReport(
       HdfsConstants.DatanodeReportType type) throws IOException;
 
@@ -780,6 +831,7 @@ public interface ClientProtocol {
    *           a symlink.
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   long getPreferredBlockSize(String filename)
       throws IOException;
 
@@ -802,7 +854,7 @@ public interface ClientProtocol {
    * percentage called threshold of blocks, which satisfy the minimal
    * replication condition.
    * The minimal replication condition is that each block must have at least
-   * <tt>dfs.namenode.replication.min</tt> replicas.
+   * {@code dfs.namenode.replication.min} replicas.
    * When the threshold is reached the name node extends safe mode
    * for a configurable amount of time
    * to let the remaining data nodes to check in before it
@@ -818,12 +870,13 @@ public interface ClientProtocol {
    * Current state of the name node can be verified using
    * {@link #setSafeMode(HdfsConstants.SafeModeAction,boolean)
    * setSafeMode(SafeModeAction.SAFEMODE_GET,false)}
-   * <h4>Configuration parameters:</h4>
-   * <tt>dfs.safemode.threshold.pct</tt> is the threshold parameter.<br>
-   * <tt>dfs.safemode.extension</tt> is the safe mode extension parameter.<br>
-   * <tt>dfs.namenode.replication.min</tt> is the minimal replication parameter.
    *
-   * <h4>Special cases:</h4>
+   * <p><b>Configuration parameters:</b></p>
+   * {@code dfs.safemode.threshold.pct} is the threshold parameter.<br>
+   * {@code dfs.safemode.extension} is the safe mode extension parameter.<br>
+   * {@code dfs.namenode.replication.min} is the minimal replication parameter.
+   *
+   * <p><b>Special cases:</b></p>
    * The name node does not enter safe mode at startup if the threshold is
    * set to 0 or if the name space is empty.<br>
    * If the threshold is set to 1 then all blocks need to have at least
@@ -904,6 +957,15 @@ public interface ClientProtocol {
   void finalizeUpgrade() throws IOException;
 
   /**
+   * Get status of upgrade - finalized or not.
+   * @return true if upgrade is finalized or if no upgrade is in progress and
+   * false otherwise.
+   * @throws IOException
+   */
+  @Idempotent
+  boolean upgradeStatus() throws IOException;
+
+  /**
    * Rolling upgrade operations.
    * @param action either query, prepare or finalize.
    * @return rolling upgrade information. On query, if no upgrade is in
@@ -924,6 +986,7 @@ public interface ClientProtocol {
    * cookie returned from the previous call.
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   CorruptFileBlocks listCorruptFileBlocks(String path, String cookie)
       throws IOException;
 
@@ -938,7 +1001,7 @@ public interface ClientProtocol {
 
   /**
    * Tell all datanodes to use a new, non-persistent bandwidth value for
-   * dfs.balance.bandwidthPerSec.
+   * dfs.datanode.balance.bandwidthPerSec.
    *
    * @param bandwidth Blanacer bandwidth in bytes per second for this datanode.
    * @throws IOException
@@ -959,6 +1022,7 @@ public interface ClientProtocol {
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   HdfsFileStatus getFileInfo(String src) throws IOException;
 
   /**
@@ -973,6 +1037,7 @@ public interface ClientProtocol {
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   boolean isFileClosed(String src) throws IOException;
 
   /**
@@ -989,7 +1054,24 @@ public interface ClientProtocol {
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   HdfsFileStatus getFileLinkInfo(String src) throws IOException;
+
+  /**
+   * Get the file info for a specific file or directory with
+   * {@link LocatedBlocks}.
+   * @param src The string representation of the path to the file
+   * @param needBlockToken Generate block tokens for {@link LocatedBlocks}
+   * @return object containing information regarding the file
+   *         or null if file not found
+   * @throws org.apache.hadoop.security.AccessControlException permission denied
+   * @throws java.io.FileNotFoundException file <code>src</code> is not found
+   * @throws IOException If an I/O error occurred
+   */
+  @Idempotent
+  @ReadOnly(isCoordinated = true)
+  HdfsLocatedFileStatus getLocatedFileInfo(String src, boolean needBlockToken)
+      throws IOException;
 
   /**
    * Get {@link ContentSummary} rooted at the specified directory.
@@ -1002,6 +1084,7 @@ public interface ClientProtocol {
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   ContentSummary getContentSummary(String path) throws IOException;
 
   /**
@@ -1114,6 +1197,7 @@ public interface ClientProtocol {
    *           or an I/O error occurred
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   String getLinkTarget(String path) throws IOException;
 
   /**
@@ -1150,7 +1234,6 @@ public interface ClientProtocol {
    * Get a valid Delegation Token.
    *
    * @param renewer the designated renewer for the token
-   * @return Token<DelegationTokenIdentifier>
    * @throws IOException
    */
   @Idempotent
@@ -1184,6 +1267,7 @@ public interface ClientProtocol {
    * @throws IOException
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   DataEncryptionKey getDataEncryptionKey() throws IOException;
 
   /**
@@ -1252,8 +1336,38 @@ public interface ClientProtocol {
    * @throws IOException on error
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   SnapshotDiffReport getSnapshotDiffReport(String snapshotRoot,
       String fromSnapshot, String toSnapshot) throws IOException;
+
+  /**
+   * Get the difference between two snapshots of a directory iteratively.
+   *
+   * @param snapshotRoot
+   *          full path of the directory where snapshots are taken
+   * @param fromSnapshot
+   *          snapshot name of the from point. Null indicates the current
+   *          tree
+   * @param toSnapshot
+   *          snapshot name of the to point. Null indicates the current
+   *          tree.
+   * @param startPath
+   *          path relative to the snapshottable root directory from where the
+   *          snapshotdiff computation needs to start across multiple rpc calls
+   * @param index
+   *           index in the created or deleted list of the directory at which
+   *           the snapshotdiff computation stopped during the last rpc call
+   *           as the no of entries exceeded the snapshotdiffentry limit. -1
+   *           indicates, the snapshotdiff compuatation needs to start right
+   *           from the startPath provided.
+   * @return The difference report represented as a {@link SnapshotDiffReport}.
+   * @throws IOException on error
+   */
+  @Idempotent
+  @ReadOnly(isCoordinated = true)
+  SnapshotDiffReportListing getSnapshotDiffReportListing(String snapshotRoot,
+      String fromSnapshot, String toSnapshot, byte[] startPath, int index)
+      throws IOException;
 
   /**
    * Add a CacheDirective to the CacheManager.
@@ -1297,6 +1411,7 @@ public interface ClientProtocol {
    * @return A batch of CacheDirectiveEntry objects.
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   BatchedEntries<CacheDirectiveEntry> listCacheDirectives(
       long prevId, CacheDirectiveInfo filter) throws IOException;
 
@@ -1338,6 +1453,7 @@ public interface ClientProtocol {
    * @return A batch of CachePoolEntry objects.
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   BatchedEntries<CachePoolEntry> listCachePools(String prevPool)
       throws IOException;
 
@@ -1384,6 +1500,7 @@ public interface ClientProtocol {
    * Gets the ACLs of files and directories.
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   AclStatus getAclStatus(String src) throws IOException;
 
   /**
@@ -1397,25 +1514,52 @@ public interface ClientProtocol {
    * Get the encryption zone for a path.
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   EncryptionZone getEZForPath(String src)
     throws IOException;
 
   /**
-   * Used to implement cursor-based batched listing of {@EncryptionZone}s.
+   * Used to implement cursor-based batched listing of {@link EncryptionZone}s.
    *
    * @param prevId ID of the last item in the previous batch. If there is no
    *               previous batch, a negative value can be used.
    * @return Batch of encryption zones.
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   BatchedEntries<EncryptionZone> listEncryptionZones(
       long prevId) throws IOException;
+
+  /**
+   * Used to implement re-encryption of encryption zones.
+   *
+   * @param zone the encryption zone to re-encrypt.
+   * @param action the action for the re-encryption.
+   * @throws IOException
+   */
+  @AtMostOnce
+  void reencryptEncryptionZone(String zone, ReencryptAction action)
+      throws IOException;
+
+  /**
+   * Used to implement cursor-based batched listing of
+   * {@link ZoneReencryptionStatus}s.
+   *
+   * @param prevId ID of the last item in the previous batch. If there is no
+   *               previous batch, a negative value can be used.
+   * @return Batch of encryption zones.
+   * @throws IOException
+   */
+  @Idempotent
+  @ReadOnly(isCoordinated = true)
+  BatchedEntries<ZoneReencryptionStatus> listReencryptionStatus(long prevId)
+      throws IOException;
 
   /**
    * Set xattr of a file or directory.
    * The name must be prefixed with the namespace followed by ".". For example,
    * "user.attr".
-   * <p/>
+   * <p>
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param src file or directory
@@ -1432,15 +1576,16 @@ public interface ClientProtocol {
    * If xAttrs is null or empty, this is the same as getting all xattrs of the
    * file or directory.  Only those xattrs for which the logged-in user has
    * permissions to view are returned.
-   * <p/>
+   * <p>
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param src file or directory
    * @param xAttrs xAttrs to get
-   * @return List<XAttr> <code>XAttr</code> list
+   * @return <code>XAttr</code> list
    * @throws IOException
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   List<XAttr> getXAttrs(String src, List<XAttr> xAttrs)
       throws IOException;
 
@@ -1448,14 +1593,15 @@ public interface ClientProtocol {
    * List the xattrs names for a file or directory.
    * Only the xattr names for which the logged in user has the permissions to
    * access will be returned.
-   * <p/>
+   * <p>
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param src file or directory
-   * @return List<XAttr> <code>XAttr</code> list
+   * @return <code>XAttr</code> list
    * @throws IOException
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   List<XAttr> listXAttrs(String src)
       throws IOException;
 
@@ -1463,7 +1609,7 @@ public interface ClientProtocol {
    * Remove xattr of a file or directory.Value in xAttr parameter is ignored.
    * The name must be prefixed with the namespace followed by ".". For example,
    * "user.attr".
-   * <p/>
+   * <p>
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param src file or directory
@@ -1490,6 +1636,7 @@ public interface ClientProtocol {
    * @throws IOException see specific implementation
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   void checkAccess(String path, FsAction mode) throws IOException;
 
   /**
@@ -1498,6 +1645,7 @@ public interface ClientProtocol {
    * the starting point for the inotify event stream.
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   long getCurrentEditLogTxid() throws IOException;
 
   /**
@@ -1505,37 +1653,101 @@ public interface ClientProtocol {
    * transactions for txids equal to or greater than txid.
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   EventBatchList getEditsFromTxid(long txid) throws IOException;
 
   /**
    * Set an erasure coding policy on a specified path.
    * @param src The path to set policy on.
-   * @param ecPolicy The erasure coding policy. If null, default policy will
-   *                 be used
+   * @param ecPolicyName The erasure coding policy name.
    */
   @AtMostOnce
-  void setErasureCodingPolicy(String src, ErasureCodingPolicy ecPolicy)
+  void setErasureCodingPolicy(String src, String ecPolicyName)
       throws IOException;
 
   /**
-   * Get the erasure coding policies loaded in Namenode
+   * Add Erasure coding policies to HDFS. For each policy input, schema and
+   * cellSize are musts, name and id are ignored. They will be automatically
+   * created and assigned by Namenode once the policy is successfully added, and
+   * will be returned in the response.
+   *
+   * @param policies The user defined ec policy list to add.
+   * @return Return the response list of adding operations.
+   * @throws IOException
+   */
+  @AtMostOnce
+  AddErasureCodingPolicyResponse[] addErasureCodingPolicies(
+      ErasureCodingPolicy[] policies) throws IOException;
+
+  /**
+   * Remove erasure coding policy.
+   * @param ecPolicyName The name of the policy to be removed.
+   * @throws IOException
+   */
+  @AtMostOnce
+  void removeErasureCodingPolicy(String ecPolicyName) throws IOException;
+
+  /**
+   * Enable erasure coding policy.
+   * @param ecPolicyName The name of the policy to be enabled.
+   * @throws IOException
+   */
+  @AtMostOnce
+  void enableErasureCodingPolicy(String ecPolicyName) throws IOException;
+
+  /**
+   * Disable erasure coding policy.
+   * @param ecPolicyName The name of the policy to be disabled.
+   * @throws IOException
+   */
+  @AtMostOnce
+  void disableErasureCodingPolicy(String ecPolicyName) throws IOException;
+
+
+  /**
+   * Get the erasure coding policies loaded in Namenode, excluding REPLICATION
+   * policy.
    *
    * @throws IOException
    */
   @Idempotent
-  ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException;
+  @ReadOnly(isCoordinated = true)
+  ErasureCodingPolicyInfo[] getErasureCodingPolicies() throws IOException;
 
   /**
-   * Get the information about the EC policy for the path
+   * Get the erasure coding codecs loaded in Namenode.
+   *
+   * @throws IOException
+   */
+  @Idempotent
+  @ReadOnly(isCoordinated = true)
+  Map<String, String> getErasureCodingCodecs() throws IOException;
+
+  /**
+   * Get the information about the EC policy for the path. Null will be returned
+   * if directory or file has REPLICATION policy.
    *
    * @param src path to get the info for
    * @throws IOException
    */
   @Idempotent
+  @ReadOnly(isCoordinated = true)
   ErasureCodingPolicy getErasureCodingPolicy(String src) throws IOException;
 
   /**
+   * Unset erasure coding policy from a specified path.
+   * @param src The path to unset policy.
+   */
+  @AtMostOnce
+  void unsetErasureCodingPolicy(String src) throws IOException;
+
+  /**
    * Get {@link QuotaUsage} rooted at the specified directory.
+   *
+   * Note: due to HDFS-6763, standby/observer doesn't keep up-to-date info
+   * about quota usage, and thus even though this is ReadOnly, it can only be
+   * directed to the active namenode.
+   *
    * @param path The string representation of the path
    *
    * @throws AccessControlException permission denied
@@ -1545,5 +1757,71 @@ public interface ClientProtocol {
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
+  @ReadOnly(activeOnly = true)
   QuotaUsage getQuotaUsage(String path) throws IOException;
+
+  /**
+   * List open files in the system in batches. INode id is the cursor and the
+   * open files returned in a batch will have their INode ids greater than
+   * the cursor INode id. Open files can only be requested by super user and
+   * the the list across batches are not atomic.
+   *
+   * @param prevId the cursor INode id.
+   * @throws IOException
+   */
+  @Idempotent
+  @Deprecated
+  @ReadOnly(isCoordinated = true)
+  BatchedEntries<OpenFileEntry> listOpenFiles(long prevId) throws IOException;
+
+  /**
+   * List open files in the system in batches. INode id is the cursor and the
+   * open files returned in a batch will have their INode ids greater than
+   * the cursor INode id. Open files can only be requested by super user and
+   * the the list across batches are not atomic.
+   *
+   * @param prevId the cursor INode id.
+   * @param openFilesTypes types to filter the open files.
+   * @param path path to filter the open files.
+   * @throws IOException
+   */
+  @Idempotent
+  @ReadOnly(isCoordinated = true)
+  BatchedEntries<OpenFileEntry> listOpenFiles(long prevId,
+      EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException;
+
+  /**
+   * Get HA service state of the server.
+   *
+   * @return server HA state
+   * @throws IOException
+   */
+  @Idempotent
+  @ReadOnly
+  HAServiceProtocol.HAServiceState getHAServiceState() throws IOException;
+
+  /**
+   * Called by client to wait until the server has reached the state id of the
+   * client. The client and server state id are given by client side and server
+   * side alignment context respectively. This can be a blocking call.
+   *
+   * @throws IOException
+   */
+  @Idempotent
+  @ReadOnly(activeOnly = true)
+  void msync() throws IOException;
+
+  /**
+   * Satisfy the storage policy for a file/directory.
+   * @param path Path of an existing file/directory.
+   * @throws AccessControlException If access is denied.
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if <code>src</code>
+   *           contains a symlink.
+   * @throws java.io.FileNotFoundException If file/dir <code>src</code> is not
+   *           found.
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException append not
+   *           allowed in safemode.
+   */
+  @AtMostOnce
+  void satisfyStoragePolicy(String path) throws IOException;
 }

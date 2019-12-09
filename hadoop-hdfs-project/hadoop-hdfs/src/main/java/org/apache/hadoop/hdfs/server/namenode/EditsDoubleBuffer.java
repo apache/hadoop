@@ -17,9 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 
+import org.apache.commons.codec.binary.Hex;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.Writer;
@@ -37,6 +43,8 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public class EditsDoubleBuffer {
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(EditsDoubleBuffer.class);
 
   private TxnBuffer bufCurrent; // current buffer for writing
   private TxnBuffer bufReady; // buffer ready for flushing
@@ -48,9 +56,9 @@ public class EditsDoubleBuffer {
     bufReady = new TxnBuffer(initBufferSize);
 
   }
-    
-  public void writeOp(FSEditLogOp op) throws IOException {
-    bufCurrent.writeOp(op);
+
+  public void writeOp(FSEditLogOp op, int logVersion) throws IOException {
+    bufCurrent.writeOp(op, logVersion);
   }
 
   public void writeRaw(byte[] bytes, int offset, int length) throws IOException {
@@ -63,6 +71,7 @@ public class EditsDoubleBuffer {
 
     int bufSize = bufCurrent.size();
     if (bufSize != 0) {
+      bufCurrent.dumpRemainingEditLogs();
       throw new IOException("FSEditStream has " + bufSize
           + " bytes still to be flushed and cannot be closed.");
     }
@@ -140,13 +149,13 @@ public class EditsDoubleBuffer {
       reset();
     }
 
-    public void writeOp(FSEditLogOp op) throws IOException {
+    public void writeOp(FSEditLogOp op, int logVersion) throws IOException {
       if (firstTxId == HdfsServerConstants.INVALID_TXID) {
         firstTxId = op.txid;
       } else {
         assert op.txid > firstTxId;
       }
-      writer.writeOp(op);
+      writer.writeOp(op, logVersion);
       numTxns++;
     }
     
@@ -156,6 +165,32 @@ public class EditsDoubleBuffer {
       firstTxId = HdfsServerConstants.INVALID_TXID;
       numTxns = 0;
       return this;
+    }
+
+    private void dumpRemainingEditLogs() {
+      byte[] buf = this.getData();
+      byte[] remainingRawEdits = Arrays.copyOfRange(buf, 0, this.size());
+      ByteArrayInputStream bis = new ByteArrayInputStream(remainingRawEdits);
+      DataInputStream dis = new DataInputStream(bis);
+      FSEditLogLoader.PositionTrackingInputStream tracker =
+          new FSEditLogLoader.PositionTrackingInputStream(bis);
+      FSEditLogOp.Reader reader = FSEditLogOp.Reader.create(dis, tracker,
+          NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+      FSEditLogOp op;
+      LOG.warn("The edits buffer is " + size() + " bytes long with " + numTxns +
+          " unflushed transactions. " +
+          "Below is the list of unflushed transactions:");
+      int numTransactions = 0;
+      try {
+        while ((op = reader.readOp(false)) != null) {
+          LOG.warn("Unflushed op [" + numTransactions + "]: " + op);
+          numTransactions++;
+        }
+      } catch (IOException ioe) {
+        // If any exceptions, print raw bytes and stop.
+        LOG.warn("Unable to dump remaining ops. Remaining raw bytes: " +
+            Hex.encodeHexString(remainingRawEdits), ioe);
+      }
     }
   }
 

@@ -63,7 +63,7 @@ public interface Queue {
 
   boolean hasAccess(QueueACL acl, UserGroupInformation user);
   
-  public ActiveUsersManager getActiveUsersManager();
+  public AbstractUsersManager getAbstractUsersManager();
 
   /**
    * Recover the state of the queue for a given container.

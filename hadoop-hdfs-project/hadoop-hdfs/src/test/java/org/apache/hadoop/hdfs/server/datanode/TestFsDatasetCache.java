@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import net.jcip.annotations.NotThreadSafe;
+import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -33,9 +35,10 @@ import java.nio.channels.FileChannel;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -67,6 +70,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
+import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
@@ -78,19 +82,22 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.log4j.Logger;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
+import org.slf4j.event.Level;
 
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY;
 
+@NotThreadSafe
 public class TestFsDatasetCache {
-  private static final Log LOG = LogFactory.getLog(TestFsDatasetCache.class);
+  private static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(TestFsDatasetCache.class);
 
   // Most Linux installs allow a default of 64KB locked memory
   static final long CACHE_CAPACITY = 64 * 1024;
@@ -108,11 +115,38 @@ public class TestFsDatasetCache {
   private static DataNode dn;
   private static FsDatasetSpi<?> fsd;
   private static DatanodeProtocolClientSideTranslatorPB spyNN;
+  /**
+   * Used to pause DN BPServiceActor threads. BPSA threads acquire the
+   * shared read lock. The test acquires the write lock for exclusive access.
+   */
+  private static ReadWriteLock lock = new ReentrantReadWriteLock(true);
   private static final PageRounder rounder = new PageRounder();
   private static CacheManipulator prevCacheManipulator;
+  private static DataNodeFaultInjector oldInjector;
 
   static {
-    LogManager.getLogger(FsDatasetCache.class).setLevel(Level.DEBUG);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(FsDatasetCache.class), Level.DEBUG);
+  }
+
+  @BeforeClass
+  public static void setUpClass() throws Exception {
+    oldInjector = DataNodeFaultInjector.get();
+    DataNodeFaultInjector.set(new DataNodeFaultInjector() {
+      @Override
+      public void startOfferService() throws Exception {
+        lock.readLock().lock();
+      }
+      @Override
+      public void endOfferService() throws Exception {
+        lock.readLock().unlock();
+      }
+    });
+  }
+
+  @AfterClass
+  public static void tearDownClass() throws Exception {
+    DataNodeFaultInjector.set(oldInjector);
   }
 
   @Before
@@ -141,7 +175,6 @@ public class TestFsDatasetCache {
     fsd = dn.getFSDataset();
 
     spyNN = InternalDataNodeTestUtils.spyOnBposToNN(dn, nn);
-
   }
 
   @After
@@ -162,17 +195,23 @@ public class TestFsDatasetCache {
   }
 
   private static void setHeartbeatResponse(DatanodeCommand[] cmds)
-      throws IOException {
-    NNHAStatusHeartbeat ha = new NNHAStatusHeartbeat(HAServiceState.ACTIVE,
-        fsImage.getLastAppliedOrWrittenTxId());
-    HeartbeatResponse response =
-        new HeartbeatResponse(cmds, ha, null,
-            ThreadLocalRandom.current().nextLong() | 1L);
-    doReturn(response).when(spyNN).sendHeartbeat(
-        (DatanodeRegistration) any(),
-        (StorageReport[]) any(), anyLong(), anyLong(),
-        anyInt(), anyInt(), anyInt(), (VolumeFailureSummary) any(),
-        anyBoolean());
+      throws Exception {
+    lock.writeLock().lock();
+    try {
+      NNHAStatusHeartbeat ha = new NNHAStatusHeartbeat(HAServiceState.ACTIVE,
+          fsImage.getLastAppliedOrWrittenTxId());
+      HeartbeatResponse response =
+          new HeartbeatResponse(cmds, ha, null,
+              ThreadLocalRandom.current().nextLong() | 1L);
+      doReturn(response).when(spyNN).sendHeartbeat(
+          (DatanodeRegistration) any(),
+          (StorageReport[]) any(), anyLong(), anyLong(),
+          anyInt(), anyInt(), anyInt(), (VolumeFailureSummary) any(),
+          anyBoolean(), any(SlowPeerReports.class),
+          any(SlowDiskReports.class));
+    } finally {
+      lock.writeLock().unlock();
+    }
   }
 
   private static DatanodeCommand[] cacheBlock(HdfsBlockLocation loc) {
@@ -224,7 +263,7 @@ public class TestFsDatasetCache {
         blockChannel = blockInputStream.getChannel();
         sizes[i] = blockChannel.size();
       } finally {
-        IOUtils.cleanup(LOG, blockChannel, blockInputStream);
+        IOUtils.cleanupWithLogger(LOG, blockChannel, blockInputStream);
       }
     }
     return sizes;

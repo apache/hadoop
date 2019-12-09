@@ -32,10 +32,12 @@ Overview
 
 Usage
 -----
+
 ### Usage Overview
 Let's provide a quick overview of the use of the credential provider framework for protecting passwords or other sensitive tokens in hadoop.
 
 ##### Why is it used?
+
 There are certain deployments that are very sensitive to how sensitive tokens like passwords are stored and managed within the cluster. For instance, there may be security best practices and policies in place that require such things to never be stored in clear text, for example. Enterprise deployments may be required to use a preferred solution for managing credentials and we need a way to plug in integrations for them.
 
 ##### General Usage Pattern
@@ -48,46 +50,46 @@ There are numerous places within the Hadoop project and ecosystem that can lever
 3. Features or components that leverage the new [Configuration.getPassword](../../api/org/apache/hadoop/conf/Configuration.html#getPassword-java.lang.String-) method to resolve their credentials will automatically pick up support for the credential provider API.
     - By using the same property names as are used for existing clear text passwords, this mechanism allows for the migration to credential providers while providing backward compatibility for clear text.
     - The entire credential provider path is interrogated before falling back to clear text passwords in config.
-4. Features or components that do not use the hadoop Configuration class for config or have other internal uses for the credential providers may choose to write to the CredentialProvider API itself. An example of its use will be included in this document but may also be found within [Configuration.getPassword](../../api/org/apache/hadoop/conf/Configuration.html#getPassword-java.lang.String-) and within the unit tests of features that have added support and need to provision credentials for the tests.
+4. Features or components that do not use Hadoop's `org.apache.hadoop.conf.Configuration` class for configuration or have other internal uses for the credential providers may choose to use the `CredentialProvider` API itself. An example of its use can be found within [Configuration.getPassword](../../api/org/apache/hadoop/conf/Configuration.html#getPassword-java.lang.String-) and within its unit tests.
 
 ##### Provision Credentials
-Example: ssl.server.keystore.password
+Example: `ssl.server.keystore.password`
 
-```
-    hadoop credential create ssl.server.keystore.password -value 123
-      -provider localjceks://file/home/lmccay/aws.jceks
+```bash
+hadoop credential create ssl.server.keystore.password -value 123 \
+  -provider localjceks://file/home/lmccay/aws.jceks
 ```
 
-Note that the alias names are the same as the configuration properties that were used to get the
-credentials from the Configuration.get method. Reusing these names allows for intuitive
-migration to the use of credential providers and fall back logic for backward compatibility.
+The alias names are the same as the configuration properties that were used to get the
+credentials from the `Configuration.get()` methods.
 
 ##### Configuring the Provider Path
+
 Now, we need to make sure that this provisioned credential store is known at runtime by the
 [Configuration.getPassword](../../api/org/apache/hadoop/conf/Configuration.html#getPassword-java.lang.String-) method. If there is no credential provider path configuration then
-getPassword will skip the credential provider API interrogation. So, it is important that the
-following be configured within core-site.xml or your component's equivalent.
+`Configuration.getPassword()` will skip the credential provider API interrogation. So, it is important that the
+following be configured within `core-site.xml` or your component's equivalent.
 
-```
-    <property>
-      <name>hadoop.security.credential.provider.path</name>
-      <value>localjceks://file/home/lmccay/aws.jceks</value>
-      <description>Path to interrogate for protected credentials.</description>
-    </property>
+```xml
+<property>
+  <name>hadoop.security.credential.provider.path</name>
+  <value>localjceks://file/home/lmccay/aws.jceks</value>
+  <description>Path to interrogate for protected credentials.</description>
+</property>
 ```
 
 A couple additional things to note about the provider path:
 
 1. The scheme is used to indicate the type of provider in the above case the
- localjceks provider does not have a dependency on the Hadoop fs abstraction
+ `localjceks` provider does not have a dependency on the Hadoop FileSystem APIs.
  and is needed sometimes to avoid a recursive dependency. Another provider
- represented by jceks, does use the Hadoop fs abstraction and therefore has
- support for keystores provisioned within HDFS. A third provider type is the
- user type. This provider can manage credentials stored within the Credentials
+ represented by `jceks`, does use the Hadoop FileSystem APIs and can
+ support keystores provisioned within HDFS or other compatible filesystems.
+ A third provider type is the `user` type.
+  This provider can manage credentials stored within the Credentials
  file for a process.
 2. The path configuration accepts a comma separated path of providers or
- credential stores. The [Configuration.getPassword](../../api/org/apache/hadoop/conf/Configuration.html#getPassword-java.lang.String-) method will walk through
- all of the providers until it resolves the alias or exhausts the list.
+ credential stores. The [Configuration.getPassword](../../api/org/apache/hadoop/conf/Configuration.html#getPassword-java.lang.String-) method will query each of the providers, in order until it resolves the alias or exhausts the list.
  Depending on the runtime needs for credentials, we may need to configure
  a chain of providers to check.
 
@@ -98,10 +100,13 @@ In summary, first, provision the credentials into a provider then configure the 
 |:---- |:---- |:---|
 |LDAPGroupsMapping    |LDAPGroupsMapping is used to look up the groups for a given user in LDAP. The CredentialProvider API is used to protect the LDAP bind password and those needed for SSL.|[LDAP Groups Mapping](GroupsMapping.html#LDAP_Groups_Mapping)|
 |SSL Passwords        |FileBasedKeyStoresFactory leverages the credential provider API in order to resolve the SSL related passwords.|TODO|
-|HDFS                 |DFSUtil leverages Configuration.getPassword method to use the credential provider API and/or fallback to the clear text value stored in ssl-server.xml.|TODO|
-|YARN                 |WebAppUtils uptakes the use of the credential provider API through the new method on Configuration called getPassword. This provides an alternative to storing the passwords in clear text within the ssl-server.xml file while maintaining backward compatibility.|TODO|
-|AWS <br/> S3/S3A     |Uses Configuration.getPassword to get the S3 credentials. They may be resolved through the credential provider API or from the config for backward compatibility.|[AWS S3/S3A Usage](../../hadoop-aws/tools/hadoop-aws/index.html)|
-|Azure <br/> WASB     |Uses Configuration.getPassword to get the WASB credentials. They may be resolved through the credential provider API or from the config for backward compatibility.|[Azure WASB Usage](../../hadoop-azure/index.html)|
+|HDFS                 |DFSUtil uses `Configuration.getPassword()` use the credential provider API and/or fallback to the clear text value stored in `ssl-server.xml`. Zookeeper-based federation state store and failover controller use Configuration.getPassword to get the Zookeeper authentication info, with fallback provided to clear text auth info.|TODO|
+|YARN                 |WebAppUtils uptakes the use of the credential provider API through the new method on Configuration called getPassword. This provides an alternative to storing the passwords in clear text within the ssl-server.xml file while maintaining backward compatibility. Zookeeper based resource manager state store uses Configuration.getPassword to get the Zookeeper authentication info, with fallback provided to clear text auth info.|TODO|
+|KMS                  |Uses HttpServer2.loadSSLConfiguration that leverages Configuration.getPassword to read SSL related credentials. They may be resolved through Credential Provider and/or from the clear text in the config when allowed.|[KMS](../../hadoop-kms/index.html)|
+|HttpFS               |Uses HttpServer2.loadSSLConfiguration that leverages Configuration.getPassword to read SSL related credentials. They may be resolved through Credential Provider and/or from the clear text in the  config when allowed.|[HttpFS Server Setup](../../hadoop-hdfs-httpfs/ServerSetup.html)|
+|AWS <br/> S3A     |Uses `Configuration.getPassword` to get the S3 credentials. They may be resolved through the credential provider API or from the config for backward compatibility.|[AWS S3/S3A Usage](../../hadoop-aws/tools/hadoop-aws/index.html)|
+|Azure <br/> WASB     |Uses `Configuration.getPassword` to get the WASB credentials. They may be resolved through the credential provider API or from the config for backward compatibility.|[Azure WASB Usage](../../hadoop-azure/index.html)|
+|Azure <br/> ADLS     |Uses `Configuration.getPassword` to get the ADLS credentials. They may be resolved through the credential provider API or from the config for backward compatibility.|[Azure ADLS Usage](../../hadoop-azure-datalake/index.html)|
 |Apache <br/> Accumulo|The trace.password property is used by the Tracer to authenticate with Accumulo and persist the traces in the trace table. The credential provider API is used to acquire the trace.password from a provider or from configuration for backward compatibility.|TODO|
 |Apache <br/> Slider  |A capability has been added to Slider to prompt the user for needed passwords and store them using CredentialProvider so they can be retrieved by an app later.|TODO|
 |Apache <br/> Hive    |Protection of the metastore password, SSL related passwords and JDO string password has been added through the use of the Credential Provider API|TODO|
@@ -111,13 +116,13 @@ In summary, first, provision the credentials into a provider then configure the 
 
 ### Credential Management
 
-#### The hadoop credential Command
+#### The `hadoop credential` Command
 
 Usage: `hadoop credential <subcommand> [options]`
 
 See the command options detail in the [Commands Manual](CommandsManual.html#credential)
 
-Utilizing the credential command will often be for provisioning a password or secret to a particular credential store provider. In order to explicitly indicate which provider store to use the `-provider` option should be used.
+The credential command can be for provisioning a password or secret to a particular credential store provider. In order to explicitly indicate which provider store to use the `-provider` option should be used.
 
 Example: `hadoop credential create ssl.server.keystore.password -provider jceks://file/tmp/test.jceks`
 
@@ -125,13 +130,51 @@ In order to indicate a particular provider type and location, the user must prov
 
 #### Provider Types
 
-1. The `UserProvider`, which is representd by the provider URI `user:///`, is used to retrieve credentials from a user's Credentials file. This file is used to store various tokens, secrets and passwords that are needed by executing jobs and applications.
-2. The `JavaKeyStoreProvider`, which is represented by the provider URI `jceks://file|hdfs/path-to-keystore`, is used to retrieve credentials from a Java keystore. The underlying use of the Hadoop filesystem abstraction allows credentials to be stored on the local filesystem or within HDFS.
+1. The `UserProvider`, which is represented by the provider URI `user:///`, is used to retrieve credentials from a user's Credentials file. This file is used to store various tokens, secrets and passwords that are needed by executing jobs and applications.
+2. The `JavaKeyStoreProvider`, which is represented by the provider URI `jceks://SCHEME/path-to-keystore`, is used to retrieve credentials from a Java keystore file in a filesystem `<SCHEME>`
+ The underlying use of the Hadoop filesystem API allows credentials to be stored on the local filesystem or within cluster stores.
 3. The `LocalJavaKeyStoreProvider`, which is represented by the provider URI `localjceks://file/path-to-keystore`, is used to access credentials from a Java keystore that is must be stored on the local filesystem. This is needed for credentials that would result in a recursive dependency on accessing HDFS. Anytime that your credential is required to gain access to HDFS we can't depend on getting a credential out of HDFS to do so.
+
+When credentials are stored in a filesystem, the following rules apply:
+
+* Credentials stored in local `localjceks://` files are loaded in the process reading in the configuration.
+  For use in a YARN application, this means that they must be visible across the entire cluster, in the local filesystems of the hosts.
+
+* Credentials stored with the `jceks://` provider can be stored in the cluster filesystem,
+and so visible across the cluster —but not in the filesystem which requires the specific
+credentials for their access.
+
+To wrap filesystem URIs with a `jceks` URI follow these steps:
+
+1. Take a filesystem URI such as `hdfs://namenode:9001/users/alice/secrets.jceks`
+1. Place `jceks://` in front of the URL: `jceks://hdfs://namenode:9001/users/alice/secrets.jceks`
+1. Replace the second `://` string with an `@` symbol: `jceks://hdfs@namenode:9001/users/alice/secrets.jceks`
+
+*Examples*
+
+For a local filesystem, a path such as `file:///tmp/secrets.jceks` would become: `jceks://file/tmp/secrets.jceks`
+
+|  Path URI | jceks URI |
+|-----------|-----------|
+| `hdfs://namenode.example.org:9001/user/alice/secret.jceks` | `jceks://hdfs@namenode.example.org:9001/user/alice/secret.jceks` |
+| `file:///tmp/secrets.jceks` | `jceks://file/tmp/secret.jceks` |
+| `s3a://container1/secrets/secret.jceks` | `jceks://s3a@container1/secrets/secret.jceks` |
+| `wasb://account@container/secret.jceks` | `jceks://wasb@account@container/secret.jceks` |
+| `abfs://account@container/secret.jceks` | `jceks://abfs@account@container/secret.jceks` |
+| `https://user:pass@service/secret.jceks?token=aia` | `jceks://https@user:pass@service/secret.jceks?token=aia` |
+
+
+Note that to avoid infinite recursion, filesystems such as `abfs`, `s3a`, `adls`
+and `wasb` explicitly exclude keystores stored on paths in their own filesystem
+schemes, even if they are stored in a container which uses a different set of
+credentials from those being looked up.
+
+As an example, you cannot use credentials stored in `s3a://shared/secrets/secret.jceks`
+to read the credentials for the container `s3a://private/` .
 
 #### Keystore Passwords
 
-Keystores in Java are generally protected by passwords. The primary method of protection of the keystore-based credential providers are OS level file permissions and any other policy based access protection that may exist for the target filesystem. While the password is not a primary source of protection, it is very important to understand the mechanics required and options available for managing these passwords. It is also very important to understand all the parties that will need access to the password used to protect the keystores in order to consume them at runtime.
+Keystores in Java are generally protected by passwords. The primary method of protection of the keystore-based credential providers are OS-level file permissions and any other policy based access protection that may exist for the target filesystem. While the password is not a primary source of protection, it is very important to understand the mechanics required and options available for managing these passwords. It is also very important to understand all the parties that will need access to the password used to protect the keystores in order to consume them at runtime.
 
 ##### Options
 | Option | Description | Notes |
@@ -146,14 +189,34 @@ Extremely important to consider that *all* of the runtime consumers of the crede
 |Keystore Password| Description|Sync Required|Clear Text|File Permissions|
 |:---- |:---- |:---|:---|:---|
 |Default Password|Hardcoded password is the default. Essentially, when using the default password for all keystore-based credential stores, we are leveraging the file permissions to protect the credential store and the keystore password is just a formality of persisting the keystore.|No|Yes|No (documented)|
-|Environment Variable|`HADOOP_CREDSTORE_PASSWORD` Environment variable must be set to the custom password for all keystores that may be configured in the provider path of any process that needs to access credentials from a keystore-based credential provider. There is only one env variable for the entire path of comma separated providers. It is difficult to know the passwords required for each keystore and it is suggested that the same be used for all keystore-based credential providers to avoid this issue. Setting the environment variable will likely require it to be set from a script or some other clear text storage mechanism. Environment variables for running processes are available from various unix commands.|Yes|Yes|No|
+|Environment Variable|The `HADOOP_CREDSTORE_PASSWORD` environment variable must be set to the custom password for all keystores that may be configured in the provider path of any process that needs to access credentials from a keystore-based credential provider. There is only one env variable for the entire path of comma-separated providers. It is difficult to know the passwords required for each keystore and it is suggested that the same be used for all keystore-based credential providers to avoid this issue. Setting the environment variable will likely require it to be set from a script or some other clear text storage mechanism. Environment variables for running processes are available from various unix commands.|Yes|Yes|No|
 |Password File|`hadoop.security.credstore.java-keystore-provider.password-file` configuration property must be set to the location of the "side file" that contains the custom password for all keystores that may be configured in the provider path. Any process that needs to access credentials from a keystore-based credential provider will need to have this configuration property set to the appropriate file location. There is only one password-file for the entire path of comma separated providers. It is difficult to know the passwords required for each keystore and it is therefore suggested that the same be used for all keystore-based credential providers to avoid this issue. Password-files are additional files that need to be managed, store the password in clear text and need file permissions to be set such that only those that need access to them have it. If file permissions are set inappropriately the password to access the keystores is available in clear text.|Yes|Yes|Yes|
 
 The use of the default password means that no additional communication/synchronization to runtime consumers needs to be done. The default password is known but file permissions are the primary protection of the keystore.
 
-When file permissions are thwarted, unlike "side files", there are no standard tools that can expose the protected credentials - even with the password known. Keytool requires a password that is six characters or more and doesn't know how to retrieve general secrets from a keystore. It is also limited to PKI keypairs. Editors will not review the secrets stored within the keystore, nor will `cat`, `more` or any other standard tools. This is why the keystore providers are better than "side file" storage of credentials.
+When file permissions are thwarted, unlike "side files", there are no standard tools that can expose the protected credentials - even with the password known. Keytool requires a password that is six characters or more and doesn't know how to retrieve general secrets from a keystore. It is also limited to PKI keypairs. Editors will not reveal the secrets stored within the keystore, nor will `cat`, `more` or any other standard tools. This is why the keystore providers are better than "side file" storage of credentials.
 
-That said, it is trivial for someone to write code to access the credentials stored within a keystore-based credential provider using the API. Again, when using the default password, the password is merely a formality of persisting the keystore. The *only* protection is file  permissions and OS level access policy.
+That said, it is trivial for someone to write code to access the credentials stored within a keystore-based credential provider using the API. Again, when using the default password, the password is merely a formality of persisting the keystore. The *only* protection is file permissions and OS level access policy.
 
 Users may decide to use a password "side file" to store the password for the keystores themselves and this is supported. It is just really important to be aware of the mechanics required for this level of correctness.
 
+#### Disabling fallback to plain text
+
+The `Credentials.getPassword()` operation falls back to using entries in the configuration XML files if there are no credential providers, or if a key cannot be found.
+
+This action can be disabled by changing the configuration option `hadoop.security.credential.clear-text-fallback` from `true` to `false`:
+
+```xml
+<property>
+  <name>hadoop.security.credential.clear-text-fallback</name>
+  <value>false</value>
+  <description>
+    true or false to indicate whether or not to fall back to storing credential
+    password as clear text. The default value is true. This property only works
+    when the password can't not be found from credential providers.
+  </description>
+</property>
+```
+
+Once set, *all configuration options looked up via the `getPassword()` API must
+be served via a credential provider*.

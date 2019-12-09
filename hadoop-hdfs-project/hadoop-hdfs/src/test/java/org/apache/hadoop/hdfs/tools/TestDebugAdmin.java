@@ -87,7 +87,7 @@ public class TestDebugAdmin {
       IOUtils.closeStream(out);
     }
     return "ret: " + ret + ", " +
-        bytes.toString().replaceAll(System.getProperty("line.separator"), "");
+        bytes.toString().replaceAll(System.lineSeparator(), "");
   }
 
   @Test(timeout = 60000)

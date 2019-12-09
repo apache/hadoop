@@ -20,7 +20,6 @@ package org.apache.hadoop.security.token;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 
@@ -29,14 +28,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.security.token.DtFetcher;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -54,7 +51,6 @@ public class TestDtUtilShell {
   private static Configuration defaultConf = new Configuration();
   private static FileSystem localFs = null;
   private final String alias = "proxy_ip:1234";
-  private final String renewer = "yarn";
   private final String getUrl = SERVICE_GET.toString() + "://localhost:9000/";
   private final String getUrl2 = "http://localhost:9000/";
   public static Text SERVICE_GET = new Text("testTokenServiceGet");
@@ -111,11 +107,12 @@ public class TestDtUtilShell {
     Token<? extends TokenIdentifier> tok = (Token<? extends TokenIdentifier>)
         new Token(IDENTIFIER, PASSWORD, KIND, service);
     creds.addToken(tok.getService(), tok);
+    Credentials.SerializedFormat format =
+        Credentials.SerializedFormat.PROTOBUF;
     if (legacy) {
-      creds.writeLegacyTokenStorageLocalFile(new File(tokenPath.toString()));
-    } else {
-      creds.writeTokenStorageFile(tokenPath, defaultConf);
+      format = Credentials.SerializedFormat.WRITABLE;
     }
+    creds.writeTokenStorageFile(tokenPath, defaultConf, format);
   }
 
   @Test
@@ -284,6 +281,6 @@ public class TestDtUtilShell {
     DataInputStream in = new DataInputStream(
         new FileInputStream(tokenFilenameGet));
     spyCreds.readTokenStorageStream(in);
-    Mockito.verify(spyCreds).readProto(in);
+    Mockito.verify(spyCreds, Mockito.never()).readFields(in);
   }
 }

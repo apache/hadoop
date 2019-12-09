@@ -36,51 +36,6 @@ the values, so enabling them to read from and potentially write to the registry.
 ## Core Settings
 
 
-### Enabling the Registry in the Resource Manager
-
-The Resource Manager manages user directory creation and record cleanup
-on YARN container/application attempt/application completion.
-
-```
-  <property>
-    <description>
-      Is the registry enabled in the YARN Resource Manager?
-
-      If true, the YARN RM will, as needed.
-      create the user and system paths, and purge
-      service records when containers, application attempts
-      and applications complete.
-
-      If false, the paths must be created by other means,
-      and no automatic cleanup of service records will take place.
-    </description>
-    <name>hadoop.registry.rm.enabled</name>
-    <value>false</value>
-  </property>
-```
-
-If the property is set in `core-site.xml` or `yarn-site.xml`,
-the YARN Resource Manager will behave as follows:
-1. On startup: create the initial root paths of `/`, `/services` and `/users`.
-  On a secure cluster, access will be restricted to the system accounts (see below).
-2. When a user submits a job: create the user path under `/users`.
-3. When a container is completed: delete from the registry all service records
-   with a `yarn:persistence` field of value `container`, and a `yarn:id` field
-   whose value matches the ID of the completed container.
-4. When an application attempt is completed: remove all service records with
-   `yarn:persistence` set to `application-attempt` and `yarn:id` set to the
-   pplication attempt ID.
-5. When an application finishes: remove all service records with
-   `yarn:persistence` set to `application` and `yarn:id` set to the
-   application ID.
-
-All these operations are asynchronous, so that zookeeper connectivity problems
-do not delay RM operations or work scheduling.
-
-If the property `hadoop.registry.rm.enabled` is set to `false`, the RM will
-not interact with the registry —and the listed operations will not take place.
-The root paths may be created by other means, but service record cleanup will not take place.
-
 ### Setting the Zookeeper Quorum: `hadoop.registry.zk.quorum`
 
 This is an essential setting: it identifies the lists of zookeeper hosts
@@ -90,7 +45,7 @@ and the ports on which the ZK services are listening.
 ```
   <property>
     <description>
-      List of hostname:port pairs defining the
+      A comma separated list of hostname:port pairs defining the
       zookeeper quorum binding for the registry
     </description>
     <name>hadoop.registry.zk.quorum</name>
@@ -328,18 +283,7 @@ concluding that the quorum is unreachable and failing.
 
   <property>
     <description>
-      Is the registry enabled: does the RM start it up,
-      create the user and system paths, and purge
-      service records when containers, application attempts
-      and applications complete
-    </description>
-    <name>hadoop.registry.rm.enabled</name>
-    <value>false</value>
-  </property>
-
-  <property>
-    <description>
-      List of hostname:port pairs defining the
+      A comma separated list of hostname:port pairs defining the
       zookeeper quorum binding for the registry
     </description>
     <name>hadoop.registry.zk.quorum</name>

@@ -76,8 +76,8 @@ public class RMAppLifetimeMonitor
     if (app == null) {
       return;
     }
-    String diagnostics =
-        "Application killed due to exceeding its lifetime period";
+    String diagnostics = "Application is killed by ResourceManager as it"
+        + " has exceeded the lifetime period.";
     rmContext.getDispatcher().getEventHandler()
         .handle(new RMAppEvent(appId, RMAppEventType.KILL, diagnostics));
   }

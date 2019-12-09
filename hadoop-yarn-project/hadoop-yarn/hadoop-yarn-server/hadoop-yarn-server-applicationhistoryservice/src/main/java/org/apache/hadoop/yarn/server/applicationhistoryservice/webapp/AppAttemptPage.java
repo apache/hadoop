@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.webapp.YarnWebParams;
 public class AppAttemptPage extends AHSView {
 
   @Override
-  protected void preHead(Page.HTML<_> html) {
+  protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
 
     String appAttemptId = $(YarnWebParams.APPLICATION_ATTEMPT_ID);

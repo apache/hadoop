@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -48,8 +49,10 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
-import org.apache.hadoop.util.AutoCloseableLock;
+import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -75,7 +78,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.RamDiskReplicaTrack
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.util.CloseableReferenceCount;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
@@ -118,7 +120,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
 
   private final File currentDir;    // <StorageDirectory>/current
   private final DF usage;
-  private final long reserved;
+  private final ReservedSpaceCalculator reserved;
   private CloseableReferenceCount reference = new CloseableReferenceCount();
 
   // Disk space reserved for blocks (RBW or Re-replicating) open for write.
@@ -130,6 +132,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   // query from the filesystem.
   protected volatile long configuredCapacity;
   private final FileIoProvider fileIoProvider;
+  private final DataNodeVolumeMetrics metrics;
 
   /**
    * Per-volume worker pool that processes new blocks to cache.
@@ -138,10 +141,16 @@ public class FsVolumeImpl implements FsVolumeSpi {
    * contention.
    */
   protected ThreadPoolExecutor cacheExecutor;
-  
-  FsVolumeImpl(
-      FsDatasetImpl dataset, String storageID, StorageDirectory sd,
+
+  FsVolumeImpl(FsDatasetImpl dataset, String storageID, StorageDirectory sd,
       FileIoProvider fileIoProvider, Configuration conf) throws IOException {
+    // outside tests, usage created in ReservedSpaceCalculator.Builder
+    this(dataset, storageID, sd, fileIoProvider, conf, null);
+  }
+
+  FsVolumeImpl(FsDatasetImpl dataset, String storageID, StorageDirectory sd,
+      FileIoProvider fileIoProvider, Configuration conf, DF usage)
+      throws IOException {
 
     if (sd.getStorageLocation() == null) {
       throw new IOException("StorageLocation specified for storage directory " +
@@ -152,17 +161,26 @@ public class FsVolumeImpl implements FsVolumeSpi {
     this.reservedForReplicas = new AtomicLong(0L);
     this.storageLocation = sd.getStorageLocation();
     this.currentDir = sd.getCurrentDir();
-    File parent = currentDir.getParentFile();
-    this.usage = new DF(parent, conf);
     this.storageType = storageLocation.getStorageType();
-    this.reserved = conf.getLong(DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY
-        + "." + StringUtils.toLowerCase(storageType.toString()), conf.getLong(
-        DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY,
-        DFSConfigKeys.DFS_DATANODE_DU_RESERVED_DEFAULT));
     this.configuredCapacity = -1;
+    this.usage = usage;
+    if (this.usage != null) {
+      reserved = new ReservedSpaceCalculator.Builder(conf)
+          .setUsage(this.usage).setStorageType(storageType).build();
+    } else {
+      reserved = null;
+      LOG.warn("Setting reserved to null as usage is null");
+    }
+    if (currentDir != null) {
+      File parent = currentDir.getParentFile();
+      cacheExecutor = initializeCacheExecutor(parent);
+      this.metrics = DataNodeVolumeMetrics.create(conf, parent.getPath());
+    } else {
+      cacheExecutor = null;
+      this.metrics = null;
+    }
     this.conf = conf;
     this.fileIoProvider = fileIoProvider;
-    cacheExecutor = initializeCacheExecutor(parent);
   }
 
   protected ThreadPoolExecutor initializeCacheExecutor(File parent) {
@@ -338,43 +356,38 @@ public class FsVolumeImpl implements FsVolumeSpi {
 
   private void decDfsUsedAndNumBlocks(String bpid, long value,
                                       boolean blockFileDeleted) {
-    try(AutoCloseableLock lock = dataset.acquireDatasetLock()) {
-      BlockPoolSlice bp = bpSlices.get(bpid);
-      if (bp != null) {
-        bp.decDfsUsed(value);
-        if (blockFileDeleted) {
-          bp.decrNumBlocks();
-        }
+    // BlockPoolSlice map is thread safe, and update the space used or
+    // number of blocks are atomic operations, so it doesn't require to
+    // hold the dataset lock.
+    BlockPoolSlice bp = bpSlices.get(bpid);
+    if (bp != null) {
+      bp.decDfsUsed(value);
+      if (blockFileDeleted) {
+        bp.decrNumBlocks();
       }
     }
   }
 
   void incDfsUsedAndNumBlocks(String bpid, long value) {
-    try(AutoCloseableLock lock = dataset.acquireDatasetLock()) {
-      BlockPoolSlice bp = bpSlices.get(bpid);
-      if (bp != null) {
-        bp.incDfsUsed(value);
-        bp.incrNumBlocks();
-      }
+    BlockPoolSlice bp = bpSlices.get(bpid);
+    if (bp != null) {
+      bp.incDfsUsed(value);
+      bp.incrNumBlocks();
     }
   }
 
   void incDfsUsed(String bpid, long value) {
-    try(AutoCloseableLock lock = dataset.acquireDatasetLock()) {
-      BlockPoolSlice bp = bpSlices.get(bpid);
-      if (bp != null) {
-        bp.incDfsUsed(value);
-      }
+    BlockPoolSlice bp = bpSlices.get(bpid);
+    if (bp != null) {
+      bp.incDfsUsed(value);
     }
   }
 
   @VisibleForTesting
   public long getDfsUsed() throws IOException {
     long dfsUsed = 0;
-    try(AutoCloseableLock lock = dataset.acquireDatasetLock()) {
-      for(BlockPoolSlice s : bpSlices.values()) {
-        dfsUsed += s.getDfsUsed();
-      }
+    for(BlockPoolSlice s : bpSlices.values()) {
+      dfsUsed += s.getDfsUsed();
     }
     return dfsUsed;
   }
@@ -393,7 +406,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   @VisibleForTesting
   public long getCapacity() {
     if (configuredCapacity < 0) {
-      long remaining = usage.getCapacity() - reserved;
+      long remaining = usage.getCapacity() - getReserved();
       return remaining > 0 ? remaining : 0;
     }
 
@@ -433,8 +446,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
 
   private long getRemainingReserved() throws IOException {
     long actualNonDfsUsed = getActualNonDfsUsed();
-    if (actualNonDfsUsed < reserved) {
-      return reserved - actualNonDfsUsed;
+    long actualReserved = getReserved();
+    if (actualNonDfsUsed < actualReserved) {
+      return actualReserved - actualNonDfsUsed;
     }
     return 0L;
   }
@@ -442,15 +456,17 @@ public class FsVolumeImpl implements FsVolumeSpi {
   /**
    * Unplanned Non-DFS usage, i.e. Extra usage beyond reserved.
    *
-   * @return
+   * @return Disk usage excluding space used by HDFS and excluding space
+   * reserved for blocks open for write.
    * @throws IOException
    */
   public long getNonDfsUsed() throws IOException {
     long actualNonDfsUsed = getActualNonDfsUsed();
-    if (actualNonDfsUsed < reserved) {
+    long actualReserved = getReserved();
+    if (actualNonDfsUsed < actualReserved) {
       return 0L;
     }
-    return actualNonDfsUsed - reserved;
+    return actualNonDfsUsed - actualReserved;
   }
 
   @VisibleForTesting
@@ -469,7 +485,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   long getReserved(){
-    return reserved;
+    return reserved != null ? reserved.getReserved() : 0;
   }
 
   @VisibleForTesting
@@ -520,7 +536,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   public String[] getBlockPoolList() {
     return bpSlices.keySet().toArray(new String[bpSlices.keySet().size()]);   
   }
-    
+
   /**
    * Temporary files. They get moved to the finalized block directory when
    * the block is finalized.
@@ -945,22 +961,27 @@ public class FsVolumeImpl implements FsVolumeSpi {
       long bytesReserved) throws IOException {
     releaseReservedSpace(bytesReserved);
     File dest = getBlockPoolSlice(bpid).addFinalizedBlock(b, replicaInfo);
+    byte[] checksum = null;
+    // copy the last partial checksum if the replica is originally
+    // in finalized or rbw state.
+    if (replicaInfo.getState() == ReplicaState.FINALIZED) {
+      FinalizedReplica finalized = (FinalizedReplica)replicaInfo;
+      checksum = finalized.getLastPartialChunkChecksum();
+    } else if (replicaInfo.getState() == ReplicaState.RBW) {
+      ReplicaBeingWritten rbw = (ReplicaBeingWritten)replicaInfo;
+      checksum = rbw.getLastChecksumAndDataLen().getChecksum();
+    }
+
     return new ReplicaBuilder(ReplicaState.FINALIZED)
         .setBlock(replicaInfo)
         .setFsVolume(this)
         .setDirectoryToUse(dest.getParentFile())
+        .setLastPartialChunkChecksum(checksum)
         .build();
   }
 
   Executor getCacheExecutor() {
     return cacheExecutor;
-  }
-
-  void checkDirs() throws DiskErrorException {
-    // TODO:FEDERATION valid synchronization
-    for(BlockPoolSlice s : bpSlices.values()) {
-      s.checkDirs();
-    }
   }
 
   @Override
@@ -1007,6 +1028,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
     Set<Entry<String, BlockPoolSlice>> set = bpSlices.entrySet();
     for (Entry<String, BlockPoolSlice> entry : set) {
       entry.getValue().shutdown(null);
+    }
+    if (metrics != null) {
+      metrics.unRegister();
     }
   }
 
@@ -1123,9 +1147,11 @@ public class FsVolumeImpl implements FsVolumeSpi {
   public byte[] loadLastPartialChunkChecksum(
       File blockFile, File metaFile) throws IOException {
     // readHeader closes the temporary FileInputStream.
-    DataChecksum dcs = BlockMetadataHeader
-        .readHeader(fileIoProvider.getFileInputStream(this, metaFile))
-        .getChecksum();
+    DataChecksum dcs;
+    try (FileInputStream fis = fileIoProvider.getFileInputStream(
+        this, metaFile)) {
+      dcs = BlockMetadataHeader.readHeader(fis).getChecksum();
+    }
     final int checksumSize = dcs.getChecksumSize();
     final long onDiskLen = blockFile.length();
     final int bytesPerChecksum = dcs.getBytesPerChecksum();
@@ -1180,12 +1206,11 @@ public class FsVolumeImpl implements FsVolumeSpi {
         .setBytesToReserve(bytesReserved)
         .buildLocalReplicaInPipeline();
 
+    // Only a finalized replica can be appended.
+    FinalizedReplica finalized = (FinalizedReplica)replicaInfo;
     // load last checksum and datalen
-    LocalReplica localReplica = (LocalReplica)replicaInfo;
-    byte[] lastChunkChecksum = loadLastPartialChunkChecksum(
-        localReplica.getBlockFile(), localReplica.getMetaFile());
     newReplicaInfo.setLastChecksumAndDataLen(
-        replicaInfo.getNumBytes(), lastChunkChecksum);
+        finalized.getVisibleLength(), finalized.getLastPartialChunkChecksum());
 
     // rename meta file to rbw directory
     // rename block file to rbw directory
@@ -1305,6 +1330,11 @@ public class FsVolumeImpl implements FsVolumeSpi {
     return fileIoProvider;
   }
 
+  @Override
+  public DataNodeVolumeMetrics getMetrics() {
+    return metrics;
+  }
+
   private LinkedList<ScanInfo> compileReport(File bpFinalizedDir,
       File dir, LinkedList<ScanInfo> report, ReportCompiler reportCompiler)
         throws InterruptedException {
@@ -1316,9 +1346,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
       fileNames = fileIoProvider.listDirectory(
           this, dir, BlockDirFilter.INSTANCE);
     } catch (IOException ioe) {
-      LOG.warn("Exception occured while compiling report: ", ioe);
-      // Initiate a check on disk failure.
-      dataset.datanode.checkDiskErrorAsync();
+      LOG.warn("Exception occurred while compiling report: ", ioe);
+      // Volume error check moved to FileIoProvider.
       // Ignore this directory and proceed.
       return report;
     }
@@ -1345,7 +1374,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
       if (!Block.isBlockFilename(file)) {
         if (isBlockMetaFile(Block.BLOCK_FILE_PREFIX, file.getName())) {
           long blockId = Block.getBlockId(file.getName());
-          verifyFileLocation(file.getParentFile(), bpFinalizedDir,
+          verifyFileLocation(file, bpFinalizedDir,
               blockId);
           report.add(new ScanInfo(blockId, null, file, this));
         }

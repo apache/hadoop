@@ -515,7 +515,7 @@ public class TestClientServiceDelegate {
         appId, 0);
     return ApplicationReport.newInstance(appId, attemptId, "user", "queue",
       "appname", "host", 124, null, YarnApplicationState.FINISHED,
-      "diagnostics", "url", 0, 0, FinalApplicationStatus.SUCCEEDED, null,
+      "diagnostics", "url", 0, 0, 0, FinalApplicationStatus.SUCCEEDED, null,
       "N/A", 0.0f, YarnConfiguration.DEFAULT_APPLICATION_TYPE, null);
   }
 
@@ -525,7 +525,7 @@ public class TestClientServiceDelegate {
         appId, 0);
     return ApplicationReport.newInstance(appId, attemptId, "user", "queue",
       "appname", host, port, null, YarnApplicationState.RUNNING, "diagnostics",
-      "url", 0, 0, FinalApplicationStatus.UNDEFINED, null, "N/A", 0.0f,
+      "url", 0, 0, 0, FinalApplicationStatus.UNDEFINED, null, "N/A", 0.0f,
       YarnConfiguration.DEFAULT_APPLICATION_TYPE, null);
   }
 

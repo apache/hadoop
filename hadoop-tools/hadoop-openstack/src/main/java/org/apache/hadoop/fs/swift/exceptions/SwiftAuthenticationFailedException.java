@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.swift.exceptions;
 
-import org.apache.commons.httpclient.HttpMethod;
+import org.apache.http.HttpResponse;
 
 import java.net.URI;
 
@@ -37,8 +37,8 @@ public class SwiftAuthenticationFailedException extends SwiftInvalidResponseExce
   public SwiftAuthenticationFailedException(String message,
                                             String operation,
                                             URI uri,
-                                            HttpMethod method) {
-    super(message, operation, uri, method);
+                                            HttpResponse resp) {
+    super(message, operation, uri, resp);
   }
 
   @Override

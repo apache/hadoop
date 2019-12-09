@@ -23,6 +23,9 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff;
+import org.apache.hadoop.util.ChunkedArrayList;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -42,6 +45,7 @@ public class TestSnapshotCommands {
   @BeforeClass
   public static void clusterSetUp() throws IOException {
     conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_MAX_LIMIT, 3);
     cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
@@ -60,6 +64,7 @@ public class TestSnapshotCommands {
   @Before
   public void setUp() throws IOException {
     fs.mkdirs(new Path("/sub1"));
+    fs.mkdirs(new Path("/Fully/QPath"));
     fs.allowSnapshot(new Path("/sub1"));
     fs.mkdirs(new Path("/sub1/sub1sub1"));
     fs.mkdirs(new Path("/sub1/sub1sub2"));
@@ -81,10 +86,12 @@ public class TestSnapshotCommands {
   @Test
   public void testAllowSnapshot() throws Exception {
     // Idempotent test
-    DFSTestUtil.DFSAdminRun("-allowSnapshot /sub1", 0, "Allowing snaphot on /sub1 succeeded", conf);
-    // allow normal dir success 
+    DFSTestUtil.DFSAdminRun("-allowSnapshot /sub1", 0,
+        "Allowing snapshot " + "on /sub1 succeeded", conf);
+    // allow normal dir success
     DFSTestUtil.FsShellRun("-mkdir /sub2", conf);
-    DFSTestUtil.DFSAdminRun("-allowSnapshot /sub2", 0, "Allowing snaphot on /sub2 succeeded", conf);
+    DFSTestUtil.DFSAdminRun("-allowSnapshot /sub2", 0,
+        "Allowing snapshot " + "on /sub2 succeeded", conf);
     // allow non-exists dir failed
     DFSTestUtil.DFSAdminRun("-allowSnapshot /sub3", -1, null, conf);
   }
@@ -106,6 +113,23 @@ public class TestSnapshotCommands {
     DFSTestUtil.FsShellRun("-ls /sub1/.snapshot/sn0", 0, "/sub1/.snapshot/sn0/sub1sub2", conf);
     DFSTestUtil.FsShellRun("-ls /sub1/.snapshot/sn1", 0, "/sub1/.snapshot/sn1/sub1sub1", conf);
     DFSTestUtil.FsShellRun("-ls /sub1/.snapshot/sn1", 0, "/sub1/.snapshot/sn1/sub1sub3", conf);
+  }
+
+  @Test
+  public void testMaxSnapshotLimit() throws Exception {
+    DFSTestUtil.FsShellRun("-mkdir /sub3", conf);
+    DFSTestUtil.DFSAdminRun("-allowSnapshot /sub3", 0,
+        "Allowing snapshot " + "on /sub3 succeeded", conf);
+    // test createSnapshot
+    DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn0", 0,
+        "Created snapshot /sub3/.snapshot/sn0", conf);
+    DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn1", 0,
+        "Created snapshot /sub3/.snapshot/sn1", conf);
+    DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn2", 0,
+        "Created snapshot /sub3/.snapshot/sn2", conf);
+    DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn3", 1,
+        "Failed to add snapshot: there are already 3 snapshot(s) and "
+            + "the max snapshot limit is 3", conf);
   }
 
   @Test
@@ -131,6 +155,11 @@ public class TestSnapshotCommands {
     DFSTestUtil.FsShellRun("-renameSnapshot /sub1 sn.nonexist sn.rename", 1,
         "renameSnapshot: The snapshot sn.nonexist does not exist for directory /sub1", conf);
 
+    //try renaming a non-existing snapshot to itself
+    DFSTestUtil.FsShellRun("-renameSnapshot /sub1 sn.nonexist sn.nonexist", 1,
+        "renameSnapshot: The snapshot sn.nonexist " +
+            "does not exist for directory /sub1", conf);
+
     //try renaming to existing snapshots
     DFSTestUtil.FsShellRun("-createSnapshot /sub1 sn.new", conf);
     DFSTestUtil.FsShellRun("-renameSnapshot /sub1 sn.new sn.rename", 1,
@@ -155,10 +184,92 @@ public class TestSnapshotCommands {
     DFSTestUtil.DFSAdminRun("-disallowSnapshot /sub1", -1,
         "disallowSnapshot: The directory /sub1 has snapshot(s). Please redo the operation after removing all the snapshots.", conf);
     DFSTestUtil.FsShellRun("-deleteSnapshot /sub1 sn1", conf);
-    DFSTestUtil.DFSAdminRun("-disallowSnapshot /sub1", 0, "Disallowing snaphot on /sub1 succeeded", conf);
+    DFSTestUtil.DFSAdminRun("-disallowSnapshot /sub1", 0,
+        "Disallowing snapshot on /sub1 succeeded", conf);
     // Idempotent test
-    DFSTestUtil.DFSAdminRun("-disallowSnapshot /sub1", 0, "Disallowing snaphot on /sub1 succeeded", conf);
+    DFSTestUtil.DFSAdminRun("-disallowSnapshot /sub1", 0,
+        "Disallowing snapshot on /sub1 succeeded", conf);
     // now it can be deleted
     DFSTestUtil.FsShellRun("-rmr /sub1", conf);
+  }
+
+  @Test (timeout=60000)
+  public void testSnapshotCommandsWithURI()throws Exception {
+    Configuration config = new HdfsConfiguration();
+    //fs.defaultFS should not be used, when path is fully qualified.
+    config.set("fs.defaultFS", "hdfs://127.0.0.1:1024");
+    String path = fs.getUri() + "/Fully/QPath";
+    DFSTestUtil.DFSAdminRun("-allowSnapshot " + path, 0,
+        "Allowing snapshot on " + path + " succeeded", config);
+    DFSTestUtil.FsShellRun("-createSnapshot " + path + " sn1", config);
+    // create file1
+    DFSTestUtil
+        .createFile(fs, new Path(fs.getUri() + "/Fully/QPath/File1"), 1024,
+            (short) 1, 100);
+    // create file2
+    DFSTestUtil
+        .createFile(fs, new Path(fs.getUri() + "/Fully/QPath/File2"), 1024,
+            (short) 1, 100);
+    DFSTestUtil.FsShellRun("-createSnapshot " + path + " sn2", config);
+    // verify the snapshotdiff using api and command line
+    SnapshotDiffReport report =
+        fs.getSnapshotDiffReport(new Path(path), "sn1", "sn2");
+    DFSTestUtil.toolRun(new SnapshotDiff(config), path + " sn1 sn2", 0,
+        report.toString());
+    DFSTestUtil.FsShellRun("-renameSnapshot " + path + " sn2 sn3", config);
+    DFSTestUtil.FsShellRun("-deleteSnapshot " + path + " sn1", config);
+    DFSTestUtil.FsShellRun("-deleteSnapshot " + path + " sn3", config);
+    DFSTestUtil.DFSAdminRun("-disallowSnapshot " + path, 0,
+        "Disallowing snapshot on " + path + " succeeded", config);
+    fs.delete(new Path("/Fully/QPath"), true);
+  }
+
+  @Test (timeout=60000)
+  public void testSnapshotDiff()throws Exception {
+    Configuration config = new HdfsConfiguration();
+    Path snapDirPath = new Path(fs.getUri().toString() + "/snap_dir");
+    String snapDir = snapDirPath.toString();
+    fs.mkdirs(snapDirPath);
+
+    DFSTestUtil.DFSAdminRun("-allowSnapshot " + snapDirPath, 0,
+        "Allowing snapshot on " + snapDirPath + " succeeded", config);
+    DFSTestUtil.createFile(fs, new Path(snapDirPath, "file1"),
+        1024, (short) 1, 100);
+    DFSTestUtil.FsShellRun("-createSnapshot " + snapDirPath + " sn1", config);
+    DFSTestUtil.createFile(fs, new Path(snapDirPath, "file2"),
+        1024, (short) 1, 100);
+    DFSTestUtil.createFile(fs, new Path(snapDirPath, "file3"),
+        1024, (short) 1, 100);
+    DFSTestUtil.FsShellRun("-createSnapshot " + snapDirPath + " sn2", config);
+
+    // verify the snapshot diff using api and command line
+    SnapshotDiffReport report_s1_s2 =
+        fs.getSnapshotDiffReport(snapDirPath, "sn1", "sn2");
+    DFSTestUtil.toolRun(new SnapshotDiff(config), snapDir +
+        " sn1 sn2", 0, report_s1_s2.toString());
+    DFSTestUtil.FsShellRun("-renameSnapshot " + snapDirPath + " sn2 sn3",
+        config);
+
+    SnapshotDiffReport report_s1_s3 =
+        fs.getSnapshotDiffReport(snapDirPath, "sn1", "sn3");
+    DFSTestUtil.toolRun(new SnapshotDiff(config), snapDir +
+        " sn1 sn3", 0, report_s1_s3.toString());
+
+    // Creating 100 more files so as to force DiffReport generation
+    // backend ChunkedArrayList to create multiple chunks.
+    for (int i = 0; i < 100; i++) {
+      DFSTestUtil.createFile(fs, new Path(snapDirPath, "file_" + i),
+          1, (short) 1, 100);
+    }
+    DFSTestUtil.FsShellRun("-createSnapshot " + snapDirPath + " sn4", config);
+    DFSTestUtil.toolRun(new SnapshotDiff(config), snapDir +
+        " sn1 sn4", 0, null);
+
+    DFSTestUtil.FsShellRun("-deleteSnapshot " + snapDir + " sn1", config);
+    DFSTestUtil.FsShellRun("-deleteSnapshot " + snapDir + " sn3", config);
+    DFSTestUtil.FsShellRun("-deleteSnapshot " + snapDir + " sn4", config);
+    DFSTestUtil.DFSAdminRun("-disallowSnapshot " + snapDir, 0,
+        "Disallowing snapshot on " + snapDirPath + " succeeded", config);
+    fs.delete(new Path("/Fully/QPath"), true);
   }
 }

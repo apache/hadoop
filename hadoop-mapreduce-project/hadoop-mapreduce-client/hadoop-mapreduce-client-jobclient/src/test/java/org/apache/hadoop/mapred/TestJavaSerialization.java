@@ -91,6 +91,8 @@ public class TestJavaSerialization {
     wr.write("b a\n");
     wr.close();
   }
+
+  @SuppressWarnings("deprecation")
   @Test
   public void testMapReduceJob() throws Exception {
 
@@ -131,16 +133,17 @@ public class TestJavaSerialization {
         FileUtil.stat2Paths(fs.listStatus(OUTPUT_DIR,
           new Utils.OutputFileUtils.OutputFilesFilter()));
     assertEquals(1, outputFiles.length);
-    InputStream is = fs.open(outputFiles[0]);
-    String reduceOutput = org.apache.commons.io.IOUtils.toString(is);
-    String[] lines = reduceOutput.split(System.getProperty("line.separator"));
-    assertEquals("Unexpected output; received output '" + reduceOutput + "'",
-      "a\t1", lines[0]);
-    assertEquals("Unexpected output; received output '" + reduceOutput + "'",
-      "b\t1", lines[1]);
-    assertEquals("Reduce output has extra lines; output is '" + reduceOutput
-        + "'", 2, lines.length);
-    is.close();
+    try (InputStream is = fs.open(outputFiles[0])) {
+      String reduceOutput = org.apache.commons.io.IOUtils.toString(is);
+      String[] lines = reduceOutput.split("\n");
+      assertEquals("Unexpected output; received output '" + reduceOutput + "'",
+          "a\t1", lines[0]);
+      assertEquals("Unexpected output; received output '" + reduceOutput + "'",
+          "b\t1", lines[1]);
+      assertEquals(
+          "Reduce output has extra lines; output is '" + reduceOutput + "'", 2,
+          lines.length);
+    }
   }
 
   /**

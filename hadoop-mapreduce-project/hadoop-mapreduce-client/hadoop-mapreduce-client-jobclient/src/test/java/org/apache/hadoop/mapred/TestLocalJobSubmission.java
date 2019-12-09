@@ -132,6 +132,58 @@ public class TestLocalJobSubmission {
     }
   }
 
+  /**
+   * Test local job submission with a file option.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testLocalJobFilesOption() throws IOException {
+    Path jarPath = makeJar(new Path(TEST_ROOT_DIR, "test.jar"));
+
+    Configuration conf = new Configuration();
+    conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://localhost:9000");
+    conf.set(MRConfig.FRAMEWORK_NAME, "local");
+    final String[] args =
+        {"-jt", "local", "-files", jarPath.toString(), "-m", "1", "-r", "1",
+            "-mt", "1", "-rt", "1"};
+    int res = -1;
+    try {
+      res = ToolRunner.run(conf, new SleepJob(), args);
+    } catch (Exception e) {
+      System.out.println("Job failed with " + e.getLocalizedMessage());
+      e.printStackTrace(System.out);
+      fail("Job failed");
+    }
+    assertEquals("dist job res is not 0:", 0, res);
+  }
+
+  /**
+   * Test local job submission with an archive option.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testLocalJobArchivesOption() throws IOException {
+    Path jarPath = makeJar(new Path(TEST_ROOT_DIR, "test.jar"));
+
+    Configuration conf = new Configuration();
+    conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://localhost:9000");
+    conf.set(MRConfig.FRAMEWORK_NAME, "local");
+    final String[] args =
+        {"-jt", "local", "-archives", jarPath.toString(), "-m", "1", "-r",
+            "1", "-mt", "1", "-rt", "1"};
+    int res = -1;
+    try {
+      res = ToolRunner.run(conf, new SleepJob(), args);
+    } catch (Exception e) {
+      System.out.println("Job failed with " + e.getLocalizedMessage());
+      e.printStackTrace(System.out);
+      fail("Job failed");
+    }
+    assertEquals("dist job res is not 0:", 0, res);
+  }
+
   private Path makeJar(Path p) throws IOException {
     FileOutputStream fos = new FileOutputStream(new File(p.toString()));
     JarOutputStream jos = new JarOutputStream(fos);

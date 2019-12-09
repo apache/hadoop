@@ -97,7 +97,9 @@ public class CpuTimeTracker {
    * @param newTime new sample time
    */
   public void updateElapsedJiffies(BigInteger elapsedJiffies, long newTime) {
-    cumulativeCpuTime = elapsedJiffies.multiply(jiffyLengthInMillis);
+    BigInteger newValue = elapsedJiffies.multiply(jiffyLengthInMillis);
+    cumulativeCpuTime = newValue.compareTo(cumulativeCpuTime) >= 0 ?
+            newValue : cumulativeCpuTime;
     sampleTime = newTime;
   }
 

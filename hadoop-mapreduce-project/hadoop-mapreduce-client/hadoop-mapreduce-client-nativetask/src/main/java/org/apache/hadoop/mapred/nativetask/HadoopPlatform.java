@@ -19,8 +19,6 @@ package org.apache.hadoop.mapred.nativetask;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.ByteWritable;
@@ -36,10 +34,13 @@ import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.nativetask.serde.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class HadoopPlatform extends Platform {
-  private static final Log LOG = LogFactory.getLog(HadoopPlatform.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HadoopPlatform.class);
 
   public HadoopPlatform() throws IOException {
   }

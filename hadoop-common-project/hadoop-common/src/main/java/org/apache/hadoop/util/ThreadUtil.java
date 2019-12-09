@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.classification.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,7 +27,7 @@ import java.io.InputStream;
 @InterfaceStability.Evolving
 public class ThreadUtil {
   
-  private static final Log LOG = LogFactory.getLog(ThreadUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ThreadUtil.class);
 
   /**
    * Cause the current thread to sleep as close as possible to the provided
@@ -54,8 +53,7 @@ public class ThreadUtil {
    * Convenience method that returns a resource as inputstream from the
    * classpath.
    * <p>
-   * It first attempts to use the Thread's context classloader and if not
-   * set it uses the class' classloader.
+   * Uses the Thread's context classloader to load resource.
    *
    * @param resourceName resource to retrieve.
    *
@@ -69,6 +67,27 @@ public class ThreadUtil {
       throw new IOException("Can not read resource file '" + resourceName +
           "' because class loader of the current thread is null");
     }
+    return getResourceAsStream(cl, resourceName);
+  }
+
+  /**
+   * Convenience method that returns a resource as inputstream from the
+   * classpath using given classloader.
+   * <p>
+   *
+   * @param cl ClassLoader to be used to retrieve resource.
+   * @param resourceName resource to retrieve.
+   *
+   * @throws IOException thrown if resource cannot be loaded
+   * @return inputstream with the resource.
+   */
+  public static InputStream getResourceAsStream(ClassLoader cl,
+        String resourceName)
+        throws IOException {
+    if (cl == null) {
+      throw new IOException("Can not read resource file '" + resourceName +
+          "' because given class loader is null");
+    }
     InputStream is = cl.getResourceAsStream(resourceName);
     if (is == null) {
       throw new IOException("Can not read resource file '" +
@@ -76,4 +95,6 @@ public class ThreadUtil {
     }
     return is;
   }
+
+
 }

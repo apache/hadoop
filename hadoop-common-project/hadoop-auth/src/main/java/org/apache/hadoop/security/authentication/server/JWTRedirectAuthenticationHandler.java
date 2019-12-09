@@ -28,6 +28,7 @@ import java.text.ParseException;
 
 import java.security.interfaces.RSAPublicKey;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.util.CertificateUtil;
 import org.slf4j.Logger;
@@ -216,7 +217,8 @@ public class JWTRedirectAuthenticationHandler extends
    * @param request for getting the original request URL
    * @return url to use as login url for redirect
    */
-  protected String constructLoginURL(HttpServletRequest request) {
+  @VisibleForTesting
+  String constructLoginURL(HttpServletRequest request) {
     String delimiter = "?";
     if (authenticationProviderUrl.contains("?")) {
       delimiter = "&";

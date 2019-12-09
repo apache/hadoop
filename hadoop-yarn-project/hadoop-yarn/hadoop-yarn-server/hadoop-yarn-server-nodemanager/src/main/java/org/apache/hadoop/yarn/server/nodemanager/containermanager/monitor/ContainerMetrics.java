@@ -130,7 +130,7 @@ public class ContainerMetrics implements MetricsSource {
   /**
    * Simple metrics cache to help prevent re-registrations.
    */
-  protected final static Map<ContainerId, ContainerMetrics>
+  private final static Map<ContainerId, ContainerMetrics>
       usageMetrics = new HashMap<>();
   // Create a timer to unregister container metrics,
   // whose associated thread run as a daemon.
@@ -242,14 +242,18 @@ public class ContainerMetrics implements MetricsSource {
     }
   }
 
-  public synchronized void finished() {
+  public synchronized void finished(boolean unregisterWithoutDelay) {
     if (!finished) {
       this.finished = true;
       if (timer != null) {
         timer.cancel();
         timer = null;
       }
-      scheduleTimerTaskForUnregistration();
+      if (!unregisterWithoutDelay) {
+        scheduleTimerTaskForUnregistration();
+      } else {
+        ContainerMetrics.unregisterContainerMetrics(ContainerMetrics.this);
+      }
       this.pMemMBQuantiles.stop();
       this.cpuCoreUsagePercentQuantiles.stop();
     }
@@ -274,7 +278,7 @@ public class ContainerMetrics implements MetricsSource {
   }
 
   public void recordProcessId(String processId) {
-    registry.tag(PROCESSID_INFO, processId);
+    registry.tag(PROCESSID_INFO, processId, true);
   }
 
   public void recordResourceLimit(int vmemLimit, int pmemLimit, int cpuVcores) {

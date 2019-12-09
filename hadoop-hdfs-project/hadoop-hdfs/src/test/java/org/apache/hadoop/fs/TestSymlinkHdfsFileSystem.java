@@ -35,13 +35,13 @@ public class TestSymlinkHdfsFileSystem extends TestSymlinkHdfs {
 
   @Override
   @Ignore("FileSystem adds missing authority in absolute URIs")
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testCreateWithPartQualPathFails() throws IOException {}
 
   @Ignore("FileSystem#create creates parent directories," +
       " so dangling links to directories are created")
   @Override
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testCreateFileViaDanglingLinkParent() throws IOException {}
 
   // Additional tests for DFS-only methods

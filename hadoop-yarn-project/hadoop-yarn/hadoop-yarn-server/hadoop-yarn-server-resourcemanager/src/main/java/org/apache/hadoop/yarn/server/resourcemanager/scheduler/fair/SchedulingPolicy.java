@@ -33,6 +33,21 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * The SchedulingPolicy is used by the fair scheduler mainly to determine
+ * what a queue's fair share and steady fair share should be as well as
+ * calculating available headroom. This determines how resources can be
+ * shared between running applications within a queue.
+ * <p>
+ * Every queue has a policy, including parents and children. If a child
+ * queue doesn't specify one, it inherits the parent's policy.
+ * The policy for a child queue must be compatible with the policy of
+ * the parent queue; there are some combinations that aren't allowed.
+ * See {@link SchedulingPolicy#isChildPolicyAllowed(SchedulingPolicy)}.
+ * The policy for a queue is specified by setting property
+ * <i>schedulingPolicy</i> in the fair scheduler configuration file.
+ * The default policy is {@link FairSharePolicy} if not specified.
+ */
 @Public
 @Evolving
 public abstract class SchedulingPolicy {
@@ -41,17 +56,16 @@ public abstract class SchedulingPolicy {
 
   public static final SchedulingPolicy DEFAULT_POLICY =
       getInstance(FairSharePolicy.class);
-  
-  public static final byte DEPTH_LEAF = (byte) 1;
-  public static final byte DEPTH_INTERMEDIATE = (byte) 2;
-  public static final byte DEPTH_ROOT = (byte) 4;
-  public static final byte DEPTH_PARENT = (byte) 6; // Root and Intermediate
-  public static final byte DEPTH_ANY = (byte) 7;
 
   /**
-   * Returns a {@link SchedulingPolicy} instance corresponding to the passed clazz
+   * Returns a {@link SchedulingPolicy} instance corresponding
+   * to the passed clazz.
+   *
+   * @param clazz a class that extends {@link SchedulingPolicy}
+   * @return a {@link SchedulingPolicy} instance
    */
-  public static SchedulingPolicy getInstance(Class<? extends SchedulingPolicy> clazz) {
+  public static SchedulingPolicy getInstance(
+      Class<? extends SchedulingPolicy> clazz) {
     SchedulingPolicy policy = ReflectionUtils.newInstance(clazz, null);
     SchedulingPolicy policyRet = instances.putIfAbsent(clazz, policy);
     if(policyRet != null) {
@@ -69,7 +83,9 @@ public abstract class SchedulingPolicy {
    * canonical class name of the {@link SchedulingPolicy}.
    * 
    * @param policy canonical class name or "drf" or "fair" or "fifo"
+   * @return a {@link SchedulingPolicy} instance parsed from given policy
    * @throws AllocationConfigurationException
+   *
    */
   @SuppressWarnings("unchecked")
   public static SchedulingPolicy parse(String policy)
@@ -97,8 +113,25 @@ public abstract class SchedulingPolicy {
     }
     return getInstance(clazz);
   }
-  
+
+  /**
+   * Initialize the scheduling policy with cluster resources.
+   * @deprecated Since it doesn't track cluster resource changes, replaced by
+   * {@link #initialize(FSContext)}.
+   *
+   * @param clusterCapacity cluster resources
+   */
+  @Deprecated
   public void initialize(Resource clusterCapacity) {}
+
+  /**
+   * Initialize the scheduling policy with a {@link FSContext} object, which has
+   * a pointer to the cluster resources among other information.
+   *
+   * @param fsContext a {@link FSContext} object which has a pointer to the
+   *                  cluster resources
+   */
+  public void initialize(FSContext fsContext) {}
 
   /**
    * The {@link ResourceCalculator} returned by this method should be used
@@ -112,27 +145,6 @@ public abstract class SchedulingPolicy {
    * @return returns the name of {@link SchedulingPolicy}
    */
   public abstract String getName();
-
-  /**
-   * Specifies the depths in the hierarchy, this {@link SchedulingPolicy}
-   * applies to
-   * 
-   * @return depth equal to one of fields {@link SchedulingPolicy}#DEPTH_*
-   */
-  public abstract byte getApplicableDepth();
-
-  /**
-   * Checks if the specified {@link SchedulingPolicy} can be used for a queue at
-   * the specified depth in the hierarchy
-   * 
-   * @param policy {@link SchedulingPolicy} we are checking the
-   *          depth-applicability for
-   * @param depth queue's depth in the hierarchy
-   * @return true if policy is applicable to passed depth, false otherwise
-   */
-  public static boolean isApplicableTo(SchedulingPolicy policy, byte depth) {
-    return ((policy.getApplicableDepth() & depth) == depth) ? true : false;
-  }
 
   /**
    * The comparator returned by this method is to be used for sorting the
@@ -168,7 +180,7 @@ public abstract class SchedulingPolicy {
       Collection<? extends FSQueue> queues, Resource totalResources);
 
   /**
-   * Check if the resource usage is over the fair share under this policy
+   * Check if the resource usage is over the fair share under this policy.
    *
    * @param usage {@link Resource} the resource usage
    * @param fairShare {@link Resource} the fair share
@@ -178,10 +190,10 @@ public abstract class SchedulingPolicy {
       Resource usage, Resource fairShare);
 
   /**
-   * Get headroom by calculating the min of <code>clusterAvailable</code> and
-   * (<code>queueFairShare</code> - <code>queueUsage</code>) resources that are
+   * Get headroom by calculating the min of {@code clusterAvailable} and
+   * ({@code queueFairShare} - {@code queueUsage}) resources that are
    * applicable to this policy. For eg if only memory then leave other
-   * resources such as CPU to same as clusterAvailable.
+   * resources such as CPU to same as {@code clusterAvailable}.
    *
    * @param queueFairShare fairshare in the queue
    * @param queueUsage resources used in the queue
@@ -191,4 +203,13 @@ public abstract class SchedulingPolicy {
   public abstract Resource getHeadroom(Resource queueFairShare,
       Resource queueUsage, Resource maxAvailable);
 
+  /**
+   * Check whether the policy of a child queue is allowed.
+   *
+   * @param childPolicy the policy of child queue
+   * @return true if the child policy is allowed; false otherwise
+   */
+  public boolean isChildPolicyAllowed(SchedulingPolicy childPolicy) {
+    return true;
+  }
 }

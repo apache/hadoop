@@ -50,6 +50,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
+import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -57,13 +58,13 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.MultipleIOException;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.ClassUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
@@ -120,7 +121,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 @SuppressWarnings("DeprecatedIsStillUsed")
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public abstract class FileSystem extends Configured implements Closeable {
+public abstract class FileSystem extends Configured
+    implements Closeable, DelegationTokenIssuer {
   public static final String FS_DEFAULT_NAME_KEY =
                    CommonConfigurationKeys.FS_DEFAULT_NAME_KEY;
   public static final String DEFAULT_FS =
@@ -385,6 +387,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
+  @Override
   public String getCanonicalServiceName() {
     return (getChildFileSystems() == null)
       ? SecurityUtil.buildDTServiceName(getUri(), getDefaultPort())
@@ -599,69 +602,9 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @throws IOException on any problem obtaining a token
    */
   @InterfaceAudience.Private()
+  @Override
   public Token<?> getDelegationToken(String renewer) throws IOException {
     return null;
-  }
-
-  /**
-   * Obtain all delegation tokens used by this FileSystem that are not
-   * already present in the given Credentials. Existing tokens will neither
-   * be verified as valid nor having the given renewer.  Missing tokens will
-   * be acquired and added to the given Credentials.
-   *
-   * Default Impl: works for simple FS with its own token
-   * and also for an embedded FS whose tokens are those of its
-   * child FileSystems (i.e. the embedded FS has no tokens of its own).
-   *
-   * @param renewer the user allowed to renew the delegation tokens
-   * @param credentials cache in which to add new delegation tokens
-   * @return list of new delegation tokens
-   * @throws IOException problems obtaining a token
-   */
-  @InterfaceAudience.Public
-  @InterfaceStability.Evolving
-  public Token<?>[] addDelegationTokens(
-      final String renewer, Credentials credentials) throws IOException {
-    if (credentials == null) {
-      credentials = new Credentials();
-    }
-    final List<Token<?>> tokens = new ArrayList<>();
-    collectDelegationTokens(renewer, credentials, tokens);
-    return tokens.toArray(new Token<?>[tokens.size()]);
-  }
-
-  /**
-   * Recursively obtain the tokens for this FileSystem and all descendant
-   * FileSystems as determined by {@link #getChildFileSystems()}.
-   * @param renewer the user allowed to renew the delegation tokens
-   * @param credentials cache in which to add the new delegation tokens
-   * @param tokens list in which to add acquired tokens
-   * @throws IOException problems obtaining a token
-   */
-  private void collectDelegationTokens(final String renewer,
-                                       final Credentials credentials,
-                                       final List<Token<?>> tokens)
-                                           throws IOException {
-    final String serviceName = getCanonicalServiceName();
-    // Collect token of the this filesystem and then of its embedded children
-    if (serviceName != null) { // fs has token, grab it
-      final Text service = new Text(serviceName);
-      Token<?> token = credentials.getToken(service);
-      if (token == null) {
-        token = getDelegationToken(renewer);
-        if (token != null) {
-          tokens.add(token);
-          credentials.addToken(service, token);
-        }
-      }
-    }
-    // Now collect the tokens from the children
-    final FileSystem[] children = getChildFileSystems();
-    if (children != null) {
-      for (final FileSystem fs : children) {
-        fs.collectDelegationTokens(renewer, credentials, tokens);
-      }
-    }
   }
 
   /**
@@ -677,6 +620,13 @@ public abstract class FileSystem extends Configured implements Closeable {
   @VisibleForTesting
   public FileSystem[] getChildFileSystems() {
     return null;
+  }
+
+  @InterfaceAudience.Private
+  @Override
+  public DelegationTokenIssuer[] getAdditionalTokenIssuers()
+      throws IOException {
+    return getChildFileSystems();
   }
 
   /**
@@ -798,8 +748,37 @@ public abstract class FileSystem extends Configured implements Closeable {
    *
    * The default implementation returns an array containing one element:
    * <pre>
-   * BlockLocation( { "localhost:50010" },  { "localhost" }, 0, file.getLen())
-   * </pre>>
+   * BlockLocation( { "localhost:9866" },  { "localhost" }, 0, file.getLen())
+   * </pre>
+   *
+   * In HDFS, if file is three-replicated, the returned array contains
+   * elements like:
+   * <pre>
+   * BlockLocation(offset: 0, length: BLOCK_SIZE,
+   *   hosts: {"host1:9866", "host2:9866, host3:9866"})
+   * BlockLocation(offset: BLOCK_SIZE, length: BLOCK_SIZE,
+   *   hosts: {"host2:9866", "host3:9866, host4:9866"})
+   * </pre>
+   *
+   * And if a file is erasure-coded, the returned BlockLocation are logical
+   * block groups.
+   *
+   * Suppose we have a RS_3_2 coded file (3 data units and 2 parity units).
+   * 1. If the file size is less than one stripe size, say 2 * CELL_SIZE, then
+   * there will be one BlockLocation returned, with 0 offset, actual file size
+   * and 4 hosts (2 data blocks and 2 parity blocks) hosting the actual blocks.
+   * 3. If the file size is less than one group size but greater than one
+   * stripe size, then there will be one BlockLocation returned, with 0 offset,
+   * actual file size with 5 hosts (3 data blocks and 2 parity blocks) hosting
+   * the actual blocks.
+   * 4. If the file size is greater than one group size, 3 * BLOCK_SIZE + 123
+   * for example, then the result will be like:
+   * <pre>
+   * BlockLocation(offset: 0, length: 3 * BLOCK_SIZE, hosts: {"host1:9866",
+   *   "host2:9866","host3:9866","host4:9866","host5:9866"})
+   * BlockLocation(offset: 3 * BLOCK_SIZE, length: 123, hosts: {"host1:9866",
+   *   "host4:9866", "host5:9866"})
+   * </pre>
    *
    * @param file FilesStatus to get data from
    * @param start offset into the given file
@@ -874,7 +853,8 @@ public abstract class FileSystem extends Configured implements Closeable {
         config.getInt(IO_FILE_BUFFER_SIZE_KEY, IO_FILE_BUFFER_SIZE_DEFAULT),
         false,
         FS_TRASH_INTERVAL_DEFAULT,
-        DataChecksum.Type.CRC32);
+        DataChecksum.Type.CRC32,
+        "");
   }
 
   /**
@@ -918,6 +898,71 @@ public abstract class FileSystem extends Configured implements Closeable {
   public FSDataInputStream open(Path f) throws IOException {
     return open(f, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
         IO_FILE_BUFFER_SIZE_DEFAULT));
+  }
+
+  /**
+   * Open an FSDataInputStream matching the PathHandle instance. The
+   * implementation may encode metadata in PathHandle to address the
+   * resource directly and verify that the resource referenced
+   * satisfies constraints specified at its construciton.
+   * @param fd PathHandle object returned by the FS authority.
+   * @throws InvalidPathHandleException If {@link PathHandle} constraints are
+   *                                    not satisfied
+   * @throws IOException IO failure
+   * @throws UnsupportedOperationException If {@link #open(PathHandle, int)}
+   *                                       not overridden by subclass
+   */
+  public FSDataInputStream open(PathHandle fd) throws IOException {
+    return open(fd, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+        IO_FILE_BUFFER_SIZE_DEFAULT));
+  }
+
+  /**
+   * Open an FSDataInputStream matching the PathHandle instance. The
+   * implementation may encode metadata in PathHandle to address the
+   * resource directly and verify that the resource referenced
+   * satisfies constraints specified at its construciton.
+   * @param fd PathHandle object returned by the FS authority.
+   * @param bufferSize the size of the buffer to use
+   * @throws InvalidPathHandleException If {@link PathHandle} constraints are
+   *                                    not satisfied
+   * @throws IOException IO failure
+   * @throws UnsupportedOperationException If not overridden by subclass
+   */
+  public FSDataInputStream open(PathHandle fd, int bufferSize)
+      throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Create a durable, serializable handle to the referent of the given
+   * entity.
+   * @param stat Referent in the target FileSystem
+   * @param opt If absent, assume {@link HandleOpt#path()}.
+   * @throws IllegalArgumentException If the FileStatus does not belong to
+   *         this FileSystem
+   * @throws UnsupportedOperationException If {@link #createPathHandle}
+   *         not overridden by subclass.
+   * @throws UnsupportedOperationException If this FileSystem cannot enforce
+   *         the specified constraints.
+   */
+  public final PathHandle getPathHandle(FileStatus stat, HandleOpt... opt) {
+    // method is final with a default so clients calling getPathHandle(stat)
+    // get the same semantics for all FileSystem implementations
+    if (null == opt || 0 == opt.length) {
+      return createPathHandle(stat, HandleOpt.path());
+    }
+    return createPathHandle(stat, opt);
+  }
+
+  /**
+   * Hook to implement support for {@link PathHandle} operations.
+   * @param stat Referent in the target FileSystem
+   * @param opt Constraints that determine the validity of the
+   *            {@link PathHandle} reference.
+   */
+  protected PathHandle createPathHandle(FileStatus stat, HandleOpt... opt) {
+    throw new UnsupportedOperationException();
   }
 
   /**
@@ -1553,7 +1598,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Mark a path to be deleted when its FileSystem is closed.
    * When the JVM shuts down cleanly, all cached FileSystem objects will be
-   * closed automatically —these the marked paths will be deleted as a result.
+   * closed automatically. These the marked paths will be deleted as a result.
    *
    * If a FileSystem instance is not cached, i.e. has been created with
    * {@link #createFileSystem(URI, Configuration)}, then the paths will
@@ -1624,6 +1669,11 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /** Check if a path exists.
+   *
+   * It is highly discouraged to call this method back to back with other
+   * {@link #getFileStatus(Path)} calls, as this will involve multiple redundant
+   * RPC calls in HDFS.
+   *
    * @param f source path
    * @return true if the path exists
    * @throws IOException IO failure
@@ -1639,9 +1689,12 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** True iff the named path is a directory.
    * Note: Avoid using this method. Instead reuse the FileStatus
    * returned by getFileStatus() or listStatus() methods.
+   *
    * @param f path to check
    * @throws IOException IO failure
+   * @deprecated Use {@link #getFileStatus(Path)} instead
    */
+  @Deprecated
   public boolean isDirectory(Path f) throws IOException {
     try {
       return getFileStatus(f).isDirectory();
@@ -1653,9 +1706,12 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** True iff the named path is a regular file.
    * Note: Avoid using this method. Instead reuse the FileStatus
    * returned by {@link #getFileStatus(Path)} or listStatus() methods.
+   *
    * @param f path to check
    * @throws IOException IO failure
+   * @deprecated Use {@link #getFileStatus(Path)} instead
    */
+  @Deprecated
   public boolean isFile(Path f) throws IOException {
     try {
       return getFileStatus(f).isFile();
@@ -1951,7 +2007,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    *  </dd>
    * </dl>
    *
-   * @param pathPattern a regular expression specifying a pth pattern
+   * @param pathPattern a glob specifying a path pattern
 
    * @return an array of paths that match the path pattern
    * @throws IOException IO failure
@@ -1965,7 +2021,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * {@code pathPattern} and is accepted by the user-supplied path filter.
    * Results are sorted by their path names.
    *
-   * @param pathPattern a regular expression specifying the path pattern
+   * @param pathPattern a glob specifying the path pattern
    * @param filter a user-supplied path filter
    * @return null if {@code pathPattern} has no glob and the path does not exist
    *         an empty array if {@code pathPattern} has a glob and no path
@@ -2040,7 +2096,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Generic iterator for implementing {@link #listStatusIterator(Path)}.
    */
-  private class DirListingIterator<T extends FileStatus> implements
+  protected class DirListingIterator<T extends FileStatus> implements
       RemoteIterator<T> {
 
     private final Path path;
@@ -2103,6 +2159,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * List the statuses and block locations of the files in the given path.
    * Does not guarantee to return the iterator that traverses statuses
    * of the files in a sorted order.
+   *
    * <pre>
    * If the path is a directory,
    *   if recursive is false, returns files in the directory;
@@ -3497,6 +3554,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       private volatile long bytesReadDistanceOfOneOrTwo;
       private volatile long bytesReadDistanceOfThreeOrFour;
       private volatile long bytesReadDistanceOfFiveOrLarger;
+      private volatile long bytesReadErasureCoded;
 
       /**
        * Add another StatisticsData object to this one.
@@ -3513,6 +3571,7 @@ public abstract class FileSystem extends Configured implements Closeable {
             other.bytesReadDistanceOfThreeOrFour;
         this.bytesReadDistanceOfFiveOrLarger +=
             other.bytesReadDistanceOfFiveOrLarger;
+        this.bytesReadErasureCoded += other.bytesReadErasureCoded;
       }
 
       /**
@@ -3530,6 +3589,7 @@ public abstract class FileSystem extends Configured implements Closeable {
             -this.bytesReadDistanceOfThreeOrFour;
         this.bytesReadDistanceOfFiveOrLarger =
             -this.bytesReadDistanceOfFiveOrLarger;
+        this.bytesReadErasureCoded = -this.bytesReadErasureCoded;
       }
 
       @Override
@@ -3573,6 +3633,10 @@ public abstract class FileSystem extends Configured implements Closeable {
 
       public long getBytesReadDistanceOfFiveOrLarger() {
         return bytesReadDistanceOfFiveOrLarger;
+      }
+
+      public long getBytesReadErasureCoded() {
+        return bytesReadErasureCoded;
       }
     }
 
@@ -3763,6 +3827,14 @@ public abstract class FileSystem extends Configured implements Closeable {
      */
     public void incrementWriteOps(int count) {
       getThreadStatistics().writeOps += count;
+    }
+
+    /**
+     * Increment the bytes read on erasure-coded files in the statistics.
+     * @param newBytes the additional bytes read
+     */
+    public void incrementBytesReadErasureCoded(long newBytes) {
+      getThreadStatistics().bytesReadErasureCoded += newBytes;
     }
 
     /**
@@ -3959,6 +4031,25 @@ public abstract class FileSystem extends Configured implements Closeable {
       });
     }
 
+    /**
+     * Get the total number of bytes read on erasure-coded files.
+     * @return the number of bytes
+     */
+    public long getBytesReadErasureCoded() {
+      return visitAll(new StatisticsAggregator<Long>() {
+        private long bytesReadErasureCoded = 0;
+
+        @Override
+        public void accept(StatisticsData data) {
+          bytesReadErasureCoded += data.bytesReadErasureCoded;
+        }
+
+        public Long aggregate() {
+          return bytesReadErasureCoded;
+        }
+      });
+    }
+
     @Override
     public String toString() {
       return visitAll(new StatisticsAggregator<String>() {
@@ -4126,5 +4217,65 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public static GlobalStorageStatistics getGlobalStorageStatistics() {
     return GlobalStorageStatistics.INSTANCE;
+  }
+
+  private static final class FileSystemDataOutputStreamBuilder extends
+      FSDataOutputStreamBuilder<FSDataOutputStream,
+        FileSystemDataOutputStreamBuilder> {
+
+    /**
+     * Constructor.
+     */
+    protected FileSystemDataOutputStreamBuilder(FileSystem fileSystem, Path p) {
+      super(fileSystem, p);
+    }
+
+    @Override
+    public FSDataOutputStream build() throws IOException {
+      if (getFlags().contains(CreateFlag.CREATE) ||
+          getFlags().contains(CreateFlag.OVERWRITE)) {
+        if (isRecursive()) {
+          return getFS().create(getPath(), getPermission(), getFlags(),
+              getBufferSize(), getReplication(), getBlockSize(), getProgress(),
+              getChecksumOpt());
+        } else {
+          return getFS().createNonRecursive(getPath(), getPermission(),
+              getFlags(), getBufferSize(), getReplication(), getBlockSize(),
+              getProgress());
+        }
+      } else if (getFlags().contains(CreateFlag.APPEND)) {
+        return getFS().append(getPath(), getBufferSize(), getProgress());
+      }
+      throw new IOException("Must specify either create, overwrite or append");
+    }
+
+    @Override
+    protected FileSystemDataOutputStreamBuilder getThisBuilder() {
+      return this;
+    }
+  }
+
+  /**
+   * Create a new FSDataOutputStreamBuilder for the file with path.
+   * Files are overwritten by default.
+   *
+   * @param path file path
+   * @return a FSDataOutputStreamBuilder object to build the file
+   *
+   * HADOOP-14384. Temporarily reduce the visibility of method before the
+   * builder interface becomes stable.
+   */
+  public FSDataOutputStreamBuilder createFile(Path path) {
+    return new FileSystemDataOutputStreamBuilder(this, path)
+        .create().overwrite(true);
+  }
+
+  /**
+   * Create a Builder to append a file.
+   * @param path file path.
+   * @return a {@link FSDataOutputStreamBuilder} to build file append request.
+   */
+  public FSDataOutputStreamBuilder appendFile(Path path) {
+    return new FileSystemDataOutputStreamBuilder(this, path).append();
   }
 }

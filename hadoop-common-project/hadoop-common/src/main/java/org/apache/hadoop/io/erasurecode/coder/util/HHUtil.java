@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.coder.util;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -64,7 +65,8 @@ public final class HHUtil {
                                                     int[] piggyBackIndex,
                                                     int numParityUnits,
                                                     int pgIndex,
-                                                    RawErasureEncoder encoder) {
+                                                    RawErasureEncoder encoder)
+      throws IOException {
     ByteBuffer[] emptyInput = new ByteBuffer[inputs.length];
     ByteBuffer[] tempInput = new ByteBuffer[inputs.length];
     int[] inputPositions = new int[inputs.length];

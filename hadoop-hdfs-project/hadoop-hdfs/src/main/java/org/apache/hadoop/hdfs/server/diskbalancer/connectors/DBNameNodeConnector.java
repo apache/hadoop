@@ -144,8 +144,6 @@ class DBNameNodeConnector implements ClusterConnector {
       // Does it make sense ? Balancer does do that. Right now
       // we only deal with volumes and not blockPools
 
-      volume.setUsed(report.getDfsUsed());
-
       volume.setUuid(storage.getStorageID());
 
       // we will skip this volume for disk balancer if

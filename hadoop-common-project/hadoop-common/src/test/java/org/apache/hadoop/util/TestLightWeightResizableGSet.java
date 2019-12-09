@@ -23,15 +23,16 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.*;
 
 /** Testing {@link LightWeightResizableGSet} */
 public class TestLightWeightResizableGSet {
-  public static final Log LOG = LogFactory.getLog(TestLightWeightResizableGSet.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestLightWeightResizableGSet.class);
   private Random random = new Random();
 
   private TestElement[] generateElements(int length) {

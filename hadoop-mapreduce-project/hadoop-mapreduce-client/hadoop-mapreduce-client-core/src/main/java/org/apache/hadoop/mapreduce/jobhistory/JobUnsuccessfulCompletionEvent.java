@@ -49,34 +49,58 @@ public class JobUnsuccessfulCompletionEvent implements HistoryEvent {
    * Create an event to record unsuccessful completion (killed/failed) of jobs
    * @param id Job ID
    * @param finishTime Finish time of the job
-   * @param finishedMaps Number of finished maps
-   * @param finishedReduces Number of finished reduces
+   * @param succeededMaps Number of succeeded maps
+   * @param succeededReduces Number of succeeded reduces
+   * @param failedMaps Number of failed maps
+   * @param failedReduces Number of failed reduces
+   * @param killedMaps Number of killed maps
+   * @param killedReduces Number of killed reduces
    * @param status Status of the job
    */
   public JobUnsuccessfulCompletionEvent(JobID id, long finishTime,
-      int finishedMaps,
-      int finishedReduces, String status) {
-    this(id, finishTime, finishedMaps, finishedReduces, status, NODIAGS_LIST);
+      int succeededMaps,
+      int succeededReduces,
+      int failedMaps,
+      int failedReduces,
+      int killedMaps,
+      int killedReduces,
+      String status) {
+    this(id, finishTime, succeededMaps, succeededReduces, failedMaps,
+            failedReduces, killedMaps, killedReduces, status, NODIAGS_LIST);
   }
 
   /**
    * Create an event to record unsuccessful completion (killed/failed) of jobs
    * @param id Job ID
    * @param finishTime Finish time of the job
-   * @param finishedMaps Number of finished maps
-   * @param finishedReduces Number of finished reduces
+   * @param succeededMaps Number of finished maps
+   * @param succeededReduces Number of finished reduces
+   * @param failedMaps Number of failed maps
+   * @param failedReduces Number of failed reduces
+   * @param killedMaps Number of killed maps
+   * @param killedReduces Number of killed reduces
    * @param status Status of the job
    * @param diagnostics job runtime diagnostics
    */
   public JobUnsuccessfulCompletionEvent(JobID id, long finishTime,
-      int finishedMaps,
-      int finishedReduces,
+      int succeededMaps,
+      int succeededReduces,
+      int failedMaps,
+      int failedReduces,
+      int killedMaps,
+      int killedReduces,
       String status,
       Iterable<String> diagnostics) {
     datum.setJobid(new Utf8(id.toString()));
     datum.setFinishTime(finishTime);
-    datum.setFinishedMaps(finishedMaps);
-    datum.setFinishedReduces(finishedReduces);
+    // using finishedMaps & finishedReduces in the Avro schema for backward
+    // compatibility
+    datum.setFinishedMaps(succeededMaps);
+    datum.setFinishedReduces(succeededReduces);
+    datum.setFailedMaps(failedMaps);
+    datum.setFailedReduces(failedReduces);
+    datum.setKilledMaps(killedMaps);
+    datum.setKilledReduces(killedReduces);
     datum.setJobStatus(new Utf8(status));
     if (diagnostics == null) {
       diagnostics = NODIAGS_LIST;
@@ -98,10 +122,19 @@ public class JobUnsuccessfulCompletionEvent implements HistoryEvent {
   }
   /** Get the job finish time */
   public long getFinishTime() { return datum.getFinishTime(); }
-  /** Get the number of finished maps */
-  public int getFinishedMaps() { return datum.getFinishedMaps(); }
-  /** Get the number of finished reduces */
-  public int getFinishedReduces() { return datum.getFinishedReduces(); }
+  /** Get the number of succeeded maps */
+  public int getSucceededMaps() { return datum.getFinishedMaps(); }
+  /** Get the number of succeeded reduces */
+  public int getSucceededReduces() { return datum.getFinishedReduces(); }
+  /** Get the number of failed maps */
+  public int getFailedMaps() { return datum.getFailedMaps(); }
+  /** Get the number of failed reduces */
+  public int getFailedReduces() { return datum.getFailedReduces(); }
+  /** Get the number of killed maps */
+  public int getKilledMaps() { return datum.getKilledMaps(); }
+  /** Get the number of killed reduces */
+  public int getKilledReduces() { return datum.getKilledReduces(); }
+
   /** Get the status */
   public String getStatus() { return datum.getJobStatus().toString(); }
   /** Get the event type */
@@ -129,12 +162,19 @@ public class JobUnsuccessfulCompletionEvent implements HistoryEvent {
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setId(StringUtils.toUpperCase(getEventType().name()));
     tEvent.addInfo("FINISH_TIME", getFinishTime());
-    tEvent.addInfo("NUM_MAPS", getFinishedMaps());
-    tEvent.addInfo("NUM_REDUCES", getFinishedReduces());
+    tEvent.addInfo("NUM_MAPS", getSucceededMaps() + getFailedMaps()
+        + getKilledMaps());
+    tEvent.addInfo("NUM_REDUCES", getSucceededReduces() + getFailedReduces()
+        + getKilledReduces());
     tEvent.addInfo("JOB_STATUS", getStatus());
     tEvent.addInfo("DIAGNOSTICS", getDiagnostics());
-    tEvent.addInfo("FINISHED_MAPS", getFinishedMaps());
-    tEvent.addInfo("FINISHED_REDUCES", getFinishedReduces());
+    tEvent.addInfo("SUCCESSFUL_MAPS", getSucceededMaps());
+    tEvent.addInfo("SUCCESSFUL_REDUCES", getSucceededReduces());
+    tEvent.addInfo("FAILED_MAPS", getFailedMaps());
+    tEvent.addInfo("FAILED_REDUCES", getFailedReduces());
+    tEvent.addInfo("KILLED_MAPS", getKilledMaps());
+    tEvent.addInfo("KILLED_REDUCES", getKilledReduces());
+
     return tEvent;
   }
 

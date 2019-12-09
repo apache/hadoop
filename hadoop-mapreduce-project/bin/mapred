@@ -15,8 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# The name of the script being executed.
+HADOOP_SHELL_EXECNAME="mapred"
 MYNAME="${BASH_SOURCE-$0}"
-HADOOP_SHELL_EXECNAME="${MYNAME##*/}"
+
 
 ## @description  build up the mapred command's usage text.
 ## @audience     public
@@ -24,15 +26,17 @@ HADOOP_SHELL_EXECNAME="${MYNAME##*/}"
 ## @replaceable  no
 function hadoop_usage
 {
-  hadoop_add_subcommand "classpath" "prints the class path needed for running mapreduce subcommands"
-  hadoop_add_subcommand "envvars" "display computed Hadoop environment variables"
-  hadoop_add_subcommand "historyserver" "run job history servers as a standalone daemon"
-  hadoop_add_subcommand "hsadmin" "job history server admin interface"
-  hadoop_add_subcommand "job" "manipulate MapReduce jobs"
-  hadoop_add_subcommand "pipes" "run a Pipes job"
-  hadoop_add_subcommand "queue" "get information regarding JobQueues"
-  hadoop_add_subcommand "sampler" "sampler"
-  hadoop_add_subcommand "version" "print the version"
+  hadoop_add_subcommand "classpath" client "prints the class path needed for running mapreduce subcommands"
+  hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
+  hadoop_add_subcommand "historyserver" daemon "run job history servers as a standalone daemon"
+  hadoop_add_subcommand "hsadmin" admin "job history server admin interface"
+  hadoop_add_subcommand "job" client "manipulate MapReduce jobs"
+  hadoop_add_subcommand "pipes" client "run a Pipes job"
+  hadoop_add_subcommand "queue" client "get information regarding JobQueues"
+  hadoop_add_subcommand "sampler" client "sampler"
+  hadoop_add_subcommand "frameworkuploader" admin "mapreduce framework upload"
+  hadoop_add_subcommand "version" client "print the version"
+  hadoop_add_subcommand "minicluster" client "CLI MiniCluster"
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" true
 }
 
@@ -69,11 +73,13 @@ function mapredcmd_case
     historyserver)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME=org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer
-      if [ -n "${HADOOP_JOB_HISTORYSERVER_HEAPSIZE}" ]; then
-        # shellcheck disable=SC2034
+      if [[ -n "${HADOOP_JOB_HISTORYSERVER_HEAPSIZE}" ]]; then
         HADOOP_HEAPSIZE_MAX="${HADOOP_JOB_HISTORYSERVER_HEAPSIZE}"
       fi
       HADOOP_DAEMON_ROOT_LOGGER=${HADOOP_JHS_LOGGER:-$HADOOP_DAEMON_ROOT_LOGGER}
+      if [[  "${HADOOP_DAEMON_MODE}" != "default" ]]; then
+        hadoop_add_param HADOOP_OPTS mapred.jobsummary.logger "-Dmapred.jobsummary.logger=${HADOOP_DAEMON_ROOT_LOGGER}"
+      fi
     ;;
     hsadmin)
       HADOOP_CLASSNAME=org.apache.hadoop.mapreduce.v2.hs.client.HSAdmin
@@ -90,8 +96,16 @@ function mapredcmd_case
     sampler)
       HADOOP_CLASSNAME=org.apache.hadoop.mapred.lib.InputSampler
     ;;
+    frameworkuploader)
+      HADOOP_CLASSNAME=org.apache.hadoop.mapred.uploader.FrameworkUploader
+    ;;
     version)
       HADOOP_CLASSNAME=org.apache.hadoop.util.VersionInfo
+    ;;
+    minicluster)
+      hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_DIR}/timelineservice"'/*'
+      hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_DIR}/test"'/*'
+      HADOOP_CLASSNAME=org.apache.hadoop.mapreduce.MiniHadoopClusterManager
     ;;
     *)
       HADOOP_CLASSNAME="${subcmd}"
@@ -112,15 +126,17 @@ else
 fi
 
 HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$HADOOP_DEFAULT_LIBEXEC_DIR}"
-# shellcheck disable=SC2034
 HADOOP_NEW_CONFIG=true
 if [[ -f "${HADOOP_LIBEXEC_DIR}/mapred-config.sh" ]]; then
+  # shellcheck source=./hadoop-mapreduce-project/bin/mapred-config.sh
   . "${HADOOP_LIBEXEC_DIR}/mapred-config.sh"
 else
   echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/mapred-config.sh." 2>&1
   exit 1
 fi
 
+# now that we have support code, let's abs MYNAME so we can use it later
+MYNAME=$(hadoop_abs "${MYNAME}")
 
 if [ $# = 0 ]; then
   hadoop_exit_with_usage 1
@@ -129,7 +145,15 @@ fi
 HADOOP_SUBCMD=$1
 shift
 
-hadoop_verify_user "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+if hadoop_need_reexec mapred "${HADOOP_SUBCMD}"; then
+  hadoop_uservar_su mapred "${HADOOP_SUBCMD}" \
+    "${MYNAME}" \
+    "--reexec" \
+    "${HADOOP_USER_PARAMS[@]}"
+  exit $?
+fi
+
+hadoop_verify_user_perm "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
 
 HADOOP_SUBCMD_ARGS=("$@")
 
@@ -149,55 +173,5 @@ fi
 
 hadoop_subcommand_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
 
-if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
-  HADOOP_SECURE_USER="${HADOOP_SUBCMD_SECUREUSER}"
-
-  hadoop_subcommand_secure_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
-
-  hadoop_verify_secure_prereq
-  hadoop_setup_secure_service
-  priv_outfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
-  priv_errfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.err"
-  priv_pidfile="${HADOOP_PID_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
-  daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
-  daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
-else
-  daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
-  daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
-fi
-
-if [[  "${HADOOP_DAEMON_MODE}" != "default" ]]; then
-  # shellcheck disable=SC2034
-  HADOOP_ROOT_LOGGER="${HADOOP_DAEMON_ROOT_LOGGER}"
-  hadoop_add_param HADOOP_OPTS mapred.jobsummary.logger "-Dmapred.jobsummary.logger=${HADOOP_ROOT_LOGGER}"
-  # shellcheck disable=SC2034
-  HADOOP_LOGFILE="hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.log"
-fi
-
-hadoop_finalize
-
-if [[ "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" = true ]]; then
-  if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
-    hadoop_secure_daemon_handler \
-      "${HADOOP_DAEMON_MODE}" \
-      "${HADOOP_SUBCMD}" \
-      "${HADOOP_CLASSNAME}" \
-      "${daemon_pidfile}" \
-      "${daemon_outfile}" \
-      "${priv_pidfile}" \
-      "${priv_outfile}" \
-      "${priv_errfile}" \
-      "${HADOOP_SUBCMD_ARGS[@]}"
-  else
-    hadoop_daemon_handler \
-      "${HADOOP_DAEMON_MODE}" \
-      "${HADOOP_SUBCMD}" \
-      "${HADOOP_CLASSNAME}" \
-      "${daemon_pidfile}" \
-      "${daemon_outfile}" \
-      "${HADOOP_SUBCMD_ARGS[@]}"
-  fi
-  exit $?
-else
-  hadoop_java_exec "${HADOOP_SUBCMD}" "${HADOOP_CLASSNAME}" "${HADOOP_SUBCMD_ARGS[@]}"
-fi
+# everything is in globals at this point, so call the generic handler
+hadoop_generic_java_subcmd_handler

@@ -18,8 +18,19 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
+/**
+ * States used by the container state machine.
+ */
 public enum ContainerState {
+  // NOTE: In case of future additions / deletions / modifications to this
+  //       enum, please ensure that the following are also correspondingly
+  //       updated:
+  //       1. ContainerImpl::getContainerSubState().
+  //       2. the doc in the ContainerSubState class.
+  //       3. the doc in the yarn_protos.proto file.
   NEW, LOCALIZING, LOCALIZATION_FAILED, SCHEDULED, RUNNING, RELAUNCHING,
-  REINITIALIZING, EXITED_WITH_SUCCESS, EXITED_WITH_FAILURE, KILLING,
-  CONTAINER_CLEANEDUP_AFTER_KILL, CONTAINER_RESOURCES_CLEANINGUP, DONE
+  REINITIALIZING, REINITIALIZING_AWAITING_KILL,
+  EXITED_WITH_SUCCESS, EXITED_WITH_FAILURE, KILLING,
+  CONTAINER_CLEANEDUP_AFTER_KILL, CONTAINER_RESOURCES_CLEANINGUP, DONE,
+  PAUSING, PAUSED, RESUMING
 }

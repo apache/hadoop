@@ -17,8 +17,11 @@
  */
 
 #include "expect.h"
+#include "exception.h"
 #include "hdfs/hdfs.h"
+#include "jni_helper.h"
 #include "native_mini_dfs.h"
+#include "os/mutexes.h"
 #include "os/thread.h"
 
 #include <errno.h>
@@ -27,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #define TO_STR_HELPER(X) #X
 #define TO_STR(X) TO_STR_HELPER(X)
@@ -53,7 +57,7 @@ static int hdfsSingleNameNodeConnect(struct NativeMiniDfsCluster *cl, hdfsFS *fs
     tPort port;
     hdfsFS hdfs;
     struct hdfsBuilder *bld;
-    
+
     port = (tPort)nmdGetNameNodePort(cl);
     if (port < 0) {
         fprintf(stderr, "hdfsSingleNameNodeConnect: nmdGetNameNodePort "
@@ -89,13 +93,12 @@ static int doTestGetDefaultBlockSize(hdfsFS fs, const char *path)
 
     blockSize = hdfsGetDefaultBlockSize(fs);
     if (blockSize < 0) {
-        ret = errno;
-        fprintf(stderr, "hdfsGetDefaultBlockSize failed with error %d\n", ret);
-        return ret;
+        fprintf(stderr, "hdfsGetDefaultBlockSize failed with error %d\n", errno);
+        return -1;
     } else if (blockSize != TLH_DEFAULT_BLOCK_SIZE) {
         fprintf(stderr, "hdfsGetDefaultBlockSize got %"PRId64", but we "
                 "expected %d\n", blockSize, TLH_DEFAULT_BLOCK_SIZE);
-        return EIO;
+        return -1;
     }
 
     blockSize = hdfsGetDefaultBlockSizeAtPath(fs, path);
@@ -106,7 +109,7 @@ static int doTestGetDefaultBlockSize(hdfsFS fs, const char *path)
         return ret;
     } else if (blockSize != TLH_DEFAULT_BLOCK_SIZE) {
         fprintf(stderr, "hdfsGetDefaultBlockSizeAtPath(%s) got "
-                "%"PRId64", but we expected %d\n", 
+                "%"PRId64", but we expected %d\n",
                 path, blockSize, TLH_DEFAULT_BLOCK_SIZE);
         return EIO;
     }
@@ -145,6 +148,7 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     int ret, expected, numEntries;
     hdfsFileInfo *fileInfo;
     struct hdfsReadStatistics *readStats = NULL;
+    struct hdfsHedgedReadMetrics *hedgedMetrics = NULL;
 
     if (hdfsExists(fs, paths->prefix) == 0) {
         EXPECT_ZERO(hdfsDelete(fs, paths->prefix, 1));
@@ -153,16 +157,29 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
 
     EXPECT_ZERO(doTestGetDefaultBlockSize(fs, paths->prefix));
 
+    /* There is no such directory.
+     * Check that errno is set to ENOENT
+     */
+    char invalid_path[] = "/some_invalid/path";
+    EXPECT_NULL_WITH_ERRNO(hdfsListDirectory(fs, invalid_path, &numEntries), ENOENT);
+
     /* There should be no entry in the directory. */
     errno = EACCES; // see if errno is set to 0 on success
     EXPECT_NULL_WITH_ERRNO(hdfsListDirectory(fs, paths->prefix, &numEntries), 0);
     if (numEntries != 0) {
         fprintf(stderr, "hdfsListDirectory set numEntries to "
                 "%d on empty directory.", numEntries);
+        return EIO;
     }
 
     /* There should not be any file to open for reading. */
     EXPECT_NULL(hdfsOpenFile(fs, paths->file1, O_RDONLY, 0, 0, 0));
+
+    /* Check if the exceptions are stored in the TLS */
+    EXPECT_STR_CONTAINS(hdfsGetLastExceptionRootCause(),
+                        "File does not exist");
+    EXPECT_STR_CONTAINS(hdfsGetLastExceptionStackTrace(),
+                        "java.io.FileNotFoundException");
 
     /* hdfsOpenFile should not accept mode = 3 */
     EXPECT_NULL(hdfsOpenFile(fs, paths->file1, 3, 0, 0, 0));
@@ -180,18 +197,44 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     }
     if (ret != expected) {
         fprintf(stderr, "hdfsWrite was supposed to write %d bytes, but "
-                "it wrote %d\n", ret, expected);
+                "it wrote %d\n", expected, ret);
         return EIO;
     }
     EXPECT_ZERO(hdfsFlush(fs, file));
     EXPECT_ZERO(hdfsHSync(fs, file));
     EXPECT_ZERO(hdfsCloseFile(fs, file));
 
+    EXPECT_ZERO(doTestGetDefaultBlockSize(fs, paths->file1));
+
     /* There should be 1 entry in the directory. */
-    EXPECT_NONNULL(hdfsListDirectory(fs, paths->prefix, &numEntries));
+    hdfsFileInfo * dirList = hdfsListDirectory(fs, paths->prefix, &numEntries);
+    EXPECT_NONNULL(dirList);
     if (numEntries != 1) {
         fprintf(stderr, "hdfsListDirectory set numEntries to "
                 "%d on directory containing 1 file.", numEntries);
+    }
+    hdfsFreeFileInfo(dirList, numEntries);
+
+    /* Create many files for ListDirectory to page through */
+    char listDirTest[PATH_MAX];
+    strcpy(listDirTest, paths->prefix);
+    strcat(listDirTest, "/for_list_test/");
+    EXPECT_ZERO(hdfsCreateDirectory(fs, listDirTest));
+    int nFile;
+    for (nFile = 0; nFile < 10000; nFile++) {
+      char filename[PATH_MAX];
+      snprintf(filename, PATH_MAX, "%s/many_files_%d", listDirTest, nFile);
+      file = hdfsOpenFile(fs, filename, O_WRONLY, 0, 0, 0);
+      EXPECT_NONNULL(file);
+      EXPECT_ZERO(hdfsCloseFile(fs, file));
+    }
+    dirList = hdfsListDirectory(fs, listDirTest, &numEntries);
+    EXPECT_NONNULL(dirList);
+    hdfsFreeFileInfo(dirList, numEntries);
+    if (numEntries != 10000) {
+        fprintf(stderr, "hdfsListDirectory set numEntries to "
+                "%d on directory containing 10000 files.", numEntries);
+        return EIO;
     }
 
     /* Let's re-open the file for reading */
@@ -204,6 +247,15 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     EXPECT_UINT64_EQ(UINT64_C(0), readStats->totalLocalBytesRead);
     EXPECT_UINT64_EQ(UINT64_C(0), readStats->totalShortCircuitBytesRead);
     hdfsFileFreeReadStatistics(readStats);
+
+    /* Verify that we can retrieve the hedged read metrics */
+    EXPECT_ZERO(hdfsGetHedgedReadMetrics(fs, &hedgedMetrics));
+    errno = 0;
+    EXPECT_UINT64_EQ(UINT64_C(0), hedgedMetrics->hedgedReadOps);
+    EXPECT_UINT64_EQ(UINT64_C(0), hedgedMetrics->hedgedReadOpsWin);
+    EXPECT_UINT64_EQ(UINT64_C(0), hedgedMetrics->hedgedReadOpsInCurThread);
+    hdfsFreeHedgedReadMetrics(hedgedMetrics);
+
     /* TODO: implement readFully and use it here */
     ret = hdfsRead(fs, file, tmp, sizeof(tmp));
     if (ret < 0) {
@@ -227,8 +279,8 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     EXPECT_ZERO(memcmp(paths->prefix, tmp, expected));
     EXPECT_ZERO(hdfsCloseFile(fs, file));
 
-    // TODO: Non-recursive delete should fail?
-    //EXPECT_NONZERO(hdfsDelete(fs, prefix, 0));
+    //Non-recursive delete fails
+    EXPECT_NONZERO(hdfsDelete(fs, paths->prefix, 0));
     EXPECT_ZERO(hdfsCopy(fs, paths->file1, fs, paths->file2));
 
     EXPECT_ZERO(hdfsChown(fs, paths->file2, NULL, NULL));
@@ -255,6 +307,17 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
 
     snprintf(tmp, sizeof(tmp), "%s/nonexistent-file-name", paths->prefix);
     EXPECT_NEGATIVE_ONE_WITH_ERRNO(hdfsChown(fs, tmp, "ha3", NULL), ENOENT);
+
+    //Test case: File does not exist
+    EXPECT_NULL_WITH_ERRNO(hdfsGetPathInfo(fs, invalid_path), ENOENT);
+
+    //Test case: No permission to access parent directory
+    EXPECT_ZERO(hdfsChmod(fs, paths->prefix, 0));
+    //reconnect as user "SomeGuy" and verify that we get permission errors
+    hdfsFS fs2 = NULL;
+    EXPECT_ZERO(hdfsSingleNameNodeConnect(tlhCluster, &fs2, "SomeGuy"));
+    EXPECT_NULL_WITH_ERRNO(hdfsGetPathInfo(fs2, paths->file2), EACCES);
+    EXPECT_ZERO(hdfsDisconnect(fs2));
     return 0;
 }
 
@@ -266,6 +329,8 @@ static int testHdfsOperationsImpl(struct tlhThreadInfo *ti)
     fprintf(stderr, "testHdfsOperations(threadIdx=%d): starting\n",
         ti->threadIdx);
     EXPECT_ZERO(hdfsSingleNameNodeConnect(tlhCluster, &fs, NULL));
+    if (!fs)
+        return 1;
     EXPECT_ZERO(setupPaths(ti, &paths));
     // test some operations
     EXPECT_ZERO(doTestHdfsOperations(ti, fs, &paths));
@@ -276,6 +341,8 @@ static int testHdfsOperationsImpl(struct tlhThreadInfo *ti)
     EXPECT_ZERO(hdfsDisconnect(fs));
     // reconnect to do the final delete.
     EXPECT_ZERO(hdfsSingleNameNodeConnect(tlhCluster, &fs, NULL));
+    if (!fs)
+        return 1;
     EXPECT_ZERO(hdfsDelete(fs, paths.prefix, 1));
     EXPECT_ZERO(hdfsDisconnect(fs));
     return 0;
@@ -306,11 +373,28 @@ static int checkFailures(struct tlhThreadInfo *ti, int tlhNumThreads)
     for (i = 0; i < tlhNumThreads; i++) {
         if (ti[i].success != 0) {
             fprintf(stderr, "%s%d", sep, i);
-            sep = ", "; 
+            sep = ", ";
         }
     }
     fprintf(stderr, "].  FAILURE.\n");
     return EXIT_FAILURE;
+}
+
+int testRecursiveJvmMutex() {
+    jthrowable jthr;
+    JNIEnv *env = getJNIEnv();
+    if (!env) {
+        fprintf(stderr, "testRecursiveJvmMutex: getJNIEnv failed\n");
+        return -EIO;
+    }
+    jthr = newRuntimeError(env, "Dummy error to print for testing");
+
+    /* printExceptionAndFree() takes the jvmMutex within */
+    mutexLock(&jvmMutex);
+    printExceptionAndFree(env, jthr, PRINT_EXC_ALL, "testRecursiveJvmMutex");
+    mutexUnlock(&jvmMutex);
+
+    return 0;
 }
 
 /**
@@ -324,6 +408,12 @@ int main(void)
     struct NativeMiniDfsConf conf = {
         1, /* doFormat */
     };
+
+    /* Check that the recursive mutex works as expected */
+    if (testRecursiveJvmMutex() < 0) {
+        fprintf(stderr, "testRecursiveJvmMutex failed\n");
+        return EXIT_FAILURE;
+    }
 
     tlhNumThreadsStr = getenv("TLH_NUM_THREADS");
     if (!tlhNumThreadsStr) {

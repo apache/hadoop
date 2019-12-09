@@ -22,8 +22,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -36,7 +36,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.junit.Test;
 
 public class TestBlockMissingException {
-  final static Log LOG = LogFactory.getLog("org.apache.hadoop.hdfs.TestBlockMissing");
+  final static Logger LOG =
+      LoggerFactory.getLogger("org.apache.hadoop.hdfs.TestBlockMissing");
   final static int NUM_DATANODES = 3;
 
   Configuration conf;

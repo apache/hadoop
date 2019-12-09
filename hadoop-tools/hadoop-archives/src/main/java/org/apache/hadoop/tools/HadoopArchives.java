@@ -37,8 +37,8 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.Parser;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -82,7 +82,7 @@ import com.google.common.base.Charsets;
  */
 public class HadoopArchives implements Tool {
   public static final int VERSION = 3;
-  private static final Log LOG = LogFactory.getLog(HadoopArchives.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HadoopArchives.class);
   
   private static final String NAME = "har"; 
   private static final String ARCHIVE_NAME = "archiveName";
@@ -473,7 +473,7 @@ public class HadoopArchives implements Tool {
     conf.setLong(HAR_BLOCKSIZE_LABEL, blockSize);
     conf.setLong(HAR_PARTSIZE_LABEL, partSize);
     conf.set(DST_HAR_LABEL, archiveName);
-    conf.set(SRC_PARENT_LABEL, parentPath.makeQualified(fs).toString());
+    conf.set(SRC_PARENT_LABEL, fs.makeQualified(parentPath).toString());
     conf.setInt(HAR_REPLICATION_LABEL, repl);
     Path outputPath = new Path(dest, archiveName);
     FileOutputFormat.setOutputPath(conf, outputPath);

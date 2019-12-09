@@ -20,8 +20,6 @@ package org.apache.hadoop.mapred.nativetask.combinertest;
 import java.io.IOException;
 import java.util.StringTokenizer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -33,10 +31,12 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class WordCount {
 
-  private static Log LOG = LogFactory.getLog(WordCount.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WordCount.class);
   
   public static class TokenizerMapper extends Mapper<Object, Text, Text, IntWritable> {
 

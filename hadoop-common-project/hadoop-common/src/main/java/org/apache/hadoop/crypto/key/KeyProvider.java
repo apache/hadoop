@@ -33,13 +33,16 @@ import java.util.Map;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 import javax.crypto.KeyGenerator;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCEKS_KEY_SERIALFILTER;
 
 /**
  * A provider of secret key material for Hadoop applications. Provides an
@@ -53,11 +56,21 @@ import javax.crypto.KeyGenerator;
 @InterfaceStability.Unstable
 public abstract class KeyProvider {
   public static final String DEFAULT_CIPHER_NAME =
-      "hadoop.security.key.default.cipher";
-  public static final String DEFAULT_CIPHER = "AES/CTR/NoPadding";
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_DEFAULT_CIPHER_KEY;
+  public static final String DEFAULT_CIPHER =
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_DEFAULT_CIPHER_DEFAULT;
   public static final String DEFAULT_BITLENGTH_NAME =
-      "hadoop.security.key.default.bitlength";
-  public static final int DEFAULT_BITLENGTH = 128;
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_KEY;
+  public static final int DEFAULT_BITLENGTH = CommonConfigurationKeysPublic.
+      HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_DEFAULT;
+  public static final String JCEKS_KEY_SERIALFILTER_DEFAULT =
+      "java.lang.Enum;"
+          + "java.security.KeyRep;"
+          + "java.security.KeyRep$Type;"
+          + "javax.crypto.spec.SecretKeySpec;"
+          + "org.apache.hadoop.crypto.key.JavaKeyStoreProvider$KeyMetadata;"
+          + "!*";
+  public static final String JCEKS_KEY_SERIAL_FILTER = "jceks.key.serialFilter";
 
   private final Configuration conf;
 
@@ -71,8 +84,8 @@ public abstract class KeyProvider {
 
     protected KeyVersion(String name, String versionName,
                          byte[] material) {
-      this.name = name;
-      this.versionName = versionName;
+      this.name = name == null ? null : name.intern();
+      this.versionName = versionName == null ? null : versionName.intern();
       this.material = material;
     }
     
@@ -199,9 +212,8 @@ public abstract class KeyProvider {
       return cipher;
     }
 
-    @SuppressWarnings("unchecked")
     public Map<String, String> getAttributes() {
-      return (attributes == null) ? Collections.EMPTY_MAP : attributes;
+      return (attributes == null) ? Collections.emptyMap() : attributes;
     }
 
     /**
@@ -370,9 +382,8 @@ public abstract class KeyProvider {
       return description;
     }
 
-    @SuppressWarnings("unchecked")
     public Map<String, String> getAttributes() {
-      return (attributes == null) ? Collections.EMPTY_MAP : attributes;
+      return (attributes == null) ? Collections.emptyMap() : attributes;
     }
 
     @Override
@@ -393,6 +404,14 @@ public abstract class KeyProvider {
    */
   public KeyProvider(Configuration conf) {
     this.conf = new Configuration(conf);
+    // Added for HADOOP-15473. Configured serialFilter property fixes
+    // java.security.UnrecoverableKeyException in JDK 8u171.
+    if(System.getProperty(JCEKS_KEY_SERIAL_FILTER) == null) {
+      String serialFilter =
+          conf.get(HADOOP_SECURITY_CRYPTO_JCEKS_KEY_SERIALFILTER,
+              JCEKS_KEY_SERIALFILTER_DEFAULT);
+      System.setProperty(JCEKS_KEY_SERIAL_FILTER, serialFilter);
+    }
   }
 
   /**
@@ -591,6 +610,18 @@ public abstract class KeyProvider {
 
     byte[] material = generateKey(meta.getBitLength(), meta.getCipher());
     return rollNewVersion(name, material);
+  }
+
+  /**
+   * Can be used by implementing classes to invalidate the caches. This could be
+   * used after rollNewVersion to provide a strong guarantee to return the new
+   * version of the given key.
+   *
+   * @param name the basename of the key
+   * @throws IOException
+   */
+  public void invalidateCache(String name) throws IOException {
+    // NOP
   }
 
   /**

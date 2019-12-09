@@ -29,8 +29,8 @@ import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
-import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInterval;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation.RLEOperator;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInterval;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -52,9 +52,9 @@ public class StageAllocatorGreedyRLE implements StageAllocator {
 
   @Override
   public Map<ReservationInterval, Resource> computeStageAllocation(Plan plan,
-      Map<Long, Resource> planLoads,
+      RLESparseResourceAllocation planLoads,
       RLESparseResourceAllocation planModifications, ReservationRequest rr,
-      long stageEarliestStart, long stageDeadline, String user,
+      long stageEarliestStart, long stageDeadline, long period, String user,
       ReservationId oldId) throws PlanningException {
 
     // abort early if the interval is not satisfiable
@@ -85,7 +85,7 @@ public class StageAllocatorGreedyRLE implements StageAllocator {
     // get available resources from plan
     RLESparseResourceAllocation netRLERes =
         plan.getAvailableResourceOverTime(user, oldId, stageEarliestStart,
-            stageDeadline);
+            stageDeadline, period);
 
     // remove plan modifications
     netRLERes =

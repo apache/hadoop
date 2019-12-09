@@ -49,6 +49,8 @@ public final class ContainerStartContext {
   private final List<String> userLocalDirs;
   private final List<String> containerLocalDirs;
   private final List<String> containerLogDirs;
+  private final List<String> userFilecacheDirs;
+  private final List<String> applicationLocalDirs;
 
   public static final class Builder {
     private Container container;
@@ -64,6 +66,8 @@ public final class ContainerStartContext {
     private List<String> userLocalDirs;
     private List<String> containerLocalDirs;
     private List<String> containerLogDirs;
+    private List<String> userFilecacheDirs;
+    private List<String> applicationLocalDirs;
 
     public Builder() {
     }
@@ -135,6 +139,18 @@ public final class ContainerStartContext {
       return this;
     }
 
+    @SuppressWarnings("checkstyle:hiddenfield")
+    public Builder setUserFilecacheDirs(List<String> userFilecacheDirs) {
+      this.userFilecacheDirs = userFilecacheDirs;
+      return this;
+    }
+
+    @SuppressWarnings("checkstyle:hiddenfield")
+    public Builder setApplicationLocalDirs(List<String> applicationLocalDirs) {
+      this.applicationLocalDirs = applicationLocalDirs;
+      return this;
+    }
+
     public ContainerStartContext build() {
       return new ContainerStartContext(this);
     }
@@ -154,6 +170,8 @@ public final class ContainerStartContext {
     this.userLocalDirs = builder.userLocalDirs;
     this.containerLocalDirs = builder.containerLocalDirs;
     this.containerLogDirs = builder.containerLogDirs;
+    this.userFilecacheDirs = builder.userFilecacheDirs;
+    this.applicationLocalDirs = builder.applicationLocalDirs;
   }
 
   public Container getContainer() {
@@ -211,5 +229,13 @@ public final class ContainerStartContext {
   public List<String> getContainerLogDirs() {
     return Collections.unmodifiableList(this
         .containerLogDirs);
+  }
+
+  public List<String> getUserFilecacheDirs() {
+    return Collections.unmodifiableList(this.userFilecacheDirs);
+  }
+
+  public List<String> getApplicationLocalDirs() {
+    return Collections.unmodifiableList(this.applicationLocalDirs);
   }
 }

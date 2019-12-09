@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CombinedIPWhiteList implements IPList {
 
-  public static final Log LOG = LogFactory.getLog(CombinedIPWhiteList.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(CombinedIPWhiteList.class);
   private static final String LOCALHOST_IP = "127.0.0.1";
 
   private final IPList[] networkLists;

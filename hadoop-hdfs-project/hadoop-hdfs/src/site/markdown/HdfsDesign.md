@@ -15,41 +15,7 @@
 HDFS Architecture
 =================
 
-* [HDFS Architecture](#HDFS_Architecture)
-    * [Introduction](#Introduction)
-    * [Assumptions and Goals](#Assumptions_and_Goals)
-        * [Hardware Failure](#Hardware_Failure)
-        * [Streaming Data Access](#Streaming_Data_Access)
-        * [Large Data Sets](#Large_Data_Sets)
-        * [Simple Coherency Model](#Simple_Coherency_Model)
-        * ["Moving Computation is Cheaper than Moving Data"](#aMoving_Computation_is_Cheaper_than_Moving_Data)
-        * [Portability Across Heterogeneous Hardware and Software Platforms](#Portability_Across_Heterogeneous_Hardware_and_Software_Platforms)
-    * [NameNode and DataNodes](#NameNode_and_DataNodes)
-    * [The File System Namespace](#The_File_System_Namespace)
-    * [Data Replication](#Data_Replication)
-        * [Replica Placement: The First Baby Steps](#Replica_Placement:_The_First_Baby_Steps)
-        * [Replica Selection](#Replica_Selection)
-        * [Safemode](#Safemode)
-    * [The Persistence of File System Metadata](#The_Persistence_of_File_System_Metadata)
-    * [The Communication Protocols](#The_Communication_Protocols)
-    * [Robustness](#Robustness)
-        * [Data Disk Failure, Heartbeats and Re-Replication](#Data_Disk_Failure_Heartbeats_and_Re-Replication)
-        * [Cluster Rebalancing](#Cluster_Rebalancing)
-        * [Data Integrity](#Data_Integrity)
-        * [Metadata Disk Failure](#Metadata_Disk_Failure)
-        * [Snapshots](#Snapshots)
-    * [Data Organization](#Data_Organization)
-        * [Data Blocks](#Data_Blocks)
-        * [Staging](#Staging)
-        * [Replication Pipelining](#Replication_Pipelining)
-    * [Accessibility](#Accessibility)
-        * [FS Shell](#FS_Shell)
-        * [DFSAdmin](#DFSAdmin)
-        * [Browser Interface](#Browser_Interface)
-    * [Space Reclamation](#Space_Reclamation)
-        * [File Deletes and Undeletes](#File_Deletes_and_Undeletes)
-        * [Decrease Replication Factor](#Decrease_Replication_Factor)
-    * [References](#References)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Introduction
 ------------
@@ -105,6 +71,11 @@ HDFS supports [user quotas](HdfsQuotaAdminGuide.html) and [access permissions](H
 HDFS does not support hard links or soft links.
 However, the HDFS architecture does not preclude implementing these features.
 
+While HDFS follows [naming convention of the FileSystem](../hadoop-common/filesystem/model.html#Paths_and_Path_Elements),
+some paths and names (e.g. `/.reserved` and `.snapshot` ) are reserved.
+Features such as [transparent encryption](TransparentEncryption.html) and
+[snapshot](HdfsSnapshots.html) use reserved paths.
+
 The NameNode maintains the file system namespace. Any change to the file system namespace or its properties is recorded by the NameNode. An application can specify the number of replicas of a file that should be maintained by HDFS. The number of copies of a file is called the replication factor of that file. This information is stored by the NameNode.
 
 Data Replication
@@ -136,7 +107,7 @@ Large HDFS instances run on a cluster of computers that commonly spread across m
 The NameNode determines the rack id each DataNode belongs to via the process outlined in [Hadoop Rack Awareness](../hadoop-common/RackAwareness.html).
 A simple but non-optimal policy is to place replicas on unique racks. This prevents losing data when an entire rack fails and allows use of bandwidth from multiple racks when reading data. This policy evenly distributes replicas in the cluster which makes it easy to balance load on component failure. However, this policy increases the cost of writes because a write needs to transfer blocks to multiple racks.
 
-For the common case, when the replication factor is three, HDFS’s placement policy is to put one replica on one node in the local rack, another on a different node in the local rack, and the last on a different node in a different rack. This policy cuts the inter-rack write traffic which generally improves write performance. The chance of rack failure is far less than that of node failure; this policy does not impact data reliability and availability guarantees. However, it does reduce the aggregate network bandwidth used when reading data since a block is placed in only two unique racks rather than three. With this policy, the replicas of a file do not evenly distribute across the racks. One third of replicas are on one node, two thirds of replicas are on one rack, and the other third are evenly distributed across the remaining racks. This policy improves write performance without compromising data reliability or read performance.
+For the common case, when the replication factor is three, HDFS’s placement policy is to put one replica on the local machine if the writer is on a datanode, otherwise on a random datanode in the same rack as that of the writer, another replica on a node in a different (remote) rack, and the last on a different node in the same remote rack. This policy cuts the inter-rack write traffic which generally improves write performance. The chance of rack failure is far less than that of node failure; this policy does not impact data reliability and availability guarantees. However, it does reduce the aggregate network bandwidth used when reading data since a block is placed in only two unique racks rather than three. With this policy, the replicas of a file do not evenly distribute across the racks. One third of replicas are on one node, two thirds of replicas are on one rack, and the other third are evenly distributed across the remaining racks. This policy improves write performance without compromising data reliability or read performance.
 
 If the replication factor is greater than 3,
 the placement of the 4th and following replicas are determined randomly
@@ -235,38 +206,13 @@ A typical block size used by HDFS is 128 MB.
 Thus, an HDFS file is chopped up into 128 MB chunks, and if possible,
 each chunk will reside on a different DataNode.
 
-### Staging
-
-A client request to create a file does not reach the NameNode immediately.
-In fact, initially the HDFS client caches the file data into a local buffer.
-Application writes are transparently redirected to this local buffer.
-When the local file accumulates data worth over one chunk size, the client contacts the NameNode.
-The NameNode inserts the file name into the file system hierarchy and allocates a data block for it.
-The NameNode responds to the client request with the identity of the DataNode and the destination data block.
-Then the client flushes the chunk of data from the local buffer to the specified DataNode.
-When a file is closed, the remaining un-flushed data in the local buffer is transferred to the DataNode.
-The client then tells the NameNode that the file is closed. At this point,
-the NameNode commits the file creation operation into a persistent store.
-If the NameNode dies before the file is closed, the file is lost.
-
-The above approach has been adopted after careful consideration of target applications that run on HDFS.
-These applications need streaming writes to files.
-If a client writes to a remote file directly without any client side buffering,
-the network speed and the congestion in the network impacts throughput considerably.
-This approach is not without precedent.
-Earlier distributed file systems, e.g. AFS, have used client side caching to improve performance.
-A POSIX requirement has been relaxed to achieve higher performance of data uploads.
-
 ### Replication Pipelining
 
-When a client is writing data to an HDFS file,
-its data is first written to a local buffer as explained in the previous section.
-Suppose the HDFS file has a replication factor of three.
-When the local buffer accumulates a chunk of user data,
-the client retrieves a list of DataNodes from the NameNode.
+When a client is writing data to an HDFS file with a replication factor of three,
+the NameNode retrieves a list of DataNodes using a replication target choosing algorithm.
 This list contains the DataNodes that will host a replica of that block.
-The client then flushes the data chunk to the first DataNode.
-The first DataNode starts receiving the data in small portions,
+The client then writes to the first DataNode.
+The first DataNode starts receiving the data in portions,
 writes each portion to its local repository and transfers that portion to the second DataNode in the list.
 The second DataNode, in turn starts receiving each portion of the data block,
 writes that portion to its repository and then flushes that portion to the third DataNode.
@@ -350,7 +296,7 @@ We are going to remove the file test1.
 The comment below shows that the file has been moved to Trash directory.
 
     $ hadoop fs -rm -r delete/test1
-    Moved: hdfs://localhost:9820/user/hadoop/delete/test1 to trash at: hdfs://localhost:9820/user/hadoop/.Trash/Current
+    Moved: hdfs://localhost:8020/user/hadoop/delete/test1 to trash at: hdfs://localhost:8020/user/hadoop/.Trash/Current
 
 now we are going to remove the file with skipTrash option,
 which will not send the file to Trash.It will be completely removed from HDFS.

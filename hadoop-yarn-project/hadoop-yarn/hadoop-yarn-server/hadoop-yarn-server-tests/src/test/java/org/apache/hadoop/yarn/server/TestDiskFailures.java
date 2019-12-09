@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileUtil;
@@ -45,6 +43,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Verify if NodeManager's in-memory good local dirs list and good log dirs list
@@ -54,7 +54,7 @@ import org.junit.Assert;
  */
 public class TestDiskFailures {
 
-  private static final Log LOG = LogFactory.getLog(TestDiskFailures.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDiskFailures.class);
 
   private static final long DISK_HEALTH_CHECK_INTERVAL = 1000;//1 sec
 

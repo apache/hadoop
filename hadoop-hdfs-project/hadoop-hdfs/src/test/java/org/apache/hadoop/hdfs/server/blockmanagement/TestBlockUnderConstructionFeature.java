@@ -50,7 +50,7 @@ public class TestBlockUnderConstructionFeature {
     DFSTestUtil.resetLastUpdatesWithOffset(dd1, -3 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd2, -1 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd3, -2 * 1000);
-    blockInfo.getUnderConstructionFeature().initializeBlockRecovery(blockInfo, 1);
+    blockInfo.getUnderConstructionFeature().initializeBlockRecovery(blockInfo, 1, true);
     BlockInfo[] blockInfoRecovery = dd2.getLeaseRecoveryCommand(1);
     assertEquals(blockInfoRecovery[0], blockInfo);
 
@@ -58,7 +58,7 @@ public class TestBlockUnderConstructionFeature {
     DFSTestUtil.resetLastUpdatesWithOffset(dd1, -2 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd2, -1 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd3, -3 * 1000);
-    blockInfo.getUnderConstructionFeature().initializeBlockRecovery(blockInfo, 2);
+    blockInfo.getUnderConstructionFeature().initializeBlockRecovery(blockInfo, 2, true);
     blockInfoRecovery = dd1.getLeaseRecoveryCommand(1);
     assertEquals(blockInfoRecovery[0], blockInfo);
 
@@ -66,7 +66,7 @@ public class TestBlockUnderConstructionFeature {
     DFSTestUtil.resetLastUpdatesWithOffset(dd1, -2 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd2, -1 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd3, -3 * 1000);
-    blockInfo.getUnderConstructionFeature().initializeBlockRecovery(blockInfo, 3);
+    blockInfo.getUnderConstructionFeature().initializeBlockRecovery(blockInfo, 3, true);
     blockInfoRecovery = dd3.getLeaseRecoveryCommand(1);
     assertEquals(blockInfoRecovery[0], blockInfo);
 
@@ -75,7 +75,7 @@ public class TestBlockUnderConstructionFeature {
     DFSTestUtil.resetLastUpdatesWithOffset(dd1, -2 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd2, -1 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd3, 0);
-    blockInfo.getUnderConstructionFeature().initializeBlockRecovery(blockInfo, 3);
+    blockInfo.getUnderConstructionFeature().initializeBlockRecovery(blockInfo, 3, true);
     blockInfoRecovery = dd3.getLeaseRecoveryCommand(1);
     assertEquals(blockInfoRecovery[0], blockInfo);
   }

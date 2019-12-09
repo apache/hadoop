@@ -28,8 +28,6 @@ import javax.annotation.Nullable;
 
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
@@ -48,6 +46,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -57,7 +57,8 @@ import com.google.common.collect.Sets;
 @RunWith(value = Parameterized.class)
 public class TestFileInputFormat {
   
-  private static final Log LOG = LogFactory.getLog(TestFileInputFormat.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFileInputFormat.class);
   
   private static String testTmpDir = System.getProperty("test.build.data", "/tmp");
   private static final Path TEST_ROOT_DIR = new Path(testTmpDir, "TestFIF");
@@ -120,6 +121,18 @@ public class TestFileInputFormat {
     List<InputSplit> splits = fileInputFormat.getSplits(job);
     Assert.assertEquals("Input splits are not correct", 2, splits.size());
     verifySplits(Lists.newArrayList("test:/a1/a2", "test:/a1/file1"), splits);
+  }
+
+  @Test
+  public void testNumInputFilesIgnoreDirs() throws Exception {
+    Configuration conf = getConfiguration();
+    conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
+    conf.setBoolean(FileInputFormat.INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, true);
+    Job job = Job.getInstance(conf);
+    FileInputFormat<?, ?> fileInputFormat = new TextInputFormat();
+    List<InputSplit> splits = fileInputFormat.getSplits(job);
+    Assert.assertEquals("Input splits are not correct", 1, splits.size());
+    verifySplits(Lists.newArrayList("test:/a1/file1"), splits);
   }
 
   @Test

@@ -21,9 +21,7 @@ package org.apache.hadoop.hdfs.nfs.nfs3;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.List;
 
 import org.apache.hadoop.fs.Path;
@@ -31,8 +29,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
-import org.apache.hadoop.hdfs.nfs.nfs3.Nfs3;
-import org.apache.hadoop.hdfs.nfs.nfs3.RpcProgramNfs3;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
@@ -40,15 +36,10 @@ import org.apache.hadoop.nfs.nfs3.response.READDIR3Response;
 import org.apache.hadoop.nfs.nfs3.response.READDIR3Response.Entry3;
 import org.apache.hadoop.nfs.nfs3.response.READDIRPLUS3Response;
 import org.apache.hadoop.nfs.nfs3.response.READDIRPLUS3Response.EntryPlus3;
-import org.apache.hadoop.oncrpc.RpcInfo;
-import org.apache.hadoop.oncrpc.RpcMessage;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.SecurityHandler;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -119,10 +110,11 @@ public class TestReaddir {
     // Get inodeId of /tmp
     HdfsFileStatus status = nn.getRpcServer().getFileInfo(testdir);
     long dirId = status.getFileId();
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
 
     // Create related part of the XDR request
     XDR xdr_req = new XDR();
-    FileHandle handle = new FileHandle(dirId);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     handle.serialize(xdr_req);
     xdr_req.writeLongAsHyper(0); // cookie
     xdr_req.writeLongAsHyper(0); // verifier
@@ -139,7 +131,7 @@ public class TestReaddir {
 
     // Create related part of the XDR request
     xdr_req = new XDR();
-    handle = new FileHandle(dirId);
+    handle = new FileHandle(dirId, namenodeId);
     handle.serialize(xdr_req);
     xdr_req.writeLongAsHyper(f2Id); // cookie
     xdr_req.writeLongAsHyper(0); // verifier
@@ -167,10 +159,11 @@ public class TestReaddir {
     // Get inodeId of /tmp
     HdfsFileStatus status = nn.getRpcServer().getFileInfo(testdir);
     long dirId = status.getFileId();
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
     
     // Create related part of the XDR request
     XDR xdr_req = new XDR();
-    FileHandle handle = new FileHandle(dirId);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     handle.serialize(xdr_req);
     xdr_req.writeLongAsHyper(0); // cookie
     xdr_req.writeLongAsHyper(0); // verifier
@@ -189,7 +182,7 @@ public class TestReaddir {
 
     // Create related part of the XDR request
     xdr_req = new XDR();
-    handle = new FileHandle(dirId);
+    handle = new FileHandle(dirId, namenodeId);
     handle.serialize(xdr_req);
     xdr_req.writeLongAsHyper(f2Id); // cookie
     xdr_req.writeLongAsHyper(0); // verifier

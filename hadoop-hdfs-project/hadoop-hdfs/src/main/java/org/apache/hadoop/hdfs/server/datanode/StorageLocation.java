@@ -64,19 +64,23 @@ public class StorageLocation
     this.storageType = storageType;
     if (uri.getScheme() == null || uri.getScheme().equals("file")) {
       // make sure all URIs that point to a file have the same scheme
-      try {
-        File uriFile = new File(uri.getPath());
-        String uriStr = uriFile.toURI().normalize().toString();
-        if (uriStr.endsWith("/")) {
-          uriStr = uriStr.substring(0, uriStr.length() - 1);
-        }
-        uri = new URI(uriStr);
-      } catch (URISyntaxException e) {
-        throw new IllegalArgumentException(
-            "URI: " + uri + " is not in the expected format");
-      }
+      uri = normalizeFileURI(uri);
     }
     baseURI = uri;
+  }
+
+  public static URI normalizeFileURI(URI uri) {
+    try {
+      File uriFile = new File(uri.getPath());
+      String uriStr = uriFile.toURI().normalize().toString();
+      if (uriStr.endsWith("/")) {
+        uriStr = uriStr.substring(0, uriStr.length() - 1);
+      }
+      return new URI(uriStr);
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(
+              "URI: " + uri + " is not in the expected format");
+    }
   }
 
   public StorageType getStorageType() {
@@ -98,6 +102,16 @@ public class StorageLocation
 
   public boolean matchesStorageDirectory(StorageDirectory sd,
       String bpid) throws IOException {
+    if (sd.getStorageLocation().getStorageType() == StorageType.PROVIDED &&
+        storageType == StorageType.PROVIDED) {
+      return matchesStorageDirectory(sd);
+    }
+    if (sd.getStorageLocation().getStorageType() == StorageType.PROVIDED ||
+        storageType == StorageType.PROVIDED) {
+      // only one PROVIDED storage directory can exist; so this cannot match!
+      return false;
+    }
+    // both storage directories are local
     return this.getBpURI(bpid, Storage.STORAGE_DIR_CURRENT).normalize()
         .equals(sd.getRoot().toURI().normalize());
   }
@@ -197,6 +211,12 @@ public class StorageLocation
     if (conf == null) {
       conf = new HdfsConfiguration();
     }
+    if (storageType == StorageType.PROVIDED) {
+      // skip creation if the storage type is PROVIDED
+      Storage.LOG.info("Skipping creating directory for block pool "
+          + blockPoolID + " for PROVIDED storage location " + this);
+      return;
+    }
 
     LocalFileSystem localFS = FileSystem.getLocal(conf);
     FsPermission permission = new FsPermission(conf.get(
@@ -213,10 +233,14 @@ public class StorageLocation
 
   @Override  // Checkable
   public VolumeCheckResult check(CheckContext context) throws IOException {
-    DiskChecker.checkDir(
-        context.localFileSystem,
-        new Path(baseURI),
-        context.expectedPermission);
+    // assume provided storage locations are always healthy,
+    // and check only for local storages.
+    if (storageType != StorageType.PROVIDED) {
+      DiskChecker.checkDir(
+          context.localFileSystem,
+          new Path(baseURI),
+          context.expectedPermission);
+    }
     return VolumeCheckResult.HEALTHY;
   }
 

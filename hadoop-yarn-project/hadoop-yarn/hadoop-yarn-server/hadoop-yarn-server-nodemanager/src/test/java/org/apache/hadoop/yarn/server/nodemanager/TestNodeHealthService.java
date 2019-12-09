@@ -22,9 +22,11 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileUtil;
@@ -45,8 +47,8 @@ import static org.mockito.Mockito.spy;
 
 public class TestNodeHealthService {
 
-  private static volatile Log LOG = LogFactory
-      .getLog(TestNodeHealthService.class);
+  private static volatile Logger LOG =
+       LoggerFactory.getLogger(TestNodeHealthService.class);
 
   protected static File testRootDir = new File("target",
       TestNodeHealthService.class.getName() + "-localDir").getAbsoluteFile();
@@ -163,10 +165,13 @@ public class TestNodeHealthService {
     LOG.info("Checking Healthy--->timeout");
     Assert.assertFalse("Node health status reported healthy even after timeout",
         healthStatus.getIsNodeHealthy());
-    Assert.assertTrue("Node script time out message not propogated",
+    Assert.assertTrue("Node script time out message not propagated",
         healthStatus.getHealthReport().equals(
-            NodeHealthScriptRunner.NODE_HEALTH_SCRIPT_TIMED_OUT_MSG
-            + NodeHealthCheckerService.SEPARATOR
-            + nodeHealthChecker.getDiskHandler().getDisksHealthReport(false)));
+            Joiner.on(NodeHealthCheckerService.SEPARATOR).skipNulls().join(
+                NodeHealthScriptRunner.NODE_HEALTH_SCRIPT_TIMED_OUT_MSG,
+                Strings.emptyToNull(
+                    nodeHealthChecker.getDiskHandler()
+                        .getDisksHealthReport(false))
+            )));
   }
 }

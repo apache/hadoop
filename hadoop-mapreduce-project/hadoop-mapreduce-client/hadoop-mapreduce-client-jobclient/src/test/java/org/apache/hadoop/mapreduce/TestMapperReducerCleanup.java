@@ -329,6 +329,10 @@ public class TestMapperReducerCleanup {
     Assert.assertTrue(reduceCleanup);
     Assert.assertTrue(recordReaderCleanup);
     Assert.assertTrue(recordWriterCleanup);
+
+    Assert.assertNotNull(job.getCluster());
+    job.close();
+    Assert.assertNull(job.getCluster());
   }
 
 }

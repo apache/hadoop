@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.conf;
 
-import org.apache.commons.logging.*;
-
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.Collection;
 import java.util.Enumeration;
@@ -33,6 +31,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A servlet for changing a node's configuration.
@@ -45,8 +45,8 @@ public class ReconfigurationServlet extends HttpServlet {
   
   private static final long serialVersionUID = 1L;
 
-  private static final Log LOG =
-    LogFactory.getLog(ReconfigurationServlet.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ReconfigurationServlet.class);
 
   // the prefix used to fing the attribute holding the reconfigurable 
   // for a given request
@@ -72,10 +72,10 @@ public class ReconfigurationServlet extends HttpServlet {
   private void printHeader(PrintWriter out, String nodeName) {
     out.print("<html><head>");
     out.printf("<title>%s Reconfiguration Utility</title>%n",
-               StringEscapeUtils.escapeHtml(nodeName));
+               StringEscapeUtils.escapeHtml4(nodeName));
     out.print("</head><body>\n");
     out.printf("<h1>%s Reconfiguration Utility</h1>%n",
-               StringEscapeUtils.escapeHtml(nodeName));
+               StringEscapeUtils.escapeHtml4(nodeName));
   }
 
   private void printFooter(PrintWriter out) {
@@ -103,20 +103,20 @@ public class ReconfigurationServlet extends HttpServlet {
       out.print("<tr><td>");
       if (!reconf.isPropertyReconfigurable(c.prop)) {
         out.print("<font color=\"red\">" + 
-                  StringEscapeUtils.escapeHtml(c.prop) + "</font>");
+                  StringEscapeUtils.escapeHtml4(c.prop) + "</font>");
         changeOK = false;
       } else {
-        out.print(StringEscapeUtils.escapeHtml(c.prop));
+        out.print(StringEscapeUtils.escapeHtml4(c.prop));
         out.print("<input type=\"hidden\" name=\"" +
-                  StringEscapeUtils.escapeHtml(c.prop) + "\" value=\"" +
-                  StringEscapeUtils.escapeHtml(c.newVal) + "\"/>");
+                  StringEscapeUtils.escapeHtml4(c.prop) + "\" value=\"" +
+                  StringEscapeUtils.escapeHtml4(c.newVal) + "\"/>");
       }
       out.print("</td><td>" +
                 (c.oldVal == null ? "<it>default</it>" : 
-                 StringEscapeUtils.escapeHtml(c.oldVal)) +
+                 StringEscapeUtils.escapeHtml4(c.oldVal)) +
                 "</td><td>" +
                 (c.newVal == null ? "<it>default</it>" : 
-                 StringEscapeUtils.escapeHtml(c.newVal)) +
+                 StringEscapeUtils.escapeHtml4(c.newVal)) +
                 "</td>");
       out.print("</tr>\n");
     }
@@ -147,9 +147,9 @@ public class ReconfigurationServlet extends HttpServlet {
     synchronized(oldConf) {
       while (params.hasMoreElements()) {
         String rawParam = params.nextElement();
-        String param = StringEscapeUtils.unescapeHtml(rawParam);
+        String param = StringEscapeUtils.unescapeHtml4(rawParam);
         String value =
-          StringEscapeUtils.unescapeHtml(req.getParameter(rawParam));
+          StringEscapeUtils.unescapeHtml4(req.getParameter(rawParam));
         if (value != null) {
           if (value.equals(newConf.getRaw(param)) || value.equals("default") ||
               value.equals("null") || value.isEmpty()) {
@@ -157,8 +157,8 @@ public class ReconfigurationServlet extends HttpServlet {
                  value.isEmpty()) && 
                 oldConf.getRaw(param) != null) {
               out.println("<p>Changed \"" + 
-                          StringEscapeUtils.escapeHtml(param) + "\" from \"" +
-                          StringEscapeUtils.escapeHtml(oldConf.getRaw(param)) +
+                          StringEscapeUtils.escapeHtml4(param) + "\" from \"" +
+                          StringEscapeUtils.escapeHtml4(oldConf.getRaw(param)) +
                           "\" to default</p>");
               reconf.reconfigureProperty(param, null);
             } else if (!value.equals("default") && !value.equals("null") &&
@@ -168,16 +168,16 @@ public class ReconfigurationServlet extends HttpServlet {
               // change from default or value to different value
               if (oldConf.getRaw(param) == null) {
                 out.println("<p>Changed \"" + 
-                            StringEscapeUtils.escapeHtml(param) + 
+                            StringEscapeUtils.escapeHtml4(param) +
                             "\" from default to \"" +
-                            StringEscapeUtils.escapeHtml(value) + "\"</p>");
+                            StringEscapeUtils.escapeHtml4(value) + "\"</p>");
               } else {
                 out.println("<p>Changed \"" + 
-                            StringEscapeUtils.escapeHtml(param) + "\" from \"" +
-                            StringEscapeUtils.escapeHtml(oldConf.
+                            StringEscapeUtils.escapeHtml4(param) + "\" from \"" +
+                            StringEscapeUtils.escapeHtml4(oldConf.
                                                          getRaw(param)) +
                             "\" to \"" +
-                            StringEscapeUtils.escapeHtml(value) + "\"</p>");
+                            StringEscapeUtils.escapeHtml4(value) + "\"</p>");
               }
               reconf.reconfigureProperty(param, value);
             } else {
@@ -185,10 +185,10 @@ public class ReconfigurationServlet extends HttpServlet {
             }
           } else {
             // parameter value != newConf value
-            out.println("<p>\"" + StringEscapeUtils.escapeHtml(param) + 
+            out.println("<p>\"" + StringEscapeUtils.escapeHtml4(param) +
                         "\" not changed because value has changed from \"" +
-                        StringEscapeUtils.escapeHtml(value) + "\" to \"" +
-                        StringEscapeUtils.escapeHtml(newConf.getRaw(param)) +
+                        StringEscapeUtils.escapeHtml4(value) + "\" to \"" +
+                        StringEscapeUtils.escapeHtml4(newConf.getRaw(param)) +
                         "\" since approval</p>");
           }
         }

@@ -31,7 +31,7 @@ public class ServerException extends XException {
    * Error codes use by the {@link Server} class.
    */
   @InterfaceAudience.Private
-  public static enum ERROR implements XException.ERROR {
+  public enum ERROR implements XException.ERROR {
     S01("Dir [{0}] does not exist"),
     S02("[{0}] is not a directory"),
     S03("Could not load file from classpath [{0}], {1}"),

@@ -34,8 +34,6 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.Parser;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -61,6 +59,8 @@ import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The main entry point and job submitter. It may either be used as a command
@@ -70,7 +70,7 @@ import org.apache.hadoop.util.Tool;
 @InterfaceStability.Stable
 public class Submitter extends Configured implements Tool {
 
-  protected static final Log LOG = LogFactory.getLog(Submitter.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(Submitter.class);
   public static final String PRESERVE_COMMANDFILE = 
     "mapreduce.pipes.commandfile.preserve";
   public static final String EXECUTABLE = "mapreduce.pipes.executable";

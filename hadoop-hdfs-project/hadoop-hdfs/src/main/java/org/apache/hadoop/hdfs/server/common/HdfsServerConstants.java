@@ -24,8 +24,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
@@ -43,13 +43,6 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 public interface HdfsServerConstants {
   int MIN_BLOCKS_FOR_WRITE = 1;
-
-  /**
-   * Please see {@link HdfsConstants#LEASE_SOFTLIMIT_PERIOD} and
-   * {@link HdfsConstants#LEASE_HARDLIMIT_PERIOD} for more information.
-   */
-  long LEASE_SOFTLIMIT_PERIOD = HdfsConstants.LEASE_SOFTLIMIT_PERIOD;
-  long LEASE_HARDLIMIT_PERIOD = HdfsConstants.LEASE_HARDLIMIT_PERIOD;
 
   long LEASE_RECOVER_PERIOD = 10 * 1000; // in ms
   // We need to limit the length and depth of a path in the filesystem.
@@ -156,6 +149,7 @@ public interface HdfsServerConstants {
     RECOVER  ("-recover"),
     FORCE("-force"),
     NONINTERACTIVE("-nonInteractive"),
+    SKIPSHAREDEDITSCHECK("-skipSharedEditsCheck"),
     RENAMERESERVED("-renameReserved"),
     METADATAVERSION("-metadataVersion"),
     UPGRADEONLY("-upgradeOnly"),
@@ -163,7 +157,9 @@ public interface HdfsServerConstants {
     // only used for StorageDirectory.analyzeStorage() in hot swap drive scenario.
     // TODO refactor StorageDirectory.analyzeStorage() so that we can do away with
     // this in StartupOption.
-    HOTSWAP("-hotswap");
+    HOTSWAP("-hotswap"),
+    // Startup the namenode in observer mode.
+    OBSERVER("-observer");
 
     private static final Pattern ENUM_WITH_ROLLING_UPGRADE_OPTION = Pattern.compile(
         "(\\w+)\\((\\w+)\\)");
@@ -370,6 +366,10 @@ public interface HdfsServerConstants {
       "security.hdfs.unreadable.by.superuser";
   String XATTR_ERASURECODING_POLICY =
       "system.hdfs.erasurecoding.policy";
+
+  String XATTR_SATISFY_STORAGE_POLICY = "user.hdfs.sps";
+
+  Path MOVER_ID_PATH = new Path("/system/mover.id");
 
   long BLOCK_GROUP_INDEX_MASK = 15;
   byte MAX_BLOCKS_IN_GROUP = 16;

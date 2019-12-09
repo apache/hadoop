@@ -20,21 +20,20 @@ package org.apache.hadoop.mapred.nativetask.serde;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.nativetask.Constants;
 import org.apache.hadoop.mapred.nativetask.buffer.DataInputStream;
 import org.apache.hadoop.mapred.nativetask.buffer.DataOutputStream;
 import org.apache.hadoop.mapred.nativetask.util.SizedWritable;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 @InterfaceAudience.Private
 public class KVSerializer<K, V> implements IKVSerializer {
 
-  private static final Log LOG = LogFactory.getLog(KVSerializer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(KVSerializer.class);
   
   public static final int KV_HEAD_LENGTH = Constants.SIZEOF_KV_LENGTH;
 

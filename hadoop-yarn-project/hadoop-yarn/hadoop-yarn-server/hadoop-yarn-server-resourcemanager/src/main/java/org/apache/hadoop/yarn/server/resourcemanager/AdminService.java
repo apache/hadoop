@@ -23,12 +23,15 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -49,6 +52,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.conf.HAUtil;
@@ -58,6 +62,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.security.ConfiguredYarnAuthorizer;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
@@ -65,6 +70,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsR
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
@@ -92,6 +100,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSyst
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -102,7 +112,6 @@ public class AdminService extends CompositeService implements
 
   private static final Log LOG = LogFactory.getLog(AdminService.class);
 
-  private final RMContext rmContext;
   private final ResourceManager rm;
   private String rmId;
 
@@ -123,16 +132,16 @@ public class AdminService extends CompositeService implements
   @VisibleForTesting
   boolean isCentralizedNodeLabelConfiguration = true;
 
-  public AdminService(ResourceManager rm, RMContext rmContext) {
+  public AdminService(ResourceManager rm) {
     super(AdminService.class.getName());
     this.rm = rm;
-    this.rmContext = rmContext;
   }
 
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     autoFailoverEnabled =
-        rmContext.isHAEnabled() && HAUtil.isAutomaticFailoverEnabled(conf);
+        rm.getRMContext().isHAEnabled()
+            && HAUtil.isAutomaticFailoverEnabled(conf);
 
     masterServiceBindAddress = conf.getSocketAddr(
         YarnConfiguration.RM_BIND_HOST,
@@ -189,7 +198,7 @@ public class AdminService extends CompositeService implements
           RMPolicyProvider.getInstance());
     }
 
-    if (rmContext.isHAEnabled()) {
+    if (rm.getRMContext().isHAEnabled()) {
       RPC.setProtocolEngine(conf, HAServiceProtocolPB.class,
           ProtobufRpcEngine.class);
 
@@ -265,7 +274,7 @@ public class AdminService extends CompositeService implements
   }
 
   private synchronized boolean isRMActive() {
-    return HAServiceState.ACTIVE == rmContext.getHAServiceState();
+    return HAServiceState.ACTIVE == rm.getRMContext().getHAServiceState();
   }
 
   private void throwStandbyException() throws StandbyException {
@@ -286,6 +295,9 @@ public class AdminService extends CompositeService implements
   @Override
   public synchronized void transitionToActive(
       HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
+    if (isRMActive()) {
+      return;
+    }
     // call refreshAdminAcls before HA state transition
     // for the case that adminAcls have been updated in previous active RM
     try {
@@ -301,13 +313,12 @@ public class AdminService extends CompositeService implements
       // call all refresh*s for active RM to get the updated configurations.
       refreshAll();
     } catch (Exception e) {
-      LOG.error("RefreshAll failed so firing fatal event", e);
-      rmContext
+      rm.getRMContext()
           .getDispatcher()
           .getEventHandler()
           .handle(
               new RMFatalEvent(RMFatalEventType.TRANSITION_TO_ACTIVE_FAILED,
-                  e));
+                  e, "failure to refresh configuration settings"));
       throw new ServiceFailedException(
           "Error on refreshAll during transition to Active", e);
     }
@@ -351,6 +362,13 @@ public class AdminService extends CompositeService implements
     }
   }
 
+  @Override
+  public synchronized void transitionToObserver(
+      StateChangeRequestInfo reqInfo) throws IOException {
+    // Should NOT get here, as RMHAServiceTarget doesn't support observer.
+    throw new ServiceFailedException("Does not support transition to Observer");
+  }
+
   /**
    * Return the HA status of this RM. This includes the current state and
    * whether the RM is ready to become active.
@@ -361,7 +379,7 @@ public class AdminService extends CompositeService implements
   @Override
   public synchronized HAServiceStatus getServiceStatus() throws IOException {
     checkAccess("getServiceState");
-    HAServiceState haState = rmContext.getHAServiceState();
+    HAServiceState haState = rm.getRMContext().getHAServiceState();
     HAServiceStatus ret = new HAServiceStatus(haState);
     if (isRMActive() || haState == HAServiceProtocol.HAServiceState.STANDBY) {
       ret.setReadyToBecomeActive();
@@ -383,6 +401,10 @@ public class AdminService extends CompositeService implements
     RefreshQueuesResponse response =
         recordFactory.newRecordInstance(RefreshQueuesResponse.class);
     try {
+      if (isSchedulerMutable()) {
+        throw new IOException("Scheduler configuration is mutable. " +
+            operation + " is not allowed in this scenario.");
+      }
       refreshQueues();
       RMAuditLogger.logSuccess(user.getShortUserName(), operation,
           "AdminService");
@@ -392,13 +414,39 @@ public class AdminService extends CompositeService implements
     }
   }
 
-  private void refreshQueues() throws IOException, YarnException {
-    rmContext.getScheduler().reinitialize(getConfig(), this.rmContext);
+  protected Configuration loadNewConfiguration()
+      throws IOException, YarnException {
+    // Retrieve yarn-site.xml in order to refresh scheduling monitor properties.
+    Configuration conf = getConfiguration(new Configuration(false),
+        YarnConfiguration.YARN_SITE_CONFIGURATION_FILE,
+        YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
+    // The reason we call Configuration#size() is because when getConfiguration
+    // been called, it invokes Configuration#addResouce, which invokes
+    // Configuration#reloadConfiguration which triggers the reload process in a
+    // lazy way, the properties will only be reload when it's needed rather than
+    // reload it right after getConfiguration been called. So here we call
+    // Configuration#size() to force the Configuration#getProps been called to
+    // reload all the properties.
+    conf.size();
+    return conf;
+  }
+
+  @Private
+  public void refreshQueues() throws IOException, YarnException {
+    Configuration conf = loadNewConfiguration();
+    rm.getRMContext().getScheduler().reinitialize(conf,
+        this.rm.getRMContext());
     // refresh the reservation system
-    ReservationSystem rSystem = rmContext.getReservationSystem();
+    ReservationSystem rSystem = rm.getRMContext().getReservationSystem();
     if (rSystem != null) {
-      rSystem.reinitialize(getConfig(), rmContext);
+      rSystem.reinitialize(conf, rm.getRMContext());
     }
+  }
+
+  private boolean isSchedulerMutable() {
+    ResourceScheduler scheduler = rm.getRMContext().getScheduler();
+    return (scheduler instanceof MutableConfScheduler
+        && ((MutableConfScheduler) scheduler).isConfigurationMutable());
   }
 
   @Override
@@ -416,14 +464,14 @@ public class AdminService extends CompositeService implements
               YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
       switch (request.getDecommissionType()) {
       case NORMAL:
-        rmContext.getNodesListManager().refreshNodes(conf);
+        rm.getRMContext().getNodesListManager().refreshNodes(conf);
         break;
       case GRACEFUL:
-        rmContext.getNodesListManager().refreshNodesGracefully(
+        rm.getRMContext().getNodesListManager().refreshNodesGracefully(
             conf, request.getDecommissionTimeout());
         break;
       case FORCEFUL:
-        rmContext.getNodesListManager().refreshNodesForcefully();
+        rm.getRMContext().getNodesListManager().refreshNodesForcefully();
         break;
       }
       RMAuditLogger.logSuccess(user.getShortUserName(), operation,
@@ -438,7 +486,7 @@ public class AdminService extends CompositeService implements
     Configuration conf =
         getConfiguration(new Configuration(false),
             YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
-    rmContext.getNodesListManager().refreshNodes(conf);
+    rm.getRMContext().getNodesListManager().refreshNodes(conf);
   }
 
   @Override
@@ -536,6 +584,7 @@ public class AdminService extends CompositeService implements
     checkRMStatus(user.getShortUserName(), operation, "refresh Service ACLs.");
 
     refreshServiceAcls();
+    refreshActiveServicesAcls();
     RMAuditLogger.logSuccess(user.getShortUserName(), operation,
             "AdminService");
 
@@ -549,10 +598,18 @@ public class AdminService extends CompositeService implements
             YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE);
 
     refreshServiceAcls(conf, policyProvider);
-    rmContext.getClientRMService().refreshServiceAcls(conf, policyProvider);
-    rmContext.getApplicationMasterService().refreshServiceAcls(
+  }
+
+  private void refreshActiveServicesAcls() throws IOException, YarnException  {
+    PolicyProvider policyProvider = RMPolicyProvider.getInstance();
+    Configuration conf =
+        getConfiguration(new Configuration(false),
+            YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE);
+    rm.getRMContext().getClientRMService().refreshServiceAcls(conf,
+        policyProvider);
+    rm.getRMContext().getApplicationMasterService().refreshServiceAcls(
         conf, policyProvider);
-    rmContext.getResourceTrackerService().refreshServiceAcls(
+    rm.getRMContext().getResourceTrackerService().refreshServiceAcls(
         conf, policyProvider);
   }
 
@@ -564,6 +621,15 @@ public class AdminService extends CompositeService implements
 
   @Override
   public String[] getGroupsForUser(String user) throws IOException {
+    String operation = "getGroupsForUser";
+    UserGroupInformation ugi;
+    try {
+      ugi = checkAcls(operation);
+    } catch (YarnException e) {
+      // The interface is from hadoop-common which does not accept YarnException
+      throw new IOException(e);
+    }
+    checkRMStatus(ugi.getShortUserName(), operation, "get groups for user");
     return UserGroupInformation.createRemoteUser(user).getGroupNames();
   }
 
@@ -582,7 +648,7 @@ public class AdminService extends CompositeService implements
     // if any invalid nodes, throw exception instead of partially updating
     // valid nodes.
     for (NodeId nodeId : nodeIds) {
-      RMNode node = this.rmContext.getRMNodes().get(nodeId);
+      RMNode node = this.rm.getRMContext().getRMNodes().get(nodeId);
       if (node == null) {
         LOG.error("Resource update get failed on all nodes due to change "
             + "resource on an unrecognized node: " + nodeId);
@@ -600,14 +666,14 @@ public class AdminService extends CompositeService implements
     for (Map.Entry<NodeId, ResourceOption> entry : nodeResourceMap.entrySet()) {
       ResourceOption newResourceOption = entry.getValue();
       NodeId nodeId = entry.getKey();
-      RMNode node = this.rmContext.getRMNodes().get(nodeId);
+      RMNode node = this.rm.getRMContext().getRMNodes().get(nodeId);
 
       if (node == null) {
         LOG.warn("Resource update get failed on an unrecognized node: " + nodeId);
         allSuccess = false;
       } else {
         // update resource to RMNode
-        this.rmContext.getDispatcher().getEventHandler()
+        this.rm.getRMContext().getDispatcher().getEventHandler()
           .handle(new RMNodeResourceUpdateEvent(nodeId, newResourceOption));
         LOG.info("Update resource on node(" + node.getNodeID()
             + ") with resource(" + newResourceOption.toString() + ")");
@@ -642,7 +708,8 @@ public class AdminService extends CompositeService implements
       DynamicResourceConfiguration newConf;
 
       InputStream drInputStream =
-          this.rmContext.getConfigurationProvider().getConfigurationInputStream(
+          this.rm.getRMContext().getConfigurationProvider()
+              .getConfigurationInputStream(
               configuration, YarnConfiguration.DR_CONFIGURATION_FILE);
 
       if (drInputStream != null) {
@@ -660,7 +727,7 @@ public class AdminService extends CompositeService implements
         updateNodeResource(updateRequest);
       }
       // refresh dynamic resource in ResourceTrackerService
-      this.rmContext.getResourceTrackerService().
+      this.rm.getRMContext().getResourceTrackerService().
           updateDynamicResourceConfiguration(newConf);
       RMAuditLogger.logSuccess(user.getShortUserName(), operation,
               "AdminService");
@@ -673,7 +740,8 @@ public class AdminService extends CompositeService implements
   private synchronized Configuration getConfiguration(Configuration conf,
       String... confFileNames) throws YarnException, IOException {
     for (String confFileName : confFileNames) {
-      InputStream confFileInputStream = this.rmContext.getConfigurationProvider()
+      InputStream confFileInputStream =
+          this.rm.getRMContext().getConfigurationProvider()
           .getConfigurationInputStream(conf, confFileName);
       if (confFileInputStream != null) {
         conf.addResource(confFileInputStream);
@@ -689,6 +757,14 @@ public class AdminService extends CompositeService implements
   void refreshAll() throws ServiceFailedException {
     try {
       checkAcls("refreshAll");
+      if (isSchedulerMutable()) {
+        try {
+          ((MutableConfScheduler) rm.getRMContext().getScheduler())
+              .getMutableConfProvider().reloadConfigurationFromStore();
+        } catch (Exception e) {
+          throw new IOException("Failed to refresh configuration:", e);
+        }
+      }
       refreshQueues();
       refreshNodes();
       refreshSuperUserGroupsConfiguration();
@@ -700,7 +776,7 @@ public class AdminService extends CompositeService implements
       }
       refreshClusterMaxPriority();
     } catch (Exception ex) {
-      throw new ServiceFailedException(ex.getMessage());
+      throw new ServiceFailedException("RefreshAll operation failed", ex);
     }
   }
 
@@ -727,9 +803,10 @@ public class AdminService extends CompositeService implements
     AddToClusterNodeLabelsResponse response =
         recordFactory.newRecordInstance(AddToClusterNodeLabelsResponse.class);
     try {
-      rmContext.getNodeLabelManager().addToCluserNodeLabels(request.getNodeLabels());
-      RMAuditLogger
-          .logSuccess(user.getShortUserName(), operation, "AdminService");
+      rm.getRMContext().getNodeLabelManager()
+          .addToCluserNodeLabels(request.getNodeLabels());
+      RMAuditLogger.logSuccess(user.getShortUserName(), operation,
+          "AdminService");
       return response;
     } catch (IOException ioe) {
       throw logAndWrapException(ioe, user.getShortUserName(), operation, msg);
@@ -749,7 +826,8 @@ public class AdminService extends CompositeService implements
     RemoveFromClusterNodeLabelsResponse response =
         recordFactory.newRecordInstance(RemoveFromClusterNodeLabelsResponse.class);
     try {
-      rmContext.getNodeLabelManager().removeFromClusterNodeLabels(request.getNodeLabels());
+      rm.getRMContext().getNodeLabelManager()
+          .removeFromClusterNodeLabels(request.getNodeLabels());
       RMAuditLogger
           .logSuccess(user.getShortUserName(), operation, "AdminService");
       return response;
@@ -785,19 +863,20 @@ public class AdminService extends CompositeService implements
         boolean isKnown = false;
         // both active and inactive nodes are recognized as known nodes
         if (requestedNode.getPort() != 0) {
-          if (rmContext.getRMNodes().containsKey(requestedNode)
-              || rmContext.getInactiveRMNodes().containsKey(requestedNode)) {
+          if (rm.getRMContext().getRMNodes().containsKey(requestedNode) || rm
+              .getRMContext().getInactiveRMNodes().containsKey(requestedNode)) {
             isKnown = true;
           }
         } else {
-          for (NodeId knownNode : rmContext.getRMNodes().keySet()) {
+          for (NodeId knownNode : rm.getRMContext().getRMNodes().keySet()) {
             if (knownNode.getHost().equals(requestedNode.getHost())) {
               isKnown = true;
               break;
             }
           }
           if (!isKnown) {
-            for (NodeId knownNode : rmContext.getInactiveRMNodes().keySet()) {
+            for (NodeId knownNode : rm.getRMContext().getInactiveRMNodes()
+                .keySet()) {
               if (knownNode.getHost().equals(requestedNode.getHost())) {
                 isKnown = true;
                 break;
@@ -821,7 +900,7 @@ public class AdminService extends CompositeService implements
       }
     }
     try {
-      rmContext.getNodeLabelManager().replaceLabelsOnNode(
+      rm.getRMContext().getNodeLabelManager().replaceLabelsOnNode(
           request.getNodeToLabels());
       RMAuditLogger
           .logSuccess(user.getShortUserName(), operation, "AdminService");
@@ -858,7 +937,7 @@ public class AdminService extends CompositeService implements
 
     checkRMStatus(user.getShortUserName(), operation, msg);
 
-    Set<NodeId> decommissioningNodes = rmContext.getNodesListManager()
+    Set<NodeId> decommissioningNodes = rm.getRMContext().getNodesListManager()
         .checkForDecommissioningNodes();
     RMAuditLogger.logSuccess(user.getShortUserName(), operation,
             "AdminService");
@@ -894,6 +973,127 @@ public class AdminService extends CompositeService implements
         getConfiguration(new Configuration(false),
             YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
 
-    rmContext.getScheduler().setClusterMaxPriority(conf);
+    rm.getRMContext().getScheduler().setClusterMaxPriority(conf);
+  }
+
+  @Override
+  public NodesToAttributesMappingResponse mapAttributesToNodes(
+      NodesToAttributesMappingRequest request)
+      throws YarnException, IOException {
+
+    final String operation = "mapAttributesToNodes";
+    final String msg = "Map Attributes to Nodes";
+    UserGroupInformation user = checkAcls(operation);
+    checkRMStatus(user.getShortUserName(), operation, msg);
+
+
+    List<NodeToAttributes> nodesToAttributes = request.getNodesToAttributes();
+    boolean failOnUnknownNodes = request.getFailOnUnknownNodes();
+
+    NodeAttributesManager nodeAttributesManager =
+        rm.getRMContext().getNodeAttributesManager();
+    try {
+      Map<String, Set<NodeAttribute>> nodeAttributeMapping =
+          validateAndFetch(nodesToAttributes, failOnUnknownNodes);
+      switch (request.getOperation()) {
+      case ADD:
+        nodeAttributesManager.addNodeAttributes(nodeAttributeMapping);
+        break;
+      case REMOVE:
+        validateAttributesExists(nodesToAttributes);
+        nodeAttributesManager.removeNodeAttributes(nodeAttributeMapping);
+        break;
+      case REPLACE:
+        nodeAttributesManager.replaceNodeAttributes(
+            NodeAttribute.PREFIX_CENTRALIZED, nodeAttributeMapping);
+        break;
+      default:
+        throw new IOException("Invalid operation " + request.getOperation()
+            + " specified in the mapAttributesToNodes request ");
+
+      }
+    } catch (IOException ioe) {
+      throw logAndWrapException(ioe, user.getShortUserName(), operation, msg);
+    }
+    RMAuditLogger.logSuccess(user.getShortUserName(), operation,
+        "AdminService");
+    return recordFactory
+        .newRecordInstance(NodesToAttributesMappingResponse.class);
+  }
+
+  private void validateAttributesExists(
+      List<NodeToAttributes> nodesToAttributes) throws IOException {
+    NodeAttributesManager nodeAttributesManager =
+        rm.getRMContext().getNodeAttributesManager();
+    for (NodeToAttributes nodeToAttrs : nodesToAttributes) {
+      String hostname = nodeToAttrs.getNode();
+      if (hostname == null) {
+        continue;
+      }
+      Set<NodeAttribute> attrs =
+          nodeAttributesManager.getAttributesForNode(hostname).keySet();
+      List<NodeAttribute> attributes = nodeToAttrs.getNodeAttributes();
+      for (NodeAttribute nodeAttr : attributes) {
+        if (!attrs.contains(nodeAttr)) {
+          throw new IOException("Node attribute [" + nodeAttr.getAttributeKey()
+              + "] doesn't exist on node " + nodeToAttrs.getNode());
+        }
+      }
+    }
+  }
+
+  /**
+   * @param nodesToAttributesMapping input to be validated
+   * @param failOnUnknownNodes indicates to fail if the nodes are not available.
+   * @return the map of Node host name to set of NodeAttributes
+   * @throws IOException if validation fails for node existence or the attribute
+   *           has a wrong prefix
+   */
+  private Map<String, Set<NodeAttribute>> validateAndFetch(
+      List<NodeToAttributes> nodesToAttributesMapping,
+      boolean failOnUnknownNodes) throws IOException {
+    Map<String, Set<NodeAttribute>> attributeMapping = new HashMap<>();
+    List<String> invalidNodes = new ArrayList<>();
+    for (NodeToAttributes nodeToAttributes : nodesToAttributesMapping) {
+      String node = nodeToAttributes.getNode();
+      if (!validateForInvalidNode(node, failOnUnknownNodes)) {
+        invalidNodes.add(node);
+        continue;
+      }
+      List<NodeAttribute> nodeAttributes = nodeToAttributes.getNodeAttributes();
+      if (!nodeAttributes.stream()
+          .allMatch(nodeAttribute -> NodeAttribute.PREFIX_CENTRALIZED
+              .equals(nodeAttribute.getAttributeKey().getAttributePrefix()))) {
+        throw new IOException("Invalid Attribute Mapping for the node " + node
+            + ". Prefix should be " + NodeAttribute.PREFIX_CENTRALIZED);
+      }
+      attributeMapping.put(node, new HashSet<>(nodeAttributes));
+    }
+    if (!invalidNodes.isEmpty()) {
+      String message = " Following nodes does not exist : " + invalidNodes;
+      LOG.error(message);
+      throw new IOException(message);
+    }
+    return attributeMapping;
+  }
+
+  /**
+   * @param node
+   * @return true if valid else false;
+   */
+  private boolean validateForInvalidNode(String node,
+      boolean failOnUnknownNodes) {
+    if (!failOnUnknownNodes) {
+      return true;
+    }
+    // both active and inactive nodes are recognized as known nodes
+    boolean isKnown = rm.getRMContext().getRMNodes().keySet().stream()
+        .anyMatch(activeNode -> activeNode.getHost().equals(node));
+
+    if (!isKnown) {
+      isKnown = rm.getRMContext().getInactiveRMNodes().keySet().stream()
+          .anyMatch(inactiveNode -> inactiveNode.getHost().equals(node));
+    }
+    return isKnown;
   }
 }

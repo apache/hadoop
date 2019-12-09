@@ -21,27 +21,26 @@ package org.apache.hadoop.hdfs.server.namenode;
   import static org.junit.Assert.assertTrue;
   import static org.junit.Assert.fail;
 
-  import org.apache.commons.logging.Log;
-  import org.apache.commons.logging.LogFactory;
-  import org.apache.hadoop.conf.Configuration;
-  import org.apache.hadoop.fs.ContentSummary;
-  import org.apache.hadoop.fs.Path;
-  import org.apache.hadoop.fs.StorageType;
-  import org.apache.hadoop.hdfs.DFSConfigKeys;
-  import org.apache.hadoop.hdfs.DFSTestUtil;
-  import org.apache.hadoop.hdfs.DistributedFileSystem;
-  import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
-  import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
-  import org.junit.Before;
-  import org.junit.Test;
+import org.junit.Before;
+import org.junit.Test;
 
-  import java.io.IOException;
+import java.io.IOException;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -59,7 +58,8 @@ public class TestQuotaByStorageType {
   private DistributedFileSystem dfs;
   private FSNamesystem fsn;
 
-  protected static final Log LOG = LogFactory.getLog(TestQuotaByStorageType.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(TestQuotaByStorageType.class);
 
   @Before
   public void setUp() throws Exception {
@@ -804,8 +804,7 @@ public class TestQuotaByStorageType {
    */
   @Test
   public void testStorageSpaceQuotaWithWarmPolicy() throws IOException {
-    final Path testDir = new Path(
-        PathUtils.getTestPath(getClass()),
+    final Path testDir = new Path(dir,
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(testDir));
 
@@ -864,9 +863,7 @@ public class TestQuotaByStorageType {
    */
   @Test(timeout = 30000)
   public void testStorageSpaceQuotaWithRepFactor() throws IOException {
-
-    final Path testDir = new Path(
-        PathUtils.getTestPath(getClass()),
+    final Path testDir = new Path(dir,
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(testDir));
 
@@ -911,8 +908,7 @@ public class TestQuotaByStorageType {
    */
   @Test(timeout = 30000)
   public void testStorageSpaceQuotaPerQuotaClear() throws IOException {
-    final Path testDir = new Path(
-        PathUtils.getTestPath(getClass()),
+    final Path testDir = new Path(dir,
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(testDir));
 

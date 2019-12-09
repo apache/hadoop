@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.tools.mapred;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
@@ -32,7 +32,7 @@ import org.junit.Assert;
 import java.io.IOException;
 
 public class TestCopyOutputFormat {
-  private static final Log LOG = LogFactory.getLog(TestCopyOutputFormat.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCopyOutputFormat.class);
 
   @Test
   public void testSetCommitDirectory() {

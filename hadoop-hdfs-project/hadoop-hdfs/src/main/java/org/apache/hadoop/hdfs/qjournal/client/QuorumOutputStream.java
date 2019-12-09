@@ -33,22 +33,21 @@ class QuorumOutputStream extends EditLogOutputStream {
   private EditsDoubleBuffer buf;
   private final long segmentTxId;
   private final int writeTimeoutMs;
-  private final boolean updateCommittedTxId;
 
   public QuorumOutputStream(AsyncLoggerSet loggers,
       long txId, int outputBufferCapacity,
-      int writeTimeoutMs, boolean updateCommittedTxId) throws IOException {
+      int writeTimeoutMs, int logVersion) throws IOException {
     super();
     this.buf = new EditsDoubleBuffer(outputBufferCapacity);
     this.loggers = loggers;
     this.segmentTxId = txId;
     this.writeTimeoutMs = writeTimeoutMs;
-    this.updateCommittedTxId = updateCommittedTxId;
+    setCurrentLogVersion(logVersion);
   }
 
   @Override
   public void write(FSEditLogOp op) throws IOException {
-    buf.writeOp(op);
+    buf.writeOp(op, getCurrentLogVersion());
   }
 
   @Override
@@ -82,6 +81,11 @@ class QuorumOutputStream extends EditLogOutputStream {
   }
 
   @Override
+  public boolean shouldForceSync() {
+    return buf.shouldForceSync();
+  }
+
+  @Override
   protected void flushAndSync(boolean durable) throws IOException {
     int numReadyBytes = buf.countReadyBytes();
     if (numReadyBytes > 0) {
@@ -112,15 +116,6 @@ class QuorumOutputStream extends EditLogOutputStream {
       // RPCs will thus let the loggers know of the most recent transaction, even
       // if a logger has fallen behind.
       loggers.setCommittedTxId(firstTxToFlush + numReadyTxns - 1);
-
-      // If we don't have this dummy send, committed TxId might be one-batch
-      // stale on the Journal Nodes
-      if (updateCommittedTxId) {
-        QuorumCall<AsyncLogger, Void> fakeCall = loggers.sendEdits(
-            segmentTxId, firstTxToFlush,
-            0, new byte[0]);
-        loggers.waitForWriteQuorum(fakeCall, writeTimeoutMs, "sendEdits");
-      }
     }
   }
 

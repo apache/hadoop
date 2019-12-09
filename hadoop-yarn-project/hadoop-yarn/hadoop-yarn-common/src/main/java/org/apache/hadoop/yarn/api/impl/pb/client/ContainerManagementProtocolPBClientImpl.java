@@ -28,6 +28,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
@@ -45,10 +47,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.CommitResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ContainerUpdateRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ContainerUpdateResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetContainerStatusesRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetContainerStatusesResponsePBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.IncreaseContainersResourceRequestPBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.IncreaseContainersResourceResponsePBImpl;
 
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReInitializeContainerRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReInitializeContainerResponsePBImpl;
@@ -56,8 +58,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ResourceLocalizationRe
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ResourceLocalizationResponsePBImpl;
 
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RestartContainerResponsePBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb
-    .RollbackResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RollbackResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.SignalContainerRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.SignalContainerResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainersRequestPBImpl;
@@ -71,8 +72,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.ContainerUpdateRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusesRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.IncreaseContainersResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ResourceLocalizationRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SignalContainerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainersRequestProto;
@@ -161,14 +162,35 @@ public class ContainerManagementProtocolPBClientImpl implements ContainerManagem
   }
 
   @Override
+  @Deprecated
   public IncreaseContainersResourceResponse increaseContainersResource(
       IncreaseContainersResourceRequest request) throws YarnException,
       IOException {
-    IncreaseContainersResourceRequestProto requestProto =
-        ((IncreaseContainersResourceRequestPBImpl)request).getProto();
     try {
-      return new IncreaseContainersResourceResponsePBImpl(
-          proxy.increaseContainersResource(null, requestProto));
+      ContainerUpdateRequest req =
+          ContainerUpdateRequest.newInstance(request.getContainersToIncrease());
+      ContainerUpdateRequestProto reqProto =
+          ((ContainerUpdateRequestPBImpl) req).getProto();
+      ContainerUpdateResponse resp = new ContainerUpdateResponsePBImpl(
+          proxy.updateContainer(null, reqProto));
+      return IncreaseContainersResourceResponse
+          .newInstance(resp.getSuccessfullyUpdatedContainers(),
+              resp.getFailedRequests());
+
+    } catch (ServiceException e) {
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
+    }
+  }
+
+  @Override
+  public ContainerUpdateResponse updateContainer(ContainerUpdateRequest
+      request) throws YarnException, IOException {
+    ContainerUpdateRequestProto requestProto =
+        ((ContainerUpdateRequestPBImpl)request).getProto();
+    try {
+      return new ContainerUpdateResponsePBImpl(
+          proxy.updateContainer(null, requestProto));
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
       return null;

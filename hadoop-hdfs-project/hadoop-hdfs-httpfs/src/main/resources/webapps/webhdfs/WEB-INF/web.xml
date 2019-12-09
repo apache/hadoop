@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<web-app version="2.4" xmlns="http://java.sun.com/xml/ns/j2ee">
+
+  <listener>
+    <listener-class>org.apache.hadoop.fs.http.server.HttpFSServerWebApp</listener-class>
+  </listener>
+
+  <servlet>
+    <servlet-name>webservices-driver</servlet-name>
+    <servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>
+    <init-param>
+      <param-name>com.sun.jersey.config.property.packages</param-name>
+      <param-value>org.apache.hadoop.fs.http.server,org.apache.hadoop.lib.wsrs</param-value>
+    </init-param>
+
+    <!-- Enables detailed Jersey request/response logging -->
+    <!--
+            <init-param>
+                <param-name>com.sun.jersey.spi.container.ContainerRequestFilters</param-name>
+                <param-value>com.sun.jersey.api.container.filter.LoggingFilter</param-value>
+            </init-param>
+            <init-param>
+                <param-name>com.sun.jersey.spi.container.ContainerResponseFilters</param-name>
+                <param-value>com.sun.jersey.api.container.filter.LoggingFilter</param-value>
+            </init-param>
+    -->
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>webservices-driver</servlet-name>
+    <url-pattern>/webhdfs/*</url-pattern>
+  </servlet-mapping>
+
+  <filter>
+    <filter-name>authFilter</filter-name>
+    <filter-class>org.apache.hadoop.fs.http.server.HttpFSAuthenticationFilter</filter-class>
+  </filter>
+
+  <filter>
+    <filter-name>MDCFilter</filter-name>
+    <filter-class>org.apache.hadoop.lib.servlet.MDCFilter</filter-class>
+  </filter>
+
+  <filter>
+    <filter-name>hostnameFilter</filter-name>
+    <filter-class>org.apache.hadoop.lib.servlet.HostnameFilter</filter-class>
+  </filter>
+
+  <filter>
+    <filter-name>checkUploadContentType</filter-name>
+    <filter-class>org.apache.hadoop.fs.http.server.CheckUploadContentTypeFilter</filter-class>
+  </filter>
+
+  <filter>
+    <filter-name>fsReleaseFilter</filter-name>
+    <filter-class>org.apache.hadoop.fs.http.server.HttpFSReleaseFilter</filter-class>
+  </filter>
+
+  <filter-mapping>
+    <filter-name>authFilter</filter-name>
+    <url-pattern>*</url-pattern>
+  </filter-mapping>
+
+  <filter-mapping>
+    <filter-name>MDCFilter</filter-name>
+    <url-pattern>*</url-pattern>
+  </filter-mapping>
+
+  <filter-mapping>
+    <filter-name>hostnameFilter</filter-name>
+    <url-pattern>*</url-pattern>
+  </filter-mapping>
+
+  <filter-mapping>
+    <filter-name>checkUploadContentType</filter-name>
+    <url-pattern>*</url-pattern>
+  </filter-mapping>
+
+  <filter-mapping>
+    <filter-name>fsReleaseFilter</filter-name>
+    <url-pattern>*</url-pattern>
+  </filter-mapping>
+
+</web-app>

@@ -221,6 +221,23 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   }
 
   @Override
+  public long getSubmitTime() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getSubmitTime();
+  }
+
+  @Override
+  public long getLaunchTime() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getLaunchTime();
+  }
+
+  @Override
+  public void setLaunchTime(long launchTime) {
+    maybeInitBuilder();
+    builder.setLaunchTime(launchTime);
+  }
+  @Override
   public long getFinishTime() {
     ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
     return p.getFinishTime();
@@ -417,6 +434,12 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   public void setFinishTime(long finishTime) {
     maybeInitBuilder();
     builder.setFinishTime(finishTime);
+  }
+
+  @Override
+  public void setSubmitTime(long submitTime) {
+    maybeInitBuilder();
+    builder.setSubmitTime(submitTime);
   }
 
   @Override

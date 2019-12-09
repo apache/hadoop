@@ -35,8 +35,6 @@ import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -54,9 +52,11 @@ import org.junit.Test;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestHSWebApp {
-  private static final Log LOG = LogFactory.getLog(TestHSWebApp.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHSWebApp.class);
 
   @Test public void testAppControllerIndex() {
     MockAppContext ctx = new MockAppContext(0, 1, 1, 1);
@@ -233,8 +233,8 @@ public class TestHSWebApp {
     PrintWriter spyPw = WebAppTests.getPrintWriter(injector);
     verify(spyPw).write(
         "Logs not available for container_10_0001_01_000001."
-            + " Aggregation may not be complete, "
-            + "Check back later or try the nodemanager at "
+            + " Aggregation may not be complete, Check back later or try to"
+            + " find the container logs in the local directory of nodemanager "
             + MockJobs.NM_HOST + ":" + MockJobs.NM_PORT);
   }
 

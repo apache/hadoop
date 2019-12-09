@@ -20,6 +20,21 @@
 # Optinally upgrade or rollback dfs state.
 # Run this on master node.
 
+## startup matrix:
+#
+# if $EUID != 0, then exec
+# if $EUID =0 then
+#    if hdfs_subcmd_user is defined, su to that user, exec
+#    if hdfs_subcmd_user is not defined, error
+#
+# For secure daemons, this means both the secure and insecure env vars need to be
+# defined.  e.g., HDFS_DATANODE_USER=root HDFS_DATANODE_SECURE_USER=hdfs
+#
+
+## @description  usage info
+## @audience     private
+## @stability    evolving
+## @replaceable  no
 function hadoop_usage
 {
   echo "Usage: start-dfs.sh [-upgrade|-rollback] [-clusterId]"
@@ -44,7 +59,6 @@ else
   echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hdfs-config.sh." 2>&1
   exit 1
 fi
-
 
 # get arguments
 if [[ $# -ge 1 ]]; then
@@ -77,32 +91,25 @@ if [[ -z "${NAMENODES}" ]]; then
 fi
 
 echo "Starting namenodes on [${NAMENODES}]"
-
-"${HADOOP_HDFS_HOME}/bin/hdfs" \
+hadoop_uservar_su hdfs namenode "${HADOOP_HDFS_HOME}/bin/hdfs" \
     --workers \
     --config "${HADOOP_CONF_DIR}" \
     --hostnames "${NAMENODES}" \
     --daemon start \
     namenode ${nameStartOpt}
 
+HADOOP_JUMBO_RETCOUNTER=$?
+
 #---------------------------------------------------------
 # datanodes (using default workers file)
 
-if [[ -n "${HADOOP_SECURE_DN_USER}" ]] &&
-   [[ -z "${HADOOP_SECURE_COMMAND}" ]]; then
-    hadoop_error "ERROR: Attempting to start secure cluster, skipping datanodes. "
-    hadoop_error "ERROR: Run start-secure-dns.sh as root or configure "
-    hadoop_error "ERROR: \${HADOOP_SECURE_COMMAND} to complete startup."
-else
-
-  echo "Starting datanodes"
-
-  "${HADOOP_HDFS_HOME}/bin/hdfs" \
+echo "Starting datanodes"
+hadoop_uservar_su hdfs datanode "${HADOOP_HDFS_HOME}/bin/hdfs" \
     --workers \
     --config "${HADOOP_CONF_DIR}" \
     --daemon start \
     datanode ${dataStartOpt}
-fi
+(( HADOOP_JUMBO_RETCOUNTER=HADOOP_JUMBO_RETCOUNTER + $? ))
 
 #---------------------------------------------------------
 # secondary namenodes (if any)
@@ -113,8 +120,8 @@ if [[ -n "${SECONDARY_NAMENODES}" ]]; then
 
   if [[ "${NAMENODES}" =~ , ]]; then
 
-    hadoop_error "ERROR: Highly available NameNode is configured."
-    hadoop_error "ERROR: Skipping SecondaryNameNode."
+    hadoop_error "WARNING: Highly available NameNode is configured."
+    hadoop_error "WARNING: Skipping SecondaryNameNode."
 
   else
 
@@ -124,33 +131,32 @@ if [[ -n "${SECONDARY_NAMENODES}" ]]; then
 
     echo "Starting secondary namenodes [${SECONDARY_NAMENODES}]"
 
-    "${HADOOP_HDFS_HOME}/bin/hdfs" \
+    hadoop_uservar_su hdfs secondarynamenode "${HADOOP_HDFS_HOME}/bin/hdfs" \
       --workers \
       --config "${HADOOP_CONF_DIR}" \
       --hostnames "${SECONDARY_NAMENODES}" \
       --daemon start \
       secondarynamenode
+    (( HADOOP_JUMBO_RETCOUNTER=HADOOP_JUMBO_RETCOUNTER + $? ))
   fi
 fi
 
 #---------------------------------------------------------
 # quorumjournal nodes (if any)
 
-SHARED_EDITS_DIR=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey dfs.namenode.shared.edits.dir 2>&-)
+JOURNAL_NODES=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -journalNodes 2>&-)
 
-case "${SHARED_EDITS_DIR}" in
-  qjournal://*)
-    JOURNAL_NODES=$(echo "${SHARED_EDITS_DIR}" | sed 's,qjournal://\([^/]*\)/.*,\1,g; s/;/ /g; s/:[0-9]*//g')
-    echo "Starting journal nodes [${JOURNAL_NODES}]"
+if [[ "${#JOURNAL_NODES}" != 0 ]]; then
+  echo "Starting journal nodes [${JOURNAL_NODES}]"
 
-    "${HADOOP_HDFS_HOME}/bin/hdfs" \
-      --workers \
-      --config "${HADOOP_CONF_DIR}" \
-      --hostnames "${JOURNAL_NODES}" \
-      --daemon start \
-      journalnode
-  ;;
-esac
+  hadoop_uservar_su hdfs journalnode "${HADOOP_HDFS_HOME}/bin/hdfs" \
+    --workers \
+    --config "${HADOOP_CONF_DIR}" \
+    --hostnames "${JOURNAL_NODES}" \
+    --daemon start \
+    journalnode
+   (( HADOOP_JUMBO_RETCOUNTER=HADOOP_JUMBO_RETCOUNTER + $? ))
+fi
 
 #---------------------------------------------------------
 # ZK Failover controllers, if auto-HA is enabled
@@ -158,12 +164,15 @@ AUTOHA_ENABLED=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey dfs.ha.automati
 if [[ "${AUTOHA_ENABLED}" = "true" ]]; then
   echo "Starting ZK Failover Controllers on NN hosts [${NAMENODES}]"
 
-  "${HADOOP_HDFS_HOME}/bin/hdfs" \
+  hadoop_uservar_su hdfs zkfc "${HADOOP_HDFS_HOME}/bin/hdfs" \
     --workers \
     --config "${HADOOP_CONF_DIR}" \
     --hostnames "${NAMENODES}" \
     --daemon start \
     zkfc
+  (( HADOOP_JUMBO_RETCOUNTER=HADOOP_JUMBO_RETCOUNTER + $? ))
 fi
+
+exit ${HADOOP_JUMBO_RETCOUNTER}
 
 # eof

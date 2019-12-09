@@ -50,6 +50,7 @@ import java.lang.reflect.Modifier;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
@@ -58,16 +59,19 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -77,9 +81,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.UnhandledException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.BlockLocation;
@@ -94,8 +97,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
@@ -104,13 +110,23 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.NameNodeInfo;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -119,8 +135,11 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
@@ -136,13 +155,18 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.namenode.XAttrStorage;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -153,22 +177,26 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.tools.JMXGet;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.Level;
+import org.junit.Assert;
 import org.junit.Assume;
-import org.mockito.internal.util.reflection.Whitebox;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -176,7 +204,7 @@ import com.google.common.annotations.VisibleForTesting;
 /** Utilities for HDFS tests */
 public class DFSTestUtil {
 
-  private static final Log LOG = LogFactory.getLog(DFSTestUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DFSTestUtil.class);
   
   private static final Random gen = new Random();
   private static final String[] dirNames = {
@@ -276,6 +304,28 @@ public class DFSTestUtil {
     newLog.restart();
     Whitebox.setInternalState(fsn.getFSImage(), "editLog", newLog);
     Whitebox.setInternalState(fsn.getFSDirectory(), "editLog", newLog);
+  }
+
+  public static void enableAllECPolicies(DistributedFileSystem fs)
+      throws IOException {
+    // Enable all available EC policies
+    for (ErasureCodingPolicy ecPolicy :
+        SystemErasureCodingPolicies.getPolicies()) {
+      fs.enableErasureCodingPolicy(ecPolicy.getName());
+    }
+  }
+
+  public static ErasureCodingPolicyState getECPolicyState(
+      final ErasureCodingPolicy policy) {
+    final ErasureCodingPolicyInfo[] policyInfos =
+        ErasureCodingPolicyManager.getInstance().getPolicies();
+    for (ErasureCodingPolicyInfo pi : policyInfos) {
+      if (pi.getPolicy().equals(policy)) {
+        return pi.getState();
+      }
+    }
+    throw new IllegalArgumentException("ErasureCodingPolicy <" + policy
+        + "> doesn't exist in the policies:" + Arrays.toString(policyInfos));
   }
 
   /** class MyFile contains enough information to recreate the contents of
@@ -816,6 +866,20 @@ public class DFSTestUtil {
     }
   }
 
+  /* Write the given bytes to the given file using the specified blockSize */
+  public static void writeFile(
+      FileSystem fs, Path p, byte[] bytes, long blockSize)
+      throws IOException {
+    if (fs.exists(p)) {
+      fs.delete(p, true);
+    }
+    try (InputStream is = new ByteArrayInputStream(bytes);
+        FSDataOutputStream os = fs.create(
+            p, false, 4096, fs.getDefaultReplication(p), blockSize)) {
+      IOUtils.copyBytes(is, os, bytes.length);
+    }
+  }
+
   /* Write the given string to the given file */
   public static void writeFile(FileSystem fs, Path p, String s)
       throws IOException {
@@ -850,7 +914,40 @@ public class DFSTestUtil {
       out.write(toAppend);
     }
   }
-  
+
+  /**
+   * Append specified length of bytes to a given file, starting with new block.
+   * @param fs The file system
+   * @param p Path of the file to append
+   * @param length Length of bytes to append to the file
+   * @throws IOException
+   */
+  public static void appendFileNewBlock(DistributedFileSystem fs,
+      Path p, int length) throws IOException {
+    assert length >= 0;
+    byte[] toAppend = new byte[length];
+    Random random = new Random();
+    random.nextBytes(toAppend);
+    appendFileNewBlock(fs, p, toAppend);
+  }
+
+  /**
+   * Append specified bytes to a given file, starting with new block.
+   *
+   * @param fs The file system
+   * @param p Path of the file to append
+   * @param bytes The data to append
+   * @throws IOException
+   */
+  public static void appendFileNewBlock(DistributedFileSystem fs,
+      Path p, byte[] bytes) throws IOException {
+    assert fs.exists(p);
+    try (FSDataOutputStream out = fs.append(p,
+        EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null)) {
+      out.write(bytes);
+    }
+  }
+
   /**
    * @return url content as string (UTF-8 encoding assumed)
    */
@@ -987,7 +1084,8 @@ public class DFSTestUtil {
       // send the request
       new Sender(out).transferBlock(b, new Token<BlockTokenIdentifier>(),
           dfsClient.clientName, new DatanodeInfo[]{datanodes[1]},
-          new StorageType[]{StorageType.DEFAULT});
+          new StorageType[]{StorageType.DEFAULT},
+          new String[0]);
       out.flush();
 
       return BlockOpResponseProto.parseDelimitedFrom(in);
@@ -1424,10 +1522,66 @@ public class DFSTestUtil {
         new byte[]{0x37, 0x38, 0x39});
     // OP_REMOVE_XATTR
     filesystem.removeXAttr(pathConcatTarget, "user.a2");
+
+    // OP_ADD_ERASURE_CODING_POLICY
+    ErasureCodingPolicy newPolicy1 =
+        new ErasureCodingPolicy(ErasureCodeConstants.RS_3_2_SCHEMA, 8 * 1024);
+    ErasureCodingPolicy[] policyArray = new ErasureCodingPolicy[] {newPolicy1};
+    AddErasureCodingPolicyResponse[] responses =
+        filesystem.addErasureCodingPolicies(policyArray);
+    newPolicy1 = responses[0].getPolicy();
+
+    // OP_ADD_ERASURE_CODING_POLICY - policy with extra options
+    Map<String, String> extraOptions = new HashMap<String, String>();
+    extraOptions.put("dummyKey", "dummyValue");
+    ECSchema schema =
+        new ECSchema(ErasureCodeConstants.RS_CODEC_NAME, 6, 10, extraOptions);
+    ErasureCodingPolicy newPolicy2 = new ErasureCodingPolicy(schema, 4 * 1024);
+    policyArray = new ErasureCodingPolicy[] {newPolicy2};
+    responses = filesystem.addErasureCodingPolicies(policyArray);
+    newPolicy2 = responses[0].getPolicy();
+    // OP_ENABLE_ERASURE_CODING_POLICY
+    filesystem.enableErasureCodingPolicy(newPolicy1.getName());
+    filesystem.enableErasureCodingPolicy(newPolicy2.getName());
+    // OP_DISABLE_ERASURE_CODING_POLICY
+    filesystem.disableErasureCodingPolicy(newPolicy1.getName());
+    filesystem.disableErasureCodingPolicy(newPolicy2.getName());
+    // OP_REMOVE_ERASURE_CODING_POLICY
+    filesystem.removeErasureCodingPolicy(newPolicy1.getName());
+    filesystem.removeErasureCodingPolicy(newPolicy2.getName());
+
+    // OP_ADD on erasure coding directory
+    Path ecDir = new Path("/ec");
+    filesystem.mkdirs(ecDir);
+    final ErasureCodingPolicy defaultEcPolicy =
+        SystemErasureCodingPolicies.getByID(
+            SystemErasureCodingPolicies.RS_6_3_POLICY_ID);
+    final ErasureCodingPolicy ecPolicyRS32 =
+        SystemErasureCodingPolicies.getByID(
+            SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
+    filesystem.enableErasureCodingPolicy(ecPolicyRS32.getName());
+    filesystem.enableErasureCodingPolicy(defaultEcPolicy.getName());
+    filesystem.setErasureCodingPolicy(ecDir, defaultEcPolicy.getName());
+
+    try (FSDataOutputStream out = filesystem.createFile(
+        new Path(ecDir, "replicated")).replicate().build()) {
+      out.write("replicated".getBytes());
+    }
+
+    try (FSDataOutputStream out = filesystem
+        .createFile(new Path(ecDir, "RS-3-2"))
+        .ecPolicyName(ecPolicyRS32.getName()).blockSize(1024 * 1024).build()) {
+      out.write("RS-3-2".getBytes());
+    }
   }
 
   public static void abortStream(DFSOutputStream out) throws IOException {
     out.abort();
+  }
+
+  public static void setPipeline(DFSOutputStream out, LocatedBlock lastBlock)
+      throws IOException {
+    out.getStreamer().setPipelineInConstruction(lastBlock);
   }
 
   public static byte[] asArray(ByteBuffer buf) {
@@ -1611,6 +1765,50 @@ public class DFSTestUtil {
   }
 
   /**
+   * Verify the aggregated {@link ClientProtocol#getStats()} block counts equal
+   * the sum of {@link ClientProtocol#getReplicatedBlockStats()} and
+   * {@link ClientProtocol#getECBlockGroupStats()}.
+   * @throws Exception
+   */
+  public static  void verifyClientStats(Configuration conf,
+      MiniDFSCluster cluster) throws Exception {
+    ClientProtocol client = NameNodeProxies.createProxy(conf,
+        cluster.getFileSystem(0).getUri(),
+        ClientProtocol.class).getProxy();
+    long[] aggregatedStats = cluster.getNameNode().getRpcServer().getStats();
+    ReplicatedBlockStats replicatedBlockStats =
+        client.getReplicatedBlockStats();
+    ECBlockGroupStats ecBlockGroupStats = client.getECBlockGroupStats();
+
+    assertEquals("Under replicated stats not matching!",
+        aggregatedStats[ClientProtocol.GET_STATS_LOW_REDUNDANCY_IDX],
+        aggregatedStats[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX]);
+    assertEquals("Low redundancy stats not matching!",
+        aggregatedStats[ClientProtocol.GET_STATS_LOW_REDUNDANCY_IDX],
+        replicatedBlockStats.getLowRedundancyBlocks() +
+            ecBlockGroupStats.getLowRedundancyBlockGroups());
+    assertEquals("Corrupt blocks stats not matching!",
+        aggregatedStats[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX],
+        replicatedBlockStats.getCorruptBlocks() +
+            ecBlockGroupStats.getCorruptBlockGroups());
+    assertEquals("Missing blocks stats not matching!",
+        aggregatedStats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX],
+        replicatedBlockStats.getMissingReplicaBlocks() +
+            ecBlockGroupStats.getMissingBlockGroups());
+    assertEquals("Missing blocks with replication factor one not matching!",
+        aggregatedStats[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX],
+        replicatedBlockStats.getMissingReplicationOneBlocks());
+    assertEquals("Bytes in future blocks stats not matching!",
+        aggregatedStats[ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX],
+        replicatedBlockStats.getBytesInFutureBlocks() +
+            ecBlockGroupStats.getBytesInFutureBlockGroups());
+    assertEquals("Pending deletion blocks stats not matching!",
+        aggregatedStats[ClientProtocol.GET_STATS_PENDING_DELETION_BLOCKS_IDX],
+        replicatedBlockStats.getPendingDeletionBlocks() +
+            ecBlockGroupStats.getPendingDeletionBlocks());
+  }
+
+  /**
    * Helper function to create a key in the Key Provider. Defaults
    * to the first indexed NameNode's Key Provider.
    *
@@ -1776,8 +1974,8 @@ public class DFSTestUtil {
     }, 100, waitTime);
   }
 
- /**
-   * Change the length of a block at datanode dnIndex
+  /**
+   * Change the length of a block at datanode dnIndex.
    */
   public static boolean changeReplicaLength(MiniDFSCluster cluster,
       ExtendedBlock blk, int dnIndex, int lenDelta) throws IOException {
@@ -1822,18 +2020,17 @@ public class DFSTestUtil {
    * Get the RefreshUserMappingsProtocol RPC proxy for the NN associated with
    * this DFSClient object
    *
-   * @param nameNodeUri the URI of the NN to get a proxy for.
+   * @param nnAddr the address of the NN to get a proxy for.
    *
    * @return the RefreshUserMappingsProtocol RPC proxy associated with this
    * DFSClient object
    */
   @VisibleForTesting
   public static RefreshUserMappingsProtocol getRefreshUserMappingsProtocolProxy(
-      Configuration conf, URI nameNodeUri) throws IOException {
-    final AtomicBoolean nnFallbackToSimpleAuth = new AtomicBoolean(false);
-    return NameNodeProxies.createProxy(conf,
-        nameNodeUri, RefreshUserMappingsProtocol.class,
-        nnFallbackToSimpleAuth).getProxy();
+      Configuration conf, InetSocketAddress nnAddr) throws IOException {
+    return NameNodeProxies.createNonHAProxy(
+        conf, nnAddr, RefreshUserMappingsProtocol.class,
+        UserGroupInformation.getCurrentUser(), false).getProxy();
   }
 
   /**
@@ -1841,7 +2038,11 @@ public class DFSTestUtil {
    */
   public static void setDatanodeDead(DatanodeInfo dn) {
     dn.setLastUpdate(0);
-    dn.setLastUpdateMonotonic(0);
+    // Set this to a large negative value.
+    // On short-lived VMs, the monotonic time can be less than the heartbeat
+    // expiry time. Setting this to 0 will fail to immediately mark the DN as
+    // dead.
+    dn.setLastUpdateMonotonic(Long.MIN_VALUE/2);
   }
 
   /**
@@ -1898,7 +2099,7 @@ public class DFSTestUtil {
       Path dir, int numBlocks, int numStripesPerBlk, boolean toMkdir)
       throws Exception {
     createStripedFile(cluster, file, dir, numBlocks, numStripesPerBlk,
-        toMkdir, null);
+        toMkdir, StripedFileTestUtil.getDefaultECPolicy());
   }
 
   /**
@@ -1922,7 +2123,8 @@ public class DFSTestUtil {
       assert dir != null;
       dfs.mkdirs(dir);
       try {
-        dfs.getClient().setErasureCodingPolicy(dir.toString(), ecPolicy);
+        dfs.getClient()
+            .setErasureCodingPolicy(dir.toString(), ecPolicy.getName());
       } catch (IOException e) {
         if (!e.getMessage().contains("non-empty directory")) {
           throw e;
@@ -1934,7 +2136,7 @@ public class DFSTestUtil {
         .create(file.toString(), new FsPermission((short)0755),
         dfs.getClient().getClientName(),
         new EnumSetWritable<>(EnumSet.of(CreateFlag.CREATE)),
-        false, (short)1, 128*1024*1024L, null);
+        false, (short)1, 128*1024*1024L, null, null);
 
     FSNamesystem ns = cluster.getNamesystem();
     FSDirectory fsdir = ns.getFSDirectory();
@@ -2013,6 +2215,49 @@ public class DFSTestUtil {
     return lastBlock;
   }
 
+  /*
+   * Copy a block from sourceProxy to destination. If the block becomes
+   * over-replicated, preferably remove it from source.
+   * Return true if a block is successfully copied; otherwise false.
+   */
+  public static boolean replaceBlock(ExtendedBlock block, DatanodeInfo source,
+      DatanodeInfo sourceProxy, DatanodeInfo destination) throws IOException {
+    return replaceBlock(block, source, sourceProxy, destination,
+        StorageType.DEFAULT, Status.SUCCESS);
+  }
+
+  /*
+   * Replace block
+   */
+  public static boolean replaceBlock(ExtendedBlock block, DatanodeInfo source,
+      DatanodeInfo sourceProxy, DatanodeInfo destination,
+      StorageType targetStorageType, Status opStatus) throws IOException,
+      SocketException {
+    Socket sock = new Socket();
+    try {
+      sock.connect(NetUtils.createSocketAddr(destination.getXferAddr()),
+          HdfsConstants.READ_TIMEOUT);
+      sock.setKeepAlive(true);
+      // sendRequest
+      DataOutputStream out = new DataOutputStream(sock.getOutputStream());
+      new Sender(out).replaceBlock(block, targetStorageType,
+          BlockTokenSecretManager.DUMMY_TOKEN, source.getDatanodeUuid(),
+          sourceProxy, null);
+      out.flush();
+      // receiveResponse
+      DataInputStream reply = new DataInputStream(sock.getInputStream());
+
+      BlockOpResponseProto proto = BlockOpResponseProto.parseDelimitedFrom(
+          reply);
+      while (proto.getStatus() == Status.IN_PROGRESS) {
+        proto = BlockOpResponseProto.parseDelimitedFrom(reply);
+      }
+      return proto.getStatus() == opStatus;
+    } finally {
+      sock.close();
+    }
+  }
+
   /**
    * Because currently DFSStripedOutputStream does not support hflush/hsync,
    * tests can use this method to flush all the buffered data to DataNodes.
@@ -2041,7 +2286,8 @@ public class DFSTestUtil {
                        ", current value = " + currentValue);
           return currentValue == expectedValue;
         } catch (Exception e) {
-          throw new UnhandledException("Test failed due to unexpected exception", e);
+          throw new RuntimeException(
+              "Test failed due to unexpected exception", e);
         }
       }
     }, 1000, 60000);
@@ -2114,4 +2360,173 @@ public class DFSTestUtil {
       assertFalse("File in trash : " + trashPath, fs.exists(trashPath));
     }
   }
+
+  public static Map<Path, FSDataOutputStream> createOpenFiles(FileSystem fs,
+      String filePrefix, int numFilesToCreate) throws IOException {
+    final Map<Path, FSDataOutputStream> filesCreated = new HashMap<>();
+    final byte[] buffer = new byte[(int) (1024 * 1.75)];
+    final Random rand = new Random(0xFEED0BACL);
+    for (int i = 0; i < numFilesToCreate; i++) {
+      Path file = new Path("/" + filePrefix + "-" + i);
+      FSDataOutputStream stm = fs.create(file, true, 1024, (short) 1, 1024);
+      rand.nextBytes(buffer);
+      stm.write(buffer);
+      filesCreated.put(file, stm);
+    }
+    return filesCreated;
+  }
+
+  public static HashSet<Path> closeOpenFiles(
+      HashMap<Path, FSDataOutputStream> openFilesMap,
+      int numFilesToClose) throws IOException {
+    HashSet<Path> closedFiles = new HashSet<>();
+    for (Iterator<Entry<Path, FSDataOutputStream>> it =
+         openFilesMap.entrySet().iterator(); it.hasNext();) {
+      Entry<Path, FSDataOutputStream> entry = it.next();
+      LOG.info("Closing file: " + entry.getKey());
+      entry.getValue().close();
+      closedFiles.add(entry.getKey());
+      it.remove();
+      numFilesToClose--;
+      if (numFilesToClose == 0) {
+        break;
+      }
+    }
+    return closedFiles;
+  }
+
+  /**
+   * Check the correctness of the snapshotDiff report.
+   * Make sure all items in the passed entries are in the snapshotDiff
+   * report.
+   */
+  public static void verifySnapshotDiffReport(DistributedFileSystem fs,
+      Path dir, String from, String to,
+      DiffReportEntry... entries) throws IOException {
+    SnapshotDiffReport report = fs.getSnapshotDiffReport(dir, from, to);
+    // reverse the order of from and to
+    SnapshotDiffReport inverseReport = fs
+        .getSnapshotDiffReport(dir, to, from);
+    LOG.info(report.toString());
+    LOG.info(inverseReport.toString() + "\n");
+
+    assertEquals(entries.length, report.getDiffList().size());
+    assertEquals(entries.length, inverseReport.getDiffList().size());
+
+    for (DiffReportEntry entry : entries) {
+      if (entry.getType() == DiffType.MODIFY) {
+        assertTrue(report.getDiffList().contains(entry));
+        assertTrue(inverseReport.getDiffList().contains(entry));
+      } else if (entry.getType() == DiffType.DELETE) {
+        assertTrue(report.getDiffList().contains(entry));
+        assertTrue(inverseReport.getDiffList().contains(
+            new DiffReportEntry(DiffType.CREATE, entry.getSourcePath())));
+      } else if (entry.getType() == DiffType.CREATE) {
+        assertTrue(report.getDiffList().contains(entry));
+        assertTrue(inverseReport.getDiffList().contains(
+            new DiffReportEntry(DiffType.DELETE, entry.getSourcePath())));
+      }
+    }
+  }
+
+  /**
+   * Check whether the Block movement has been successfully
+   * completed to satisfy the storage policy for the given file.
+   * @param fileName file name.
+   * @param expectedStorageType storage type.
+   * @param expectedStorageCount expected storage type.
+   * @param timeout timeout.
+   * @param fs distributedFileSystem.
+   * @throws Exception
+   */
+  public static void waitExpectedStorageType(String fileName,
+      final StorageType expectedStorageType, int expectedStorageCount,
+      int timeout, DistributedFileSystem fs) throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        final LocatedBlock lb;
+        try {
+          lb = fs.getClient().getLocatedBlocks(fileName, 0).get(0);
+        } catch (IOException e) {
+          LOG.error("Exception while getting located blocks", e);
+          return false;
+        }
+        int actualStorageCount = 0;
+        for(StorageType type : lb.getStorageTypes()) {
+          if (expectedStorageType == type) {
+            actualStorageCount++;
+          }
+        }
+        LOG.info(
+            expectedStorageType + " replica count, expected="
+                + expectedStorageCount + " and actual=" + actualStorageCount);
+        return expectedStorageCount == actualStorageCount;
+      }
+    }, 500, timeout);
+  }
+
+  /**
+   * Waits for removal of a specified Xattr on a specified file.
+   *
+   * @param srcPath
+   *          file name.
+   * @param xattr
+   *          name of the extended attribute.
+   * @param ns
+   *          Namesystem
+   * @param timeout
+   *          max wait time
+   * @throws Exception
+   */
+  public static void waitForXattrRemoved(String srcPath, String xattr,
+      Namesystem ns, int timeout) throws TimeoutException, InterruptedException,
+          UnresolvedLinkException, AccessControlException,
+          ParentNotDirectoryException {
+    final INode inode = ns.getFSDirectory().getINode(srcPath);
+    final XAttr satisfyXAttr = XAttrHelper.buildXAttr(xattr);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
+        return !existingXAttrs.contains(satisfyXAttr);
+      }
+    }, 100, timeout);
+  }
+
+  /**
+   * Get namenode connector using the given configuration and file path.
+   *
+   * @param conf
+   *          hdfs configuration
+   * @param filePath
+   *          file path
+   * @param namenodeCount
+   *          number of namenodes
+   * @param createMoverPath
+   *          create move path flag to skip the path creation
+   * @return Namenode connector.
+   * @throws IOException
+   */
+  public static NameNodeConnector getNameNodeConnector(Configuration conf,
+      Path filePath, int namenodeCount, boolean createMoverPath)
+          throws IOException {
+    final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
+    Assert.assertEquals(namenodeCount, namenodes.size());
+    NameNodeConnector.checkOtherInstanceRunning(createMoverPath);
+    while (true) {
+      try {
+        final List<NameNodeConnector> nncs = NameNodeConnector
+            .newNameNodeConnectors(namenodes,
+                StoragePolicySatisfier.class.getSimpleName(),
+                filePath, conf,
+                NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
+        return nncs.get(0);
+      } catch (IOException e) {
+        LOG.warn("Failed to connect with namenode", e);
+        // Ignore
+      }
+    }
+  }
+
 }

@@ -29,8 +29,8 @@ import java.security.MessageDigest;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.StringUtils;
@@ -42,7 +42,7 @@ import com.google.common.base.Charsets;
  * that the Unix "md5sum" utility writes.
  */
 public abstract class MD5FileUtils {
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       MD5FileUtils.class);
 
   public static final String MD5_SUFFIX = ".md5";
@@ -84,7 +84,7 @@ public abstract class MD5FileUtils {
     } catch (IOException ioe) {
       throw new IOException("Error reading md5 file at " + md5File, ioe);
     } finally {
-      IOUtils.cleanup(LOG, reader);
+      IOUtils.cleanupWithLogger(LOG, reader);
     }
     
     Matcher matcher = LINE_REGEX.matcher(md5Line);

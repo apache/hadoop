@@ -105,12 +105,47 @@ jthrowable globalClassReference(const char *className, JNIEnv *env, jclass *out)
 jthrowable classNameOfObject(jobject jobj, JNIEnv *env, char **name);
 
 /** getJNIEnv: A helper function to get the JNIEnv* for the given thread.
+ * It gets this from the ThreadLocalState if it exists. If a ThreadLocalState
+ * does not exist, one will be created.
  * If no JVM exists, then one will be created. JVM command line arguments
  * are obtained from the LIBHDFS_OPTS environment variable.
  * @param: None.
  * @return The JNIEnv* corresponding to the thread.
  * */
 JNIEnv* getJNIEnv(void);
+
+/**
+ * Get the last exception root cause that happened in the context of the
+ * current thread.
+ *
+ * The pointer returned by this function is guaranteed to be valid until
+ * the next call to invokeMethod() by the current thread.
+ * Users of this function should not free the pointer.
+ *
+ * @return The root cause as a C-string.
+ */
+char* getLastTLSExceptionRootCause();
+
+/**
+ * Get the last exception stack trace that happened in the context of the
+ * current thread.
+ *
+ * The pointer returned by this function is guaranteed to be valid until
+ * the next call to invokeMethod() by the current thread.
+ * Users of this function should not free the pointer.
+ *
+ * @return The stack trace as a C-string.
+ */
+char* getLastTLSExceptionStackTrace();
+
+/** setTLSExceptionStrings: Sets the 'rootCause' and 'stackTrace' in the
+ * ThreadLocalState if one exists for the current thread.
+ *
+ * @param rootCause A string containing the root cause of an exception.
+ * @param stackTrace A string containing the stack trace of an exception.
+ * @return None.
+ */
+void setTLSExceptionStrings(const char *rootCause, const char *stackTrace);
 
 /**
  * Figure out if a Java object is an instance of a particular class.

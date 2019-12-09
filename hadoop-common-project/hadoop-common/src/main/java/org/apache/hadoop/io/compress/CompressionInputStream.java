@@ -59,10 +59,13 @@ public abstract class CompressionInputStream extends InputStream implements Seek
 
   @Override
   public void close() throws IOException {
-    in.close();
-    if (trackedDecompressor != null) {
-      CodecPool.returnDecompressor(trackedDecompressor);
-      trackedDecompressor = null;
+    try {
+      in.close();
+    } finally {
+      if (trackedDecompressor != null) {
+        CodecPool.returnDecompressor(trackedDecompressor);
+        trackedDecompressor = null;
+      }
     }
   }
   

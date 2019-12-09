@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.client.api.async;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -32,7 +31,6 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
 import org.apache.hadoop.yarn.client.api.impl.NMClientImpl;
@@ -179,7 +177,53 @@ public abstract class NMClientAsync extends AbstractService {
   public abstract void startContainerAsync(
       Container container, ContainerLaunchContext containerLaunchContext);
 
+  @Deprecated
   public abstract void increaseContainerResourceAsync(Container container);
+
+  /**
+   * <p>Update the resources of a container.</p>
+   *
+   * <p>The <code>ApplicationMaster</code> or other applications that use the
+   * client must provide the details of the container, including the Id and
+   * the target resource encapsulated in the updated container token via
+   * {@link Container}.
+   * </p>
+   *
+   * @param container the container with updated token.
+   */
+  public abstract void updateContainerResourceAsync(Container container);
+
+  /**
+   * <p>Re-Initialize the Container.</p>
+   *
+   * @param containerId the Id of the container to Re-Initialize.
+   * @param containerLaunchContex the updated ContainerLaunchContext.
+   * @param autoCommit commit re-initialization automatically ?
+   */
+  public abstract void reInitializeContainerAsync(ContainerId containerId,
+      ContainerLaunchContext containerLaunchContex, boolean autoCommit);
+
+  /**
+   * <p>Restart the specified container.</p>
+   *
+   * @param containerId the Id of the container to restart.
+   */
+  public abstract void restartContainerAsync(ContainerId containerId);
+
+  /**
+   * <p>Rollback last reInitialization of the specified container.</p>
+   *
+   * @param containerId the Id of the container to restart.
+   */
+  public abstract void rollbackLastReInitializationAsync(
+      ContainerId containerId);
+
+  /**
+   * <p>Commit last reInitialization of the specified container.</p>
+   *
+   * @param containerId the Id of the container to commit reInitialize.
+   */
+  public abstract void commitLastReInitializationAsync(ContainerId containerId);
 
   public abstract void stopContainerAsync(
       ContainerId containerId, NodeId nodeId);
@@ -271,7 +315,18 @@ public abstract class NMClientAsync extends AbstractService {
      * @param containerId the Id of the container
      * @param resource the target resource of the container
      */
+    @Deprecated
     public abstract void onContainerResourceIncreased(
+        ContainerId containerId, Resource resource);
+
+    /**
+     * The API is called when <code>NodeManager</code> responds to indicate
+     * the container resource has been successfully updated.
+     *
+     * @param containerId the Id of the container
+     * @param resource the target resource of the container
+     */
+    public abstract void onContainerResourceUpdated(
         ContainerId containerId, Resource resource);
 
     /**
@@ -291,7 +346,18 @@ public abstract class NMClientAsync extends AbstractService {
      * @param containerId the Id of the container
      * @param t the raised exception
      */
+    @Deprecated
     public abstract void onIncreaseContainerResourceError(
+        ContainerId containerId, Throwable t);
+
+    /**
+     * The API is called when an exception is raised in the process of
+     * updating container resource.
+     *
+     * @param containerId the Id of the container
+     * @param t the raised exception
+     */
+    public abstract void onUpdateContainerResourceError(
         ContainerId containerId, Throwable t);
 
     /**
@@ -303,6 +369,70 @@ public abstract class NMClientAsync extends AbstractService {
      */
     public abstract void onStopContainerError(
         ContainerId containerId, Throwable t);
+
+    /**
+     * Callback for container re-initialization request.
+     *
+     * @param containerId the Id of the container to be Re-Initialized.
+     */
+    public void onContainerReInitialize(ContainerId containerId) {}
+
+    /**
+     * Callback for container restart.
+     *
+     * @param containerId the Id of the container to restart.
+     */
+    public void onContainerRestart(ContainerId containerId) {}
+
+    /**
+     * Callback for rollback of last re-initialization.
+     *
+     * @param containerId the Id of the container to restart.
+     */
+    public void onRollbackLastReInitialization(ContainerId containerId) {}
+
+    /**
+     * Callback for commit of last re-initialization.
+     *
+     * @param containerId the Id of the container to commit reInitialize.
+     */
+    public void onCommitLastReInitialization(ContainerId containerId) {}
+
+    /**
+     * Error Callback for container re-initialization request.
+     *
+     * @param containerId the Id of the container to be Re-Initialized.
+     * @param t a Throwable.
+     */
+    public void onContainerReInitializeError(ContainerId containerId,
+        Throwable t) {}
+
+    /**
+     * Error Callback for container restart.
+     *
+     * @param containerId the Id of the container to restart.
+     * @param t a Throwable.
+     *
+     */
+    public void onContainerRestartError(ContainerId containerId, Throwable t) {}
+
+    /**
+     * Error Callback for rollback of last re-initialization.
+     *
+     * @param containerId the Id of the container to restart.
+     * @param t a Throwable.
+     */
+    public void onRollbackLastReInitializationError(ContainerId containerId,
+        Throwable t) {}
+
+    /**
+     * Error Callback for commit of last re-initialization.
+     *
+     * @param containerId the Id of the container to commit reInitialize.
+     * @param t a Throwable.
+     */
+    public void onCommitLastReInitializationError(ContainerId containerId,
+        Throwable t) {}
   }
 
   /**

@@ -24,7 +24,6 @@ import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -101,7 +100,7 @@ public class TestSnapshotRename {
     for (int i = 0; i < listByName.size(); i++) {
       assertEquals(sortedNames[i], listByName.get(i).getRoot().getLocalName());
     }
-    List<DirectoryDiff> listByTime = srcRoot.getDiffs().asList();
+    DiffList<DirectoryDiff> listByTime = srcRoot.getDiffs().asList();
     assertEquals(names.length, listByTime.size());
     for (int i = 0; i < listByTime.size(); i++) {
       Snapshot s = srcRoot.getDirectorySnapshottableFeature().getSnapshotById(
@@ -183,6 +182,22 @@ public class TestSnapshotRename {
         + sub1.toString();
     exception.expectMessage(error);
     hdfs.renameSnapshot(sub1, "wrongName", "s2");
+  }
+
+  /**
+   * Test rename a non-existing snapshot to itself.
+   */
+  @Test (timeout=60000)
+  public void testRenameNonExistingSnapshotToItself() throws Exception {
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
+    // Create snapshot for sub1
+    SnapshotTestHelper.createSnapshot(hdfs, sub1, "s1");
+
+    exception.expect(SnapshotException.class);
+    String error = "The snapshot wrongName does not exist for directory "
+        + sub1.toString();
+    exception.expectMessage(error);
+    hdfs.renameSnapshot(sub1, "wrongName", "wrongName");
   }
   
   /**

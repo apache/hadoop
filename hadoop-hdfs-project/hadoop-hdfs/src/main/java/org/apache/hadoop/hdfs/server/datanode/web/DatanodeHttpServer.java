@@ -26,8 +26,8 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
+import io.netty.bootstrap.ChannelFactory;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -41,8 +41,8 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -72,6 +72,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_INTERNAL_PROXY_PORT;
 
 public class DatanodeHttpServer implements Closeable {
   private final HttpServer2 infoServer;
@@ -86,7 +87,14 @@ public class DatanodeHttpServer implements Closeable {
   private final RestCsrfPreventionFilter restCsrfPreventionFilter;
   private InetSocketAddress httpAddress;
   private InetSocketAddress httpsAddress;
-  static final Log LOG = LogFactory.getLog(DatanodeHttpServer.class);
+  static final Logger LOG = LoggerFactory.getLogger(DatanodeHttpServer.class);
+
+  // HttpServer threads are only used for the web UI and basic servlets, so
+  // set them to the minimum possible
+  private static final int HTTP_SELECTOR_THREADS = 1;
+  private static final int HTTP_ACCEPTOR_THREADS = 1;
+  private static final int HTTP_MAX_THREADS =
+      HTTP_SELECTOR_THREADS + HTTP_ACCEPTOR_THREADS + 1;
 
   public DatanodeHttpServer(final Configuration conf,
       final DataNode datanode,
@@ -96,13 +104,20 @@ public class DatanodeHttpServer implements Closeable {
     this.conf = conf;
 
     Configuration confForInfoServer = new Configuration(conf);
-    confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS, 10);
+    confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS_KEY,
+        HTTP_MAX_THREADS);
+    confForInfoServer.setInt(HttpServer2.HTTP_SELECTOR_COUNT_KEY,
+        HTTP_SELECTOR_THREADS);
+    confForInfoServer.setInt(HttpServer2.HTTP_ACCEPTOR_COUNT_KEY,
+        HTTP_ACCEPTOR_THREADS);
+    int proxyPort =
+        confForInfoServer.getInt(DFS_DATANODE_HTTP_INTERNAL_PROXY_PORT, 0);
     HttpServer2.Builder builder = new HttpServer2.Builder()
         .setName("datanode")
         .setConf(confForInfoServer)
         .setACL(new AccessControlList(conf.get(DFS_ADMIN, " ")))
         .hostName(getHostnameForSpnegoPrincipal(confForInfoServer))
-        .addEndpoint(URI.create("http://localhost:0"))
+        .addEndpoint(URI.create("http://localhost:" + proxyPort))
         .setFindPort(true);
 
     final boolean xFrameEnabled = conf.getBoolean(
@@ -117,6 +132,7 @@ public class DatanodeHttpServer implements Closeable {
 
     this.infoServer = builder.build();
 
+    this.infoServer.setAttribute(HttpServer2.CONF_CONTEXT_ATTRIBUTE, conf);
     this.infoServer.setAttribute("datanode", datanode);
     this.infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     this.infoServer.addServlet(null, "/blockScannerReport",
@@ -138,8 +154,16 @@ public class DatanodeHttpServer implements Closeable {
         .childHandler(new ChannelInitializer<SocketChannel>() {
         @Override
         protected void initChannel(SocketChannel ch) throws Exception {
-          ch.pipeline().addLast(new PortUnificationServerHandler(jettyAddr,
-              conf, confForCreate, restCsrfPreventionFilter));
+          ChannelPipeline p = ch.pipeline();
+          p.addLast(new HttpRequestDecoder(),
+            new HttpResponseEncoder());
+          if (restCsrfPreventionFilter != null) {
+            p.addLast(new RestCsrfPreventionFilterHandler(
+                restCsrfPreventionFilter));
+          }
+          p.addLast(
+              new ChunkedWriteHandler(),
+              new URLDispatcher(jettyAddr, conf, confForCreate));
         }
       });
 

@@ -39,7 +39,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -47,7 +47,7 @@ public class TestDistCpSync {
   private MiniDFSCluster cluster;
   private final Configuration conf = new HdfsConfiguration();
   private DistributedFileSystem dfs;
-  private DistCpOptions options;
+  private DistCpContext context;
   private final Path source = new Path("/source");
   private final Path target = new Path("/target");
   private final long BLOCK_SIZE = 1024;
@@ -62,10 +62,13 @@ public class TestDistCpSync {
     dfs.mkdirs(source);
     dfs.mkdirs(target);
 
-    options = new DistCpOptions(Arrays.asList(source), target);
-    options.setSyncFolder(true);
-    options.setUseDiff("s1", "s2");
+    final DistCpOptions options = new DistCpOptions.Builder(
+        Collections.singletonList(source), target)
+        .withSyncFolder(true)
+        .withUseDiff("s1", "s2")
+        .build();
     options.appendToConf(conf);
+    context = new DistCpContext(options);
 
     conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, target.toString());
     conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, target.toString());
@@ -92,34 +95,34 @@ public class TestDistCpSync {
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
         HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
-    Assert.assertEquals(spath, options.getSourcePaths().get(0));
+    Assert.assertEquals(spath, context.getSourcePaths().get(0));
 
     // reset source path in options
-    options.setSourcePaths(Arrays.asList(source));
+    context.setSourcePaths(Collections.singletonList(source));
     // the source/target does not have the given snapshots
     dfs.allowSnapshot(source);
     dfs.allowSnapshot(target);
     Assert.assertFalse(sync());
-    Assert.assertEquals(spath, options.getSourcePaths().get(0));
+    Assert.assertEquals(spath, context.getSourcePaths().get(0));
 
     // reset source path in options
-    options.setSourcePaths(Arrays.asList(source));
+    context.setSourcePaths(Collections.singletonList(source));
     dfs.createSnapshot(source, "s1");
     dfs.createSnapshot(source, "s2");
     dfs.createSnapshot(target, "s1");
     Assert.assertTrue(sync());
 
     // reset source paths in options
-    options.setSourcePaths(Arrays.asList(source));
+    context.setSourcePaths(Collections.singletonList(source));
     // changes have been made in target
     final Path subTarget = new Path(target, "sub");
     dfs.mkdirs(subTarget);
     Assert.assertFalse(sync());
     // make sure the source path has been updated to the snapshot path
-    Assert.assertEquals(spath, options.getSourcePaths().get(0));
+    Assert.assertEquals(spath, context.getSourcePaths().get(0));
 
     // reset source paths in options
-    options.setSourcePaths(Arrays.asList(source));
+    context.setSourcePaths(Collections.singletonList(source));
     dfs.delete(subTarget, true);
     Assert.assertTrue(sync());
   }
@@ -137,7 +140,7 @@ public class TestDistCpSync {
   }
 
   private boolean sync() throws Exception {
-    DistCpSync distCpSync = new DistCpSync(options, conf);
+    DistCpSync distCpSync = new DistCpSync(context, conf);
     return distCpSync.sync();
   }
 
@@ -231,7 +234,7 @@ public class TestDistCpSync {
     SnapshotDiffReport report = dfs.getSnapshotDiffReport(source, "s1", "s2");
     System.out.println(report);
 
-    DistCpSync distCpSync = new DistCpSync(options, conf);
+    DistCpSync distCpSync = new DistCpSync(context, conf);
 
     // do the sync
     Assert.assertTrue(distCpSync.sync());
@@ -239,24 +242,24 @@ public class TestDistCpSync {
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
             HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
-    Assert.assertEquals(spath, options.getSourcePaths().get(0));
+    Assert.assertEquals(spath, context.getSourcePaths().get(0));
 
     // build copy listing
     final Path listingPath = new Path("/tmp/META/fileList.seq");
     CopyListing listing = new SimpleCopyListing(conf, new Credentials(), distCpSync);
-    listing.buildListing(listingPath, options);
+    listing.buildListing(listingPath, context);
 
     Map<Text, CopyListingFileStatus> copyListing = getListing(listingPath);
     CopyMapper copyMapper = new CopyMapper();
     StubContext stubContext = new StubContext(conf, null, 0);
-    Mapper<Text, CopyListingFileStatus, Text, Text>.Context context =
+    Mapper<Text, CopyListingFileStatus, Text, Text>.Context mapContext =
         stubContext.getContext();
     // Enable append
-    context.getConfiguration().setBoolean(
+    mapContext.getConfiguration().setBoolean(
         DistCpOptionSwitch.APPEND.getConfigLabel(), true);
-    copyMapper.setup(context);
+    copyMapper.setup(mapContext);
     for (Map.Entry<Text, CopyListingFileStatus> entry : copyListing.entrySet()) {
-      copyMapper.map(entry.getKey(), entry.getValue(), context);
+      copyMapper.map(entry.getKey(), entry.getValue(), mapContext);
     }
 
     // verify that we only list modified and created files/directories
@@ -312,7 +315,12 @@ public class TestDistCpSync {
    */
   @Test
   public void testSyncWithCurrent() throws Exception {
-    options.setUseDiff("s1", ".");
+    final DistCpOptions options = new DistCpOptions.Builder(
+        Collections.singletonList(source), target)
+        .withSyncFolder(true)
+        .withUseDiff("s1", ".")
+        .build();
+    context = new DistCpContext(options);
     initData(source);
     initData(target);
     enableAndCreateFirstSnapshot();
@@ -323,7 +331,7 @@ public class TestDistCpSync {
     // do the sync
     sync();
     // make sure the source path is still unchanged
-    Assert.assertEquals(source, options.getSourcePaths().get(0));
+    Assert.assertEquals(source, context.getSourcePaths().get(0));
   }
 
   private void initData2(Path dir) throws Exception {
@@ -501,32 +509,32 @@ public class TestDistCpSync {
     SnapshotDiffReport report = dfs.getSnapshotDiffReport(source, "s1", "s2");
     System.out.println(report);
 
-    DistCpSync distCpSync = new DistCpSync(options, conf);
+    DistCpSync distCpSync = new DistCpSync(context, conf);
     // do the sync
     Assert.assertTrue(distCpSync.sync());
 
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
             HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
-    Assert.assertEquals(spath, options.getSourcePaths().get(0));
+    Assert.assertEquals(spath, context.getSourcePaths().get(0));
 
     // build copy listing
     final Path listingPath = new Path("/tmp/META/fileList.seq");
     CopyListing listing = new SimpleCopyListing(conf, new Credentials(), distCpSync);
-    listing.buildListing(listingPath, options);
+    listing.buildListing(listingPath, context);
 
     Map<Text, CopyListingFileStatus> copyListing = getListing(listingPath);
     CopyMapper copyMapper = new CopyMapper();
     StubContext stubContext = new StubContext(conf, null, 0);
-    Mapper<Text, CopyListingFileStatus, Text, Text>.Context context =
+    Mapper<Text, CopyListingFileStatus, Text, Text>.Context mapContext =
             stubContext.getContext();
     // Enable append
-    context.getConfiguration().setBoolean(
+    mapContext.getConfiguration().setBoolean(
             DistCpOptionSwitch.APPEND.getConfigLabel(), true);
-    copyMapper.setup(context);
+    copyMapper.setup(mapContext);
     for (Map.Entry<Text, CopyListingFileStatus> entry :
             copyListing.entrySet()) {
-      copyMapper.map(entry.getKey(), entry.getValue(), context);
+      copyMapper.map(entry.getKey(), entry.getValue(), mapContext);
     }
 
     // verify that we only list modified and created files/directories
@@ -729,7 +737,7 @@ public class TestDistCpSync {
 
     boolean threwException = false;
     try {
-      DistCpSync distCpSync = new DistCpSync(options, conf);
+      DistCpSync distCpSync = new DistCpSync(context, conf);
       // do the sync
       distCpSync.sync();
     } catch (HadoopIllegalArgumentException e) {

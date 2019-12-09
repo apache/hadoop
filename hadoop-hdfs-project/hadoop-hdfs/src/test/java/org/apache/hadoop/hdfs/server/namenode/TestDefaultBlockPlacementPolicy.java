@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -98,6 +99,51 @@ public class TestDefaultBlockPlacementPolicy {
   }
 
   /**
+   * Verify local node selection with using DFSNetworkTopology.
+   */
+  @Test
+  public void testPlacementWithDFSNetworkTopology() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    final String[] racks = {"/RACK0", "/RACK0", "/RACK2", "/RACK3", "/RACK2"};
+    final String[] hosts = {"/host0", "/host1", "/host2", "/host3", "/host4"};
+
+    // enables DFSNetworkTopology
+    conf.setBoolean(DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY, true);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY,
+        DEFAULT_BLOCK_SIZE / 2);
+
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).racks(racks)
+        .hosts(hosts).build();
+    cluster.waitActive();
+    nameNodeRpc = cluster.getNameNodeRpc();
+    namesystem = cluster.getNamesystem();
+
+    DatanodeManager dm = namesystem.getBlockManager().getDatanodeManager();
+    assertTrue(dm.getNetworkTopology() instanceof DFSNetworkTopology);
+
+    String clientMachine = "/host3";
+    String clientRack = "/RACK3";
+    String src = "/test";
+    // Create the file with client machine
+    HdfsFileStatus fileStatus = namesystem.startFile(src, perm, clientMachine,
+        clientMachine, EnumSet.of(CreateFlag.CREATE), true, REPLICATION_FACTOR,
+        DEFAULT_BLOCK_SIZE, null, null, false);
+    LocatedBlock locatedBlock = nameNodeRpc.addBlock(src, clientMachine, null,
+        null, fileStatus.getFileId(), null, null);
+
+    assertEquals("Block should be allocated sufficient locations",
+        REPLICATION_FACTOR, locatedBlock.getLocations().length);
+    assertEquals("First datanode should be rack local", clientRack,
+        locatedBlock.getLocations()[0].getNetworkLocation());
+    nameNodeRpc.abandonBlock(locatedBlock.getBlock(), fileStatus.getFileId(),
+        src, clientMachine);
+  }
+
+  /**
    * Verify decommissioned nodes should not be selected.
    */
   @Test
@@ -110,11 +156,11 @@ public class TestDefaultBlockPlacementPolicy {
     DatanodeDescriptor dnd3 = dnm.getDatanode(
         cluster.getDataNodes().get(3).getDatanodeId());
     assertEquals(dnd3.getNetworkLocation(), clientRack);
-    dnm.getDecomManager().startDecommission(dnd3);
+    dnm.getDatanodeAdminManager().startDecommission(dnd3);
     try {
       testPlacement(clientMachine, clientRack, false);
     } finally {
-      dnm.getDecomManager().stopDecommission(dnd3);
+      dnm.getDatanodeAdminManager().stopDecommission(dnd3);
     }
   }
 
@@ -138,7 +184,7 @@ public class TestDefaultBlockPlacementPolicy {
       // Create the file with client machine
       HdfsFileStatus fileStatus = namesystem.startFile(src, perm,
           clientMachine, clientMachine, EnumSet.of(CreateFlag.CREATE), true,
-          REPLICATION_FACTOR, DEFAULT_BLOCK_SIZE, null, false);
+          REPLICATION_FACTOR, DEFAULT_BLOCK_SIZE, null, null, false);
       LocatedBlock locatedBlock = nameNodeRpc.addBlock(src, clientMachine,
           null, null, fileStatus.getFileId(), null, null);
 

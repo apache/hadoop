@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.shell.CopyCommands.Cp;
 import org.apache.hadoop.fs.shell.CopyCommands.Get;
 import org.apache.hadoop.fs.shell.CopyCommands.Put;
+import org.apache.hadoop.fs.shell.CopyCommands.CopyFromLocal;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,9 +43,11 @@ public class TestCopyPreserveFlag {
   private static final int MODIFICATION_TIME = 12345000;
   private static final int ACCESS_TIME = 23456000;
   private static final Path DIR_FROM = new Path("d0");
+  private static final Path DIR_FROM_SPL = new Path("d0 space");
   private static final Path DIR_TO1 = new Path("d1");
   private static final Path DIR_TO2 = new Path("d2");
   private static final Path FROM = new Path(DIR_FROM, "f0");
+  private static final Path FROM_SPL = new Path(DIR_FROM_SPL, "f0");
   private static final Path TO = new Path(DIR_TO1, "f1");
   private static final FsPermission PERMISSIONS = new FsPermission(
     FsAction.ALL,
@@ -76,10 +79,10 @@ public class TestCopyPreserveFlag {
         output.writeChar('\n');
     }
     output.close();
-    fs.setTimes(FROM, MODIFICATION_TIME, ACCESS_TIME);
     fs.setPermission(FROM, PERMISSIONS);
-    fs.setTimes(DIR_FROM, MODIFICATION_TIME, ACCESS_TIME);
+    fs.setTimes(FROM, MODIFICATION_TIME, ACCESS_TIME);
     fs.setPermission(DIR_FROM, PERMISSIONS);
+    fs.setTimes(DIR_FROM, MODIFICATION_TIME, ACCESS_TIME);
   }
 
   @After
@@ -117,6 +120,32 @@ public class TestCopyPreserveFlag {
   public void testPutWithoutP() throws Exception {
     run(new Put(), FROM.toString(), TO.toString());
     assertAttributesChanged(TO);
+  }
+
+  @Test(timeout = 10000)
+  public void testPutWithSplCharacter() throws Exception {
+    fs.mkdirs(DIR_FROM_SPL);
+    fs.createNewFile(FROM_SPL);
+    run(new Put(), FROM_SPL.toString(), TO.toString());
+    assertAttributesChanged(TO);
+  }
+
+  @Test(timeout = 10000)
+  public void testCopyFromLocal() throws Exception {
+    run(new CopyFromLocal(), FROM.toString(), TO.toString());
+    assertAttributesChanged(TO);
+  }
+
+  @Test(timeout = 10000)
+  public void testCopyFromLocalWithThreads() throws Exception {
+    run(new CopyFromLocal(), "-t", "10", FROM.toString(), TO.toString());
+    assertAttributesChanged(TO);
+  }
+
+  @Test(timeout = 10000)
+  public void testCopyFromLocalWithThreadsPreserve() throws Exception {
+    run(new CopyFromLocal(), "-p", "-t", "10", FROM.toString(), TO.toString());
+    assertAttributesPreserved(TO);
   }
 
   @Test(timeout = 10000)

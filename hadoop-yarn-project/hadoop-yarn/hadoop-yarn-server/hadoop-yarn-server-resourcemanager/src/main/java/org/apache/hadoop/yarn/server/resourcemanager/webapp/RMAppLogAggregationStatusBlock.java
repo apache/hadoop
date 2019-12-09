@@ -38,9 +38,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.util.Apps;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -87,28 +87,28 @@ public class RMAppLogAggregationStatusBlock extends HtmlBlock {
       tr().
         th(_TH, "Log Aggregation Status").
         th(_TH, "Description").
-      _();
+        __();
     table_description.tr().td(LogAggregationStatus.DISABLED.name())
-      .td("Log Aggregation is Disabled.")._();
+      .td("Log Aggregation is Disabled.").__();
     table_description.tr().td(LogAggregationStatus.NOT_START.name())
-      .td("Log Aggregation does not Start.")._();
+      .td("Log Aggregation does not Start.").__();
     table_description.tr().td(LogAggregationStatus.RUNNING.name())
-      .td("Log Aggregation is Running.")._();
+      .td("Log Aggregation is Running.").__();
     table_description.tr().td(LogAggregationStatus.RUNNING_WITH_FAILURE.name())
       .td("Log Aggregation is Running, but has failures "
-          + "in previous cycles")._();
+          + "in previous cycles").__();
     table_description.tr().td(LogAggregationStatus.SUCCEEDED.name())
       .td("Log Aggregation is Succeeded. All of the logs have been "
-          + "aggregated successfully.")._();
+          + "aggregated successfully.").__();
     table_description.tr().td(LogAggregationStatus.FAILED.name())
       .td("Log Aggregation is Failed. At least one of the logs "
-          + "have not been aggregated.")._();
+          + "have not been aggregated.").__();
     table_description.tr().td(LogAggregationStatus.TIME_OUT.name())
       .td("The application is finished, but the log aggregation status is "
           + "not updated for a long time. Not sure whether the log aggregation "
-          + "is finished or not.")._();
-    table_description._();
-    div_description._();
+          + "is finished or not.").__();
+    table_description.__();
+    div_description.__();
 
     RMApp rmApp = rm.getRMContext().getRMApps().get(appId);
     // Application Log aggregation status Table
@@ -131,7 +131,7 @@ public class RMAppLogAggregationStatusBlock extends HtmlBlock {
       .th(_TH, "Last "
           + maxLogAggregationDiagnosticsInMemory + " Diagnostic Messages")
       .th(_TH, "Last "
-          + maxLogAggregationDiagnosticsInMemory + " Failure Messages")._();
+          + maxLogAggregationDiagnosticsInMemory + " Failure Messages").__();
 
     if (rmApp != null) {
       Map<NodeId, LogAggregationReport> logAggregationReports =
@@ -152,11 +152,11 @@ public class RMAppLogAggregationStatusBlock extends HtmlBlock {
             .td(report.getKey().toString())
             .td(status == null ? "N/A" : status.toString())
             .td(message == null ? "N/A" : message)
-            .td(failureMessage == null ? "N/A" : failureMessage)._();
+            .td(failureMessage == null ? "N/A" : failureMessage).__();
         }
       }
     }
-    table._();
-    div._();
+    table.__();
+    div.__();
   }
 }

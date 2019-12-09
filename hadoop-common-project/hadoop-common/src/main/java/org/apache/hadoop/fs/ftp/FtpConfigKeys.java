@@ -54,6 +54,7 @@ public class FtpConfigKeys extends CommonConfigurationKeys {
   public static final long    FS_TRASH_INTERVAL_DEFAULT = 0;
   public static final DataChecksum.Type CHECKSUM_TYPE_DEFAULT =
       DataChecksum.Type.CRC32;
+  public static final String KEY_PROVIDER_URI_DEFAULT = "";
   
   protected static FsServerDefaults getServerDefaults() throws IOException {
     return new FsServerDefaults(
@@ -64,7 +65,8 @@ public class FtpConfigKeys extends CommonConfigurationKeys {
         STREAM_BUFFER_SIZE_DEFAULT,
         ENCRYPT_DATA_TRANSFER_DEFAULT,
         FS_TRASH_INTERVAL_DEFAULT,
-        CHECKSUM_TYPE_DEFAULT);
+        CHECKSUM_TYPE_DEFAULT,
+        KEY_PROVIDER_URI_DEFAULT);
   }
 }
   

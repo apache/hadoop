@@ -21,7 +21,7 @@ Hadoop Archive Logs Guide
 Overview
 --------
 
-For clusters with a lot of Yarn aggregated logs, it can be helpful to combine
+For clusters with a lot of YARN aggregated logs, it can be helpful to combine
 them into hadoop archives in order to reduce the number of small files, and
 hence the stress on the NameNode.  This tool provides an easy way to do this.
 Aggregated logs in hadoop archives can still be read by the Job History Server
@@ -50,7 +50,7 @@ How to Archive Logs
                                    to be eligible (default: 20)
     -noProxy                       When specified, all processing will be
                                    done as the user running this command (or
-                                   the Yarn user if DefaultContainerExecutor
+                                   the YARN user if DefaultContainerExecutor
                                    is in use). When not specified, all
                                    processing will be done as the user who
                                    owns that application; if the user
@@ -86,7 +86,7 @@ The tool works by performing the following procedure:
     its aggregated log files with the resulting archive.
 
 The ``-noProxy`` option makes the tool process everything as the user who is
-currently running it, or the Yarn user if DefaultContainerExecutor is in use.
+currently running it, or the YARN user if DefaultContainerExecutor is in use.
 When not specified, all processing will be done by the user who owns that
 application; if the user running this command is not allowed to impersonate that
 user, it will fail.  This is useful if you want an admin user to handle all

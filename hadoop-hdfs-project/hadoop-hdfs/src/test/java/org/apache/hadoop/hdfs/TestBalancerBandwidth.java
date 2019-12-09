@@ -27,8 +27,8 @@ import java.util.ArrayList;
 import java.util.concurrent.TimeoutException;
 
 import com.google.common.base.Supplier;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
@@ -43,7 +43,8 @@ public class TestBalancerBandwidth {
   final static private Configuration conf = new Configuration();
   final static private int NUM_OF_DATANODES = 2;
   final static private int DEFAULT_BANDWIDTH = 1024*1024;
-  public static final Log LOG = LogFactory.getLog(TestBalancerBandwidth.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestBalancerBandwidth.class);
   private static final Charset UTF8 = Charset.forName("UTF-8");
   private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
   private final PrintStream outStream = new PrintStream(outContent);

@@ -20,12 +20,14 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
@@ -33,16 +35,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 
+import com.google.common.annotations.VisibleForTesting;
+
 @XmlRootElement(name = "node")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class NodeInfo {
 
   protected String rack;
   protected NodeState state;
-  protected String id;
+  private String id;
   protected String nodeHostName;
   protected String nodeHTTPAddress;
-  protected long lastHealthUpdate;
+  private long lastHealthUpdate;
   protected String version;
   protected String healthReport;
   protected int numContainers;
@@ -55,7 +59,11 @@ public class NodeInfo {
   private long usedVirtualCoresOpport;
   private int numQueuedContainers;
   protected ArrayList<String> nodeLabels = new ArrayList<String>();
+  private AllocationTagsInfo allocationTags;
   protected ResourceUtilizationInfo resourceUtilization;
+  protected ResourceInfo usedResource;
+  protected ResourceInfo availableResource;
+  protected NodeAttributesInfo nodeAttributesInfo;
 
   public NodeInfo() {
   } // JAXB needs this
@@ -73,6 +81,8 @@ public class NodeInfo {
       this.usedVirtualCores = report.getUsedResource().getVirtualCores();
       this.availableVirtualCores =
           report.getAvailableResource().getVirtualCores();
+      this.usedResource = new ResourceInfo(report.getUsedResource());
+      this.availableResource = new ResourceInfo(report.getAvailableResource());
     }
     this.id = id.toString();
     this.rack = ni.getRackName();
@@ -103,6 +113,22 @@ public class NodeInfo {
     if (labelSet != null) {
       nodeLabels.addAll(labelSet);
       Collections.sort(nodeLabels);
+    }
+
+    // add attributes
+    Set<NodeAttribute> attrs = ni.getAllNodeAttributes();
+    nodeAttributesInfo = new NodeAttributesInfo();
+    for (NodeAttribute attribute : attrs) {
+      NodeAttributeInfo info = new NodeAttributeInfo(attribute);
+      this.nodeAttributesInfo.addNodeAttributeInfo(info);
+    }
+
+    // add allocation tags
+    allocationTags = new AllocationTagsInfo();
+    Map<String, Long> allocationTagsInfo = ni.getAllocationTagsWithCount();
+    if (allocationTagsInfo != null) {
+      allocationTagsInfo.forEach((tag, count) ->
+          allocationTags.addAllocationTag(new AllocationTagInfo(tag, count)));
     }
 
     // update node and containers resource utilization
@@ -181,7 +207,39 @@ public class NodeInfo {
     return this.nodeLabels;
   }
 
+  public ResourceInfo getUsedResource() {
+    return usedResource;
+  }
+
+  public void setUsedResource(ResourceInfo used) {
+    this.usedResource = used;
+  }
+
+  public ResourceInfo getAvailableResource() {
+    return availableResource;
+  }
+
+  public void setAvailableResource(ResourceInfo avail) {
+    this.availableResource = avail;
+  }
+
   public ResourceUtilizationInfo getResourceUtilization() {
     return this.resourceUtilization;
   }
+
+  public String getAllocationTagsSummary() {
+    return this.allocationTags == null ? "" :
+        this.allocationTags.toString();
+  }
+
+  @VisibleForTesting
+  public void setId(String id) {
+    this.id = id;
+  }
+
+  @VisibleForTesting
+  public void setLastHealthUpdate(long lastHealthUpdate) {
+    this.lastHealthUpdate = lastHealthUpdate;
+  }
+
 }

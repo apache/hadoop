@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.sharedcachemanager.webapp;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -28,6 +26,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A very simple web interface for the metrics reported by
@@ -37,7 +37,8 @@ import org.apache.hadoop.yarn.webapp.WebApps;
 @Private
 @Unstable
 public class SCMWebServer extends AbstractService {
-  private static final Log LOG = LogFactory.getLog(SCMWebServer.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SCMWebServer.class);
 
   private final SharedCacheManager scm;
   private WebApp webApp;

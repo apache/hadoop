@@ -21,11 +21,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+
 import org.junit.Assert;
 
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.ComputeFairShares;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,7 +38,7 @@ public class TestComputeFairShares {
   
   @Before
   public void setUp() throws Exception {
-    scheds = new ArrayList<Schedulable>();
+    scheds = new ArrayList<>();
   }
   
   /** 
@@ -52,7 +52,7 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable());
     scheds.add(new FakeSchedulable());
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(40), ResourceType.MEMORY);
+        Resources.createResource(40), ResourceInformation.MEMORY_MB.getName());
     verifyMemoryShares(10, 10, 10, 10);
   }
   
@@ -70,7 +70,7 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable(0, 11));
     scheds.add(new FakeSchedulable(0, 3));
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(40), ResourceType.MEMORY);
+        Resources.createResource(40), ResourceInformation.MEMORY_MB.getName());
     verifyMemoryShares(13, 13, 11, 3);
   }
 
@@ -90,7 +90,7 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable(0));
     scheds.add(new FakeSchedulable(2));
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(40), ResourceType.MEMORY);
+        Resources.createResource(40), ResourceInformation.MEMORY_MB.getName());
     verifyMemoryShares(20, 18, 0, 2);
   }
   
@@ -100,12 +100,12 @@ public class TestComputeFairShares {
    */
   @Test
   public void testWeightedSharing() {
-    scheds.add(new FakeSchedulable(0, 2.0));
-    scheds.add(new FakeSchedulable(0, 1.0));
-    scheds.add(new FakeSchedulable(0, 1.0));
-    scheds.add(new FakeSchedulable(0, 0.5));
+    scheds.add(new FakeSchedulable(0, 2.0f));
+    scheds.add(new FakeSchedulable(0, 1.0f));
+    scheds.add(new FakeSchedulable(0, 1.0f));
+    scheds.add(new FakeSchedulable(0, 0.5f));
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(45), ResourceType.MEMORY);
+        Resources.createResource(45), ResourceInformation.MEMORY_MB.getName());
     verifyMemoryShares(20, 10, 10, 5);
   }
   
@@ -118,12 +118,12 @@ public class TestComputeFairShares {
    */
   @Test
   public void testWeightedSharingWithMaxShares() {
-    scheds.add(new FakeSchedulable(0, 10, 2.0));
-    scheds.add(new FakeSchedulable(0, 11, 1.0));
-    scheds.add(new FakeSchedulable(0, 30, 1.0));
-    scheds.add(new FakeSchedulable(0, 20, 0.5));
+    scheds.add(new FakeSchedulable(0, 10, 2.0f));
+    scheds.add(new FakeSchedulable(0, 11, 1.0f));
+    scheds.add(new FakeSchedulable(0, 30, 1.0f));
+    scheds.add(new FakeSchedulable(0, 20, 0.5f));
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(45), ResourceType.MEMORY);
+        Resources.createResource(45), ResourceInformation.MEMORY_MB.getName());
     verifyMemoryShares(10, 11, 16, 8);
   }
 
@@ -137,66 +137,115 @@ public class TestComputeFairShares {
    */
   @Test
   public void testWeightedSharingWithMinShares() {
-    scheds.add(new FakeSchedulable(20, 2.0));
-    scheds.add(new FakeSchedulable(0, 1.0));
-    scheds.add(new FakeSchedulable(5, 1.0));
-    scheds.add(new FakeSchedulable(15, 0.5));
+    scheds.add(new FakeSchedulable(20, 2.0f));
+    scheds.add(new FakeSchedulable(0, 1.0f));
+    scheds.add(new FakeSchedulable(5, 1.0f));
+    scheds.add(new FakeSchedulable(15, 0.5f));
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(45), ResourceType.MEMORY);
+        Resources.createResource(45), ResourceInformation.MEMORY_MB.getName());
     verifyMemoryShares(20, 5, 5, 15);
   }
 
   /**
-   * Test that shares are computed accurately even when the number of slots is
-   * very large.
+   * Test that shares are computed accurately even when the number of
+   * resources is very large.
+   * Test adapted to accommodate long values for resources.
    */
   @Test
   public void testLargeShares() {
-    int million = 1000 * 1000;
-    scheds.add(new FakeSchedulable());
-    scheds.add(new FakeSchedulable());
-    scheds.add(new FakeSchedulable());
-    scheds.add(new FakeSchedulable());
+    long giga = 1000L * 1000L * 1000L * 4L;
+    scheds.add(new FakeSchedulable(0L, giga));
+    scheds.add(new FakeSchedulable(0L, giga));
+    scheds.add(new FakeSchedulable(0L, giga));
+    scheds.add(new FakeSchedulable(0L, giga));
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(40 * million), ResourceType.MEMORY);
-    verifyMemoryShares(10 * million, 10 * million, 10 * million, 10 * million);
+        Resources.createResource(4 * giga),
+        ResourceInformation.MEMORY_MB.getName());
+    verifyMemoryShares(giga, giga, giga, giga);
   }
-  
+
+  /**
+   * Test overflow in the resources taken and upper bound.
+   */
+  @Test
+  public void testLargeMinimums() {
+    long giga = 1000L * 1000L * 1000L * 4L;
+    scheds.add(new FakeSchedulable(Long.MAX_VALUE, Long.MAX_VALUE));
+    scheds.add(new FakeSchedulable(giga, giga));
+    ComputeFairShares.computeShares(scheds,
+        Resources.createResource(4 * giga),
+        ResourceInformation.MEMORY_MB.getName());
+    verifyMemoryShares(Long.MAX_VALUE, giga);
+  }
+
+  /**
+   * Test overflow in the upper bound calculation for the binary search.
+   */
+  @Test
+  public void testOverflowMaxShare() {
+    long giga = 1000L * 1000L * 1000L;
+    scheds.add(new FakeSchedulable(0L, giga));
+    scheds.add(new FakeSchedulable(0L, Long.MAX_VALUE));
+    ComputeFairShares.computeShares(scheds,
+        Resources.createResource(2 * giga),
+        ResourceInformation.MEMORY_MB.getName());
+    verifyMemoryShares(giga, giga);
+  }
+
+  /**
+   * Test overflow in the fixed share calculations. The 3th schedulable should
+   * not get any share as all resources are taken by the handleFixedShare()
+   * call.
+   * With the overflow it looked like there were more resources available then
+   * there really are.
+   * The values in the test might not be "real" but they show the overflow.
+   */
+  @Test
+  public void testOverflowFixedShare() {
+    long giga = 1000L * 1000L * 1000L;
+    long minValue = Long.MAX_VALUE - 1L;
+    scheds.add(new FakeSchedulable(giga, giga, 0));
+    scheds.add(new FakeSchedulable(minValue, Long.MAX_VALUE, 0));
+    scheds.add(new FakeSchedulable(0L, giga));
+    ComputeFairShares.computeShares(scheds,
+        Resources.createResource(1000L),
+        ResourceInformation.MEMORY_MB.getName());
+    verifyMemoryShares(giga, minValue, 0);
+  }
+
   /**
    * Test that being called on an empty list doesn't confuse the algorithm.
    */
   @Test
   public void testEmptyList() {
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(40), ResourceType.MEMORY);
+        Resources.createResource(40), ResourceInformation.MEMORY_MB.getName());
     verifyMemoryShares();
   }
   
   /**
-   * Test that CPU works as well as memory
+   * Test that CPU works as well as memory.
    */
   @Test
   public void testCPU() {
-    scheds.add(new FakeSchedulable(Resources.createResource(0, 20),
-        new ResourceWeights(2.0f)));
-    scheds.add(new FakeSchedulable(Resources.createResource(0, 0),
-        new ResourceWeights(1.0f)));
-    scheds.add(new FakeSchedulable(Resources.createResource(0, 5),
-        new ResourceWeights(1.0f)));
-    scheds.add(new FakeSchedulable(Resources.createResource(0, 15),
-        new ResourceWeights(0.5f)));
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 20), 2.0f));
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 0), 1.0f));
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 5), 1.0f));
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 15), 0.5f));
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(0, 45), ResourceType.CPU);
+        Resources.createResource(0, 45), ResourceInformation.VCORES.getName());
     verifyCPUShares(20, 5, 5, 15);
   }
   
   /**
    * Check that a given list of shares have been assigned to this.scheds.
    */
-  private void verifyMemoryShares(int... shares) {
-    Assert.assertEquals(scheds.size(), shares.length);
+  private void verifyMemoryShares(long... shares) {
+    Assert.assertEquals("Number of shares and schedulables are not consistent",
+        scheds.size(), shares.length);
     for (int i = 0; i < shares.length; i++) {
-      Assert.assertEquals(shares[i], scheds.get(i).getFairShare().getMemorySize());
+      Assert.assertEquals("Expected share number " + i + " in list wrong",
+          shares[i], scheds.get(i).getFairShare().getMemorySize());
     }
   }
   
@@ -204,9 +253,11 @@ public class TestComputeFairShares {
    * Check that a given list of shares have been assigned to this.scheds.
    */
   private void verifyCPUShares(int... shares) {
-    Assert.assertEquals(scheds.size(), shares.length);
+    Assert.assertEquals("Number of shares and schedulables are not consistent",
+        scheds.size(), shares.length);
     for (int i = 0; i < shares.length; i++) {
-      Assert.assertEquals(shares[i], scheds.get(i).getFairShare().getVirtualCores());
+      Assert.assertEquals("Expected share number " + i + " in list wrong",
+          shares[i], scheds.get(i).getFairShare().getVirtualCores());
     }
   }
 }

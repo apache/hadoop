@@ -30,7 +30,6 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -41,9 +40,9 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
@@ -60,14 +59,14 @@ public class JobBlock extends HtmlBlock {
     String jid = $(JOB_ID);
     if (jid.isEmpty()) {
       html.
-        p()._("Sorry, can't do anything without a JobID.")._();
+        p().__("Sorry, can't do anything without a JobID.").__();
       return;
     }
     JobId jobID = MRApps.toJobID(jid);
     Job job = appContext.getJob(jobID);
     if (job == null) {
       html.
-        p()._("Sorry, ", jid, " not found.")._();
+        p().__("Sorry, ", jid, " not found.").__();
       return;
     }
 
@@ -77,15 +76,15 @@ public class JobBlock extends HtmlBlock {
 
     JobInfo jinfo = new JobInfo(job, true);
     info("Job Overview").
-        _("Job Name:", jinfo.getName()).
-        _("User Name:", jinfo.getUserName()).
-        _("Queue Name:", jinfo.getQueueName()).
-        _("State:", jinfo.getState()).
-        _("Uberized:", jinfo.isUberized()).
-        _("Started:", new Date(jinfo.getStartTime())).
-        _("Elapsed:", StringUtils.formatTime(jinfo.getElapsedTime()));
+        __("Job Name:", jinfo.getName()).
+        __("User Name:", jinfo.getUserName()).
+        __("Queue Name:", jinfo.getQueueName()).
+        __("State:", jinfo.getState()).
+        __("Uberized:", jinfo.isUberized()).
+        __("Started:", new Date(jinfo.getStartTime())).
+        __("Elapsed:", StringUtils.formatTime(jinfo.getElapsedTime()));
     DIV<Hamlet> div = html.
-      _(InfoBlock.class).
+        __(InfoBlock.class).
       div(_INFO_WRAP);
 
     // MRAppMasters Table
@@ -93,13 +92,13 @@ public class JobBlock extends HtmlBlock {
     table.
       tr().
       th(amString).
-      _().
+        __().
       tr().
       th(_TH, "Attempt Number").
       th(_TH, "Start Time").
       th(_TH, "Node").
       th(_TH, "Logs").
-      _();
+        __();
     for (AMInfo amInfo : amInfos) {
       AMAttemptInfo attempt = new AMAttemptInfo(amInfo,
           jinfo.getId(), jinfo.getUserName());
@@ -109,14 +108,14 @@ public class JobBlock extends HtmlBlock {
         td(new Date(attempt.getStartTime()).toString()).
         td().a(".nodelink", url(MRWebAppUtil.getYARNWebappScheme(),
             attempt.getNodeHttpAddress()),
-            attempt.getNodeHttpAddress())._().
+            attempt.getNodeHttpAddress()).__().
         td().a(".logslink", url(attempt.getLogsLink()), 
-            "logs")._().
-        _();
+            "logs").__().
+          __();
     }
 
-    table._();
-    div._();
+    table.__();
+    div.__();
 
     html.div(_INFO_WRAP).        
       // Tasks table
@@ -127,30 +126,30 @@ public class JobBlock extends HtmlBlock {
             th(_TH, "Total").
             th(_TH, "Pending").
             th(_TH, "Running").
-            th(_TH, "Complete")._().
+            th(_TH, "Complete").__().
           tr(_ODD).
             th("Map").
             td().
               div(_PROGRESSBAR).
                 $title(join(jinfo.getMapProgressPercent(), '%')). // tooltip
                 div(_PROGRESSBAR_VALUE).
-                  $style(join("width:", jinfo.getMapProgressPercent(), '%'))._()._()._().
-            td().a(url("tasks", jid, "m", "ALL"),String.valueOf(jinfo.getMapsTotal()))._().
-            td().a(url("tasks", jid, "m", "PENDING"),String.valueOf(jinfo.getMapsPending()))._().
-            td().a(url("tasks", jid, "m", "RUNNING"),String.valueOf(jinfo.getMapsRunning()))._().
-            td().a(url("tasks", jid, "m", "COMPLETED"),String.valueOf(jinfo.getMapsCompleted()))._()._().
+                  $style(join("width:", jinfo.getMapProgressPercent(), '%')).__().__().__().
+            td().a(url("tasks", jid, "m", "ALL"), String.valueOf(jinfo.getMapsTotal())).__().
+            td().a(url("tasks", jid, "m", "PENDING"), String.valueOf(jinfo.getMapsPending())).__().
+            td().a(url("tasks", jid, "m", "RUNNING"), String.valueOf(jinfo.getMapsRunning())).__().
+            td().a(url("tasks", jid, "m", "COMPLETED"), String.valueOf(jinfo.getMapsCompleted())).__().__().
           tr(_EVEN).
             th("Reduce").
             td().
               div(_PROGRESSBAR).
                 $title(join(jinfo.getReduceProgressPercent(), '%')). // tooltip
                 div(_PROGRESSBAR_VALUE).
-                  $style(join("width:", jinfo.getReduceProgressPercent(), '%'))._()._()._().
-            td().a(url("tasks", jid, "r", "ALL"),String.valueOf(jinfo.getReducesTotal()))._().
-            td().a(url("tasks", jid, "r", "PENDING"),String.valueOf(jinfo.getReducesPending()))._().
-            td().a(url("tasks", jid, "r", "RUNNING"),String.valueOf(jinfo.getReducesRunning()))._().
-            td().a(url("tasks", jid, "r", "COMPLETED"),String.valueOf(jinfo.getReducesCompleted()))._()._()
-          ._().
+                  $style(join("width:", jinfo.getReduceProgressPercent(), '%')).__().__().__().
+            td().a(url("tasks", jid, "r", "ALL"), String.valueOf(jinfo.getReducesTotal())).__().
+            td().a(url("tasks", jid, "r", "PENDING"), String.valueOf(jinfo.getReducesPending())).__().
+            td().a(url("tasks", jid, "r", "RUNNING"), String.valueOf(jinfo.getReducesRunning())).__().
+            td().a(url("tasks", jid, "r", "COMPLETED"), String.valueOf(jinfo.getReducesCompleted())).__().__()
+          .__().
         // Attempts table
         table("#job").
         tr().
@@ -159,45 +158,45 @@ public class JobBlock extends HtmlBlock {
           th(_TH, "Running").
           th(_TH, "Failed").
           th(_TH, "Killed").
-          th(_TH, "Successful")._().
+          th(_TH, "Successful").__().
         tr(_ODD).
           th("Maps").
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.NEW.toString()),
-              String.valueOf(jinfo.getNewMapAttempts()))._().
+              String.valueOf(jinfo.getNewMapAttempts())).__().
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.RUNNING.toString()),
-              String.valueOf(jinfo.getRunningMapAttempts()))._().
+              String.valueOf(jinfo.getRunningMapAttempts())).__().
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.FAILED.toString()),
-              String.valueOf(jinfo.getFailedMapAttempts()))._().
+              String.valueOf(jinfo.getFailedMapAttempts())).__().
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.KILLED.toString()),
-              String.valueOf(jinfo.getKilledMapAttempts()))._().
+              String.valueOf(jinfo.getKilledMapAttempts())).__().
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.SUCCESSFUL.toString()),
-              String.valueOf(jinfo.getSuccessfulMapAttempts()))._().
-        _().
+              String.valueOf(jinfo.getSuccessfulMapAttempts())).__().
+        __().
         tr(_EVEN).
           th("Reduces").
           td().a(url("attempts", jid, "r",
               TaskAttemptStateUI.NEW.toString()),
-              String.valueOf(jinfo.getNewReduceAttempts()))._().
+              String.valueOf(jinfo.getNewReduceAttempts())).__().
           td().a(url("attempts", jid, "r",
               TaskAttemptStateUI.RUNNING.toString()),
-              String.valueOf(jinfo.getRunningReduceAttempts()))._().
+              String.valueOf(jinfo.getRunningReduceAttempts())).__().
           td().a(url("attempts", jid, "r",
               TaskAttemptStateUI.FAILED.toString()),
-              String.valueOf(jinfo.getFailedReduceAttempts()))._().
+              String.valueOf(jinfo.getFailedReduceAttempts())).__().
           td().a(url("attempts", jid, "r",
               TaskAttemptStateUI.KILLED.toString()),
-              String.valueOf(jinfo.getKilledReduceAttempts()))._().
+              String.valueOf(jinfo.getKilledReduceAttempts())).__().
           td().a(url("attempts", jid, "r",
               TaskAttemptStateUI.SUCCESSFUL.toString()),
-              String.valueOf(jinfo.getSuccessfulReduceAttempts()))._().
-         _().
-       _().
-     _();
+              String.valueOf(jinfo.getSuccessfulReduceAttempts())).__().
+        __().
+        __().
+        __();
   }
 
 }

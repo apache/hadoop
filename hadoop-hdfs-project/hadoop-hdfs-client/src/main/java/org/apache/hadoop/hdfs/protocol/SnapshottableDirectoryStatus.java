@@ -21,6 +21,7 @@ import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.EnumSet;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -57,13 +58,30 @@ public class SnapshottableDirectoryStatus {
   private final byte[] parentFullPath;
 
   public SnapshottableDirectoryStatus(long modification_time, long access_time,
-      FsPermission permission, String owner, String group, byte[] localName,
-      long inodeId, int childrenNum,
+      FsPermission permission, EnumSet<HdfsFileStatus.Flags> flags,
+      String owner, String group, byte[] localName, long inodeId,
+      int childrenNum, int snapshotNumber, int snapshotQuota,
+      byte[] parentFullPath) {
+    this.dirStatus = new HdfsFileStatus.Builder()
+      .isdir(true)
+      .mtime(modification_time)
+      .atime(access_time)
+      .perm(permission)
+      .flags(flags)
+      .owner(owner)
+      .group(group)
+      .path(localName)
+      .fileId(inodeId)
+      .children(childrenNum)
+      .build();
+    this.snapshotNumber = snapshotNumber;
+    this.snapshotQuota = snapshotQuota;
+    this.parentFullPath = parentFullPath;
+  }
+
+  public SnapshottableDirectoryStatus(HdfsFileStatus dirStatus,
       int snapshotNumber, int snapshotQuota, byte[] parentFullPath) {
-    this.dirStatus = new HdfsFileStatus(0, true, 0, 0, modification_time,
-        access_time, permission, owner, group, null, localName, inodeId,
-        childrenNum, null, HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED,
-        null);
+    this.dirStatus = dirStatus;
     this.snapshotNumber = snapshotNumber;
     this.snapshotQuota = snapshotQuota;
     this.parentFullPath = parentFullPath;

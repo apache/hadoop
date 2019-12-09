@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -16,9 +16,9 @@
 
 setup() {
 
-  TMP="${BATS_TEST_DIRNAME}/../../../target/test-dir/bats.$$.${RANDOM}"
-  mkdir -p ${TMP}
-  TMP=$(cd -P -- "${TMP}" >/dev/null && pwd -P)
+  RELTMP="${BATS_TEST_DIRNAME}/../../../target/test-dir/bats.$$.${RANDOM}"
+  mkdir -p ${RELTMP}
+  TMP=$(cd -P -- "${RELTMP}" >/dev/null && pwd -P)
   export TMP
   TESTBINDIR=$(cd -P -- "$(pwd)" >/dev/null && pwd -P)
   HADOOP_LIBEXEC_DIR=${TESTBINDIR}/../../main/bin

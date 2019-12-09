@@ -21,7 +21,6 @@ package org.apache.hadoop.mapreduce.v2.app.webapp;
 import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 
-import org.apache.hadoop.mapreduce.v2.app.webapp.SingleCounterBlock;
 import org.apache.hadoop.yarn.webapp.SubView;
 
 /**
@@ -33,7 +32,7 @@ public class SingleCounterPage extends AppView {
    * (non-Javadoc)
    * @see org.apache.hadoop.mapreduce.v2.hs.webapp.HsView#preHead(org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML)
    */
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
     String tid = $(TASK_ID);
     String activeNav = "3";

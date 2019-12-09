@@ -19,22 +19,53 @@
 import Ember from 'ember';
 
 export default Ember.Controller.extend({
+  queryParams: ["service", "viewType"],
+  service: undefined,
+  viewType: "graph",
 
-  breadcrumbs: Ember.computed("model.attempt.appId", function () {
+  actions: {
+    changeViewType(param) {
+      this.set("viewType", param);
+    }
+  },
+
+  breadcrumbs: Ember.computed("model.attempt.appId", "model.attempt.id", function () {
     var appId = this.get("model.attempt.appId");
-    return [{
+    var attemptId = this.get("model.attempt.id");
+    var serviceName = this.get('service');
+    var breadcrumbs = [{
       text: "Home",
       routeName: 'application'
     },{
       text: "Applications",
-      routeName: 'yarn-apps'
+      routeName: 'yarn-apps.apps'
     }, {
       text: `App [${appId}]`,
-      routeName: 'yarn-app',
-      model: appId
+      href: `#/yarn-app/${appId}/attempts`
     }, {
-      text: "Attempt",
+      text: "Attempts",
+      href: `#/yarn-app/${appId}/attempts`
+    }, {
+      text: `Attempt [${attemptId}]`
     }];
+    if (serviceName) {
+      breadcrumbs = [{
+        text: "Home",
+        routeName: 'application'
+      }, {
+        text: "Services",
+        routeName: 'yarn-services'
+      }, {
+        text: `${serviceName} [${appId}]`,
+        href: `#/yarn-app/${appId}/components?service=${serviceName}`
+      }, {
+        text: "Attempts",
+        href: `#/yarn-app/${appId}/attempts?service=${serviceName}`
+      }, {
+        text: `Attempt [${attemptId}]`
+      }];
+    }
+    return breadcrumbs;
   })
 
 });

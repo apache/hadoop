@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -54,11 +52,14 @@ import org.apache.hadoop.mapreduce.v2.hs.protocolPB.HSAdminRefreshProtocolServer
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 public class HSAdminServer extends AbstractService implements HSAdminProtocol {
 
-  private static final Log LOG = LogFactory.getLog(HSAdminServer.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HSAdminServer.class);
   private AccessControlList adminAcl;
   private AggregatedLogDeletionService aggLogDelService = null;
 

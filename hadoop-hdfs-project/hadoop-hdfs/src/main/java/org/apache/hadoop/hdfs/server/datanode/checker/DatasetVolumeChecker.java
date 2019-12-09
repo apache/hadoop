@@ -24,10 +24,11 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -43,9 +44,11 @@ import javax.annotation.Nullable;
 import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -91,6 +94,7 @@ public class DatasetVolumeChecker {
    * Minimum time between two successive disk checks of a volume.
    */
   private final long minDiskCheckGapMs;
+  private final long diskCheckTimeout;
 
   /**
    * Timestamp of the last check of all volumes.
@@ -101,6 +105,8 @@ public class DatasetVolumeChecker {
 
   private static final VolumeCheckContext IGNORED_CONTEXT =
       new VolumeCheckContext();
+
+  private final ExecutorService checkVolumeResultHandlerExecutorService;
 
   /**
    * @param conf Configuration object.
@@ -136,20 +142,39 @@ public class DatasetVolumeChecker {
           + minDiskCheckGapMs + " (should be >= 0)");
     }
 
+    diskCheckTimeout = conf.getTimeDuration(
+        DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY,
+        DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_DEFAULT,
+        TimeUnit.MILLISECONDS);
+
+    if (diskCheckTimeout < 0) {
+      throw new DiskErrorException("Invalid value configured for "
+          + DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY + " - "
+          + diskCheckTimeout + " (should be >= 0)");
+    }
+
     lastAllVolumesCheck = timer.monotonicNow() - minDiskCheckGapMs;
 
-    if (maxVolumeFailuresTolerated < 0) {
+    if (maxVolumeFailuresTolerated < DataNode.MAX_VOLUME_FAILURE_TOLERATED_LIMIT) {
       throw new DiskErrorException("Invalid value configured for "
           + DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY + " - "
-          + maxVolumeFailuresTolerated + " (should be non-negative)");
+          + maxVolumeFailuresTolerated + " "
+          + DataNode.MAX_VOLUME_FAILURES_TOLERATED_MSG);
     }
 
     delegateChecker = new ThrottledAsyncChecker<>(
-        timer, minDiskCheckGapMs, Executors.newCachedThreadPool(
+        timer, minDiskCheckGapMs, diskCheckTimeout,
+        Executors.newCachedThreadPool(
             new ThreadFactoryBuilder()
                 .setNameFormat("DataNode DiskChecker thread %d")
                 .setDaemon(true)
                 .build()));
+
+    checkVolumeResultHandlerExecutorService = Executors.newCachedThreadPool(
+        new ThreadFactoryBuilder()
+            .setNameFormat("VolumeCheck ResultHandler thread %d")
+            .setDaemon(true)
+            .build());
   }
 
   /**
@@ -161,38 +186,63 @@ public class DatasetVolumeChecker {
    * @param dataset - FsDatasetSpi to be checked.
    * @return set of failed volumes.
    */
-  public Set<StorageLocation> checkAllVolumes(
+  public Set<FsVolumeSpi> checkAllVolumes(
       final FsDatasetSpi<? extends FsVolumeSpi> dataset)
       throws InterruptedException {
-
-    if (timer.monotonicNow() - lastAllVolumesCheck < minDiskCheckGapMs) {
+    final long gap = timer.monotonicNow() - lastAllVolumesCheck;
+    if (gap < minDiskCheckGapMs) {
       numSkippedChecks.incrementAndGet();
+      LOG.trace(
+          "Skipped checking all volumes, time since last check {} is less " +
+          "than the minimum gap between checks ({} ms).",
+          gap, minDiskCheckGapMs);
+      return Collections.emptySet();
+    }
+
+    final FsDatasetSpi.FsVolumeReferences references =
+        dataset.getFsVolumeReferences();
+
+    if (references.size() == 0) {
+      LOG.warn("checkAllVolumesAsync - no volumes can be referenced");
       return Collections.emptySet();
     }
 
     lastAllVolumesCheck = timer.monotonicNow();
-    final Set<StorageLocation> healthyVolumes = new HashSet<>();
-    final Set<StorageLocation> failedVolumes = new HashSet<>();
-    final Set<StorageLocation> allVolumes = new HashSet<>();
+    final Set<FsVolumeSpi> healthyVolumes = new HashSet<>();
+    final Set<FsVolumeSpi> failedVolumes = new HashSet<>();
+    final Set<FsVolumeSpi> allVolumes = new HashSet<>();
 
-    final FsDatasetSpi.FsVolumeReferences references =
-        dataset.getFsVolumeReferences();
-    final CountDownLatch resultsLatch = new CountDownLatch(references.size());
+    final AtomicLong numVolumes = new AtomicLong(references.size());
+    final CountDownLatch latch = new CountDownLatch(1);
 
     for (int i = 0; i < references.size(); ++i) {
       final FsVolumeReference reference = references.getReference(i);
-      allVolumes.add(reference.getVolume().getStorageLocation());
-      ListenableFuture<VolumeCheckResult> future =
+      Optional<ListenableFuture<VolumeCheckResult>> olf =
           delegateChecker.schedule(reference.getVolume(), IGNORED_CONTEXT);
       LOG.info("Scheduled health check for volume {}", reference.getVolume());
-      Futures.addCallback(future, new ResultHandler(
-          reference, healthyVolumes, failedVolumes, resultsLatch, null));
+      if (olf.isPresent()) {
+        allVolumes.add(reference.getVolume());
+        Futures.addCallback(olf.get(),
+            new ResultHandler(reference, healthyVolumes, failedVolumes,
+                numVolumes, new Callback() {
+                  @Override
+                  public void call(Set<FsVolumeSpi> ignored1,
+                                   Set<FsVolumeSpi> ignored2) {
+                    latch.countDown();
+                  }
+                }), MoreExecutors.directExecutor());
+      } else {
+        IOUtils.cleanup(null, reference);
+        if (numVolumes.decrementAndGet() == 0) {
+          latch.countDown();
+        }
+      }
     }
 
     // Wait until our timeout elapses, after which we give up on
     // the remaining volumes.
-    if (!resultsLatch.await(maxAllowedTimeForCheckMs, TimeUnit.MILLISECONDS)) {
-      LOG.warn("checkAllVolumes timed out after {} ms" +
+    if (!latch.await(maxAllowedTimeForCheckMs, TimeUnit.MILLISECONDS)) {
+      LOG.warn("checkAllVolumes timed out after {} ms",
           maxAllowedTimeForCheckMs);
     }
 
@@ -208,50 +258,6 @@ public class DatasetVolumeChecker {
   }
 
   /**
-   * Start checks against all volumes of a dataset, invoking the
-   * given callback when the operation has completed. The function
-   * does not wait for the checks to complete.
-   *
-   * If a volume cannot be referenced then it is already closed and
-   * cannot be checked. No error is propagated to the callback for that
-   * volume.
-   *
-   * @param dataset - FsDatasetSpi to be checked.
-   * @param callback - Callback to be invoked when the checks are complete.
-   * @return true if the check was scheduled and the callback will be invoked.
-   *         false if the check was not scheduled and the callback will not be
-   *         invoked.
-   */
-  public boolean checkAllVolumesAsync(
-      final FsDatasetSpi<? extends FsVolumeSpi> dataset,
-      Callback callback) {
-
-    if (timer.monotonicNow() - lastAllVolumesCheck < minDiskCheckGapMs) {
-      numSkippedChecks.incrementAndGet();
-      return false;
-    }
-
-    lastAllVolumesCheck = timer.monotonicNow();
-    final Set<StorageLocation> healthyVolumes = new HashSet<>();
-    final Set<StorageLocation> failedVolumes = new HashSet<>();
-    final FsDatasetSpi.FsVolumeReferences references =
-        dataset.getFsVolumeReferences();
-    final CountDownLatch latch = new CountDownLatch(references.size());
-
-    LOG.info("Checking {} volumes", references.size());
-    for (int i = 0; i < references.size(); ++i) {
-      final FsVolumeReference reference = references.getReference(i);
-      // The context parameter is currently ignored.
-      ListenableFuture<VolumeCheckResult> future =
-          delegateChecker.schedule(reference.getVolume(), IGNORED_CONTEXT);
-      Futures.addCallback(future, new ResultHandler(
-          reference, healthyVolumes, failedVolumes, latch, callback));
-    }
-    numAsyncDatasetChecks.incrementAndGet();
-    return true;
-  }
-
-  /**
    * A callback interface that is supplied the result of running an
    * async disk check on multiple volumes.
    */
@@ -260,12 +266,12 @@ public class DatasetVolumeChecker {
      * @param healthyVolumes set of volumes that passed disk checks.
      * @param failedVolumes set of volumes that failed disk checks.
      */
-    void call(Set<StorageLocation> healthyVolumes,
-              Set<StorageLocation> failedVolumes);
+    void call(Set<FsVolumeSpi> healthyVolumes,
+              Set<FsVolumeSpi> failedVolumes);
   }
 
   /**
-   * Check a single volume, returning a {@link ListenableFuture}
+   * Check a single volume asynchronously, returning a {@link ListenableFuture}
    * that can be used to retrieve the final result.
    *
    * If the volume cannot be referenced then it is already closed and
@@ -273,24 +279,39 @@ public class DatasetVolumeChecker {
    *
    * @param volume the volume that is to be checked.
    * @param callback callback to be invoked when the volume check completes.
+   * @return true if the check was scheduled and the callback will be invoked.
+   *         false otherwise.
    */
-  public void checkVolume(
+  public boolean checkVolume(
       final FsVolumeSpi volume,
       Callback callback) {
+    if (volume == null) {
+      LOG.debug("Cannot schedule check on null volume");
+      return false;
+    }
+
     FsVolumeReference volumeReference;
     try {
       volumeReference = volume.obtainReference();
     } catch (ClosedChannelException e) {
       // The volume has already been closed.
-      callback.call(new HashSet<>(), new HashSet<>());
-      return;
+      return false;
     }
-    ListenableFuture<VolumeCheckResult> future =
+
+    Optional<ListenableFuture<VolumeCheckResult>> olf =
         delegateChecker.schedule(volume, IGNORED_CONTEXT);
-    numVolumeChecks.incrementAndGet();
-    Futures.addCallback(future, new ResultHandler(
-        volumeReference, new HashSet<>(), new HashSet<>(),
-        new CountDownLatch(1), callback));
+    if (olf.isPresent()) {
+      numVolumeChecks.incrementAndGet();
+      Futures.addCallback(olf.get(),
+          new ResultHandler(volumeReference, new HashSet<>(), new HashSet<>(),
+              new AtomicLong(1), callback),
+          checkVolumeResultHandlerExecutorService
+      );
+      return true;
+    } else {
+      IOUtils.cleanup(null, volumeReference);
+    }
+    return false;
   }
 
   /**
@@ -299,26 +320,35 @@ public class DatasetVolumeChecker {
   private class ResultHandler
       implements FutureCallback<VolumeCheckResult> {
     private final FsVolumeReference reference;
-    private final Set<StorageLocation> failedVolumes;
-    private final Set<StorageLocation> healthyVolumes;
-    private final CountDownLatch latch;
-    private final AtomicLong numVolumes;
+    private final Set<FsVolumeSpi> failedVolumes;
+    private final Set<FsVolumeSpi> healthyVolumes;
+    private final AtomicLong volumeCounter;
 
     @Nullable
     private final Callback callback;
 
+    /**
+     *
+     * @param reference FsVolumeReference to be released when the check is
+     *                  complete.
+     * @param healthyVolumes set of healthy volumes. If the disk check is
+     *                       successful, add the volume here.
+     * @param failedVolumes set of failed volumes. If the disk check fails,
+     *                      add the volume here.
+     * @param volumeCounter volumeCounter used to trigger callback invocation.
+     * @param callback invoked when the volumeCounter reaches 0.
+     */
     ResultHandler(FsVolumeReference reference,
-                  Set<StorageLocation> healthyVolumes,
-                  Set<StorageLocation> failedVolumes,
-                  CountDownLatch latch,
+                  Set<FsVolumeSpi> healthyVolumes,
+                  Set<FsVolumeSpi> failedVolumes,
+                  AtomicLong volumeCounter,
                   @Nullable Callback callback) {
       Preconditions.checkState(reference != null);
       this.reference = reference;
       this.healthyVolumes = healthyVolumes;
       this.failedVolumes = failedVolumes;
-      this.latch = latch;
+      this.volumeCounter = volumeCounter;
       this.callback = callback;
-      numVolumes = new AtomicLong(latch.getCount());
     }
 
     @Override
@@ -355,13 +385,13 @@ public class DatasetVolumeChecker {
 
     private void markHealthy() {
       synchronized (DatasetVolumeChecker.this) {
-        healthyVolumes.add(reference.getVolume().getStorageLocation());
+        healthyVolumes.add(reference.getVolume());
       }
     }
 
     private void markFailed() {
       synchronized (DatasetVolumeChecker.this) {
-        failedVolumes.add(reference.getVolume().getStorageLocation());
+        failedVolumes.add(reference.getVolume());
       }
     }
 
@@ -372,10 +402,8 @@ public class DatasetVolumeChecker {
 
     private void invokeCallback() {
       try {
-        latch.countDown();
-
-        if (numVolumes.decrementAndGet() == 0 &&
-            callback != null) {
+        final long remaining = volumeCounter.decrementAndGet();
+        if (callback != null && remaining == 0) {
           callback.call(healthyVolumes, failedVolumes);
         }
       } catch(Exception e) {
@@ -423,13 +451,6 @@ public class DatasetVolumeChecker {
    */
   public long getNumSyncDatasetChecks() {
     return numSyncDatasetChecks.get();
-  }
-
-  /**
-   * Return the number of {@link #checkAllVolumesAsync} invocations.
-   */
-  public long getNumAsyncDatasetChecks() {
-    return numAsyncDatasetChecks.get();
   }
 
   /**

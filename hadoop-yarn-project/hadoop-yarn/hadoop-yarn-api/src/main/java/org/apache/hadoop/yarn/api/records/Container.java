@@ -27,6 +27,9 @@ import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
+import java.util.Collections;
+import java.util.Set;
+
 /**
  * {@code Container} represents an allocated resource in the cluster.
  * <p>
@@ -255,5 +258,17 @@ public abstract class Container implements Comparable<Container> {
   @Unstable
   public void setVersion(int version) {
     throw new UnsupportedOperationException();
+  }
+
+  @Private
+  @Unstable
+  public Set<String> getAllocationTags() {
+    return Collections.emptySet();
+  }
+
+  @Private
+  @Unstable
+  public void setAllocationTags(Set<String> allocationTags) {
+
   }
 }

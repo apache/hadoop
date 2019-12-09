@@ -20,6 +20,7 @@ import Ember from 'ember';
 import BaseChartComponent from 'yarn-ui/components/base-chart-component';
 import ColorUtils from 'yarn-ui/utils/color-utils';
 import Converter from 'yarn-ui/utils/converter';
+import {Entities} from 'yarn-ui/constants';
 
 export default BaseChartComponent.extend({
   /*
@@ -41,8 +42,10 @@ export default BaseChartComponent.extend({
     }
 
     if (!middleValue) {
-      if (this.get("type") == "memory") {
+      if (this.get(Entities.Type) === Entities.Memory) {
         middleValue = Converter.memoryToSimpliedUnit(total);
+      } else if (this.get(Entities.Type) === Entities.Resource) {
+        middleValue = Converter.resourceToSimplifiedUnit(total, this.get(Entities.Unit));
       } else {
         middleValue = total;
       }
@@ -53,8 +56,10 @@ export default BaseChartComponent.extend({
 
     // 50 is for title
     var outerRadius = (h - 50 - 2 * layout.margin) / 2;
-    var innerRadius = outerRadius * 0.618;
-    console.log("inner:" + innerRadius + " outer:" + outerRadius);
+
+    // Ratio of inner radius to outer radius
+    var radiusRatio = 0.75;
+    var innerRadius = outerRadius * radiusRatio;
 
     var arc = d3.svg.arc()
       .innerRadius(innerRadius)
@@ -111,7 +116,7 @@ export default BaseChartComponent.extend({
         if (allZero) {
           return this.colors[i];
         }
-      }.bind(this))
+      }.bind(this));
     this.bindTooltip(path);
     path.on("click", function (d) {
       var data = d.data;
@@ -119,7 +124,7 @@ export default BaseChartComponent.extend({
         this.tooltip.remove();
         document.location.href = data.link;
       }
-    }.bind(this))
+    }.bind(this));
 
     // Show labels
     if (showLabels) {
@@ -147,9 +152,12 @@ export default BaseChartComponent.extend({
         })
         .text(function(d) {
           var value = d.value;
-          if (this.get("type") == "memory") {
+          if (this.get("type") === "memory") {
             value = Converter.memoryToSimpliedUnit(value);
+          } else if (this.get("type") === "resource") {
+            value = Converter.resourceToSimplifiedUnit(value, this.get(Entities.Unit));
           }
+
           return d.label + ' = ' + value + suffix;
         }.bind(this));
     }
@@ -183,11 +191,19 @@ export default BaseChartComponent.extend({
     }
 
     this.renderDonutChart(this.get("data"), this.get("title"), this.get("showLabels"), 
-                          this.get("middleLabel"), this.get("middleValue"));
+                          this.get("middleLabel"), this.get("middleValue"), this.get("suffix"));
   },
 
   didInsertElement: function() {
+    // When parentIdPrefix is specified, use parentidPrefix + name as new parent
+    // id
+    if (this.get("parentIdPrefix")) {
+      var newParentId = this.get("parentIdPrefix") + this.get("id");
+      this.set("parentId", newParentId);
+      console.log(newParentId);
+    }
+
     this.initChart();
     this.draw();
   },
-})
+});

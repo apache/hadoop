@@ -22,20 +22,30 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.File;
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.ReconfigurationException;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doAnswer;
+import org.apache.hadoop.test.GenericTestUtils;
+
+import com.google.common.base.Supplier;
+
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertThat;
+
+/**
+ * DO NOT ADD MOCKITO IMPORTS HERE Or Downstream projects may not
+ * be able to start mini dfs cluster. THANKS.
+ */
 
 /**
  * Utility class for accessing package-private DataNode information during tests.
@@ -43,6 +53,8 @@ import static org.mockito.Mockito.doAnswer;
  * dependencies to {@link MiniDFSCluster}.
  */
 public class DataNodeTestUtils {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DataNodeTestUtils.class);
   private static final String DIR_FAILURE_SUFFIX = ".origin";
 
   public final static String TEST_CLUSTER_ID = "testClusterID";
@@ -84,6 +96,14 @@ public class DataNodeTestUtils {
     for (BPOfferService bpos : dn.getAllBpOs()) {
       bpos.triggerBlockReportForTests();
     }
+  }
+
+  public static void pauseIBR(DataNode dn) {
+    dn.setIBRDisabledForTest(true);
+  }
+
+  public static void resumeIBR(DataNode dn) {
+    dn.setIBRDisabledForTest(false);
   }
 
   public static InterDatanodeProtocol createInterDatanodeProtocolProxy(
@@ -184,23 +204,69 @@ public class DataNodeTestUtils {
   }
 
   /**
-   * This method is used to mock the data node block pinning API.
+   * Reconfigure a DataNode by setting a new list of volumes.
    *
-   * @param dn datanode
-   * @param pinned true if the block is pinned, false otherwise
-   * @throws IOException
+   * @param dn DataNode to reconfigure
+   * @param newVols new volumes to configure
+   * @throws Exception if there is any failure
    */
-  public static void mockDatanodeBlkPinning(final DataNode dn,
-      final boolean pinned) throws IOException {
-    final FsDatasetSpi<? extends FsVolumeSpi> data = dn.data;
-    dn.data = Mockito.spy(data);
-
-    doAnswer(new Answer<Object>() {
-      public Object answer(InvocationOnMock invocation) throws IOException {
-        // Bypass the argument to FsDatasetImpl#getPinning to show that
-        // the block is pinned.
-        return pinned;
+  public static void reconfigureDataNode(DataNode dn, File... newVols)
+      throws Exception {
+    StringBuilder dnNewDataDirs = new StringBuilder();
+    for (File newVol: newVols) {
+      if (dnNewDataDirs.length() > 0) {
+        dnNewDataDirs.append(',');
       }
-    }).when(dn.data).getPinning(any(ExtendedBlock.class));
+      dnNewDataDirs.append(newVol.getAbsolutePath());
+    }
+    try {
+      assertThat(
+          dn.reconfigurePropertyImpl(
+              DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
+              dnNewDataDirs.toString()),
+          is(dn.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY)));
+    } catch (ReconfigurationException e) {
+      // This can be thrown if reconfiguration tries to use a failed volume.
+      // We need to swallow the exception, because some of our tests want to
+      // cover this case.
+      LOG.warn("Could not reconfigure DataNode.", e);
+    }
+  }
+
+  /** Get the FsVolume on the given basePath. */
+  public static FsVolumeImpl getVolume(DataNode dn, File basePath) throws
+      IOException {
+    try (FsDatasetSpi.FsVolumeReferences volumes = dn.getFSDataset()
+        .getFsVolumeReferences()) {
+      for (FsVolumeSpi vol : volumes) {
+        if (vol.getBaseURI().equals(basePath.toURI())) {
+          return (FsVolumeImpl) vol;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Call and wait DataNode to detect disk failure.
+   *
+   * @param dn
+   * @param volume
+   * @throws Exception
+   */
+  public static void waitForDiskError(DataNode dn, FsVolumeSpi volume)
+      throws Exception {
+    LOG.info("Starting to wait for datanode to detect disk failure.");
+    final long lastDiskErrorCheck = dn.getLastDiskErrorCheck();
+    dn.checkDiskErrorAsync(volume);
+    // Wait 10 seconds for checkDiskError thread to finish and discover volume
+    // failures.
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+
+      @Override
+      public Boolean get() {
+        return dn.getLastDiskErrorCheck() != lastDiskErrorCheck;
+      }
+    }, 100, 10000);
   }
 }

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.mapred;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.IOException;
+import java.util.Random;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BooleanWritable;
@@ -31,17 +31,16 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.util.Random;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestSequenceFileAsBinaryOutputFormat {
-  private static final Log LOG =
-      LogFactory.getLog(TestSequenceFileAsBinaryOutputFormat.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSequenceFileAsBinaryOutputFormat.class);
   private static final int RECORDS = 10000;
   // A random task attempt id for testing.
   private static final String attempt = "attempt_200707121733_0001_m_000000_0";

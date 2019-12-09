@@ -20,29 +20,38 @@ package org.apache.hadoop.yarn.server.nodemanager.nodelabels;
 
 import java.io.IOException;
 import java.util.TimerTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
  * Provides Node's Labels by constantly monitoring the configuration.
  */
-public class ConfigurationNodeLabelsProvider extends AbstractNodeLabelsProvider {
+public class ConfigurationNodeLabelsProvider extends NodeLabelsProvider {
 
-  private static final Log LOG = LogFactory
-      .getLog(ConfigurationNodeLabelsProvider.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(ConfigurationNodeLabelsProvider.class);
 
   public ConfigurationNodeLabelsProvider() {
     super("Configuration Based NodeLabels Provider");
+  }
+
+  @Override
+  protected void serviceInit(Configuration conf) throws Exception {
+    long taskInterval = conf.getLong(
+        YarnConfiguration.NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS);
+    this.setIntervalTime(taskInterval);
+    super.serviceInit(conf);
   }
 
   private void updateNodeLabelsFromConfig(Configuration conf)
       throws IOException {
     String configuredNodePartition =
         conf.get(YarnConfiguration.NM_PROVIDER_CONFIGURED_NODE_PARTITION, null);
-    setNodeLabels(convertToNodeLabelSet(configuredNodePartition));
+    setDescriptors(convertToNodeLabelSet(configuredNodePartition));
   }
 
   private class ConfigurationMonitorTimerTask extends TimerTask {

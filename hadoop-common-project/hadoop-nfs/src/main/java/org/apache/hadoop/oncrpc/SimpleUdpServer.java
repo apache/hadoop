@@ -20,20 +20,21 @@ package org.apache.hadoop.oncrpc;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple UDP server implemented based on netty.
  */
 public class SimpleUdpServer {
-  public static final Log LOG = LogFactory.getLog(SimpleUdpServer.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SimpleUdpServer.class);
   private final int SEND_BUFFER_SIZE = 65536;
   private final int RECEIVE_BUFFER_SIZE = 65536;
 
@@ -63,6 +64,7 @@ public class SimpleUdpServer {
     server.setOption("broadcast", "false");
     server.setOption("sendBufferSize", SEND_BUFFER_SIZE);
     server.setOption("receiveBufferSize", RECEIVE_BUFFER_SIZE);
+    server.setOption("reuseAddress", true);
 
     // Listen to the UDP port
     ch = server.bind(new InetSocketAddress(port));

@@ -25,8 +25,8 @@ import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,7 +37,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 
 public class WebHdfsTestUtil {
-  public static final Log LOG = LogFactory.getLog(WebHdfsTestUtil.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(WebHdfsTestUtil.class);
 
   public static Configuration createConf() {
     final Configuration conf = new Configuration();

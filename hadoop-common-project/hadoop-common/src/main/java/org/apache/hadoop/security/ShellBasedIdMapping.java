@@ -29,14 +29,14 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A simple shell-based implementation of {@link IdMappingServiceProvider} 
@@ -62,8 +62,8 @@ import com.google.common.collect.HashBiMap;
  */
 public class ShellBasedIdMapping implements IdMappingServiceProvider {
 
-  private static final Log LOG =
-      LogFactory.getLog(ShellBasedIdMapping.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ShellBasedIdMapping.class);
 
   private final static String OS = System.getProperty("os.name");
 

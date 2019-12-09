@@ -20,7 +20,7 @@
 # CMake configuration.
 #
 
-cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/..)
 include(HadoopCommon)
@@ -93,6 +93,33 @@ else()
         message(FATAL_ERROR "Required snappy library could not be found.  SNAPPY_LIBRARY=${SNAPPY_LIBRARY}, SNAPPY_INCLUDE_DIR=${SNAPPY_INCLUDE_DIR}, CUSTOM_SNAPPY_INCLUDE_DIR=${CUSTOM_SNAPPY_INCLUDE_DIR}, CUSTOM_SNAPPY_PREFIX=${CUSTOM_SNAPPY_PREFIX}, CUSTOM_SNAPPY_INCLUDE=${CUSTOM_SNAPPY_INCLUDE}")
     endif()
 endif()
+
+# Require zstandard
+SET(STORED_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+hadoop_set_find_shared_library_version("1")
+find_library(ZSTD_LIBRARY
+    NAMES zstd
+    PATHS ${CUSTOM_ZSTD_PREFIX} ${CUSTOM_ZSTD_PREFIX}/lib
+          ${CUSTOM_ZSTD_PREFIX}/lib64 ${CUSTOM_ZSTD_LIB})
+SET(CMAKE_FIND_LIBRARY_SUFFIXES ${STORED_CMAKE_FIND_LIBRARY_SUFFIXES})
+find_path(ZSTD_INCLUDE_DIR
+    NAMES zstd.h
+    PATHS ${CUSTOM_ZSTD_PREFIX} ${CUSTOM_ZSTD_PREFIX}/include
+          ${CUSTOM_ZSTD_INCLUDE})
+if (ZSTD_LIBRARY AND ZSTD_INCLUDE_DIR)
+    GET_FILENAME_COMPONENT(HADOOP_ZSTD_LIBRARY ${ZSTD_LIBRARY} NAME)
+    set(ZSTD_SOURCE_FILES
+        "${SRC}/io/compress/zstd/ZStandardCompressor.c"
+        "${SRC}/io/compress/zstd/ZStandardDecompressor.c")
+    set(REQUIRE_ZSTD ${REQUIRE_ZSTD}) # Stop warning about unused variable.
+        message(STATUS "Found ZStandard: ${ZSTD_LIBRARY}")
+else ()
+    set(ZSTD_INCLUDE_DIR "")
+    set(ZSTD_SOURCE_FILES "")
+    IF(REQUIRE_ZSTD)
+        MESSAGE(FATAL_ERROR "Required zstandard library could not be found.  ZSTD_LIBRARY=${ZSTD_LIBRARY}, ZSTD_INCLUDE_DIR=${ZSTD_INCLUDE_DIR}, CUSTOM_ZSTD_INCLUDE_DIR=${CUSTOM_ZSTD_INCLUDE_DIR}, CUSTOM_ZSTD_PREFIX=${CUSTOM_ZSTD_PREFIX}, CUSTOM_ZSTD_INCLUDE=${CUSTOM_ZSTD_INCLUDE}")
+    ENDIF(REQUIRE_ZSTD)
+endif ()
 
 set(STORED_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
 hadoop_set_find_shared_library_version("2")
@@ -208,6 +235,7 @@ include_directories(
     ${BZIP2_INCLUDE_DIR}
     ${SNAPPY_INCLUDE_DIR}
     ${ISAL_INCLUDE_DIR}
+    ${ZSTD_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
     ${SRC}/util
 )
@@ -222,6 +250,7 @@ hadoop_add_dual_library(hadoop
     ${SRC}/io/compress/lz4/lz4hc.c
     ${ISAL_SOURCE_FILES}
     ${SNAPPY_SOURCE_FILES}
+    ${ZSTD_SOURCE_FILES}
     ${OPENSSL_SOURCE_FILES}
     ${SRC}/io/compress/zlib/ZlibCompressor.c
     ${SRC}/io/compress/zlib/ZlibDecompressor.c

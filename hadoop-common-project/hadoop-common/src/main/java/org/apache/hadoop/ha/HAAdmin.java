@@ -28,8 +28,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -43,6 +41,8 @@ import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A command-line tool for making calls in the HAServiceProtocol.
@@ -62,7 +62,7 @@ public abstract class HAAdmin extends Configured implements Tool {
    * operation, which is why it is not documented in the usage below.
    */
   private static final String FORCEMANUAL = "forcemanual";
-  private static final Log LOG = LogFactory.getLog(HAAdmin.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HAAdmin.class);
 
   private int rpcTimeoutForChecks = -1;
   
@@ -72,6 +72,9 @@ public abstract class HAAdmin extends Configured implements Tool {
         new UsageInfo("[--"+FORCEACTIVE+"] <serviceId>", "Transitions the service into Active state"))
     .put("-transitionToStandby",
         new UsageInfo("<serviceId>", "Transitions the service into Standby state"))
+      .put("-transitionToObserver",
+          new UsageInfo("<serviceId>",
+              "Transitions the service into Observer state"))
     .put("-failover",
         new UsageInfo("[--"+FORCEFENCE+"] [--"+FORCEACTIVE+"] <serviceId> <serviceId>",
             "Failover from the first service to the second.\n" +
@@ -80,6 +83,8 @@ public abstract class HAAdmin extends Configured implements Tool {
             "--" + FORCEACTIVE + " option is used."))
     .put("-getServiceState",
         new UsageInfo("<serviceId>", "Returns the state of the service"))
+      .put("-getAllServiceState",
+          new UsageInfo(null, "Returns the state of all the services"))
     .put("-checkHealth",
         new UsageInfo("<serviceId>",
             "Requests that the service perform a health check.\n" + 
@@ -119,7 +124,11 @@ public abstract class HAAdmin extends Configured implements Tool {
       String cmd = e.getKey();
       UsageInfo usage = e.getValue();
       
-      errOut.println("    [" + cmd + " " + usage.args + "]"); 
+      if (usage.args == null) {
+        errOut.println("    [" + cmd + "]");
+      } else {
+        errOut.println("    [" + cmd + " " + usage.args + "]");
+      }
     }
     errOut.println();
     ToolRunner.printGenericCommandUsage(errOut);    
@@ -130,7 +139,11 @@ public abstract class HAAdmin extends Configured implements Tool {
     if (usage == null) {
       throw new RuntimeException("No usage for cmd " + cmd);
     }
-    errOut.println(getUsageString() + " [" + cmd + " " + usage.args + "]");
+    if (usage.args == null) {
+      errOut.println(getUsageString() + " [" + cmd + "]");
+    } else {
+      errOut.println(getUsageString() + " [" + cmd + " " + usage.args + "]");
+    }
   }
 
   private int transitionToActive(final CommandLine cmd)
@@ -211,6 +224,28 @@ public abstract class HAAdmin extends Configured implements Tool {
     HAServiceProtocolHelper.transitionToStandby(proto, createReqInfo());
     return 0;
   }
+
+  private int transitionToObserver(final CommandLine cmd)
+      throws IOException, ServiceFailedException {
+    String[] argv = cmd.getArgs();
+    if (argv.length != 1) {
+      errOut.println("transitionToObserver: incorrect number of arguments");
+      printUsage(errOut, "-transitionToObserver");
+      return -1;
+    }
+
+    HAServiceTarget target = resolveTarget(argv[0]);
+    if (!checkSupportObserver(target)) {
+      return -1;
+    }
+    if (!checkManualStateManagementOK(target)) {
+      return -1;
+    }
+    HAServiceProtocol proto = target.getProxy(getConf(), 0);
+    HAServiceProtocolHelper.transitionToObserver(proto, createReqInfo());
+    return 0;
+  }
+
   /**
    * Ensure that we are allowed to manually manage the HA state of the target
    * service. If automatic failover is configured, then the automatic
@@ -237,6 +272,21 @@ public abstract class HAAdmin extends Configured implements Tool {
       }
     }
     return true;
+  }
+
+  /**
+   * Check if the target supports the Observer state.
+   * @param target the target to check
+   * @return true if the target support Observer state, false otherwise.
+   */
+  private boolean checkSupportObserver(HAServiceTarget target) {
+    if (target.supportObserver()) {
+      return true;
+    } else {
+      errOut.println(
+          "The target " + target + " doesn't support Observer state.");
+      return false;
+    }
   }
 
   private StateChangeRequestInfo createReqInfo() {
@@ -426,6 +476,7 @@ public abstract class HAAdmin extends Configured implements Tool {
     // Mutative commands take FORCEMANUAL option
     if ("-transitionToActive".equals(cmd) ||
         "-transitionToStandby".equals(cmd) ||
+        "-transitionToObserver".equals(cmd) ||
         "-failover".equals(cmd)) {
       opts.addOption(FORCEMANUAL, false,
           "force manual control even if auto-failover is enabled");
@@ -439,7 +490,7 @@ public abstract class HAAdmin extends Configured implements Tool {
     
     if (cmdLine.hasOption(FORCEMANUAL)) {
       if (!confirmForceManual()) {
-        LOG.fatal("Aborted");
+        LOG.error("Aborted");
         return -1;
       }
       // Instruct the NNs to honor this request even if they're
@@ -451,10 +502,14 @@ public abstract class HAAdmin extends Configured implements Tool {
       return transitionToActive(cmdLine);
     } else if ("-transitionToStandby".equals(cmd)) {
       return transitionToStandby(cmdLine);
+    } else if ("-transitionToObserver".equals(cmd)) {
+      return transitionToObserver(cmdLine);
     } else if ("-failover".equals(cmd)) {
       return failover(cmdLine);
     } else if ("-getServiceState".equals(cmd)) {
       return getServiceState(cmdLine);
+    } else if ("-getAllServiceState".equals(cmd)) {
+      return getAllServiceState();
     } else if ("-checkHealth".equals(cmd)) {
       return checkHealth(cmdLine);
     } else if ("-help".equals(cmd)) {
@@ -465,7 +520,30 @@ public abstract class HAAdmin extends Configured implements Tool {
       throw new AssertionError("Should not get here, command: " + cmd);
     } 
   }
-  
+
+  protected int getAllServiceState() {
+    Collection<String> targetIds = getTargetIds(null);
+    if (targetIds.isEmpty()) {
+      errOut.println("Failed to get service IDs");
+      return -1;
+    }
+    for (String targetId : targetIds) {
+      HAServiceTarget target = resolveTarget(targetId);
+      String address = target.getAddress().getHostName() + ":"
+          + target.getAddress().getPort();
+      try {
+        HAServiceProtocol proto = target.getProxy(getConf(),
+            rpcTimeoutForChecks);
+        out.println(String.format("%-50s %-10s", address, proto
+            .getServiceStatus().getState()));
+      } catch (IOException e) {
+        out.println(String.format("%-50s %-10s", address,
+            "Failed to connect: " + e.getMessage()));
+      }
+    }
+    return 0;
+  }
+
   private boolean confirmForceManual() throws IOException {
      return ToolRunner.confirmPrompt(
         "You have specified the --" + FORCEMANUAL + " flag. This flag is " +
@@ -532,11 +610,18 @@ public abstract class HAAdmin extends Configured implements Tool {
       return -1;
     }
     
-    out.println(cmd + " [" + usageInfo.args + "]: " + usageInfo.help);
+    if (usageInfo.args == null) {
+      out.println(cmd + ": " + usageInfo.help);
+    } else {
+      out.println(cmd + " [" + usageInfo.args + "]: " + usageInfo.help);
+    }
     return 0;
   }
-  
-  protected static class UsageInfo {
+
+  /**
+   * UsageInfo class holds args and help details.
+   */
+  public static class UsageInfo {
     public final String args;
     public final String help;
     

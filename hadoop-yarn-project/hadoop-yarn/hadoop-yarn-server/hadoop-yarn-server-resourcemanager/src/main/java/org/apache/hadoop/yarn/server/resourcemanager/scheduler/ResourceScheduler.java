@@ -19,10 +19,13 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 
@@ -49,4 +52,28 @@ public interface ResourceScheduler extends YarnScheduler, Recoverable {
    * @throws IOException
    */
   void reinitialize(Configuration conf, RMContext rmContext) throws IOException;
+
+  /**
+   * Get the {@link NodeId} available in the cluster by resource name.
+   * @param resourceName resource name
+   * @return the number of available {@link NodeId} by resource name.
+   */
+  List<NodeId> getNodeIds(String resourceName);
+
+  /**
+   * Attempts to allocate a SchedulerRequest on a Node.
+   * NOTE: This ignores the numAllocations in the resource sizing and tries
+   *       to allocate a SINGLE container only.
+   * @param appAttempt ApplicationAttempt.
+   * @param schedulingRequest SchedulingRequest.
+   * @param schedulerNode SchedulerNode.
+   * @return true if proposal was accepted.
+   */
+  boolean attemptAllocationOnNode(SchedulerApplicationAttempt appAttempt,
+      SchedulingRequest schedulingRequest, SchedulerNode schedulerNode);
+
+  /**
+   * Reset scheduler metrics.
+   */
+  void resetSchedulerMetrics();
 }

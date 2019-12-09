@@ -26,8 +26,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -54,12 +52,14 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CommitterEventHandler extends AbstractService
     implements EventHandler<CommitterEvent> {
 
-  private static final Log LOG =
-      LogFactory.getLog(CommitterEventHandler.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CommitterEventHandler.class);
 
   private final AppContext context;
   private final OutputCommitter committer;

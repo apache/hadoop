@@ -70,6 +70,7 @@ message ApplicationStateDataProto {
     optional int64 finish_time = 7;
     optional hadoop.common.RPCCallerContextProto caller_context = 8;
     repeated ApplicationTimeoutMapProto application_timeouts = 9;
+    optional int64 launch_time = 10;
 }
 
 message ApplicationAttemptStateDataProto {
@@ -87,6 +88,8 @@ message ApplicationAttemptStateDataProto {
     optional int64 finish_time = 12;
     optional int64 preempted_memory_seconds = 13;
     optional int64 preempted_vcore_seconds = 14;
+    repeated StringLongMapProto application_resource_usage_map = 15;
+    repeated StringLongMapProto preempted_resource_usage_map = 16;
 }
 
 message EpochProto {

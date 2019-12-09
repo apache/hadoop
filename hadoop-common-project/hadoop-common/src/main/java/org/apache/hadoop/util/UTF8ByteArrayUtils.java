@@ -30,7 +30,7 @@ public class UTF8ByteArrayUtils {
    * @param start starting offset
    * @param end ending position
    * @param b the byte to find
-   * @return position that first byte occures otherwise -1
+   * @return position that first byte occurs, otherwise -1
    */
   public static int findByte(byte [] utf, int start, int end, byte b) {
     for(int i=start; i<end; i++) {
@@ -47,7 +47,7 @@ public class UTF8ByteArrayUtils {
    * @param start starting offset
    * @param end ending position
    * @param b the bytes to find
-   * @return position that first byte occures otherwise -1
+   * @return position that first byte occurs, otherwise -1
    */
   public static int findBytes(byte [] utf, int start, int end, byte[] b) {
     int matchEnd = end - b.length;

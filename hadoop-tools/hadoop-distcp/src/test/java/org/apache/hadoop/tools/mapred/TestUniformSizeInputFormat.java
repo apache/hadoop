@@ -31,6 +31,7 @@ import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.tools.CopyListing;
 import org.apache.hadoop.tools.CopyListingFileStatus;
+import org.apache.hadoop.tools.DistCpContext;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.StubContext;
 import org.apache.hadoop.security.Credentials;
@@ -74,9 +75,9 @@ public class TestUniformSizeInputFormat {
 
     List<Path> sourceList = new ArrayList<Path>();
     sourceList.add(sourcePath);
-    final DistCpOptions distCpOptions = new DistCpOptions(sourceList, targetPath);
-    distCpOptions.setMaxMaps(nMaps);
-    return distCpOptions;
+    return new DistCpOptions.Builder(sourceList, targetPath)
+        .maxMaps(nMaps)
+        .build();
   }
 
   private static int createFile(String path, int fileSize) throws Exception {
@@ -100,14 +101,14 @@ public class TestUniformSizeInputFormat {
   }
 
   public void testGetSplits(int nMaps) throws Exception {
-    DistCpOptions options = getOptions(nMaps);
+    DistCpContext context = new DistCpContext(getOptions(nMaps));
     Configuration configuration = new Configuration();
     configuration.set("mapred.map.tasks",
-                      String.valueOf(options.getMaxMaps()));
+                      String.valueOf(context.getMaxMaps()));
     Path listFile = new Path(cluster.getFileSystem().getUri().toString()
         + "/tmp/testGetSplits_1/fileList.seq");
-    CopyListing.getCopyListing(configuration, CREDENTIALS, options).
-        buildListing(listFile, options);
+    CopyListing.getCopyListing(configuration, CREDENTIALS, context)
+        .buildListing(listFile, context);
 
     JobContext jobContext = new JobContextImpl(configuration, new JobID());
     UniformSizeInputFormat uniformSizeInputFormat = new UniformSizeInputFormat();

@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.QueueState;
@@ -31,6 +29,8 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.DOMException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -59,8 +59,8 @@ import java.util.HashSet;
  * Creates the complete queue hieararchy
  */
 class QueueConfigurationParser {
-  private static final Log LOG =
-    LogFactory.getLog(QueueConfigurationParser.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(QueueConfigurationParser.class);
   
   private boolean aclsEnabled = false;
 

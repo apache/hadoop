@@ -23,7 +23,8 @@ import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
-import org.apache.hadoop.registry.server.integration.RMRegistryOperationsService;
+
+import org.apache.hadoop.registry.server.services.RegistryAdminService;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,22 +32,16 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
-/**
- * Abstract registry tests .. inits the field {@link #registry}
- * before the test with an instance of {@link RMRegistryOperationsService};
- * and {@link #operations} with the same instance cast purely
- * to the type {@link RegistryOperations}.
- *
- */
+
 public class AbstractRegistryTest extends AbstractZKRegistryTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractRegistryTest.class);
-  protected RMRegistryOperationsService registry;
+  protected RegistryAdminService registry;
   protected RegistryOperations operations;
 
   @Before
   public void setupRegistry() throws IOException {
-    registry = new RMRegistryOperationsService("yarnRegistry");
+    registry = new RegistryAdminService("yarnRegistry");
     operations = registry;
     registry.init(createRegistryConfiguration());
     registry.start();

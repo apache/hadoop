@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderFactory;
@@ -167,7 +166,6 @@ public class TestBlockTokenWithDFS {
           setCachingStrategy(CachingStrategy.newDefaultStrategy()).
           setClientCacheContext(ClientContext.getFromConf(conf)).
           setConfiguration(conf).
-          setTracer(FsTracer.get(conf)).
           setRemotePeerFactory(new RemotePeerFactory() {
             @Override
             public Peer newConnectedPeer(InetSocketAddress addr,
@@ -353,7 +351,7 @@ public class TestBlockTokenWithDFS {
     try {
       // prefer non-ephemeral port to avoid port collision on restartNameNode
       cluster = new MiniDFSCluster.Builder(conf)
-          .nameNodePort(ServerSocketUtil.getPort(19820, 100))
+          .nameNodePort(ServerSocketUtil.getPort(18020, 100))
           .nameNodeHttpPort(ServerSocketUtil.getPort(19870, 100))
           .numDataNodes(numDataNodes)
           .build();

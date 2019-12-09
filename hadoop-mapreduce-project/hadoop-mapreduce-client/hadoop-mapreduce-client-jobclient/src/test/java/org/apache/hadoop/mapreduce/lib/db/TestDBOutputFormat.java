@@ -18,7 +18,9 @@
 package org.apache.hadoop.mapreduce.lib.db;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
@@ -26,6 +28,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 public class TestDBOutputFormat {
   private String[] fieldNames = new String[] { "id", "name", "value" };
@@ -44,6 +47,48 @@ public class TestDBOutputFormat {
     
     actual = format.constructQuery("hadoop_output", nullFieldNames);
     assertEquals(nullExpected, actual);
+  }
+
+  @Test
+  public void testDB2ConstructQuery() {
+    String db2expected = StringUtils.removeEnd(expected, ";");
+    String db2nullExpected = StringUtils.removeEnd(nullExpected, ";");
+
+    try {
+      Class<?> clazz = this.format.getClass();
+      Field field = clazz.getDeclaredField("dbProductName");
+      field.setAccessible(true);
+      field.set(format, "DB2");
+    } catch (IllegalAccessException | NoSuchFieldException e) {
+      fail(e.getMessage());
+    }
+
+    String actual = format.constructQuery("hadoop_output", fieldNames);
+    assertEquals(db2expected, actual);
+
+    actual = format.constructQuery("hadoop_output", nullFieldNames);
+    assertEquals(db2nullExpected, actual);
+  }
+
+  @Test
+  public void testORACLEConstructQuery() {
+    String oracleExpected = StringUtils.removeEnd(expected, ";");
+    String oracleNullExpected = StringUtils.removeEnd(nullExpected, ";");
+
+    try {
+      Class<?> clazz = this.format.getClass();
+      Field field = clazz.getDeclaredField("dbProductName");
+      field.setAccessible(true);
+      field.set(format, "ORACLE");
+    } catch (IllegalAccessException | NoSuchFieldException e) {
+      fail(e.getMessage());
+    }
+
+    String actual = format.constructQuery("hadoop_output", fieldNames);
+    assertEquals(oracleExpected, actual);
+
+    actual = format.constructQuery("hadoop_output", nullFieldNames);
+    assertEquals(oracleNullExpected, actual);
   }
 
   @Test

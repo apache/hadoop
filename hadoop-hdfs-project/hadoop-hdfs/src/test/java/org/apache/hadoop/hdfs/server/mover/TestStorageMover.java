@@ -26,8 +26,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -61,7 +61,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -72,13 +72,13 @@ import com.google.common.collect.Maps;
  * Test the data migration tool (for Archival Storage)
  */
 public class TestStorageMover {
-  static final Log LOG = LogFactory.getLog(TestStorageMover.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestStorageMover.class);
   static {
-    GenericTestUtils.setLogLevel(LogFactory.getLog(BlockPlacementPolicy.class),
-        Level.ALL);
-    GenericTestUtils.setLogLevel(LogFactory.getLog(Dispatcher.class),
-        Level.ALL);
-    GenericTestUtils.setLogLevel(DataTransferProtocol.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(BlockPlacementPolicy.class), Level.TRACE);
+    GenericTestUtils.setLogLevel(LoggerFactory.getLogger(Dispatcher.class),
+        Level.TRACE);
+    GenericTestUtils.setLogLevel(DataTransferProtocol.LOG, Level.TRACE);
   }
 
   private static final int BLOCK_SIZE = 1024;
@@ -96,6 +96,8 @@ public class TestStorageMover {
     DEFAULT_CONF.setLong(
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 2L);
     DEFAULT_CONF.setLong(DFSConfigKeys.DFS_MOVER_MOVEDWINWIDTH_KEY, 2000L);
+    DEFAULT_CONF.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT);
 
     DEFAULT_POLICIES = BlockStoragePolicySuite.createDefaultSuite();
     HOT = DEFAULT_POLICIES.getPolicy(HdfsConstants.HOT_STORAGE_POLICY_NAME);
@@ -283,7 +285,7 @@ public class TestStorageMover {
 
     private void verifyRecursively(final Path parent,
         final HdfsFileStatus status) throws Exception {
-      if (status.isDir()) {
+      if (status.isDirectory()) {
         Path fullPath = parent == null ?
             new Path("/") : status.getFullPath(parent);
         DirectoryListing children = dfs.getClient().listPaths(
@@ -320,7 +322,7 @@ public class TestStorageMover {
       }
       final List<StorageType> types = policy.chooseStorageTypes(
           status.getReplication());
-      for(LocatedBlock lb : fileStatus.getBlockLocations().getLocatedBlocks()) {
+      for(LocatedBlock lb : fileStatus.getLocatedBlocks().getLocatedBlocks()) {
         final Mover.StorageTypeDiff diff = new Mover.StorageTypeDiff(types,
             lb.getStorageTypes());
         Assert.assertTrue(fileStatus.getFullName(parent.toString())
@@ -568,7 +570,7 @@ public class TestStorageMover {
       // make sure the writing can continue
       out.writeBytes("world!");
       ((DFSOutputStream) out.getWrappedStream()).hsync();
-      IOUtils.cleanup(LOG, out);
+      IOUtils.cleanupWithLogger(LOG, out);
 
       lbs = test.dfs.getClient().getLocatedBlocks(
           barFile.toString(), BLOCK_SIZE);
@@ -583,7 +585,7 @@ public class TestStorageMover {
       byte[] buf = new byte[13];
       // read from offset 1024
       in.readFully(BLOCK_SIZE, buf, 0, buf.length);
-      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanupWithLogger(LOG, in);
       Assert.assertEquals("hello, world!", new String(buf));
     } finally {
       test.shutdownCluster();

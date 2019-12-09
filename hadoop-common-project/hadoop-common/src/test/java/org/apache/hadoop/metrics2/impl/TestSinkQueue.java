@@ -22,18 +22,20 @@ import java.util.ConcurrentModificationException;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import static org.apache.hadoop.metrics2.impl.SinkQueue.*;
 
 /**
  * Test the half-blocking metrics sink queue
  */
 public class TestSinkQueue {
-  private static final Log LOG = LogFactory.getLog(TestSinkQueue.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSinkQueue.class);
 
   /**
    * Test common use case
@@ -234,7 +236,7 @@ public class TestSinkQueue {
       callback.run();
     }
     catch (ConcurrentModificationException e) {
-      LOG.info(e);
+      LOG.info(e.toString());
       return;
     }
     LOG.error("should've thrown CME");

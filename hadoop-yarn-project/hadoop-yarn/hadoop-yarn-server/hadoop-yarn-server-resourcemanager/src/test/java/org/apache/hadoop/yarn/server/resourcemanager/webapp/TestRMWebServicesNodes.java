@@ -22,10 +22,17 @@ import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseS
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.TreeMap;
+import java.util.Iterator;
 
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
@@ -34,15 +41,22 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
@@ -51,6 +65,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStartedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.RackResolver;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -734,7 +750,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
 
   public void verifyNodeInfo(JSONObject nodeInfo, RMNode nm)
       throws JSONException, Exception {
-    assertEquals("incorrect number of elements", 18, nodeInfo.length());
+    assertEquals("incorrect number of elements", 20, nodeInfo.length());
 
     JSONObject resourceInfo = nodeInfo.getJSONObject("resourceUtilization");
     verifyNodeInfoGeneric(nm, nodeInfo.getString("state"),
@@ -834,6 +850,141 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
           opportunisticStatus.getOpportCoresUsed(), usedVirtualCoresOpport);
       assertEquals("numQueuedContainers doesn't match: " + numQueuedContainers,
           opportunisticStatus.getQueuedOpportContainers(), numQueuedContainers);
+    }
+  }
+
+  @Test
+  public void testNodesAllocationTags() throws Exception {
+    NodeId nm1 = NodeId.newInstance("host1", 1234);
+    NodeId nm2 = NodeId.newInstance("host2", 2345);
+    AllocationTagsManager atm = mock(AllocationTagsManager.class);
+
+    Map<String, Map<String, Long>> expectedAllocationTags = new TreeMap<>();
+    Map<String, Long> nm1Tags = new TreeMap<>();
+    nm1Tags.put("A", 1L);
+    nm1Tags.put("B", 2L);
+    Map<String, Long> nm2Tags = new TreeMap<>();
+    nm2Tags.put("C", 1L);
+    nm2Tags.put("D", 2L);
+    expectedAllocationTags.put(nm1.toString(), nm1Tags);
+    expectedAllocationTags.put(nm2.toString(), nm2Tags);
+
+    when(atm.getAllocationTagsWithCount(nm1)).thenReturn(nm1Tags);
+    when(atm.getAllocationTagsWithCount(nm2)).thenReturn(nm2Tags);
+    rm.getRMContext().setAllocationTagsManager(atm);
+
+    rm.start();
+
+    rm.registerNode(nm1.toString(), 1024);
+    rm.registerNode(nm2.toString(), 1024);
+
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("nodes").accept("application/json").get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    JSONObject nodesInfoJson = response.getEntity(JSONObject.class);
+    verifyNodeAllocationTag(nodesInfoJson, expectedAllocationTags);
+
+    rm.stop();
+  }
+
+  @Test
+  public void testNodeAttributesInfo() throws Exception {
+    ResourceTrackerService resourceTrackerService =
+        rm.getResourceTrackerService();
+    RegisterNodeManagerRequest registerReq =
+        Records.newRecord(RegisterNodeManagerRequest.class);
+    NodeId nodeId = NodeId.newInstance("host1", 1234);
+    Resource capability = BuilderUtils.newResource(1024, 1);
+    registerReq.setResource(capability);
+    registerReq.setNodeId(nodeId);
+    registerReq.setHttpPort(1234);
+    registerReq.setNMVersion(YarnVersionInfo.getVersion());
+    RegisterNodeManagerResponse registerResponse =
+        resourceTrackerService.registerNodeManager(registerReq);
+
+    Set<NodeAttribute> nodeAttributes = new HashSet<>();
+    nodeAttributes.add(NodeAttribute.newInstance(
+        NodeAttribute.PREFIX_DISTRIBUTED, "host",
+        NodeAttributeType.STRING, "host1"));
+    nodeAttributes.add(NodeAttribute.newInstance(
+        NodeAttribute.PREFIX_DISTRIBUTED, "rack",
+        NodeAttributeType.STRING, "rack1"));
+
+    NodeHeartbeatRequest heartbeatReq =
+        Records.newRecord(NodeHeartbeatRequest.class);
+    NodeStatus nodeStatus =
+        NodeStatus.newInstance(nodeId, 0, new ArrayList<ContainerStatus>(),
+        null, null, null, null, null);
+    heartbeatReq.setNodeStatus(nodeStatus);
+    heartbeatReq.setLastKnownNMTokenMasterKey(registerResponse
+        .getNMTokenMasterKey());
+    heartbeatReq.setLastKnownContainerTokenMasterKey(registerResponse
+        .getContainerTokenMasterKey());
+    heartbeatReq.setNodeAttributes(nodeAttributes);
+    resourceTrackerService.nodeHeartbeat(heartbeatReq);
+
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("nodes").accept("application/json").get(ClientResponse.class);
+
+    JSONObject nodesInfoJson = response.getEntity(JSONObject.class);
+    JSONArray nodes = nodesInfoJson.getJSONObject("nodes")
+        .getJSONArray("node");
+    JSONObject nodeJson = nodes.getJSONObject(0);
+    JSONArray nodeAttributesInfo = nodeJson.getJSONObject("nodeAttributesInfo")
+        .getJSONArray("nodeAttributeInfo");
+    assertEquals(nodeAttributes.size(), nodeAttributesInfo.length());
+
+    Iterator<NodeAttribute> it = nodeAttributes.iterator();
+    for (int j=0; j<nodeAttributesInfo.length(); j++) {
+      JSONObject nodeAttributeInfo = nodeAttributesInfo.getJSONObject(j);
+      NodeAttribute expectedNodeAttribute = it.next();
+      String expectedPrefix = expectedNodeAttribute.getAttributeKey()
+          .getAttributePrefix();
+      String expectedName = expectedNodeAttribute.getAttributeKey()
+          .getAttributeName();
+      String expectedType = expectedNodeAttribute.getAttributeType()
+          .toString();
+      String expectedValue = expectedNodeAttribute.getAttributeValue();
+      assertEquals(expectedPrefix, nodeAttributeInfo.getString("prefix"));
+      assertEquals(expectedName, nodeAttributeInfo.getString("name"));
+      assertEquals(expectedType, nodeAttributeInfo.getString("type"));
+      assertEquals(expectedValue, nodeAttributeInfo.getString("value"));
+    }
+  }
+
+  private void verifyNodeAllocationTag(JSONObject json,
+      Map<String, Map<String, Long>> expectedAllocationTags)
+      throws JSONException {
+    JSONArray nodes = json.getJSONObject("nodes").getJSONArray("node");
+    assertEquals(expectedAllocationTags.size(), nodes.length());
+    for (int i=0; i<nodes.length(); i++) {
+      JSONObject nodeJson = nodes.getJSONObject(i);
+      String nodeId = nodeJson.getString("id");
+
+      // Ensure the response contains all nodes info
+      assertTrue("Nodes info should have expected node IDs",
+          expectedAllocationTags.containsKey(nodeId));
+
+      Map<String, Long> expectedTags = expectedAllocationTags.get(nodeId);
+      JSONArray tagsInfo = nodeJson.getJSONObject("allocationTags")
+          .getJSONArray("allocationTagInfo");
+
+      // Ensure number of tags are expected.
+      assertEquals(expectedTags.size(), tagsInfo.length());
+
+      // Iterate expected tags and make sure the actual
+      // tags/counts are matched.
+      Iterator<String> it = expectedTags.keySet().iterator();
+      for (int j=0; j<tagsInfo.length(); j++) {
+        JSONObject tagInfo = tagsInfo.getJSONObject(j);
+        String expectedTag = it.next();
+        assertEquals(tagInfo.getString("allocationTag"), expectedTag);
+        assertEquals(tagInfo.getLong("allocationsCount"),
+            expectedTags.get(expectedTag).longValue());
+      }
     }
   }
 

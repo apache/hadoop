@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -47,16 +49,20 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.AMState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Before;
@@ -594,14 +600,12 @@ public class TestApplicationLimitsByPartition {
         .thenReturn(Resources.createResource(GB));
     when(csContext.getMaximumResourceCapability())
         .thenReturn(Resources.createResource(16 * GB));
-    when(csContext.getNonPartitionedQueueComparator())
-        .thenReturn(
-            CapacitySchedulerQueueManager.NON_PARTITIONED_QUEUE_COMPARATOR);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     RMContext rmContext = TestUtils.getMockRMContext();
     RMContext spyRMContext = spy(rmContext);
     when(spyRMContext.getNodeLabelManager()).thenReturn(mgr);
     when(csContext.getRMContext()).thenReturn(spyRMContext);
+    when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
 
     mgr.activateNode(NodeId.newInstance("h0", 0),
         Resource.newInstance(160 * GB, 16)); // default Label
@@ -617,6 +621,8 @@ public class TestApplicationLimitsByPartition {
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(csContext,
         csConf, null, "root", queues, queues, TestUtils.spyHook);
+    rootQueue.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     ResourceUsage queueResUsage = rootQueue.getQueueResourceUsage();
     when(csContext.getClusterResourceUsage())
@@ -642,7 +648,8 @@ public class TestApplicationLimitsByPartition {
     ResourceRequest amResourceRequest = mock(ResourceRequest.class);
     Resource amResource = Resources.createResource(0, 0);
     when(amResourceRequest.getCapability()).thenReturn(amResource);
-    when(rmApp.getAMResourceRequest()).thenReturn(amResourceRequest);
+    when(rmApp.getAMResourceRequests()).thenReturn(
+        Collections.singletonList(amResourceRequest));
     Mockito.doReturn(rmApp).when(spyApps).get((ApplicationId) Matchers.any());
     when(spyRMContext.getRMApps()).thenReturn(spyApps);
     RMAppAttempt rmAppAttempt = mock(RMAppAttempt.class);
@@ -660,7 +667,7 @@ public class TestApplicationLimitsByPartition {
     final ApplicationAttemptId appAttemptId_0_0 =
         TestUtils.getMockApplicationAttemptId(0, 0);
     FiCaSchedulerApp app_0_0 = new FiCaSchedulerApp(appAttemptId_0_0, user_0,
-        queue, queue.getActiveUsersManager(), spyRMContext);
+        queue, queue.getAbstractUsersManager(), spyRMContext);
     queue.submitApplicationAttempt(app_0_0, user_0);
 
     List<ResourceRequest> app_0_0_requests = new ArrayList<ResourceRequest>();
@@ -672,21 +679,24 @@ public class TestApplicationLimitsByPartition {
     queue.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource),
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    //head room = queue capacity = 50 % 90% 160 GB
+    //head room = queue capacity = 50 % 90% 160 GB * 0.25 (UL)
     Resource expectedHeadroom =
-        Resources.createResource((int) (0.5 * 0.9 * 160) * GB, 1);
+        Resources.createResource((int) (0.5 * 0.9 * 160 * 0.25) * GB, 1);
     assertEquals(expectedHeadroom, app_0_0.getHeadroom());
 
     // Submit second application from user_0, check headroom
     final ApplicationAttemptId appAttemptId_0_1 =
         TestUtils.getMockApplicationAttemptId(1, 0);
     FiCaSchedulerApp app_0_1 = new FiCaSchedulerApp(appAttemptId_0_1, user_0,
-        queue, queue.getActiveUsersManager(), spyRMContext);
+        queue, queue.getAbstractUsersManager(), spyRMContext);
     queue.submitApplicationAttempt(app_0_1, user_0);
 
     List<ResourceRequest> app_0_1_requests = new ArrayList<ResourceRequest>();
     app_0_1_requests.add(TestUtils.createResourceRequest(ResourceRequest.ANY,
         1 * GB, 2, true, priority_1, recordFactory));
+    app_0_1.updateResourceRequests(app_0_1_requests);
+
+    app_0_1_requests.clear();
     app_0_1_requests.add(TestUtils.createResourceRequest(ResourceRequest.ANY,
         1 * GB, 2, true, priority_1, recordFactory, "y"));
     app_0_1.updateResourceRequests(app_0_1_requests);
@@ -701,20 +711,24 @@ public class TestApplicationLimitsByPartition {
     assertEquals(expectedHeadroom, app_0_0.getHeadroom());// no change
     //head room for default label + head room for y partition
     //head room for y partition = 100% 50%(b queue capacity ) *  160 * GB
-    Resource expectedHeadroomWithReqInY =
-        Resources.add(Resources.createResource((int) (0.5 * 160) * GB, 1), expectedHeadroom);
+    Resource expectedHeadroomWithReqInY = Resources.add(
+        Resources.createResource((int) (0.25 * 0.5 * 160) * GB, 1),
+        expectedHeadroom);
     assertEquals(expectedHeadroomWithReqInY, app_0_1.getHeadroom());
 
     // Submit first application from user_1, check for new headroom
     final ApplicationAttemptId appAttemptId_1_0 =
         TestUtils.getMockApplicationAttemptId(2, 0);
     FiCaSchedulerApp app_1_0 = new FiCaSchedulerApp(appAttemptId_1_0, user_1,
-        queue, queue.getActiveUsersManager(), spyRMContext);
+        queue, queue.getAbstractUsersManager(), spyRMContext);
     queue.submitApplicationAttempt(app_1_0, user_1);
 
     List<ResourceRequest> app_1_0_requests = new ArrayList<ResourceRequest>();
     app_1_0_requests.add(TestUtils.createResourceRequest(ResourceRequest.ANY,
         1 * GB, 2, true, priority_1, recordFactory));
+    app_1_0.updateResourceRequests(app_1_0_requests);
+
+    app_1_0_requests.clear();
     app_1_0_requests.add(TestUtils.createResourceRequest(ResourceRequest.ANY,
         1 * GB, 2, true, priority_1, recordFactory, "y"));
     app_1_0.updateResourceRequests(app_1_0_requests);
@@ -725,16 +739,97 @@ public class TestApplicationLimitsByPartition {
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY); // Schedule to compute
     //head room = queue capacity = (50 % 90% 160 GB)/2 (for 2 users)
     expectedHeadroom =
-        Resources.createResource((int) (0.5 * 0.9 * 160 * 0.5) * GB, 1);
+        Resources.createResource((int) (0.5 * 0.9 * 160 * 0.25) * GB, 1);
     //head room for default label + head room for y partition
     //head room for y partition = 100% 50%(b queue capacity ) *  160 * GB
-    expectedHeadroomWithReqInY =
-        Resources.add(Resources.createResource((int) (0.5 * 0.5 * 160) * GB, 1),
-            expectedHeadroom);
+    expectedHeadroomWithReqInY = Resources.add(
+        Resources.createResource((int) (0.25 * 0.5 * 160) * GB, 1),
+        expectedHeadroom);
     assertEquals(expectedHeadroom, app_0_0.getHeadroom());
     assertEquals(expectedHeadroomWithReqInY, app_0_1.getHeadroom());
     assertEquals(expectedHeadroomWithReqInY, app_1_0.getHeadroom());
 
+
+  }
+
+  /**
+   * {@link LeafQueue#activateApplications()} should validate values of all
+   * resourceTypes before activating application.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testAMLimitByAllResources() throws Exception {
+    CapacitySchedulerConfiguration csconf =
+        new CapacitySchedulerConfiguration();
+    csconf.setResourceComparator(DominantResourceCalculator.class);
+    String queueName = "a1";
+    csconf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] {queueName});
+    csconf.setCapacity("root." + queueName, 100);
+
+    ResourceInformation res0 = ResourceInformation.newInstance("memory-mb",
+        ResourceInformation.MEMORY_MB.getUnits(), GB, Long.MAX_VALUE);
+    ResourceInformation res1 = ResourceInformation.newInstance("vcores",
+        ResourceInformation.VCORES.getUnits(), 1, Integer.MAX_VALUE);
+    ResourceInformation res2 = ResourceInformation.newInstance("gpu",
+        ResourceInformation.GPUS.getUnits(), 0, Integer.MAX_VALUE);
+    Map<String, ResourceInformation> riMap = new HashMap<>();
+    riMap.put(ResourceInformation.MEMORY_URI, res0);
+    riMap.put(ResourceInformation.VCORES_URI, res1);
+    riMap.put(ResourceInformation.GPU_URI, res2);
+    ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
+
+    YarnConfiguration config = new YarnConfiguration(csconf);
+    config.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    config.setBoolean(TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES,
+        false);
+
+    MockRM rm = new MockRM(config);
+    rm.start();
+
+    Map<String, Long> res = new HashMap<>();
+    res.put("gpu", 0L);
+
+    Resource clusterResource = Resource.newInstance(16 * GB, 64, res);
+
+    // Cluster Resource - 16GB, 64vcores
+    // AMLimit 16384 x .1 mb , 64 x .1 vcore
+    // Effective AM limit after normalized to minimum resource 2048,7
+
+    rm.registerNode("127.0.0.1:1234", clusterResource);
+
+    String userName = "user_0";
+    ResourceScheduler scheduler = rm.getRMContext().getScheduler();
+    LeafQueue queueA = (LeafQueue) ((CapacityScheduler) scheduler)
+        .getQueue(queueName);
+
+    Resource amResource = Resource.newInstance(GB, 1);
+
+    rm.submitApp(amResource, "app-1", userName, null, queueName);
+    rm.submitApp(amResource, "app-2", userName, null, queueName);
+
+    // app-3 should not be activated as amLimit will be reached
+    // for memory
+    rm.submitApp(amResource, "app-3", userName, null, queueName);
+
+    Assert.assertEquals("PendingApplications should be 1", 1,
+        queueA.getNumPendingApplications());
+    Assert.assertEquals("Active applications should be 2", 2,
+        queueA.getNumActiveApplications());
+    // AMLimit is 2048,7
+    Assert.assertEquals(2048,
+        queueA.getQueueResourceUsage().getAMLimit().getMemorySize());
+    Assert.assertEquals(7,
+        queueA.getQueueResourceUsage().getAMLimit().getVirtualCores());
+    // Used AM Resource is 2048,2
+    Assert.assertEquals(2048,
+        queueA.getQueueResourceUsage().getAMUsed().getMemorySize());
+    Assert.assertEquals(2,
+        queueA.getQueueResourceUsage().getAMUsed().getVirtualCores());
+
+    rm.close();
 
   }
 }

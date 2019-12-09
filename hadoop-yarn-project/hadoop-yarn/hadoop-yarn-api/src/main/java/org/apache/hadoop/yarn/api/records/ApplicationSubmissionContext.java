@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -51,7 +53,7 @@ import org.apache.hadoop.yarn.util.Records;
  *   <li>
  *     maxAppAttempts. The maximum number of application attempts.
  *     It should be no larger than the global number of max attempts in the
- *     Yarn configuration.
+ *     YARN configuration.
  *   </li>
  *   <li>
  *     attemptFailuresValidityInterval. The default value is -1.
@@ -100,7 +102,7 @@ public abstract class ApplicationSubmissionContext {
     amReq.setNumContainers(1);
     amReq.setRelaxLocality(true);
     amReq.setNodeLabelExpression(amContainerLabelExpression);
-    context.setAMContainerResourceRequest(amReq);
+    context.setAMContainerResourceRequests(Collections.singletonList(amReq));
     return context;
   }
   
@@ -159,7 +161,8 @@ public abstract class ApplicationSubmissionContext {
     context.setApplicationType(applicationType);
     context.setKeepContainersAcrossApplicationAttempts(keepContainers);
     context.setNodeLabelExpression(appLabelExpression);
-    context.setAMContainerResourceRequest(resourceRequest);
+    context.setAMContainerResourceRequests(
+        Collections.singletonList(resourceRequest));
     return context;
   }
 
@@ -392,15 +395,18 @@ public abstract class ApplicationSubmissionContext {
    * Set the flag which indicates whether to keep containers across application
    * attempts.
    * <p>
-   * If the flag is true, running containers will not be killed when application
-   * attempt fails and these containers will be retrieved by the new application
-   * attempt on registration via
+   * For managed AM, if the flag is true, running containers will not be killed
+   * when application attempt fails and these containers will be retrieved by
+   * the new application attempt on registration via
    * {@link ApplicationMasterProtocol#registerApplicationMaster(RegisterApplicationMasterRequest)}.
    * </p>
-   * 
-   * @param keepContainers
-   *          the flag which indicates whether to keep containers across
-   *          application attempts.
+   * <p>
+   * For unmanaged AM, if the flag is true, RM allows re-register and returns
+   * the running containers in the same attempt back to the UAM for HA.
+   * </p>
+   *
+   * @param keepContainers the flag which indicates whether to keep containers
+   *          across application attempts.
    */
   @Public
   @Stable
@@ -454,28 +460,60 @@ public abstract class ApplicationSubmissionContext {
   public abstract void setNodeLabelExpression(String nodeLabelExpression);
   
   /**
-   * Get ResourceRequest of AM container, if this is not null, scheduler will
-   * use this to acquire resource for AM container.
-   * 
+   * Get the ResourceRequest of the AM container.
+   *
+   * If this is not null, scheduler will use this to acquire resource for AM
+   * container.
+   *
    * If this is null, scheduler will assemble a ResourceRequest by using
    * <em>getResource</em> and <em>getPriority</em> of
    * <em>ApplicationSubmissionContext</em>.
-   * 
-   * Number of containers and Priority will be ignore.
-   * 
-   * @return ResourceRequest of AM container
+   *
+   * Number of containers and Priority will be ignored.
+   *
+   * @return ResourceRequest of the AM container
+   * @deprecated See {@link #getAMContainerResourceRequests()}
    */
   @Public
   @Evolving
+  @Deprecated
   public abstract ResourceRequest getAMContainerResourceRequest();
   
   /**
-   * Set ResourceRequest of AM container
-   * @param request of AM container
+   * Set ResourceRequest of the AM container
+   * @param request of the AM container
+   * @deprecated See {@link #setAMContainerResourceRequests(List)}
    */
   @Public
   @Evolving
+  @Deprecated
   public abstract void setAMContainerResourceRequest(ResourceRequest request);
+
+  /**
+   * Get the ResourceRequests of the AM container.
+   *
+   * If this is not null, scheduler will use this to acquire resource for AM
+   * container.
+   *
+   * If this is null, scheduler will use the ResourceRequest as determined by
+   * <em>getAMContainerResourceRequest</em> and its behavior.
+   *
+   * Number of containers and Priority will be ignored.
+   *
+   * @return List of ResourceRequests of the AM container
+   */
+  @Public
+  @Evolving
+  public abstract List<ResourceRequest> getAMContainerResourceRequests();
+
+  /**
+   * Set ResourceRequests of the AM container.
+   * @param requests of the AM container
+   */
+  @Public
+  @Evolving
+  public abstract void setAMContainerResourceRequests(
+      List<ResourceRequest> requests);
 
   /**
    * Get the attemptFailuresValidityInterval in milliseconds for the application
@@ -560,4 +598,25 @@ public abstract class ApplicationSubmissionContext {
   @Unstable
   public abstract void setApplicationTimeouts(
       Map<ApplicationTimeoutType, Long> applicationTimeouts);
+
+  /**
+   * Get application scheduling environment variables stored as a key value
+   * pair map for application.
+   *
+   * @return placement envs for application.
+   */
+  @Public
+  @Unstable
+  public abstract Map<String, String> getApplicationSchedulingPropertiesMap();
+
+  /**
+   * Set the scheduling envs for the application.
+   *
+   * @param schedulingEnvMap
+   *          A map of env's for the application scheduling preferences.
+   */
+  @Public
+  @Unstable
+  public abstract void setApplicationSchedulingPropertiesMap(
+      Map<String, String> schedulingEnvMap);
 }

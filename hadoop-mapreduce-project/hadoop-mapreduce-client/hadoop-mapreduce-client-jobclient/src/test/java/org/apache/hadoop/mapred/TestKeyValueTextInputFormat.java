@@ -21,19 +21,21 @@ package org.apache.hadoop.mapred;
 import java.io.*;
 import java.util.*;
 
-import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.compress.*;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 public class TestKeyValueTextInputFormat {
-  private static final Log LOG =
-    LogFactory.getLog(TestKeyValueTextInputFormat.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestKeyValueTextInputFormat.class);
 
   private static int MAX_LENGTH = 10000;
   

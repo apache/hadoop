@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.auth.AWSCredentials;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.net.URI;
@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.ProviderUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.lookupPassword;
 
 /**
  * Support session credentials for authenticating with AWS.
@@ -49,26 +50,26 @@ public class TemporaryAWSCredentialsProvider implements AWSCredentialsProvider {
   private String accessKey;
   private String secretKey;
   private String sessionToken;
-  private IOException lookupIOE;
 
-  public TemporaryAWSCredentialsProvider(URI uri, Configuration conf) {
-    try {
-      Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
-          conf, S3AFileSystem.class);
-      this.accessKey = S3AUtils.lookupPassword(c, ACCESS_KEY, null);
-      this.secretKey = S3AUtils.lookupPassword(c, SECRET_KEY, null);
-      this.sessionToken = S3AUtils.lookupPassword(c, SESSION_TOKEN, null);
-    } catch (IOException e) {
-      lookupIOE = e;
-    }
+  public TemporaryAWSCredentialsProvider(Configuration conf)
+      throws IOException {
+    this(null, conf);
   }
 
+  public TemporaryAWSCredentialsProvider(URI uri, Configuration conf)
+      throws IOException {
+
+      // determine the bucket
+      String bucket = uri != null ? uri.getHost():  "";
+      Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
+          conf, S3AFileSystem.class);
+      this.accessKey = lookupPassword(bucket, c, ACCESS_KEY);
+      this.secretKey = lookupPassword(bucket, c, SECRET_KEY);
+      this.sessionToken = lookupPassword(bucket, c, SESSION_TOKEN);
+  }
+
+  @Override
   public AWSCredentials getCredentials() {
-    if (lookupIOE != null) {
-      // propagate any initialization problem
-      throw new CredentialInitializationException(lookupIOE.toString(),
-          lookupIOE);
-    }
     if (!StringUtils.isEmpty(accessKey) && !StringUtils.isEmpty(secretKey)
         && !StringUtils.isEmpty(sessionToken)) {
       return new BasicSessionCredentials(accessKey, secretKey, sessionToken);

@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
@@ -33,6 +31,8 @@ import org.apache.hadoop.mapred.nativetask.buffer.BufferType;
 import org.apache.hadoop.mapred.nativetask.buffer.ByteBufferDataReader;
 import org.apache.hadoop.mapred.nativetask.buffer.InputBuffer;
 import org.apache.hadoop.util.Progress;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * actively signal a {@link BufferPullee} to load data into buffer and receive
@@ -40,7 +40,7 @@ import org.apache.hadoop.util.Progress;
 @InterfaceAudience.Private
 public class BufferPuller implements RawKeyValueIterator, DataReceiver {
   
-  private static Log LOG = LogFactory.getLog(BufferPuller.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BufferPuller.class);
 
   public final static int KV_HEADER_LENGTH = Constants.SIZEOF_KV_LENGTH;
 

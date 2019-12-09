@@ -19,8 +19,11 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -36,12 +39,14 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaAlreadyExistsException;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipeline;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.junit.Assert;
@@ -60,7 +65,8 @@ public class TestWriteToReplica {
   // test close
   @Test
   public void testClose() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration(),
+        new File(GenericTestUtils.getRandomizedTempPath())).build();
     
     try {
       cluster.waitActive();
@@ -82,7 +88,8 @@ public class TestWriteToReplica {
   // test append
   @Test
   public void testAppend() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration(),
+        new File(GenericTestUtils.getRandomizedTempPath())).build();
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
@@ -102,7 +109,8 @@ public class TestWriteToReplica {
   // test writeToRbw
   @Test
   public void testWriteToRbw() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration(),
+        new File(GenericTestUtils.getRandomizedTempPath())).build();
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
@@ -122,7 +130,8 @@ public class TestWriteToReplica {
   // test writeToTemporary
   @Test
   public void testWriteToTemporary() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration(),
+        new File(GenericTestUtils.getRandomizedTempPath())).build();
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
@@ -154,7 +163,7 @@ public class TestWriteToReplica {
     
     ExtendedBlock[] blocks = new ExtendedBlock[] {
         new ExtendedBlock(bpid, 1, 1, 2001), new ExtendedBlock(bpid, 2, 1, 2002), 
-        new ExtendedBlock(bpid, 3, 1, 2003), new ExtendedBlock(bpid, 4, 1, 2004),
+        new ExtendedBlock(bpid, 3, 2, 2003), new ExtendedBlock(bpid, 4, 1, 2004),
         new ExtendedBlock(bpid, 5, 1, 2005), new ExtendedBlock(bpid, 6, 1, 2006)
     };
 
@@ -353,7 +362,7 @@ public class TestWriteToReplica {
     }
  
     try {
-      dataSet.createRbw(StorageType.DEFAULT, blocks[FINALIZED], false);
+      dataSet.createRbw(StorageType.DEFAULT, null, blocks[FINALIZED], false);
       Assert.fail("Should not have created a replica that's already " +
       		"finalized " + blocks[FINALIZED]);
     } catch (ReplicaAlreadyExistsException e) {
@@ -371,7 +380,7 @@ public class TestWriteToReplica {
     }
 
     try {
-      dataSet.createRbw(StorageType.DEFAULT, blocks[TEMPORARY], false);
+      dataSet.createRbw(StorageType.DEFAULT, null, blocks[TEMPORARY], false);
       Assert.fail("Should not have created a replica that had created as " +
       		"temporary " + blocks[TEMPORARY]);
     } catch (ReplicaAlreadyExistsException e) {
@@ -381,7 +390,7 @@ public class TestWriteToReplica {
         0L, blocks[RBW].getNumBytes());  // expect to be successful
     
     try {
-      dataSet.createRbw(StorageType.DEFAULT, blocks[RBW], false);
+      dataSet.createRbw(StorageType.DEFAULT, null, blocks[RBW], false);
       Assert.fail("Should not have created a replica that had created as RBW " +
           blocks[RBW]);
     } catch (ReplicaAlreadyExistsException e) {
@@ -397,7 +406,7 @@ public class TestWriteToReplica {
     }
 
     try {
-      dataSet.createRbw(StorageType.DEFAULT, blocks[RWR], false);
+      dataSet.createRbw(StorageType.DEFAULT, null, blocks[RWR], false);
       Assert.fail("Should not have created a replica that was waiting to be " +
       		"recovered " + blocks[RWR]);
     } catch (ReplicaAlreadyExistsException e) {
@@ -413,7 +422,7 @@ public class TestWriteToReplica {
     }
 
     try {
-      dataSet.createRbw(StorageType.DEFAULT, blocks[RUR], false);
+      dataSet.createRbw(StorageType.DEFAULT, null, blocks[RUR], false);
       Assert.fail("Should not have created a replica that was under recovery " +
           blocks[RUR]);
     } catch (ReplicaAlreadyExistsException e) {
@@ -430,49 +439,53 @@ public class TestWriteToReplica {
           e.getMessage().contains(ReplicaNotFoundException.NON_EXISTENT_REPLICA));
     }
     
-    dataSet.createRbw(StorageType.DEFAULT, blocks[NON_EXISTENT], false);
+    dataSet.createRbw(StorageType.DEFAULT, null, blocks[NON_EXISTENT], false);
   }
   
   private void testWriteToTemporary(FsDatasetImpl dataSet, ExtendedBlock[] blocks) throws IOException {
     try {
-      dataSet.createTemporary(StorageType.DEFAULT, blocks[FINALIZED]);
+      dataSet.createTemporary(StorageType.DEFAULT, null, blocks[FINALIZED],
+          false);
       Assert.fail("Should not have created a temporary replica that was " +
       		"finalized " + blocks[FINALIZED]);
     } catch (ReplicaAlreadyExistsException e) {
     }
  
     try {
-      dataSet.createTemporary(StorageType.DEFAULT, blocks[TEMPORARY]);
+      dataSet.createTemporary(StorageType.DEFAULT, null, blocks[TEMPORARY],
+          false);
       Assert.fail("Should not have created a replica that had created as" +
       		"temporary " + blocks[TEMPORARY]);
     } catch (ReplicaAlreadyExistsException e) {
     }
     
     try {
-      dataSet.createTemporary(StorageType.DEFAULT, blocks[RBW]);
+      dataSet.createTemporary(StorageType.DEFAULT, null, blocks[RBW], false);
       Assert.fail("Should not have created a replica that had created as RBW " +
           blocks[RBW]);
     } catch (ReplicaAlreadyExistsException e) {
     }
     
     try {
-      dataSet.createTemporary(StorageType.DEFAULT, blocks[RWR]);
+      dataSet.createTemporary(StorageType.DEFAULT, null, blocks[RWR], false);
       Assert.fail("Should not have created a replica that was waiting to be " +
       		"recovered " + blocks[RWR]);
     } catch (ReplicaAlreadyExistsException e) {
     }
     
     try {
-      dataSet.createTemporary(StorageType.DEFAULT, blocks[RUR]);
+      dataSet.createTemporary(StorageType.DEFAULT, null, blocks[RUR], false);
       Assert.fail("Should not have created a replica that was under recovery " +
           blocks[RUR]);
     } catch (ReplicaAlreadyExistsException e) {
     }
     
-    dataSet.createTemporary(StorageType.DEFAULT, blocks[NON_EXISTENT]);
+    dataSet.createTemporary(StorageType.DEFAULT, null, blocks[NON_EXISTENT],
+        false);
 
     try {
-      dataSet.createTemporary(StorageType.DEFAULT, blocks[NON_EXISTENT]);
+      dataSet.createTemporary(StorageType.DEFAULT, null, blocks[NON_EXISTENT],
+          false);
       Assert.fail("Should not have created a replica that had already been "
           + "created " + blocks[NON_EXISTENT]);
     } catch (Exception e) {
@@ -485,7 +498,8 @@ public class TestWriteToReplica {
     blocks[NON_EXISTENT].setGenerationStamp(newGenStamp);
     try {
       ReplicaInPipeline replicaInfo =
-          dataSet.createTemporary(StorageType.DEFAULT, blocks[NON_EXISTENT]).getReplica();
+          dataSet.createTemporary(StorageType.DEFAULT, null,
+              blocks[NON_EXISTENT], false).getReplica();
       Assert.assertTrue(replicaInfo.getGenerationStamp() == newGenStamp);
       Assert.assertTrue(
           replicaInfo.getBlockId() == blocks[NON_EXISTENT].getBlockId());
@@ -503,7 +517,8 @@ public class TestWriteToReplica {
   @Test
   public  void testReplicaMapAfterDatanodeRestart() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf,
+        new File(GenericTestUtils.getRandomizedTempPath()))
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
         .build();
     try {
@@ -547,7 +562,53 @@ public class TestWriteToReplica {
       cluster.shutdown();
     }
   }
-  
+
+  /**
+   * Test that we can successfully recover a {@link ReplicaBeingWritten}
+   * which has inconsistent metadata (bytes were written to disk but bytesOnDisk
+   * was not updated) but that recovery fails when the block is actually
+   * corrupt (bytes are not present on disk).
+   */
+  @Test
+  public void testRecoverInconsistentRbw() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf,
+        new File(GenericTestUtils.getRandomizedTempPath())).build();
+    cluster.waitActive();
+    DataNode dn = cluster.getDataNodes().get(0);
+    FsDatasetImpl fsDataset = (FsDatasetImpl)DataNodeTestUtils.getFSDataset(dn);
+
+    // set up replicasMap
+    String bpid = cluster.getNamesystem().getBlockPoolId();
+    ExtendedBlock[] blocks = setup(bpid, cluster.getFsDatasetTestUtils(dn));
+
+    ReplicaBeingWritten rbw = (ReplicaBeingWritten)fsDataset.
+        getReplicaInfo(bpid, blocks[RBW].getBlockId());
+    long bytesOnDisk = rbw.getBytesOnDisk();
+    // simulate an inconsistent replica length update by reducing in-memory
+    // value of on disk length
+    rbw.setLastChecksumAndDataLen(bytesOnDisk - 1, null);
+    fsDataset.recoverRbw(blocks[RBW], blocks[RBW].getGenerationStamp(), 0L,
+        rbw.getNumBytes());
+    // after the recovery, on disk length should equal acknowledged length.
+    Assert.assertTrue(rbw.getBytesOnDisk() == rbw.getBytesAcked());
+
+    // reduce on disk length again; this time actually truncate the file to
+    // simulate the data not being present
+    rbw.setLastChecksumAndDataLen(bytesOnDisk - 1, null);
+    try (RandomAccessFile blockRAF = rbw.getFileIoProvider().
+        getRandomAccessFile(rbw.getVolume(), rbw.getBlockFile(), "rw")) {
+      // truncate blockFile
+      blockRAF.setLength(bytesOnDisk - 1);
+      fsDataset.recoverRbw(blocks[RBW], blocks[RBW].getGenerationStamp(), 0L,
+          rbw.getNumBytes());
+      fail("recovery should have failed");
+    } catch (ReplicaNotFoundException rnfe) {
+      GenericTestUtils.assertExceptionContains("Found fewer bytesOnDisk than " +
+          "bytesAcked for replica", rnfe);
+    }
+  }
+
   /**
    * Compare the replica map before and after the restart
    **/

@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
@@ -70,8 +71,11 @@ public class TestTokenClientRMService {
 
   @BeforeClass
   public static void setupSecretManager() throws IOException {
+    ResourceManager rm = mock(ResourceManager.class);
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getStateStore()).thenReturn(new NullRMStateStore());
+    when(rm.getRMContext()).thenReturn(rmContext);
+    when(rmContext.getResourceManager()).thenReturn(rm);
     dtsm =
         new RMDelegationTokenSecretManager(60000, 60000, 60000, 60000,
             rmContext);
@@ -80,6 +84,8 @@ public class TestTokenClientRMService {
     conf.set("hadoop.security.authentication", "kerberos");
     conf.set("hadoop.security.auth_to_local", kerberosRule);
     UserGroupInformation.setConfiguration(conf);
+    UserGroupInformation.getLoginUser()
+       .setAuthenticationMethod(AuthenticationMethod.KERBEROS);
   }
 
   @AfterClass

@@ -29,26 +29,28 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
 import java.util.Collection;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.App;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.MapTaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.SubView;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TFOOT;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.THEAD;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
-import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.InputType;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TFOOT;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.THEAD;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TR;
+import org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.InputType;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
-import com.google.common.base.Joiner;
 import com.google.inject.Inject;
 
 /**
@@ -61,10 +63,12 @@ public class HsTaskPage extends HsView {
    */
   static class AttemptsBlock extends HtmlBlock {
     final App app;
+    final Configuration conf;
 
     @Inject
-    AttemptsBlock(App ctx) {
+    AttemptsBlock(App ctx, Configuration conf) {
       app = ctx;
+      this.conf = conf;
     }
 
     @Override
@@ -110,13 +114,13 @@ public class HsTaskPage extends HsView {
       headRow.th("Elapsed Time").
               th(".note", "Note");
       
-       TBODY<TABLE<Hamlet>> tbody = headRow._()._().tbody();
+       TBODY<TABLE<Hamlet>> tbody = headRow.__().__().tbody();
        // Write all the data into a JavaScript array of arrays for JQuery
        // DataTables to display
        StringBuilder attemptsTableData = new StringBuilder("[\n");
 
        for (TaskAttempt attempt : getTaskAttempts()) {
-        final TaskAttemptInfo ta = new TaskAttemptInfo(attempt, false);
+        final TaskAttemptInfo ta = new MapTaskAttemptInfo(attempt, false);
         String taid = ta.getId();
 
         String nodeHttpAddr = ta.getNode();
@@ -148,17 +152,25 @@ public class HsTaskPage extends HsView {
         attemptsTableData.append("[\"")
         .append(getAttemptId(taskId, ta)).append("\",\"")
         .append(ta.getState()).append("\",\"")
-        .append(StringEscapeUtils.escapeJavaScript(
-              StringEscapeUtils.escapeHtml(ta.getStatus()))).append("\",\"")
+        .append(StringEscapeUtils.escapeEcmaScript(
+              StringEscapeUtils.escapeHtml4(ta.getStatus()))).append("\",\"")
 
         .append("<a class='nodelink' href='" + MRWebAppUtil.getYARNWebappScheme() + nodeHttpAddr + "'>")
-        .append(nodeRackName + "/" + nodeHttpAddr + "</a>\",\"")
+        .append(nodeRackName + "/" + nodeHttpAddr + "</a>\",\"");
 
-        .append("<a class='logslink' href='").append(url("logs", nodeIdString
-          , containerIdString, taid, app.getJob().getUserName()))
-          .append("'>logs</a>\",\"")
+         String logsUrl = url("logs", nodeIdString, containerIdString, taid,
+             app.getJob().getUserName());
+         if (!conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
+             YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)) {
+           logsUrl =
+               url(MRWebAppUtil.getYARNWebappScheme(), nodeHttpAddr, "node",
+                   "containerlogs", containerIdString,
+                   app.getJob().getUserName());
+         }
+         attemptsTableData.append("<a class='logslink' href='").append(logsUrl)
+             .append("'>logs</a>\",\"");
 
-          .append(attemptStartTime).append("\",\"");
+        attemptsTableData.append(attemptStartTime).append("\",\"");
 
         if(type == TaskType.REDUCE) {
           attemptsTableData.append(shuffleFinishTime).append("\",\"")
@@ -172,8 +184,8 @@ public class HsTaskPage extends HsView {
           .append(elapsedReduceTime).append("\",\"");
         }
           attemptsTableData.append(attemptElapsed).append("\",\"")
-          .append(StringEscapeUtils.escapeJavaScript(
-              StringEscapeUtils.escapeHtml(ta.getNote())))
+          .append(StringEscapeUtils.escapeEcmaScript(
+              StringEscapeUtils.escapeHtml4(ta.getNote())))
           .append("\"],\n");
       }
        //Remove the last comma and close off the array of arrays
@@ -182,55 +194,55 @@ public class HsTaskPage extends HsView {
        }
        attemptsTableData.append("]");
        html.script().$type("text/javascript").
-       _("var attemptsTableData=" + attemptsTableData)._();
+           __("var attemptsTableData=" + attemptsTableData).__();
 
-      TR<TFOOT<TABLE<Hamlet>>> footRow = tbody._().tfoot().tr();
+      TR<TFOOT<TABLE<Hamlet>>> footRow = tbody.__().tfoot().tr();
       footRow.
           th().input("search_init").$type(InputType.text).
-              $name("attempt_name").$value("Attempt")._()._().
+              $name("attempt_name").$value("Attempt").__().__().
           th().input("search_init").$type(InputType.text).
-              $name("attempt_state").$value("State")._()._().
+              $name("attempt_state").$value("State").__().__().
           th().input("search_init").$type(InputType.text).
-              $name("attempt_status").$value("Status")._()._().
+              $name("attempt_status").$value("Status").__().__().
           th().input("search_init").$type(InputType.text).
-              $name("attempt_node").$value("Node")._()._().
+              $name("attempt_node").$value("Node").__().__().
           th().input("search_init").$type(InputType.text).
-              $name("attempt_node").$value("Logs")._()._().
+              $name("attempt_node").$value("Logs").__().__().
           th().input("search_init").$type(InputType.text).
-              $name("attempt_start_time").$value("Start Time")._()._();
+              $name("attempt_start_time").$value("Start Time").__().__();
       
       if(type == TaskType.REDUCE) {
         footRow.
         th().input("search_init").$type(InputType.text).
-            $name("shuffle_time").$value("Shuffle Time")._()._();
+            $name("shuffle_time").$value("Shuffle Time").__().__();
         footRow.
         th().input("search_init").$type(InputType.text).
-            $name("merge_time").$value("Merge Time")._()._();
+            $name("merge_time").$value("Merge Time").__().__();
       }
       
       footRow.
         th().input("search_init").$type(InputType.text).
-            $name("attempt_finish").$value("Finish Time")._()._();
+            $name("attempt_finish").$value("Finish Time").__().__();
       
       if(type == TaskType.REDUCE) {
         footRow.
         th().input("search_init").$type(InputType.text).
-            $name("elapsed_shuffle_time").$value("Elapsed Shuffle Time")._()._();
+            $name("elapsed_shuffle_time").$value("Elapsed Shuffle Time").__().__();
         footRow.
         th().input("search_init").$type(InputType.text).
-            $name("elapsed_merge_time").$value("Elapsed Merge Time")._()._();
+            $name("elapsed_merge_time").$value("Elapsed Merge Time").__().__();
         footRow.
         th().input("search_init").$type(InputType.text).
-            $name("elapsed_reduce_time").$value("Elapsed Reduce Time")._()._();
+            $name("elapsed_reduce_time").$value("Elapsed Reduce Time").__().__();
       }
 
       footRow.
         th().input("search_init").$type(InputType.text).
-            $name("attempt_elapsed").$value("Elapsed Time")._()._().
+            $name("attempt_elapsed").$value("Elapsed Time").__().__().
         th().input("search_init").$type(InputType.text).
-            $name("note").$value("Note")._()._();
+            $name("note").$value("Note").__().__();
       
-      footRow._()._()._();
+      footRow.__().__().__();
     }
 
     protected String getAttemptId(TaskId taskId, TaskAttemptInfo ta) {
@@ -256,7 +268,7 @@ public class HsTaskPage extends HsView {
    * (non-Javadoc)
    * @see org.apache.hadoop.mapreduce.v2.hs.webapp.HsView#preHead(org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML)
    */
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
     //override the nav config from commonPReHead
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:2}");

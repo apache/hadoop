@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestDSSleepingAppMaster extends ApplicationMaster{
 
-  private static final Log LOG = LogFactory.getLog(TestDSSleepingAppMaster.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestDSSleepingAppMaster.class);
   private static final long SLEEP_TIME = 5000;
 
   public static void main(String[] args) {

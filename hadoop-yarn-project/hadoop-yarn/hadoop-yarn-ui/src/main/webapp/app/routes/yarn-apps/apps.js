@@ -19,4 +19,13 @@
 import Ember from 'ember';
 
 export default Ember.Route.extend({
+  model() {
+    return Ember.RSVP.hash({
+      apps: this.store.findAll('yarn-app', {reload: true}),
+    });
+  },
+
+  unloadAll() {
+    this.store.unloadAll('yarn-app');
+  }
 });

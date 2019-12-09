@@ -23,8 +23,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
 import com.google.protobuf.BlockingService;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolPB;
@@ -38,6 +36,8 @@ import org.apache.hadoop.security.AccessControlException;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_DEFAULT;
 
@@ -46,7 +46,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_DEF
  * a mock implementation.
  */
 class DummyHAService extends HAServiceTarget {
-  public static final Log LOG = LogFactory.getLog(DummyHAService.class);
+  public static final Logger LOG = LoggerFactory.getLogger(DummyHAService
+      .class);
   private static final String DUMMY_FENCE_KEY = "dummy.fence.key";
   volatile HAServiceState state;
   HAServiceProtocol proxy, healthMonitorProxy;
@@ -55,7 +56,8 @@ class DummyHAService extends HAServiceTarget {
   InetSocketAddress address, healthMonitorAddress;
   boolean isHealthy = true;
   boolean actUnreachable = false;
-  boolean failToBecomeActive, failToBecomeStandby, failToFence;
+  boolean failToBecomeActive, failToBecomeStandby, failToBecomeObserver,
+      failToFence;
   
   DummySharedResource sharedResource;
   public int fenceCount = 0;
@@ -216,6 +218,11 @@ class DummyHAService extends HAServiceTarget {
   }
 
   @Override
+  public boolean supportObserver() {
+    return true;
+  }
+
+  @Override
   public String toString() {
     return "DummyHAService #" + index;
   }
@@ -262,6 +269,16 @@ class DummyHAService extends HAServiceTarget {
       state = HAServiceState.STANDBY;
     }
     
+    @Override
+    public void transitionToObserver(StateChangeRequestInfo req)
+        throws ServiceFailedException, AccessControlException, IOException {
+      checkUnreachable();
+      if (failToBecomeObserver) {
+        throw new ServiceFailedException("injected failure");
+      }
+      state = HAServiceState.OBSERVER;
+    }
+
     @Override
     public HAServiceStatus getServiceStatus() throws IOException {
       checkUnreachable();

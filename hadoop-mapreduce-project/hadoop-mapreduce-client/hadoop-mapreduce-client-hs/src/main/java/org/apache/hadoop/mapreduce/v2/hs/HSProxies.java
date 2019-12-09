@@ -21,8 +21,6 @@ package org.apache.hadoop.mapreduce.v2.hs;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -38,11 +36,13 @@ import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolPB;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolClientSideTranslatorPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 public class HSProxies {
 
-  private static final Log LOG = LogFactory.getLog(HSProxies.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HSProxies.class);
 
   @SuppressWarnings("unchecked")
   public static <T> T createProxy(Configuration conf, InetSocketAddress hsaddr,

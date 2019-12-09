@@ -18,20 +18,20 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
-import java.util.Map;
+import java.io.IOException;
 
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerContext;
 
 public abstract class PlacementRule {
+
   public String getName() {
     return this.getClass().getName();
   }
 
-  public void initialize(Map<String, String> parameters, RMContext rmContext)
-      throws YarnException {
-  }
+  public abstract boolean initialize(
+      CapacitySchedulerContext schedulerContext) throws IOException;
 
   /**
    * Get queue for a given application
@@ -50,6 +50,6 @@ public abstract class PlacementRule {
    *         in the {@link PlacementManager} will take care
    *         </p>
    */
-  public abstract String getQueueForApp(ApplicationSubmissionContext asc,
-      String user) throws YarnException;
+  public abstract ApplicationPlacementContext getPlacementForApp(
+      ApplicationSubmissionContext asc, String user) throws YarnException;
 }

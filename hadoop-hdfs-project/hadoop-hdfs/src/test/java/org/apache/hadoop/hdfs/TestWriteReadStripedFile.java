@@ -17,22 +17,21 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -46,14 +45,16 @@ import java.util.Arrays;
 import java.util.Random;
 
 public class TestWriteReadStripedFile {
-  public static final Log LOG = LogFactory.getLog(TestWriteReadStripedFile.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestWriteReadStripedFile.class);
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      SystemErasureCodingPolicies.getByID(
+          SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
   private final int cellSize = ecPolicy.getCellSize();
   private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
   private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
   private final int numDNs = dataBlocks + parityBlocks;
-  private final int stripesPerBlock = 4;
+  private final int stripesPerBlock = 2;
   private final int blockSize = stripesPerBlock * cellSize;
   private final int blockGroupSize = blockSize * dataBlocks;
 
@@ -62,11 +63,10 @@ public class TestWriteReadStripedFile {
   private Configuration conf = new HdfsConfiguration();
 
   static {
-    GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
-    ((Log4JLogger)LogFactory.getLog(BlockPlacementPolicy.class))
-        .getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(BlockPlacementPolicy.LOG, Level.TRACE);
   }
 
   @Rule
@@ -79,8 +79,10 @@ public class TestWriteReadStripedFile {
         false);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(ecPolicy.getName());
     fs.mkdirs(new Path("/ec"));
-    cluster.getFileSystem().getClient().setErasureCodingPolicy("/ec", null);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy("/ec",
+        ecPolicy.getName());
   }
 
   @After
@@ -223,7 +225,8 @@ public class TestWriteReadStripedFile {
 
     byte[] smallBuf = new byte[1024];
     byte[] largeBuf = new byte[fileLength + 100];
-    StripedFileTestUtil.verifyPread(fs, srcPath, fileLength, expected, largeBuf);
+    StripedFileTestUtil.verifyPread(fs, srcPath, fileLength, expected,
+        largeBuf);
 
     StripedFileTestUtil.verifyStatefulRead(fs, srcPath, fileLength, expected,
         largeBuf);
@@ -266,13 +269,15 @@ public class TestWriteReadStripedFile {
 
     byte[] smallBuf = new byte[1024];
     byte[] largeBuf = new byte[fileLength + 100];
-    // TODO: HDFS-8797
-    //StripedFileTestUtil.verifyPread(fs, srcPath, fileLength, expected, largeBuf);
+    StripedFileTestUtil
+        .verifyPread(fs, srcPath, fileLength, expected, largeBuf, ecPolicy);
 
-    StripedFileTestUtil.verifyStatefulRead(fs, srcPath, fileLength, expected, largeBuf);
+    StripedFileTestUtil
+        .verifyStatefulRead(fs, srcPath, fileLength, expected, largeBuf);
     StripedFileTestUtil.verifySeek(fs, srcPath, fileLength, ecPolicy,
         blockGroupSize);
-    StripedFileTestUtil.verifyStatefulRead(fs, srcPath, fileLength, expected, smallBuf);
+    StripedFileTestUtil
+        .verifyStatefulRead(fs, srcPath, fileLength, expected, smallBuf);
     // webhdfs doesn't support bytebuffer read
   }
 

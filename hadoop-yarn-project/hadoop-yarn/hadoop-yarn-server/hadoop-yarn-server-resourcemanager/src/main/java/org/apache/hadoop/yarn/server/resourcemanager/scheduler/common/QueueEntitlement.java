@@ -43,4 +43,26 @@ public class QueueEntitlement {
   public void setCapacity(float capacity) {
     this.capacity = capacity;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o)
+      return true;
+    if (!(o instanceof QueueEntitlement))
+      return false;
+
+    QueueEntitlement that = (QueueEntitlement) o;
+
+    if (Float.compare(that.capacity, capacity) != 0)
+      return false;
+    return Float.compare(that.maxCapacity, maxCapacity) == 0;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = (capacity != +0.0f ? Float.floatToIntBits(capacity) : 0);
+    result = 31 * result + (maxCapacity != +0.0f ? Float.floatToIntBits(
+        maxCapacity) : 0);
+    return result;
+  }
 }

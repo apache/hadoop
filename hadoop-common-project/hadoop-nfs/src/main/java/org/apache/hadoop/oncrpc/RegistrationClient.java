@@ -19,18 +19,19 @@ package org.apache.hadoop.oncrpc;
 
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply.AcceptState;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A simple client that registers an RPC program with portmap.
  */
 public class RegistrationClient extends SimpleTcpClient {
-  public static final Log LOG = LogFactory.getLog(RegistrationClient.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(RegistrationClient.class);
 
   public RegistrationClient(String host, int port, XDR request) {
     super(host, port, request);

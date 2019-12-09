@@ -28,8 +28,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
@@ -47,10 +45,12 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestUnmanagedAMLauncher {
-  private static final Log LOG = LogFactory
-      .getLog(TestUnmanagedAMLauncher.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestUnmanagedAMLauncher.class);
 
   protected static MiniYARNCluster yarnCluster = null;
   protected static Configuration conf = new YarnConfiguration();
@@ -128,7 +128,7 @@ public class TestUnmanagedAMLauncher {
     String classpath = getTestRuntimeClasspath();
     String javaHome = System.getenv("JAVA_HOME");
     if (javaHome == null) {
-      LOG.fatal("JAVA_HOME not defined. Test not running.");
+      LOG.error("JAVA_HOME not defined. Test not running.");
       return;
     }
     String[] args = {
@@ -170,7 +170,7 @@ public class TestUnmanagedAMLauncher {
     String classpath = getTestRuntimeClasspath();
     String javaHome = System.getenv("JAVA_HOME");
     if (javaHome == null) {
-      LOG.fatal("JAVA_HOME not defined. Test not running.");
+      LOG.error("JAVA_HOME not defined. Test not running.");
       return;
     }
     String[] args = {

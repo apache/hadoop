@@ -26,10 +26,12 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
-public class TestTypedBytesWritable extends TestCase {
+public class TestTypedBytesWritable {
 
+  @Test
   public void testToString() {
     TypedBytesWritable tbw = new TypedBytesWritable();
     tbw.setValue(true);
@@ -46,6 +48,7 @@ public class TestTypedBytesWritable extends TestCase {
     assertEquals("random text", tbw.toString());
   }
 
+  @Test
   public void testIO() throws IOException {
     TypedBytesWritable tbw = new TypedBytesWritable();
     tbw.setValue(12345);

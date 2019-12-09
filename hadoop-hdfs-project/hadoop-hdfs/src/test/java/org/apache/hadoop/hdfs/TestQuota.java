@@ -28,6 +28,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -35,6 +36,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.Scanner;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -42,6 +44,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
@@ -58,13 +61,20 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
+import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.event.Level;
+import org.slf4j.LoggerFactory;
 
 /** A class for testing quota-related commands */
 public class TestQuota {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestQuota.class);
   
   private static Configuration conf = null;
   private static final ByteArrayOutputStream OUT_STREAM = new ByteArrayOutputStream();
@@ -76,6 +86,9 @@ public class TestQuota {
   private static FileSystem webhdfs;
   /* set a smaller block size so that we can test with smaller space quotas */
   private static final int DEFAULT_BLOCK_SIZE = 512;
+
+  @Rule
+  public final Timeout testTestout = new Timeout(120000);
 
   @BeforeClass
   public static void setUpClass() throws Exception {
@@ -120,7 +133,7 @@ public class TestQuota {
   }
 
   @AfterClass
-  public static void tearDownClass() throws Exception {
+  public static void tearDownClass() {
     try {
       System.out.flush();
       System.err.flush();
@@ -158,7 +171,7 @@ public class TestQuota {
    * @throws Exception
    */
   @Test
-  public void testDSQuotaExceededExceptionIsHumanReadable() throws Exception {
+  public void testDSQuotaExceededExceptionIsHumanReadable() {
     Integer bytes = 1024;
     try {
       throw new DSQuotaExceededException(bytes, bytes);
@@ -176,7 +189,7 @@ public class TestQuota {
   public void testQuotaCommands() throws Exception {
     DFSAdmin admin = new DFSAdmin(conf);
     final Path dir = new Path(
-        PathUtils.getTestPath(getClass()),
+        PathUtils.getTestDir(getClass()).getPath(),
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(dir));
 
@@ -184,11 +197,20 @@ public class TestQuota {
     final short replication = 5;
     final long spaceQuota = fileLen * replication * 15 / 8;
 
-    // 1: create a directory test and set its quota to be 3
+    // 1: create a test directory
     final Path parent = new Path(dir, "test");
     assertTrue(dfs.mkdirs(parent));
-    String[] args = new String[]{"-setQuota", "3", parent.toString()};
+
+    // Try setting name quota with suffixes
+    String[] args;
+    args = new String[]{"-setQuota", "3K", parent.toString()};
     runCommand(admin, args, false);
+    args = new String[]{"-setQuota", "3m", parent.toString()};
+    runCommand(admin, args, false);
+    // Set the final name quota to 3
+    args = new String[]{"-setQuota", "3", parent.toString()};
+    runCommand(admin, args, false);
+
 
     //try setting space quota with a 'binary prefix'
     runCommand(admin, false, "-setSpaceQuota", "2t", parent.toString());
@@ -311,6 +333,13 @@ public class TestQuota {
     // 14a: set quota on a non-existent directory
     Path nonExistentPath = new Path(dir, "test1");
     assertFalse(dfs.exists(nonExistentPath));
+    try {
+      compareQuotaUsage(null, dfs, nonExistentPath);
+      fail("Expected FileNotFoundException");
+    } catch (FileNotFoundException fnfe) {
+      GenericTestUtils.assertExceptionContains(
+          "File/Directory does not exist: " + nonExistentPath, fnfe);
+    }
     args = new String[]{"-setQuota", "1", nonExistentPath.toString()};
     runCommand(admin, args, true);
     runCommand(admin, true, "-setSpaceQuota", "1g", // for space quota
@@ -457,7 +486,7 @@ public class TestQuota {
   @Test
   public void testNamespaceCommands() throws Exception {
     final Path parent = new Path(
-        PathUtils.getTestPath(getClass()),
+        PathUtils.getTestDir(getClass()).getPath(),
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(parent));
 
@@ -638,7 +667,7 @@ public class TestQuota {
   @Test
   public void testSpaceCommands() throws Exception {
     final Path parent = new Path(
-        PathUtils.getTestPath(getClass()),
+        PathUtils.getTestDir(getClass()).getPath(),
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(parent));
 
@@ -895,7 +924,7 @@ public class TestQuota {
   @Test
   public void testQuotaByStorageType() throws Exception {
     final Path parent = new Path(
-        PathUtils.getTestPath(getClass()),
+        PathUtils.getTestDir(getClass()).getPath(),
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(parent));
 
@@ -940,7 +969,7 @@ public class TestQuota {
   @Test
   public void testMaxSpaceQuotas() throws Exception {
     final Path parent = new Path(
-        PathUtils.getTestPath(getClass()),
+        PathUtils.getTestDir(getClass()).getPath(),
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(parent));
 
@@ -1003,7 +1032,7 @@ public class TestQuota {
   public void testBlockAllocationAdjustsUsageConservatively() 
       throws Exception {
     final Path parent = new Path(
-        PathUtils.getTestPath(getClass()),
+        PathUtils.getTestDir(getClass()).getPath(),
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(parent));
 
@@ -1053,7 +1082,7 @@ public class TestQuota {
   @Test
   public void testMultipleFilesSmallerThanOneBlock() throws Exception {
     final Path parent = new Path(
-        PathUtils.getTestPath(getClass()),
+        PathUtils.getTestDir(getClass()).getPath(),
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(parent));
 
@@ -1139,7 +1168,7 @@ public class TestQuota {
   @Test
   public void testSetSpaceQuotaWhenStorageTypeIsWrong() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    conf.set(FS_DEFAULT_NAME_KEY, "hdfs://127.0.0.1:9820");
+    conf.set(FS_DEFAULT_NAME_KEY, "hdfs://127.0.0.1:8020");
     DFSAdmin admin = new DFSAdmin(conf);
     ByteArrayOutputStream err = new ByteArrayOutputStream();
     PrintStream oldErr = System.err;
@@ -1163,7 +1192,7 @@ public class TestQuota {
   @Test
   public void testHugeFileCount() throws IOException {
     final Path parent = new Path(
-        PathUtils.getTestPath(getClass()),
+        PathUtils.getTestDir(getClass()).getPath(),
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(parent));
 
@@ -1196,7 +1225,7 @@ public class TestQuota {
 
     final DFSAdmin dfsAdmin = new DFSAdmin(conf);
     final Path dir = new Path(
-        PathUtils.getTestPath(getClass()),
+        PathUtils.getTestDir(getClass()).getPath(),
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(dir));
 
@@ -1227,7 +1256,7 @@ public class TestQuota {
   public void testSetAndClearSpaceQuotaRegular() throws Exception {
 
     final Path dir = new Path(
-        PathUtils.getTestPath(getClass()),
+        PathUtils.getTestDir(getClass()).getPath(),
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(dir));
 
@@ -1244,6 +1273,32 @@ public class TestQuota {
         dir,
         0,
         -1);
+  }
+
+  /**
+   * Test to all the commands by passing the fully qualified path.
+   */
+  @Test(timeout = 30000)
+  public void testQuotaCommandsWithURI() throws Exception {
+    DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    final Path dir = new Path("/" + this.getClass().getSimpleName(),
+        GenericTestUtils.getMethodName());
+    assertTrue(dfs.mkdirs(dir));
+
+    /* set space quota */
+    testSetAndClearSpaceQuotaRegularInternal(
+        new String[] { "-setSpaceQuota", "1024",
+            dfs.getUri() + "/" + dir.toString() }, dir, 0, 1024);
+
+    /* clear space quota */
+    testSetAndClearSpaceQuotaRegularInternal(
+        new String[] { "-clrSpaceQuota", dfs.getUri() + "/" + dir.toString() },
+        dir, 0, -1);
+    runCommand(dfsAdmin, false, "-setQuota", "1000",
+        dfs.getUri() + "/" + dir.toString());
+
+    runCommand(dfsAdmin, false, "-clrQuota",
+        dfs.getUri() + "/" + dir.toString());
   }
 
   private void testSetAndClearSpaceQuotaRegularInternal(
@@ -1273,7 +1328,7 @@ public class TestQuota {
   public void testSetAndClearSpaceQuotaByStorageType() throws Exception {
 
     final Path dir = new Path(
-        PathUtils.getTestPath(getClass()),
+        PathUtils.getTestDir(getClass()).getPath(),
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(dir));
 
@@ -1326,27 +1381,27 @@ public class TestQuota {
    * Test to set and clear space quote when directory doesn't exist.
    */
   @Test(timeout = 30000)
-  public void testSetAndClearSpaceQuotaDirecotryNotExist() throws Exception {
+  public void testSetAndClearSpaceQuotaDirectoryNotExist() throws Exception {
     final Path dir = new Path(
-        PathUtils.getTestPath(getClass()),
+        PathUtils.getTestDir(getClass()).getPath(),
         GenericTestUtils.getMethodName());
 
     /* set space quota */
-    testSetAndClearSpaceQuotaDirecotryNotExistInternal(
+    testSetAndClearSpaceQuotaDirectoryNotExistInternal(
         new String[] {"-setSpaceQuota", "1024", dir.toString()},
         dir,
         -1,
         "setSpaceQuota");
 
     /* clear space quota */
-    testSetAndClearSpaceQuotaDirecotryNotExistInternal(
+    testSetAndClearSpaceQuotaDirectoryNotExistInternal(
         new String[] {"-clrSpaceQuota", dir.toString()},
         dir,
         -1,
         "clrSpaceQuota");
   }
 
-  private void testSetAndClearSpaceQuotaDirecotryNotExistInternal(
+  private void testSetAndClearSpaceQuotaDirectoryNotExistInternal(
       final String[] args,
       final Path dir,
       final int cmdRet,
@@ -1376,7 +1431,7 @@ public class TestQuota {
   public void testSetAndClearSpaceQuotaPathIsFile() throws Exception {
 
     final Path parent = new Path(
-        PathUtils.getTestPath(getClass()),
+        PathUtils.getTestDir(getClass()).getPath(),
         GenericTestUtils.getMethodName());
     final Path file = new Path(parent, "path-is-file");
     DFSTestUtil.createFile(dfs, file, 1024L, (short) 1L, 0);
@@ -1427,7 +1482,7 @@ public class TestQuota {
   public void testSetAndClearSpaceQuotaNoAccess() throws Exception {
 
     final Path dir = new Path(
-        PathUtils.getTestPath(getClass()),
+        PathUtils.getTestDir(getClass()).getPath(),
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(dir));
 
@@ -1442,6 +1497,142 @@ public class TestQuota {
         new String[] {"-clrSpaceQuota", dir.toString()},
         -1,
         "clrSpaceQuota");
+  }
+
+  @Test
+  public void testSpaceQuotaExceptionOnClose() throws Exception {
+    GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.TRACE);
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    final Path dir = new Path(
+        PathUtils.getTestDir(getClass()).getPath(),
+        GenericTestUtils.getMethodName());
+    assertTrue(dfs.mkdirs(dir));
+    final String[] args = new String[] {"-setSpaceQuota", "1", dir.toString()};
+    assertEquals(0, ToolRunner.run(dfsAdmin, args));
+
+    final Path testFile = new Path(dir, "file");
+    final FSDataOutputStream stream = dfs.create(testFile);
+    stream.write("whatever".getBytes());
+    try {
+      stream.close();
+      fail("close should fail");
+    } catch (DSQuotaExceededException expected) {
+    }
+
+    assertEquals(0, cluster.getNamesystem().getNumFilesUnderConstruction());
+  }
+
+  @Test
+  public void testSpaceQuotaExceptionOnFlush() throws Exception {
+    GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    final Path dir = new Path(
+        PathUtils.getTestDir(getClass()).getPath(),
+        GenericTestUtils.getMethodName());
+    assertTrue(dfs.mkdirs(dir));
+    final String[] args = new String[] {"-setSpaceQuota", "1", dir.toString()};
+    assertEquals(0, ToolRunner.run(dfsAdmin, args));
+
+    Path testFile = new Path(dir, "file");
+    FSDataOutputStream stream = dfs.create(testFile);
+    // get the lease renewer now so we can verify it later without calling
+    // getLeaseRenewer, which will automatically add the client into it.
+    final LeaseRenewer leaseRenewer = dfs.getClient().getLeaseRenewer();
+    stream.write("whatever".getBytes());
+    try {
+      stream.hflush();
+      fail("flush should fail");
+    } catch (DSQuotaExceededException expected) {
+    }
+    // even if we close the stream in finially, it won't help.
+    try {
+      stream.close();
+      fail("close should fail too");
+    } catch (DSQuotaExceededException expected) {
+    }
+
+    GenericTestUtils.setLogLevel(LeaseRenewer.LOG, Level.TRACE);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        LOG.info("LeaseRenewer: {}", leaseRenewer);
+        return leaseRenewer.isEmpty();
+      }
+    }, 100, 10000);
+    assertEquals(0, cluster.getNamesystem().getNumFilesUnderConstruction());
+  }
+
+  @Test
+  public void testRename() throws Exception {
+    int fileLen = 1024;
+    short replication = 3;
+
+    final Path parent = new Path(PathUtils.getTestDir(getClass()).getPath(),
+        GenericTestUtils.getMethodName());
+    assertTrue(dfs.mkdirs(parent));
+
+    final Path srcDir = new Path(parent, "src-dir");
+    Path file = new Path(srcDir, "file1");
+    DFSTestUtil.createFile(dfs, file, fileLen, replication, 0);
+    dfs.setStoragePolicy(srcDir, HdfsConstants.HOT_STORAGE_POLICY_NAME);
+
+    final Path dstDir = new Path(parent, "dst-dir");
+    assertTrue(dfs.mkdirs(dstDir));
+    dfs.setStoragePolicy(dstDir, HdfsConstants.ALLSSD_STORAGE_POLICY_NAME);
+
+    dfs.setQuota(srcDir, 100000, 100000);
+    dfs.setQuota(dstDir, 100000, 100000);
+
+    Path dstFile = new Path(dstDir, "file1");
+    // Test quota check of rename. Expect a QuotaExceedException.
+    dfs.setQuotaByStorageType(dstDir, StorageType.SSD, 10);
+    try {
+      dfs.rename(file, dstFile);
+      fail("Expect QuotaExceedException.");
+    } catch (QuotaExceededException qe) {
+    }
+
+    // Set enough quota, expect a successful rename.
+    dfs.setQuotaByStorageType(dstDir, StorageType.SSD, fileLen * replication);
+    dfs.rename(file, dstFile);
+    // Verify the storage type usage is properly updated on source and dst.
+    checkQuotaAndCount(dfs, srcDir);
+    checkQuotaAndCount(dfs, dstDir);
+  }
+
+  @Test
+  public void testSpaceQuotaExceptionOnAppend() throws Exception {
+    GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.TRACE);
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    final Path dir = new Path(
+        PathUtils.getTestDir(getClass()).getPath(),
+        GenericTestUtils.getMethodName());
+    dfs.delete(dir, true);
+    assertTrue(dfs.mkdirs(dir));
+    final String[] args =
+        new String[] {"-setSpaceQuota", "4000", dir.toString()};
+    ToolRunner.run(dfsAdmin, args);
+
+    final Path testFile = new Path(dir, "file");
+    OutputStream stream = dfs.create(testFile);
+    stream.write("whatever".getBytes());
+    stream.close();
+
+    assertEquals(0, cluster.getNamesystem().getNumFilesUnderConstruction());
+
+    stream = dfs.append(testFile);
+    byte[] buf = AppendTestUtil.initBuffer(4096);
+    stream.write(buf);
+    try {
+      stream.close();
+      fail("close after append should fail");
+    } catch (DSQuotaExceededException expected) {
+    }
+    assertEquals(0, cluster.getNamesystem().getNumFilesUnderConstruction());
   }
 
   private void testSetAndClearSpaceQuotaNoAccessInternal(
@@ -1475,10 +1666,22 @@ public class TestQuota {
   private static void scanIntoList(
       final ByteArrayOutputStream baos,
       final List<String> list) {
-    final Scanner scanner = new Scanner(baos.toString());
+    final Scanner scanner = new Scanner(
+        baos.toString().replaceAll("\r\r\n", System.lineSeparator()));
     while (scanner.hasNextLine()) {
       list.add(scanner.nextLine());
     }
     scanner.close();
+  }
+
+  // quota and count should match.
+  private void checkQuotaAndCount(DistributedFileSystem fs, Path path)
+      throws IOException {
+    QuotaUsage qu = fs.getQuotaUsage(path);
+    ContentSummary cs = fs.getContentSummary(path);
+    for (StorageType st : StorageType.values()) {
+      // it will fail here, because the quota and consume is not handled right.
+      assertEquals(qu.getTypeConsumed(st), cs.getTypeConsumed(st));
+    }
   }
 }

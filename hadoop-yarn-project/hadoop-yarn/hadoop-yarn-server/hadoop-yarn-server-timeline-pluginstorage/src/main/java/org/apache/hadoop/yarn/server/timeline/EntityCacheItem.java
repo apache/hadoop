@@ -17,8 +17,10 @@
 package org.apache.hadoop.yarn.server.timeline;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,8 +97,11 @@ public class EntityCacheItem {
       }
       if (!appLogs.getDetailLogs().isEmpty()) {
         if (store == null) {
-          store = new LevelDBCacheTimelineStore(groupId.toString(),
-              "LeveldbCache." + groupId);
+          store = ReflectionUtils.newInstance(config.getClass(
+              YarnConfiguration
+                  .TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_CACHE_STORE,
+              MemoryTimelineStore.class, TimelineStore.class),
+              config);
           store.init(config);
           store.start();
         } else {

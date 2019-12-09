@@ -89,11 +89,14 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
   private String webserviceUserName = "testuser";
   private static boolean setAuthFilter = false;
+  private static boolean enableRecurrence = false;
 
   private static MockRM rm;
 
-  private static final int MINIMUM_RESOURCE_DURATION = 1000000;
+  private static final int MINIMUM_RESOURCE_DURATION = 100000;
   private static final Clock clock = new UTCClock();
+  private static final int MAXIMUM_PERIOD = 86400000;
+  private static final int DEFAULT_RECURRENCE = MAXIMUM_PERIOD / 10;
   private static final String TEST_DIR = new File(System.getProperty(
       "test.build.data", "/tmp")).getAbsolutePath();
   private static final String FS_ALLOC_FILE = new File(TEST_DIR,
@@ -145,21 +148,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       bind(GenericExceptionHandler.class);
       conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
           YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
-      Configuration conf = new Configuration();
       conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
-      conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-          YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-          ResourceScheduler.class);
-      CapacitySchedulerConfiguration csconf =
-          new CapacitySchedulerConfiguration(conf);
-      String[] queues = { "default", "dedicated" };
-      csconf.setQueues("root", queues);
-      csconf.setCapacity("root.default", 50.0f);
-      csconf.setCapacity("root.dedicated", 50.0f);
-      csconf.setReservable("root.dedicated", true);
 
-      rm = new MockRM(csconf);
+      rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
       if (setAuthFilter) {
         filter("/*").through(TestRMCustomAuthFilter.class);
@@ -173,6 +164,16 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     public void configureScheduler() {
       conf.set(YarnConfiguration.RM_SCHEDULER,
           CapacityScheduler.class.getName());
+      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+          ResourceScheduler.class);
+      CapacitySchedulerConfiguration csconf =
+          new CapacitySchedulerConfiguration(conf);
+      String[] queues = { "default", "dedicated" };
+      csconf.setQueues("root", queues);
+      csconf.setCapacity("root.default", 50.0f);
+      csconf.setCapacity("root.dedicated", 50.0f);
+      csconf.setReservable("root.dedicated", true);
+      conf = csconf;
     }
   }
 
@@ -189,9 +190,13 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
         out.println("    <aclAdministerApps>someuser </aclAdministerApps>");
         out.println("  </queue>");
         out.println("  <queue name=\"dedicated\">");
+        out.println("    <reservation>");
+        out.println("    </reservation>");
         out.println("    <aclAdministerApps>someuser </aclAdministerApps>");
         out.println("  </queue>");
         out.println("</queue>");
+        out.println("<defaultQueueSchedulingPolicy>drf" +
+            "</defaultQueueSchedulingPolicy>");
         out.println("</allocations>");
         out.close();
       } catch (IOException e) {
@@ -264,7 +269,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
   @Parameters
   public static Collection<Object[]> guiceConfigs() {
-    return Arrays.asList(new Object[][] { { 0 }, { 1 }, { 2 }, { 3 } });
+    return Arrays.asList(new Object[][] {{0, true}, {1, true}, {2, true},
+        {3, true}, {0, false}, {1, false}, {2, false}, {3, false}});
   }
 
   @Before
@@ -273,13 +279,15 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     super.setUp();
   }
 
-  public TestRMWebServicesReservation(int run) {
+  public TestRMWebServicesReservation(int run, boolean recurrence) {
     super(new WebAppDescriptor.Builder(
         "org.apache.hadoop.yarn.server.resourcemanager.webapp")
         .contextListenerClass(GuiceServletConfig.class)
         .filterClass(com.google.inject.servlet.GuiceFilter.class)
         .clientConfig(new DefaultClientConfig(JAXBContextResolver.class))
         .contextPath("jersey-guice-filter").servletPath("/").build());
+
+    enableRecurrence = recurrence;
     switch (run) {
     case 0:
     default:
@@ -590,13 +598,22 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       return;
     }
 
-    JSONObject reservations = json.getJSONObject("reservations");
+    if (!enableRecurrence) {
+      JSONObject reservations = json.getJSONObject("reservations");
 
-    testRDLHelper(reservations);
+      testRDLHelper(reservations);
 
-    String reservationName = reservations.getJSONObject
-            ("reservation-definition").getString("reservation-name");
-    assertEquals(reservationName, "res_2");
+      String reservationName = reservations
+          .getJSONObject("reservation-definition")
+          .getString("reservation-name");
+      assertEquals("res_2", reservationName);
+    } else {
+      // In the case of recurring reservations, both reservations will be
+      // picked up by the search interval since it is greater than the period
+      // of the reservation.
+      JSONArray reservations = json.getJSONArray("reservations");
+      assertEquals(2, reservations.length());
+    }
 
     rm.stop();
   }
@@ -629,13 +646,22 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       return;
     }
 
-    JSONObject reservations = json.getJSONObject("reservations");
+    if (!enableRecurrence) {
+      JSONObject reservations = json.getJSONObject("reservations");
 
-    testRDLHelper(reservations);
+      testRDLHelper(reservations);
 
-    String reservationName = reservations.getJSONObject
-            ("reservation-definition").getString("reservation-name");
-    assertEquals(reservationName, "res_2");
+      String reservationName = reservations
+          .getJSONObject("reservation-definition")
+          .getString("reservation-name");
+      assertEquals("res_2", reservationName);
+    } else {
+      // In the case of recurring reservations, both reservations will be
+      // picked up by the search interval since it is greater than the period
+      // of the reservation.
+      JSONArray reservations = json.getJSONArray("reservations");
+      assertEquals(2, reservations.length());
+    }
 
     rm.stop();
   }
@@ -674,8 +700,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     testRDLHelper(reservations);
 
     // only res_1 should fall into the time interval given in the request json.
-    String reservationName = reservations.getJSONObject
-            ("reservation-definition").getString("reservation-name");
+    String reservationName = reservations
+        .getJSONObject("reservation-definition")
+        .getString("reservation-name");
     assertEquals(reservationName, "res_1");
 
     rm.stop();
@@ -996,9 +1023,15 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       ReservationId reservationId) throws Exception {
     String reservationJson = loadJsonFile("submit-reservation.json");
 
+    String recurrenceExpression = "";
+    if (enableRecurrence) {
+      recurrenceExpression = String.format(
+          "\"recurrence-expression\" : \"%s\",", DEFAULT_RECURRENCE);
+    }
+
     String reservationJsonRequest = String.format(reservationJson,
         reservationId.toString(), arrival, arrival + MINIMUM_RESOURCE_DURATION,
-        reservationName);
+        reservationName, recurrenceExpression);
 
     return submitAndVerifyReservation(path, media, reservationJsonRequest);
   }
@@ -1026,8 +1059,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
   }
 
   private void updateReservationTestHelper(String path,
-      ReservationId reservationId, String media) throws JSONException,
-      Exception {
+      ReservationId reservationId, String media) throws Exception {
 
     String reservationJson = loadJsonFile("update-reservation.json");
 
@@ -1041,7 +1073,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     if (this.isAuthenticationEnabled()) {
       // only works when previous submit worked
       if(rsci.getReservationId() == null) {
-        throw new IOException("Incorrectly parsed the reservatinId");
+        throw new IOException("Incorrectly parsed the reservationId");
       }
       rsci.setReservationId(reservationId.toString());
     }

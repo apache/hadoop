@@ -20,6 +20,10 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 
+import org.apache.hadoop.yarn.server.nodemanager.recovery.RecoveryIterator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -50,8 +54,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -95,7 +97,6 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.Localize
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
-import org.apache.hadoop.yarn.server.nodemanager.DeletionService.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.DirectoryCollection.DirsChangeListener;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocol;
@@ -113,6 +114,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResourceFailedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalCacheCleaner.LocalCacheCleanerStats;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ApplicationLocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationCleanupEvent;
@@ -131,6 +133,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.LocalResourceTrackerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredLocalizationState;
@@ -147,9 +150,12 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public class ResourceLocalizationService extends CompositeService
     implements EventHandler<LocalizationEvent>, LocalizationProtocol {
 
-  private static final Log LOG = LogFactory.getLog(ResourceLocalizationService.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(ResourceLocalizationService.class);
   public static final String NM_PRIVATE_DIR = "nmPrivate";
   public static final FsPermission NM_PRIVATE_PERM = new FsPermission((short) 0700);
+  private static final FsPermission PUBLIC_FILECACHE_FOLDER_PERMS =
+      new FsPermission((short) 0755);
 
   private Server server;
   private InetSocketAddress localizationServerAddress;
@@ -165,6 +171,8 @@ public class ResourceLocalizationService extends CompositeService
   private final ScheduledExecutorService cacheCleanup;
   private LocalizerTokenSecretManager secretManager;
   private NMStateStoreService stateStore;
+  @VisibleForTesting
+  final NodeManagerMetrics metrics;
 
   @VisibleForTesting
   LocalResourcesTracker publicRsrc;
@@ -194,7 +202,8 @@ public class ResourceLocalizationService extends CompositeService
 
   public ResourceLocalizationService(Dispatcher dispatcher,
       ContainerExecutor exec, DeletionService delService,
-      LocalDirsHandlerService dirsHandler, Context context) {
+      LocalDirsHandlerService dirsHandler, Context context,
+      NodeManagerMetrics metrics) {
 
     super(ResourceLocalizationService.class.getName());
     this.exec = exec;
@@ -208,6 +217,7 @@ public class ResourceLocalizationService extends CompositeService
           .build());
     this.stateStore = context.getNMStateStore();
     this.nmContext = context;
+    this.metrics = metrics;
   }
 
   FileContext getLocalFileContext(Configuration conf) {
@@ -256,9 +266,7 @@ public class ResourceLocalizationService extends CompositeService
     }
 
     diskValidator = DiskValidatorFactory.getInstance(
-        conf.get(YarnConfiguration.DISK_VALIDATOR));
-    LOG.info("Disk Validator: " + YarnConfiguration.DISK_VALIDATOR +
-        " is loaded.");
+        YarnConfiguration.DEFAULT_DISK_VALIDATOR);
     cacheTargetSize =
       conf.getLong(YarnConfiguration.NM_LOCALIZER_CACHE_TARGET_SIZE_MB, YarnConfiguration.DEFAULT_NM_LOCALIZER_CACHE_TARGET_SIZE_MB) << 20;
     cacheCleanupPeriod =
@@ -289,69 +297,77 @@ public class ResourceLocalizationService extends CompositeService
 
   //Recover localized resources after an NM restart
   public void recoverLocalizedResources(RecoveredLocalizationState state)
-      throws URISyntaxException {
+      throws URISyntaxException, IOException {
     LocalResourceTrackerState trackerState = state.getPublicTrackerState();
     recoverTrackerResources(publicRsrc, trackerState);
 
-    for (Map.Entry<String, RecoveredUserResources> userEntry :
-         state.getUserResources().entrySet()) {
-      String user = userEntry.getKey();
-      RecoveredUserResources userResources = userEntry.getValue();
-      trackerState = userResources.getPrivateTrackerState();
-      if (!trackerState.isEmpty()) {
+    try (RecoveryIterator<Map.Entry<String, RecoveredUserResources>> it
+             = state.getIterator()) {
+      while (it.hasNext()) {
+        Map.Entry<String, RecoveredUserResources> userEntry = it.next();
+        String user = userEntry.getKey();
+        RecoveredUserResources userResources = userEntry.getValue();
+        trackerState = userResources.getPrivateTrackerState();
         LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
-            null, dispatcher, true, super.getConfig(), stateStore);
+            null, dispatcher, true, super.getConfig(), stateStore,
+            dirsHandler);
         LocalResourcesTracker oldTracker = privateRsrc.putIfAbsent(user,
             tracker);
         if (oldTracker != null) {
           tracker = oldTracker;
         }
         recoverTrackerResources(tracker, trackerState);
-      }
 
-      for (Map.Entry<ApplicationId, LocalResourceTrackerState> appEntry :
-           userResources.getAppTrackerStates().entrySet()) {
-        trackerState = appEntry.getValue();
-        if (!trackerState.isEmpty()) {
+        for (Map.Entry<ApplicationId, LocalResourceTrackerState> appEntry :
+            userResources.getAppTrackerStates().entrySet()) {
+          trackerState = appEntry.getValue();
           ApplicationId appId = appEntry.getKey();
           String appIdStr = appId.toString();
-          LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
-              appId, dispatcher, false, super.getConfig(), stateStore);
-          LocalResourcesTracker oldTracker = appRsrc.putIfAbsent(appIdStr,
-              tracker);
-          if (oldTracker != null) {
-            tracker = oldTracker;
+          LocalResourcesTracker tracker1 = new LocalResourcesTrackerImpl(user,
+              appId, dispatcher, false, super.getConfig(), stateStore,
+              dirsHandler);
+          LocalResourcesTracker oldTracker1 = appRsrc.putIfAbsent(appIdStr,
+              tracker1);
+          if (oldTracker1 != null) {
+            tracker1 = oldTracker1;
           }
-          recoverTrackerResources(tracker, trackerState);
+          recoverTrackerResources(tracker1, trackerState);
         }
       }
     }
   }
 
   private void recoverTrackerResources(LocalResourcesTracker tracker,
-      LocalResourceTrackerState state) throws URISyntaxException {
-    for (LocalizedResourceProto proto : state.getLocalizedResources()) {
-      LocalResource rsrc = new LocalResourcePBImpl(proto.getResource());
-      LocalResourceRequest req = new LocalResourceRequest(rsrc);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Recovering localized resource " + req + " at "
-            + proto.getLocalPath());
+      LocalResourceTrackerState state) throws URISyntaxException, IOException {
+    try (RecoveryIterator<LocalizedResourceProto> it =
+             state.getCompletedResourcesIterator()) {
+      while (it != null && it.hasNext()) {
+        LocalizedResourceProto proto = it.next();
+        LocalResource rsrc = new LocalResourcePBImpl(proto.getResource());
+        LocalResourceRequest req = new LocalResourceRequest(rsrc);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Recovering localized resource " + req + " at "
+              + proto.getLocalPath());
+        }
+        tracker.handle(new ResourceRecoveredEvent(req,
+            new Path(proto.getLocalPath()), proto.getSize()));
       }
-      tracker.handle(new ResourceRecoveredEvent(req,
-          new Path(proto.getLocalPath()), proto.getSize()));
     }
 
-    for (Map.Entry<LocalResourceProto, Path> entry :
-         state.getInProgressResources().entrySet()) {
-      LocalResource rsrc = new LocalResourcePBImpl(entry.getKey());
-      LocalResourceRequest req = new LocalResourceRequest(rsrc);
-      Path localPath = entry.getValue();
-      tracker.handle(new ResourceRecoveredEvent(req, localPath, 0));
+    try (RecoveryIterator<Map.Entry<LocalResourceProto, Path>> it =
+             state.getStartedResourcesIterator()) {
+      while (it != null && it.hasNext()) {
+        Map.Entry<LocalResourceProto, Path> entry = it.next();
+        LocalResource rsrc = new LocalResourcePBImpl(entry.getKey());
+        LocalResourceRequest req = new LocalResourceRequest(rsrc);
+        Path localPath = entry.getValue();
+        tracker.handle(new ResourceRecoveredEvent(req, localPath, 0));
 
-      // delete any in-progress localizations, containers will request again
-      LOG.info("Deleting in-progress localization for " + req + " at "
-          + localPath);
-      tracker.remove(tracker.getLocalizedResource(req), delService);
+        // delete any in-progress localizations, containers will request again
+        LOG.info("Deleting in-progress localization for " + req + " at "
+            + localPath);
+        tracker.remove(tracker.getLocalizedResource(req), delService);
+      }
     }
 
     // TODO: remove untracked directories in local filesystem
@@ -399,7 +415,7 @@ public class ResourceLocalizationService extends CompositeService
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
         false)) {
-      server.refreshServiceAcl(conf, new NMPolicyProvider());
+      server.refreshServiceAcl(conf, NMPolicyProvider.getInstance());
     }
     
     return server;
@@ -454,10 +470,11 @@ public class ResourceLocalizationService extends CompositeService
     // 0) Create application tracking structs
     String userName = app.getUser();
     privateRsrc.putIfAbsent(userName, new LocalResourcesTrackerImpl(userName,
-        null, dispatcher, true, super.getConfig(), stateStore));
+        null, dispatcher, true, super.getConfig(), stateStore, dirsHandler));
     String appIdStr = app.getAppId().toString();
     appRsrc.putIfAbsent(appIdStr, new LocalResourcesTrackerImpl(app.getUser(),
-        app.getAppId(), dispatcher, false, super.getConfig(), stateStore));
+        app.getAppId(), dispatcher, false, super.getConfig(), stateStore,
+        dirsHandler));
     // 1) Signal container init
     //
     // This is handled by the ApplicationImpl state machine and allows
@@ -530,6 +547,12 @@ public class ResourceLocalizationService extends CompositeService
     } else if (LOG.isInfoEnabled()) {
       LOG.info(stats.toString());
     }
+
+    // Update metrics
+    metrics.setCacheSizeBeforeClean(stats.getCacheSizeBeforeClean());
+    metrics.setTotalBytesDeleted(stats.getTotalDelSize());
+    metrics.setPrivateBytesDeleted(stats.getPrivateDelSize());
+    metrics.setPublicBytesDeleted(stats.getPublicDelSize());
     return stats;
   }
 
@@ -542,7 +565,7 @@ public class ResourceLocalizationService extends CompositeService
       rsrcCleanup.getResources();
     for (Map.Entry<LocalResourceVisibility, Collection<LocalResourceRequest>> e :
          rsrcs.entrySet()) {
-      LocalResourcesTracker tracker = getLocalResourcesTracker(e.getKey(), c.getUser(), 
+      LocalResourcesTracker tracker = getLocalResourcesTracker(e.getKey(), c.getUser(),
           c.getContainerId().getApplicationAttemptId()
           .getApplicationId());
       for (LocalResourceRequest req : e.getValue()) {
@@ -590,7 +613,9 @@ public class ResourceLocalizationService extends CompositeService
   private void submitDirForDeletion(String userName, Path dir) {
     try {
       lfs.getFileStatus(dir);
-      delService.delete(userName, dir, new Path[] {});
+      FileDeletionTask deletionTask = new FileDeletionTask(delService, userName,
+          dir, null);
+      delService.delete(deletionTask);
     } catch (UnsupportedFileSystemException ue) {
       LOG.warn("Local dir " + dir + " is an unsupported filesystem", ue);
     } catch (IOException ie) {
@@ -842,7 +867,7 @@ public class ResourceLocalizationService extends CompositeService
       // TODO handle failures, cancellation, requests by other containers
       LocalizedResource rsrc = request.getResource();
       LocalResourceRequest key = rsrc.getRequest();
-      LOG.info("Downloading public rsrc:" + key);
+      LOG.info("Downloading public resource: " + key);
       /*
        * Here multiple containers may request the same resource. So we need
        * to start downloading only when
@@ -863,7 +888,11 @@ public class ResourceLocalizationService extends CompositeService
             Path publicDirDestPath =
                 publicRsrc.getPathForLocalization(key, publicRootPath,
                     delService);
+            if (publicDirDestPath == null) {
+              return;
+            }
             if (!publicDirDestPath.getParent().equals(publicRootPath)) {
+              createParentDirs(publicDirDestPath, publicRootPath);
               if (diskValidator != null) {
                 diskValidator.checkStatus(
                     new File(publicDirDestPath.toUri().getPath()));
@@ -901,8 +930,34 @@ public class ResourceLocalizationService extends CompositeService
                 + " Either queue is full or threadpool is shutdown.", re);
           }
         } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Skip downloading resource: " + key + " since it's in"
+                + " state: " + rsrc.getState());
+          }
           rsrc.unlock();
         }
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Skip downloading resource: " + key + " since it is locked"
+              + " by other threads");
+        }
+      }
+    }
+
+    private void createParentDirs(Path destDirPath, Path destDirRoot)
+        throws IOException {
+      if (destDirPath == null || destDirPath.equals(destDirRoot)) {
+        return;
+      }
+      createParentDirs(destDirPath.getParent(), destDirRoot);
+      createDir(destDirPath, PUBLIC_FILECACHE_FOLDER_PERMS);
+    }
+
+    private void createDir(Path dirPath, FsPermission perms)
+        throws IOException {
+      lfs.mkdir(dirPath, perms, false);
+      if (!perms.equals(perms.applyUMask(lfs.getUMask()))) {
+        lfs.setPermission(dirPath, perms);
       }
     }
 
@@ -926,11 +981,17 @@ public class ResourceLocalizationService extends CompositeService
                 .getDU(new File(local.toUri()))));
               assoc.getResource().unlock();
             } catch (ExecutionException e) {
-              LOG.info("Failed to download resource " + assoc.getResource(),
-                  e.getCause());
-              LocalResourceRequest req = assoc.getResource().getRequest();
-              publicRsrc.handle(new ResourceFailedLocalizationEvent(req,
-                  e.getMessage()));
+              String user = assoc.getContext().getUser();
+              ApplicationId applicationId = assoc.getContext().getContainerId().getApplicationAttemptId().getApplicationId();
+              LocalResourcesTracker tracker =
+                getLocalResourcesTracker(LocalResourceVisibility.APPLICATION, user, applicationId);
+              final String diagnostics = "Failed to download resource " +
+                  assoc.getResource() + " " + e.getCause();
+              tracker.handle(new ResourceFailedLocalizationEvent(
+                  assoc.getResource().getRequest(), diagnostics));
+              publicRsrc.handle(new ResourceFailedLocalizationEvent(
+                  assoc.getResource().getRequest(), diagnostics));
+              LOG.error(diagnostics);
               assoc.getResource().unlock();
             } catch (CancellationException e) {
               // ignore; shutting down
@@ -940,7 +1001,7 @@ public class ResourceLocalizationService extends CompositeService
           }
         }
       } catch(Throwable t) {
-        LOG.fatal("Error: Shutting down", t);
+        LOG.error("Error: Shutting down", t);
       } finally {
         LOG.info("Public cache exiting");
         threadPool.shutdownNow();
@@ -1051,6 +1112,7 @@ public class ResourceLocalizationService extends CompositeService
           LOG.error(
               "Got exception in parsing URL of LocalResource:"
                   + rsrc.getResource(), e);
+          continue;
         }
         LocalizerResourceRequestEvent assoc = scheduled.get(req);
         if (assoc == null) {
@@ -1119,10 +1181,11 @@ public class ResourceLocalizationService extends CompositeService
           LocalResourcesTracker tracker = getLocalResourcesTracker(
               next.getVisibility(), user, applicationId);
           if (tracker != null) {
-            ResourceLocalizationSpec resource =
-                NodeManagerBuilderUtils.newResourceLocalizationSpec(next,
-                getPathForLocalization(next, tracker));
-            rsrcs.add(resource);
+            Path localPath = getPathForLocalization(next, tracker);
+            if (localPath != null) {
+              rsrcs.add(NodeManagerBuilderUtils.newResourceLocalizationSpec(
+                  next, localPath));
+            }
           }
         } catch (IOException e) {
           LOG.error("local path for PRIVATE localization could not be " +
@@ -1199,7 +1262,7 @@ public class ResourceLocalizationService extends CompositeService
         exception = e;
       } finally {
         if (exception != null) {
-          LOG.info("Localizer failed", exception);
+          LOG.info("Localizer failed for "+localizerId, exception);
           // On error, report failure to Container and signal ABORT
           // Notify resource of failed localization
           ContainerId cId = context.getContainerId();
@@ -1219,10 +1282,13 @@ public class ResourceLocalizationService extends CompositeService
           event.getResource().unlock();
         }
         if (!paths.isEmpty()) {
-          delService.delete(context.getUser(),
-              null, paths.toArray(new Path[paths.size()]));
+          FileDeletionTask deletionTask = new FileDeletionTask(delService,
+              context.getUser(), null, paths);
+          delService.delete(deletionTask);
         }
-        delService.delete(null, nmPrivateCTokensPath, new Path[] {});
+        FileDeletionTask deletionTask = new FileDeletionTask(delService, null,
+            nmPrivateCTokensPath, null);
+        delService.delete(deletionTask);
       }
     }
 
@@ -1441,7 +1507,9 @@ public class ResourceLocalizationService extends CompositeService
         String appName = fileStatus.getPath().getName();
         if (appName.matches("^application_\\d+_\\d+_DEL_\\d+$")) {
           LOG.info("delete app log dir," + appName);
-          del.delete(null, fileStatus.getPath());
+          FileDeletionTask deletionTask = new FileDeletionTask(del, null,
+              fileStatus.getPath(), null);
+          del.delete(deletionTask);
         }
       }
     }
@@ -1501,7 +1569,9 @@ public class ResourceLocalizationService extends CompositeService
               ||
               status.getPath().getName()
                   .matches(".*" + ContainerLocalizer.FILECACHE + "_DEL_.*")) {
-            del.delete(null, status.getPath(), new Path[] {});
+            FileDeletionTask deletionTask = new FileDeletionTask(del, null,
+                status.getPath(), null);
+            del.delete(deletionTask);
           }
         } catch (IOException ex) {
           // Do nothing, just give the warning
@@ -1515,24 +1585,25 @@ public class ResourceLocalizationService extends CompositeService
   private void cleanUpFilesPerUserDir(FileContext lfs, DeletionService del,
       Path userDirPath) throws IOException {
     RemoteIterator<FileStatus> userDirStatus = lfs.listStatus(userDirPath);
-    FileDeletionTask dependentDeletionTask =
-        del.createFileDeletionTask(null, userDirPath, new Path[] {});
+    FileDeletionTask dependentDeletionTask = new FileDeletionTask(del, null,
+        userDirPath, new ArrayList<Path>());
     if (userDirStatus != null && userDirStatus.hasNext()) {
       List<FileDeletionTask> deletionTasks = new ArrayList<FileDeletionTask>();
       while (userDirStatus.hasNext()) {
         FileStatus status = userDirStatus.next();
         String owner = status.getOwner();
-        FileDeletionTask deletionTask =
-            del.createFileDeletionTask(owner, null,
-              new Path[] { status.getPath() });
-        deletionTask.addFileDeletionTaskDependency(dependentDeletionTask);
+        List<Path> pathList = new ArrayList<>();
+        pathList.add(status.getPath());
+        FileDeletionTask deletionTask = new FileDeletionTask(del, owner, null,
+            pathList);
+        deletionTask.addDeletionTaskDependency(dependentDeletionTask);
         deletionTasks.add(deletionTask);
       }
       for (FileDeletionTask task : deletionTasks) {
-        del.scheduleFileDeletionTask(task);
+        del.delete(task);
       }
     } else {
-      del.scheduleFileDeletionTask(dependentDeletionTask);
+      del.delete(dependentDeletionTask);
     }
   }
   

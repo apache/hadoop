@@ -16,7 +16,6 @@
 <property><!--Loaded from job.xml--><name>mapreduce.reduce.shuffle.memory.limit.percent</name><value>0.25</value></property>
 <property><!--Loaded from job.xml--><name>hadoop.http.authentication.kerberos.keytab</name><value>${user.home}/hadoop.keytab</value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.keytab</name><value>/etc/krb5.keytab</value></property>
-<property><!--Loaded from job.xml--><name>io.seqfile.sorter.recordlimit</name><value>1000000</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.task.io.sort.factor</name><value>10</value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.disk-health-checker.interval-ms</name><value>120000</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.working.dir</name><value>hdfs://localhost:8021/user/user</value></property>
@@ -102,7 +101,6 @@
 <property><!--Loaded from job.xml--><name>dfs.client.block.write.retries</name><value>3</value></property>
 <property><!--Loaded from job.xml--><name>hadoop.proxyuser.user.groups</name><value>users</value></property>
 <property><!--Loaded from job.xml--><name>dfs.namenode.name.dir.restore</name><value>false</value></property>
-<property><!--Loaded from job.xml--><name>io.seqfile.lazydecompress</name><value>true</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.reduce.merge.inmem.threshold</name><value>1000</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.input.fileinputformat.split.minsize</name><value>0</value></property>
 <property><!--Loaded from job.xml--><name>dfs.replication</name><value>3</value></property>

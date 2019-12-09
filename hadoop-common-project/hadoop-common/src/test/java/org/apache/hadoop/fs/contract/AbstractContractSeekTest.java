@@ -132,7 +132,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
   @Test
   public void testSeekReadClosedFile() throws Throwable {
     instream = getFileSystem().open(smallSeekFile);
-    getLog().debug(
+    getLogger().debug(
       "Stream is of type " + instream.getClass().getCanonicalName());
     instream.close();
     try {
@@ -272,7 +272,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     describe("Seek round a large file and verify the bytes are what is expected");
     Path testSeekFile = path("bigseekfile.txt");
     byte[] block = dataset(100 * 1024, 0, 255);
-    createFile(getFileSystem(), testSeekFile, false, block);
+    createFile(getFileSystem(), testSeekFile, true, block);
     instream = getFileSystem().open(testSeekFile);
     assertEquals(0, instream.getPos());
     //expect that seek to 0 works
@@ -309,7 +309,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     assumeSupportsPositionedReadable();
     Path testSeekFile = path("bigseekfile.txt");
     byte[] block = dataset(65536, 0, 255);
-    createFile(getFileSystem(), testSeekFile, false, block);
+    createFile(getFileSystem(), testSeekFile, true, block);
     instream = getFileSystem().open(testSeekFile);
     instream.seek(39999);
     assertTrue(-1 != instream.read());
@@ -341,7 +341,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     int filesize = 10 * 1024;
     byte[] buf = dataset(filesize, 0, 255);
     Path randomSeekFile = path("testrandomseeks.bin");
-    createFile(getFileSystem(), randomSeekFile, false, buf);
+    createFile(getFileSystem(), randomSeekFile, true, buf);
     Random r = new Random();
 
     // Record the sequence of seeks and reads which trigger a failure.

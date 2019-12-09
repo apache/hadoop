@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
 
 import java.util.Collection;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -41,8 +41,8 @@ import org.apache.hadoop.yarn.server.api.ContainerType;
 @Private
 public class SampleContainerLogAggregationPolicy implements
     ContainerLogAggregationPolicy  {
-  private static final Log LOG =
-      LogFactory.getLog(SampleContainerLogAggregationPolicy.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SampleContainerLogAggregationPolicy.class);
 
   static String SAMPLE_RATE = "SR";
   public static final float DEFAULT_SAMPLE_RATE = 0.2f;

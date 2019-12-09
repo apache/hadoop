@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs;
 
-import junit.framework.AssertionFailedError;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFactory;
@@ -45,7 +44,7 @@ public class TestFsShell {
     }
 
     if (!(th instanceof RuntimeException)) {
-      throw new AssertionFailedError("Expected Runtime exception, got: " + th)
+      throw new AssertionError("Expected Runtime exception, got: " + th)
           .initCause(th);
     }
   }

@@ -17,17 +17,16 @@
  */
 package org.apache.hadoop.hdfs.client.impl;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.EnumSet;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf.ShortCircuitConf;
+import org.apache.hadoop.hdfs.client.impl.metrics.BlockReaderIoProvider;
+import org.apache.hadoop.hdfs.client.impl.metrics.BlockReaderLocalMetrics;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
@@ -35,14 +34,16 @@ import org.apache.hadoop.hdfs.shortcircuit.ClientMmap;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitReplica;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DirectBufferPool;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-
+import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.EnumSet;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * BlockReaderLocal enables local short circuited reads. If the DFS client is on
@@ -66,6 +67,11 @@ class BlockReaderLocal implements BlockReader {
 
   private static final DirectBufferPool bufferPool = new DirectBufferPool();
 
+  private static BlockReaderLocalMetrics metrics;
+  private static Lock metricsInitializationLock = new ReentrantLock();
+  private final BlockReaderIoProvider blockReaderIoProvider;
+  private static final Timer TIMER = new Timer();
+
   public static class Builder {
     private final int bufferSize;
     private boolean verifyChecksum;
@@ -75,9 +81,10 @@ class BlockReaderLocal implements BlockReader {
     private long dataPos;
     private ExtendedBlock block;
     private StorageType storageType;
-    private Tracer tracer;
+    private ShortCircuitConf shortCircuitConf;
 
     public Builder(ShortCircuitConf conf) {
+      this.shortCircuitConf = conf;
       this.maxReadahead = Integer.MAX_VALUE;
       this.verifyChecksum = !conf.isSkipShortCircuitChecksums();
       this.bufferSize = conf.getShortCircuitBufferSize();
@@ -118,11 +125,6 @@ class BlockReaderLocal implements BlockReader {
 
     public Builder setStorageType(StorageType storageType) {
       this.storageType = storageType;
-      return this;
-    }
-
-    public Builder setTracer(Tracer tracer) {
-      this.tracer = tracer;
       return this;
     }
 
@@ -234,11 +236,6 @@ class BlockReaderLocal implements BlockReader {
    */
   private StorageType storageType;
 
-  /**
-   * The Tracer to use.
-   */
-  private final Tracer tracer;
-
   private BlockReaderLocal(Builder builder) {
     this.replica = builder.replica;
     this.dataIn = replica.getDataStream().getChannel();
@@ -268,7 +265,20 @@ class BlockReaderLocal implements BlockReader {
     }
     this.maxReadaheadLength = maxReadaheadChunks * bytesPerChecksum;
     this.storageType = builder.storageType;
-    this.tracer = builder.tracer;
+
+    if (builder.shortCircuitConf.isScrMetricsEnabled()) {
+      metricsInitializationLock.lock();
+      try {
+        if (metrics == null) {
+          metrics = BlockReaderLocalMetrics.create();
+        }
+      } finally {
+        metricsInitializationLock.unlock();
+      }
+    }
+
+    this.blockReaderIoProvider = new BlockReaderIoProvider(
+        builder.shortCircuitConf, metrics, TIMER);
   }
 
   private synchronized void createDataBufIfNeeded() {
@@ -336,52 +346,49 @@ class BlockReaderLocal implements BlockReader {
    */
   private synchronized int fillBuffer(ByteBuffer buf, boolean canSkipChecksum)
       throws IOException {
-    try (TraceScope ignored = tracer.newScope(
-        "BlockReaderLocal#fillBuffer(" + block.getBlockId() + ")")) {
-      int total = 0;
-      long startDataPos = dataPos;
-      int startBufPos = buf.position();
-      while (buf.hasRemaining()) {
-        int nRead = dataIn.read(buf, dataPos);
-        if (nRead < 0) {
-          break;
-        }
-        dataPos += nRead;
-        total += nRead;
+    int total = 0;
+    long startDataPos = dataPos;
+    int startBufPos = buf.position();
+    while (buf.hasRemaining()) {
+      int nRead = blockReaderIoProvider.read(dataIn, buf, dataPos);
+      if (nRead < 0) {
+        break;
       }
-      if (canSkipChecksum) {
-        freeChecksumBufIfExists();
-        return total;
-      }
-      if (total > 0) {
-        try {
-          buf.limit(buf.position());
-          buf.position(startBufPos);
-          createChecksumBufIfNeeded();
-          int checksumsNeeded = (total + bytesPerChecksum - 1) /
-              bytesPerChecksum;
-          checksumBuf.clear();
-          checksumBuf.limit(checksumsNeeded * checksumSize);
-          long checksumPos = BlockMetadataHeader.getHeaderSize()
-              + ((startDataPos / bytesPerChecksum) * checksumSize);
-          while (checksumBuf.hasRemaining()) {
-            int nRead = checksumIn.read(checksumBuf, checksumPos);
-            if (nRead < 0) {
-              throw new IOException("Got unexpected checksum file EOF at " +
-                  checksumPos + ", block file position " + startDataPos +
-                  " for block " + block + " of file " + filename);
-            }
-            checksumPos += nRead;
-          }
-          checksumBuf.flip();
-
-          checksum.verifyChunkedSums(buf, checksumBuf, filename, startDataPos);
-        } finally {
-          buf.position(buf.limit());
-        }
-      }
+      dataPos += nRead;
+      total += nRead;
+    }
+    if (canSkipChecksum) {
+      freeChecksumBufIfExists();
       return total;
     }
+    if (total > 0) {
+      try {
+        buf.limit(buf.position());
+        buf.position(startBufPos);
+        createChecksumBufIfNeeded();
+        int checksumsNeeded = (total + bytesPerChecksum - 1) /
+            bytesPerChecksum;
+        checksumBuf.clear();
+        checksumBuf.limit(checksumsNeeded * checksumSize);
+        long checksumPos = BlockMetadataHeader.getHeaderSize()
+            + ((startDataPos / bytesPerChecksum) * checksumSize);
+        while (checksumBuf.hasRemaining()) {
+          int nRead = checksumIn.read(checksumBuf, checksumPos);
+          if (nRead < 0) {
+            throw new IOException("Got unexpected checksum file EOF at " +
+                checksumPos + ", block file position " + startDataPos +
+                " for block " + block + " of file " + filename);
+          }
+          checksumPos += nRead;
+        }
+        checksumBuf.flip();
+
+        checksum.verifyChunkedSums(buf, checksumBuf, filename, startDataPos);
+      } finally {
+        buf.position(buf.limit());
+      }
+    }
+    return total;
   }
 
   private boolean createNoChecksumContext() {
@@ -435,7 +442,7 @@ class BlockReaderLocal implements BlockReader {
     freeChecksumBufIfExists();
     int total = 0;
     while (buf.hasRemaining()) {
-      int nRead = dataIn.read(buf, dataPos);
+      int nRead = blockReaderIoProvider.read(dataIn, buf, dataPos);
       if (nRead <= 0) break;
       dataPos += nRead;
       total += nRead;
@@ -574,7 +581,8 @@ class BlockReaderLocal implements BlockReader {
         int len) throws IOException {
     freeDataBufIfExists();
     freeChecksumBufIfExists();
-    int nRead = dataIn.read(ByteBuffer.wrap(arr, off, len), dataPos);
+    int nRead = blockReaderIoProvider.read(
+        dataIn, ByteBuffer.wrap(arr, off, len), dataPos);
     if (nRead > 0) {
       dataPos += nRead;
     } else if ((nRead == 0) && (dataPos == dataIn.size())) {
@@ -627,6 +635,9 @@ class BlockReaderLocal implements BlockReader {
     replica.unref();
     freeDataBufIfExists();
     freeChecksumBufIfExists();
+    if (metrics != null) {
+      metrics.collectThreadLocalStates();
+    }
   }
 
   @Override

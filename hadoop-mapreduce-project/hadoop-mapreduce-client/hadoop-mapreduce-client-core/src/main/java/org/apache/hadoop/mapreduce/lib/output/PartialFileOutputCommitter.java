@@ -20,8 +20,6 @@ package org.apache.hadoop.mapreduce.lib.output;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +31,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.task.annotation.Checkpointable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -45,8 +45,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class PartialFileOutputCommitter
     extends FileOutputCommitter implements PartialOutputCommitter {
 
-  private static final Log LOG =
-    LogFactory.getLog(PartialFileOutputCommitter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PartialFileOutputCommitter.class);
 
 
   public PartialFileOutputCommitter(Path outputPath,

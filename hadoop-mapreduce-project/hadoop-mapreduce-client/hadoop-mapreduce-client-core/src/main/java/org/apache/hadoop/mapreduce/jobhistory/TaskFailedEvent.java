@@ -32,6 +32,7 @@ import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.util.SystemClock;
 
 /**
  * Event to record the failure of a task
@@ -49,11 +50,12 @@ public class TaskFailedEvent implements HistoryEvent {
   private String status;
   private String error;
   private Counters counters;
+  private long startTime;
 
   private static final Counters EMPTY_COUNTERS = new Counters();
 
   /**
-   * Create an event to record task failure
+   * Create an event to record task failure.
    * @param id Task ID
    * @param finishTime Finish time of the task
    * @param taskType Type of the task
@@ -61,10 +63,11 @@ public class TaskFailedEvent implements HistoryEvent {
    * @param status Status
    * @param failedDueToAttempt The attempt id due to which the task failed
    * @param counters Counters for the task
+   * @param startTs task start time.
    */
   public TaskFailedEvent(TaskID id, long finishTime, 
       TaskType taskType, String error, String status,
-      TaskAttemptID failedDueToAttempt, Counters counters) {
+      TaskAttemptID failedDueToAttempt, Counters counters, long startTs) {
     this.id = id;
     this.finishTime = finishTime;
     this.taskType = taskType;
@@ -72,15 +75,23 @@ public class TaskFailedEvent implements HistoryEvent {
     this.status = status;
     this.failedDueToAttempt = failedDueToAttempt;
     this.counters = counters;
+    this.startTime = startTs;
+  }
+
+  public TaskFailedEvent(TaskID id, long finishTime, TaskType taskType,
+      String error, String status, TaskAttemptID failedDueToAttempt,
+      Counters counters) {
+    this(id, finishTime, taskType, error, status, failedDueToAttempt, counters,
+        SystemClock.getInstance().getTime());
   }
 
   public TaskFailedEvent(TaskID id, long finishTime, 
-	      TaskType taskType, String error, String status,
-	      TaskAttemptID failedDueToAttempt) {
-    this(id, finishTime, taskType, error, status,
-        failedDueToAttempt, EMPTY_COUNTERS);
+      TaskType taskType, String error, String status,
+      TaskAttemptID failedDueToAttempt) {
+    this(id, finishTime, taskType, error, status, failedDueToAttempt,
+        EMPTY_COUNTERS);
   }
-  
+
   TaskFailedEvent() {}
 
   public Object getDatum() {
@@ -118,27 +129,37 @@ public class TaskFailedEvent implements HistoryEvent {
         EventReader.fromAvro(datum.getCounters());
   }
 
-  /** Get the task id */
+  /** Gets the task id. */
   public TaskID getTaskId() { return id; }
-  /** Get the error string */
+  /** Gets the error string. */
   public String getError() { return error; }
-  /** Get the finish time of the attempt */
+  /** Gets the finish time of the attempt. */
   public long getFinishTime() {
     return finishTime;
   }
-  /** Get the task type */
+  /**
+   * Gets the task start time to be reported to ATSv2.
+   * @return task start time.
+   */
+  public long getStartTime() {
+    return startTime;
+  }
+  /** Gets the task type. */
   public TaskType getTaskType() {
     return taskType;
   }
-  /** Get the attempt id due to which the task failed */
+  /** Gets the attempt id due to which the task failed. */
   public TaskAttemptID getFailedAttemptID() {
     return failedDueToAttempt;
   }
-  /** Get the task status */
+  /**
+   * Gets the task status.
+   * @return task status
+   */
   public String getTaskStatus() { return status; }
-  /** Get task counters */
+  /** Gets task counters. */
   public Counters getCounters() { return counters; }
-  /** Get the event type */
+  /** Gets the event type. */
   public EventType getEventType() {
     return EventType.TASK_FAILED;
   }

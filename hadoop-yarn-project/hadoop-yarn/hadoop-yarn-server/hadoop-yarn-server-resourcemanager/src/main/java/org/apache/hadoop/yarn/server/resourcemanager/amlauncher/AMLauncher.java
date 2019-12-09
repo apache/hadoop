@@ -81,6 +81,7 @@ public class AMLauncher implements Runnable {
   private final AMLauncherEventType eventType;
   private final RMContext rmContext;
   private final Container masterContainer;
+  private boolean timelineServiceV2Enabled;
 
   @SuppressWarnings("rawtypes")
   private final EventHandler handler;
@@ -93,6 +94,8 @@ public class AMLauncher implements Runnable {
     this.rmContext = rmContext;
     this.handler = rmContext.getDispatcher().getEventHandler();
     this.masterContainer = application.getMasterContainer();
+    this.timelineServiceV2Enabled = YarnConfiguration.
+        timelineServiceV2Enabled(conf);
   }
 
   private void connect() throws IOException {
@@ -105,7 +108,7 @@ public class AMLauncher implements Runnable {
     connect();
     ContainerId masterContainerID = masterContainer.getId();
     ApplicationSubmissionContext applicationContext =
-      application.getSubmissionContext();
+        application.getSubmissionContext();
     LOG.info("Setting up container " + masterContainer
         + " for AM " + application.getAppAttemptId());
     ContainerLaunchContext launchContext =
@@ -189,25 +192,16 @@ public class AMLauncher implements Runnable {
     ContainerLaunchContext container =
         applicationMasterContext.getAMContainerSpec();
 
-    // Populate the current queue name in the environment variable.
-    setupQueueNameEnv(container, applicationMasterContext);
-
+    if (container == null){
+      throw new IOException(containerID +
+            " has been cleaned before launched");
+    }
     // Finalize the container
     setupTokens(container, containerID);
     // set the flow context optionally for timeline service v.2
     setFlowContext(container);
 
     return container;
-  }
-
-  private void setupQueueNameEnv(ContainerLaunchContext container,
-      ApplicationSubmissionContext applicationMasterContext) {
-    String queueName = applicationMasterContext.getQueue();
-    if (queueName == null) {
-      queueName = YarnConfiguration.DEFAULT_QUEUE_NAME;
-    }
-    container.getEnvironment().put(ApplicationConstants.Environment
-            .YARN_RESOURCEMANAGER_APPLICATION_QUEUE.key(), queueName);
   }
 
   @Private
@@ -248,7 +242,7 @@ public class AMLauncher implements Runnable {
   }
 
   private void setFlowContext(ContainerLaunchContext container) {
-    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+    if (timelineServiceV2Enabled) {
       Map<String, String> environment = container.getEnvironment();
       ApplicationId applicationId =
           application.getAppAttemptId().getApplicationId();
@@ -316,13 +310,9 @@ public class AMLauncher implements Runnable {
         LOG.info("Launching master" + application.getAppAttemptId());
         launch();
         handler.handle(new RMAppAttemptEvent(application.getAppAttemptId(),
-            RMAppAttemptEventType.LAUNCHED));
+            RMAppAttemptEventType.LAUNCHED, System.currentTimeMillis()));
       } catch(Exception ie) {
-        String message = "Error launching " + application.getAppAttemptId()
-            + ". Got exception: " + StringUtils.stringifyException(ie);
-        LOG.info(message);
-        handler.handle(new RMAppAttemptEvent(application
-            .getAppAttemptId(), RMAppAttemptEventType.LAUNCH_FAILED, message));
+        onAMLaunchFailed(masterContainer.getId(), ie);
       }
       break;
     case CLEANUP:
@@ -356,5 +346,14 @@ public class AMLauncher implements Runnable {
     } else {
       throw (IOException) t;
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  protected void onAMLaunchFailed(ContainerId containerId, Exception ie) {
+    String message = "Error launching " + application.getAppAttemptId()
+            + ". Got exception: " + StringUtils.stringifyException(ie);
+    LOG.info(message);
+    handler.handle(new RMAppAttemptEvent(application
+           .getAppAttemptId(), RMAppAttemptEventType.LAUNCH_FAILED, message));
   }
 }

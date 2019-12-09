@@ -27,6 +27,7 @@ import org.apache.hadoop.io.erasurecode.ECChunk;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.hdfs.DFSUtilClient.CorruptedBlocks;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -88,7 +89,7 @@ class StatefulStripeReader extends StripeReader {
   }
 
   @Override
-  void decode() {
+  void decode() throws IOException {
     finalizeDecodeInputs();
     decodeAndFillBuffer(false);
   }

@@ -35,6 +35,11 @@ public final class Constants {
   private Constants() {
   }
 
+  /**
+   * default hadoop temp dir on local system: {@value}.
+   */
+  public static final String HADOOP_TMP_DIR = "hadoop.tmp.dir";
+
   /** The minimum multipart size which S3 supports. */
   public static final int MULTIPART_MIN_SIZE = 5 * 1024 * 1024;
 
@@ -48,8 +53,70 @@ public final class Constants {
   public static final String AWS_CREDENTIALS_PROVIDER =
       "fs.s3a.aws.credentials.provider";
 
+  /**
+   * Extra set of security credentials which will be prepended to that
+   * set in {@code "hadoop.security.credential.provider.path"}.
+   * This extra option allows for per-bucket overrides.
+   */
+  public static final String S3A_SECURITY_CREDENTIAL_PROVIDER_PATH =
+      "fs.s3a.security.credential.provider.path";
+
   // session token for when using TemporaryAWSCredentialsProvider
   public static final String SESSION_TOKEN = "fs.s3a.session.token";
+
+  /**
+   * AWS Role to request.
+   */
+  public static final String ASSUMED_ROLE_ARN =
+      "fs.s3a.assumed.role.arn";
+
+  /**
+   * Session name for the assumed role, must be valid characters according
+   * to the AWS APIs.
+   * If not set, one is generated from the current Hadoop/Kerberos username.
+   */
+  public static final String ASSUMED_ROLE_SESSION_NAME =
+      "fs.s3a.assumed.role.session.name";
+
+  /**
+   * Duration of assumed roles before a refresh is attempted.
+   */
+  public static final String ASSUMED_ROLE_SESSION_DURATION =
+      "fs.s3a.assumed.role.session.duration";
+
+  /** Security Token Service Endpoint. If unset, uses the default endpoint. */
+  public static final String ASSUMED_ROLE_STS_ENDPOINT =
+      "fs.s3a.assumed.role.sts.endpoint";
+
+  /**
+   * Region for the STS endpoint; only relevant if the endpoint
+   * is set.
+   */
+  public static final String ASSUMED_ROLE_STS_ENDPOINT_REGION =
+      "fs.s3a.assumed.role.sts.endpoint.region";
+
+  /**
+   * Default value for the STS endpoint region; needed for
+   * v4 signing.
+   */
+  public static final String ASSUMED_ROLE_STS_ENDPOINT_REGION_DEFAULT =
+      "us-west-1";
+
+  /**
+   * Default duration of an assumed role.
+   */
+  public static final String ASSUMED_ROLE_SESSION_DURATION_DEFAULT = "30m";
+
+  /** list of providers to authenticate for the assumed role. */
+  public static final String ASSUMED_ROLE_CREDENTIALS_PROVIDER =
+      "fs.s3a.assumed.role.credentials.provider";
+
+  /** JSON policy containing the policy to apply to the role. */
+  public static final String ASSUMED_ROLE_POLICY =
+      "fs.s3a.assumed.role.policy";
+
+  public static final String ASSUMED_ROLE_CREDENTIALS_DEFAULT =
+      SimpleAWSCredentialsProvider.NAME;
 
   // number of simultaneous connections to s3
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
@@ -128,7 +195,10 @@ public final class Constants {
   public static final String BUFFER_DIR = "fs.s3a.buffer.dir";
 
   // switch to the fast block-by-block upload mechanism
+  // this is the only supported upload mechanism
+  @Deprecated
   public static final String FAST_UPLOAD = "fs.s3a.fast.upload";
+  @Deprecated
   public static final boolean DEFAULT_FAST_UPLOAD = false;
 
   //initial size of memory buffer for a fast upload
@@ -208,16 +278,32 @@ public final class Constants {
       "fs.s3a.multipart.purge.age";
   public static final long DEFAULT_PURGE_EXISTING_MULTIPART_AGE = 86400;
 
-  // s3 server-side encryption
+  // s3 server-side encryption, see S3AEncryptionMethods for valid options
   public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM =
       "fs.s3a.server-side-encryption-algorithm";
 
   /**
    * The standard encryption algorithm AWS supports.
    * Different implementations may support others (or none).
+   * Use the S3AEncryptionMethods instead when configuring
+   * which Server Side Encryption to use.
+   * Value: "{@value}".
    */
+  @Deprecated
   public static final String SERVER_SIDE_ENCRYPTION_AES256 =
       "AES256";
+
+  /**
+   * Used to specify which AWS KMS key to use if
+   * {@link #SERVER_SIDE_ENCRYPTION_ALGORITHM} is
+   * {@code SSE-KMS} (will default to aws/s3
+   * master key if left blank).
+   * With with {@code SSE_C}, the base-64 encoded AES 256 key.
+   * May be set within a JCEKS file.
+   * Value: "{@value}".
+   */
+  public static final String SERVER_SIDE_ENCRYPTION_KEY =
+      "fs.s3a.server-side-encryption.key";
 
   //override signature algorithm used for signing requests
   public static final String SIGNING_ALGORITHM = "fs.s3a.signing-algorithm";
@@ -226,9 +312,20 @@ public final class Constants {
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
   public static final String FS_S3A = "s3a";
 
+  /** Prefix for all S3A properties: {@value}. */
+  public static final String FS_S3A_PREFIX = "fs.s3a.";
+
+  /** Prefix for S3A bucket-specific properties: {@value}. */
+  public static final String FS_S3A_BUCKET_PREFIX = "fs.s3a.bucket.";
+
   public static final int S3A_DEFAULT_PORT = -1;
 
   public static final String USER_AGENT_PREFIX = "fs.s3a.user.agent.prefix";
+
+  /** Whether or not to allow MetadataStore to be source of truth. */
+  public static final String METADATASTORE_AUTHORITATIVE =
+      "fs.s3a.metadatastore.authoritative";
+  public static final boolean DEFAULT_METADATASTORE_AUTHORITATIVE = false;
 
   /** read ahead buffer size to prevent connection re-establishments. */
   public static final String READAHEAD_RANGE = "fs.s3a.readahead.range";
@@ -275,11 +372,322 @@ public final class Constants {
   @InterfaceStability.Unstable
   public static final Class<? extends S3ClientFactory>
       DEFAULT_S3_CLIENT_FACTORY_IMPL =
-          S3ClientFactory.DefaultS3ClientFactory.class;
+          DefaultS3ClientFactory.class;
 
   /**
    * Maximum number of partitions in a multipart upload: {@value}.
    */
   @InterfaceAudience.Private
   public static final int MAX_MULTIPART_COUNT = 10000;
+
+  /* Constants. */
+  public static final String S3_METADATA_STORE_IMPL =
+      "fs.s3a.metadatastore.impl";
+
+  /** Minimum period of time (in milliseconds) to keep metadata (may only be
+   * applied when a prune command is manually run).
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_CLI_PRUNE_AGE =
+      "fs.s3a.s3guard.cli.prune.age";
+
+  /**
+   * The region of the DynamoDB service.
+   *
+   * This config has no default value. If the user does not set this, the
+   * S3Guard will operate table in the associated S3 bucket region.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_REGION_KEY =
+      "fs.s3a.s3guard.ddb.region";
+
+  /**
+   * The DynamoDB table name to use.
+   *
+   * This config has no default value. If the user does not set this, the
+   * S3Guard implementation will use the respective S3 bucket name.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_NAME_KEY =
+      "fs.s3a.s3guard.ddb.table";
+
+  /**
+   * A prefix for adding tags to the DDB Table upon creation.
+   *
+   * For example:
+   * fs.s3a.s3guard.ddb.table.tag.mytag
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_TAG =
+      "fs.s3a.s3guard.ddb.table.tag.";
+
+  /**
+   * Test table name to use during DynamoDB integration test.
+   *
+   * The table will be modified, and deleted in the end of the tests.
+   * If this value is not set, the integration tests that would be destructive
+   * won't run.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TEST_TABLE_NAME_KEY =
+      "fs.s3a.s3guard.ddb.test.table";
+
+  /**
+   * Whether to create the DynamoDB table if the table does not exist.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_CREATE_KEY =
+      "fs.s3a.s3guard.ddb.table.create";
+
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_CAPACITY_READ_KEY =
+      "fs.s3a.s3guard.ddb.table.capacity.read";
+  public static final long S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT = 500;
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY =
+      "fs.s3a.s3guard.ddb.table.capacity.write";
+  public static final long S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT = 100;
+
+  /**
+   * The maximum put or delete requests per BatchWriteItem request.
+   *
+   * Refer to Amazon API reference for this limit.
+   */
+  public static final int S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT = 25;
+
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_MAX_RETRIES =
+      "fs.s3a.s3guard.ddb.max.retries";
+
+  /**
+   * Max retries on batched/throttled DynamoDB operations before giving up and
+   * throwing an IOException.  Default is {@value}. See core-default.xml for
+   * more detail.
+   */
+  public static final int S3GUARD_DDB_MAX_RETRIES_DEFAULT =
+      DEFAULT_MAX_ERROR_RETRIES;
+
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_THROTTLE_RETRY_INTERVAL =
+      "fs.s3a.s3guard.ddb.throttle.retry.interval";
+  public static final String S3GUARD_DDB_THROTTLE_RETRY_INTERVAL_DEFAULT =
+      "100ms";
+
+  /**
+   * Period of time (in milliseconds) to sleep between batches of writes.
+   * Currently only applies to prune operations, as they are naturally a
+   * lower priority than other operations.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY =
+      "fs.s3a.s3guard.ddb.background.sleep";
+  public static final int S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_DEFAULT = 25;
+
+  /**
+   * The default "Null" metadata store: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_NULL
+      = "org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore";
+
+  /**
+   * Use Local memory for the metadata: {@value}.
+   * This is not coherent across processes and must be used for testing only.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_LOCAL
+      = "org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore";
+
+  /**
+   * Maximum number of records in LocalMetadataStore.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_LOCAL_MAX_RECORDS =
+      "fs.s3a.s3guard.local.max_records";
+  public static final int DEFAULT_S3GUARD_METASTORE_LOCAL_MAX_RECORDS = 256;
+
+  /**
+   * Time to live in milliseconds in LocalMetadataStore.
+   * If zero, time-based expiration is disabled.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_LOCAL_ENTRY_TTL =
+      "fs.s3a.s3guard.local.ttl";
+  public static final int DEFAULT_S3GUARD_METASTORE_LOCAL_ENTRY_TTL
+      = 10 * 1000;
+
+  /**
+   * Use DynamoDB for the metadata: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_DYNAMO
+      = "org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore";
+
+  /**
+   * Inconsistency (visibility delay) injection settings.
+   */
+  @InterfaceStability.Unstable
+  public static final String FAIL_INJECT_INCONSISTENCY_KEY =
+      "fs.s3a.failinject.inconsistency.key.substring";
+
+  @InterfaceStability.Unstable
+  public static final String FAIL_INJECT_INCONSISTENCY_MSEC =
+      "fs.s3a.failinject.inconsistency.msec";
+
+  @InterfaceStability.Unstable
+  public static final String FAIL_INJECT_INCONSISTENCY_PROBABILITY =
+      "fs.s3a.failinject.inconsistency.probability";
+
+  /**
+   * S3 API level parameters.
+   */
+  @InterfaceStability.Unstable
+  public static final String LIST_VERSION = "fs.s3a.list.version";
+
+  @InterfaceStability.Unstable
+  public static final int DEFAULT_LIST_VERSION = 2;
+
+  @InterfaceStability.Unstable
+  public static final String FAIL_INJECT_THROTTLE_PROBABILITY =
+      "fs.s3a.failinject.throttle.probability";
+
+  @InterfaceStability.Unstable
+  public static final String FAIL_INJECT_CLIENT_FACTORY =
+      "org.apache.hadoop.fs.s3a.InconsistentS3ClientFactory";
+
+  /**
+   * Number of times to retry any repeatable S3 client request on failure,
+   * excluding throttling requests: {@value}.
+   */
+  public static final String RETRY_LIMIT = "fs.s3a.retry.limit";
+
+  /**
+   * Default retry limit: {@value}.
+   */
+  public static final int RETRY_LIMIT_DEFAULT = DEFAULT_MAX_ERROR_RETRIES;
+
+  /**
+   * Interval between retry attempts.: {@value}.
+   */
+  public static final String RETRY_INTERVAL = "fs.s3a.retry.interval";
+
+  /**
+   * Default retry interval: {@value}.
+   */
+  public static final String RETRY_INTERVAL_DEFAULT = "500ms";
+
+  /**
+   * Number of times to retry any throttled request: {@value}.
+   */
+  public static final String RETRY_THROTTLE_LIMIT =
+      "fs.s3a.retry.throttle.limit";
+
+  /**
+   * Default throttled retry limit: {@value}.
+   */
+  public static final int RETRY_THROTTLE_LIMIT_DEFAULT =
+      DEFAULT_MAX_ERROR_RETRIES;
+
+  /**
+   * Interval between retry attempts on throttled requests: {@value}.
+   */
+  public static final String RETRY_THROTTLE_INTERVAL =
+      "fs.s3a.retry.throttle.interval";
+
+  /**
+   * Default throttled retry interval: {@value}.
+   */
+  public static final String RETRY_THROTTLE_INTERVAL_DEFAULT = "500ms";
+
+  /**
+   * Should etags be exposed as checksums?
+   */
+  public static final String ETAG_CHECKSUM_ENABLED =
+      "fs.s3a.etag.checksum.enabled";
+
+  /**
+   * Default value: false.
+   */
+  public static final boolean ETAG_CHECKSUM_ENABLED_DEFAULT = false;
+
+  /**
+   * Where to get the value to use in change detection.  E.g. eTag, or
+   * versionId?
+   */
+  public static final String CHANGE_DETECT_SOURCE
+      = "fs.s3a.change.detection.source";
+
+  /**
+   * eTag as the change detection mechanism.
+   */
+  public static final String CHANGE_DETECT_SOURCE_ETAG = "etag";
+
+  /**
+   * Object versionId as the change detection mechanism.
+   */
+  public static final String CHANGE_DETECT_SOURCE_VERSION_ID = "versionid";
+
+  /**
+   * Default change detection mechanism: eTag.
+   */
+  public static final String CHANGE_DETECT_SOURCE_DEFAULT =
+      CHANGE_DETECT_SOURCE_ETAG;
+
+  /**
+   * Mode to run change detection in.  Server side comparison?  Client side
+   * comparison? Client side compare and warn rather than exception?  Don't
+   * bother at all?
+   */
+  public static final String CHANGE_DETECT_MODE =
+      "fs.s3a.change.detection.mode";
+
+  /**
+   * Change is detected on the client side by comparing the returned id with the
+   * expected id.  A difference results in {@link RemoteFileChangedException}.
+   */
+  public static final String CHANGE_DETECT_MODE_CLIENT = "client";
+
+  /**
+   * Change is detected by passing the expected value in the GetObject request.
+   * If the expected value is unavailable, {@link RemoteFileChangedException} is
+   * thrown.
+   */
+  public static final String CHANGE_DETECT_MODE_SERVER = "server";
+
+  /**
+   * Change is detected on the client side by comparing the returned id with the
+   * expected id.  A difference results in a WARN level message being logged.
+   */
+  public static final String CHANGE_DETECT_MODE_WARN = "warn";
+
+  /**
+   * Change detection is turned off.  Readers may see inconsistent results due
+   * to concurrent writes without any exception or warning messages.  May be
+   * useful with third-party S3 API implementations that don't support one of
+   * the change detection modes.
+   */
+  public static final String CHANGE_DETECT_MODE_NONE = "none";
+
+  /**
+   * Default change detection mode: server.
+   */
+  public static final String CHANGE_DETECT_MODE_DEFAULT =
+      CHANGE_DETECT_MODE_SERVER;
+
+  /**
+   * If true, raises a {@link RemoteFileChangedException} exception when S3
+   * doesn't provide the attribute defined by fs.s3a.change.detection.source.
+   * For example, if source is versionId, but object versioning is not enabled
+   * on the bucket, or alternatively if source is eTag and a third-party S3
+   * implementation that doesn't return eTag is used.
+   * <p>
+   * When false, only a warning message will be logged for this condition.
+   */
+  public static final String CHANGE_DETECT_REQUIRE_VERSION =
+      "fs.s3a.change.detection.version.required";
+
+  /**
+   * Default change detection require version: true.
+   */
+  public static final boolean CHANGE_DETECT_REQUIRE_VERSION_DEFAULT = true;
 }

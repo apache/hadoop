@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.conf;
 
-import com.google.common.base.Optional;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
 
 import java.util.Map;
+import java.util.Optional;
 
-@InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceAudience.LimitedPrivate({"HDFS", "Management Tools"})
+@InterfaceStability.Unstable
 public class ReconfigurationTaskStatus {
   long startTime;
   long endTime;

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.web;
 
 import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.KERBEROS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -29,9 +30,16 @@ import java.net.URL;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.WebHdfs;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -69,7 +77,7 @@ public class TestWebHdfsUrl {
         uri, conf);
 
     // Construct a file path that contains percentage-encoded string
-    String pathName = "/hdtest010%2C60020%2C1371000602151.1371058984668";
+    String pathName = "/hdtest010%2C60020%2C1371000602151.1371058984668+";
     Path fsPath = new Path(pathName);
     URL encodedPathUrl = webhdfs.toUrl(PutOpParam.Op.CREATE, fsPath);
     // We should get back the original file path after cycling back and decoding
@@ -356,5 +364,149 @@ public class TestWebHdfsUrl {
       ugi.addToken(token);
     }
     return (WebHdfsFileSystem) FileSystem.get(uri, conf);
+  }
+
+  private static final String SPECIAL_CHARACTER_FILENAME =
+          "specialFile ?\"\\()[]_-=&+;,{}#%'`~!@$^*|<>.";
+
+  @Test
+  public void testWebHdfsSpecialCharacterFile() throws Exception {
+    UserGroupInformation ugi =
+            UserGroupInformation.createRemoteUser("test-user");
+    ugi.setAuthenticationMethod(KERBEROS);
+    UserGroupInformation.setLoginUser(ugi);
+
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final Path dir = new Path("/testWebHdfsSpecialCharacterFile");
+
+    final short numDatanodes = 1;
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+            .numDataNodes(numDatanodes)
+            .build();
+    try {
+      cluster.waitActive();
+      final FileSystem fs = WebHdfsTestUtil
+              .getWebHdfsFileSystem(conf, WebHdfs.SCHEME);
+
+      //create a file
+      final long length = 1L << 10;
+      final Path file1 = new Path(dir, SPECIAL_CHARACTER_FILENAME);
+
+      DFSTestUtil.createFile(fs, file1, length, numDatanodes, 20120406L);
+
+      //get file status and check that it was written properly.
+      final FileStatus s1 = fs.getFileStatus(file1);
+      assertEquals("Write failed for file " + file1, length, s1.getLen());
+
+      boolean found = false;
+      RemoteIterator<LocatedFileStatus> statusRemoteIterator =
+              fs.listFiles(dir, false);
+      while (statusRemoteIterator.hasNext()) {
+        LocatedFileStatus locatedFileStatus = statusRemoteIterator.next();
+        if (locatedFileStatus.isFile() &&
+                SPECIAL_CHARACTER_FILENAME
+                        .equals(locatedFileStatus.getPath().getName())) {
+          found = true;
+        }
+      }
+      assertFalse("Could not find file with special character", !found);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  private static final String BACKWARD_COMPATIBLE_SPECIAL_CHARACTER_FILENAME =
+          "specialFile ?\"\\()[]_-=&,{}#'`~!@$^*|<>.+%";
+
+  @Test
+  public void testWebHdfsBackwardCompatibleSpecialCharacterFile()
+          throws Exception {
+    UserGroupInformation ugi =
+            UserGroupInformation.createRemoteUser("test-user");
+    ugi.setAuthenticationMethod(KERBEROS);
+    UserGroupInformation.setLoginUser(ugi);
+
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final Path dir = new Path("/testWebHdfsSpecialCharacterFile");
+
+    final short numDatanodes = 1;
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+            .numDataNodes(numDatanodes)
+            .build();
+    try {
+      cluster.waitActive();
+      final FileSystem fs = WebHdfsTestUtil
+              .getWebHdfsFileSystem(conf, WebHdfs.SCHEME);
+
+      //create a file
+      final long length = 1L << 10;
+      final Path file1 = new Path(dir,
+              BACKWARD_COMPATIBLE_SPECIAL_CHARACTER_FILENAME);
+
+      DFSTestUtil.createFile(fs, file1, length, numDatanodes, 20120406L);
+
+      //get file status and check that it was written properly.
+      final FileStatus s1 = fs.getFileStatus(file1);
+      assertEquals("Write failed for file " + file1, length, s1.getLen());
+
+      boolean found = false;
+      RemoteIterator<LocatedFileStatus> statusRemoteIterator =
+              fs.listFiles(dir, false);
+      while (statusRemoteIterator.hasNext()) {
+        LocatedFileStatus locatedFileStatus = statusRemoteIterator.next();
+        if (locatedFileStatus.isFile() &&
+                BACKWARD_COMPATIBLE_SPECIAL_CHARACTER_FILENAME
+                        .equals(locatedFileStatus.getPath().getName())) {
+          found = true;
+        }
+      }
+      assertFalse("Could not find file with special character", !found);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testWebHdfsUrlEncoding() throws Exception {
+    final WebHdfsFileSystem fs =
+        (WebHdfsFileSystem) FileSystem.get(uri, WebHdfsTestUtil.createConf());
+
+    // characters which should not be urlencoded.
+    final String unreserved = "_-!.~'()*";
+    final String punct = ",:$&=";
+    String path = "/testWebHdfsUrlEncoding" + unreserved + punct;
+    URL url =
+        WebHdfsTestUtil.toUrl(fs, GetOpParam.Op.LISTSTATUS, new Path(path));
+    WebHdfsTestUtil.LOG.info(url.getPath());
+    assertEquals(WebHdfsFileSystem.PATH_PREFIX + path, url.getPath());
+  }
+
+  @Test
+  public void testWebHdfsPathWithSemicolon() throws Exception {
+    try (MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(WebHdfsTestUtil.createConf())
+            .numDataNodes(1)
+            .build()) {
+      cluster.waitActive();
+
+      // regression test for HDFS-14423.
+      final Path semicolon = new Path("/a;b");
+      final Path plus = new Path("/a+b");
+      final Path percent = new Path("/a%b");
+
+      final WebHdfsFileSystem webhdfs = WebHdfsTestUtil.getWebHdfsFileSystem(
+          cluster.getConfiguration(0), WebHdfs.SCHEME);
+      webhdfs.create(semicolon).close();
+      webhdfs.create(plus).close();
+      webhdfs.create(percent).close();
+
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      assertEquals(semicolon.getName(),
+          dfs.getFileStatus(semicolon).getPath().getName());
+      assertEquals(plus.getName(),
+          dfs.getFileStatus(plus).getPath().getName());
+      assertEquals(percent.getName(),
+          dfs.getFileStatus(percent).getPath().getName());
+    }
   }
 }

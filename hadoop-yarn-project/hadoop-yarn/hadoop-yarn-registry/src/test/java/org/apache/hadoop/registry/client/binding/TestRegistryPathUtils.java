@@ -80,7 +80,15 @@ public class TestRegistryPathUtils extends Assert {
     assertCreatedPathEquals("/alice", "/alice", "/");
   }
 
-
+  @Test
+  public void testGetUserFromPath() throws Exception {
+    assertEquals("bob", RegistryPathUtils
+        .getUsername("/registry/users/bob/services/yarn-service/test1/"));
+    assertEquals("bob-dev", RegistryPathUtils
+        .getUsername("/registry/users/bob-dev/services/yarn-service/test1"));
+    assertEquals("bob.dev", RegistryPathUtils
+        .getUsername("/registry/users/bob.dev/services/yarn-service/test1"));
+  }
 
 
   @Test

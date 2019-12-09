@@ -30,8 +30,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.cache.Weigher;
 import com.google.common.util.concurrent.UncheckedExecutionException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -45,13 +43,16 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Manages an in memory cache of parsed Job History files.
  */
 public class CachedHistoryStorage extends AbstractService implements
     HistoryStorage {
-  private static final Log LOG = LogFactory.getLog(CachedHistoryStorage.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CachedHistoryStorage.class);
 
   private LoadingCache<JobId, Job> loadedJobCache = null;
   private int loadedJobCacheSize;
@@ -172,9 +173,14 @@ public class CachedHistoryStorage extends AbstractService implements
     HistoryFileInfo fileInfo;
 
     fileInfo = hsManager.getFileInfo(jobId);
+
     if (fileInfo == null) {
       throw new HSFileRuntimeException("Unable to find job " + jobId);
-    } else if (fileInfo.isDeleted()) {
+    }
+
+    fileInfo.waitUntilMoved();
+
+    if (fileInfo.isDeleted()) {
       throw new HSFileRuntimeException("Cannot load deleted job " + jobId);
     } else {
       return fileInfo.loadJob();
@@ -210,6 +216,7 @@ public class CachedHistoryStorage extends AbstractService implements
       for (HistoryFileInfo mi : hsManager.getAllFileInfo()) {
         if (mi != null) {
           JobId id = mi.getJobId();
+          mi.waitUntilMoved();
           result.put(id, new PartialJob(mi.getJobIndexInfo(), id));
         }
       }

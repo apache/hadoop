@@ -46,7 +46,7 @@ class OperationOutput {
   private static final String MEASUREMENT_SEP = "*";
   private static final String STRING_SEP = ";";
 
-  static enum OutputType {
+  enum OutputType {
     STRING, FLOAT, LONG, DOUBLE, INTEGER
   }
 
@@ -65,7 +65,7 @@ class OperationOutput {
     int place = key.indexOf(TYPE_SEP);
     if (place == -1) {
       throw new IllegalArgumentException(
-          "Invalid key format - no type seperator - " + TYPE_SEP);
+          "Invalid key format - no type separator - " + TYPE_SEP);
     }
     try {
       dataType = OutputType.valueOf(
@@ -78,7 +78,7 @@ class OperationOutput {
     place = key.indexOf(MEASUREMENT_SEP);
     if (place == -1) {
       throw new IllegalArgumentException(
-          "Invalid key format - no measurement seperator - " + MEASUREMENT_SEP);
+          "Invalid key format - no measurement separator - " + MEASUREMENT_SEP);
     }
     opType = key.substring(0, place);
     measurementType = key.substring(place + 1);

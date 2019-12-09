@@ -18,20 +18,28 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.Closeable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AnonymousAWSCredentials;
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * A list of providers.
@@ -50,16 +58,25 @@ import java.util.List;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class AWSCredentialProviderList implements AWSCredentialsProvider {
+public class AWSCredentialProviderList implements AWSCredentialsProvider,
+    AutoCloseable {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       AWSCredentialProviderList.class);
   public static final String NO_AWS_CREDENTIAL_PROVIDERS
       = "No AWS Credential Providers";
 
+  static final String
+      CREDENTIALS_REQUESTED_WHEN_CLOSED
+      = "Credentials requested after provider list was closed";
+
   private final List<AWSCredentialsProvider> providers = new ArrayList<>(1);
   private boolean reuseLastProvider = true;
   private AWSCredentialsProvider lastProvider;
+
+  private final AtomicInteger refCount = new AtomicInteger(1);
+
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   /**
    * Empty instance. This is not ready to be used.
@@ -85,27 +102,13 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider {
   }
 
   /**
-   * Reuse the last provider?
-   * @param reuseLastProvider flag to indicate the last provider should
-   * be re-used
-   */
-  public void setReuseLastProvider(boolean reuseLastProvider) {
-    this.reuseLastProvider = reuseLastProvider;
-  }
-
-  /**
-   * query the {@link #reuseLastProvider} flag.
-   * @return the current flag state.
-   */
-  public boolean isReuseLastProvider() {
-    return reuseLastProvider;
-  }
-
-  /**
    * Refresh all child entries.
    */
   @Override
   public void refresh() {
+    if (isClosed()) {
+      return;
+    }
     for (AWSCredentialsProvider provider : providers) {
       provider.refresh();
     }
@@ -118,6 +121,11 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider {
    */
   @Override
   public AWSCredentials getCredentials() {
+    if (isClosed()) {
+      LOG.warn(CREDENTIALS_REQUESTED_WHEN_CLOSED);
+      throw new NoAuthWithAWSException(
+          CREDENTIALS_REQUESTED_WHEN_CLOSED);
+    }
     checkNotEmpty();
     if (reuseLastProvider && lastProvider != null) {
       return lastProvider.getCredentials();
@@ -148,8 +156,7 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider {
     if (lastException != null) {
       message += ": " + lastException;
     }
-    throw new AmazonClientException(message, lastException);
-
+    throw new NoAuthWithAWSException(message, lastException);
   }
 
   /**
@@ -168,7 +175,7 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider {
    */
   public void checkNotEmpty() {
     if (providers.isEmpty()) {
-      throw new AmazonClientException(NO_AWS_CREDENTIAL_PROVIDERS);
+      throw new NoAuthWithAWSException(NO_AWS_CREDENTIAL_PROVIDERS);
     }
   }
 
@@ -178,12 +185,9 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider {
    * If there are no providers, "" is returned.
    */
   public String listProviderNames() {
-    StringBuilder sb = new StringBuilder(providers.size() * 32);
-    for (AWSCredentialsProvider provider : providers) {
-      sb.append(provider.getClass().getSimpleName());
-      sb.append(' ');
-    }
-    return sb.toString();
+    return providers.stream()
+        .map(provider -> provider.getClass().getSimpleName() + ' ')
+        .collect(Collectors.joining());
   }
 
   /**
@@ -193,7 +197,72 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider {
    */
   @Override
   public String toString() {
-    return "AWSCredentialProviderList: " +
-        StringUtils.join(providers, " ");
+    return "AWSCredentialProviderList[" +
+        "refcount= " + refCount.get() + ": [" +
+        StringUtils.join(providers, ", ") + ']';
+  }
+
+  /**
+   * Get a reference to this object with an updated reference count.
+   *
+   * @return a reference to this
+   */
+  public synchronized AWSCredentialProviderList share() {
+    Preconditions.checkState(!closed.get(), "Provider list is closed");
+    refCount.incrementAndGet();
+    return this;
+  }
+
+  /**
+   * Get the current reference count.
+   * @return the current ref count
+   */
+  @VisibleForTesting
+  public int getRefCount() {
+    return refCount.get();
+  }
+
+  /**
+   * Get the closed flag.
+   * @return true iff the list is closed.
+   */
+  @VisibleForTesting
+  public boolean isClosed() {
+    return closed.get();
+  }
+
+  /**
+   * Close routine will close all providers in the list which implement
+   * {@code Closeable}.
+   * This matters because some providers start a background thread to
+   * refresh their secrets.
+   */
+  @Override
+  public void close() {
+    synchronized (this) {
+      if (closed.get()) {
+        // already closed: no-op
+        return;
+      }
+      int remainder = refCount.decrementAndGet();
+      if (remainder != 0) {
+        // still actively used, or somehow things are
+        // now negative
+        LOG.debug("Not closing {}", this);
+        return;
+      }
+      // at this point, the closing is going to happen
+      LOG.debug("Closing {}", this);
+      closed.set(true);
+    }
+
+    // do this outside the synchronized block.
+    for (AWSCredentialsProvider p : providers) {
+      if (p instanceof Closeable) {
+        IOUtils.closeStream((Closeable) p);
+      } else if (p instanceof AutoCloseable) {
+        S3AUtils.closeAutocloseables(LOG, (AutoCloseable)p);
+      }
+    }
   }
 }

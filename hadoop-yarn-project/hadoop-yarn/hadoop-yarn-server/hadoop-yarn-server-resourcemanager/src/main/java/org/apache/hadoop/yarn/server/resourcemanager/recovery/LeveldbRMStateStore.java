@@ -64,12 +64,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.AM
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.fusesource.leveldbjni.internal.NativeDB;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBException;
-import org.iq80.leveldb.Logger;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.WriteBatch;
 
@@ -165,7 +163,6 @@ public class LeveldbRMStateStore extends RMStateStore {
     Path storeRoot = createStorageDir();
     Options options = new Options();
     options.createIfMissing(false);
-    options.logger(new LeveldbLogger());
     LOG.info("Using state database at " + storeRoot + " for recovery");
     File dbfile = new File(storeRoot.toString());
     try {
@@ -214,6 +211,11 @@ public class LeveldbRMStateStore extends RMStateStore {
     return db == null;
   }
 
+  @VisibleForTesting
+  DB getDatabase() {
+    return db;
+  }
+
   @Override
   protected Version loadVersion() throws Exception {
     Version version = null;
@@ -250,14 +252,14 @@ public class LeveldbRMStateStore extends RMStateStore {
 
   @Override
   public synchronized long getAndIncrementEpoch() throws Exception {
-    long currentEpoch = 0;
+    long currentEpoch = baseEpoch;
     byte[] dbKeyBytes = bytes(EPOCH_NODE);
     try {
       byte[] data = db.get(dbKeyBytes);
       if (data != null) {
         currentEpoch = EpochProto.parseFrom(data).getEpoch();
       }
-      EpochProto proto = Epoch.newInstance(currentEpoch + 1).getProto();
+      EpochProto proto = Epoch.newInstance(nextEpoch(currentEpoch)).getProto();
       db.put(dbKeyBytes, proto.toByteArray());
     } catch (DBException e) {
       throw new IOException(e);
@@ -284,6 +286,9 @@ public class LeveldbRMStateStore extends RMStateStore {
       while (iter.hasNext()) {
         Entry<byte[],byte[]> entry = iter.next();
         String key = asString(entry.getKey());
+        if (!key.startsWith(RM_RESERVATION_KEY_PREFIX)) {
+          break;
+        }
 
         String planReservationString =
             key.substring(RM_RESERVATION_KEY_PREFIX.length());
@@ -402,11 +407,10 @@ public class LeveldbRMStateStore extends RMStateStore {
 
   private RMDelegationTokenIdentifierData loadDelegationToken(byte[] data)
       throws IOException {
-    RMDelegationTokenIdentifierData tokenData =
-        new RMDelegationTokenIdentifierData();
+    RMDelegationTokenIdentifierData tokenData = null;
     DataInputStream in = new DataInputStream(new ByteArrayInputStream(data));
     try {
-      tokenData.readFields(in);
+      tokenData = RMStateStoreUtils.readRMDelegationTokenIdentifierData(in);
     } finally {
       IOUtils.cleanup(LOG, in);
     }
@@ -863,15 +867,6 @@ public class LeveldbRMStateStore extends RMStateStore {
       }
       long duration = Time.monotonicNow() - start;
       LOG.info("Full compaction cycle completed in " + duration + " msec");
-    }
-  }
-
-  private static class LeveldbLogger implements Logger {
-    private static final Log LOG = LogFactory.getLog(LeveldbLogger.class);
-
-    @Override
-    public void log(String message) {
-      LOG.info(message);
     }
   }
 }

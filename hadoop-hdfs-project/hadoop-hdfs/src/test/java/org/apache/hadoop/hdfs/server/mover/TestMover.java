@@ -51,6 +51,7 @@ import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -71,14 +72,15 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.balancer.Dispatcher.DBlock;
 import org.apache.hadoop.hdfs.server.balancer.ExitStatus;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.mover.Mover.MLocation;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -113,6 +115,8 @@ public class TestMover {
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
         1L);
     conf.setLong(DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY, 2000L);
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
   }
 
   static Mover newMover(Configuration conf) throws IOException {
@@ -123,15 +127,18 @@ public class TestMover {
       nnMap.put(nn, null);
     }
 
-    final List<NameNodeConnector> nncs = NameNodeConnector.newNameNodeConnectors(
-        nnMap, Mover.class.getSimpleName(), Mover.MOVER_ID_PATH, conf,
-        NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
+    final List<NameNodeConnector> nncs = NameNodeConnector.
+        newNameNodeConnectors(nnMap, Mover.class.getSimpleName(),
+            HdfsServerConstants.MOVER_ID_PATH, conf,
+            NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
     return new Mover(nncs.get(0), conf, new AtomicInteger(0), new HashMap<>());
   }
 
   @Test
   public void testScheduleSameBlock() throws IOException {
     final Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(4).build();
     try {
@@ -200,6 +207,214 @@ public class TestMover {
     }
   }
 
+  private void setupStoragePoliciesAndPaths(DistributedFileSystem dfs1,
+                                           DistributedFileSystem dfs2,
+                                            Path dir, String file)
+      throws Exception {
+
+    dfs1.mkdirs(dir);
+    dfs2.mkdirs(dir);
+
+    //Write to DISK on nn1
+    dfs1.setStoragePolicy(dir, "HOT");
+    FSDataOutputStream out = dfs1.create(new Path(file));
+    out.writeChars("testScheduleWithinSameNode");
+    out.close();
+
+    //Write to Archive on nn2
+    dfs2.setStoragePolicy(dir, "COLD");
+    out = dfs2.create(new Path(file));
+    out.writeChars("testScheduleWithinSameNode");
+    out.close();
+
+    //verify before movement
+    LocatedBlock lb = dfs1.getClient().getLocatedBlocks(file, 0).get(0);
+    StorageType[] storageTypes = lb.getStorageTypes();
+    for (StorageType storageType : storageTypes) {
+      Assert.assertTrue(StorageType.DISK == storageType);
+    }
+
+    //verify before movement
+    lb = dfs2.getClient().getLocatedBlocks(file, 0).get(0);
+    storageTypes = lb.getStorageTypes();
+    for (StorageType storageType : storageTypes) {
+      Assert.assertTrue(StorageType.ARCHIVE == storageType);
+    }
+  }
+
+  private void waitForLocatedBlockWithDiskStorageType(
+      final DistributedFileSystem dfs, final String file,
+      int expectedDiskCount) throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        LocatedBlock lb = null;
+        try {
+          lb = dfs.getClient().getLocatedBlocks(file, 0).get(0);
+        } catch (IOException e) {
+          LOG.error("Exception while getting located blocks", e);
+          return false;
+        }
+        int diskCount = 0;
+        for (StorageType storageType : lb.getStorageTypes()) {
+          if (StorageType.DISK == storageType) {
+            diskCount++;
+          }
+        }
+        LOG.info("Archive replica count, expected={} and actual={}",
+            expectedDiskCount, diskCount);
+        return expectedDiskCount == diskCount;
+      }
+    }, 100, 3000);
+  }
+
+  @Test(timeout = 300000)
+  public void testWithFederateClusterWithinSameNode() throws
+      Exception {
+    final Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(4).storageTypes( new StorageType[] {StorageType.DISK,
+            StorageType.ARCHIVE}).nnTopology(MiniDFSNNTopology
+            .simpleFederatedTopology(2)).build();
+    DFSTestUtil.setFederatedConfiguration(cluster, conf);
+
+    try {
+      cluster.waitActive();
+
+      final String file = "/test/file";
+      Path dir = new Path ("/test");
+
+      final DistributedFileSystem dfs1 = cluster.getFileSystem(0);
+      final DistributedFileSystem dfs2 = cluster.getFileSystem(1);
+
+      URI nn1 = dfs1.getUri();
+      URI nn2 = dfs2.getUri();
+
+      setupStoragePoliciesAndPaths(dfs1, dfs2, dir, file);
+
+
+      // move to ARCHIVE
+      dfs1.setStoragePolicy(dir, "COLD");
+      int rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] {"-p", nn1 + dir.toString()});
+      Assert.assertEquals("Movement to ARCHIVE should be successful", 0, rc);
+
+
+      //move to DISK
+      dfs2.setStoragePolicy(dir, "HOT");
+      rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] {"-p", nn2 + dir.toString()});
+      Assert.assertEquals("Movement to DISK should be successful", 0, rc);
+
+
+      // Wait till namenode notified about the block location details
+      waitForLocatedBlockWithArchiveStorageType(dfs1, file, 3);
+      waitForLocatedBlockWithDiskStorageType(dfs2, file, 3);
+
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testWithFederatedCluster() throws Exception{
+
+    final Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    final MiniDFSCluster cluster = new MiniDFSCluster
+        .Builder(conf)
+        .storageTypes(new StorageType[]{StorageType.DISK,
+            StorageType.ARCHIVE})
+        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
+        .numDataNodes(4).build();
+    DFSTestUtil.setFederatedConfiguration(cluster, conf);
+    try {
+      cluster.waitActive();
+
+      final String file = "/test/file";
+      Path dir = new Path ("/test");
+
+      final DistributedFileSystem dfs1 = cluster.getFileSystem(0);
+      final DistributedFileSystem dfs2 = cluster.getFileSystem(1);
+
+      URI nn1 = dfs1.getUri();
+      URI nn2 = dfs2.getUri();
+
+      setupStoragePoliciesAndPaths(dfs1, dfs2, dir, file);
+
+      //Changing storage policies
+      dfs1.setStoragePolicy(dir, "COLD");
+      dfs2.setStoragePolicy(dir, "HOT");
+
+      int rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] {"-p", nn1 + dir.toString(), nn2 + dir.toString()});
+
+      Assert.assertEquals("Movement to DISK should be successful", 0, rc);
+
+      waitForLocatedBlockWithArchiveStorageType(dfs1, file, 3);
+      waitForLocatedBlockWithDiskStorageType(dfs2, file, 3);
+
+    } finally {
+      cluster.shutdown();
+    }
+
+  }
+
+  @Test(timeout = 300000)
+  public void testWithFederatedHACluster() throws Exception{
+
+    final Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    final MiniDFSCluster cluster = new MiniDFSCluster
+        .Builder(conf)
+        .storageTypes(new StorageType[]{StorageType.DISK,
+            StorageType.ARCHIVE})
+        .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(2))
+        .numDataNodes(4).build();
+    DFSTestUtil.setFederatedHAConfiguration(cluster, conf);
+
+
+    try {
+
+      Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
+
+      Iterator<URI> iter = namenodes.iterator();
+      URI nn1 = iter.next();
+      URI nn2 = iter.next();
+
+      cluster.transitionToActive(0);
+      cluster.transitionToActive(2);
+
+      final String file = "/test/file";
+      Path dir = new Path ("/test");
+
+      final DistributedFileSystem dfs1  = (DistributedFileSystem) FileSystem
+          .get(nn1, conf);
+
+      final DistributedFileSystem dfs2  = (DistributedFileSystem) FileSystem
+          .get(nn2, conf);
+
+     setupStoragePoliciesAndPaths(dfs1, dfs2, dir, file);
+
+      //Changing Storage Policies
+      dfs1.setStoragePolicy(dir, "COLD");
+      dfs2.setStoragePolicy(dir, "HOT");
+
+      int rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] {"-p", nn1 + dir.toString(), nn2 + dir.toString()});
+
+      Assert.assertEquals("Movement to DISK should be successful", 0, rc);
+
+      waitForLocatedBlockWithArchiveStorageType(dfs1, file, 3);
+      waitForLocatedBlockWithDiskStorageType(dfs2, file, 3);
+    } finally {
+      cluster.shutdown();
+    }
+
+  }
+
   private void waitForLocatedBlockWithArchiveStorageType(
       final DistributedFileSystem dfs, final String file,
       int expectedArchiveCount) throws Exception {
@@ -246,8 +461,11 @@ public class TestMover {
    */
   @Test
   public void testMoverCli() throws Exception {
+    final Configuration clusterConf = new HdfsConfiguration();
+    clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
-        .Builder(new HdfsConfiguration()).numDataNodes(0).build();
+        .Builder(clusterConf).numDataNodes(0).build();
     try {
       final Configuration conf = cluster.getConfiguration(0);
       try {
@@ -279,8 +497,10 @@ public class TestMover {
   @Test
   public void testMoverCliWithHAConf() throws Exception {
     final Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
-        .Builder(new HdfsConfiguration())
+        .Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .numDataNodes(0).build();
     HATestUtil.setFailoverConfigurations(cluster, conf, "MyCluster");
@@ -301,11 +521,16 @@ public class TestMover {
 
   @Test
   public void testMoverCliWithFederation() throws Exception {
+    final Configuration clusterConf = new HdfsConfiguration();
+    clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
-        .Builder(new HdfsConfiguration())
+        .Builder(clusterConf)
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(3))
         .numDataNodes(0).build();
     final Configuration conf = new HdfsConfiguration();
+    clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     DFSTestUtil.setFederatedConfiguration(cluster, conf);
     try {
       Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
@@ -349,11 +574,16 @@ public class TestMover {
 
   @Test
   public void testMoverCliWithFederationHA() throws Exception {
+    final Configuration clusterConf = new HdfsConfiguration();
+    clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
-        .Builder(new HdfsConfiguration())
+        .Builder(clusterConf)
         .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(3))
         .numDataNodes(0).build();
     final Configuration conf = new HdfsConfiguration();
+    clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     DFSTestUtil.setFederatedHAConfiguration(cluster, conf);
     try {
       Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
@@ -417,6 +647,8 @@ public class TestMover {
   public void testMoveWhenStoragePolicyNotSatisfying() throws Exception {
     // HDFS-8147
     final Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(3)
         .storageTypes(
@@ -436,6 +668,39 @@ public class TestMover {
       int rc = ToolRunner.run(conf, new Mover.Cli(),
           new String[] { "-p", file.toString() });
       int exitcode = ExitStatus.NO_MOVE_BLOCK.getExitCode();
+      Assert.assertEquals("Exit code should be " + exitcode, exitcode, rc);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testMoveWhenStoragePolicySatisfierIsRunning() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.EXTERNAL.toString());
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3)
+        .storageTypes(
+            new StorageType[][] {{StorageType.DISK}, {StorageType.DISK},
+                {StorageType.DISK}}).build();
+    try {
+      cluster.waitActive();
+      // Simulate External sps by creating #getNameNodeConnector instance.
+      DFSTestUtil.getNameNodeConnector(conf, HdfsServerConstants.MOVER_ID_PATH,
+          1, true);
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final String file = "/testMoveWhenStoragePolicySatisfierIsRunning";
+      // write to DISK
+      final FSDataOutputStream out = dfs.create(new Path(file));
+      out.writeChars("testMoveWhenStoragePolicySatisfierIsRunning");
+      out.close();
+
+      // move to ARCHIVE
+      dfs.setStoragePolicy(new Path(file), "COLD");
+      int rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] {"-p", file.toString()});
+      int exitcode = ExitStatus.IO_EXCEPTION.getExitCode();
       Assert.assertEquals("Exit code should be " + exitcode, exitcode, rc);
     } finally {
       cluster.shutdown();
@@ -477,8 +742,54 @@ public class TestMover {
     }
   }
 
+  @Test(timeout=100000)
+  public void testBalancerMaxIterationTimeNotAffectMover() throws Exception {
+    long blockSize = 10*1024*1024;
+    final Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    conf.setInt(DFSConfigKeys.DFS_MOVER_MOVERTHREADS_KEY, 1);
+    conf.setInt(
+        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, 1);
+    // set a fairly large block size to run into the limitation
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf.setLong(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, blockSize);
+    // set a somewhat grater than zero max iteration time to have the move time
+    // to surely exceed it
+    conf.setLong(DFSConfigKeys.DFS_BALANCER_MAX_ITERATION_TIME_KEY, 200L);
+    conf.setInt(DFSConfigKeys.DFS_MOVER_RETRY_MAX_ATTEMPTS_KEY, 1);
+    // set client socket timeout to have an IN_PROGRESS notification back from
+    // the DataNode about the copy in every second.
+    conf.setLong(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 1000L);
+
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(2)
+        .storageTypes(
+            new StorageType[][] {{StorageType.DISK, StorageType.DISK},
+                {StorageType.ARCHIVE, StorageType.ARCHIVE}})
+        .build();
+    try {
+      cluster.waitActive();
+      final DistributedFileSystem fs = cluster.getFileSystem();
+      final String file = "/testMaxIterationTime.dat";
+      final Path path = new Path(file);
+      short rep_factor = 1;
+      int seed = 0xFAFAFA;
+      // write to DISK
+      DFSTestUtil.createFile(fs, path, 4L * blockSize, rep_factor, seed);
+
+      // move to ARCHIVE
+      fs.setStoragePolicy(new Path(file), "COLD");
+      int rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] {"-p", file});
+      Assert.assertEquals("Retcode expected to be ExitStatus.SUCCESS (0).",
+          ExitStatus.SUCCESS.getExitCode(), rc);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final int dataBlocks = ecPolicy.getNumDataUnits();
   private final int parityBlocks = ecPolicy.getNumParityUnits();
   private final int cellSize = ecPolicy.getCellSize();
@@ -492,6 +803,8 @@ public class TestMover {
         1L);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
   }
 
   @Test(timeout = 300000)
@@ -528,6 +841,8 @@ public class TestMover {
 
     try {
       cluster.waitActive();
+      cluster.getFileSystem().enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
 
       // set "/bar" directory with HOT storage policy.
       ClientProtocol client = NameNodeProxies.createProxy(conf,
@@ -537,7 +852,8 @@ public class TestMover {
       client.setStoragePolicy(barDir,
           HdfsConstants.HOT_STORAGE_POLICY_NAME);
       // set an EC policy on "/bar" directory
-      client.setErasureCodingPolicy(barDir, null);
+      client.setErasureCodingPolicy(barDir,
+          StripedFileTestUtil.getDefaultECPolicy().getName());
 
       // write file to barDir
       final String fooFile = "/bar/foo";
@@ -756,7 +1072,7 @@ public class TestMover {
       for (int i = 0; i < cluster.getDataNodes().size(); i++) {
         DataNode dn = cluster.getDataNodes().get(i);
         LOG.info("Simulate block pinning in datanode {}", dn);
-        DataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
+        InternalDataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
       }
 
       // move file blocks to ONE_SSD policy
@@ -820,6 +1136,48 @@ public class TestMover {
     }
   }
 
+  @Test(timeout = 300000)
+  public void testMoverWhenStoragePolicyUnset() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1)
+        .storageTypes(
+            new StorageType[][] {{StorageType.DISK, StorageType.ARCHIVE}})
+        .build();
+    try {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final String file = "/testMoverWhenStoragePolicyUnset";
+      // write to DISK
+      DFSTestUtil.createFile(dfs, new Path(file), 1L, (short) 1, 0L);
+
+      // move to ARCHIVE
+      dfs.setStoragePolicy(new Path(file), "COLD");
+      int rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] {"-p", file.toString()});
+      Assert.assertEquals("Movement to ARCHIVE should be successful", 0, rc);
+
+      // Wait till namenode notified about the block location details
+      waitForLocatedBlockWithArchiveStorageType(dfs, file, 1);
+
+      // verify before unset policy
+      LocatedBlock lb = dfs.getClient().getLocatedBlocks(file, 0).get(0);
+      Assert.assertTrue(StorageType.ARCHIVE == (lb.getStorageTypes())[0]);
+
+      // unset storage policy
+      dfs.unsetStoragePolicy(new Path(file));
+      rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] {"-p", file.toString()});
+      Assert.assertEquals("Movement to DISK should be successful", 0, rc);
+
+      lb = dfs.getClient().getLocatedBlocks(file, 0).get(0);
+      Assert.assertTrue(StorageType.DISK == (lb.getStorageTypes())[0]);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   private void createFileWithFavoredDatanodes(final Configuration conf,
       final MiniDFSCluster cluster, final DistributedFileSystem dfs)
           throws IOException {
@@ -852,7 +1210,7 @@ public class TestMover {
       if (dn.getDatanodeId().getDatanodeUuid()
           .equals(datanodeInfo.getDatanodeUuid())) {
         LOG.info("Simulate block pinning in datanode {}", datanodeInfo);
-        DataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
+        InternalDataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
         break;
       }
     }

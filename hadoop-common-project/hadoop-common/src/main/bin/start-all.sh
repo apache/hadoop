@@ -15,10 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo "This script is deprecated. Use start-dfs.sh and start-yarn.sh instead."
-exit 1
-
-
+## @description  catch the ctrl-c
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+function hadoop_abort_startall()
+{
+  exit 1
+}
 
 # let's locate libexec...
 if [[ -n "${HADOOP_HOME}" ]]; then
@@ -38,6 +42,16 @@ else
   echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hadoop-config.sh." 2>&1
   exit 1
 fi
+
+if ! hadoop_privilege_check; then
+  trap hadoop_abort_startall INT
+  hadoop_error "WARNING: Attempting to start all Apache Hadoop daemons as ${USER} in 10 seconds."
+  hadoop_error "WARNING: This is not a recommended production deployment configuration."
+  hadoop_error "WARNING: Use CTRL-C to abort."
+  sleep 10
+  trap - INT
+fi
+
 # start hdfs daemons if hdfs is present
 if [[ -f "${HADOOP_HDFS_HOME}/sbin/start-dfs.sh" ]]; then
   "${HADOOP_HDFS_HOME}/sbin/start-dfs.sh" --config "${HADOOP_CONF_DIR}"
@@ -47,6 +61,5 @@ fi
 if [[ -f "${HADOOP_YARN_HOME}/sbin/start-yarn.sh" ]]; then
   "${HADOOP_YARN_HOME}/sbin/start-yarn.sh" --config "${HADOOP_CONF_DIR}"
 fi
-
 
 

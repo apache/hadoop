@@ -21,16 +21,21 @@ package org.apache.hadoop.mapreduce.v2.hs.webapp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Times;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
-import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.InputType;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.InputType;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -42,9 +47,19 @@ public class HsJobsBlock extends HtmlBlock {
   final AppContext appContext;
   final SimpleDateFormat dateFormat =
     new SimpleDateFormat("yyyy.MM.dd HH:mm:ss z");
+  private UserGroupInformation ugi;
+  private boolean isFilterAppListByUserEnabled;
+  private boolean areAclsEnabled;
+  private AccessControlList adminAclList;
 
-  @Inject HsJobsBlock(AppContext appCtx) {
+  @Inject
+  HsJobsBlock(Configuration conf, AppContext appCtx, ViewContext ctx) {
+    super(ctx);
     appContext = appCtx;
+    isFilterAppListByUserEnabled = conf
+        .getBoolean(YarnConfiguration.FILTER_ENTITY_LIST_BY_USER, false);
+    areAclsEnabled = conf.getBoolean(MRConfig.MR_ACLS_ENABLED, false);
+    adminAclList = new AccessControlList(conf.get(MRConfig.MR_ADMINS, " "));
   }
 
   /*
@@ -69,7 +84,7 @@ public class HsJobsBlock extends HtmlBlock {
             th("Maps Completed").
             th("Reduces Total").
             th("Reduces Completed").
-            th("Elapsed Time")._()._().
+            th("Elapsed Time").__().__().
         tbody();
     LOG.info("Getting list of all Jobs.");
     // Write all the data into a JavaScript array of arrays for JQuery
@@ -77,17 +92,23 @@ public class HsJobsBlock extends HtmlBlock {
     StringBuilder jobsTableData = new StringBuilder("[\n");
     for (Job j : appContext.getAllJobs().values()) {
       JobInfo job = new JobInfo(j);
+      ugi = getCallerUGI();
+      // Allow to list only per-user apps if incoming ugi has permission.
+      if (isFilterAppListByUserEnabled && ugi != null
+          && !checkAccess(job.getUserName())) {
+        continue;
+      }
       jobsTableData.append("[\"")
       .append(dateFormat.format(new Date(job.getSubmitTime()))).append("\",\"")
       .append(job.getFormattedStartTimeStr(dateFormat)).append("\",\"")
       .append(dateFormat.format(new Date(job.getFinishTime()))).append("\",\"")
       .append("<a href='").append(url("job", job.getId())).append("'>")
       .append(job.getId()).append("</a>\",\"")
-      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+      .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         job.getName()))).append("\",\"")
-      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+      .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         job.getUserName()))).append("\",\"")
-      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+      .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         job.getQueueName()))).append("\",\"")
       .append(job.getState()).append("\",\"")
       .append(String.valueOf(job.getMapsTotal())).append("\",\"")
@@ -105,38 +126,55 @@ public class HsJobsBlock extends HtmlBlock {
     }
     jobsTableData.append("]");
     html.script().$type("text/javascript").
-    _("var jobsTableData=" + jobsTableData)._();
-    tbody._().
+        __("var jobsTableData=" + jobsTableData).__();
+    tbody.__().
     tfoot().
       tr().
         th().input("search_init").$type(InputType.text)
-          .$name("submit_time").$value("Submit Time")._()._().
+          .$name("submit_time").$value("Submit Time").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("start_time").$value("Start Time")._()._().
+          .$name("start_time").$value("Start Time").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("finish_time").$value("Finish Time")._()._().
+          .$name("finish_time").$value("Finish Time").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("job_id").$value("Job ID")._()._().
+          .$name("job_id").$value("Job ID").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("name").$value("Name")._()._().
+          .$name("name").$value("Name").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("user").$value("User")._()._().
+          .$name("user").$value("User").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("queue").$value("Queue")._()._().
+          .$name("queue").$value("Queue").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("state").$value("State")._()._().
+          .$name("state").$value("State").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("maps_total").$value("Maps Total")._()._().
+          .$name("maps_total").$value("Maps Total").__().__().
         th().input("search_init").$type(InputType.text).
-          $name("maps_completed").$value("Maps Completed")._()._().
+          $name("maps_completed").$value("Maps Completed").__().__().
         th().input("search_init").$type(InputType.text).
-          $name("reduces_total").$value("Reduces Total")._()._().
+          $name("reduces_total").$value("Reduces Total").__().__().
         th().input("search_init").$type(InputType.text).
-          $name("reduces_completed").$value("Reduces Completed")._()._().
+          $name("reduces_completed").$value("Reduces Completed").__().__().
         th().input("search_init").$type(InputType.text).
-          $name("elapsed_time").$value("Elapsed Time")._()._().
-        _().
-      _().
-    _();
+          $name("elapsed_time").$value("Elapsed Time").__().__().
+        __().
+        __().
+        __();
+  }
+
+  private boolean checkAccess(String userName) {
+    if(!areAclsEnabled) {
+      return true;
+    }
+
+    // User could see its own job.
+    if (ugi.getShortUserName().equals(userName)) {
+      return true;
+    }
+
+    // Admin could also see all jobs
+    if (adminAclList != null && adminAclList.isUserAllowed(ugi)) {
+      return true;
+    }
+    return false;
   }
 }

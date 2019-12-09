@@ -22,7 +22,7 @@ import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.lang.WordUtils;
+import org.apache.commons.text.WordUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -189,8 +189,9 @@ public class CacheAdmin extends Configured implements Tool {
         System.err.println("Can't understand argument: " + args.get(0));
         return 1;
       }
-        
-      DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+
+      DistributedFileSystem dfs =
+          AdminHelper.getDFS(new Path(path).toUri(), conf);
       CacheDirectiveInfo directive = builder.build();
       EnumSet<CacheFlag> flags = EnumSet.noneOf(CacheFlag.class);
       if (force) {
@@ -409,7 +410,8 @@ public class CacheAdmin extends Configured implements Tool {
       }
       int exitCode = 0;
       try {
-        DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+        DistributedFileSystem dfs =
+            AdminHelper.getDFS(new Path(path).toUri(), conf);
         RemoteIterator<CacheDirectiveEntry> iter =
             dfs.listCacheDirectives(
                 new CacheDirectiveInfo.Builder().

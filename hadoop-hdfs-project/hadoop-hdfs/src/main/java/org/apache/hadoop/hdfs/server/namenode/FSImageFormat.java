@@ -37,7 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -53,6 +53,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -180,7 +181,7 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class FSImageFormat {
-  private static final Log LOG = FSImage.LOG;
+  private static final Logger LOG = FSImage.LOG;
 
   // Static-only class
   private FSImageFormat() {}
@@ -230,7 +231,7 @@ public class FSImageFormat {
           loader.load(file);
         }
       } finally {
-        IOUtils.cleanup(LOG, is);
+        IOUtils.cleanupWithLogger(LOG, is);
       }
     }
   }
@@ -895,8 +896,9 @@ public class FSImageFormat {
           in.readShort());
       final long preferredBlockSize = in.readLong();
 
-      return new INodeFileAttributes.SnapshotCopy(name, permissions, null, modificationTime,
-          accessTime, replication, preferredBlockSize, (byte) 0, null, false);
+      return new INodeFileAttributes.SnapshotCopy(name, permissions, null,
+          modificationTime, accessTime, replication, null, preferredBlockSize,
+          (byte) 0, null, BlockType.CONTIGUOUS);
     }
 
     public INodeDirectoryAttributes loadINodeDirectoryAttributes(DataInput in)

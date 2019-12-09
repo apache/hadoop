@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.tools.mapred.lib;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -42,7 +42,7 @@ import java.io.IOException;
  * consumed.
  */
 class DynamicInputChunk<K, V> {
-  private static Log LOG = LogFactory.getLog(DynamicInputChunk.class);
+  private static Logger LOG = LoggerFactory.getLogger(DynamicInputChunk.class);
   private Path chunkFilePath;
   private SequenceFileRecordReader<K, V> reader;
   private SequenceFile.Writer writer;
@@ -68,7 +68,7 @@ class DynamicInputChunk<K, V> {
    * Method to write records into a chunk.
    * @param key Key from the listing file.
    * @param value Corresponding value from the listing file.
-   * @throws IOException Exception onf failure to write to the file.
+   * @throws IOException Exception on failure to write to the file.
    */
   public void write(Text key, CopyListingFileStatus value) throws IOException {
     writer.append(key, value);
@@ -78,7 +78,7 @@ class DynamicInputChunk<K, V> {
    * Closes streams opened to the chunk-file.
    */
   public void close() {
-    IOUtils.cleanup(LOG, reader, writer);
+    IOUtils.cleanupWithLogger(LOG, reader, writer);
   }
 
   /**

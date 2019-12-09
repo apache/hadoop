@@ -420,6 +420,7 @@ namespace HadoopPipes {
     }
 
     string createDigest(string &password, string& msg) {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
       HMAC_CTX ctx;
       unsigned char digest[EVP_MAX_MD_SIZE];
       HMAC_Init(&ctx, (const unsigned char *)password.c_str(), 
@@ -428,7 +429,16 @@ namespace HadoopPipes {
       unsigned int digestLen;
       HMAC_Final(&ctx, digest, &digestLen);
       HMAC_cleanup(&ctx);
-
+#else
+      HMAC_CTX *ctx = HMAC_CTX_new();
+      unsigned char digest[EVP_MAX_MD_SIZE];
+      HMAC_Init_ex(ctx, (const unsigned char *)password.c_str(),
+          password.length(), EVP_sha1(), NULL);
+      HMAC_Update(ctx, (const unsigned char *)msg.c_str(), msg.length());
+      unsigned int digestLen;
+      HMAC_Final(ctx, digest, &digestLen);
+      HMAC_CTX_free(ctx);
+#endif
       //now apply base64 encoding
       BIO *bmem, *b64;
       BUF_MEM *bptr;

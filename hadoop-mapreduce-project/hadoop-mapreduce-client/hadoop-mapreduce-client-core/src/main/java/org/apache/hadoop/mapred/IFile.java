@@ -43,8 +43,8 @@ import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.Serializer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <code>IFile</code> is the simple &lt;key-len, value-len, key, value&gt; format
@@ -56,7 +56,7 @@ import org.apache.commons.logging.LogFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class IFile {
-  private static final Log LOG = LogFactory.getLog(IFile.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IFile.class);
   public static final int EOF_MARKER = -1; // End of File Marker
   
   /**

@@ -43,6 +43,10 @@ import "HdfsServer.proto";
 message GetBlocksRequestProto {
   required DatanodeIDProto datanode = 1; // Datanode ID
   required uint64 size = 2;              // Size in bytes
+  // Minimum Block Size in bytes, adding default value to 10MB, as this might
+  // cause problem during rolling upgrade, when balancers are upgraded later.
+  // For more info refer HDFS-13356
+  optional uint64 minBlockSize = 3 [default = 10485760];
 }
 
  
@@ -193,6 +197,31 @@ message IsUpgradeFinalizedResponseProto {
 }
 
 /**
+ * void request
+ */
+message IsRollingUpgradeRequestProto {
+}
+
+message IsRollingUpgradeResponseProto {
+  required bool isRollingUpgrade = 1;
+}
+
+message GetFilePathRequestProto {
+  required uint64 fileId = 1;
+}
+
+message GetFilePathResponseProto {
+  required string srcPath = 1;
+}
+
+message GetNextSPSPathRequestProto {
+}
+
+message GetNextSPSPathResponseProto {
+  optional uint64 spsPath = 1;
+}
+
+/**
  * Protocol used by the sub-ordinate namenode to send requests
  * the active/primary namenode.
  *
@@ -267,4 +296,16 @@ service NamenodeProtocolService {
    */
   rpc isUpgradeFinalized(IsUpgradeFinalizedRequestProto)
       returns (IsUpgradeFinalizedResponseProto);
+
+  /**
+   * Return whether the NameNode is in rolling upgrade (true) or not (false).
+   */
+  rpc isRollingUpgrade(IsRollingUpgradeRequestProto)
+      returns (IsRollingUpgradeResponseProto);
+
+  /**
+   * Return the sps path from namenode
+   */
+  rpc getNextSPSPath(GetNextSPSPathRequestProto)
+      returns (GetNextSPSPathResponseProto);
 }

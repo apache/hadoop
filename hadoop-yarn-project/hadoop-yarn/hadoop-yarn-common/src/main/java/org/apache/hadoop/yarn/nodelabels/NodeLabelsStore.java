@@ -30,25 +30,27 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
-public abstract class NodeLabelsStore implements Closeable {
-  protected CommonNodeLabelsManager mgr;
-  
+/**
+ * Interface class for Node label store.
+ */
+public interface NodeLabelsStore extends Closeable {
+
   /**
-   * Store node {@literal ->} label
+   * Store node {@literal ->} label.
    */
-  public abstract void updateNodeToLabelsMappings(
+  void updateNodeToLabelsMappings(
       Map<NodeId, Set<String>> nodeToLabels) throws IOException;
 
   /**
-   * Store new labels
+   * Store new labels.
    */
-  public abstract void storeNewClusterNodeLabels(List<NodeLabel> label)
+  void storeNewClusterNodeLabels(List<NodeLabel> label)
       throws IOException;
 
   /**
-   * Remove labels
+   * Remove labels.
    */
-  public abstract void removeClusterNodeLabels(Collection<String> labels)
+  void removeClusterNodeLabels(Collection<String> labels)
       throws IOException;
 
   /**
@@ -56,16 +58,14 @@ public abstract class NodeLabelsStore implements Closeable {
    * ignoreNodeToLabelsMappings is true then node to labels mappings should not
    * be recovered. In case of Distributed NodeLabels setup
    * ignoreNodeToLabelsMappings will be set to true and recover will be invoked
-   * as RM will collect the node labels from NM through registration/HB
+   * as RM will collect the node labels from NM through registration/HB.
    *
    * @throws IOException
    * @throws YarnException
    */
-  public abstract void recover() throws IOException, YarnException;
-  
-  public void init(Configuration conf) throws Exception {}
+  void recover() throws IOException, YarnException;
 
-  public void setNodeLabelsManager(CommonNodeLabelsManager mgr) {
-    this.mgr = mgr;
-  }
+  void init(Configuration conf, CommonNodeLabelsManager mgr)
+      throws Exception;
+
 }

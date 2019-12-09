@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -74,9 +73,8 @@ public class HttpExceptionUtils {
     json.put(ERROR_CLASSNAME_JSON, ex.getClass().getName());
     Map<String, Object> jsonResponse = new LinkedHashMap<String, Object>();
     jsonResponse.put(ERROR_JSON, json);
-    ObjectMapper jsonMapper = new ObjectMapper();
     Writer writer = response.getWriter();
-    jsonMapper.writerWithDefaultPrettyPrinter().writeValue(writer, jsonResponse);
+    JsonSerialization.writer().writeValue(writer, jsonResponse);
     writer.flush();
   }
 
@@ -144,8 +142,7 @@ public class HttpExceptionUtils {
       InputStream es = null;
       try {
         es = conn.getErrorStream();
-        ObjectMapper mapper = new ObjectMapper();
-        Map json = mapper.readValue(es, Map.class);
+        Map json = JsonSerialization.mapReader().readValue(es);
         json = (Map) json.get(ERROR_JSON);
         String exClass = (String) json.get(ERROR_CLASSNAME_JSON);
         String exMsg = (String) json.get(ERROR_MESSAGE_JSON);
@@ -157,18 +154,20 @@ public class HttpExceptionUtils {
             toThrow = (Exception) constr.newInstance(exMsg);
           } catch (Exception ex) {
             toThrow = new IOException(String.format(
-                "HTTP status [%d], exception [%s], message [%s] ",
-                conn.getResponseCode(), exClass, exMsg));
+                "HTTP status [%d], exception [%s], message [%s], URL [%s]",
+                conn.getResponseCode(), exClass, exMsg, conn.getURL()));
           }
         } else {
           String msg = (exMsg != null) ? exMsg : conn.getResponseMessage();
           toThrow = new IOException(String.format(
-              "HTTP status [%d], message [%s]", conn.getResponseCode(), msg));
+              "HTTP status [%d], message [%s], URL [%s]",
+              conn.getResponseCode(), msg, conn.getURL()));
         }
       } catch (Exception ex) {
         toThrow = new IOException(String.format(
-            "HTTP status [%d], message [%s]", conn.getResponseCode(),
-            conn.getResponseMessage()));
+            "HTTP status [%d], message [%s], URL [%s], exception [%s]",
+            conn.getResponseCode(), conn.getResponseMessage(), conn.getURL(),
+            ex.toString()), ex);
       } finally {
         if (es != null) {
           try {

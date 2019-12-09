@@ -32,27 +32,27 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.charset.CharacterCodingException;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import junit.framework.AssertionFailedError;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.KerberosAuthException;
 import org.apache.hadoop.security.NetUtilsTestResolver;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestNetUtils {
 
-  private static final Log LOG = LogFactory.getLog(TestNetUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestNetUtils.class);
   private static final int DEST_PORT = 4040;
   private static final String DEST_PORT_NAME = Integer.toString(DEST_PORT);
   private static final int LOCAL_PORT = 8080;
@@ -265,6 +265,44 @@ public class TestNetUtils {
   }
 
   @Test
+  public void testWrapKerbAuthException() throws Throwable {
+    IOException e = new KerberosAuthException("socket timeout on connection");
+    IOException wrapped = verifyExceptionClass(e, KerberosAuthException.class);
+    assertInException(wrapped, "socket timeout on connection");
+    assertInException(wrapped, "localhost");
+    assertInException(wrapped, "DestHost:destPort ");
+    assertInException(wrapped, "LocalHost:localPort");
+    assertRemoteDetailsIncluded(wrapped);
+    assertInException(wrapped, "KerberosAuthException");
+  }
+
+  @Test
+  public void testWrapIOEWithNoStringConstructor() throws Throwable {
+    IOException e = new CharacterCodingException();
+    IOException wrapped = verifyExceptionClass(e, IOException.class);
+    assertInException(wrapped, "Failed on local exception");
+    assertNotInException(wrapped, NetUtils.HADOOP_WIKI);
+    assertInException(wrapped, "Host Details ");
+    assertRemoteDetailsIncluded(wrapped);
+  }
+
+  @Test
+  public void testWrapIOEWithPrivateStringConstructor() throws Throwable {
+    class TestIOException extends CharacterCodingException{
+      private  TestIOException(String cause){
+      }
+      TestIOException(){
+      }
+    }
+    IOException e = new TestIOException();
+    IOException wrapped = verifyExceptionClass(e, IOException.class);
+    assertInException(wrapped, "Failed on local exception");
+    assertNotInException(wrapped, NetUtils.HADOOP_WIKI);
+    assertInException(wrapped, "Host Details ");
+    assertRemoteDetailsIncluded(wrapped);
+  }
+
+  @Test
   public void testWrapSocketException() throws Throwable {
     IOException wrapped = verifyExceptionClass(new SocketException("failed"),
         SocketException.class);
@@ -328,7 +366,7 @@ public class TestNetUtils {
   private void assertInException(Exception e, String text) throws Throwable {
     String message = extractExceptionMessage(e);
     if (!(message.contains(text))) {
-      throw new AssertionFailedError("Wrong text in message "
+      throw new AssertionError("Wrong text in message "
         + "\"" + message + "\""
         + " expected \"" + text + "\"")
           .initCause(e);
@@ -339,7 +377,7 @@ public class TestNetUtils {
     assertNotNull("Null Exception", e);
     String message = e.getMessage();
     if (message == null) {
-      throw new AssertionFailedError("Empty text in exception " + e)
+      throw new AssertionError("Empty text in exception " + e)
           .initCause(e);
     }
     return message;
@@ -349,7 +387,7 @@ public class TestNetUtils {
       throws Throwable{
     String message = extractExceptionMessage(e);
     if (message.contains(text)) {
-      throw new AssertionFailedError("Wrong text in message "
+      throw new AssertionError("Wrong text in message "
            + "\"" + message + "\""
            + " did not expect \"" + text + "\"")
           .initCause(e);
@@ -364,7 +402,7 @@ public class TestNetUtils {
          "localhost", LOCAL_PORT, e);
     LOG.info(wrapped.toString(), wrapped);
     if(!(wrapped.getClass().equals(expectedClass))) {
-      throw new AssertionFailedError("Wrong exception class; expected "
+      throw new AssertionError("Wrong exception class; expected "
          + expectedClass
          + " got " + wrapped.getClass() + ": " + wrapped).initCause(wrapped);
     }
@@ -667,6 +705,14 @@ public class TestNetUtils {
     InetSocketAddress addr = NetUtils.createSocketAddr(defaultAddr);
     conf.setSocketAddr("myAddress", addr);
     assertEquals(defaultAddr.trim(), NetUtils.getHostPortString(addr));
+  }
+
+  @Test
+  public void testBindToLocalAddress() throws Exception {
+    assertNotNull(NetUtils
+        .bindToLocalAddress(NetUtils.getLocalInetAddress("127.0.0.1"), false));
+    assertNull(NetUtils
+        .bindToLocalAddress(NetUtils.getLocalInetAddress("127.0.0.1"), true));
   }
 
   private <T> void assertBetterArrayEquals(T[] expect, T[]got) {

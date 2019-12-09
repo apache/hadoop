@@ -19,20 +19,24 @@
 package org.apache.hadoop.fs.azure;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
-import static org.junit.Assert.assertEquals;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class TestShellDecryptionKeyProvider {
-  public static final Log LOG = LogFactory
-      .getLog(TestShellDecryptionKeyProvider.class);
+/**
+ * Windows only tests of shell scripts to provide decryption keys.
+ */
+public class TestShellDecryptionKeyProvider
+    extends AbstractWasbTestWithTimeout {
+  public static final Logger LOG = LoggerFactory
+      .getLogger(TestShellDecryptionKeyProvider.class);
   private static File TEST_ROOT_DIR = new File(System.getProperty(
       "test.build.data", "/tmp"), "TestShellDecryptionKeyProvider");
 
@@ -62,7 +66,8 @@ public class TestShellDecryptionKeyProvider {
     // Create a simple script which echoes the given key plus the given
     // expected result (so that we validate both script input and output)
     File scriptFile = new File(TEST_ROOT_DIR, "testScript.cmd");
-    FileUtils.writeStringToFile(scriptFile, "@echo %1 " + expectedResult);
+    FileUtils.writeStringToFile(scriptFile, "@echo %1 " + expectedResult,
+            StandardCharsets.UTF_8);
 
     ShellDecryptionKeyProvider provider = new ShellDecryptionKeyProvider();
     Configuration conf = new Configuration();

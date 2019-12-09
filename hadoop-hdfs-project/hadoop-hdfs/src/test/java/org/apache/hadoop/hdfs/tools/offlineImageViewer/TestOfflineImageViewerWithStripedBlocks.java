@@ -31,12 +31,12 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
@@ -46,7 +46,7 @@ import org.junit.Test;
 
 public class TestOfflineImageViewerWithStripedBlocks {
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private int dataBlocks = ecPolicy.getNumDataUnits();
   private int parityBlocks = ecPolicy.getNumParityUnits();
 
@@ -63,8 +63,11 @@ public class TestOfflineImageViewerWithStripedBlocks {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.waitActive();
-    cluster.getFileSystem().getClient().setErasureCodingPolicy("/", null);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy("/",
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     Path eczone = new Path("/eczone");
     fs.mkdirs(eczone);
   }
@@ -143,6 +146,8 @@ public class TestOfflineImageViewerWithStripedBlocks {
     // Verify space consumed present in BlockInfoStriped
     FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
     INodeFile fileNode = fsdir.getINode4Write(file.toString()).asFile();
+    assertEquals(StripedFileTestUtil.getDefaultECPolicy().getId(),
+        fileNode.getErasureCodingPolicyID());
     assertTrue("Invalid block size", fileNode.getBlocks().length > 0);
     long actualFileSize = 0;
     for (BlockInfo blockInfo : fileNode.getBlocks()) {

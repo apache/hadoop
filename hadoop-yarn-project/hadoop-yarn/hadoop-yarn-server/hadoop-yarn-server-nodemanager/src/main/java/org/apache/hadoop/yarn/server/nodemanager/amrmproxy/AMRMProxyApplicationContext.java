@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.registry.client.api.RegistryOperations;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -66,5 +68,19 @@ public interface AMRMProxyApplicationContext {
    * @return the NMContext.
    */
   Context getNMCotext();
+
+  /**
+   * Gets the credentials of this application.
+   *
+   * @return the credentials.
+   */
+  Credentials getCredentials();
+
+  /**
+   * Gets the registry client.
+   *
+   * @return the registry.
+   */
+  RegistryOperations getRegistryClient();
 
 }

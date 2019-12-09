@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -67,7 +68,7 @@ import static org.junit.Assert.assertEquals;
 
 public class TestAddStripedBlocks {
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
   private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
   private final int cellSize = ecPolicy.getCellSize();
@@ -82,11 +83,12 @@ public class TestAddStripedBlocks {
 
   @Before
   public void setup() throws IOException {
-    cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
-        .numDataNodes(groupSize).build();
+    HdfsConfiguration conf = new HdfsConfiguration();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize).build();
     cluster.waitActive();
     dfs = cluster.getFileSystem();
-    dfs.getClient().setErasureCodingPolicy("/", null);
+    dfs.enableErasureCodingPolicy(ecPolicy.getName());
+    dfs.getClient().setErasureCodingPolicy("/", ecPolicy.getName());
   }
 
   @After
@@ -335,8 +337,8 @@ public class TestAddStripedBlocks {
     int i = groupSize - 1;
     for (DataNode dn : cluster.getDataNodes()) {
       String storageID = storageIDs.get(i);
-      final Block block = new Block(lastBlock.getBlockId() + i--,
-          lastBlock.getGenerationStamp(), 0);
+      final Block block = new Block(lastBlock.getBlockId() + i--, 0,
+          lastBlock.getGenerationStamp());
       DatanodeStorage storage = new DatanodeStorage(storageID);
       List<ReplicaBeingWritten> blocks = new ArrayList<>();
       ReplicaBeingWritten replica = new ReplicaBeingWritten(block, null, null,
@@ -420,7 +422,9 @@ public class TestAddStripedBlocks {
         cluster.getDataNodes().get(3).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
     // the total number of corrupted block info is still 1
+    Assert.assertEquals(1, ns.getCorruptECBlockGroups());
     Assert.assertEquals(1, ns.getCorruptReplicaBlocks());
+    Assert.assertEquals(0, ns.getCorruptReplicatedBlocks());
     // 2 internal blocks corrupted
     Assert.assertEquals(2, bm.getCorruptReplicas(stored).size());
 

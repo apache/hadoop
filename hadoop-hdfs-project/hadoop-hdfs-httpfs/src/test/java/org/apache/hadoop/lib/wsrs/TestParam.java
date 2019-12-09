@@ -100,7 +100,7 @@ public class TestParam {
     test(param, "L", "a long", 1L, 2L, "x", null);
   }
 
-  public static enum ENUM {
+  public enum ENUM {
     FOO, BAR
   }
 

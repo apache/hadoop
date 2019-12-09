@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.AclUtil;
@@ -51,6 +52,8 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
@@ -250,7 +253,7 @@ abstract public class ViewFileSystemBaseTest {
         fsTarget.isFile(new Path(targetTestRoot,"user/foo")));
     
     // Delete the created file
-    Assert.assertTrue("Delete should suceed",
+    Assert.assertTrue("Delete should succeed",
         fsView.delete(new Path("/user/foo"), false));
     Assert.assertFalse("File should not exist after delete",
         fsView.exists(new Path("/user/foo")));
@@ -265,7 +268,7 @@ abstract public class ViewFileSystemBaseTest {
         fsTarget.isFile(new Path(targetTestRoot,"dir2/foo")));
     
     // Delete the created file
-    Assert.assertTrue("Delete should suceed",
+    Assert.assertTrue("Delete should succeed",
         fsView.delete(new Path("/internalDir/linkToDir2/foo"), false));
     Assert.assertFalse("File should not exist after delete",
         fsView.exists(new Path("/internalDir/linkToDir2/foo")));
@@ -365,28 +368,83 @@ abstract public class ViewFileSystemBaseTest {
   }
   
   // rename across mount points that point to same target also fail 
-  @Test(expected=IOException.class) 
+  @Test
   public void testRenameAcrossMounts1() throws IOException {
     fileSystemTestHelper.createFile(fsView, "/user/foo");
-    fsView.rename(new Path("/user/foo"), new Path("/user2/fooBarBar"));
-    /* - code if we had wanted this to suceed
-    Assert.assertFalse(fSys.exists(new Path("/user/foo")));
-    Assert.assertFalse(fSysLocal.exists(new Path(targetTestRoot,"user/foo")));
-    Assert.assertTrue(fSys.isFile(FileSystemTestHelper.getTestRootPath(fSys,"/user2/fooBarBar")));
-    Assert.assertTrue(fSysLocal.isFile(new Path(targetTestRoot,"user/fooBarBar")));
-    */
+    try {
+      fsView.rename(new Path("/user/foo"), new Path("/user2/fooBarBar"));
+      ContractTestUtils.fail("IOException is not thrown on rename operation");
+    } catch (IOException e) {
+      GenericTestUtils
+          .assertExceptionContains("Renames across Mount points not supported",
+              e);
+    }
   }
   
   
   // rename across mount points fail if the mount link targets are different
   // even if the targets are part of the same target FS
 
-  @Test(expected=IOException.class) 
+  @Test
   public void testRenameAcrossMounts2() throws IOException {
     fileSystemTestHelper.createFile(fsView, "/user/foo");
-    fsView.rename(new Path("/user/foo"), new Path("/data/fooBar"));
+    try {
+      fsView.rename(new Path("/user/foo"), new Path("/data/fooBar"));
+      ContractTestUtils.fail("IOException is not thrown on rename operation");
+    } catch (IOException e) {
+      GenericTestUtils
+          .assertExceptionContains("Renames across Mount points not supported",
+              e);
+    }
   }
-  
+
+  // RenameStrategy SAME_TARGET_URI_ACROSS_MOUNTPOINT enabled
+  // to rename across mount points that point to same target URI
+  @Test
+  public void testRenameAcrossMounts3() throws IOException {
+    Configuration conf2 = new Configuration(conf);
+    conf2.set(Constants.CONFIG_VIEWFS_RENAME_STRATEGY,
+        ViewFileSystem.RenameStrategy.SAME_TARGET_URI_ACROSS_MOUNTPOINT
+            .toString());
+    FileSystem fsView2 = FileSystem.newInstance(FsConstants.VIEWFS_URI, conf2);
+    fileSystemTestHelper.createFile(fsView2, "/user/foo");
+    fsView2.rename(new Path("/user/foo"), new Path("/user2/fooBarBar"));
+    ContractTestUtils
+        .assertPathDoesNotExist(fsView2, "src should not exist after rename",
+            new Path("/user/foo"));
+    ContractTestUtils
+        .assertPathDoesNotExist(fsTarget, "src should not exist after rename",
+            new Path(targetTestRoot, "user/foo"));
+    ContractTestUtils.assertIsFile(fsView2,
+        fileSystemTestHelper.getTestRootPath(fsView2, "/user2/fooBarBar"));
+    ContractTestUtils
+        .assertIsFile(fsTarget, new Path(targetTestRoot, "user/fooBarBar"));
+  }
+
+  // RenameStrategy SAME_FILESYSTEM_ACROSS_MOUNTPOINT enabled
+  // to rename across mount points where the mount link targets are different
+  // but are part of the same target FS
+  @Test
+  public void testRenameAcrossMounts4() throws IOException {
+    Configuration conf2 = new Configuration(conf);
+    conf2.set(Constants.CONFIG_VIEWFS_RENAME_STRATEGY,
+        ViewFileSystem.RenameStrategy.SAME_FILESYSTEM_ACROSS_MOUNTPOINT
+            .toString());
+    FileSystem fsView2 = FileSystem.newInstance(FsConstants.VIEWFS_URI, conf2);
+    fileSystemTestHelper.createFile(fsView2, "/user/foo");
+    fsView2.rename(new Path("/user/foo"), new Path("/data/fooBar"));
+    ContractTestUtils
+        .assertPathDoesNotExist(fsView2, "src should not exist after rename",
+            new Path("/user/foo"));
+    ContractTestUtils
+        .assertPathDoesNotExist(fsTarget, "src should not exist after rename",
+            new Path(targetTestRoot, "user/foo"));
+    ContractTestUtils.assertIsFile(fsView2,
+        fileSystemTestHelper.getTestRootPath(fsView2, "/data/fooBar"));
+    ContractTestUtils
+        .assertIsFile(fsTarget, new Path(targetTestRoot, "data/fooBar"));
+  }
+
   static protected boolean SupportsBlocks = false; //  local fs use 1 block
                                                    // override for HDFS
   @Test
@@ -947,8 +1005,8 @@ abstract public class ViewFileSystemBaseTest {
           + mtPrefix + Constants.CONFIG_VIEWFS_LINK + "." + "/");
     } catch (Exception e) {
       if (e instanceof UnsupportedFileSystemException) {
-        String msg = Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH
-            + " is not supported yet.";
+        String msg = " Use " + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH +
+            " instead";
         assertThat(e.getMessage(), containsString(msg));
       } else {
         fail("Unexpected exception: " + e.getMessage());
@@ -1136,5 +1194,77 @@ abstract public class ViewFileSystemBaseTest {
     assertEquals("Space used not matching between ViewFileSystem and " +
         "the mounted FileSystem!",
         usedSpaceByPathViaTargetFs, usedSpaceByPathViaViewFs);
+  }
+
+  @Test
+  public void testLinkTarget() throws Exception {
+
+    Assume.assumeTrue(fsTarget.supportsSymlinks() &&
+        fsTarget.areSymlinksEnabled());
+
+    // Symbolic link
+    final String targetFileName = "debug.log";
+    final String linkFileName = "debug.link";
+    final Path targetFile = new Path(targetTestRoot, targetFileName);
+    final Path symLink = new Path(targetTestRoot, linkFileName);
+
+    FileSystemTestHelper.createFile(fsTarget, targetFile);
+    fsTarget.createSymlink(targetFile, symLink, false);
+
+    final Path mountTargetRootPath = new Path("/targetRoot");
+    final Path mountTargetSymLinkPath = new Path(mountTargetRootPath,
+        linkFileName);
+    final Path expectedMountLinkTarget = fsTarget.makeQualified(
+        new Path(targetTestRoot, targetFileName));
+    final Path actualMountLinkTarget = fsView.getLinkTarget(
+        mountTargetSymLinkPath);
+
+    assertEquals("Resolved link target path not matching!",
+        expectedMountLinkTarget, actualMountLinkTarget);
+
+    // Relative symbolic link
+    final String relativeFileName = "dir2/../" + targetFileName;
+    final String link2FileName = "dir2/rel.link";
+    final Path relTargetFile = new Path(targetTestRoot, relativeFileName);
+    final Path relativeSymLink = new Path(targetTestRoot, link2FileName);
+    fsTarget.createSymlink(relTargetFile, relativeSymLink, true);
+
+    final Path mountTargetRelativeSymLinkPath = new Path(mountTargetRootPath,
+        link2FileName);
+    final Path expectedMountRelLinkTarget = fsTarget.makeQualified(
+        new Path(targetTestRoot, relativeFileName));
+    final Path actualMountRelLinkTarget = fsView.getLinkTarget(
+        mountTargetRelativeSymLinkPath);
+
+    assertEquals("Resolved relative link target path not matching!",
+        expectedMountRelLinkTarget, actualMountRelLinkTarget);
+
+    try {
+      fsView.getLinkTarget(new Path("/linkToAFile"));
+      fail("Resolving link target for a ViewFs mount link should fail!");
+    } catch (Exception e) {
+      LOG.info("Expected exception: " + e);
+      assertThat(e.getMessage(),
+          containsString("not a symbolic link"));
+    }
+
+    try {
+      fsView.getLinkTarget(fsView.makeQualified(
+          new Path(mountTargetRootPath, targetFileName)));
+      fail("Resolving link target for a non sym link should fail!");
+    } catch (Exception e) {
+      LOG.info("Expected exception: " + e);
+      assertThat(e.getMessage(),
+          containsString("not a symbolic link"));
+    }
+
+    try {
+      fsView.getLinkTarget(new Path("/targetRoot/non-existing-file"));
+      fail("Resolving link target for a non existing link should fail!");
+    } catch (Exception e) {
+      LOG.info("Expected exception: " + e);
+      assertThat(e.getMessage(),
+          containsString("File does not exist:"));
+    }
   }
 }

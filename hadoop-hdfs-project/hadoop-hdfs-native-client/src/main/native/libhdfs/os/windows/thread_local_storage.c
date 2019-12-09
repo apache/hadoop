@@ -19,6 +19,7 @@
 #include "os/thread_local_storage.h"
 
 #include <jni.h>
+#include <malloc.h>
 #include <stdio.h>
 #include <windows.h>
 
@@ -27,16 +28,21 @@ static DWORD gTlsIndex = TLS_OUT_OF_INDEXES;
 
 /**
  * If the current thread has a JNIEnv in thread-local storage, then detaches the
- * current thread from the JVM.
+ * current thread from the JVM and also frees up the ThreadLocalState object.
  */
 static void detachCurrentThreadFromJvm()
 {
+  struct ThreadLocalState *state = NULL;
   JNIEnv *env = NULL;
   JavaVM *vm;
   jint ret;
-  if (threadLocalStorageGet(&env) || !env) {
+  if (threadLocalStorageGet(&state) || !state) {
     return;
   }
+  if (!state->env) {
+    return;
+  }
+  env = state->env;
   ret = (*env)->GetJavaVM(env, &vm);
   if (ret) {
     fprintf(stderr,
@@ -46,6 +52,20 @@ static void detachCurrentThreadFromJvm()
   } else {
     (*vm)->DetachCurrentThread(vm);
   }
+
+  /* Free exception strings */
+  if (state->lastExceptionStackTrace) free(state->lastExceptionStackTrace);
+  if (state->lastExceptionRootCause) free(state->lastExceptionRootCause);
+
+  /* Free the state itself */
+  free(state);
+}
+
+void hdfsThreadDestructor(void *v)
+{
+  // Ignore 'v' since it will contain the state and we will obtain it in the below
+  // call anyway.
+  detachCurrentThreadFromJvm();
 }
 
 /**
@@ -122,7 +142,21 @@ extern const PIMAGE_TLS_CALLBACK pTlsCallback;
 const PIMAGE_TLS_CALLBACK pTlsCallback = tlsCallback;
 #pragma const_seg()
 
-int threadLocalStorageGet(JNIEnv **env)
+struct ThreadLocalState* threadLocalStorageCreate()
+{
+  struct ThreadLocalState *state;
+  state = (struct ThreadLocalState*)malloc(sizeof(struct ThreadLocalState));
+  if (state == NULL) {
+    fprintf(stderr,
+      "threadLocalStorageSet: OOM - Unable to allocate thread local state\n");
+    return NULL;
+  }
+  state->lastExceptionStackTrace = NULL;
+  state->lastExceptionRootCause = NULL;
+  return state;
+}
+
+int threadLocalStorageGet(struct ThreadLocalState **state)
 {
   LPVOID tls;
   DWORD ret;
@@ -137,13 +171,13 @@ int threadLocalStorageGet(JNIEnv **env)
   }
   tls = TlsGetValue(gTlsIndex);
   if (tls) {
-    *env = tls;
+    *state = tls;
     return 0;
   } else {
     ret = GetLastError();
     if (ERROR_SUCCESS == ret) {
       /* Thread-local storage contains NULL, because we haven't set it yet. */
-      *env = NULL;
+      *state = NULL;
       return 0;
     } else {
       /*
@@ -158,15 +192,15 @@ int threadLocalStorageGet(JNIEnv **env)
   }
 }
 
-int threadLocalStorageSet(JNIEnv *env)
+int threadLocalStorageSet(struct ThreadLocalState *state)
 {
   DWORD ret = 0;
-  if (!TlsSetValue(gTlsIndex, (LPVOID)env)) {
+  if (!TlsSetValue(gTlsIndex, (LPVOID)state)) {
     ret = GetLastError();
     fprintf(stderr,
       "threadLocalStorageSet: TlsSetValue failed with error %d\n",
       ret);
-    detachCurrentThreadFromJvm(env);
+    detachCurrentThreadFromJvm(state);
   }
   return ret;
 }

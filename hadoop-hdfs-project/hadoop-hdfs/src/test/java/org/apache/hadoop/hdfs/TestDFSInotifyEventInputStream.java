@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileSystem;
@@ -48,7 +49,7 @@ import java.util.concurrent.TimeUnit;
 public class TestDFSInotifyEventInputStream {
 
   private static final int BLOCK_SIZE = 1024;
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestDFSInotifyEventInputStream.class);
 
   public static EventBatch waitForNextEvents(DFSInotifyEventInputStream eis)
@@ -72,7 +73,7 @@ public class TestDFSInotifyEventInputStream {
    */
   @Test
   public void testOpcodeCount() {
-    Assert.assertEquals(50, FSEditLogOpCodes.values().length);
+    Assert.assertEquals(54, FSEditLogOpCodes.values().length);
   }
 
 
@@ -140,6 +141,7 @@ public class TestDFSInotifyEventInputStream {
       client.rename("/file5", "/dir"); // RenameOldOp -> RenameEvent
       //TruncateOp -> TruncateEvent
       client.truncate("/truncate_file", BLOCK_SIZE);
+      client.create("/file_ec_test1", false);
       EventBatch batch = null;
 
       // RenameOp
@@ -180,6 +182,8 @@ public class TestDFSInotifyEventInputStream {
       Assert.assertTrue(ce.getSymlinkTarget() == null);
       Assert.assertTrue(ce.getOverwrite());
       Assert.assertEquals(BLOCK_SIZE, ce.getDefaultBlockSize());
+      Assert.assertTrue(ce.isErasureCoded().isPresent());
+      Assert.assertFalse(ce.isErasureCoded().get());
       LOG.info(ce.toString());
       Assert.assertTrue(ce.toString().startsWith("CreateEvent [INodeType="));
 
@@ -395,6 +399,25 @@ public class TestDFSInotifyEventInputStream {
       LOG.info(et.toString());
       Assert.assertTrue(et.toString().startsWith("TruncateEvent [path="));
 
+      // CreateEvent without overwrite
+      batch = waitForNextEvents(eis);
+      Assert.assertEquals(1, batch.getEvents().length);
+      txid = checkTxid(batch, txid);
+      Assert.assertTrue(batch.getEvents()[0].getEventType()
+              == Event.EventType.CREATE);
+      ce = (Event.CreateEvent) batch.getEvents()[0];
+      Assert.assertTrue(ce.getiNodeType() == Event.CreateEvent.INodeType.FILE);
+      Assert.assertTrue(ce.getPath().equals("/file_ec_test1"));
+      Assert.assertTrue(ce.getCtime() > 0);
+      Assert.assertTrue(ce.getReplication() > 0);
+      Assert.assertTrue(ce.getSymlinkTarget() == null);
+      Assert.assertFalse(ce.getOverwrite());
+      Assert.assertEquals(BLOCK_SIZE, ce.getDefaultBlockSize());
+      Assert.assertTrue(ce.isErasureCoded().isPresent());
+      Assert.assertFalse(ce.isErasureCoded().get());
+      LOG.info(ce.toString());
+      Assert.assertTrue(ce.toString().startsWith("CreateEvent [INodeType="));
+
       // Returns null when there are no further events
       Assert.assertTrue(eis.poll() == null);
 
@@ -405,6 +428,83 @@ public class TestDFSInotifyEventInputStream {
       // been read to the client during the first poll() call
       Assert.assertTrue(eis.getTxidsBehindEstimate() == eventsBehind);
 
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 120000)
+  public void testErasureCodedFiles() throws Exception {
+    ErasureCodingPolicy ecPolicy = StripedFileTestUtil.getDefaultECPolicy();
+    final int dataUnits = ecPolicy.getNumDataUnits();
+    final int parityUnits = ecPolicy.getNumParityUnits();
+
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, ecPolicy.getCellSize());
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    // so that we can get an atime change
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 1);
+
+    MiniQJMHACluster.Builder builder = new MiniQJMHACluster.Builder(conf);
+    builder.getDfsBuilder().numDataNodes(dataUnits + parityUnits);
+    MiniQJMHACluster cluster = builder.build();
+
+    try {
+      cluster.getDfsCluster().waitActive();
+      cluster.getDfsCluster().transitionToActive(0);
+      DFSClient client = new DFSClient(cluster.getDfsCluster().getNameNode(0)
+              .getNameNodeAddress(), conf);
+      DistributedFileSystem fs =
+              (DistributedFileSystem)cluster.getDfsCluster().getFileSystem(0);
+
+      Path ecDir = new Path("/ecdir");
+      fs.mkdirs(ecDir);
+      fs.setErasureCodingPolicy(ecDir, ecPolicy.getName());
+
+      DFSInotifyEventInputStream eis = client.getInotifyEventStream();
+
+      int sz = ecPolicy.getNumDataUnits() * ecPolicy.getCellSize();
+      byte[] contents = new byte[sz];
+      DFSTestUtil.writeFile(fs, new Path("/ecdir/file_ec_test2"), contents);
+
+      EventBatch batch = null;
+
+      batch = waitForNextEvents(eis);
+      Assert.assertEquals(1, batch.getEvents().length);
+      long txid = batch.getTxid();
+      long eventsBehind = eis.getTxidsBehindEstimate();
+      Assert.assertTrue(batch.getEvents()[0].getEventType()
+              == Event.EventType.CREATE);
+      Event.CreateEvent ce = (Event.CreateEvent) batch.getEvents()[0];
+      Assert.assertTrue(ce.getiNodeType() == Event.CreateEvent.INodeType.FILE);
+      Assert.assertTrue(ce.getPath().equals("/ecdir/file_ec_test2"));
+      Assert.assertTrue(ce.getCtime() > 0);
+      Assert.assertEquals(1, ce.getReplication());
+      Assert.assertTrue(ce.getSymlinkTarget() == null);
+      Assert.assertTrue(ce.getOverwrite());
+      Assert.assertEquals(ecPolicy.getCellSize(), ce.getDefaultBlockSize());
+      Assert.assertTrue(ce.isErasureCoded().isPresent());
+      Assert.assertTrue(ce.isErasureCoded().get());
+      LOG.info(ce.toString());
+      Assert.assertTrue(ce.toString().startsWith("CreateEvent [INodeType="));
+
+      batch = waitForNextEvents(eis);
+      Assert.assertEquals(1, batch.getEvents().length);
+      txid = checkTxid(batch, txid);
+      Assert.assertTrue(batch.getEvents()[0].getEventType()
+              == Event.EventType.CLOSE);
+      Assert.assertTrue(((Event.CloseEvent) batch.getEvents()[0]).getPath()
+              .equals("/ecdir/file_ec_test2"));
+
+      // Returns null when there are no further events
+      Assert.assertTrue(eis.poll() == null);
+
+      // make sure the estimate hasn't changed since the above assertion
+      // tells us that we are fully caught up to the current namesystem state
+      // and we should not have been behind at all when eventsBehind was set
+      // either, since there were few enough events that they should have all
+      // been read to the client during the first poll() call
+      Assert.assertTrue(eis.getTxidsBehindEstimate() == eventsBehind);
     } finally {
       cluster.shutdown();
     }

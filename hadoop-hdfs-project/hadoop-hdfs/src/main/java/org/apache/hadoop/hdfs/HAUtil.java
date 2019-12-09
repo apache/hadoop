@@ -29,7 +29,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY;
-import static org.apache.hadoop.security.SecurityUtil.buildTokenService;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -39,8 +38,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -48,17 +45,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.AbstractNNFailoverProxyProvider;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -67,12 +60,6 @@ import com.google.common.collect.Lists;
 @InterfaceAudience.Private
 public class HAUtil {
   
-  private static final Log LOG = 
-    LogFactory.getLog(HAUtil.class);
-  
-  private static final DelegationTokenSelector tokenSelector =
-      new DelegationTokenSelector();
-
   private static final String[] HA_SPECIAL_INDEPENDENT_KEYS = new String[]{
     DFS_NAMENODE_RPC_ADDRESS_KEY,
     DFS_NAMENODE_RPC_BIND_HOST_KEY,
@@ -97,7 +84,7 @@ public class HAUtil {
    */
   public static boolean isHAEnabled(Configuration conf, String nsId) {
     Map<String, Map<String, InetSocketAddress>> addresses =
-      DFSUtil.getHaNnRpcAddresses(conf);
+        DFSUtilClient.getHaNnRpcAddresses(conf);
     if (addresses == null) return false;
     Map<String, InetSocketAddress> nnMap = addresses.get(nsId);
     return nnMap != null && nnMap.size() > 1;
@@ -160,10 +147,10 @@ public class HAUtil {
   }
   
   /**
-   * Get the NN ID of the other node in an HA setup.
+   * Get the NN ID of the other nodes in an HA setup.
    * 
    * @param conf the configuration of this node
-   * @return the NN ID of the other node in this nameservice
+   * @return a list of NN IDs of other nodes in this nameservice
    */
   public static List<String> getNameNodeIdOfOtherNodes(Configuration conf, String nsId) {
     Preconditions.checkArgument(nsId != null,
@@ -196,26 +183,26 @@ public class HAUtil {
   }
 
   /**
-   * Given the configuration for this node, return a Configuration object for
-   * the other node in an HA setup.
+   * Given the configuration for this node, return a list of configurations
+   * for the other nodes in an HA setup.
    * 
    * @param myConf the configuration of this node
-   * @return the configuration of the other node in an HA setup
+   * @return a list of configuration of other nodes in an HA setup
    */
   public static List<Configuration> getConfForOtherNodes(
       Configuration myConf) {
     
     String nsId = DFSUtil.getNamenodeNameServiceId(myConf);
-    List<String> otherNn = getNameNodeIdOfOtherNodes(myConf, nsId);
+    List<String> otherNodes = getNameNodeIdOfOtherNodes(myConf, nsId);
 
     // Look up the address of the other NNs
-    List<Configuration> confs = new ArrayList<Configuration>(otherNn.size());
+    List<Configuration> confs = new ArrayList<Configuration>(otherNodes.size());
     myConf = new Configuration(myConf);
     // unset independent properties
     for (String idpKey : HA_SPECIAL_INDEPENDENT_KEYS) {
       myConf.unset(idpKey);
     }
-    for (String nn : otherNn) {
+    for (String nn : otherNodes) {
       Configuration confForOtherNode = new Configuration(myConf);
       NameNode.initializeGenericKeys(confForOtherNode, nsId, nn);
       confs.add(confForOtherNode);
@@ -257,47 +244,6 @@ public class HAUtil {
     }
     // Check whether the failover proxy provider uses logical URI.
     return provider.useLogicalURI();
-  }
-
-  /**
-   * Locate a delegation token associated with the given HA cluster URI, and if
-   * one is found, clone it to also represent the underlying namenode address.
-   * @param ugi the UGI to modify
-   * @param haUri the logical URI for the cluster
-   * @param nnAddrs collection of NNs in the cluster to which the token
-   * applies
-   */
-  public static void cloneDelegationTokenForLogicalUri(
-      UserGroupInformation ugi, URI haUri,
-      Collection<InetSocketAddress> nnAddrs) {
-    // this cloning logic is only used by hdfs
-    Text haService = HAUtilClient.buildTokenServiceForLogicalUri(haUri,
-                                                                 HdfsConstants.HDFS_URI_SCHEME);
-    Token<DelegationTokenIdentifier> haToken =
-        tokenSelector.selectToken(haService, ugi.getTokens());
-    if (haToken != null) {
-      for (InetSocketAddress singleNNAddr : nnAddrs) {
-        // this is a minor hack to prevent physical HA tokens from being
-        // exposed to the user via UGI.getCredentials(), otherwise these
-        // cloned tokens may be inadvertently propagated to jobs
-        Token<DelegationTokenIdentifier> specificToken =
-            haToken.privateClone(buildTokenService(singleNNAddr));
-        Text alias = new Text(
-            HAUtilClient.buildTokenServicePrefixForLogicalUri(
-                HdfsConstants.HDFS_URI_SCHEME)
-                + "//" + specificToken.getService());
-        ugi.addToken(alias, specificToken);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Mapped HA service delegation token for logical URI " +
-              haUri + " to namenode " + singleNNAddr);
-        }
-      }
-    } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("No HA service delegation token found for logical URI " +
-            haUri);
-      }
-    }
   }
 
   /**
@@ -380,6 +326,7 @@ public class HAUtil {
    */
   public static boolean isAtLeastOneActive(List<ClientProtocol> namenodes)
       throws IOException {
+    List<IOException> exceptions = new ArrayList<>();
     for (ClientProtocol namenode : namenodes) {
       try {
         namenode.getFileInfo("/");
@@ -389,9 +336,14 @@ public class HAUtil {
         if (cause instanceof StandbyException) {
           // This is expected to happen for a standby NN.
         } else {
-          throw re;
+          exceptions.add(re);
         }
+      } catch (IOException ioe) {
+        exceptions.add(ioe);
       }
+    }
+    if(!exceptions.isEmpty()){
+      throw MultipleIOException.createIOException(exceptions);
     }
     return false;
   }

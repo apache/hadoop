@@ -15,6 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+
 add_definitions(-DLIBHDFS_DLL_EXPORT)
 
 include_directories(
@@ -61,7 +64,7 @@ build_libhdfs_test(test_libhdfs_threaded hdfs_static expect.c test_libhdfs_threa
 link_libhdfs_test(test_libhdfs_threaded hdfs_static native_mini_dfs)
 add_libhdfs_test(test_libhdfs_threaded hdfs_static)
 
-if (NOT WIN32)
+if (NOT WIN32 AND NOT APPLE)
 build_libhdfs_test(test_libhdfs_zerocopy hdfs_static expect.c test_libhdfs_zerocopy.c)
 link_libhdfs_test(test_libhdfs_zerocopy hdfs_static native_mini_dfs ${OS_LINK_LIBRARIES})
 add_libhdfs_test(test_libhdfs_zerocopy hdfs_static)
@@ -71,9 +74,11 @@ endif()
 # introducing an abstraction layer over the sys/mman.h functions.
 if(NOT WIN32)
     build_libhdfs_test(test_libhdfs_vecsum hdfs vecsum.c)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+    find_package(Threads REQUIRED)
     if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
-        link_libhdfs_test(test_libhdfs_vecsum hdfs pthread)
+        link_libhdfs_test(test_libhdfs_vecsum hdfs ${CMAKE_THREAD_LIBS_INIT})
     else()
-        link_libhdfs_test(test_libhdfs_vecsum hdfs pthread rt)
+        link_libhdfs_test(test_libhdfs_vecsum hdfs ${CMAKE_THREAD_LIBS_INIT} rt)
     endif()
 endif()

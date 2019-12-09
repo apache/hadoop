@@ -20,7 +20,7 @@
 
 <div class="col-md-12 container-fluid">
   <div class="row">
-    {{node-menu-panel path="yarn-node-containers" nodeAddr=model.nodeInfo.addr nodeId=model.nodeInfo.id}}
+    {{node-menu-panel path="yarn-node-containers" nodeAddr=model.nodeInfo.addr nodeId=model.nodeInfo.id nmGpuInfo=model.nmGpuInfo}}
     {{#if model.containers}}
     <div class="col-md-10 container-fluid">
       <table id="node-containers-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">
@@ -36,12 +36,12 @@
           {{#if model.containers}}
             {{#each model.containers as |container|}}
                 <tr>
-                  <td><a href="#/yarn-node-container/{{model.nodeInfo.id}}/{{model.nodeInfo.addr}}/{{container.containerId}}">{{container.containerId}}</a></td>
+                  <td><a href="#/yarn-node-container/{{model.nodeInfo.id}}/{{encodedNodeAddr}}/{{container.containerId}}">{{container.containerId}}</a></td>
                   <td><span class={{container.containerStateStyle}}>{{container.state}}</span></td>
                   <td>{{container.user}}</td>
                   <td>
                     {{log-files-comma nodeId=model.nodeInfo.id
-                        nodeAddr=model.nodeInfo.addr
+                        nodeAddr=encodedNodeAddr
                         containerId=container.containerId
                         logFiles=container.containerLogFiles}}
                   </td>

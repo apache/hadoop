@@ -15,18 +15,7 @@
 YARN Node Labels
 ===============
 
-* [Overview](#Overview)
-* [Features](#Features)
-* [Configuration](#Configuration)
-    * [Setting up ResourceManager to enable Node Labels](#Setting_up_ResourceManager_to_enable_Node_Labels)
-    * [Add/modify node labels list to YARN](#Add/modify_node_labels_list_to_YARN)
-    * [Add/modify node-to-labels mapping to YARN](#Add/modify_node-to-labels_mapping_to_YARN)
-    * [Configuration of Schedulers for node labels](#Configuration_of_Schedulers_for_node_labels)
-* [Specifying node label for application](#Specifying_node_label_for_application)
-* [Monitoring](#Monitoring)
-    * [Monitoring through web UI](#Monitoring_through_web_UI)
-    * [Monitoring through commandline](#Monitoring_through_commandline)
-* [Useful links](#Useful_links)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------
@@ -85,6 +74,13 @@ Notes:
     * Executing ```yarn rmadmin -addToClusterNodeLabels "label_1(exclusive=true/false),label_2(exclusive=true/false)"``` to add node label.
     * If user don’t specify “(exclusive=…)”, exclusive will be ```true``` by default.
     * Run ```yarn cluster --list-node-labels``` to check added node labels are visible in the cluster.
+
+###Remove node labels from YARN
+
+* Remove cluster node labels:
+    * To remove one or more node labels, execute the following command: ```yarn rmadmin -removeFromClusterNodeLabels "<label>[,<label>,...]"```. The command argument should be a comma-separated list of node labels to remove.
+    * It is not allowed to remove a label which has been associated with queues, i.e., one or more queues have access to this label.
+    * To verify if specified node labels have been successfully removed, run ```yarn cluster --list-node-labels```.
 
 ###Add/modify node-to-labels mapping to YARN
 

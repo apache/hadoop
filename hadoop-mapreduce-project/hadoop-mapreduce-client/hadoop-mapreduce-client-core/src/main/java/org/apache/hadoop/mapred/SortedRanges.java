@@ -25,9 +25,9 @@ import java.util.Iterator;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Writable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Keeps the Ranges sorted by startIndex.
@@ -37,8 +37,8 @@ import org.apache.hadoop.io.Writable;
  */
 class SortedRanges implements Writable{
   
-  private static final Log LOG = 
-    LogFactory.getLog(SortedRanges.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SortedRanges.class);
   
   private TreeSet<Range> ranges = new TreeSet<Range>();
   private long indicesCount;

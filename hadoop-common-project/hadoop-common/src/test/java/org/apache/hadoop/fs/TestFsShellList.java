@@ -75,4 +75,18 @@ public class TestFsShellList {
     lsArgv = new String[]{"-ls", "-q", testRootDir.toString()};
     assertThat(shell.run(lsArgv), is(0));
   }
+
+  /*
+  UGI params should take effect when we pass.
+ */
+  @Test(expected = IllegalArgumentException.class)
+  public void testListWithUGI() throws Exception {
+    FsShell fsShell = new FsShell(new Configuration());
+    //Passing Dummy such that it should through IAE
+    fsShell.getConf()
+        .set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+            "DUMMYAUTH");
+    String[] lsArgv = new String[] {"-ls", testRootDir.toString()};
+    fsShell.run(lsArgv);
+  }
 }

@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!--
+  Do not modify this file directly.  Instead, copy entries that you wish to
+  modify from this file into kms-site.xml and change them there.  If
+  kms-site.xml does not already exist, create it.
+-->
+
+<configuration>
+
+  <property>
+    <name>hadoop.kms.http.port</name>
+    <value>9600</value>
+    <description>
+      The HTTP port for KMS REST API.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.http.host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The bind host for KMS REST API.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.http.administrators</name>
+    <value></value>
+    <description>ACL for the admins, this configuration is used to control
+      who can access the default KMS servlets. The value should be a comma
+      separated list of users and groups. The user list comes first and is
+      separated by a space followed by the group list,
+      e.g. "user1,user2 group1,group2". Both users and groups are optional,
+      so "user1", " group1", "", "user1 group1", "user1,user2 group1,group2"
+      are all valid (note the leading space in " group1"). '*' grants access
+      to all users and groups, e.g. '*', '* ' and ' *' are all valid.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.ssl.enabled</name>
+    <value>false</value>
+    <description>
+      Whether SSL is enabled. Default is false, i.e. disabled.
+    </description>
+  </property>
+
+  <!-- HTTP properties -->
+
+  <property>
+    <name>hadoop.http.max.threads</name>
+    <value>1000</value>
+    <description>
+      The maxmimum number of threads.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.http.max.request.header.size</name>
+    <value>65536</value>
+    <description>
+      The maxmimum HTTP request header size.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.http.max.response.header.size</name>
+    <value>65536</value>
+    <description>
+      The maxmimum HTTP response header size.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.http.temp.dir</name>
+    <value>${hadoop.tmp.dir}/kms</value>
+    <description>
+      KMS temp directory.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.http.socket.backlog.size</name>
+    <value>500</value>
+    <description>
+      KMS Server accept queue size.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.http.idle_timeout.ms</name>
+    <value>1000</value>
+    <description>
+      KMS Server connection timeout in milliseconds.
+    </description>
+  </property>
+  <!-- KMS Backend KeyProvider -->
+
+  <property>
+    <name>hadoop.kms.key.provider.uri</name>
+    <value>jceks://file@/${user.home}/kms.keystore</value>
+    <description>
+      URI of the backing KeyProvider for the KMS.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.security.keystore.java-keystore-provider.password-file</name>
+    <value></value>
+    <description>
+      If using the JavaKeyStoreProvider, the file name for the keystore password.
+    </description>
+  </property>
+
+  <!-- KMS Cache -->
+
+  <property>
+    <name>hadoop.kms.cache.enable</name>
+    <value>true</value>
+    <description>
+      Whether the KMS will act as a cache for the backing KeyProvider.
+      When the cache is enabled, operations like getKeyVersion, getMetadata,
+      and getCurrentKey will sometimes return cached data without consulting
+      the backing KeyProvider. Cached values are flushed when keys are deleted
+      or modified.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.cache.timeout.ms</name>
+    <value>600000</value>
+    <description>
+      Expiry time for the KMS key version and key metadata cache, in
+      milliseconds. This affects getKeyVersion and getMetadata.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.current.key.cache.timeout.ms</name>
+    <value>30000</value>
+    <description>
+      Expiry time for the KMS current key cache, in milliseconds. This
+      affects getCurrentKey operations.
+    </description>
+  </property>
+
+  <!-- KMS Audit -->
+
+  <property>
+    <name>hadoop.kms.audit.aggregation.window.ms</name>
+    <value>10000</value>
+    <description>
+      Duplicate audit log events within the aggregation window (specified in
+      ms) are quashed to reduce log traffic. A single message for aggregated
+      events is printed at the end of the window, along with a count of the
+      number of aggregated events.
+    </description>
+  </property>
+
+  <!-- KMS Security -->
+
+  <property>
+    <name>hadoop.kms.authentication.type</name>
+    <value>simple</value>
+    <description>
+      Authentication type for the KMS. Can be either 'simple' (default) or
+      'kerberos'.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.authentication.kerberos.keytab</name>
+    <value>${user.home}/kms.keytab</value>
+    <description>
+      Path to the keytab with credentials for the configured Kerberos principal.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.authentication.kerberos.principal</name>
+    <value>HTTP/localhost</value>
+    <description>
+      The Kerberos principal to use for the HTTP endpoint.
+      The principal must start with 'HTTP/' as per the Kerberos HTTP SPNEGO specification.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.authentication.kerberos.name.rules</name>
+    <value>DEFAULT</value>
+    <description>
+      Rules used to resolve Kerberos principal names.
+    </description>
+  </property>
+
+  <!-- Authentication cookie signature source -->
+
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider</name>
+    <value>random</value>
+    <description>
+      Indicates how the secret to sign the authentication cookies will be
+      stored. Options are 'random' (default), 'string' and 'zookeeper'.
+      If using a setup with multiple KMS instances, 'zookeeper' should be used.
+    </description>
+  </property>
+
+  <!-- Configuration for 'zookeeper' authentication cookie signature source -->
+
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.path</name>
+    <value>/hadoop-kms/hadoop-auth-signature-secret</value>
+    <description>
+      The Zookeeper ZNode path where the KMS instances will store and retrieve
+      the secret from.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.connection.string</name>
+    <value>#HOSTNAME#:#PORT#,...</value>
+    <description>
+      The Zookeeper connection string, a list of hostnames and port comma
+      separated.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.auth.type</name>
+    <value>none</value>
+    <description>
+      The Zookeeper authentication type, 'none' (default) or 'sasl' (Kerberos).
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.kerberos.keytab</name>
+    <value>/etc/hadoop/conf/kms.keytab</value>
+    <description>
+      The absolute path for the Kerberos keytab with the credentials to
+      connect to Zookeeper.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.kerberos.principal</name>
+    <value>kms/#HOSTNAME#</value>
+    <description>
+      The Kerberos service principal used to connect to Zookeeper.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.audit.logger</name>
+    <value>org.apache.hadoop.crypto.key.kms.server.SimpleKMSAuditLogger</value>
+    <description>
+      The audit logger for KMS. It is a comma-separated list of KMSAuditLogger
+      class names. Default is the text-format SimpleKMSAuditLogger only.
+      If this is not configured, default will be used.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.key.authorization.enable</name>
+    <value>true</value>
+    <description>Boolean property to Enable/Disable per Key authorization</description>
+  </property>
+
+  <property>
+    <name>hadoop.security.kms.encrypted.key.cache.size</name>
+    <value>100</value>
+    <description>The size of the cache. This is the maximum number of EEKs that
+      can be cached under each key name.</description>
+  </property>
+
+  <property>
+    <name>hadoop.security.kms.encrypted.key.cache.low.watermark</name>
+    <value>0.3</value>
+    <description>A low watermark on the cache. For each key name, if after a get call,
+      the number of cached EEKs are less than (size * low watermark),
+      then the cache under this key name will be filled asynchronously.
+      For each key name, only 1 thread could be running for the asynchronous filling.</description>
+  </property>
+
+  <property>
+    <name>hadoop.security.kms.encrypted.key.cache.num.fill.threads</name>
+    <value>2</value>
+    <description>The maximum number of asynchronous threads overall, across key names,
+      allowed to fill the queue in a cache.</description>
+  </property>
+
+  <property>
+    <name>hadoop.security.kms.encrypted.key.cache.expiry</name>
+    <value>43200000</value>
+    <description>The cache expiry time, in milliseconds. Internally Guava cache is used as the cache implementation.
+      The expiry approach is expireAfterAccess</description>
+  </property>
+</configuration>

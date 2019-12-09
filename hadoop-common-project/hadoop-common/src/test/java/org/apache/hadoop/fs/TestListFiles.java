@@ -24,18 +24,18 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 
 import static org.junit.Assert.*;
 import org.junit.Test;
 import org.junit.BeforeClass;
+import org.slf4j.event.Level;
 
 /**
  * This class tests the FileStatus API.
  */
 public class TestListFiles {
   static {
-    GenericTestUtils.setLogLevel(FileSystem.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FileSystem.LOG, Level.TRACE);
   }
 
   static final long seed = 0xDEADBEEFL;

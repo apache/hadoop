@@ -14,4 +14,3 @@
 # limitations under the License.
 
 org.apache.hadoop.fs.s3native.NativeS3FileSystem
-org.apache.hadoop.fs.s3a.S3AFileSystem

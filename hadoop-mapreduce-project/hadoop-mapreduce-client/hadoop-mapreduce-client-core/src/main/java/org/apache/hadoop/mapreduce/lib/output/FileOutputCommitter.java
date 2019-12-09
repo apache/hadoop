@@ -21,8 +21,6 @@ package org.apache.hadoop.mapreduce.lib.output;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -39,14 +37,19 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Progressable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** An {@link OutputCommitter} that commits files specified 
  * in job output directory i.e. ${mapreduce.output.fileoutputformat.outputdir}.
  **/
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class FileOutputCommitter extends OutputCommitter {
-  private static final Log LOG = LogFactory.getLog(FileOutputCommitter.class);
+public class FileOutputCommitter extends PathOutputCommitter {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FileOutputCommitter.class);
 
   /** 
    * Name of directory where pending data is placed.  Data that has not been
@@ -85,6 +88,17 @@ public class FileOutputCommitter extends OutputCommitter {
   // default value to be 1 to keep consistent with previous behavior
   public static final int FILEOUTPUTCOMMITTER_FAILURE_ATTEMPTS_DEFAULT = 1;
 
+  // Whether tasks should delete their task temporary directories. This is
+  // purely an optimization for filesystems without O(1) recursive delete, as
+  // commitJob will recursively delete the entire job temporary directory.
+  // HDFS has O(1) recursive delete, so this parameter is left false by default.
+  // Users of object stores, for example, may want to set this to true. Note:
+  // this is only used if mapreduce.fileoutputcommitter.algorithm.version=2
+  public static final String FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED =
+      "mapreduce.fileoutputcommitter.task.cleanup.enabled";
+  public static final boolean
+      FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED_DEFAULT = false;
+
   private Path outputPath = null;
   private Path workPath = null;
   private final int algorithmVersion;
@@ -101,8 +115,11 @@ public class FileOutputCommitter extends OutputCommitter {
   public FileOutputCommitter(Path outputPath, 
                              TaskAttemptContext context) throws IOException {
     this(outputPath, (JobContext)context);
-    if (outputPath != null) {
-      workPath = getTaskAttemptPath(context, outputPath);
+    if (getOutputPath() != null) {
+      workPath = Preconditions.checkNotNull(
+          getTaskAttemptPath(context, getOutputPath()),
+          "Null task attempt path in %s and output path %s",
+          context, outputPath);
     }
   }
   
@@ -116,6 +133,7 @@ public class FileOutputCommitter extends OutputCommitter {
   @Private
   public FileOutputCommitter(Path outputPath, 
                              JobContext context) throws IOException {
+    super(outputPath, context);
     Configuration conf = context.getConfiguration();
     algorithmVersion =
         conf.getInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
@@ -149,17 +167,11 @@ public class FileOutputCommitter extends OutputCommitter {
    * @return the path where final output of the job should be placed.  This
    * could also be considered the committed application attempt path.
    */
-  private Path getOutputPath() {
+  @Override
+  public Path getOutputPath() {
     return this.outputPath;
   }
-  
-  /**
-   * @return true if we have an output path set, else false.
-   */
-  private boolean hasOutputPath() {
-    return this.outputPath != null;
-  }
-  
+
   /**
    * @return the path where the output of pending job attempts are
    * stored.
@@ -389,7 +401,7 @@ public class FileOutputCommitter extends OutputCommitter {
 
       if (algorithmVersion == 1) {
         for (FileStatus stat: getAllCommittedTaskPaths(context)) {
-          mergePaths(fs, stat, finalOutput);
+          mergePaths(fs, stat, finalOutput, context);
         }
       }
 
@@ -440,10 +452,11 @@ public class FileOutputCommitter extends OutputCommitter {
    * @throws IOException on any error
    */
   private void mergePaths(FileSystem fs, final FileStatus from,
-      final Path to) throws IOException {
+      final Path to, JobContext context) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Merging data from " + from + " to " + to);
     }
+    reportProgress(context);
     FileStatus toStat;
     try {
       toStat = fs.getFileStatus(to);
@@ -467,22 +480,28 @@ public class FileOutputCommitter extends OutputCommitter {
           if (!fs.delete(to, true)) {
             throw new IOException("Failed to delete " + to);
           }
-          renameOrMerge(fs, from, to);
+          renameOrMerge(fs, from, to, context);
         } else {
           //It is a directory so merge everything in the directories
           for (FileStatus subFrom : fs.listStatus(from.getPath())) {
             Path subTo = new Path(to, subFrom.getPath().getName());
-            mergePaths(fs, subFrom, subTo);
+            mergePaths(fs, subFrom, subTo, context);
           }
         }
       } else {
-        renameOrMerge(fs, from, to);
+        renameOrMerge(fs, from, to, context);
       }
     }
   }
 
-  private void renameOrMerge(FileSystem fs, FileStatus from, Path to)
-      throws IOException {
+  private void reportProgress(JobContext context) {
+    if (context instanceof Progressable) {
+      ((Progressable) context).progress();
+    }
+  }
+
+  private void renameOrMerge(FileSystem fs, FileStatus from, Path to,
+      JobContext context) throws IOException {
     if (algorithmVersion == 1) {
       if (!fs.rename(from.getPath(), to)) {
         throw new IOException("Failed to rename " + from + " to " + to);
@@ -491,7 +510,7 @@ public class FileOutputCommitter extends OutputCommitter {
       fs.mkdirs(to);
       for (FileStatus subFrom : fs.listStatus(from.getPath())) {
         Path subTo = new Path(to, subFrom.getPath().getName());
-        mergePaths(fs, subFrom, subTo);
+        mergePaths(fs, subFrom, subTo, context);
       }
     }
   }
@@ -583,9 +602,20 @@ public class FileOutputCommitter extends OutputCommitter {
               committedTaskPath);
         } else {
           // directly merge everything from taskAttemptPath to output directory
-          mergePaths(fs, taskAttemptDirStatus, outputPath);
+          mergePaths(fs, taskAttemptDirStatus, outputPath, context);
           LOG.info("Saved output of task '" + attemptId + "' to " +
               outputPath);
+
+          if (context.getConfiguration().getBoolean(
+              FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED,
+              FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED_DEFAULT)) {
+            LOG.debug(String.format(
+                "Deleting the temporary directory of '%s': '%s'",
+                attemptId, taskAttemptPath));
+            if(!fs.delete(taskAttemptPath, true)) {
+              LOG.warn("Could not delete " + taskAttemptPath);
+            }
+          }
         }
       } else {
         LOG.warn("No Output found for " + attemptId);
@@ -696,7 +726,7 @@ public class FileOutputCommitter extends OutputCommitter {
           FileStatus from = fs.getFileStatus(previousCommittedTaskPath);
           LOG.info("Recovering task for upgrading scenario, moving files from "
               + previousCommittedTaskPath + " to " + outputPath);
-          mergePaths(fs, from, outputPath);
+          mergePaths(fs, from, outputPath, context);
         } catch (FileNotFoundException ignored) {
         }
         LOG.info("Done recovering task " + attemptId);
@@ -704,5 +734,19 @@ public class FileOutputCommitter extends OutputCommitter {
     } else {
       LOG.warn("Output Path is null in recoverTask()");
     }
+  }
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "FileOutputCommitter{");
+    sb.append(super.toString()).append("; ");
+    sb.append("outputPath=").append(outputPath);
+    sb.append(", workPath=").append(workPath);
+    sb.append(", algorithmVersion=").append(algorithmVersion);
+    sb.append(", skipCleanup=").append(skipCleanup);
+    sb.append(", ignoreCleanupFailures=").append(ignoreCleanupFailures);
+    sb.append('}');
+    return sb.toString();
   }
 }

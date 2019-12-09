@@ -19,18 +19,19 @@ package org.apache.hadoop.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import junit.framework.Assert;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.junit.Assert;
 import org.apache.hadoop.util.FindClass;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test the find class logic
  */
 public class TestFindClass extends Assert {
-  private static final Log LOG = LogFactory.getLog(TestFindClass.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFindClass.class);
 
   public static final String LOG4J_PROPERTIES = "log4j.properties";
 

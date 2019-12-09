@@ -45,8 +45,6 @@ import javax.security.sasl.SaslServer;
 import javax.security.sasl.SaslServerFactory;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -57,6 +55,8 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A utility class for dealing with SASL on RPC server
@@ -64,11 +64,11 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class SaslRpcServer {
-  public static final Log LOG = LogFactory.getLog(SaslRpcServer.class);
+  public static final Logger LOG = LoggerFactory.getLogger(SaslRpcServer.class);
   public static final String SASL_DEFAULT_REALM = "default";
   private static SaslServerFactory saslFactory;
 
-  public static enum QualityOfProtection {
+  public enum QualityOfProtection {
     AUTHENTICATION("auth"),
     INTEGRITY("auth-int"),
     PRIVACY("auth-conf");
@@ -218,7 +218,7 @@ public class SaslRpcServer {
 
   /** Authentication method */
   @InterfaceStability.Evolving
-  public static enum AuthMethod {
+  public enum AuthMethod {
     SIMPLE((byte) 80, ""),
     KERBEROS((byte) 81, "GSSAPI"),
     @Deprecated

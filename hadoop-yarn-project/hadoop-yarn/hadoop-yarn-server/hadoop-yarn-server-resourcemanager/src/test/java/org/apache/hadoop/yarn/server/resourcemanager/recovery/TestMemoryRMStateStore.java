@@ -43,6 +43,7 @@ public class TestMemoryRMStateStore {
     store.init(conf);
     ResourceManager mockRM = mock(ResourceManager.class);
     store.setResourceManager(mockRM);
+    store.setRMDispatcher(new RMStateStoreTestBase.TestDispatcher());
     RMDelegationTokenIdentifier mockTokenId =
         mock(RMDelegationTokenIdentifier.class);
     store.removeRMDelegationToken(mockTokenId);
@@ -58,6 +59,7 @@ public class TestMemoryRMStateStore {
     };
     store.init(conf);
     store.setResourceManager(mockRM);
+    store.setRMDispatcher(new RMStateStoreTestBase.TestDispatcher());
     store.removeRMDelegationToken(mockTokenId);
     assertTrue("RMStateStore should have been in fenced state",
         store.isFencedState());

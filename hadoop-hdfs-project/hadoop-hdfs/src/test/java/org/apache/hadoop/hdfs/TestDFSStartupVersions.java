@@ -24,8 +24,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
@@ -41,7 +41,7 @@ import org.junit.Test;
  */
 public class TestDFSStartupVersions {
   
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
                                                    "org.apache.hadoop.hdfs.TestDFSStartupVersions");
   private MiniDFSCluster cluster = null;
   
@@ -265,7 +265,7 @@ public class TestDFSStartupVersions {
           conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY), "current");
       log("DataNode version info", DATA_NODE, i, versions[i]);
       UpgradeUtilities.createDataNodeVersionFile(storage,
-          versions[i].storageInfo, bpid, versions[i].blockPoolId);
+          versions[i].storageInfo, bpid, versions[i].blockPoolId, conf);
       try {
         cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
       } catch (Exception ignore) {

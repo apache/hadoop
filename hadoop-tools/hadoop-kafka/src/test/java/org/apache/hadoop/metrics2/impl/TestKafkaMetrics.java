@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.metrics2.impl;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.metrics2.AbstractMetric;
@@ -40,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.StringJoiner;
 import java.util.concurrent.Future;
 
 import static org.junit.Assert.assertEquals;
@@ -74,8 +74,10 @@ public class TestKafkaMetrics {
 
     @Override
     public String toString() {
-      return Objects.toStringHelper(this).add("name", name())
-          .add("description", desc).toString();
+      return new StringJoiner(", ", this.getClass().getSimpleName() + "{", "}")
+          .add("name=" + name())
+          .add("description=" + desc)
+          .toString();
     }
   }
 
@@ -155,7 +157,7 @@ public class TestKafkaMetrics {
     Date currDate = new Date(timestamp);
     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     String date = dateFormat.format(currDate);
-    SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm:ss");
+    SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
     String time = timeFormat.format(currDate);
     String hostname = new String("null");
     try {

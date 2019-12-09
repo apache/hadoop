@@ -18,8 +18,8 @@
 -->
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<meta http-equiv="X-UA-Compatible" content="IE=9" />
-<link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap.min.css" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<link rel="stylesheet" type="text/css" href="/static/bootstrap-3.3.7/css/bootstrap.min.css" />
 <link rel="stylesheet" type="text/css" href="/static/dataTables.bootstrap.css" />
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
 <title>Namenode information</title>
@@ -43,6 +43,10 @@
       <ul class="dropdown-menu">
         <li><a href="explorer.html">Browse the file system</a></li>
         <li><a href="logs">Logs</a></li>
+        <li><a href="logLevel">Log Level</a></li>
+        <li><a href="jmx">Metrics</a></li>
+        <li><a href="conf">Configuration</a></li>
+        <li><a href="stacks">Process Thread Dump</a></li>
       </ul>
     </li>
   </ul>
@@ -147,21 +151,22 @@
 
 <p>
   {#fs}
-  {FilesTotal|fmt_number} files and directories, {BlocksTotal|fmt_number} blocks = {ObjectsTotal|fmt_number} total filesystem object(s).
+  {FilesTotal|fmt_number} files and directories, {BlocksTotal|fmt_number} blocks ({#replicastat}{TotalReplicatedBlocks|fmt_number}{/replicastat} replicated blocks, {#ecstat}{TotalECBlockGroups|fmt_number}{/ecstat} erasure coded block groups) = {ObjectsTotal|fmt_number} total filesystem object(s).
   {#helper_fs_max_objects/}
   {/fs}
 </p>
 {#mem.HeapMemoryUsage}
-<p>Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Heap Memory. Max Heap Memory is {@eq key=max value="-1" type="number"}&ltunbonded&gt{:else}{max|fmt_bytes}{/eq}.</p>
+<p>Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Heap Memory. Max Heap Memory is {@eq key=max value="-1" type="number"}&ltunbounded&gt{:else}{max|fmt_bytes}{/eq}.</p>
 {/mem.HeapMemoryUsage}
 
 {#mem.NonHeapMemoryUsage}
-<p>Non Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Commited Non Heap Memory. Max Non Heap Memory is {@eq key=max value="-1" type="number"}&ltunbonded&gt{:else}{max|fmt_bytes}{/eq}.</p>
+<p>Non Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Commited Non Heap Memory. Max Non Heap Memory is {@eq key=max value="-1" type="number"}&ltunbounded&gt{:else}{max|fmt_bytes}{/eq}.</p>
 {/mem.NonHeapMemoryUsage}
 
 {#nn}
 <table class="table table-bordered table-striped">
   <tr><th> Configured Capacity:</th><td>{Total|fmt_bytes}</td></tr>
+  <tr><th> Configured Remote Capacity:</th><td>{ProvidedCapacity|fmt_bytes}</td></tr>
   <tr><th> DFS Used:</th><td>{Used|fmt_bytes} ({PercentUsed|fmt_percentage})</td></tr>
   <tr><th> Non DFS Used:</th><td>{NonDfsUsedSpace|fmt_bytes}</td></tr>
   <tr><th> DFS Remaining:</th><td>{Free|fmt_bytes} ({PercentRemaining|fmt_percentage})</td></tr>
@@ -171,20 +176,23 @@
 {/nn}
 
 {#fs}
-  <tr><th><a href="#tab-datanode">Live Nodes</a></th><td>{NumLiveDataNodes} (Decommissioned: {NumDecomLiveDataNodes})</td></tr>
-  <tr><th><a href="#tab-datanode">Dead Nodes</a></th><td>{NumDeadDataNodes} (Decommissioned: {NumDecomDeadDataNodes})</td></tr>
+  <tr><th><a href="#tab-datanode">Live Nodes</a></th><td>{NumLiveDataNodes} (Decommissioned: {NumDecomLiveDataNodes}, In Maintenance: {NumInMaintenanceLiveDataNodes})</td></tr>
+  <tr><th><a href="#tab-datanode">Dead Nodes</a></th><td>{NumDeadDataNodes} (Decommissioned: {NumDecomDeadDataNodes}, In Maintenance: {NumInMaintenanceDeadDataNodes})</td></tr>
   <tr><th><a href="#tab-datanode">Decommissioning Nodes</a></th><td>{NumDecommissioningDataNodes}</td></tr>
+  <tr><th><a href="#tab-datanode">Entering Maintenance Nodes</a></th><td> {NumEnteringMaintenanceDataNodes}</td></tr>
   <tr><th><a href="#tab-datanode-volume-failures">Total Datanode Volume Failures</a></th><td>{VolumeFailuresTotal} ({EstimatedCapacityLostTotal|fmt_bytes})</td></tr>
   {@eq key=nnstat.State value="active"}
     <tr><th title="Excludes missing blocks.">Number of Under-Replicated Blocks</th><td>{UnderReplicatedBlocks}</td></tr>
-    <tr><th>Number of Blocks Pending Deletion</th><td>{PendingDeletionBlocks}</td></tr>
+    <tr><th>Number of Blocks Pending Deletion (including replicas)</th><td>{PendingDeletionBlocks}</td></tr>
   {/eq}
   <tr><th>Block Deletion Start Time</th><td>{BlockDeletionStartTime|date_tostring}</td></tr>
 {/fs}
-
 {#fsn}
   <tr><th>Last Checkpoint Time</th><td>{@if cond="{LastCheckpointTime} === 0"}Never{:else}{LastCheckpointTime|date_tostring}{/if}</td></tr>
 {/fsn}
+{#ecstat}
+  <tr><th>Enabled Erasure Coding Policies</th><td>{EnabledEcPolicies}</td></tr>
+{/ecstat}
 </table>
 
 <div class="page-header"><h1>NameNode Journal Status</h1></div>
@@ -293,10 +301,18 @@
   <ul class="dfshealth-node-legend">
     <li class="dfshealth-node-icon dfshealth-node-alive">In service</li>
     <li class="dfshealth-node-icon dfshealth-node-down">Down</li>
+    <li class="dfshealth-node-icon dfshealth-node-decommissioning">Decommissioning</li>
     <li class="dfshealth-node-icon dfshealth-node-decommissioned">Decommissioned</li>
     <li class="dfshealth-node-icon dfshealth-node-down-decommissioned">Decommissioned &amp; dead</li>
   </ul>
+  <ul class="dfshealth-node-legend">
+    <li class="dfshealth-node-icon dfshealth-node-entering-maintenance">Entering Maintenance</li>
+    <li class="dfshealth-node-icon dfshealth-node-in-maintenance">In Maintenance</li>
+    <li class="dfshealth-node-icon dfshealth-node-down-maintenance">In Maintenance &amp; dead</li>
+  </ul>
 </div>
+<div class="page-header"><h1><small>Datanode usage histogram</small></h1></div>
+<small><div id="datanode-usage-histogram"></div></small>
 <div class="page-header"><h1><small>In operation</small></h1></div>
 <small>
 <table class="table" id="table-datanodes">
@@ -305,6 +321,7 @@
       <th>Node</th>
       <th>Http Address</th>
       <th>Last contact</th>
+      <th>Last Block Report</th>
       <th style="width:180px; text-align:center">Capacity</th>
       <th>Blocks</th>
       <th>Block pool used</th>
@@ -314,8 +331,9 @@
   {#LiveNodes}
   <tr>
     <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{name} ({xferaddr})</td>
-    <td ng-value="{state}-{name}"><a href='//{dnWebAddress}'>{dnWebAddress}</a></td>
+    <td ng-value="{state}-{name}"><a href='{dnWebAddress}'>{dnWebAddress}</a></td>
     <td ng-value="{lastContact}">{lastContact}s</td>
+    <td ng-value="{lastBlockReport}">{lastBlockReport}m</td>
     <td ng-value="{usedPercentage}">
       <div>
         <div style="display:inline-block; float: left; padding-right: 10px;">{capacity|fmt_bytes}</div>
@@ -342,6 +360,32 @@
   </tr>
   {/DeadNodes}
 </table>
+</small>
+
+<div class="page-header"><h1><small>Entering Maintenance</small></h1></div>
+<small>
+  {?EnteringMaintenanceNodes}
+  <table class="table">
+    <thead>
+    <tr>
+      <th>Node</th>
+      <th>Under replicated blocks</th>
+      <th>Blocks with no live replicas</th>
+      <th>Under Replicated Blocks <br/>In files under construction</th>
+    </tr>
+    </thead>
+    {#EnteringMaintenanceNodes}
+    <tr>
+      <td>{name} ({xferaddr})</td>
+      <td>{underReplicatedBlocks}</td>
+      <td>{maintenanceOnlyReplicas}</td>
+      <td>{underReplicateInOpenFiles}</td>
+    </tr>
+    {/EnteringMaintenanceNodes}
+  </table>
+  {:else}
+  No nodes are entering maintenance.
+  {/EnteringMaintenanceNodes}
 </small>
 
 <div class="page-header"><h1><small>Decommissioning</small></h1></div>
@@ -391,7 +435,7 @@ No nodes are decommissioning
     <td>{#helper_date_tostring value="{lastVolumeFailureDate}"/}</td>
     <td>{volfails}</td>
     <td>{estimatedCapacityLostTotal|fmt_bytes}</td>
-    <td>{#failedStorageLocations}{.}{@sep}<br />{/sep}{/failedStorageLocations}</td>
+    <td>{#failedStorageIDs}{.}{@sep}<br />{/sep}{/failedStorageIDs}</td>
   </tr>
   {/LiveNodes}
 </table>
@@ -431,14 +475,15 @@ There are no reported volume failures.
 </table>
 </script>
 
-<script type="text/javascript" src="/static/jquery-1.10.2.min.js">
+<script type="text/javascript" src="/static/jquery-3.3.1.min.js">
 </script><script type="text/javascript" src="/static/jquery.dataTables.min.js">
-</script><script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap.min.js">
+</script><script type="text/javascript" src="/static/bootstrap-3.3.7/js/bootstrap.min.js">
 </script><script type="text/javascript" src="/static/dataTables.bootstrap.js">
 </script><script type="text/javascript" src="/static/moment.min.js">
 </script><script type="text/javascript" src="/static/dust-full-2.0.0.min.js">
 </script><script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js">
 </script><script type="text/javascript" src="/static/dfs-dust.js">
+</script><script type="text/javascript" src="/static/d3-v4.1.1.min.js">
 </script><script type="text/javascript" src="dfshealth.js">
 </script>
 </body>

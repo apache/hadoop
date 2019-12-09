@@ -20,6 +20,8 @@ package org.apache.hadoop.io.retry;
 
 import java.io.IOException;
 
+import javax.security.sasl.SaslException;
+
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 
@@ -61,7 +63,9 @@ public interface UnreliableInterface {
   boolean failsOnceThenSucceedsWithReturnValue() throws UnreliableException;
 
   void failsTenTimesThenSucceeds() throws UnreliableException;
-  
+
+  void failsWithSASLExceptionTenTimes() throws SaslException;
+
   public String succeedsOnceThenFailsReturningString()
       throws UnreliableException, StandbyException, IOException;
   @Idempotent

@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import Ember from 'ember';
 import DS from 'ember-data';
 import Converter from 'yarn-ui/utils/converter';
 
@@ -31,6 +32,7 @@ export default DS.Model.extend({
   logsLink: DS.attr('string'),
   state: DS.attr('string'),
   appAttemptId: DS.attr('string'),
+  diagnosticsInfo: DS.attr('string'),
 
   appId: Ember.computed("id",function () {
     var id = this.get("id");
@@ -45,8 +47,8 @@ export default DS.Model.extend({
   attemptStartedTime: function() {
     var startTime = this.get("startTime");
     // If startTime variable is not present, get from startedTime
-    if (startTime == undefined ||
-      startTime == "Invalid date") {
+    if (startTime === undefined ||
+      startTime === "Invalid date") {
       startTime = this.get("startedTime");
     }
 
@@ -73,14 +75,14 @@ export default DS.Model.extend({
     if (!this.get("containerId")) {
       return this.get("id");
     }
-    return "attempt_" + 
+    return "attempt_" +
            parseInt(Converter.containerIdToAttemptId(this.get("containerId")).split("_")[3]);
   }.property("containerId"),
 
   appMasterContainerId: function() {
     var id = this.get("containerId");
     // If containerId variable is not present, get from amContainerId
-    if (id == undefined) {
+    if (id === undefined) {
       id = this.get("amContainerId");
     }
     return id;
@@ -89,16 +91,16 @@ export default DS.Model.extend({
   IsAmNodeUrl: function() {
     var url = this.get("nodeHttpAddress");
       // If nodeHttpAddress variable is not present, hardcode it.
-    if (url == undefined) {
+    if (url === undefined) {
       url = "Not Available";
     }
-    return url != "Not Available";
+    return url !== "Not Available";
   }.property("nodeHttpAddress"),
 
   amNodeId : function() {
     var id = this.get("nodeId");
     // If nodeId variable is not present, get from host
-    if (id == undefined) {
+    if (id === undefined) {
       id = this.get("hosts");
     }
     return id;
@@ -107,10 +109,10 @@ export default DS.Model.extend({
   IsLinkAvailable: function() {
     var url = this.get("logsLink");
     // If logsLink variable is not present, hardcode its.
-    if (url == undefined) {
+    if (url === undefined) {
       url = "Not Available";
     }
-    return url != "Not Available";
+    return url !== "Not Available";
   }.property("logsLink"),
 
   elapsedTime: function() {
@@ -118,13 +120,12 @@ export default DS.Model.extend({
     if (elapsedMs <= 0) {
       elapsedMs = Date.now() - this.get("startTs");
     }
-
-    return Converter.msToElapsedTime(elapsedMs);
+    return Converter.msToElapsedTimeUnit(elapsedMs);
   }.property(),
 
   tooltipLabel: function() {
-    return "<p>Id:" + this.get("id") + 
-           "</p><p>ElapsedTime:" + 
+    return "<p>Id:" + this.get("id") +
+           "</p><p>ElapsedTime:" +
            String(this.get("elapsedTime")) + "</p>";
   }.property(),
 
@@ -140,4 +141,15 @@ export default DS.Model.extend({
     return this.get("state");
   }.property(),
 
+  masterNodeURL: function() {
+    var addr = encodeURIComponent(this.get("nodeHttpAddress"));
+    return `#/yarn-node/${this.get("nodeId")}/${addr}/info/`;
+  }.property("nodeId", "nodeHttpAddress"),
+
+  appAttemptContainerLogsURL: function() {
+    const attemptId = this.get("id");
+    const containerId = this.get("appMasterContainerId");
+    const appId = Converter.attemptIdToAppId(attemptId);
+    return `#/yarn-app/${appId}/logs?attempt=${attemptId}&containerid=${containerId}`;
+  }.property("id", "appMasterContainerId")
 });

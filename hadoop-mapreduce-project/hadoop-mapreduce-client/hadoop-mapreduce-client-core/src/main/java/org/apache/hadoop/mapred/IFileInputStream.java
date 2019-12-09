@@ -25,8 +25,6 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
@@ -36,6 +34,8 @@ import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.io.ReadaheadPool.ReadaheadRequest;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.util.DataChecksum;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 /**
  * A checksum input stream, used for IFiles.
  * Used to validate the checksum of files created by {@link IFileOutputStream}. 
@@ -59,7 +59,8 @@ public class IFileInputStream extends InputStream {
   private boolean readahead;
   private int readaheadLength;
 
-  public static final Log LOG = LogFactory.getLog(IFileInputStream.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(IFileInputStream.class);
 
   private boolean disableChecksumValidation = false;
   

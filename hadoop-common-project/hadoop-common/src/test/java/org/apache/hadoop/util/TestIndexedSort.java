@@ -21,14 +21,15 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparator;
 
-public class TestIndexedSort extends TestCase {
+public class TestIndexedSort {
 
   public void sortAllEqual(IndexedSorter sorter) throws Exception {
     final int SAMPLE = 500;
@@ -128,6 +129,7 @@ public class TestIndexedSort extends TestCase {
   }
 
 
+  @Test
   public void testQuickSort() throws Exception {
     QuickSort sorter = new QuickSort();
     sortRandom(sorter);
@@ -158,6 +160,7 @@ public class TestIndexedSort extends TestCase {
     assertTrue(Arrays.equals(values, check));
   }
 
+  @Test
   public void testHeapSort() throws Exception {
     HeapSort sorter = new HeapSort();
     sortRandom(sorter);

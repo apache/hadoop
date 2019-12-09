@@ -93,8 +93,8 @@
         { type: 'DELETE'
         }).done(function(data) {
           browse_directory(current_directory);
-        }).error(network_error_handler(url)
-         ).complete(function() {
+        }).fail(network_error_handler(url)
+         ).always(function() {
            $('#delete-modal').modal('hide');
            $('#delete-button').button('reset');
         });
@@ -140,8 +140,8 @@
     $.ajax(url, { type: 'PUT'
       }).done(function(data) {
         browse_directory(current_directory);
-      }).error(network_error_handler(url))
-      .complete(function() {
+      }).fail(network_error_handler(url))
+      .always(function() {
         $('.explorer-perm-links').popover('destroy');
       });
   }
@@ -207,13 +207,13 @@
             url: url,
             processData: false,
             crossDomain: true
-          }).complete(function(data) {
-            $('#file-info-preview-body').val(data.responseText);
+          }).always(function(data) {
+            $('#file-info-preview-body').val(data);
             $('#file-info-tail').show();
-          }).error(function(jqXHR, textStatus, errorThrown) {
+          }).fail(function(jqXHR, textStatus, errorThrown) {
             show_err_msg("Couldn't preview the file. " + errorThrown);
           });
-        }).error(function(jqXHR, textStatus, errorThrown) {
+        }).fail(function(jqXHR, textStatus, errorThrown) {
           show_err_msg("Couldn't find datanode to read file from. " + errorThrown);
         });
       }
@@ -235,7 +235,7 @@
         $('#file-info-blockinfo-panel').hide();
       }
       $('#file-info').modal();
-    }).error(network_error_handler(url));
+    }).fail(network_error_handler(url));
   }
 
   /**Use X-editable to make fields editable with a nice UI.
@@ -254,8 +254,8 @@
             op + '&' + parameter + '=' + encodeURIComponent(params.value);
 
           return $.ajax(url, { type: 'PUT', })
-            .error(network_error_handler(url))
-            .success(function() {
+            .fail(network_error_handler(url))
+            .done(function() {
                 browse_directory(current_directory);
              });
         },
@@ -360,7 +360,7 @@
           "deferRender": true
         });
       });
-    }).error(network_error_handler(url));
+    }).fail(network_error_handler(url));
   }
 
 
@@ -370,6 +370,12 @@
 
     var b = function() { browse_directory($('#directory').val()); };
     $('#btn-nav-directory').click(b);
+    //Also navigate to the directory when a user presses enter.
+    $('#directory').on('keyup', function (e) {
+      if (e.which == 13) {
+        browse_directory($('#directory').val());
+      }
+    });
     var dir = window.location.hash.slice(1);
     if(dir == "") {
       window.location.hash = "/";
@@ -392,12 +398,40 @@
     $.ajax(url, { type: 'PUT' }
     ).done(function(data) {
       browse_directory(current_directory);
-    }).error(network_error_handler(url)
-     ).complete(function() {
+    }).fail(network_error_handler(url)
+     ).always(function() {
        $('#btn-create-directory').modal('hide');
        $('#btn-create-directory-send').button('reset');
     });
   })
+
+  $('#btn-upload-files').click(function() {
+        $('#modal-upload-file-button').prop('disabled', true).button('reset');
+        $('#modal-upload-file-input').val(null);
+      });
+
+  $('#btn-create-dir').click(function() {
+        $('#btn-create-directory-send').prop('disabled', true).button('reset');
+        $('#new_directory').val(null);
+      });
+
+  $('#modal-upload-file-input').change(function() {
+      if($('#modal-upload-file-input').prop('files').length >0) {
+         $('#modal-upload-file-button').prop('disabled', false);
+        }
+      else {
+        $('#modal-upload-file-button').prop('disabled', true);
+        }
+      });
+
+  $('#new_directory').on('keyup keypress blur change',function() {
+      if($('#new_directory').val() == '' ||  $('#new_directory').val() == null) {
+         $('#btn-create-directory-send').prop('disabled', true);
+        }
+      else {
+         $('#btn-create-directory-send').prop('disabled', false);
+        }
+      });
 
   $('#modal-upload-file-button').click(function() {
     $(this).prop('disabled', true);
@@ -408,8 +442,7 @@
     for(var i = 0; i < $('#modal-upload-file-input').prop('files').length; i++) {
       (function() {
         var file = $('#modal-upload-file-input').prop('files')[i];
-        var url = '/webhdfs/v1' + current_directory;
-        url = encode_path(append_path(url, file.name));
+        var url = '/webhdfs/v1' + encode_path(append_path(current_directory, file.name));
         url += '?op=CREATE&noredirect=true';
         files.push( { file: file } )
         files[i].request = $.ajax({
@@ -431,24 +464,31 @@
             data: file.file,
             processData: false,
             crossDomain: true
-          }).complete(function(data) {
+          }).always(function(data) {
             numCompleted++;
             if(numCompleted == files.length) {
-              $('#modal-upload-file').modal('hide');
-              $('#modal-upload-file-button').button('reset');
+              reset_upload_button();
               browse_directory(current_directory);
             }
-          }).error(function(jqXHR, textStatus, errorThrown) {
+          }).fail(function(jqXHR, textStatus, errorThrown) {
             numCompleted++;
+            reset_upload_button();
             show_err_msg("Couldn't upload the file " + file.file.name + ". "+ errorThrown);
           });
-        }).error(function(jqXHR, textStatus, errorThrown) {
+        }).fail(function(jqXHR, textStatus, errorThrown) {
           numCompleted++;
+          reset_upload_button();
           show_err_msg("Couldn't find datanode to write file. " + errorThrown);
         });
       })();
     }
   });
+
+  //Reset the upload button
+  function reset_upload_button() {
+    $('#modal-upload-file').modal('hide');
+    $('#modal-upload-file-button').button('reset');
+  }
 
   //Store the list of files which have been checked into session storage
   function store_selected_files(current_directory) {
@@ -479,7 +519,7 @@
         if(index == files.length - 1) {
           browse_directory(current_directory);
         }
-      }).error(function(jqXHR, textStatus, errorThrown) {
+      }).fail(function(jqXHR, textStatus, errorThrown) {
         show_err_msg("Couldn't move file " + value + ". " + errorThrown);
       });
 

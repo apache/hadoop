@@ -87,7 +87,7 @@ public class WRITE3Request extends RequestWithHandle {
   
   @Override
   public String toString() {
-    return String.format("fileId: %d offset: %d count: %d stableHow: %s",
-        handle.getFileId(), offset, count, stableHow.name());
+    return String.format("fileHandle: %s offset: %d count: %d stableHow: %s",
+        handle.dumpFileHandle(), offset, count, stableHow.name());
   }
 }

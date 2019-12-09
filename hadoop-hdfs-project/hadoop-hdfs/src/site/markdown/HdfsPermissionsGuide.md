@@ -15,20 +15,7 @@
 HDFS Permissions Guide
 ======================
 
-* [HDFS Permissions Guide](#HDFS_Permissions_Guide)
-    * [Overview](#Overview)
-    * [User Identity](#User_Identity)
-    * [Group Mapping](#Group_Mapping)
-    * [Permission Checks](#Permission_Checks)
-    * [Understanding the Implementation](#Understanding_the_Implementation)
-    * [Changes to the File System API](#Changes_to_the_File_System_API)
-    * [Changes to the Application Shell](#Changes_to_the_Application_Shell)
-    * [The Super-User](#The_Super-User)
-    * [The Web Server](#The_Web_Server)
-    * [ACLs (Access Control Lists)](#ACLs_Access_Control_Lists)
-    * [ACLs File System API](#ACLs_File_System_API)
-    * [ACLs Shell Commands](#ACLs_Shell_Commands)
-    * [Configuration Parameters](#Configuration_Parameters)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------
@@ -335,7 +322,7 @@ Configuration Parameters
 
 *   `dfs.namenode.posix.acl.inheritance.enabled`
 
-    Set to true to enable POSIX style ACL inheritance. Disabled by default.
+    Set to true to enable POSIX style ACL inheritance. Enabled by default.
     When it is enabled and the create request comes from a compatible client,
     the NameNode will apply default ACLs from the parent directory to
     the create mode and ignore the client umask. If no default ACL is found,

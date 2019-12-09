@@ -14,6 +14,8 @@
 
 # YARN Application Security
 
+<!-- MACRO{toc|fromDepth=0|toDepth=1} -->
+
 Anyone writing a YARN application needs to understand the process, in order
 to write short-lived applications or long-lived services. They also need to
 start testing on secure clusters during early development stages, in order

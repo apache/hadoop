@@ -47,6 +47,6 @@ public class TestDelegateToFileSystem {
 
   @Test
   public void testDefaultURIwithPort() throws Exception {
-    testDefaultUriInternal("hdfs://dummyhost:9820");
+    testDefaultUriInternal("hdfs://dummyhost:8020");
   }
 }

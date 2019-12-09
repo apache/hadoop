@@ -77,7 +77,7 @@ private static NumberFormat idFormat = NumberFormat.getInstance();
     job.setOutputFormat(TextOutputFormat.class);
     job.setNumReduceTasks(1);
 
-    job.set(FieldSelectionHelper.DATA_FIELD_SEPERATOR, "-");
+    job.set(FieldSelectionHelper.DATA_FIELD_SEPARATOR, "-");
     job.set(FieldSelectionHelper.MAP_OUTPUT_KEY_VALUE_SPEC, "6,5,1-3:0-");
     job.set(FieldSelectionHelper.REDUCE_OUTPUT_KEY_VALUE_SPEC, ":4,3,2,1,0,0-");
 

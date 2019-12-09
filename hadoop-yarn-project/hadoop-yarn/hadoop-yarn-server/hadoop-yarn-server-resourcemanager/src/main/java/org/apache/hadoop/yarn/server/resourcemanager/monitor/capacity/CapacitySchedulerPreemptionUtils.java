@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -99,7 +100,7 @@ public class CapacitySchedulerPreemptionUtils {
           }
 
           deductPreemptableResourcePerApp(context, tq.totalPartitionResource,
-              tas, res, partition);
+              tas, res);
         }
       }
     }
@@ -108,10 +109,10 @@ public class CapacitySchedulerPreemptionUtils {
   private static void deductPreemptableResourcePerApp(
       CapacitySchedulerPreemptionContext context,
       Resource totalPartitionResource, Collection<TempAppPerPartition> tas,
-      Resource res, String partition) {
+      Resource res) {
     for (TempAppPerPartition ta : tas) {
       ta.deductActuallyToBePreempted(context.getResourceCalculator(),
-          totalPartitionResource, res, partition);
+          totalPartitionResource, res);
     }
   }
 
@@ -132,6 +133,16 @@ public class CapacitySchedulerPreemptionUtils {
    *          map to hold preempted containers
    * @param totalPreemptionAllowed
    *          total preemption allowed per round
+   * @param conservativeDRF
+   *          should we do conservativeDRF preemption or not.
+   *          When true:
+   *            stop preempt container when any major resource type
+   *            {@literal <=} 0 for to-preempt.
+   *            This is default preemption behavior of intra-queue preemption
+   *          When false:
+   *            stop preempt container when: all major resource type
+   *            {@literal <=} 0 for to-preempt.
+   *            This is default preemption behavior of inter-queue preemption
    * @return should we preempt rmContainer. If we should, deduct from
    *         <code>resourceToObtainByPartition</code>
    */
@@ -140,7 +151,8 @@ public class CapacitySchedulerPreemptionUtils {
       Map<String, Resource> resourceToObtainByPartitions,
       RMContainer rmContainer, Resource clusterResource,
       Map<ApplicationAttemptId, Set<RMContainer>> preemptMap,
-      Resource totalPreemptionAllowed) {
+      Map<ApplicationAttemptId, Set<RMContainer>> curCandidates,
+      Resource totalPreemptionAllowed, boolean conservativeDRF) {
     ApplicationAttemptId attemptId = rmContainer.getApplicationAttemptId();
 
     // We will not account resource of a container twice or more
@@ -152,12 +164,49 @@ public class CapacitySchedulerPreemptionUtils {
         rmContainer.getAllocatedNode());
     Resource toObtainByPartition = resourceToObtainByPartitions
         .get(nodePartition);
+    if (null == toObtainByPartition) {
+      return false;
+    }
 
-    if (null != toObtainByPartition
-        && Resources.greaterThan(rc, clusterResource, toObtainByPartition,
-            Resources.none())
-        && Resources.fitsIn(rc, clusterResource,
-            rmContainer.getAllocatedResource(), totalPreemptionAllowed)) {
+    // If a toObtain resource type == 0, set it to -1 to avoid 0 resource
+    // type affect following doPreemption check: isAnyMajorResourceZero
+    for (ResourceInformation ri : toObtainByPartition.getResources()) {
+      if (ri.getValue() == 0) {
+        ri.setValue(-1);
+      }
+    }
+
+    if (rc.isAnyMajorResourceAboveZero(toObtainByPartition) && Resources.fitsIn(
+        rc, rmContainer.getAllocatedResource(), totalPreemptionAllowed)) {
+      boolean doPreempt;
+
+      // How much resource left after preemption happen.
+      Resource toObtainAfterPreemption = Resources.subtract(toObtainByPartition,
+          rmContainer.getAllocatedResource());
+
+      if (conservativeDRF) {
+        doPreempt = !rc.isAnyMajorResourceZeroOrNegative(toObtainByPartition);
+      } else {
+        // When we want to do more aggressive preemption, we will do preemption
+        // only if:
+        // - The preempt of the container makes positive contribution to the
+        //   to-obtain resource. Positive contribution means any positive
+        //   resource type decreases.
+        //
+        //   This is example of positive contribution:
+        //     * before: <30, 10, 5>, after <20, 10, -10>
+        //   But this not positive contribution:
+        //     * before: <30, 10, 0>, after <30, 10, -15>
+        doPreempt = Resources.lessThan(rc, clusterResource,
+            Resources
+                .componentwiseMax(toObtainAfterPreemption, Resources.none()),
+            Resources.componentwiseMax(toObtainByPartition, Resources.none()));
+      }
+
+      if (!doPreempt) {
+        return false;
+      }
+
       Resources.subtractFrom(toObtainByPartition,
           rmContainer.getAllocatedResource());
       Resources.subtractFrom(totalPreemptionAllowed,
@@ -170,7 +219,7 @@ public class CapacitySchedulerPreemptionUtils {
       }
 
       // Add to preemptMap
-      addToPreemptMap(preemptMap, attemptId, rmContainer);
+      addToPreemptMap(preemptMap, curCandidates, attemptId, rmContainer);
       return true;
     }
 
@@ -182,15 +231,23 @@ public class CapacitySchedulerPreemptionUtils {
     return context.getScheduler().getSchedulerNode(nodeId).getPartition();
   }
 
-  private static void addToPreemptMap(
+  protected static void addToPreemptMap(
       Map<ApplicationAttemptId, Set<RMContainer>> preemptMap,
+      Map<ApplicationAttemptId, Set<RMContainer>> curCandidates,
       ApplicationAttemptId appAttemptId, RMContainer containerToPreempt) {
-    Set<RMContainer> set = preemptMap.get(appAttemptId);
-    if (null == set) {
-      set = new HashSet<>();
-      preemptMap.put(appAttemptId, set);
+    Set<RMContainer> setForToPreempt = preemptMap.get(appAttemptId);
+    Set<RMContainer> setForCurCandidates = curCandidates.get(appAttemptId);
+    if (null == setForToPreempt) {
+      setForToPreempt = new HashSet<>();
+      preemptMap.put(appAttemptId, setForToPreempt);
     }
-    set.add(containerToPreempt);
+    setForToPreempt.add(containerToPreempt);
+
+    if (null == setForCurCandidates) {
+      setForCurCandidates = new HashSet<>();
+      curCandidates.put(appAttemptId, setForCurCandidates);
+    }
+    setForCurCandidates.add(containerToPreempt);
   }
 
   private static boolean preemptMapContains(

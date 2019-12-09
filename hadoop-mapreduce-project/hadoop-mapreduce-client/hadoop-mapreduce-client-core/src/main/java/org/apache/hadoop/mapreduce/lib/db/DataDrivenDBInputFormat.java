@@ -31,8 +31,8 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -61,7 +61,8 @@ import org.apache.hadoop.conf.Configuration;
 public class DataDrivenDBInputFormat<T extends DBWritable>
     extends DBInputFormat<T> implements Configurable {
 
-  private static final Log LOG = LogFactory.getLog(DataDrivenDBInputFormat.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DataDrivenDBInputFormat.class);
 
   /** If users are providing their own query, the following string is expected to
       appear in the WHERE clause, which will be substituted with a pair of conditions

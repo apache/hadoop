@@ -109,7 +109,9 @@ public class TestStorageLocationChecker {
     conf.setInt(DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 1);
 
     thrown.expect(IOException.class);
-    thrown.expectMessage("Too many failed volumes");
+    thrown.expectMessage("Too many failed volumes - current valid volumes: 1,"
+        + " volumes configured: 3, volumes failed: 2, volume failures"
+        + " tolerated: 1");
     StorageLocationChecker checker =
         new StorageLocationChecker(conf, new FakeTimer());
     checker.check(conf, locations);

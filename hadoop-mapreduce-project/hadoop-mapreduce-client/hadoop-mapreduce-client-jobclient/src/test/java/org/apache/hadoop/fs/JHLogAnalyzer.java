@@ -34,8 +34,6 @@ import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.HashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
@@ -46,6 +44,8 @@ import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Job History Log Analyzer.
@@ -144,7 +144,8 @@ import org.apache.hadoop.util.StringUtils;
  */
 @SuppressWarnings("deprecation")
 public class JHLogAnalyzer {
-  private static final Log LOG = LogFactory.getLog(JHLogAnalyzer.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(JHLogAnalyzer.class);
   // Constants
   private static final String JHLA_ROOT_DIR = 
                             System.getProperty("test.build.data", "stats/JHLA");
@@ -162,7 +163,7 @@ public class JHLogAnalyzer {
     Configuration.addDefaultResource("hdfs-site.xml");
   }
 
-  static enum StatSeries {
+  enum StatSeries {
     STAT_ALL_SLOT_TIME
           (AccumulatingReducer.VALUE_TYPE_LONG + "allSlotTime"),
     STAT_FAILED_SLOT_TIME

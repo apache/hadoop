@@ -137,7 +137,7 @@ abstract public class LocalReplica extends ReplicaInfo {
       return;
     }
 
-    ReplicaDirInfo dirInfo = parseBaseDir(dir);
+    ReplicaDirInfo dirInfo = parseBaseDir(dir, getBlockId());
     this.hasSubdirs = dirInfo.hasSubidrs;
 
     synchronized (internedBaseDirs) {
@@ -163,16 +163,21 @@ abstract public class LocalReplica extends ReplicaInfo {
   }
 
   @VisibleForTesting
-  public static ReplicaDirInfo parseBaseDir(File dir) {
-
+  public static ReplicaDirInfo parseBaseDir(File dir, long blockId) {
     File currentDir = dir;
     boolean hasSubdirs = false;
     while (currentDir.getName().startsWith(DataStorage.BLOCK_SUBDIR_PREFIX)) {
       hasSubdirs = true;
       currentDir = currentDir.getParentFile();
     }
-
-    return new ReplicaDirInfo(currentDir.getAbsolutePath(), hasSubdirs);
+    if (hasSubdirs) {
+      // set baseDir to currentDir if it matches id(idToBlockDir).
+      File idToBlockDir = DatanodeUtil.idToBlockDir(currentDir, blockId);
+      if (idToBlockDir.equals(dir)) {
+        return new ReplicaDirInfo(currentDir.getAbsolutePath(), true);
+      }
+    }
+    return new ReplicaDirInfo(dir.getAbsolutePath(), false);
   }
 
   /**
@@ -186,16 +191,18 @@ abstract public class LocalReplica extends ReplicaInfo {
     final FileIoProvider fileIoProvider = getFileIoProvider();
     final File tmpFile = DatanodeUtil.createFileWithExistsCheck(
         getVolume(), b, DatanodeUtil.getUnlinkTmpFile(file), fileIoProvider);
-    try (FileInputStream in = fileIoProvider.getFileInputStream(
-        getVolume(), file)) {
-      try (FileOutputStream out = fileIoProvider.getFileOutputStream(
-          getVolume(), tmpFile)) {
-        IOUtils.copyBytes(in, out, 16 * 1024);
+    try {
+      try (FileInputStream in = fileIoProvider.getFileInputStream(
+          getVolume(), file)) {
+        try (FileOutputStream out = fileIoProvider.getFileOutputStream(
+            getVolume(), tmpFile)) {
+          IOUtils.copyBytes(in, out, 16 * 1024);
+        }
       }
       if (file.length() != tmpFile.length()) {
-        throw new IOException("Copy of file " + file + " size " + file.length()+
-                              " into file " + tmpFile +
-                              " resulted in a size of " + tmpFile.length());
+        throw new IOException("Copy of file " + file + " size " + file.length()
+            + " into file " + tmpFile + " resulted in a size of "
+            + tmpFile.length());
       }
       fileIoProvider.replaceFile(getVolume(), tmpFile, file);
     } catch (IOException e) {
@@ -508,6 +515,19 @@ abstract public class LocalReplica extends ReplicaInfo {
       metaRAF.setLength(newmetalen);
       metaRAF.seek(newmetalen - checksumsize);
       metaRAF.write(b, 0, checksumsize);
+    }
+  }
+
+  /**
+   * Sync the parent directory changes to durable device.
+   * @throws IOException
+   */
+  public void fsyncDirectory() throws IOException {
+    File dir = getDir();
+    try {
+      getFileIoProvider().dirSync(getVolume(), getDir());
+    } catch (IOException e) {
+      throw new IOException("Failed to sync " + dir, e);
     }
   }
 }

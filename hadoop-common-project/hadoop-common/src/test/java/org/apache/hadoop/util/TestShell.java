@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
@@ -38,6 +39,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.util.Shell.*;
+import static org.junit.Assume.assumeTrue;
+
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
@@ -474,7 +477,7 @@ public class TestShell extends Assert {
   }
 
   @Test(timeout=120000)
-  public void testShellKillAllProcesses() throws Throwable {
+  public void testDestroyAllShellProcesses() throws Throwable {
     Assume.assumeFalse(WINDOWS);
     StringBuffer sleepCommand = new StringBuffer();
     sleepCommand.append("sleep 200");
@@ -519,8 +522,18 @@ public class TestShell extends Assert {
       }
     }, 10, 10000);
 
-    Shell.destroyAllProcesses();
+    Shell.destroyAllShellProcesses();
     shexc1.getProcess().waitFor();
     shexc2.getProcess().waitFor();
+  }
+
+  @Test
+  public void testIsJavaVersionAtLeast() {
+    assertTrue(Shell.isJavaVersionAtLeast(8));
+  }
+
+  @Test
+  public void testIsBashSupported() throws InterruptedIOException {
+    assumeTrue("Bash is not supported", Shell.checkIsBashSupported());
   }
 }

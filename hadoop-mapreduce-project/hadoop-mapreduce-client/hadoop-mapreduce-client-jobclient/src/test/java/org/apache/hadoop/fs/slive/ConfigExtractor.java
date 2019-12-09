@@ -22,12 +22,12 @@ import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.slive.Constants.OperationType;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple access layer onto of a configuration object that extracts the slive
@@ -35,7 +35,8 @@ import org.apache.hadoop.util.StringUtils;
  */
 class ConfigExtractor {
 
-  private static final Log LOG = LogFactory.getLog(ConfigExtractor.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ConfigExtractor.class);
 
   private Configuration config;
 

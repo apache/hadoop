@@ -64,17 +64,19 @@ public class AuthorizationException extends AccessControlException {
 
   @Override
   public void printStackTrace() {
-    // Do not provide the stack-trace
+    printStackTrace(System.err);
   }
 
   @Override
   public void printStackTrace(PrintStream s) {
     // Do not provide the stack-trace
+    s.println(this);
   }
 
   @Override
   public void printStackTrace(PrintWriter s) {
     // Do not provide the stack-trace
+    s.println(this);
   }
-  
+
 }

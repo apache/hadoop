@@ -20,16 +20,16 @@ package org.apache.hadoop.util;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.crypto.OpensslCipher;
 import org.apache.hadoop.io.compress.Lz4Codec;
 import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestNativeCodeLoader {
-  static final Log LOG = LogFactory.getLog(TestNativeCodeLoader.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestNativeCodeLoader.class);
 
   private static boolean requireTestJni() {
     String rtj = System.getProperty("require.test.libhadoop");

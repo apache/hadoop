@@ -24,9 +24,9 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URISyntaxException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -60,7 +60,8 @@ class SharedCacheUploader implements Callable<Boolean> {
   static final FsPermission FILE_PERMISSION =
       new FsPermission((short)00555);
 
-  private static final Log LOG = LogFactory.getLog(SharedCacheUploader.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(SharedCacheUploader.class);
 
   private final LocalResource resource;
   private final Path localPath;

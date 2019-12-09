@@ -17,4 +17,5 @@ org.apache.hadoop.io.compress.DeflateCodec
 org.apache.hadoop.io.compress.GzipCodec
 org.apache.hadoop.io.compress.Lz4Codec
 org.apache.hadoop.io.compress.SnappyCodec
+org.apache.hadoop.io.compress.ZStandardCodec
 

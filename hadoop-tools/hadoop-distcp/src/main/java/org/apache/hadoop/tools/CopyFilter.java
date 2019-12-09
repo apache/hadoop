@@ -43,7 +43,7 @@ public abstract class CopyFilter {
    * Public factory method which returns the appropriate implementation of
    * CopyFilter.
    *
-   * @param conf DistCp configuratoin
+   * @param conf DistCp configuration
    * @return An instance of the appropriate CopyFilter
    */
   public static CopyFilter getCopyFilter(Configuration conf) {

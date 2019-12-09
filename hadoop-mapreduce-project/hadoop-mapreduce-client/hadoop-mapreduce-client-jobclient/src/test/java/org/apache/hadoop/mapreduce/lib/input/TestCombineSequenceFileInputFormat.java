@@ -27,8 +27,6 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,10 +42,12 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestCombineSequenceFileInputFormat {
-  private static final Log LOG =
-    LogFactory.getLog(TestCombineSequenceFileInputFormat.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestCombineSequenceFileInputFormat.class);
   private static Configuration conf = new Configuration();
   private static FileSystem localFs = null;
 

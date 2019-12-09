@@ -28,7 +28,6 @@ public class HttpFSKerberosAuthenticationHandlerForTesting
   @Override
   public void init(Properties config) throws ServletException {
     //NOP overwrite to avoid Kerberos initialization
-    config.setProperty(TOKEN_KIND, "t");
     initTokenManager(config);
   }
 

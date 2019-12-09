@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.tools;
 
-import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
 import org.apache.hadoop.fs.viewfs.*;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,7 +37,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 public class TestDistCpViewFs {
-  private static final Log LOG = LogFactory.getLog(TestDistCpViewFs.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDistCpViewFs.class);
 
   private static FileSystem fs;
 
@@ -413,11 +413,13 @@ public class TestDistCpViewFs {
 
   private void runTest(Path listFile, Path target, boolean targetExists, 
       boolean sync) throws IOException {
-    DistCpOptions options = new DistCpOptions(listFile, target);
-    options.setSyncFolder(sync);
-    options.setTargetPathExists(targetExists);
+    final DistCpOptions options = new DistCpOptions.Builder(listFile, target)
+        .withSyncFolder(sync)
+        .build();
     try {
-      new DistCp(getConf(), options).execute();
+      final DistCp distcp = new DistCp(getConf(), options);
+      distcp.context.setTargetPathExists(targetExists);
+      distcp.execute();
     } catch (Exception e) {
       LOG.error("Exception encountered ", e);
       throw new IOException(e);

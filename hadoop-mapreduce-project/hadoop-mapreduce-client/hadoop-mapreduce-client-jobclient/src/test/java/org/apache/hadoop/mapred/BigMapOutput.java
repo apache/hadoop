@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,10 +35,12 @@ import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BigMapOutput extends Configured implements Tool {
-  public static final Log LOG =
-    LogFactory.getLog(BigMapOutput.class.getName());
+  public static final Logger LOG =
+      LoggerFactory.getLogger(BigMapOutput.class);
   private static Random random = new Random();
   public static String MIN_KEY = "mapreduce.bmo.minkey";
   public static String MIN_VALUE = "mapreduce.bmo.minvalue";
@@ -128,17 +128,20 @@ public class BigMapOutput extends Configured implements Tool {
         usage();
       }
     }
-    
-    FileSystem fs = FileSystem.get(getConf());
+    if (bigMapInput == null || outputPath == null) {
+      // report usage and exit
+      usage();
+      // this stops IDES warning about unset local variables.
+      return -1;
+    }
+
     JobConf jobConf = new JobConf(getConf(), BigMapOutput.class);
 
     jobConf.setJobName("BigMapOutput");
     jobConf.setInputFormat(NonSplitableSequenceFileInputFormat.class);
     jobConf.setOutputFormat(SequenceFileOutputFormat.class);
     FileInputFormat.setInputPaths(jobConf, bigMapInput);
-    if (fs.exists(outputPath)) {
-      fs.delete(outputPath, true);
-    }
+    outputPath.getFileSystem(jobConf).delete(outputPath, true);
     FileOutputFormat.setOutputPath(jobConf, outputPath);
     jobConf.setMapperClass(IdentityMapper.class);
     jobConf.setReducerClass(IdentityReducer.class);
@@ -146,7 +149,10 @@ public class BigMapOutput extends Configured implements Tool {
     jobConf.setOutputValueClass(BytesWritable.class);
     
     if (createInput) {
-      createBigMapInputFile(jobConf, fs, bigMapInput, fileSizeInMB);
+      createBigMapInputFile(jobConf,
+          bigMapInput.getFileSystem(jobConf),
+          bigMapInput,
+          fileSizeInMB);
     }
     
     Date startTime = new Date();

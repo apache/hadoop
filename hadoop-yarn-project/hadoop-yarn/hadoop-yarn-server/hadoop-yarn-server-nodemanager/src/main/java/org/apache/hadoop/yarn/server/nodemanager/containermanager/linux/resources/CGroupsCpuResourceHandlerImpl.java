@@ -20,14 +20,16 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
@@ -57,7 +59,8 @@ import java.util.List;
 @InterfaceAudience.Private
 public class CGroupsCpuResourceHandlerImpl implements CpuResourceHandler {
 
-  static final Log LOG = LogFactory.getLog(CGroupsCpuResourceHandlerImpl.class);
+  static final Logger LOG =
+       LoggerFactory.getLogger(CGroupsCpuResourceHandlerImpl.class);
 
   private CGroupsHandler cGroupsHandler;
   private boolean strictResourceUsageMode = false;
@@ -72,6 +75,7 @@ public class CGroupsCpuResourceHandlerImpl implements CpuResourceHandler {
   static final int MIN_PERIOD_US = 1000;
   @VisibleForTesting
   static final int CPU_DEFAULT_WEIGHT = 1024; // set by kernel
+  static final int CPU_DEFAULT_WEIGHT_OPPORTUNISTIC = 2;
 
   CGroupsCpuResourceHandlerImpl(CGroupsHandler cGroupsHandler) {
     this.cGroupsHandler = cGroupsHandler;
@@ -91,7 +95,7 @@ public class CGroupsCpuResourceHandlerImpl implements CpuResourceHandler {
     this.strictResourceUsageMode = conf.getBoolean(
         YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE,
         YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE);
-    this.cGroupsHandler.mountCGroupController(CPU);
+    this.cGroupsHandler.initializeCGroupController(CPU);
     nodeVCores = NodeManagerHardwareUtils.getVCores(plugin, conf);
 
     // cap overall usage to the number of cores allocated to YARN
@@ -181,32 +185,9 @@ public class CGroupsCpuResourceHandlerImpl implements CpuResourceHandler {
   @Override
   public List<PrivilegedOperation> preStart(Container container)
       throws ResourceHandlerException {
-
     String cgroupId = container.getContainerId().toString();
-    Resource containerResource = container.getResource();
     cGroupsHandler.createCGroup(CPU, cgroupId);
-    try {
-      int containerVCores = containerResource.getVirtualCores();
-      int cpuShares = CPU_DEFAULT_WEIGHT * containerVCores;
-      cGroupsHandler
-          .updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_SHARES,
-              String.valueOf(cpuShares));
-      if (strictResourceUsageMode) {
-        if (nodeVCores != containerVCores) {
-          float containerCPU =
-              (containerVCores * yarnProcessors) / (float) nodeVCores;
-          int[] limits = getOverallLimits(containerCPU);
-          cGroupsHandler.updateCGroupParam(CPU, cgroupId,
-              CGroupsHandler.CGROUP_CPU_PERIOD_US, String.valueOf(limits[0]));
-          cGroupsHandler.updateCGroupParam(CPU, cgroupId,
-              CGroupsHandler.CGROUP_CPU_QUOTA_US, String.valueOf(limits[1]));
-        }
-      }
-    } catch (ResourceHandlerException re) {
-      cGroupsHandler.deleteCGroup(CPU, cgroupId);
-      LOG.warn("Could not update cgroup for container", re);
-      throw re;
-    }
+    updateContainer(container);
     List<PrivilegedOperation> ret = new ArrayList<>();
     ret.add(new PrivilegedOperation(
         PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
@@ -222,6 +203,49 @@ public class CGroupsCpuResourceHandlerImpl implements CpuResourceHandler {
   }
 
   @Override
+  public List<PrivilegedOperation> updateContainer(Container container)
+      throws ResourceHandlerException {
+    Resource containerResource = container.getResource();
+    String cgroupId = container.getContainerId().toString();
+    File cgroup = new File(cGroupsHandler.getPathForCGroup(CPU, cgroupId));
+    if (cgroup.exists()) {
+      try {
+        int containerVCores = containerResource.getVirtualCores();
+        ContainerTokenIdentifier id = container.getContainerTokenIdentifier();
+        if (id != null && id.getExecutionType() ==
+            ExecutionType.OPPORTUNISTIC) {
+          cGroupsHandler
+              .updateCGroupParam(CPU, cgroupId,
+                  CGroupsHandler.CGROUP_CPU_SHARES,
+                  String.valueOf(CPU_DEFAULT_WEIGHT_OPPORTUNISTIC));
+        } else {
+          int cpuShares = CPU_DEFAULT_WEIGHT * containerVCores;
+          cGroupsHandler
+              .updateCGroupParam(CPU, cgroupId,
+                  CGroupsHandler.CGROUP_CPU_SHARES,
+                  String.valueOf(cpuShares));
+        }
+        if (strictResourceUsageMode) {
+          if (nodeVCores != containerVCores) {
+            float containerCPU =
+                (containerVCores * yarnProcessors) / (float) nodeVCores;
+            int[] limits = getOverallLimits(containerCPU);
+            cGroupsHandler.updateCGroupParam(CPU, cgroupId,
+                CGroupsHandler.CGROUP_CPU_PERIOD_US, String.valueOf(limits[0]));
+            cGroupsHandler.updateCGroupParam(CPU, cgroupId,
+                CGroupsHandler.CGROUP_CPU_QUOTA_US, String.valueOf(limits[1]));
+          }
+        }
+      } catch (ResourceHandlerException re) {
+        cGroupsHandler.deleteCGroup(CPU, cgroupId);
+        LOG.warn("Could not update cgroup for container", re);
+        throw re;
+      }
+    }
+    return null;
+  }
+
+  @Override
   public List<PrivilegedOperation> postComplete(ContainerId containerId)
       throws ResourceHandlerException {
     cGroupsHandler.deleteCGroup(CPU, containerId.toString());
@@ -231,5 +255,10 @@ public class CGroupsCpuResourceHandlerImpl implements CpuResourceHandler {
   @Override public List<PrivilegedOperation> teardown()
       throws ResourceHandlerException {
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return CGroupsCpuResourceHandlerImpl.class.getName();
   }
 }

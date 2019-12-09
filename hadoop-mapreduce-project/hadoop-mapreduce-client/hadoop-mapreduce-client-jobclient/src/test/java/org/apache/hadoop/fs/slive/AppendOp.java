@@ -24,12 +24,12 @@ import java.io.OutputStream;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.slive.DataWriter.GenerateOutput;
 import org.apache.hadoop.fs.slive.OperationOutput.OutputType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Operation which selects a random file and appends a random amount of bytes
@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.slive.OperationOutput.OutputType;
  */
 class AppendOp extends Operation {
 
-  private static final Log LOG = LogFactory.getLog(AppendOp.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AppendOp.class);
 
   AppendOp(ConfigExtractor cfg, Random rnd) {
     super(AppendOp.class.getSimpleName(), cfg, rnd);

@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -33,6 +32,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
+import org.apache.hadoop.hdfs.server.namenode.SerialNumberManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.LimitInputStream;
 import org.apache.hadoop.util.Time;
@@ -297,7 +297,8 @@ abstract class PBImageTextWriter implements Closeable {
     LevelDBMetadataMap(String baseDir) throws IOException {
       File dbDir = new File(baseDir);
       if (dbDir.exists()) {
-        FileUtils.deleteDirectory(dbDir);
+        throw new IOException("Folder " + dbDir + " already exists! Delete " +
+            "manually or provide another (not existing) directory!");
       }
       if (!dbDir.mkdirs()) {
         throw new IOException("Failed to mkdir on " + dbDir);
@@ -391,7 +392,7 @@ abstract class PBImageTextWriter implements Closeable {
     }
   }
 
-  private String[] stringTable;
+  private SerialNumberManager.StringTable stringTable;
   private PrintStream out;
   private MetadataMap metadataMap = null;
 

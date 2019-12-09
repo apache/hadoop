@@ -27,11 +27,11 @@ import org.apache.hadoop.yarn.webapp.view.TwoColumnLayout;
 
 public class NMView extends TwoColumnLayout {
 
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
       commonPreHead(html);
     }
 
-  protected void commonPreHead(Page.HTML<_> html) {
+  protected void commonPreHead(Page.HTML<__> html) {
     set(ACCORDION_ID, "nav");
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
   }

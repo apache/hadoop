@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -39,14 +40,19 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
@@ -58,9 +64,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.SocketFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -79,30 +82,32 @@ import org.apache.hadoop.ipc.Server.Connection;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.Whitebox;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 /** Unit tests for IPC. */
 public class TestIPC {
-  public static final Log LOG =
-    LogFactory.getLog(TestIPC.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestIPC.class);
   
   private static Configuration conf;
   final static int PING_INTERVAL = 1000;
@@ -168,6 +173,11 @@ public class TestIPC {
       this(handlerCount, sleep, LongWritable.class, null);
     }
 
+    public TestServer(int port, int handlerCount, boolean sleep)
+        throws IOException {
+      this(port, handlerCount, sleep, LongWritable.class, null);
+    }
+
     public TestServer(int handlerCount, boolean sleep, Configuration conf)
         throws IOException {
       this(handlerCount, sleep, LongWritable.class, null, conf);
@@ -179,11 +189,24 @@ public class TestIPC {
       this(handlerCount, sleep, paramClass, responseClass, conf);
     }
 
+    public TestServer(int port, int handlerCount, boolean sleep,
+        Class<? extends Writable> paramClass,
+        Class<? extends Writable> responseClass) throws IOException {
+      this(port, handlerCount, sleep, paramClass, responseClass, conf);
+    }
+
     public TestServer(int handlerCount, boolean sleep,
         Class<? extends Writable> paramClass,
         Class<? extends Writable> responseClass, Configuration conf)
         throws IOException {
-      super(ADDRESS, 0, paramClass, handlerCount, conf);
+      this(0, handlerCount, sleep, paramClass, responseClass, conf);
+    }
+
+    public TestServer(int port, int handlerCount, boolean sleep,
+        Class<? extends Writable> paramClass,
+        Class<? extends Writable> responseClass, Configuration conf)
+        throws IOException {
+      super(ADDRESS, port, paramClass, handlerCount, conf);
       this.sleep = sleep;
       this.responseClass = responseClass;
     }
@@ -231,12 +254,12 @@ public class TestIPC {
           final long param = RANDOM.nextLong();
           LongWritable value = call(client, param, server, conf);
           if (value.get() != param) {
-            LOG.fatal("Call failed!");
+            LOG.error("Call failed!");
             failed = true;
             break;
           }
         } catch (Exception e) {
-          LOG.fatal("Caught: " + StringUtils.stringifyException(e));
+          LOG.error("Caught: " + StringUtils.stringifyException(e));
           failed = true;
         }
       }
@@ -333,6 +356,37 @@ public class TestIPC {
     for (int i = 0; i < clientCount; i++) {
       clients[i].stop();
     }
+    server.stop();
+  }
+
+  @Test
+  public void testAuxiliaryPorts() throws IOException, InterruptedException {
+    int defaultPort = 9000;
+    int[] auxiliaryPorts = {9001, 9002, 9003};
+    final int handlerCount = 5;
+    final boolean handlerSleep = false;
+    Server server = new TestServer(defaultPort, handlerCount, handlerSleep);
+    for (int port : auxiliaryPorts) {
+      server.addAuxiliaryListener(port);
+    }
+    Set<InetSocketAddress> listenerAddrs =
+        server.getAuxiliaryListenerAddresses();
+    Set<InetSocketAddress> addrs = new HashSet<>();
+    for (InetSocketAddress addr : listenerAddrs) {
+      addrs.add(NetUtils.getConnectAddress(addr));
+    }
+    server.start();
+
+    Client client = new Client(LongWritable.class, conf);
+    Set<SerialCaller> calls = new HashSet<>();
+    for (InetSocketAddress addr : addrs) {
+      calls.add(new SerialCaller(client, addr, 100));
+    }
+    for (SerialCaller caller : calls) {
+      caller.join();
+      assertFalse(caller.failed);
+    }
+    client.stop();
     server.stop();
   }
 	
@@ -785,7 +839,7 @@ public class TestIPC {
             call(client, new LongWritable(Thread.currentThread().getId()),
                 addr, 60000, conf);
           } catch (Throwable e) {
-            LOG.error(e);
+            LOG.error(e.toString());
             failures.incrementAndGet();
             return;
           } finally {
@@ -807,7 +861,7 @@ public class TestIPC {
       }
       // wait until reader put a call to callQueue, to make sure all readers
       // are blocking on the queue after initialClients threads are started.
-      verify(spy, timeout(100).times(i + 1)).put(Mockito.<Call>anyObject());
+      verify(spy, timeout(5000).times(i + 1)).put(Mockito.<Call>anyObject());
     }
 
     try {
@@ -864,7 +918,7 @@ public class TestIPC {
 
   @Test(timeout=30000)
   public void testConnectionIdleTimeouts() throws Exception {
-    ((Log4JLogger)Server.LOG).getLogger().setLevel(Level.DEBUG);
+    GenericTestUtils.setLogLevel(Server.LOG, Level.DEBUG);
     final int maxIdle = 1000;
     final int cleanupInterval = maxIdle*3/4; // stagger cleanups
     final int killMax = 3;
@@ -896,7 +950,7 @@ public class TestIPC {
               callBarrier.await();
             }
           } catch (Throwable t) {
-            LOG.error(t);
+            LOG.error(t.toString());
             error.set(true); 
           } 
         }
@@ -918,7 +972,7 @@ public class TestIPC {
               callReturned.countDown();
               Thread.sleep(10000);
             } catch (IOException e) {
-              LOG.error(e);
+              LOG.error(e.toString());
             } catch (InterruptedException e) {
             } finally {
               client.stop();
@@ -1339,7 +1393,7 @@ public class TestIPC {
 
   @Test
   public void testMaxConnections() throws Exception {
-    conf.setInt("ipc.server.max.connections", 5);
+    conf.setInt("ipc.server.max.connections", 6);
     Server server = null;
     Thread connectors[] = new Thread[10];
 
@@ -1374,8 +1428,10 @@ public class TestIPC {
       }
 
       Thread.sleep(1000);
-      // server should only accept up to 5 connections
-      assertEquals(5, server.getNumOpenConnections());
+      // server should only accept up to 6 connections
+      assertEquals(6, server.getNumOpenConnections());
+      // server should drop the other 4 connections
+      assertEquals(4, server.getNumDroppedConnections());
 
       for (int i = 0; i < 10; i++) {
         connectors[i].join();
@@ -1392,6 +1448,50 @@ public class TestIPC {
   public void testClientGetTimeout() throws IOException {
     Configuration config = new Configuration();
     assertEquals(Client.getTimeout(config), -1);
+  }
+
+  @Test(timeout=60000)
+  public void testSetupConnectionShouldNotBlockShutdown() throws Exception {
+    // Start server
+    SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
+    Server server = new TestServer(1, true);
+    final InetSocketAddress addr = NetUtils.getConnectAddress(server);
+
+    // Track how many times we retried to set up the connection
+    final AtomicInteger createSocketCalled = new AtomicInteger();
+
+    doAnswer(new Answer() {
+      @Override
+      public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+        createSocketCalled.addAndGet(1);
+        Thread.sleep(MIN_SLEEP_TIME * 5);
+        throw new ConnectTimeoutException("fake");
+      }
+    }).when(mockFactory).createSocket();
+    final Client client = new Client(LongWritable.class, conf, mockFactory);
+
+    final AtomicBoolean callStarted = new AtomicBoolean(false);
+
+    // Call a random function asynchronously so that we can call stop()
+    new Thread(new Runnable() {
+      public void run() {
+        try {
+          callStarted.set(true);
+          call(client, RANDOM.nextLong(), addr, conf);
+        } catch (IOException ignored) {}
+      }
+    }).start();
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return callStarted.get() && createSocketCalled.get() == 1;
+      }
+    }, 50, 60000);
+
+    // stop() should stop the client immediately without any more retries
+    client.stop();
+    assertEquals(1, createSocketCalled.get());
   }
 
   private void assertRetriesOnSocketTimeouts(Configuration conf,
@@ -1423,7 +1523,7 @@ public class TestIPC {
   }
 
   private void checkVersionMismatch() throws IOException {
-    try (final ServerSocket listenSocket = new ServerSocket()) {
+    try (ServerSocket listenSocket = new ServerSocket()) {
       listenSocket.bind(null);
       InetSocketAddress addr =
           (InetSocketAddress) listenSocket.getLocalSocketAddress();
@@ -1482,6 +1582,78 @@ public class TestIPC {
       return;
     }
     Assert.fail("didn't get limit exceeded");
+  }
+
+  @Test
+  public void testUserBinding() throws Exception {
+    checkUserBinding(false);
+  }
+
+  @Test
+  public void testProxyUserBinding() throws Exception {
+    checkUserBinding(true);
+  }
+
+  private void checkUserBinding(boolean asProxy) throws Exception {
+    Socket s;
+    // don't attempt bind with no service host.
+    s = checkConnect(null, asProxy);
+    Mockito.verify(s, Mockito.never()).bind(Mockito.any(SocketAddress.class));
+
+    // don't attempt bind with service host not belonging to this host.
+    s = checkConnect("1.2.3.4", asProxy);
+    Mockito.verify(s, Mockito.never()).bind(Mockito.any(SocketAddress.class));
+
+    // do attempt bind when service host is this host.
+    InetAddress addr = InetAddress.getLocalHost();
+    s = checkConnect(addr.getHostAddress(), asProxy);
+    Mockito.verify(s).bind(new InetSocketAddress(addr, 0));
+  }
+
+  // dummy protocol that claims to support kerberos.
+  @KerberosInfo(serverPrincipal = "server@REALM")
+  private static class TestBindingProtocol {
+  }
+
+  private Socket checkConnect(String addr, boolean asProxy) throws Exception {
+    // create a fake ugi that claims to have kerberos credentials.
+    StringBuilder principal = new StringBuilder();
+    principal.append("client");
+    if (addr != null) {
+      principal.append("/").append(addr);
+    }
+    principal.append("@REALM");
+    UserGroupInformation ugi =
+        spy(UserGroupInformation.createRemoteUser(principal.toString()));
+    Mockito.doReturn(true).when(ugi).hasKerberosCredentials();
+    if (asProxy) {
+      ugi = UserGroupInformation.createProxyUser("proxy", ugi);
+    }
+
+    // create a mock socket that throws on connect.
+    SocketException expectedConnectEx =
+        new SocketException("Expected connect failure");
+    Socket s = Mockito.mock(Socket.class);
+    SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
+    Mockito.doReturn(s).when(mockFactory).createSocket();
+    doThrow(expectedConnectEx).when(s).connect(
+        Mockito.any(SocketAddress.class), Mockito.anyInt());
+
+    // do a dummy call and expect it to throw an exception on connect.
+    // tests should verify if/how a bind occurred.
+    try (Client client = new Client(LongWritable.class, conf, mockFactory)) {
+      final InetSocketAddress sockAddr = new InetSocketAddress(0);
+      final LongWritable param = new LongWritable(RANDOM.nextLong());
+      final ConnectionId remoteId = new ConnectionId(
+          sockAddr, TestBindingProtocol.class, ugi, 0,
+          RetryPolicies.TRY_ONCE_THEN_FAIL, conf);
+      client.call(RPC.RpcKind.RPC_BUILTIN, param, remoteId, null);
+      fail("call didn't throw connect exception");
+    } catch (SocketException se) {
+      // ipc layer re-wraps exceptions, so check the cause.
+      Assert.assertSame(expectedConnectEx, se.getCause());
+    }
+    return s;
   }
 
   private void doIpcVersionTest(

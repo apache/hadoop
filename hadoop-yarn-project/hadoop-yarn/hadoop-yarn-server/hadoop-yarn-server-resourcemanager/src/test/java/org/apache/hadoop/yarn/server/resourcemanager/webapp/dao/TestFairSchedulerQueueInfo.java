@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueueManager;
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -43,6 +44,8 @@ public class TestFairSchedulerQueueInfo {
     when(scheduler.getAllocationConfiguration()).thenReturn(allocConf);
     when(scheduler.getConf()).thenReturn(conf);
     when(scheduler.getClusterResource()).thenReturn(Resource.newInstance(1, 1));
+    when(scheduler.getResourceCalculator()).thenReturn(
+        new DefaultResourceCalculator());
     SystemClock clock = SystemClock.getInstance();
     when(scheduler.getClock()).thenReturn(clock);
     QueueManager queueManager = new QueueManager(scheduler);

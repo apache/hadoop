@@ -30,10 +30,10 @@ import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfEntryInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
-import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.InputType;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.InputType;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -56,21 +56,21 @@ public class ConfBlock extends HtmlBlock {
     String jid = $(JOB_ID);
     if (jid.isEmpty()) {
       html.
-        p()._("Sorry, can't do anything without a JobID.")._();
+        p().__("Sorry, can't do anything without a JobID.").__();
       return;
     }
     JobId jobID = MRApps.toJobID(jid);
     Job job = appContext.getJob(jobID);
     if (job == null) {
       html.
-        p()._("Sorry, ", jid, " not found.")._();
+        p().__("Sorry, ", jid, " not found.").__();
       return;
     }
     Path confPath = job.getConfFile();
     try {
       ConfInfo info = new ConfInfo(job);
 
-      html.div().a("/jobhistory/downloadconf/" + jid, confPath.toString());
+      html.div().a("/jobhistory/downloadconf/" + jid, confPath.toString()).__();
       TBODY<TABLE<Hamlet>> tbody = html.
         // Tasks table
       table("#conf").
@@ -79,8 +79,8 @@ public class ConfBlock extends HtmlBlock {
             th(_TH, "key").
             th(_TH, "value").
             th(_TH, "source chain").
-          _().
-        _().
+              __().
+              __().
       tbody();
       for (ConfEntryInfo entry : info.getProperties()) {
         StringBuffer buffer = new StringBuffer();
@@ -100,20 +100,20 @@ public class ConfBlock extends HtmlBlock {
             td(entry.getName()).
             td(entry.getValue()).
             td(buffer.toString()).
-          _();
+            __();
       }
-      tbody._().
+      tbody.__().
       tfoot().
         tr().
-          th().input("search_init").$type(InputType.text).$name("key").$value("key")._()._().
-          th().input("search_init").$type(InputType.text).$name("value").$value("value")._()._().
-          th().input("search_init").$type(InputType.text).$name("source chain").$value("source chain")._()._().
-          _().
-        _().
-      _();
+          th().input("search_init").$type(InputType.text).$name("key").$value("key").__().__().
+          th().input("search_init").$type(InputType.text).$name("value").$value("value").__().__().
+          th().input("search_init").$type(InputType.text).$name("source chain").$value("source chain").__().__().
+          __().
+          __().
+          __();
     } catch(IOException e) {
       LOG.error("Error while reading "+confPath, e);
-      html.p()._("Sorry got an error while reading conf file. ",confPath);
+      html.p().__("Sorry got an error while reading conf file. ", confPath);
     }
   }
 }

@@ -70,6 +70,15 @@ set HADOOP_SECURE_DN_USER=%HADOOP_SECURE_DN_USER%
 @rem Where log files are stored in the secure data environment.
 set HADOOP_SECURE_DN_LOG_DIR=%HADOOP_LOG_DIR%\%HADOOP_HDFS_USER%
 
+@rem
+@rem Router-based HDFS Federation specific parameters
+@rem Specify the JVM options to be used when starting the RBF Routers.
+@rem These options will be appended to the options specified as HADOOP_OPTS
+@rem and therefore may override any similar flags set in HADOOP_OPTS
+@rem
+@rem set HADOOP_DFSROUTER_OPTS=""
+@rem
+
 @rem The directory where pid files are stored. /tmp by default.
 @rem NOTE: this should be set to a directory that can only be written to by 
 @rem       the user that will run the hadoop daemons.  Otherwise there is the

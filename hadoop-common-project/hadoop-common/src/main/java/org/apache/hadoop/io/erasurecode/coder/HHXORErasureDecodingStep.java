@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.coder;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -64,7 +65,8 @@ public class HHXORErasureDecodingStep extends HHErasureCodingStep {
   }
 
   @Override
-  public void performCoding(ECChunk[] inputChunks, ECChunk[] outputChunks) {
+  public void performCoding(ECChunk[] inputChunks, ECChunk[] outputChunks)
+      throws IOException {
     if (erasedIndexes.length == 0) {
       return;
     }
@@ -74,7 +76,8 @@ public class HHXORErasureDecodingStep extends HHErasureCodingStep {
     performCoding(inputBuffers, outputBuffers);
   }
 
-  private void performCoding(ByteBuffer[] inputs, ByteBuffer[] outputs) {
+  private void performCoding(ByteBuffer[] inputs, ByteBuffer[] outputs)
+      throws IOException {
     final int numDataUnits = rsRawDecoder.getNumDataUnits();
     final int numParityUnits = rsRawDecoder.getNumParityUnits();
     final int numTotalUnits = numDataUnits + numParityUnits;
@@ -119,7 +122,7 @@ public class HHXORErasureDecodingStep extends HHErasureCodingStep {
 
   private void doDecodeSingle(ByteBuffer[][] inputs, ByteBuffer[][] outputs,
                               int erasedLocationToFix, int bufSize,
-                              boolean isDirect) {
+                              boolean isDirect) throws IOException {
     final int numDataUnits = rsRawDecoder.getNumDataUnits();
     final int numParityUnits = rsRawDecoder.getNumParityUnits();
     final int subPacketSize = getSubPacketSize();
@@ -261,7 +264,8 @@ public class HHXORErasureDecodingStep extends HHErasureCodingStep {
 
   private void doDecodeMultiAndParity(ByteBuffer[][] inputs,
                                       ByteBuffer[][] outputs,
-                                      int[] erasedLocationToFix, int bufSize) {
+                                      int[] erasedLocationToFix, int bufSize)
+      throws IOException {
     final int numDataUnits = rsRawDecoder.getNumDataUnits();
     final int numParityUnits = rsRawDecoder.getNumParityUnits();
     final int numTotalUnits = numDataUnits + numParityUnits;

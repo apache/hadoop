@@ -33,13 +33,19 @@ import org.junit.Before;
 import org.mockito.Mockito;
 
 import java.io.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+
+import static org.mockito.Mockito.when;
 
 @Deprecated
 public class TestCgroupsLCEResourcesHandler {
-  static File cgroupDir = null;
+  private static File cgroupDir = null;
 
   @Before
   public void setUp() throws Exception {
@@ -72,7 +78,7 @@ public class TestCgroupsLCEResourcesHandler {
 
     // Test 1, tasks file is empty
     // tasks file has no data, should return true
-    Mockito.stub(fspy.delete()).toReturn(true);
+    Mockito.when(fspy.delete()).thenReturn(true);
     Assert.assertTrue(handler.checkAndDeleteCgroup(fspy));
 
     // Test 2, tasks file has data
@@ -129,9 +135,9 @@ public class TestCgroupsLCEResourcesHandler {
   static class CustomCgroupsLCEResourceHandler extends
       CgroupsLCEResourcesHandler {
 
-    String mtabFile;
-    int[] limits = new int[2];
-    boolean generateLimitsMode = false;
+    private String mtabFile;
+    private int[] limits = new int[2];
+    private boolean generateLimitsMode = false;
 
     @Override
     int[] getOverallLimits(float x) {
@@ -151,6 +157,20 @@ public class TestCgroupsLCEResourcesHandler {
     }
   }
 
+  private static File createMockCgroupMount(File parentDir,
+                                            String type)
+      throws IOException {
+    File cgroupMountDir =
+        new File(parentDir.getAbsolutePath(), type + "/hadoop-yarn");
+    FileUtils.deleteQuietly(cgroupMountDir);
+    if (!cgroupMountDir.mkdirs()) {
+      String message =
+          "Could not create dir " + cgroupMountDir.getAbsolutePath();
+      throw new IOException(message);
+    }
+    return cgroupMountDir;
+  }
+
   @Test
   public void testInit() throws IOException {
     LinuxContainerExecutor mockLCE = new MockLinuxContainerExecutor();
@@ -165,12 +185,13 @@ public class TestCgroupsLCEResourcesHandler {
     handler.setConf(conf);
     handler.initConfig();
 
-    // create mock cgroup
-    File cpuCgroupMountDir = TestCGroupsHandlerImpl.createMockCgroupMount(
-        cgroupDir, "cpu");
-
     // create mock mtab
-    File mockMtab = TestCGroupsHandlerImpl.createMockMTab(cgroupDir);
+    File mockMtab =
+        TestCGroupsHandlerImpl.createPremountedCgroups(cgroupDir, false);
+
+    // create mock cgroup
+    File cpuCgroupMountDir = createMockCgroupMount(
+        cgroupDir, "cpu");
 
     // setup our handler and call init()
     handler.setMtabFile(mockMtab.getAbsolutePath());
@@ -262,12 +283,13 @@ public class TestCgroupsLCEResourcesHandler {
     handler.setConf(conf);
     handler.initConfig();
 
-    // create mock cgroup
-    File cpuCgroupMountDir = TestCGroupsHandlerImpl.createMockCgroupMount(
-        cgroupDir, "cpu");
-
     // create mock mtab
-    File mockMtab = TestCGroupsHandlerImpl.createMockMTab(cgroupDir);
+    File mockMtab =
+        TestCGroupsHandlerImpl.createPremountedCgroups(cgroupDir, false);
+
+    // create mock cgroup
+    File cpuCgroupMountDir = createMockCgroupMount(
+        cgroupDir, "cpu");
 
     // setup our handler and call init()
     handler.setMtabFile(mockMtab.getAbsolutePath());
@@ -340,6 +362,61 @@ public class TestCgroupsLCEResourcesHandler {
     Assert.assertEquals(1000 * 1000, readIntFromFile(quotaFile));
 
     FileUtils.deleteQuietly(cgroupDir);
+  }
+
+  @Test
+  public void testSelectCgroup() {
+    File cpu = new File(cgroupDir, "cpu");
+    File cpuNoExist = new File(cgroupDir, "cpuNoExist");
+    File memory = new File(cgroupDir, "memory");
+    try {
+      CgroupsLCEResourcesHandler handler = new CgroupsLCEResourcesHandler();
+      Map<String, Set<String>> cgroups = new LinkedHashMap<>();
+
+      Assert.assertTrue("temp dir should be created", cpu.mkdirs());
+      Assert.assertTrue("temp dir should be created", memory.mkdirs());
+      Assert.assertFalse("temp dir should not be created", cpuNoExist.exists());
+
+      cgroups.put(
+          memory.getAbsolutePath(), Collections.singleton("memory"));
+      cgroups.put(
+          cpuNoExist.getAbsolutePath(), Collections.singleton("cpu"));
+      cgroups.put(cpu.getAbsolutePath(), Collections.singleton("cpu"));
+      String selectedCPU = handler.findControllerInMtab("cpu", cgroups);
+      Assert.assertEquals("Wrong CPU mount point selected",
+          cpu.getAbsolutePath(), selectedCPU);
+    } finally {
+      FileUtils.deleteQuietly(cpu);
+      FileUtils.deleteQuietly(memory);
+    }
+  }
+
+  @Test
+  public void testManualCgroupSetting() throws IOException {
+    CgroupsLCEResourcesHandler handler = new CgroupsLCEResourcesHandler();
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH,
+        cgroupDir.getAbsolutePath());
+    handler.setConf(conf);
+    File cpu = new File(new File(cgroupDir, "cpuacct,cpu"), "/hadoop-yarn");
+
+    try {
+      Assert.assertTrue("temp dir should be created", cpu.mkdirs());
+
+      final int numProcessors = 4;
+      ResourceCalculatorPlugin plugin =
+              Mockito.mock(ResourceCalculatorPlugin.class);
+      Mockito.doReturn(numProcessors).when(plugin).getNumProcessors();
+      Mockito.doReturn(numProcessors).when(plugin).getNumCores();
+      when(plugin.getNumProcessors()).thenReturn(8);
+      handler.init(null, plugin);
+
+      Assert.assertEquals("CPU CGRoup path was not set", cpu.getParent(),
+          handler.getControllerPaths().get("cpu"));
+
+    } finally {
+      FileUtils.deleteQuietly(cpu);
+    }
   }
 
 }

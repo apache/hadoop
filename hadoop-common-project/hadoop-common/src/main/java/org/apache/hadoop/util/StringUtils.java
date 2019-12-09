@@ -35,8 +35,8 @@ import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang.SystemUtils;
-import org.apache.commons.lang.time.FastDateFormat;
+import org.apache.commons.lang3.SystemUtils;
+import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
@@ -175,6 +175,17 @@ public class StringUtils {
   /** Same as byteToHexString(bytes, 0, bytes.length). */
   public static String byteToHexString(byte bytes[]) {
     return byteToHexString(bytes, 0, bytes.length);
+  }
+
+  /**
+   * Convert a byte to a hex string.
+   * @see #byteToHexString(byte[])
+   * @see #byteToHexString(byte[], int, int)
+   * @param b byte
+   * @return byte's hex value as a String
+   */
+  public static String byteToHexString(byte b) {
+    return byteToHexString(new byte[] {b});
   }
 
   /**
@@ -361,8 +372,8 @@ public class StringUtils {
   
   /**
    * Returns an arraylist of strings.
-   * @param str the comma seperated string values
-   * @return the arraylist of the comma seperated string values
+   * @param str the comma separated string values
+   * @return the arraylist of the comma separated string values
    */
   public static String[] getStrings(String str){
     String delim = ",";
@@ -373,7 +384,7 @@ public class StringUtils {
    * Returns an arraylist of strings.
    * @param str the string values
    * @param delim delimiter to separate the values
-   * @return the arraylist of the seperated string values
+   * @return the arraylist of the separated string values
    */
   public static String[] getStrings(String str, String delim){
     Collection<String> values = getStringCollection(str, delim);
@@ -385,7 +396,7 @@ public class StringUtils {
 
   /**
    * Returns a collection of strings.
-   * @param str comma seperated string values
+   * @param str comma separated string values
    * @return an <code>ArrayList</code> of string values
    */
   public static Collection<String> getStringCollection(String str){
@@ -429,10 +440,11 @@ public class StringUtils {
   }
   
   /**
-   * Splits a comma separated value <code>String</code>, trimming leading and
-   * trailing whitespace on each value.
+   * Splits a comma or newline separated value <code>String</code>, trimming
+   * leading and trailing whitespace on each value.
    *
-   * @param str a comma separated <code>String</code> with values, may be null
+   * @param str a comma or newline separated <code>String</code> with values,
+   *            may be null
    * @return an array of <code>String</code> values, empty array if null String
    *         input
    */
@@ -441,7 +453,7 @@ public class StringUtils {
       return emptyStringArray;
     }
 
-    return str.trim().split("\\s*,\\s*");
+    return str.trim().split("\\s*[,\n]\\s*");
   }
 
   final public static String[] emptyStringArray = {};
@@ -664,11 +676,11 @@ public class StringUtils {
    * @param msg content of the message
    * @return a message for logging
    */
-  private static String toStartupShutdownString(String prefix, String [] msg) {
+  public static String toStartupShutdownString(String prefix, String[] msg) {
     StringBuilder b = new StringBuilder(prefix);
     b.append("\n/************************************************************");
     for(String s : msg)
-      b.append("\n" + prefix + s);
+      b.append("\n").append(prefix).append(s);
     b.append("\n************************************************************/");
     return b.toString();
   }
@@ -699,21 +711,7 @@ public class StringUtils {
                                      final LogAdapter LOG) { 
     final String hostname = NetUtils.getHostname();
     final String classname = clazz.getSimpleName();
-    LOG.info(
-        toStartupShutdownString("STARTUP_MSG: ", new String[] {
-            "Starting " + classname,
-            "  user = " + System.getProperty("user.name"),
-            "  host = " + hostname,
-            "  args = " + Arrays.asList(args),
-            "  version = " + VersionInfo.getVersion(),
-            "  classpath = " + System.getProperty("java.class.path"),
-            "  build = " + VersionInfo.getUrl() + " -r "
-                         + VersionInfo.getRevision()  
-                         + "; compiled by '" + VersionInfo.getUser()
-                         + "' on " + VersionInfo.getDate(),
-            "  java = " + System.getProperty("java.version") }
-        )
-      );
+    LOG.info(createStartupShutdownMessage(classname, hostname, args));
 
     if (SystemUtils.IS_OS_UNIX) {
       try {
@@ -734,11 +732,34 @@ public class StringUtils {
   }
 
   /**
+   * Generate the text for the startup/shutdown message of processes.
+   * @param classname short classname of the class
+   * @param hostname hostname
+   * @param args Command arguments
+   * @return a string to log.
+   */
+  public static String createStartupShutdownMessage(String classname,
+      String hostname, String[] args) {
+    return toStartupShutdownString("STARTUP_MSG: ", new String[] {
+        "Starting " + classname,
+        "  host = " + hostname,
+        "  args = " + (args != null ? Arrays.asList(args) : new ArrayList<>()),
+        "  version = " + VersionInfo.getVersion(),
+        "  classpath = " + System.getProperty("java.class.path"),
+        "  build = " + VersionInfo.getUrl() + " -r "
+                     + VersionInfo.getRevision()  
+                     + "; compiled by '" + VersionInfo.getUser()
+                     + "' on " + VersionInfo.getDate(),
+        "  java = " + System.getProperty("java.version") }
+    );
+  }
+
+  /**
    * The traditional binary prefixes, kilo, mega, ..., exa,
    * which can be represented by a 64-bit integer.
    * TraditionalBinaryPrefix symbol are case insensitive. 
    */
-  public static enum TraditionalBinaryPrefix {
+  public enum TraditionalBinaryPrefix {
     KILO(10),
     MEGA(KILO.bitShift + 10),
     GIGA(MEGA.bitShift + 10),
@@ -966,7 +987,7 @@ public class StringUtils {
     String[] words = split(StringUtils.toLowerCase(s), ESCAPE_CHAR,  '_');
 
     for (String word : words)
-      sb.append(org.apache.commons.lang.StringUtils.capitalize(word));
+      sb.append(org.apache.commons.lang3.StringUtils.capitalize(word));
 
     return sb.toString();
   }
@@ -1131,4 +1152,95 @@ public class StringUtils {
     return s1.equalsIgnoreCase(s2);
   }
 
+  /**
+   * <p>Checks if the String contains only unicode letters.</p>
+   *
+   * <p><code>null</code> will return <code>false</code>.
+   * An empty String (length()=0) will return <code>true</code>.</p>
+   *
+   * <pre>
+   * StringUtils.isAlpha(null)   = false
+   * StringUtils.isAlpha("")     = true
+   * StringUtils.isAlpha("  ")   = false
+   * StringUtils.isAlpha("abc")  = true
+   * StringUtils.isAlpha("ab2c") = false
+   * StringUtils.isAlpha("ab-c") = false
+   * </pre>
+   *
+   * @param str  the String to check, may be null
+   * @return <code>true</code> if only contains letters, and is non-null
+   */
+  public static boolean isAlpha(String str) {
+    if (str == null) {
+      return false;
+    }
+    int sz = str.length();
+    for (int i = 0; i < sz; i++) {
+      if (!Character.isLetter(str.charAt(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Same as WordUtils#wrap in commons-lang 2.6. Unlike commons-lang3, leading
+   * spaces on the first line are NOT stripped.
+   *
+   * @param str  the String to be word wrapped, may be null
+   * @param wrapLength  the column to wrap the words at, less than 1 is treated
+   *                   as 1
+   * @param newLineStr  the string to insert for a new line,
+   *  <code>null</code> uses the system property line separator
+   * @param wrapLongWords  true if long words (such as URLs) should be wrapped
+   * @return a line with newlines inserted, <code>null</code> if null input
+   */
+  public static String wrap(String str, int wrapLength, String newLineStr,
+      boolean wrapLongWords) {
+    if(str == null) {
+      return null;
+    } else {
+      if(newLineStr == null) {
+        newLineStr = System.lineSeparator();
+      }
+
+      if(wrapLength < 1) {
+        wrapLength = 1;
+      }
+
+      int inputLineLength = str.length();
+      int offset = 0;
+      StringBuffer wrappedLine = new StringBuffer(inputLineLength + 32);
+
+      while(inputLineLength - offset > wrapLength) {
+        if(str.charAt(offset) == 32) {
+          ++offset;
+        } else {
+          int spaceToWrapAt = str.lastIndexOf(32, wrapLength + offset);
+          if(spaceToWrapAt >= offset) {
+            wrappedLine.append(str.substring(offset, spaceToWrapAt));
+            wrappedLine.append(newLineStr);
+            offset = spaceToWrapAt + 1;
+          } else if(wrapLongWords) {
+            wrappedLine.append(str.substring(offset, wrapLength + offset));
+            wrappedLine.append(newLineStr);
+            offset += wrapLength;
+          } else {
+            spaceToWrapAt = str.indexOf(32, wrapLength + offset);
+            if(spaceToWrapAt >= 0) {
+              wrappedLine.append(str.substring(offset, spaceToWrapAt));
+              wrappedLine.append(newLineStr);
+              offset = spaceToWrapAt + 1;
+            } else {
+              wrappedLine.append(str.substring(offset));
+              offset = inputLineLength;
+            }
+          }
+        }
+      }
+
+      wrappedLine.append(str.substring(offset));
+      return wrappedLine.toString();
+    }
+  }
 }

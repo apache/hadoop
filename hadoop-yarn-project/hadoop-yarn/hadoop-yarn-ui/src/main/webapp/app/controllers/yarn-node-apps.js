@@ -22,6 +22,7 @@ export default Ember.Controller.extend({
 
   breadcrumbs: Ember.computed("model.attempt.appId", function () {
     var nodeInfo = this.get("model.nodeInfo");
+    var addr = encodeURIComponent(nodeInfo.addr);
     return [{
       text: "Home",
       routeName: 'application'
@@ -30,10 +31,15 @@ export default Ember.Controller.extend({
       routeName: 'yarn-nodes.table'
     }, {
       text: `Node [ ${nodeInfo.id} ]`,
-      href: `/#/yarn-node/${nodeInfo.id}/${nodeInfo.addr}`,
+      href: `#/yarn-node/${nodeInfo.id}/${addr}/info`
     }, {
       text: "Applications",
     }];
+  }),
+
+  encodedNodeAddr: Ember.computed("model.nodeInfo", function() {
+    var nodeInfo = this.get("model.nodeInfo");
+    return encodeURIComponent(nodeInfo.addr);
   })
 
 });

@@ -34,13 +34,13 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TD;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.THEAD;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TD;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.THEAD;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -60,12 +60,12 @@ public class CountersBlock extends HtmlBlock {
   @Override protected void render(Block html) {
     if (job == null) {
       html.
-        p()._("Sorry, no counters for nonexistent", $(JOB_ID, "job"))._();
+        p().__("Sorry, no counters for nonexistent", $(JOB_ID, "job")).__();
       return;
     }
     if (!$(TASK_ID).isEmpty() && task == null) {
       html.
-        p()._("Sorry, no counters for nonexistent", $(TASK_ID, "task"))._();
+        p().__("Sorry, no counters for nonexistent", $(TASK_ID, "task")).__();
       return;
     }
     
@@ -75,7 +75,7 @@ public class CountersBlock extends HtmlBlock {
         type = $(JOB_ID, "the job");
       }
       html.
-        p()._("Sorry it looks like ",type," has no counters.")._();
+        p().__("Sorry it looks like ", type, " has no counters.").__();
       return;
     }
     
@@ -97,7 +97,7 @@ public class CountersBlock extends HtmlBlock {
         thead().
           tr().
             th(".group.ui-state-default", "Counter Group").
-            th(".ui-state-default", "Counters")._()._().
+            th(".ui-state-default", "Counters").__().__().
         tbody();
     for (CounterGroup g : total) {
       CounterGroup mg = map == null ? null : map.getGroup(g.getName());
@@ -109,7 +109,7 @@ public class CountersBlock extends HtmlBlock {
       TR<THEAD<TABLE<TD<TR<TBODY<TABLE<DIV<Hamlet>>>>>>>> groupHeadRow = tbody.
         tr().
           th().$title(g.getName()).$class("ui-state-default").
-            _(fixGroupDisplayName(g.getDisplayName()))._().
+          __(fixGroupDisplayName(g.getDisplayName())).__().
           td().$class(C_TABLE).
             table(".dt-counters").$id(job.getID()+"."+g.getName()).
               thead().
@@ -120,20 +120,20 @@ public class CountersBlock extends HtmlBlock {
       }
       // Ditto
       TBODY<TABLE<TD<TR<TBODY<TABLE<DIV<Hamlet>>>>>>> group = groupHeadRow.
-            th(map == null ? "Value" : "Total")._()._().
+            th(map == null ? "Value" : "Total").__().__().
         tbody();
       for (Counter counter : g) {
         // Ditto
         TR<TBODY<TABLE<TD<TR<TBODY<TABLE<DIV<Hamlet>>>>>>>> groupRow = group.
           tr();
           if (task == null && mg == null && rg == null) {
-            groupRow.td().$title(counter.getName())._(counter.getDisplayName()).
-            _();
+            groupRow.td().$title(counter.getName()).__(counter.getDisplayName()).
+                __();
           } else {
             groupRow.td().$title(counter.getName()).
               a(url(urlBase,urlId,g.getName(), 
                   counter.getName()), counter.getDisplayName()).
-            _();
+                __();
           }
         if (map != null) {
           Counter mc = mg == null ? null : mg.findCounter(counter.getName());
@@ -142,11 +142,11 @@ public class CountersBlock extends HtmlBlock {
             td(mc == null ? "0" : String.format("%,d", mc.getValue())).
             td(rc == null ? "0" : String.format("%,d", rc.getValue()));
         }
-        groupRow.td(String.format("%,d", counter.getValue()))._();
+        groupRow.td(String.format("%,d", counter.getValue())).__();
       }
-      group._()._()._()._();
+      group.__().__().__().__();
     }
-    tbody._()._()._();
+    tbody.__().__().__();
   }
 
   private void getCounters(AppContext ctx) {

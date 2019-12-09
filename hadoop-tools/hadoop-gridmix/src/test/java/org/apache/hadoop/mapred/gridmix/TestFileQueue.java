@@ -26,8 +26,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -36,7 +36,7 @@ import org.apache.hadoop.mapreduce.lib.input.CombineFileSplit;
 
 public class TestFileQueue {
 
-  static final Log LOG = LogFactory.getLog(TestFileQueue.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestFileQueue.class);
   static final int NFILES = 4;
   static final int BLOCK = 256;
   static final Path[] paths = new Path[NFILES];
@@ -48,8 +48,8 @@ public class TestFileQueue {
   public static void setup() throws IOException {
     final Configuration conf = new Configuration();
     final FileSystem fs = FileSystem.getLocal(conf).getRaw();
-    final Path p = new Path(System.getProperty("test.build.data", "/tmp"),
-        "testFileQueue").makeQualified(fs);
+    final Path p = fs.makeQualified(new Path(
+        System.getProperty("test.build.data", "/tmp"), "testFileQueue"));
     fs.delete(p, true);
     final byte[] b = new byte[BLOCK];
     for (int i = 0; i < NFILES; ++i) {
@@ -71,8 +71,8 @@ public class TestFileQueue {
   public static void cleanup() throws IOException {
     final Configuration conf = new Configuration();
     final FileSystem fs = FileSystem.getLocal(conf).getRaw();
-    final Path p = new Path(System.getProperty("test.build.data", "/tmp"),
-        "testFileQueue").makeQualified(fs);
+    final Path p = fs.makeQualified(new Path(
+        System.getProperty("test.build.data", "/tmp"), "testFileQueue"));
     fs.delete(p, true);
   }
 

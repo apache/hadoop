@@ -31,7 +31,8 @@ import org.apache.hadoop.security.KerberosInfo;
 
 /*****************************************************************************
  * Protocol that a secondary NameNode uses to communicate with the NameNode.
- * It's used to get part of the name node state
+ * Also used by external storage policy satisfier. It's used to get part of the
+ * name node state
  *****************************************************************************/
 @KerberosInfo(
     serverPrincipal = DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY)
@@ -67,17 +68,18 @@ public interface NamenodeProtocol {
   /**
    * Get a list of blocks belonging to <code>datanode</code>
    * whose total size equals <code>size</code>.
-   * 
+   *
    * @see org.apache.hadoop.hdfs.server.balancer.Balancer
    * @param datanode  a data node
    * @param size      requested size
+   * @param minBlockSize each block should be of this minimum Block Size
    * @return          a list of blocks & their locations
    * @throws IOException if size is less than or equal to 0 or
-                                   datanode does not exist
+  datanode does not exist
    */
   @Idempotent
-  public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
-  throws IOException;
+  BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
+      minBlockSize) throws IOException;
 
   /**
    * Get the current block keys
@@ -193,5 +195,20 @@ public interface NamenodeProtocol {
   @Idempotent
   public boolean isUpgradeFinalized() throws IOException;
 
+  /**
+   * return whether the Namenode is rolling upgrade in progress (true) or
+   * not (false).
+   * @return
+   * @throws IOException
+   */
+  @Idempotent
+  boolean isRollingUpgrade() throws IOException;
+
+  /**
+   * @return Gets the next available sps path, otherwise null. This API used
+   *         by External SPS.
+   */
+  @AtMostOnce
+  Long getNextSPSPath() throws IOException;
 }
 

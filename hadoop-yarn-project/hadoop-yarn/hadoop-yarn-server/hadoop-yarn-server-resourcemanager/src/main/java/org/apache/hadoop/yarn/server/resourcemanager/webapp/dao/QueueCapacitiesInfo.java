@@ -24,6 +24,7 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 
 /**
@@ -39,6 +40,7 @@ public class QueueCapacitiesInfo {
   }
 
   public QueueCapacitiesInfo(QueueCapacities capacities,
+      QueueResourceQuotas resourceQuotas,
       boolean considerAMUsage) {
     if (capacities == null) {
       return;
@@ -68,12 +70,17 @@ public class QueueCapacitiesInfo {
       queueCapacitiesByPartition.add(new PartitionQueueCapacitiesInfo(
           partitionName, capacity, usedCapacity, maxCapacity, absCapacity,
           absUsedCapacity, absMaxCapacity,
-          considerAMUsage ? maxAMLimitPercentage : 0f));
+          considerAMUsage ? maxAMLimitPercentage : 0f,
+          resourceQuotas.getConfiguredMinResource(partitionName),
+          resourceQuotas.getConfiguredMaxResource(partitionName),
+          resourceQuotas.getEffectiveMinResource(partitionName),
+          resourceQuotas.getEffectiveMaxResource(partitionName)));
     }
   }
 
-  public QueueCapacitiesInfo(QueueCapacities capacities) {
-    this(capacities, true);
+  public QueueCapacitiesInfo(QueueCapacities capacities,
+      QueueResourceQuotas resourceQuotas) {
+    this(capacities, resourceQuotas, true);
   }
 
   public void add(PartitionQueueCapacitiesInfo partitionQueueCapacitiesInfo) {

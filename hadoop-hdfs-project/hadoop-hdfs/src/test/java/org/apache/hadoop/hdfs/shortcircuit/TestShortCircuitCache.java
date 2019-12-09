@@ -34,13 +34,18 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
+import net.jcip.annotations.NotThreadSafe;
 import org.apache.commons.collections.map.LinkedMap;
-import org.apache.commons.lang.mutable.MutableBoolean;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.ClientContext;
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.PeerCache;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderFactory;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderTestUtil;
 import org.apache.hadoop.hdfs.DFSInputStream;
@@ -49,10 +54,12 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.net.DomainPeer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
@@ -64,9 +71,12 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitCache.ShortCircuitReplica
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.ShmId;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.Slot;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RetriableException;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
@@ -81,8 +91,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.HashMultimap;
 
+@NotThreadSafe
 public class TestShortCircuitCache {
-  static final Log LOG = LogFactory.getLog(TestShortCircuitCache.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestShortCircuitCache.class);
   
   private static class TestFileDescriptorPair {
     final TemporarySocketDirectory dir = new TemporarySocketDirectory();
@@ -115,7 +127,7 @@ public class TestShortCircuitCache {
     }
 
     public void close() throws IOException {
-      IOUtils.cleanup(LOG, fis);
+      IOUtils.cleanupWithLogger(LOG, fis);
       dir.close();
     }
 
@@ -723,8 +735,8 @@ public class TestShortCircuitCache {
         throw new IOException("injected error into sendShmResponse");
       }
     }).when(failureInjector).sendShortCircuitShmResponse();
-    DataNodeFaultInjector prevInjector = DataNodeFaultInjector.instance;
-    DataNodeFaultInjector.instance = failureInjector;
+    DataNodeFaultInjector prevInjector = DataNodeFaultInjector.get();
+    DataNodeFaultInjector.set(failureInjector);
 
     try {
       // The first read will try to allocate a shared memory segment and slot.
@@ -741,7 +753,7 @@ public class TestShortCircuitCache {
         cluster.getDataNodes().get(0).getShortCircuitRegistry());
 
     LOG.info("Clearing failure injector and performing another read...");
-    DataNodeFaultInjector.instance = prevInjector;
+    DataNodeFaultInjector.set(prevInjector);
 
     fs.getClient().getClientContext().getDomainSocketFactory().clearPathMap();
 
@@ -790,5 +802,111 @@ public class TestShortCircuitCache {
         cluster.getDataNodes().get(0).getShortCircuitRegistry());
     cluster.shutdown();
     sockDir.close();
+  }
+
+  @Test
+  public void testFetchOrCreateRetries() throws Exception {
+    try(ShortCircuitCache cache = Mockito
+        .spy(new ShortCircuitCache(10, 10000000, 10, 10000000, 1, 10000, 0))) {
+      final TestFileDescriptorPair pair = new TestFileDescriptorPair();
+      ExtendedBlockId extendedBlockId = new ExtendedBlockId(123, "test_bp1");
+      SimpleReplicaCreator sRC = new SimpleReplicaCreator(123, cache, pair);
+
+      // Arrange that fetch will throw RetriableException for any call
+      Mockito.doThrow(new RetriableException("Retry")).when(cache)
+        .fetch(Mockito.eq(extendedBlockId), Mockito.any());
+
+      // Act: calling fetchOrCreate two times
+      //  first call: it will create and put entry to replicaInfoMap
+      //  second call: it will call fetch to get info for entry, and should
+      //               retry 3 times because RetriableException thrown
+      cache.fetchOrCreate(extendedBlockId, sRC);
+      cache.fetchOrCreate(extendedBlockId, sRC);
+
+      // Assert that fetchOrCreate retried to fetch at least 3 times
+      Mockito.verify(cache, Mockito.atLeast(3))
+        .fetch(Mockito.eq(extendedBlockId), Mockito.any());
+    }
+  }
+
+  @Test
+  public void testRequestFileDescriptorsWhenULimit() throws Exception {
+    TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
+    Configuration conf = createShortCircuitConf(
+        "testRequestFileDescriptorsWhenULimit", sockDir);
+
+    final short replicas = 1;
+    final int fileSize = 3;
+    final String testFile = "/testfile";
+
+    try (MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(replicas).build()) {
+
+      cluster.waitActive();
+
+      DistributedFileSystem fs = cluster.getFileSystem();
+      DFSTestUtil.createFile(fs, new Path(testFile), fileSize, replicas, 0L);
+
+      LocatedBlock blk = new DFSClient(DFSUtilClient.getNNAddress(conf), conf)
+          .getLocatedBlocks(testFile, 0, fileSize).get(0);
+
+      ClientContext clientContext = Mockito.mock(ClientContext.class);
+      Mockito.when(clientContext.getPeerCache()).thenAnswer(
+          (Answer<PeerCache>) peerCacheCall -> {
+            PeerCache peerCache = new PeerCache(10, Long.MAX_VALUE);
+            DomainPeer peer = Mockito.spy(getDomainPeerToDn(conf));
+            peerCache.put(blk.getLocations()[0], peer);
+
+            Mockito.when(peer.getDomainSocket()).thenAnswer(
+                (Answer<DomainSocket>) domainSocketCall -> {
+                  DomainSocket domainSocket = Mockito.mock(DomainSocket.class);
+                  Mockito.when(domainSocket
+                      .recvFileInputStreams(
+                          Mockito.any(FileInputStream[].class),
+                          Mockito.any(byte[].class),
+                          Mockito.anyInt(),
+                          Mockito.anyInt())
+                  ).thenAnswer(
+                      // we are mocking the FileOutputStream array with nulls
+                      (Answer<Void>) recvFileInputStreamsCall -> null
+                  );
+                  return domainSocket;
+                }
+            );
+
+            return peerCache;
+          });
+
+      Mockito.when(clientContext.getShortCircuitCache()).thenAnswer(
+          (Answer<ShortCircuitCache>) shortCircuitCacheCall -> {
+            ShortCircuitCache cache = Mockito.mock(ShortCircuitCache.class);
+            Mockito.when(cache.allocShmSlot(
+                Mockito.any(DatanodeInfo.class),
+                Mockito.any(DomainPeer.class),
+                Mockito.any(MutableBoolean.class),
+                Mockito.any(ExtendedBlockId.class),
+                Mockito.anyString()))
+                .thenAnswer((Answer<Slot>) call -> null);
+
+            return cache;
+          }
+      );
+
+      DatanodeInfo[] nodes = blk.getLocations();
+
+      try {
+        Assert.assertNull(new BlockReaderFactory(new DfsClientConf(conf))
+            .setInetSocketAddress(NetUtils.createSocketAddr(nodes[0]
+                .getXferAddr()))
+            .setClientCacheContext(clientContext)
+            .setDatanodeInfo(blk.getLocations()[0])
+            .setBlock(blk.getBlock())
+            .setBlockToken(new Token())
+            .createShortCircuitReplicaInfo());
+      } catch (NullPointerException ex) {
+        Assert.fail("Should not throw NPE when the native library is unable " +
+            "to create new files!");
+      }
+    }
   }
 }

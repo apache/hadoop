@@ -28,8 +28,6 @@ import java.io.PrintStream;
 import java.util.Date;
 import java.util.StringTokenizer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
@@ -38,6 +36,8 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.*;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
  /**
  * Distributed i/o benchmark.
@@ -69,7 +69,7 @@ import org.junit.Test;
 @Ignore
 public class DFSCIOTest {
   // Constants
-  private static final Log LOG = LogFactory.getLog(DFSCIOTest.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DFSCIOTest.class);
   private static final int TEST_TYPE_READ = 0;
   private static final int TEST_TYPE_WRITE = 1;
   private static final int TEST_TYPE_CLEANUP = 2;

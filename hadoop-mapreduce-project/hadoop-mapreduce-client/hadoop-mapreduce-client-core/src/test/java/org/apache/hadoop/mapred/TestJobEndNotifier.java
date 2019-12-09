@@ -31,12 +31,15 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
+import org.junit.Test;
 
-public class TestJobEndNotifier extends TestCase {
+public class TestJobEndNotifier {
   HttpServer2 server;
   URL baseUrl;
 
@@ -99,6 +102,7 @@ public class TestJobEndNotifier extends TestCase {
     }
   }
 
+  @Before
   public void setUp() throws Exception {
     new File(System.getProperty("build.webapps", "build/webapps") + "/test"
         ).mkdirs();
@@ -118,6 +122,7 @@ public class TestJobEndNotifier extends TestCase {
     FailServlet.calledTimes = 0;
   }
 
+  @After
   public void tearDown() throws Exception {
     server.stop();
   }
@@ -125,6 +130,7 @@ public class TestJobEndNotifier extends TestCase {
   /**
    * Basic validation for localRunnerNotification.
    */
+  @Test
   public void testLocalJobRunnerUriSubstitution() throws InterruptedException {
     JobStatus jobStatus = createTestJobStatus(
         "job_20130313155005308_0001", JobStatus.SUCCEEDED);
@@ -145,6 +151,7 @@ public class TestJobEndNotifier extends TestCase {
   /**
    * Validate job.end.retry.attempts for the localJobRunner.
    */
+  @Test
   public void testLocalJobRunnerRetryCount() throws InterruptedException {
     int retryAttempts = 3;
     JobStatus jobStatus = createTestJobStatus(
@@ -161,6 +168,7 @@ public class TestJobEndNotifier extends TestCase {
    * Validate that the notification times out after reaching
    * mapreduce.job.end-notification.timeout.
    */
+  @Test
   public void testNotificationTimeout() throws InterruptedException {
     Configuration conf = new Configuration();
     // Reduce the timeout to 1 second

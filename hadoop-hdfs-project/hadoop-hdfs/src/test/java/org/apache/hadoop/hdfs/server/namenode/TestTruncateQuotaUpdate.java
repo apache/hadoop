@@ -22,12 +22,14 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DiffList;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DiffListByArrayList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.internal.util.reflection.Whitebox;
 
 import java.util.ArrayList;
 
@@ -156,10 +158,11 @@ public class TestTruncateQuotaUpdate {
     FileDiff diff = mock(FileDiff.class);
     when(diff.getBlocks()).thenReturn(blocks);
     FileDiffList diffList = new FileDiffList();
+    Whitebox.setInternalState(diffList, "diffs", new DiffListByArrayList<>(0));
     @SuppressWarnings("unchecked")
-    ArrayList<FileDiff> diffs = ((ArrayList<FileDiff>)Whitebox.getInternalState
-        (diffList, "diffs"));
-    diffs.add(diff);
+    DiffList<FileDiff> diffs = (DiffList<FileDiff>)Whitebox.getInternalState(
+        diffList, "diffs");
+    diffs.addFirst(diff);
     FileWithSnapshotFeature sf = new FileWithSnapshotFeature(diffList);
     file.addFeature(sf);
   }

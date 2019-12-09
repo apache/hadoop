@@ -33,7 +33,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
@@ -52,15 +51,21 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -70,6 +75,7 @@ import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationIdNotProvidedException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
+import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 
@@ -226,7 +232,7 @@ public abstract class YarnClient extends AbstractService {
    * Get the AMRM token of the application.
    * <p>
    * The AMRM token is required for AM to RM scheduling operations. For 
-   * managed Application Masters Yarn takes care of injecting it. For unmanaged
+   * managed Application Masters YARN takes care of injecting it. For unmanaged
    * Applications Masters, the token must be obtained via this method and set
    * in the {@link org.apache.hadoop.security.UserGroupInformation} of the
    * current user.
@@ -767,7 +773,7 @@ public abstract class YarnClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Map<NodeId, Set<NodeLabel>> getNodeToLabels()
+  public abstract Map<NodeId, Set<String>> getNodeToLabels()
       throws YarnException, IOException;
 
   /**
@@ -782,7 +788,7 @@ public abstract class YarnClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Map<NodeLabel, Set<NodeId>> getLabelsToNodes()
+  public abstract Map<String, Set<NodeId>> getLabelsToNodes()
       throws YarnException, IOException;
 
   /**
@@ -798,7 +804,7 @@ public abstract class YarnClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Map<NodeLabel, Set<NodeId>> getLabelsToNodes(
+  public abstract Map<String, Set<NodeId>> getLabelsToNodes(
       Set<String> labels) throws YarnException, IOException;
 
   /**
@@ -855,4 +861,101 @@ public abstract class YarnClient extends AbstractService {
     throw new UnsupportedOperationException("The sub-class extending "
         + YarnClient.class.getName() + " is expected to implement this !");
   }
+
+  /**
+   * <p>
+   * Get the resource profiles available in the RM.
+   * </p>
+   * @return a Map of the resource profile names to their capabilities
+   * @throws YARNFeatureNotEnabledException if resource-profile is disabled
+   * @throws YarnException if any error happens inside YARN
+   * @throws IOException in case of other errors
+   */
+  @Public
+  @Unstable
+  public abstract Map<String, Resource> getResourceProfiles()
+      throws YarnException, IOException;
+
+  /**
+   * <p>
+   * Get the details of a specific resource profile from the RM.
+   * </p>
+   * @param profile the profile name
+   * @return resource profile name with its capabilities
+   * @throws YARNFeatureNotEnabledException if resource-profile is disabled
+   * @throws YarnException if any error happens inside YARN
+   * @throws IOException in case of other others
+   */
+  @Public
+  @Unstable
+  public abstract Resource getResourceProfile(String profile)
+      throws YarnException, IOException;
+
+  /**
+   * <p>
+   * Get available resource types supported by RM.
+   * </p>
+   * @return list of supported resource types with detailed information
+   * @throws YarnException if any issue happens inside YARN
+   * @throws IOException in case of other others
+   */
+  @Public
+  @Unstable
+  public abstract List<ResourceTypeInfo> getResourceTypeInfo()
+      throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to get node attributes in the cluster.
+   * </p>
+   *
+   * @return cluster node attributes collection
+   * @throws YarnException when there is a failure in
+   *                       {@link ApplicationClientProtocol}
+   * @throws IOException   when there is a failure in
+   *                       {@link ApplicationClientProtocol}
+   */
+  @Public
+  @Unstable
+  public abstract Set<NodeAttributeInfo> getClusterAttributes()
+      throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to get mapping of AttributeKey to associated
+   * NodeToAttributeValue list for specified node attributeKeys in the cluster.
+   * </p>
+   *
+   * @param attributes AttributeKeys for which associated NodeToAttributeValue
+   *          mapping value has to be retrieved. If empty or null is set then
+   *          will return mapping for all attributeKeys in the cluster
+   * @return mapping of AttributeKey to List of associated
+   *         NodeToAttributeValue's.
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public abstract Map<NodeAttributeKey,
+      List<NodeToAttributeValue>> getAttributesToNodes(
+      Set<NodeAttributeKey> attributes) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to get all node to attribute mapping in
+   * existing cluster.
+   * </p>
+   *
+   * @param hostNames HostNames for which host to attributes mapping has to
+   *                  be retrived.If empty or null is set then will return
+   *                  all nodes to attributes mapping in cluster.
+   * @return Node to attribute mappings
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public abstract Map<String, Set<NodeAttribute>> getNodeToAttributes(
+      Set<String> hostNames) throws YarnException, IOException;
+
 }

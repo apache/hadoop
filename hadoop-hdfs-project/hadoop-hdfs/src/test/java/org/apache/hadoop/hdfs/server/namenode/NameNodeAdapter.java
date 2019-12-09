@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.mockito.Mockito.spy;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -42,11 +46,12 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.test.Whitebox;
 import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.Whitebox;
 
 /**
  * This is a utility class to expose NameNode functionality for unit tests.
@@ -69,12 +74,16 @@ public class NameNodeAdapter {
   }
   
   public static HdfsFileStatus getFileInfo(NameNode namenode, String src,
-      boolean resolveLink) throws AccessControlException, UnresolvedLinkException,
-        StandbyException, IOException {
+      boolean resolveLink, boolean needLocation, boolean needBlockToken)
+      throws AccessControlException, UnresolvedLinkException, StandbyException,
+      IOException {
+    final FSPermissionChecker pc =
+        namenode.getNamesystem().getPermissionChecker();
     namenode.getNamesystem().readLock();
     try {
       return FSDirStatAndListingOp.getFileInfo(namenode.getNamesystem()
-          .getFSDirectory(), src, resolveLink);
+          .getFSDirectory(), pc, src, resolveLink, needLocation,
+          needBlockToken);
     } finally {
       namenode.getNamesystem().readUnlock();
     }
@@ -122,7 +131,8 @@ public class NameNodeAdapter {
       DatanodeDescriptor dd, FSNamesystem namesystem) throws IOException {
     return namesystem.handleHeartbeat(nodeReg,
         BlockManagerTestUtil.getStorageReportsForDatanode(dd),
-        dd.getCacheCapacity(), dd.getCacheRemaining(), 0, 0, 0, null, true);
+        dd.getCacheCapacity(), dd.getCacheRemaining(), 0, 0, 0, null, true,
+        SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
   }
 
   public static boolean setReplication(final FSNamesystem ns,
@@ -167,6 +177,11 @@ public class NameNodeAdapter {
     return l == null ? -1 : l.getLastUpdate();
   }
 
+
+  public static HAServiceState getServiceState(NameNode nn) {
+    return nn.getServiceState();
+  }
+
   /**
    * Return the datanode descriptor for the given datanode.
    */
@@ -186,7 +201,41 @@ public class NameNodeAdapter {
   public static long[] getStats(final FSNamesystem fsn) {
     return fsn.getStats();
   }
-  
+
+  public static FSNamesystem spyOnNamesystem(NameNode nn) {
+    FSNamesystem fsnSpy = Mockito.spy(nn.getNamesystem());
+    FSNamesystem fsnOld = nn.namesystem;
+    fsnOld.writeLock();
+    fsnSpy.writeLock();
+    nn.namesystem = fsnSpy;
+    try {
+      FieldUtils.writeDeclaredField(
+          (NameNodeRpcServer)nn.getRpcServer(), "namesystem", fsnSpy, true);
+      FieldUtils.writeDeclaredField(
+          fsnSpy.getBlockManager(), "namesystem", fsnSpy, true);
+      FieldUtils.writeDeclaredField(
+          fsnSpy.getLeaseManager(), "fsnamesystem", fsnSpy, true);
+      FieldUtils.writeDeclaredField(
+          fsnSpy.getBlockManager().getDatanodeManager(),
+          "namesystem", fsnSpy, true);
+      FieldUtils.writeDeclaredField(
+          BlockManagerTestUtil.getHeartbeatManager(fsnSpy.getBlockManager()),
+          "namesystem", fsnSpy, true);
+    } catch (IllegalAccessException e) {
+      throw new RuntimeException("Cannot set spy FSNamesystem", e);
+    } finally {
+      fsnSpy.writeUnlock();
+      fsnOld.writeUnlock();
+    }
+    return fsnSpy;
+  }
+
+  public static BlockManager spyOnBlockManager(NameNode nn) {
+    BlockManager bmSpy = Mockito.spy(nn.getNamesystem().getBlockManager());
+    nn.getNamesystem().setBlockManagerForTesting(bmSpy);
+    return bmSpy;
+  }
+
   public static ReentrantReadWriteLock spyOnFsLock(FSNamesystem fsn) {
     ReentrantReadWriteLock spy = Mockito.spy(fsn.getFsLockForTests());
     fsn.setFsLockForTests(spy);

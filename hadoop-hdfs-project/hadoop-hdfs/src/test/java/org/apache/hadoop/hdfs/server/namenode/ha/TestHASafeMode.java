@@ -30,8 +30,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -62,11 +62,11 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.apache.hadoop.test.Whitebox;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.internal.util.reflection.Whitebox;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
@@ -75,7 +75,8 @@ import com.google.common.collect.Lists;
  * Tests that exercise safemode in an HA cluster.
  */
 public class TestHASafeMode {
-  private static final Log LOG = LogFactory.getLog(TestHASafeMode.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestHASafeMode.class);
   private static final int BLOCK_SIZE = 1024;
   private NameNode nn0;
   private NameNode nn1;
@@ -83,8 +84,8 @@ public class TestHASafeMode {
   private MiniDFSCluster cluster;
   
   static {
-    DFSTestUtil.setNameNodeLogLevel(Level.ALL);
-    GenericTestUtils.setLogLevel(FSImage.LOG, Level.ALL);
+    DFSTestUtil.setNameNodeLogLevel(org.apache.log4j.Level.TRACE);
+    GenericTestUtils.setLogLevel(FSImage.LOG, Level.TRACE);
   }
   
   @Before
@@ -493,13 +494,22 @@ public class TestHASafeMode {
     int numNodes, int nodeThresh) {
     String status = nn.getNamesystem().getSafemode();
     if (safe == total) {
-      assertTrue("Bad safemode status: '" + status + "'",
-          status.startsWith(
-            "Safe mode is ON. The reported blocks " + safe + " has reached the "
-            + "threshold 0.9990 of total blocks " + total + ". The number of "
-            + "live datanodes " + numNodes + " has reached the minimum number "
-            + nodeThresh + ". In safe mode extension. "
-            + "Safe mode will be turned off automatically"));
+      if (nodeThresh == 0) {
+        assertTrue("Bad safemode status: '" + status + "'",
+            status.startsWith("Safe mode is ON. The reported blocks " + safe
+                + " has reached the " + "threshold 0.9990 of total blocks "
+                + total + ". The minimum number of live datanodes is not "
+                + "required. In safe mode extension. Safe mode will be turned "
+                + "off automatically"));
+      } else {
+        assertTrue("Bad safemode status: '" + status + "'",
+            status.startsWith(
+                "Safe mode is ON. The reported blocks " + safe + " has reached "
+                    + "the threshold 0.9990 of total blocks " + total + ". The "
+                    + "number of live datanodes " + numNodes + " has reached "
+                    + "the minimum number " + nodeThresh + ". In safe mode "
+                    + "extension. Safe mode will be turned off automatically"));
+      }
     } else {
       int additional = (int) (total * 0.9990) - safe;
       assertTrue("Bad safemode status: '" + status + "'",
@@ -568,9 +578,9 @@ public class TestHASafeMode {
     assertTrue("Bad safemode status: '" + status + "'",
       status.startsWith(
         "Safe mode is ON. The reported blocks 10 has reached the threshold "
-        + "0.9990 of total blocks 10. The number of live datanodes 3 has "
-        + "reached the minimum number 0. In safe mode extension. "
-        + "Safe mode will be turned off automatically"));
+        + "0.9990 of total blocks 10. The minimum number of live datanodes is "
+        + "not required. In safe mode extension. Safe mode will be turned off "
+        + "automatically"));
 
     // Delete those blocks while the SBN is in safe mode.
     // Immediately roll the edit log before the actual deletions are sent

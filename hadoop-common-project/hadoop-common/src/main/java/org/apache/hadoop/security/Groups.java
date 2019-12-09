@@ -59,9 +59,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Timer;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A user-to-groups mapping service.
@@ -74,7 +73,8 @@ import org.apache.commons.logging.LogFactory;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class Groups {
-  private static final Log LOG = LogFactory.getLog(Groups.class);
+  @VisibleForTesting
+  static final Logger LOG = LoggerFactory.getLogger(Groups.class);
   
   private final GroupMappingServiceProvider impl;
 
@@ -103,12 +103,11 @@ public class Groups {
   }
 
   public Groups(Configuration conf, final Timer timer) {
-    impl = 
-      ReflectionUtils.newInstance(
-          conf.getClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING, 
-                        ShellBasedUnixGroupsMapping.class, 
-                        GroupMappingServiceProvider.class), 
-          conf);
+    impl = ReflectionUtils.newInstance(
+        conf.getClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+            JniBasedUnixGroupsMappingWithFallback.class,
+            GroupMappingServiceProvider.class),
+        conf);
 
     cacheTimeout = 
       conf.getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS, 
@@ -310,6 +309,7 @@ public class Groups {
      */
     @Override
     public List<String> load(String user) throws Exception {
+      LOG.debug("GroupCacheLoader - load.");
       TraceScope scope = null;
       Tracer tracer = Tracer.curThreadTracer();
       if (tracer != null) {
@@ -348,6 +348,7 @@ public class Groups {
     public ListenableFuture<List<String>> reload(final String key,
                                                  List<String> oldValue)
         throws Exception {
+      LOG.debug("GroupCacheLoader - reload (async).");
       if (!reloadGroupsInBackground) {
         return super.reload(key, oldValue);
       }
@@ -374,7 +375,7 @@ public class Groups {
           backgroundRefreshException.incrementAndGet();
           backgroundRefreshRunning.decrementAndGet();
         }
-      });
+      }, MoreExecutors.directExecutor());
       return listenableFuture;
     }
 

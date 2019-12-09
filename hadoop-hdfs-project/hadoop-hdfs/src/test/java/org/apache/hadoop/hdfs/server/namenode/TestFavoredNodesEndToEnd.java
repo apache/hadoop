@@ -29,7 +29,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Random;
 
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CreateFlag;
@@ -43,7 +43,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -52,8 +52,8 @@ import org.junit.Test;
 
 public class TestFavoredNodesEndToEnd {
   {
-    GenericTestUtils.setLogLevel(LogFactory.getLog(BlockPlacementPolicy.class),
-        Level.ALL);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(BlockPlacementPolicy.class), Level.TRACE);
   }
 
   private static MiniDFSCluster cluster;
@@ -184,6 +184,29 @@ public class TestFavoredNodesEndToEnd {
       for (BlockLocation loc : locations) {
         String[] hosts = loc.getNames();
         String[] hosts1 = getStringForInetSocketAddrs(datanode);
+        assertTrue(compareNodes(hosts, hosts1));
+      }
+    }
+  }
+
+  @Test(timeout = 180000)
+  public void testCreateStreamBuilderFavoredNodesEndToEnd() throws Exception {
+    //create 10 files with random preferred nodes
+    for (int i = 0; i < NUM_FILES; i++) {
+      Random rand = new Random(System.currentTimeMillis() + i);
+      //pass a new created rand so as to get a uniform distribution each time
+      //without too much collisions (look at the do-while loop in getDatanodes)
+      InetSocketAddress[] dns = getDatanodes(rand);
+      Path p = new Path("/filename"+i);
+      FSDataOutputStream out =
+          dfs.createFile(p).favoredNodes(dns).build();
+      out.write(SOME_BYTES);
+      out.close();
+      BlockLocation[] locations = getBlockLocations(p);
+      //verify the files got created in the right nodes
+      for (BlockLocation loc : locations) {
+        String[] hosts = loc.getNames();
+        String[] hosts1 = getStringForInetSocketAddrs(dns);
         assertTrue(compareNodes(hosts, hosts1));
       }
     }

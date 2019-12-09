@@ -195,6 +195,11 @@ class HeartbeatManager implements DatanodeStatistics {
     return stats.getStatsMap();
   }
 
+  @Override
+  public long getProvidedCapacity() {
+    return blockManager.getProvidedCapacity();
+  }
+
   synchronized void register(final DatanodeDescriptor d) {
     if (!d.isAlive()) {
       addDatanode(d);
@@ -232,8 +237,8 @@ class HeartbeatManager implements DatanodeStatistics {
       int xceiverCount, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary) {
     stats.subtract(node);
-    node.updateHeartbeat(reports, cacheCapacity, cacheUsed,
-      xceiverCount, failedVolumes, volumeFailureSummary);
+    blockManager.updateHeartbeat(node, reports, cacheCapacity, cacheUsed,
+        xceiverCount, failedVolumes, volumeFailureSummary);
     stats.add(node);
   }
 
@@ -246,7 +251,7 @@ class HeartbeatManager implements DatanodeStatistics {
     // updateHeartbeat, because we don't want to modify the
     // heartbeatedSinceRegistration flag.  Arrival of a lifeline message does
     // not count as arrival of the first heartbeat.
-    node.updateHeartbeatState(reports, cacheCapacity, cacheUsed,
+    blockManager.updateHeartbeatState(node, reports, cacheCapacity, cacheUsed,
         xceiverCount, failedVolumes, volumeFailureSummary);
     stats.add(node);
   }

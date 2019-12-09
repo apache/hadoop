@@ -27,8 +27,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -44,6 +42,8 @@ import org.apache.hadoop.mapreduce.v2.api.MRDelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.Shell;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 @Unstable
@@ -54,8 +54,8 @@ import org.apache.hadoop.util.Shell;
 public class HistoryServerFileSystemStateStoreService
     extends HistoryServerStateStoreService {
 
-  public static final Log LOG =
-      LogFactory.getLog(HistoryServerFileSystemStateStoreService.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(HistoryServerFileSystemStateStoreService.class);
 
   private static final String ROOT_STATE_DIR_NAME = "HistoryServerState";
   private static final String TOKEN_STATE_DIR_NAME = "tokens";
@@ -192,7 +192,7 @@ public class HistoryServerFileSystemStateStoreService
       dataStream.close();
       dataStream = null;
     } finally {
-      IOUtils.cleanup(LOG, dataStream);
+      IOUtils.cleanupWithLogger(LOG, dataStream);
     }
 
     createNewFile(keyPath, memStream.toByteArray());
@@ -265,7 +265,7 @@ public class HistoryServerFileSystemStateStoreService
         out.close();
         out = null;
       } finally {
-        IOUtils.cleanup(LOG, out);
+        IOUtils.cleanupWithLogger(LOG, out);
       }
     } catch (IOException e) {
       fs.delete(file, false);
@@ -279,7 +279,7 @@ public class HistoryServerFileSystemStateStoreService
     try {
       in.readFully(data);
     } finally {
-      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanupWithLogger(LOG, in);
     }
     return data;
   }
@@ -306,7 +306,7 @@ public class HistoryServerFileSystemStateStoreService
       dataStream.close();
       dataStream = null;
     } finally {
-      IOUtils.cleanup(LOG, dataStream);
+      IOUtils.cleanupWithLogger(LOG, dataStream);
     }
     return memStream.toByteArray();
   }
@@ -320,7 +320,7 @@ public class HistoryServerFileSystemStateStoreService
     try {
       key.readFields(in);
     } finally {
-      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanupWithLogger(LOG, in);
     }
     state.tokenMasterKeyState.add(key);
   }
@@ -349,7 +349,7 @@ public class HistoryServerFileSystemStateStoreService
       tokenId.readFields(in);
       renewDate = in.readLong();
     } finally {
-      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanupWithLogger(LOG, in);
     }
     state.tokenState.put(tokenId, renewDate);
     return tokenId;

@@ -18,16 +18,16 @@
 package org.apache.hadoop.oncrpc.security;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.oncrpc.XDR;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class for all credentials. Currently we only support 3 different types
  * of auth flavors: AUTH_NONE, AUTH_SYS, and RPCSEC_GSS.
  */
 public abstract class Credentials extends RpcAuthInfo {
-  public static final Log LOG = LogFactory.getLog(Credentials.class);
+  public static final Logger LOG = LoggerFactory.getLogger(Credentials.class);
 
   public static Credentials readFlavorAndCredentials(XDR xdr) {
     AuthFlavor flavor = AuthFlavor.fromValue(xdr.readInt());

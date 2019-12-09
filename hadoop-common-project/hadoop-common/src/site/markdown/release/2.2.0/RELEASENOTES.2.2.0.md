@@ -23,23 +23,23 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
-* [HADOOP-10020](https://issues.apache.org/jira/browse/HADOOP-10020) | *Blocker* | **disable symlinks temporarily**
-
-During review of symbolic links, many issues were found related to the impact on semantics of existing APIs such FileSystem#listStatus, FileSystem#globStatus etc. There were also many issues brought up about symbolic links, and the impact on security and functionality of HDFS. All these issues will be addressed in the upcoming release 2.3. Until then the feature is temporarily disabled.
-
-
----
-
 * [YARN-1229](https://issues.apache.org/jira/browse/YARN-1229) | *Blocker* | **Define constraints on Auxiliary Service names. Change ShuffleHandler service name from mapreduce.shuffle to mapreduce\_shuffle.**
 
-**WARNING: No release note provided for this incompatible change.**
+**WARNING: No release note provided for this change.**
 
 
 ---
 
 * [YARN-1228](https://issues.apache.org/jira/browse/YARN-1228) | *Major* | **Clean up Fair Scheduler configuration loading**
 
-**WARNING: No release note provided for this incompatible change.**
+**WARNING: No release note provided for this change.**
+
+
+---
+
+* [HADOOP-10020](https://issues.apache.org/jira/browse/HADOOP-10020) | *Blocker* | **disable symlinks temporarily**
+
+During review of symbolic links, many issues were found related to the impact on semantics of existing APIs such FileSystem#listStatus, FileSystem#globStatus etc. There were also many issues brought up about symbolic links, and the impact on security and functionality of HDFS. All these issues will be addressed in the upcoming release 2.3. Until then the feature is temporarily disabled.
 
 
 

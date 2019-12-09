@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -100,6 +101,24 @@ public class ResourceHandlerChain implements ResourceHandler {
   }
 
   @Override
+  public List<PrivilegedOperation> updateContainer(Container container)
+      throws ResourceHandlerException {
+    List<PrivilegedOperation> allOperations = new
+        ArrayList<PrivilegedOperation>();
+
+    for (ResourceHandler resourceHandler : resourceHandlers) {
+      List<PrivilegedOperation> handlerOperations =
+          resourceHandler.updateContainer(container);
+
+      if (handlerOperations != null) {
+        allOperations.addAll(handlerOperations);
+      }
+
+    }
+    return allOperations;
+  }
+
+  @Override
   public List<PrivilegedOperation> postComplete(ContainerId containerId)
       throws ResourceHandlerException {
     List<PrivilegedOperation> allOperations = new
@@ -135,8 +154,15 @@ public class ResourceHandlerChain implements ResourceHandler {
     return allOperations;
   }
 
-  List<ResourceHandler> getResourceHandlerList() {
+  @VisibleForTesting
+  public List<ResourceHandler> getResourceHandlerList() {
     return Collections.unmodifiableList(resourceHandlers);
   }
 
+  @Override
+  public String toString() {
+    return ResourceHandlerChain.class.getName() + "{" +
+        "resourceHandlers=" + resourceHandlers +
+        '}';
+  }
 }

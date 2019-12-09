@@ -17,25 +17,30 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URL;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.BlockingService;
+import org.slf4j.Logger;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocol;
+import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocolProtos.InterQJournalProtocolService;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.QJournalProtocolService;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
+import org.apache.hadoop.hdfs.qjournal.protocolPB.InterQJournalProtocolPB;
+import org.apache.hadoop.hdfs.qjournal.protocolPB.InterQJournalProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.qjournal.protocolPB.QJournalProtocolPB;
 import org.apache.hadoop.hdfs.qjournal.protocolPB.QJournalProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -46,13 +51,18 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.net.NetUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingService;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URL;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_RPC_BIND_HOST_KEY;
+
 
 @InterfaceAudience.Private
 @VisibleForTesting
-public class JournalNodeRpcServer implements QJournalProtocol {
-
+public class JournalNodeRpcServer implements QJournalProtocol,
+    InterQJournalProtocol {
+  private static final Logger LOG = JournalNode.LOG;
   private static final int HANDLER_COUNT = 5;
   private final JournalNode jn;
   private Server server;
@@ -68,6 +78,12 @@ public class JournalNodeRpcServer implements QJournalProtocol {
         true);
     
     InetSocketAddress addr = getAddress(confCopy);
+    String bindHost = conf.getTrimmed(DFS_JOURNALNODE_RPC_BIND_HOST_KEY, null);
+    if (bindHost == null) {
+      bindHost = addr.getHostName();
+    }
+    LOG.info("RPC server is binding to " + bindHost + ":" + addr.getPort());
+
     RPC.setProtocolEngine(confCopy, QJournalProtocolPB.class,
         ProtobufRpcEngine.class);
     QJournalProtocolServerSideTranslatorPB translator =
@@ -76,13 +92,26 @@ public class JournalNodeRpcServer implements QJournalProtocol {
         .newReflectiveBlockingService(translator);
     
     this.server = new RPC.Builder(confCopy)
-      .setProtocol(QJournalProtocolPB.class)
-      .setInstance(service)
-      .setBindAddress(addr.getHostName())
-      .setPort(addr.getPort())
-      .setNumHandlers(HANDLER_COUNT)
-      .setVerbose(false)
-      .build();
+        .setProtocol(QJournalProtocolPB.class)
+        .setInstance(service)
+        .setBindAddress(bindHost)
+        .setPort(addr.getPort())
+        .setNumHandlers(HANDLER_COUNT)
+        .setVerbose(false)
+        .build();
+
+
+    //Adding InterQJournalProtocolPB to server
+    InterQJournalProtocolServerSideTranslatorPB
+        qJournalProtocolServerSideTranslatorPB = new
+        InterQJournalProtocolServerSideTranslatorPB(this);
+
+    BlockingService interQJournalProtocolService = InterQJournalProtocolService
+        .newReflectiveBlockingService(qJournalProtocolServerSideTranslatorPB);
+
+    DFSUtil.addPBProtocol(confCopy, InterQJournalProtocolPB.class,
+        interQJournalProtocolService, server);
+
 
     // set service-level authorization security policy
     if (confCopy.getBoolean(
@@ -117,15 +146,18 @@ public class JournalNodeRpcServer implements QJournalProtocol {
   }
 
   @Override
-  public boolean isFormatted(String journalId) throws IOException {
-    return jn.getOrCreateJournal(journalId).isFormatted();
+  public boolean isFormatted(String journalId,
+                             String nameServiceId) throws IOException {
+    return jn.getOrCreateJournal(journalId, nameServiceId).isFormatted();
   }
 
   @SuppressWarnings("deprecation")
   @Override
-  public GetJournalStateResponseProto getJournalState(String journalId)
+  public GetJournalStateResponseProto getJournalState(String journalId,
+                                                      String nameServiceId)
         throws IOException {
-    long epoch = jn.getOrCreateJournal(journalId).getLastPromisedEpoch(); 
+    long epoch = jn.getOrCreateJournal(journalId,
+        nameServiceId).getLastPromisedEpoch();
     return GetJournalStateResponseProto.newBuilder()
         .setLastPromisedEpoch(epoch)
         .setHttpPort(jn.getBoundHttpAddress().getPort())
@@ -135,59 +167,65 @@ public class JournalNodeRpcServer implements QJournalProtocol {
 
   @Override
   public NewEpochResponseProto newEpoch(String journalId,
-      NamespaceInfo nsInfo,
+                                        String nameServiceId,
+                                        NamespaceInfo nsInfo,
       long epoch) throws IOException {
-    return jn.getOrCreateJournal(journalId).newEpoch(nsInfo, epoch);
+    return jn.getOrCreateJournal(journalId,
+        nameServiceId).newEpoch(nsInfo, epoch);
   }
 
   @Override
-  public void format(String journalId, NamespaceInfo nsInfo)
+  public void format(String journalId,
+                     String nameServiceId,
+                     NamespaceInfo nsInfo,
+                     boolean force)
       throws IOException {
-    jn.getOrCreateJournal(journalId).format(nsInfo);
+    jn.getOrCreateJournal(journalId, nameServiceId).format(nsInfo, force);
   }
 
   @Override
   public void journal(RequestInfo reqInfo,
       long segmentTxId, long firstTxnId,
       int numTxns, byte[] records) throws IOException {
-    jn.getOrCreateJournal(reqInfo.getJournalId())
+    jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
        .journal(reqInfo, segmentTxId, firstTxnId, numTxns, records);
   }
   
   @Override
   public void heartbeat(RequestInfo reqInfo) throws IOException {
-    jn.getOrCreateJournal(reqInfo.getJournalId())
+    jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
       .heartbeat(reqInfo);
   }
 
   @Override
   public void startLogSegment(RequestInfo reqInfo, long txid, int layoutVersion)
       throws IOException {
-    jn.getOrCreateJournal(reqInfo.getJournalId())
+    jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
       .startLogSegment(reqInfo, txid, layoutVersion);
   }
 
   @Override
   public void finalizeLogSegment(RequestInfo reqInfo, long startTxId,
       long endTxId) throws IOException {
-    jn.getOrCreateJournal(reqInfo.getJournalId())
+    jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
       .finalizeLogSegment(reqInfo, startTxId, endTxId);
   }
 
   @Override
   public void purgeLogsOlderThan(RequestInfo reqInfo, long minTxIdToKeep)
       throws IOException {
-    jn.getOrCreateJournal(reqInfo.getJournalId())
+    jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
       .purgeLogsOlderThan(reqInfo, minTxIdToKeep);
   }
 
   @SuppressWarnings("deprecation")
   @Override
-  public GetEditLogManifestResponseProto getEditLogManifest(String jid,
+  public GetEditLogManifestResponseProto getEditLogManifest(
+      String jid, String nameServiceId,
       long sinceTxId, boolean inProgressOk)
       throws IOException {
     
-    RemoteEditLogManifest manifest = jn.getOrCreateJournal(jid)
+    RemoteEditLogManifest manifest = jn.getOrCreateJournal(jid, nameServiceId)
         .getEditLogManifest(sinceTxId, inProgressOk);
     
     return GetEditLogManifestResponseProto.newBuilder()
@@ -198,16 +236,24 @@ public class JournalNodeRpcServer implements QJournalProtocol {
   }
 
   @Override
+  public GetJournaledEditsResponseProto getJournaledEdits(String jid,
+      String nameServiceId, long sinceTxId, int maxTxns) throws IOException {
+    return jn.getOrCreateJournal(jid, nameServiceId)
+        .getJournaledEdits(sinceTxId, maxTxns);
+  }
+
+  @Override
   public PrepareRecoveryResponseProto prepareRecovery(RequestInfo reqInfo,
       long segmentTxId) throws IOException {
-    return jn.getOrCreateJournal(reqInfo.getJournalId())
+    return jn.getOrCreateJournal(reqInfo.getJournalId(),
+        reqInfo.getNameServiceId())
         .prepareRecovery(reqInfo, segmentTxId);
   }
 
   @Override
   public void acceptRecovery(RequestInfo reqInfo, SegmentStateProto log,
       URL fromUrl) throws IOException {
-    jn.getOrCreateJournal(reqInfo.getJournalId())
+    jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
         .acceptRecovery(reqInfo, log, fromUrl);
   }
 
@@ -222,30 +268,59 @@ public class JournalNodeRpcServer implements QJournalProtocol {
   }
 
   @Override
-  public void doFinalize(String journalId) throws IOException {
-    jn.doFinalize(journalId);
+  public void doFinalize(String journalId,
+                         String nameServiceId) throws IOException {
+    jn.doFinalize(journalId, nameServiceId);
   }
 
   @Override
-  public Boolean canRollBack(String journalId, StorageInfo storage,
+  public Boolean canRollBack(String journalId,
+                             String nameServiceId, StorageInfo storage,
       StorageInfo prevStorage, int targetLayoutVersion)
       throws IOException {
-    return jn.canRollBack(journalId, storage, prevStorage, targetLayoutVersion);
+    return jn.canRollBack(journalId, storage, prevStorage, targetLayoutVersion,
+        nameServiceId);
   }
 
   @Override
-  public void doRollback(String journalId) throws IOException {
-    jn.doRollback(journalId);
+  public void doRollback(String journalId,
+                         String nameServiceId) throws IOException {
+    jn.doRollback(journalId, nameServiceId);
   }
 
   @Override
-  public void discardSegments(String journalId, long startTxId)
+  public void discardSegments(String journalId,
+                              String nameServiceId, long startTxId)
       throws IOException {
-    jn.discardSegments(journalId, startTxId);
+    jn.discardSegments(journalId, startTxId, nameServiceId);
   }
 
   @Override
-  public Long getJournalCTime(String journalId) throws IOException {
-    return jn.getJournalCTime(journalId);
+  public Long getJournalCTime(String journalId,
+                              String nameServiceId) throws IOException {
+    return jn.getJournalCTime(journalId, nameServiceId);
+  }
+
+  @SuppressWarnings("deprecation")
+  @Override
+  public GetEditLogManifestResponseProto getEditLogManifestFromJournal(
+      String jid, String nameServiceId,
+      long sinceTxId, boolean inProgressOk)
+      throws IOException {
+
+    RemoteEditLogManifest manifest = jn.getOrCreateJournal(jid, nameServiceId)
+        .getEditLogManifest(sinceTxId, inProgressOk);
+
+    return GetEditLogManifestResponseProto.newBuilder()
+        .setManifest(PBHelper.convert(manifest))
+        .setHttpPort(jn.getBoundHttpAddress().getPort())
+        .setFromURL(jn.getHttpServerURI())
+        .build();
+  }
+
+  /** Allow access to the RPC server for testing. */
+  @VisibleForTesting
+  Server getRpcServer() {
+    return server;
   }
 }

@@ -123,16 +123,4 @@ public class Limits {
   public synchronized LimitExceededException violation() {
     return firstViolation;
   }
-
-  // This allows initialization of global settings and not for an instance
-  public static synchronized void reset(Configuration conf) {
-    isInited = false;
-    init(conf);
-  }
-
-  // This allows resetting of an instance to allow reuse
-  public synchronized void reset() {
-    totalCounters = 0;
-    firstViolation = null;
-  }
 }

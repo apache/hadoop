@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Timer;
@@ -208,7 +209,15 @@ public class DelegationTokenRenewer extends AbstractService {
     }
     appTokens.clear();
     allTokens.clear();
-    this.renewerService.shutdown();
+
+    serviceStateLock.writeLock().lock();
+    try {
+      isServiceStarted = false;
+      this.renewerService.shutdown();
+    } finally {
+      serviceStateLock.writeLock().unlock();
+    }
+
     dtCancelThread.interrupt();
     try {
       dtCancelThread.join(1000);
@@ -379,43 +388,43 @@ public class DelegationTokenRenewer extends AbstractService {
    * @param applicationId added application
    * @param ts tokens
    * @param shouldCancelAtEnd true if tokens should be canceled when the app is
-   * done else false. 
+   * done else false.
    * @param user user
+   * @param tokenConf tokenConf sent by the app-submitter
    */
   public void addApplicationAsync(ApplicationId applicationId, Credentials ts,
-      boolean shouldCancelAtEnd, String user) {
+      boolean shouldCancelAtEnd, String user, Configuration tokenConf) {
     processDelegationTokenRenewerEvent(new DelegationTokenRenewerAppSubmitEvent(
-      applicationId, ts, shouldCancelAtEnd, user));
+      applicationId, ts, shouldCancelAtEnd, user, tokenConf));
   }
 
   /**
    * Asynchronously add application tokens for renewal.
-   *
-   * @param applicationId
+   *  @param applicationId
    *          added application
    * @param ts
    *          tokens
    * @param shouldCancelAtEnd
    *          true if tokens should be canceled when the app is done else false.
-   * @param user
-   *          user
+   * @param user user
+   * @param tokenConf tokenConf sent by the app-submitter
    */
   public void addApplicationAsyncDuringRecovery(ApplicationId applicationId,
-      Credentials ts, boolean shouldCancelAtEnd, String user) {
+      Credentials ts, boolean shouldCancelAtEnd, String user,
+      Configuration tokenConf) {
     processDelegationTokenRenewerEvent(
         new DelegationTokenRenewerAppRecoverEvent(applicationId, ts,
-            shouldCancelAtEnd, user));
+            shouldCancelAtEnd, user, tokenConf));
   }
 
-  /**
-   * Synchronously renew delegation tokens.
-   * @param user user
-   */
+
+  // Only for testing
+  // Synchronously renew delegation tokens.
   public void addApplicationSync(ApplicationId applicationId, Credentials ts,
       boolean shouldCancelAtEnd, String user) throws IOException,
       InterruptedException {
     handleAppSubmitEvent(new DelegationTokenRenewerAppSubmitEvent(
-      applicationId, ts, shouldCancelAtEnd, user));
+      applicationId, ts, shouldCancelAtEnd, user, new Configuration()));
   }
 
   private void handleAppSubmitEvent(AbstractDelegationTokenRenewerAppEvent evt)
@@ -455,8 +464,27 @@ public class DelegationTokenRenewer extends AbstractService {
 
         DelegationTokenToRenew dttr = allTokens.get(token);
         if (dttr == null) {
+          Configuration tokenConf;
+          if (evt.tokenConf != null) {
+            // Override conf with app provided conf - this is required in cases
+            // where RM does not have the required conf to communicate with
+            // remote hdfs cluster. The conf is provided by the application
+            // itself.
+            tokenConf = evt.tokenConf;
+            LOG.info("Using app provided token conf for renewal,"
+                + " number of configs = " + tokenConf.size());
+            if (LOG.isDebugEnabled()) {
+              for (Iterator<Map.Entry<String, String>> itor =
+                   tokenConf.iterator(); itor.hasNext(); ) {
+                Map.Entry<String, String> entry = itor.next();
+                LOG.info(entry.getKey() + " ===> " + entry.getValue());
+              }
+            }
+          }  else {
+            tokenConf = getConfig();
+          }
           dttr = new DelegationTokenToRenew(Arrays.asList(applicationId), token,
-              getConfig(), now, shouldCancelAtEnd, evt.getUser());
+              tokenConf, now, shouldCancelAtEnd, evt.getUser());
           try {
             renewToken(dttr);
           } catch (IOException ioe) {
@@ -572,6 +600,10 @@ public class DelegationTokenRenewer extends AbstractService {
       throws IOException {
     // calculate timer time
     long expiresIn = token.expirationDate - System.currentTimeMillis();
+    if (expiresIn <= 0) {
+      LOG.info("Will not renew token " + token);
+      return;
+    }
     long renewIn = token.expirationDate - expiresIn/10; // little bit before the expiration
     // need to create new task every time
     RenewalTimerTask tTask = new RenewalTimerTask(token);
@@ -926,22 +958,22 @@ public class DelegationTokenRenewer extends AbstractService {
   }
 
   static class DelegationTokenRenewerAppSubmitEvent
-      extends
-        AbstractDelegationTokenRenewerAppEvent {
+      extends AbstractDelegationTokenRenewerAppEvent {
     public DelegationTokenRenewerAppSubmitEvent(ApplicationId appId,
-        Credentials credentails, boolean shouldCancelAtEnd, String user) {
+        Credentials credentails, boolean shouldCancelAtEnd, String user,
+        Configuration tokenConf) {
       super(appId, credentails, shouldCancelAtEnd, user,
-          DelegationTokenRenewerEventType.VERIFY_AND_START_APPLICATION);
+          DelegationTokenRenewerEventType.VERIFY_AND_START_APPLICATION, tokenConf);
     }
   }
 
   static class DelegationTokenRenewerAppRecoverEvent
-      extends
-        AbstractDelegationTokenRenewerAppEvent {
+      extends AbstractDelegationTokenRenewerAppEvent {
     public DelegationTokenRenewerAppRecoverEvent(ApplicationId appId,
-        Credentials credentails, boolean shouldCancelAtEnd, String user) {
+        Credentials credentails, boolean shouldCancelAtEnd, String user,
+        Configuration tokenConf) {
       super(appId, credentails, shouldCancelAtEnd, user,
-          DelegationTokenRenewerEventType.RECOVER_APPLICATION);
+          DelegationTokenRenewerEventType.RECOVER_APPLICATION, tokenConf);
     }
   }
 
@@ -949,16 +981,18 @@ public class DelegationTokenRenewer extends AbstractService {
       DelegationTokenRenewerEvent {
 
     private Credentials credentials;
+    private Configuration tokenConf;
     private boolean shouldCancelAtEnd;
     private String user;
 
     public AbstractDelegationTokenRenewerAppEvent(ApplicationId appId,
-        Credentials credentails, boolean shouldCancelAtEnd, String user,
-        DelegationTokenRenewerEventType type) {
+        Credentials credentials, boolean shouldCancelAtEnd, String user,
+        DelegationTokenRenewerEventType type, Configuration tokenConf) {
       super(appId, type);
-      this.credentials = credentails;
+      this.credentials = credentials;
       this.shouldCancelAtEnd = shouldCancelAtEnd;
       this.user = user;
+      this.tokenConf = tokenConf;
     }
 
     public Credentials getCredentials() {

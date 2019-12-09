@@ -57,8 +57,8 @@ public class TestRSErasureCoder extends TestErasureCoderBase {
      * This tests if the configuration items work or not.
      */
     Configuration conf = new Configuration();
-    conf.set(CodecUtil.IO_ERASURECODE_CODEC_RS_DEFAULT_RAWCODER_KEY,
-        RSRawErasureCoderFactory.class.getCanonicalName());
+    conf.set(CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
+        RSRawErasureCoderFactory.CODER_NAME);
     prepare(conf, 10, 4, new int[]{0}, new int[0]);
 
     testCoding(true);

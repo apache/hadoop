@@ -155,6 +155,8 @@ public class TestMetaSave {
       line = reader.readLine();
       assertTrue(line.equals("Metasave: Blocks waiting for reconstruction: 0"));
       line = reader.readLine();
+      assertTrue(line.equals("Metasave: Blocks currently missing: 0"));
+      line = reader.readLine();
       assertTrue(line.equals("Mis-replicated blocks that have been postponed:"));
       line = reader.readLine();
       assertTrue(line.equals("Metasave: Blocks being reconstructed: 0"));

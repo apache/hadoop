@@ -18,19 +18,18 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import java.util.Collection;
-import java.util.Map;
-
 import com.google.common.collect.Maps;
-import com.google.common.base.Objects;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsException;
+import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.impl.MsInfo;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.StringJoiner;
 
 /**
  * An optional metrics registry class for creating and maintaining a
@@ -143,6 +142,7 @@ public class MetricsRegistry {
   public MutableGaugeInt newGauge(String name, String desc, int iVal) {
     return newGauge(Interns.info(name, desc), iVal);
   }
+
   /**
    * Create a mutable integer gauge
    * @param info  metadata of the metric
@@ -176,6 +176,30 @@ public class MetricsRegistry {
   public synchronized MutableGaugeLong newGauge(MetricsInfo info, long iVal) {
     checkMetricName(info.name());
     MutableGaugeLong ret = new MutableGaugeLong(info, iVal);
+    metricsMap.put(info.name(), ret);
+    return ret;
+  }
+
+  /**
+   * Create a mutable float gauge
+   * @param name  of the metric
+   * @param desc  metric description
+   * @param iVal  initial value
+   * @return a new gauge object
+   */
+  public MutableGaugeFloat newGauge(String name, String desc, float iVal) {
+    return newGauge(Interns.info(name, desc), iVal);
+  }
+
+  /**
+   * Create a mutable float gauge
+   * @param info  metadata of the metric
+   * @param iVal  initial value
+   * @return a new gauge object
+   */
+  public synchronized MutableGaugeFloat newGauge(MetricsInfo info, float iVal) {
+    checkMetricName(info.name());
+    MutableGaugeFloat ret = new MutableGaugeFloat(info, iVal);
     metricsMap.put(info.name(), ret);
     return ret;
   }
@@ -287,6 +311,15 @@ public class MetricsRegistry {
     MutableRatesWithAggregation rates = new MutableRatesWithAggregation();
     metricsMap.put(name, rates);
     return rates;
+  }
+
+  public synchronized MutableRollingAverages newMutableRollingAverages(
+      String name, String valueName) {
+    checkMetricName(name);
+    MutableRollingAverages rollingAverages =
+        new MutableRollingAverages(valueName);
+    metricsMap.put(name, rollingAverages);
+    return rollingAverages;
   }
 
   synchronized void add(String name, MutableMetric metric) {
@@ -415,9 +448,13 @@ public class MetricsRegistry {
     }
   }
 
-  @Override public String toString() {
-    return Objects.toStringHelper(this)
-        .add("info", metricsInfo).add("tags", tags()).add("metrics", metrics())
+  @Override
+  public String toString() {
+    return new StringJoiner(", ", this.getClass().getSimpleName() + "{", "}")
+        .add("info=" + metricsInfo.toString())
+        .add("tags=" + tags())
+        .add("metrics=" + metrics())
         .toString();
   }
+
 }

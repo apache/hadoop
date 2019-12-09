@@ -45,8 +45,6 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslClient;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -75,6 +73,9 @@ import org.apache.hadoop.util.ProtoUtil;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.google.re2j.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * A utility class that encapsulates SASL logic for RPC client
  */
@@ -82,7 +83,7 @@ import com.google.re2j.Pattern;
 @InterfaceStability.Evolving
 public class SaslRpcClient {
   // This log is public as it is referenced in tests
-  public static final Log LOG = LogFactory.getLog(SaslRpcClient.class);
+  public static final Logger LOG = LoggerFactory.getLogger(SaslRpcClient.class);
 
   private final UserGroupInformation ugi;
   private final Class<?> protocol;

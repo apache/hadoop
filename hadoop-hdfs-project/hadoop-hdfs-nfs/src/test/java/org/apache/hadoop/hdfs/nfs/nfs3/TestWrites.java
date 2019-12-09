@@ -481,6 +481,7 @@ public class TestWrites {
       cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).build();
       cluster.waitActive();
       client = new DFSClient(DFSUtilClient.getNNAddress(config), config);
+      int namenodeId = Nfs3Utils.getNamenodeId(config);
 
       // Use emphral port in case tests are running in parallel
       config.setInt("nfs3.mountd.port", 0);
@@ -492,7 +493,7 @@ public class TestWrites {
       nfsd = (RpcProgramNfs3) nfs3.getRpcProgram();
 
       HdfsFileStatus status = client.getFileInfo("/");
-      FileHandle rootHandle = new FileHandle(status.getFileId());
+      FileHandle rootHandle = new FileHandle(status.getFileId(), namenodeId);
       // Create file1
       CREATE3Request createReq = new CREATE3Request(rootHandle, "file1",
           Nfs3Constant.CREATE_UNCHECKED, new SetAttr3(), 0);
@@ -598,8 +599,9 @@ public class TestWrites {
 
       DFSClient dfsClient = new DFSClient(DFSUtilClient.getNNAddress(config),
           config);
+      int namenodeId = Nfs3Utils.getNamenodeId(config);
       HdfsFileStatus status = dfsClient.getFileInfo("/");
-      FileHandle rootHandle = new FileHandle(status.getFileId());
+      FileHandle rootHandle = new FileHandle(status.getFileId(), namenodeId);
 
       CREATE3Request createReq = new CREATE3Request(rootHandle,
           "out-of-order-write" + System.currentTimeMillis(),
@@ -674,8 +676,9 @@ public class TestWrites {
 
       DFSClient dfsClient = new DFSClient(DFSUtilClient.getNNAddress(config),
           config);
+      int namenodeId = Nfs3Utils.getNamenodeId(config);
       HdfsFileStatus status = dfsClient.getFileInfo("/");
-      FileHandle rootHandle = new FileHandle(status.getFileId());
+      FileHandle rootHandle = new FileHandle(status.getFileId(), namenodeId);
 
       CREATE3Request createReq = new CREATE3Request(rootHandle,
           "overlapping-writes" + System.currentTimeMillis(),

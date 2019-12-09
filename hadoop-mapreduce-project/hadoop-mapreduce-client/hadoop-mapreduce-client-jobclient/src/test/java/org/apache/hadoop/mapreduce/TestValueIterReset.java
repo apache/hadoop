@@ -27,8 +27,6 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -42,6 +40,8 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertTrue;
 
@@ -66,8 +66,8 @@ public class TestValueIterReset {
     }
   }
 
-  private static final Log LOG =
-    LogFactory.getLog(TestValueIterReset.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestValueIterReset.class);
 
   public static class TestMapper 
   extends Mapper<LongWritable, Text, IntWritable, IntWritable> {

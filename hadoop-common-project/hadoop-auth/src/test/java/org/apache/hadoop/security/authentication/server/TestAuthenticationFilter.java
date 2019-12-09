@@ -1232,6 +1232,7 @@ public class TestAuthenticationFilter {
       String tokenSigned = signer.sign(token.toString());
       Cookie cookie = new Cookie(AuthenticatedURL.AUTH_COOKIE, tokenSigned);
       Mockito.when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+      Mockito.when(request.getRequestURL()).thenReturn(new StringBuffer());
 
       filter.doFilter(request, response, chain);
 

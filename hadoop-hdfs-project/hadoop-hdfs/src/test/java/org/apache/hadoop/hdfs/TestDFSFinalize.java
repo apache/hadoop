@@ -25,8 +25,8 @@ import java.io.File;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
@@ -43,7 +43,7 @@ import com.google.common.collect.Lists;
  */
 public class TestDFSFinalize {
  
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
                                                    "org.apache.hadoop.hdfs.TestDFSFinalize");
   private Configuration conf;
   private int testCounter = 0;

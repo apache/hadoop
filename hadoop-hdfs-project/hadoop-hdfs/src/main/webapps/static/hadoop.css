@@ -235,8 +235,23 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
     content: "\e013";
 }
 
+.dfshealth-node-decommissioning:before {
+    color: #5fa341;
+    content: "\e090";
+}
+
 .dfshealth-node-decommissioned:before {
     color: #eea236;
+    content: "\e090";
+}
+
+.dfshealth-node-in-maintenance:before {
+    color: #eea236;
+    content: "\e136";
+}
+
+.dfshealth-node-entering-maintenance:before {
+    color: #5fa341;
     content: "\e136";
 }
 
@@ -246,8 +261,13 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
 }
 
 .dfshealth-node-down-decommissioned:before {
-    color: #2e6da6;
+    color: #c7254e;
     content: "\e017";
+}
+
+.dfshealth-node-down-maintenance:before {
+    color: #c7254e;
+    content: "\e136";
 }
 
 .dfshealth-node-legend {
@@ -292,4 +312,13 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
   min-width: 75px;
   float: right;
   left: 75px;
+}
+
+.bar rect {
+    fill: #5FA33F;
+}
+
+.bar text {
+    fill: #fff;
+    font: 10px sans-serif;
 }

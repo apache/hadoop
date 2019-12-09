@@ -23,19 +23,20 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.StringUtils;
 
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Concurrent/Multiple Connections. */
 class SFTPConnectionPool {
 
-  public static final Log LOG = LogFactory.getLog(SFTPFileSystem.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SFTPFileSystem.class);
   // Maximum number of allowed live connections. This doesn't mean we cannot
   // have more live connections. It means that when we have more
   // live connections than this threshold, any unused connection will be

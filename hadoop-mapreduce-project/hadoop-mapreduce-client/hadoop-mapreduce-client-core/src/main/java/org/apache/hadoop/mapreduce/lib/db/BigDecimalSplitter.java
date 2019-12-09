@@ -24,8 +24,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -39,7 +39,8 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class BigDecimalSplitter implements DBSplitter {
-  private static final Log LOG = LogFactory.getLog(BigDecimalSplitter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BigDecimalSplitter.class);
 
   public List<InputSplit> split(Configuration conf, ResultSet results, String colName)
       throws SQLException {

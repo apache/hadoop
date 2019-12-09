@@ -29,8 +29,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.mapred.gridmix.Statistics.JobStats;
 import org.apache.hadoop.mapreduce.Job;
@@ -54,7 +54,7 @@ import org.apache.hadoop.mapreduce.JobStatus;
  */
 class JobMonitor implements Gridmix.Component<JobStats> {
 
-  public static final Log LOG = LogFactory.getLog(JobMonitor.class);
+  public static final Logger LOG = LoggerFactory.getLogger(JobMonitor.class);
 
   private final Queue<JobStats> mJobs;
   private ExecutorService executor;

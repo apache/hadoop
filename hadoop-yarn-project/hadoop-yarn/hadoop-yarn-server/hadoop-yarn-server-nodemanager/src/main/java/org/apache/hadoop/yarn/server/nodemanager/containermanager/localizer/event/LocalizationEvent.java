@@ -27,7 +27,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Reso
 public class LocalizationEvent extends AbstractEvent<LocalizationEventType> {
 
   public LocalizationEvent(LocalizationEventType event) {
-    super(event);
+    super(event, System.currentTimeMillis());
   }
 
 }

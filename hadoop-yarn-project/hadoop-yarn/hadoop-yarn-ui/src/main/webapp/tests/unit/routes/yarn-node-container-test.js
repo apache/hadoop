@@ -17,6 +17,7 @@
  */
 
 import { moduleFor, test } from 'ember-qunit';
+import Ember from 'ember';
 
 moduleFor('route:yarn-node-container', 'Unit | Route | NodeContainer', {
 });
@@ -36,7 +37,7 @@ test('Test getting specific container on a node', function(assert) {
       nodeId: "localhost:64318", containerLogFiles:["syslog","stderr",
       "stdout"]};
   var store = {
-    queryRecord: function(type, query) {
+    queryRecord: function() {
       return new Ember.RSVP.Promise(function(resolve) {
         resolve(response);
       });
@@ -45,17 +46,16 @@ test('Test getting specific container on a node', function(assert) {
   assert.expect(6);
   var route = this.subject();
   route.set('store', store);
-  var model =
-      route.model({node_id:"localhost:64318", node_addr:"localhost:8042",
-          container_id:"container_e32_1456000363780_0002_01_000001"}).
-      then(
-        function(value){
-          assert.ok(value);
-          assert.ok(value.nodeContainer);
-          assert.deepEqual(value.nodeContainer, response);
-          assert.ok(value.nodeInfo);
-          assert.equal(value.nodeInfo.addr, 'localhost:8042');
-          assert.equal(value.nodeInfo.id, 'localhost:64318');
-        }
-      );
+  route.model({node_id:"localhost:64318", node_addr:"localhost:8042",
+        container_id:"container_e32_1456000363780_0002_01_000001"})
+    .then(
+      function(value){
+        assert.ok(value);
+        assert.ok(value.nodeContainer);
+        assert.deepEqual(value.nodeContainer, response);
+        assert.ok(value.nodeInfo);
+        assert.equal(value.nodeInfo.addr, 'localhost:8042');
+        assert.equal(value.nodeInfo.id, 'localhost:64318');
+      }
+    );
 });

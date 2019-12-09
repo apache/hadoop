@@ -21,24 +21,41 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.pb.PlacementConstraintFromProtoConverter;
+import org.apache.hadoop.yarn.api.pb.PlacementConstraintToProtoConverter;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
+
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
+import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterRequestProtoOrBuilder;
 
 import com.google.protobuf.TextFormat;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 @Private
 @Unstable
-public class RegisterApplicationMasterRequestPBImpl extends RegisterApplicationMasterRequest {
-  RegisterApplicationMasterRequestProto proto = RegisterApplicationMasterRequestProto.getDefaultInstance();
-  RegisterApplicationMasterRequestProto.Builder builder = null;
+public class RegisterApplicationMasterRequestPBImpl
+    extends RegisterApplicationMasterRequest {
+  private RegisterApplicationMasterRequestProto proto =
+      RegisterApplicationMasterRequestProto.getDefaultInstance();
+  private RegisterApplicationMasterRequestProto.Builder builder = null;
+  private Map<Set<String>, PlacementConstraint> placementConstraints = null;
   boolean viaProto = false;
   
   public RegisterApplicationMasterRequestPBImpl() {
     builder = RegisterApplicationMasterRequestProto.newBuilder();
   }
 
-  public RegisterApplicationMasterRequestPBImpl(RegisterApplicationMasterRequestProto proto) {
+  public RegisterApplicationMasterRequestPBImpl(
+      RegisterApplicationMasterRequestProto proto) {
     this.proto = proto;
     viaProto = true;
   }
@@ -71,6 +88,30 @@ public class RegisterApplicationMasterRequestPBImpl extends RegisterApplicationM
   }
 
   private void mergeLocalToBuilder() {
+    if (this.placementConstraints != null) {
+      addPlacementConstraintMap();
+    }
+  }
+
+  private void addPlacementConstraintMap() {
+    maybeInitBuilder();
+    builder.clearPlacementConstraints();
+    if (this.placementConstraints == null) {
+      return;
+    }
+    List<YarnProtos.PlacementConstraintMapEntryProto> protoList =
+        new ArrayList<>();
+    for (Map.Entry<Set<String>, PlacementConstraint> entry :
+        this.placementConstraints.entrySet()) {
+      protoList.add(
+          YarnProtos.PlacementConstraintMapEntryProto.newBuilder()
+              .addAllAllocationTags(entry.getKey())
+              .setPlacementConstraint(
+                  new PlacementConstraintToProtoConverter(
+                      entry.getValue()).convert())
+              .build());
+    }
+    builder.addAllPlacementConstraints(protoList);
   }
 
   private void mergeLocalToProto() {
@@ -90,7 +131,8 @@ public class RegisterApplicationMasterRequestPBImpl extends RegisterApplicationM
 
   @Override
   public String getHost() {
-    RegisterApplicationMasterRequestProtoOrBuilder p = viaProto ? proto : builder;
+    RegisterApplicationMasterRequestProtoOrBuilder p =
+        viaProto ? proto : builder;
     return p.getHost();
   }
 
@@ -106,7 +148,8 @@ public class RegisterApplicationMasterRequestPBImpl extends RegisterApplicationM
 
   @Override
   public int getRpcPort() {
-    RegisterApplicationMasterRequestProtoOrBuilder p = viaProto ? proto : builder;
+    RegisterApplicationMasterRequestProtoOrBuilder p =
+        viaProto ? proto : builder;
     return p.getRpcPort();
   }
 
@@ -118,7 +161,8 @@ public class RegisterApplicationMasterRequestPBImpl extends RegisterApplicationM
 
   @Override
   public String getTrackingUrl() {
-    RegisterApplicationMasterRequestProtoOrBuilder p = viaProto ? proto : builder;
+    RegisterApplicationMasterRequestProtoOrBuilder p =
+        viaProto ? proto : builder;
     return p.getTrackingUrl();
   }
 
@@ -131,4 +175,50 @@ public class RegisterApplicationMasterRequestPBImpl extends RegisterApplicationM
     }
     builder.setTrackingUrl(url);
   }
-}  
+
+  private void initPlacementConstraintMap() {
+    if (this.placementConstraints != null) {
+      return;
+    }
+    RegisterApplicationMasterRequestProtoOrBuilder p =
+        viaProto ? proto : builder;
+    List<YarnProtos.PlacementConstraintMapEntryProto> pcmList =
+        p.getPlacementConstraintsList();
+    this.placementConstraints = new HashMap<>();
+    for (YarnProtos.PlacementConstraintMapEntryProto e : pcmList) {
+      this.placementConstraints.put(
+          new HashSet<>(e.getAllocationTagsList()),
+          new PlacementConstraintFromProtoConverter(
+              e.getPlacementConstraint()).convert());
+    }
+  }
+
+  @Override
+  public Map<Set<String>, PlacementConstraint> getPlacementConstraints() {
+    initPlacementConstraintMap();
+    return this.placementConstraints;
+  }
+
+  @Override
+  public void setPlacementConstraints(
+      Map<Set<String>, PlacementConstraint> constraints) {
+    maybeInitBuilder();
+    if (constraints == null) {
+      builder.clearPlacementConstraints();
+    } else {
+      removeEmptyKeys(constraints);
+    }
+    this.placementConstraints = constraints;
+  }
+
+  private void removeEmptyKeys(
+      Map<Set<String>, PlacementConstraint> constraintMap) {
+    Iterator<Set<String>> iter = constraintMap.keySet().iterator();
+    while (iter.hasNext()) {
+      Set<String> aTags = iter.next();
+      if (aTags.size() == 0) {
+        iter.remove();
+      }
+    }
+  }
+}

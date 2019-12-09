@@ -22,6 +22,7 @@ import java.net.URL;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
@@ -49,7 +50,7 @@ interface AsyncLogger {
   
   interface Factory {
     AsyncLogger createLogger(Configuration conf, NamespaceInfo nsInfo,
-        String journalId, InetSocketAddress addr);
+        String journalId, String nameServiceId, InetSocketAddress addr);
   }
 
   /**
@@ -89,8 +90,9 @@ interface AsyncLogger {
   /**
    * Format the log directory.
    * @param nsInfo the namespace info to format with
+   * @param force the force option to format
    */
-  public ListenableFuture<Void> format(NamespaceInfo nsInfo);
+  public ListenableFuture<Void> format(NamespaceInfo nsInfo, boolean force);
 
   /**
    * @return whether or not the remote node has any valid data.
@@ -106,6 +108,12 @@ interface AsyncLogger {
    * Begin a new epoch on the target node.
    */
   public ListenableFuture<NewEpochResponseProto> newEpoch(long epoch);
+
+  /**
+   * Fetch journaled edits from the cache.
+   */
+  public ListenableFuture<GetJournaledEditsResponseProto> getJournaledEdits(
+      long fromTxnId, int maxTransactions);
   
   /**
    * Fetch the list of edit logs available on the remote node.

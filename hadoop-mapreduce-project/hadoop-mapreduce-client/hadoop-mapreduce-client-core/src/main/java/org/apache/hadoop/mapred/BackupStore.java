@@ -26,8 +26,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -45,6 +43,8 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.CryptoUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <code>BackupStore</code> is an utility class that is used to support
@@ -60,7 +60,8 @@ import org.apache.hadoop.mapreduce.CryptoUtils;
 @InterfaceStability.Unstable
 public class BackupStore<K,V> {
 
-  private static final Log LOG = LogFactory.getLog(BackupStore.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BackupStore.class.getName());
   private static final int MAX_VINT_SIZE = 9;
   private static final int EOF_MARKER_SIZE = 2 * MAX_VINT_SIZE;
   private final TaskAttemptID tid;

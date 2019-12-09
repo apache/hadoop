@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
+
 /**
  * root dir operations against an S3 bucket.
  */
@@ -36,6 +38,18 @@ public class ITestS3AContractRootDir extends
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AContractRootDir.class);
+
+  /**
+   * Create a configuration, possibly patching in S3Guard options.
+   * @return a configuration
+   */
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    // patch in S3Guard options
+    maybeEnableS3Guard(conf);
+    return conf;
+  }
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {

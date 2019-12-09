@@ -37,6 +37,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -84,7 +85,7 @@ public class TestTimelineReaderWebServices {
       Configuration config = new YarnConfiguration();
       config.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
       config.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
-      config.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+      config.set(YarnConfiguration.TIMELINE_SERVICE_READER_WEBAPP_ADDRESS,
           "localhost:0");
       config.set(YarnConfiguration.RM_CLUSTER_ID, "cluster1");
       config.setClass(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
@@ -238,7 +239,7 @@ public class TestTimelineReaderWebServices {
       assertEquals(3, entity.getConfigs().size());
       assertEquals(3, entity.getMetrics().size());
       assertTrue("UID should be present",
-          entity.getInfo().containsKey(TimelineReaderManager.UID_KEY));
+          entity.getInfo().containsKey(TimelineReaderUtils.UID_KEY));
       // Includes UID.
       assertEquals(3, entity.getInfo().size());
       // No events will be returned as events are not part of fields.
@@ -265,7 +266,7 @@ public class TestTimelineReaderWebServices {
       assertEquals(3, entity.getConfigs().size());
       assertEquals(3, entity.getMetrics().size());
       assertTrue("UID should be present",
-          entity.getInfo().containsKey(TimelineReaderManager.UID_KEY));
+          entity.getInfo().containsKey(TimelineReaderUtils.UID_KEY));
       // Includes UID.
       assertEquals(3, entity.getInfo().size());
       assertEquals(2, entity.getEvents().size());
@@ -773,6 +774,24 @@ public class TestTimelineReaderWebServices {
 
       assertEquals(entities1, entities2);
 
+    } finally {
+      client.destroy();
+    }
+  }
+
+  @Test
+  public void testHealthCheck() throws Exception {
+    Client client = createClient();
+    try {
+      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/"
+      + "timeline/health");
+      ClientResponse resp = getResponse(client, uri);
+      TimelineHealth timelineHealth =
+          resp.getEntity(new GenericType<TimelineHealth>() {
+          });
+      assertEquals(200, resp.getStatus());
+      assertEquals(TimelineHealth.TimelineHealthStatus.RUNNING,
+          timelineHealth.getHealthStatus());
     } finally {
       client.destroy();
     }

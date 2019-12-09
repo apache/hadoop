@@ -17,8 +17,6 @@
 */
 package org.apache.hadoop.yarn.event;
 
-import org.apache.hadoop.conf.Configuration;
-
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -36,13 +34,8 @@ public class DrainDispatcher extends AsyncDispatcher {
     super(eventQueue);
     this.queue = eventQueue;
     this.mutex = this;
-  }
-
-  @Override
-  public void serviceInit(Configuration conf)
-      throws Exception {
-    conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, false);
-    super.serviceInit(conf);
+    // Disable system exit since this class is only for unit tests.
+    disableExitOnDispatchException();
   }
 
   /**

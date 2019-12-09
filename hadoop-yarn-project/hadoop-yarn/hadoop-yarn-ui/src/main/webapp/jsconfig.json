@@ -2,5 +2,13 @@
     "compilerOptions": {
         "target": "ES6",
         "module": "commonjs"
-    }
+    },
+    "exclude": [
+        "node_modules",
+        "dist",
+        "bower_components",
+        "jspm_packages",
+        "tmp",
+        "temp"
+    ]
 }

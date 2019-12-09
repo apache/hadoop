@@ -60,11 +60,14 @@ public class TestDNFencingWithReplication {
   private static class ReplicationToggler extends RepeatingTestThread {
     private final FileSystem fs;
     private final Path path;
+    private final MiniDFSCluster cluster;
 
-    public ReplicationToggler(TestContext ctx, FileSystem fs, Path p) {
+    ReplicationToggler(TestContext ctx, FileSystem fs, Path p,
+                       MiniDFSCluster cluster) {
       super(ctx);
       this.fs = fs;
       this.path = p;
+      this.cluster = cluster;
     }
 
     @Override
@@ -81,6 +84,7 @@ public class TestDNFencingWithReplication {
           @Override
           public Boolean get() {
             try {
+              cluster.waitActive();
               BlockLocation[] blocks = fs.getFileBlockLocations(path, 0, 10);
               Assert.assertEquals(1, blocks.length);
               return blocks[0].getHosts().length == replicas;
@@ -90,8 +94,8 @@ public class TestDNFencingWithReplication {
           }
         }, 100, 60000);
       } catch (TimeoutException te) {
-        throw new IOException("Timed out waiting for " + replicas + " replicas " +
-            "on path " + path);
+        throw new IOException("Timed out waiting for " + replicas +
+                " replicas on path " + path);
       }
     }
     
@@ -122,7 +126,7 @@ public class TestDNFencingWithReplication {
       for (int i = 0; i < NUM_THREADS; i++) {
         Path p = new Path("/test-" + i);
         DFSTestUtil.createFile(fs, p, BLOCK_SIZE*10, (short)3, (long)i);
-        togglers.addThread(new ReplicationToggler(togglers, fs, p));
+        togglers.addThread(new ReplicationToggler(togglers, fs, p, cluster));
       }
       
       // Start a separate thread which will make sure that replication

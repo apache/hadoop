@@ -31,8 +31,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -46,22 +44,19 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.mapred.Utils;
-import org.apache.hadoop.mapred.TaskLog.LogName;
-import org.apache.hadoop.mapred.TaskLog.Reader;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility methods used in various Job Control unit tests.
  */
 public class MapReduceTestUtil {
-  public static final Log LOG = 
-    LogFactory.getLog(MapReduceTestUtil.class.getName());
+  public static final Logger LOG =
+      LoggerFactory.getLogger(MapReduceTestUtil.class);
 
   static private Random rand = new Random();
 

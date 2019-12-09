@@ -132,6 +132,54 @@ struct hdfsFile_internal;
         } \
     } while (0);
 
+#define EXPECT_INT_LT(x, y) \
+    do { \
+        int __my_ret__ = x; \
+        int __my_errno__ = errno; \
+        if (__my_ret__ >= (y)) { \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with return " \
+              "code %d (errno: %d): expected less than %d\n", \
+               __FILE__, __LINE__, __my_ret__, __my_errno__, (y)); \
+            return -1; \
+        } \
+    } while (0);
+
+#define EXPECT_INT_LE(x, y) \
+    do { \
+        int __my_ret__ = x; \
+        int __my_errno__ = errno; \
+        if (__my_ret__ > (y)) { \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with return " \
+              "code %d (errno: %d): expected less than or equal %d\n", \
+               __FILE__, __LINE__, __my_ret__, __my_errno__, (y)); \
+            return -1; \
+        } \
+    } while (0);
+
+#define EXPECT_INT_GT(x, y) \
+    do { \
+        int __my_ret__ = x; \
+        int __my_errno__ = errno; \
+        if (__my_ret__ <= (y)) { \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with return " \
+              "code %d (errno: %d): expected greater than %d\n", \
+               __FILE__, __LINE__, __my_ret__, __my_errno__, (y)); \
+            return -1; \
+        } \
+    } while (0);
+
+#define EXPECT_INT_GE(x, y) \
+    do { \
+        int __my_ret__ = x; \
+        int __my_errno__ = errno; \
+        if (__my_ret__ < (y)) { \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with return " \
+              "code %d (errno: %d): expected greater than or equal %d\n", \
+               __FILE__, __LINE__, __my_ret__, __my_errno__, (y)); \
+            return -1; \
+        } \
+    } while (0);
+
 #define EXPECT_INT64_EQ(x, y) \
     do { \
         int64_t __my_ret__ = y; \
@@ -141,6 +189,18 @@ struct hdfsFile_internal;
               "value %"PRId64" (errno: %d): expected %"PRId64"\n", \
                __FILE__, __LINE__, __my_ret__, __my_errno__, (x)); \
             return -1; \
+        } \
+    } while (0);
+
+#define ASSERT_INT64_EQ(x, y) \
+    do { \
+        int64_t __my_ret__ = y; \
+        int __my_errno__ = errno; \
+        if (__my_ret__ != (x)) { \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with return " \
+              "value %"PRId64" (errno: %d): expected %"PRId64"\n", \
+               __FILE__, __LINE__, __my_ret__, __my_errno__, (x)); \
+            exit(EXIT_FAILURE); \
         } \
     } while (0);
 
@@ -162,6 +222,24 @@ struct hdfsFile_internal;
         break; \
     ret = -errno; \
     } while (ret == -EINTR);
+
+#define EXPECT_STR_CONTAINS(str, substr) \
+    do { \
+        char *_my_ret_ = (str); \
+        int _my_errno_ = errno; \
+        if ((str) == NULL) { \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with NULL return " \
+              "return value (errno: %d): expected substring: %s\n", \
+              __FILE__, __LINE__, _my_errno_, (substr)); \
+            return -1; \
+        } \
+        if (strstr((str), (substr)) == NULL) { \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with return " \
+              "value %s (errno: %d): expected substring: %s\n", \
+              __FILE__, __LINE__, _my_ret_, _my_errno_, (substr)); \
+            return -1; \
+        } \
+    } while (0);
 
 /**
  * Test that an HDFS file has the given statistics.

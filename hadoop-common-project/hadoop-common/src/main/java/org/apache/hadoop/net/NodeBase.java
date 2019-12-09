@@ -45,7 +45,7 @@ public class NodeBase implements Node {
   
   /** Construct a node from its path
    * @param path 
-   *   a concatenation of this node's location, the path seperator, and its name 
+   *   a concatenation of this node's location, the path separator, and its name
    */
   public NodeBase(String path) {
     path = normalize(path);

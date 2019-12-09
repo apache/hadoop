@@ -35,7 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -702,7 +702,7 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
     command.addAll(ContainerLocalizer.getJavaOpts(getConf()));
 
     ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr,
-        localDirs);
+        localDirs, super.getConf());
 
     String cmdLine = StringUtils.join(command, " ");
 

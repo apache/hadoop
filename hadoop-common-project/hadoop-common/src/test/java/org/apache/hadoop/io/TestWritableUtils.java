@@ -20,15 +20,16 @@ package org.apache.hadoop.io;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 public class TestWritableUtils {
-  private static final Log LOG = LogFactory.getLog(TestWritableUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestWritableUtils.class);
 
   private void testValue(int val, int vintlen) throws IOException {
     DataOutputBuffer buf = new DataOutputBuffer();

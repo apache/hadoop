@@ -30,8 +30,6 @@ import java.util.Random;
 
 import javax.crypto.SecretKey;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -56,6 +54,8 @@ import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is responsible for launching and communicating with the child 
@@ -63,7 +63,8 @@ import org.apache.hadoop.util.StringUtils;
  */
 class Application<K1 extends WritableComparable, V1 extends Writable,
                   K2 extends WritableComparable, V2 extends Writable> {
-  private static final Log LOG = LogFactory.getLog(Application.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(Application.class.getName());
   private ServerSocket serverSocket;
   private Process process;
   private Socket clientSocket;

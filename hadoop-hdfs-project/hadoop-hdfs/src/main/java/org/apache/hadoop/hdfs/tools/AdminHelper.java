@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.tools;
 
 import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -26,6 +27,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.tools.TableListing;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
 
 /**
@@ -48,13 +50,29 @@ public class AdminHelper {
     return (DistributedFileSystem)fs;
   }
 
+  static DistributedFileSystem getDFS(URI uri, Configuration conf)
+      throws IOException {
+    FileSystem fs = FileSystem.get(uri, conf);
+    if (!(fs instanceof DistributedFileSystem)) {
+      throw new IllegalArgumentException("FileSystem " + fs.getUri()
+          + " is not an HDFS file system");
+    }
+    return (DistributedFileSystem) fs;
+  }
+
   /**
    * NN exceptions contain the stack trace as part of the exception message.
    * When it's a known error, pretty-print the error and squish the stack trace.
    */
   static String prettifyException(Exception e) {
-    return e.getClass().getSimpleName() + ": "
-        + e.getLocalizedMessage().split("\n")[0];
+    if (e.getLocalizedMessage() != null) {
+      return e.getClass().getSimpleName() + ": "
+          + e.getLocalizedMessage().split("\n")[0];
+    } else if (e.getStackTrace() != null && e.getStackTrace().length > 0) {
+      return e.getClass().getSimpleName() + " at " + e.getStackTrace()[0];
+    } else {
+      return e.getClass().getSimpleName();
+    }
   }
 
   static TableListing getOptionDescriptionListing() {
@@ -133,7 +151,7 @@ public class AdminHelper {
     private final Command[] commands;
 
     public HelpCommand(Command[] commands) {
-      Preconditions.checkNotNull(commands != null);
+      Preconditions.checkNotNull(commands, "commands cannot be null.");
       this.commands = commands;
     }
 
@@ -164,11 +182,11 @@ public class AdminHelper {
         for (AdminHelper.Command command : commands) {
           System.err.println(command.getLongUsage());
         }
-        return 0;
+        return 1;
       }
       if (args.size() != 1) {
-        System.out.println("You must give exactly one argument to -help.");
-        return 0;
+        System.err.println("You must give exactly one argument to -help.");
+        return 1;
       }
       final String commandName = args.get(0);
       // prepend a dash to match against the command names

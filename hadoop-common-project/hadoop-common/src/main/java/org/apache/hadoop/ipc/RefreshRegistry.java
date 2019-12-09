@@ -24,9 +24,9 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Used to registry custom methods to refresh at runtime.
@@ -34,7 +34,8 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceStability.Unstable
 public class RefreshRegistry {
-  public static final Log LOG = LogFactory.getLog(RefreshRegistry.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(RefreshRegistry.class);
 
   // Used to hold singleton instance
   private static class RegistryHolder {

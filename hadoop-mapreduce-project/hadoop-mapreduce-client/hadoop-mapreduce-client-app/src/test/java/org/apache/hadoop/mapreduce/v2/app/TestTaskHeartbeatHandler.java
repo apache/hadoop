@@ -23,6 +23,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -30,10 +31,12 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -103,6 +106,41 @@ public class TestTaskHeartbeatHandler {
 
     final long expectedTimeout = taskTimeoutConfiged;
     verifyTaskTimeoutConfig(conf, expectedTimeout);
+  }
+
+  @Test
+  public void testTaskUnregistered() throws Exception {
+    EventHandler mockHandler = mock(EventHandler.class);
+    ControlledClock clock = new ControlledClock();
+    clock.setTime(0);
+    final TaskHeartbeatHandler hb =
+        new TaskHeartbeatHandler(mockHandler, clock, 1);
+    Configuration conf = new Configuration();
+    conf.setInt(MRJobConfig.TASK_TIMEOUT_CHECK_INTERVAL_MS, 1);
+    hb.init(conf);
+    hb.start();
+    try {
+      ApplicationId appId = ApplicationId.newInstance(0l, 5);
+      JobId jobId = MRBuilderUtils.newJobId(appId, 4);
+      TaskId tid = MRBuilderUtils.newTaskId(jobId, 3, TaskType.MAP);
+      final TaskAttemptId taid = MRBuilderUtils.newTaskAttemptId(tid, 2);
+      Assert.assertFalse(hb.hasRecentlyUnregistered(taid));
+      hb.register(taid);
+      Assert.assertFalse(hb.hasRecentlyUnregistered(taid));
+      hb.unregister(taid);
+      Assert.assertTrue(hb.hasRecentlyUnregistered(taid));
+      long unregisterTimeout = conf.getLong(MRJobConfig.TASK_EXIT_TIMEOUT,
+          MRJobConfig.TASK_EXIT_TIMEOUT_DEFAULT);
+      clock.setTime(unregisterTimeout + 1);
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return !hb.hasRecentlyUnregistered(taid);
+        }
+      }, 10, 10000);
+    } finally {
+      hb.stop();
+    }
   }
 
   /**

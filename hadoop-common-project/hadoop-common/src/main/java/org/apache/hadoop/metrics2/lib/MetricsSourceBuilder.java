@@ -24,8 +24,6 @@ import java.lang.reflect.Method;
 
 import static com.google.common.base.Preconditions.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsException;
@@ -34,6 +32,8 @@ import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Helper class to build {@link MetricsSource} object from annotations.
@@ -49,7 +49,8 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 @InterfaceAudience.Private
 public class MetricsSourceBuilder {
-  private static final Log LOG = LogFactory.getLog(MetricsSourceBuilder.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MetricsSourceBuilder.class);
 
   private final Object source;
   private final MutableMetricsFactory factory;

@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -37,6 +35,8 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.util.Options;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_MAP_INDEX_SKIP_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_MAP_INDEX_SKIP_KEY;
@@ -60,7 +60,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_MAP_INDEX_SK
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class MapFile {
-  private static final Log LOG = LogFactory.getLog(MapFile.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MapFile.class);
 
   /** The name of the index file. */
   public static final String INDEX_FILE_NAME = "index";
@@ -811,15 +811,40 @@ public class MapFile {
                                     (LongWritable.class));
     }
     try {
-      long pos = 0L;
+      /** What's the position (in bytes) we wrote when we got the last index */
+      long lastIndexPos = -1;
+      /**
+       * What was size when we last wrote an index. Set to MIN_VALUE to ensure
+       * that we have an index at position zero - midKey will throw an exception
+       * if this is not the case
+       */
+      long lastIndexKeyCount = Long.MIN_VALUE;
+      long pos = dataReader.getPosition();
       LongWritable position = new LongWritable();
+      long nextBlock = pos;
+      boolean blockCompressed = dataReader.isBlockCompressed();
       while(dataReader.next(key, value)) {
-        cnt++;
-        if (cnt % indexInterval == 0) {
-          position.set(pos);
-          if (!dryrun) indexWriter.append(key, position);
+        if (blockCompressed) {
+          long curPos = dataReader.getPosition();
+          if (curPos > nextBlock) {
+            pos = nextBlock;                       // current block position
+            nextBlock = curPos;
+          }
         }
-        pos = dataReader.getPosition();
+        // Follow the same logic as in
+        // {@link MapFile.Writer#append(WritableComparable, Writable)}
+        if (cnt >= lastIndexKeyCount + indexInterval && pos > lastIndexPos) {
+          position.set(pos);
+          if (!dryrun) {
+            indexWriter.append(key, position);
+          }
+          lastIndexPos = pos;
+          lastIndexKeyCount = cnt;
+        }
+        if (!blockCompressed) {
+          pos = dataReader.getPosition();         // next record position
+        }
+        cnt++;
       }
     } catch(Throwable t) {
       // truncated data file. swallow it.
@@ -986,23 +1011,22 @@ public class MapFile {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf);
     MapFile.Reader reader = null;
-    MapFile.Writer writer = null;
     try {
       reader = new MapFile.Reader(fs, in, conf);
-      writer =
-        new MapFile.Writer(conf, fs, out,
-            reader.getKeyClass().asSubclass(WritableComparable.class),
-            reader.getValueClass());
-
       WritableComparable<?> key = ReflectionUtils.newInstance(
           reader.getKeyClass().asSubclass(WritableComparable.class), conf);
       Writable value = ReflectionUtils.newInstance(reader.getValueClass()
         .asSubclass(Writable.class), conf);
 
-      while (reader.next(key, value))               // copy all entries
-        writer.append(key, value);
+      try (MapFile.Writer writer = new MapFile.Writer(conf, fs, out,
+            reader.getKeyClass().asSubclass(WritableComparable.class),
+            reader.getValueClass())) {
+        while (reader.next(key, value)) {             // copy all entries
+          writer.append(key, value);
+        }
+      }
     } finally {
-      IOUtils.cleanup(LOG, writer, reader);
+      IOUtils.cleanupWithLogger(LOG, reader);
     }
   }
 }

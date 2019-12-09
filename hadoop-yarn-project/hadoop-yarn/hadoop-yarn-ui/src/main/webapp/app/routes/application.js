@@ -17,8 +17,23 @@
  */
 
 import Ember from 'ember';
+import AbstractRoute from './abstract';
 
-export default Ember.Route.extend({
+export default AbstractRoute.extend({
+  model() {
+    return Ember.RSVP.hash({
+      clusterInfo: this.store.findAll('ClusterInfo', {reload: true}).catch(function() {
+        return null;
+      }),
+      userInfo: this.store.findAll('cluster-user-info', {reload: true}).catch(function() {
+        return null;
+      }),
+      timelineHealth: this.store.queryRecord('timeline-health', {}).catch(function() {
+        return null;
+      })
+    });
+  },
+
   actions: {
     /**
      * Base error handler for the application.
@@ -27,14 +42,23 @@ export default Ember.Route.extend({
      * error handler page.
      */
     error: function (error) {
-      Ember.Logger.log(error.stack);
+      if (error && error.stack) {
+        Ember.Logger.log(error.stack);
+      }
 
-      if (error && error.errors[0] &&
-          error.errors[0].status == 404) {
+      if (error && error.errors[0] && parseInt(error.errors[0].status) === 404) {
         this.intermediateTransitionTo('/notfound');
+      } else if (error && error.errors[0] && parseInt(error.errors[0].status) === 401) {
+        this.intermediateTransitionTo('/notauth');
       } else {
         this.intermediateTransitionTo('/error');
       }
     }
-  }
+  },
+
+  unloadAll: function() {
+    this.store.unloadAll('ClusterInfo');
+    this.store.unloadAll('cluster-user-info');
+    this.store.unloadAll('timeline-health');
+  },
 });

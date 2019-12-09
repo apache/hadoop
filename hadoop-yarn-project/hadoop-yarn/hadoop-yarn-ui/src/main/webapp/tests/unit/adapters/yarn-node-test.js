@@ -19,10 +19,14 @@
 import { moduleFor, test } from 'ember-qunit';
 
 moduleFor('adapter:yarn-node', 'Unit | Adapter | Node', {
+  unit: true
 });
 
 test('Basic creation', function(assert) {
-  let adapter = this.subject();
+  let adapter = this.subject({
+    host: "localhost:4200",
+    namespace: "{nodeAddress}/ws/v1/node"
+  });
 
   assert.ok(adapter);
   assert.ok(adapter.urlForFindRecord);
@@ -31,12 +35,15 @@ test('Basic creation', function(assert) {
   assert.ok(adapter.host);
   assert.ok(adapter.namespace);
   assert.equal(adapter.headers.Accept, "application/json");
-  assert.equal(adapter.namespace, "ws/v1/node");
+  assert.equal(adapter.namespace, "{nodeAddress}/ws/v1/node");
 });
 
 test('urlForFindRecord test', function(assert) {
-  let adapter = this.subject();
+  let adapter = this.subject({
+    host: "localhost:4200",
+    namespace: "{nodeAddress}/ws/v1/node"
+  });
   let host = adapter.host;
   assert.equal(adapter.urlForFindRecord("localhost:8042"),
-      host + "localhost:8042/ws/v1/node");
+      host + "/localhost:8042/ws/v1/node");
 });

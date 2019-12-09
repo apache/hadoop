@@ -26,7 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 
 @Private
@@ -189,7 +189,7 @@ public class Graph {
 
   public void save(String filepath) throws IOException {
     try (OutputStreamWriter fout = new OutputStreamWriter(
-        new FileOutputStream(filepath), Charset.forName("UTF-8"));) {
+        new FileOutputStream(filepath), Charset.forName("UTF-8"))) {
       fout.write(generateGraphViz());
     }
   }

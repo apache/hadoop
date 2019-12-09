@@ -18,9 +18,9 @@
   -->
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=9" />
-    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap.min.css" />
-    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap-editable.css"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.3.7/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.3.7/css/bootstrap-editable.css"/>
     <link rel="stylesheet" type="text/css" href="/static/dataTables.bootstrap.css" />
     <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
     <title>Browsing HDFS</title>
@@ -44,6 +44,10 @@
           <ul class="dropdown-menu">
             <li><a href="#">Browse the file system</a></li>
             <li><a href="logs">Logs</a></li>
+            <li><a href="logLevel">Log Level</a></li>
+            <li><a href="jmx">Metrics</a></li>
+            <li><a href="conf">Configuration</a></li>
+            <li><a href="stacks">Process Thread Dump</a></li>
           </ul>
         </li>
       </ul>
@@ -181,11 +185,11 @@
       <div class="col-xs-2 col-md-2">
         <button type="button" class="btn btn-default" data-toggle="modal"
           aria-label="New Directory" data-target="#btn-create-directory"
-          title="Create Directory">
+          title="Create Directory" id="btn-create-dir">
             <span class="glyphicon glyphicon-folder-open"></span>
         </button>
         <button type="button" class="btn btn-default" data-toggle="modal"
-          data-target="#modal-upload-file" title="Upload Files">
+          data-target="#modal-upload-file" title="Upload Files" id="btn-upload-files">
             <span class="glyphicon glyphicon-cloud-upload"></span>
         </button>
         <button class="btn btn-default dropdown-toggle" type="button"
@@ -302,10 +306,10 @@
         </ul>
       </p>
     </script>
-    <script type="text/javascript" src="/static/jquery-1.10.2.min.js">
+    <script type="text/javascript" src="/static/jquery-3.3.1.min.js">
     </script><script type="text/javascript" src="/static/jquery.dataTables.min.js">
-    </script><script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap.min.js">
-    </script><script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap-editable.min.js">
+    </script><script type="text/javascript" src="/static/bootstrap-3.3.7/js/bootstrap.min.js">
+    </script><script type="text/javascript" src="/static/bootstrap-3.3.7/js/bootstrap-editable.min.js">
     </script><script type="text/javascript" src="/static/dataTables.bootstrap.js">
     </script><script type="text/javascript" src="/static/dust-full-2.0.0.min.js">
     </script><script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js">

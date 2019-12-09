@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -48,8 +50,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ReservationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.StringStringMapProto;
 
-import com.google.common.base.CharMatcher;
 import com.google.protobuf.TextFormat;
 
 @Private
@@ -66,10 +68,11 @@ extends ApplicationSubmissionContext {
   private ContainerLaunchContext amContainer = null;
   private Resource resource = null;
   private Set<String> applicationTags = null;
-  private ResourceRequest amResourceRequest = null;
+  private List<ResourceRequest> amResourceRequests = null;
   private LogAggregationContext logAggregationContext = null;
   private ReservationId reservationId = null;
   private Map<ApplicationTimeoutType, Long> applicationTimeouts = null;
+  private Map<String, String> schedulingProperties = null;
 
   public ApplicationSubmissionContextPBImpl() {
     builder = ApplicationSubmissionContextProto.newBuilder();
@@ -81,7 +84,7 @@ extends ApplicationSubmissionContext {
     viaProto = true;
   }
   
-  public ApplicationSubmissionContextProto getProto() {
+  public synchronized ApplicationSubmissionContextProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -118,18 +121,17 @@ extends ApplicationSubmissionContext {
     if (this.amContainer != null) {
       builder.setAmContainerSpec(convertToProtoFormat(this.amContainer));
     }
-    if (this.resource != null &&
-        !((ResourcePBImpl) this.resource).getProto().equals(
-            builder.getResource())) {
+    if (this.resource != null) {
       builder.setResource(convertToProtoFormat(this.resource));
     }
     if (this.applicationTags != null && !this.applicationTags.isEmpty()) {
       builder.clearApplicationTags();
       builder.addAllApplicationTags(this.applicationTags);
     }
-    if (this.amResourceRequest != null) {
-      builder.setAmContainerResourceRequest(
-          convertToProtoFormat(this.amResourceRequest));
+    if (this.amResourceRequests != null) {
+      builder.clearAmContainerResourceRequest();
+      builder.addAllAmContainerResourceRequest(
+          convertToProtoFormat(this.amResourceRequests));
     }
     if (this.logAggregationContext != null) {
       builder.setLogAggregationContext(
@@ -140,6 +142,9 @@ extends ApplicationSubmissionContext {
     }
     if (this.applicationTimeouts != null) {
       addApplicationTimeouts();
+    }
+    if (this.schedulingProperties != null) {
+      addApplicationSchedulingProperties();
     }
   }
 
@@ -159,7 +164,7 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public Priority getPriority() {
+  public synchronized Priority getPriority() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     if (this.priority != null) {
       return this.priority;
@@ -172,7 +177,7 @@ extends ApplicationSubmissionContext {
   }
   
   @Override
-  public void setPriority(Priority priority) {
+  public synchronized void setPriority(Priority priority) {
     maybeInitBuilder();
     if (priority == null)
       builder.clearPriority();
@@ -180,7 +185,7 @@ extends ApplicationSubmissionContext {
   }
   
   @Override
-  public ApplicationId getApplicationId() {
+  public synchronized ApplicationId getApplicationId() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     if (this.applicationId != null) {
       return applicationId;
@@ -193,7 +198,7 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public void setApplicationId(ApplicationId applicationId) {
+  public synchronized void setApplicationId(ApplicationId applicationId) {
     maybeInitBuilder();
     if (applicationId == null)
       builder.clearApplicationId();
@@ -201,7 +206,7 @@ extends ApplicationSubmissionContext {
   }
   
   @Override
-  public String getApplicationName() {
+  public synchronized String getApplicationName() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasApplicationName()) {
       return null;
@@ -210,7 +215,7 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public void setApplicationName(String applicationName) {
+  public synchronized void setApplicationName(String applicationName) {
     maybeInitBuilder();
     if (applicationName == null) {
       builder.clearApplicationName();
@@ -220,7 +225,7 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public String getQueue() {
+  public synchronized String getQueue() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasQueue()) {
       return null;
@@ -229,7 +234,7 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public String getApplicationType() {
+  public synchronized String getApplicationType() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasApplicationType()) {
       return null;
@@ -247,13 +252,13 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public Set<String> getApplicationTags() {
+  public synchronized Set<String> getApplicationTags() {
     initApplicationTags();
     return this.applicationTags;
   }
 
   @Override
-  public void setQueue(String queue) {
+  public synchronized void setQueue(String queue) {
     maybeInitBuilder();
     if (queue == null) {
       builder.clearQueue();
@@ -263,7 +268,7 @@ extends ApplicationSubmissionContext {
   }
   
   @Override
-  public void setApplicationType(String applicationType) {
+  public synchronized void setApplicationType(String applicationType) {
     maybeInitBuilder();
     if (applicationType == null) {
       builder.clearApplicationType();
@@ -283,7 +288,7 @@ extends ApplicationSubmissionContext {
             "maximum allowed length of a tag is " +
             YarnConfiguration.APPLICATION_MAX_TAG_LENGTH);
       }
-      if (!CharMatcher.ASCII.matchesAllOf(tag)) {
+      if (!org.apache.commons.lang3.StringUtils.isAsciiPrintable(tag)) {
         throw new IllegalArgumentException("A tag can only have ASCII " +
             "characters! Invalid tag - " + tag);
       }
@@ -291,7 +296,7 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public void setApplicationTags(Set<String> tags) {
+  public synchronized void setApplicationTags(Set<String> tags) {
     maybeInitBuilder();
     if (tags == null || tags.isEmpty()) {
       builder.clearApplicationTags();
@@ -307,7 +312,7 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public ContainerLaunchContext getAMContainerSpec() {
+  public synchronized ContainerLaunchContext getAMContainerSpec() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     if (this.amContainer != null) {
       return amContainer;
@@ -320,7 +325,8 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public void setAMContainerSpec(ContainerLaunchContext amContainer) {
+  public synchronized void
+      setAMContainerSpec(ContainerLaunchContext amContainer) {
     maybeInitBuilder();
     if (amContainer == null) {
       builder.clearAmContainerSpec();
@@ -329,44 +335,44 @@ extends ApplicationSubmissionContext {
   }
   
   @Override
-  public boolean getUnmanagedAM() {
+  public synchronized boolean getUnmanagedAM() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     return p.getUnmanagedAm();
   }
   
   @Override
-  public void setUnmanagedAM(boolean value) {
+  public synchronized void setUnmanagedAM(boolean value) {
     maybeInitBuilder();
     builder.setUnmanagedAm(value);
   }
   
   @Override
-  public boolean getCancelTokensWhenComplete() {
+  public synchronized boolean getCancelTokensWhenComplete() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     //There is a default so cancelTokens should never be null
     return p.getCancelTokensWhenComplete();
   }
   
   @Override
-  public void setCancelTokensWhenComplete(boolean cancel) {
+  public synchronized void setCancelTokensWhenComplete(boolean cancel) {
     maybeInitBuilder();
     builder.setCancelTokensWhenComplete(cancel);
   }
 
   @Override
-  public int getMaxAppAttempts() {
+  public synchronized int getMaxAppAttempts() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     return p.getMaxAppAttempts();
   }
 
   @Override
-  public void setMaxAppAttempts(int maxAppAttempts) {
+  public synchronized void setMaxAppAttempts(int maxAppAttempts) {
     maybeInitBuilder();
     builder.setMaxAppAttempts(maxAppAttempts);
   }
 
   @Override
-  public Resource getResource() {
+  public synchronized Resource getResource() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     if (this.resource != null) {
       return this.resource;
@@ -379,7 +385,7 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public void setResource(Resource resource) {
+  public synchronized void setResource(Resource resource) {
     maybeInitBuilder();
     if (resource == null) {
       builder.clearResource();
@@ -388,7 +394,7 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public ReservationId getReservationID() {
+  public synchronized ReservationId getReservationID() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     if (reservationId != null) {
       return reservationId;
@@ -401,7 +407,7 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public void setReservationID(ReservationId reservationID) {
+  public synchronized void setReservationID(ReservationId reservationID) {
     maybeInitBuilder();
     if (reservationID == null) {
       builder.clearReservationId();
@@ -411,14 +417,14 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public void
+  public synchronized void
       setKeepContainersAcrossApplicationAttempts(boolean keepContainers) {
     maybeInitBuilder();
     builder.setKeepContainersAcrossApplicationAttempts(keepContainers);
   }
 
   @Override
-  public boolean getKeepContainersAcrossApplicationAttempts() {
+  public synchronized boolean getKeepContainersAcrossApplicationAttempts() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     return p.getKeepContainersAcrossApplicationAttempts();
   }
@@ -430,13 +436,23 @@ extends ApplicationSubmissionContext {
   private PriorityProto convertToProtoFormat(Priority t) {
     return ((PriorityPBImpl)t).getProto();
   }
-  
-  private ResourceRequestPBImpl convertFromProtoFormat(ResourceRequestProto p) {
-    return new ResourceRequestPBImpl(p);
+
+  private List<ResourceRequest> convertFromProtoFormat(
+      List<ResourceRequestProto> ps) {
+    List<ResourceRequest> rs = new ArrayList<>();
+    for (ResourceRequestProto p : ps) {
+      rs.add(new ResourceRequestPBImpl(p));
+    }
+    return rs;
   }
 
-  private ResourceRequestProto convertToProtoFormat(ResourceRequest t) {
-    return ((ResourceRequestPBImpl)t).getProto();
+  private List<ResourceRequestProto> convertToProtoFormat(
+      List<ResourceRequest> ts) {
+    List<ResourceRequestProto> rs = new ArrayList<>(ts.size());
+    for (ResourceRequest t : ts) {
+      rs.add(((ResourceRequestPBImpl)t).getProto());
+    }
+    return rs;
   }
 
   private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
@@ -462,11 +478,11 @@ extends ApplicationSubmissionContext {
   }
 
   private ResourceProto convertToProtoFormat(Resource t) {
-    return ((ResourcePBImpl)t).getProto();
+    return ProtoUtils.convertToProtoFormat(t);
   }
 
   @Override
-  public String getNodeLabelExpression() {
+  public synchronized String getNodeLabelExpression() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasNodeLabelExpression()) {
       return null;
@@ -475,7 +491,7 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public void setNodeLabelExpression(String labelExpression) {
+  public synchronized void setNodeLabelExpression(String labelExpression) {
     maybeInitBuilder();
     if (labelExpression == null) {
       builder.clearNodeLabelExpression();
@@ -485,35 +501,58 @@ extends ApplicationSubmissionContext {
   }
   
   @Override
-  public ResourceRequest getAMContainerResourceRequest() {
-    ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.amResourceRequest != null) {
-      return amResourceRequest;
-    } // Else via proto
-    if (!p.hasAmContainerResourceRequest()) {
+  @Deprecated
+  public synchronized ResourceRequest getAMContainerResourceRequest() {
+    List<ResourceRequest> reqs = getAMContainerResourceRequests();
+    if (reqs == null || reqs.isEmpty()) {
       return null;
     }
-    amResourceRequest = convertFromProtoFormat(p.getAmContainerResourceRequest());
-    return amResourceRequest;
+    return getAMContainerResourceRequests().get(0);
   }
 
   @Override
-  public void setAMContainerResourceRequest(ResourceRequest request) {
+  public synchronized List<ResourceRequest> getAMContainerResourceRequests() {
+    ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.amResourceRequests != null) {
+      return amResourceRequests;
+    } // Else via proto
+    if (p.getAmContainerResourceRequestCount() == 0) {
+      return null;
+    }
+    amResourceRequests =
+        convertFromProtoFormat(p.getAmContainerResourceRequestList());
+    return amResourceRequests;
+  }
+
+  @Override
+  @Deprecated
+  public synchronized void setAMContainerResourceRequest(
+      ResourceRequest request) {
     maybeInitBuilder();
     if (request == null) {
       builder.clearAmContainerResourceRequest();
     }
-    this.amResourceRequest = request;
+    this.amResourceRequests = Collections.singletonList(request);
   }
 
   @Override
-  public long getAttemptFailuresValidityInterval() {
+  public synchronized void setAMContainerResourceRequests(
+      List<ResourceRequest> requests) {
+    maybeInitBuilder();
+    if (requests == null) {
+      builder.clearAmContainerResourceRequest();
+    }
+    this.amResourceRequests = requests;
+  }
+
+  @Override
+  public synchronized long getAttemptFailuresValidityInterval() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     return p.getAttemptFailuresValidityInterval();
   }
 
   @Override
-  public void setAttemptFailuresValidityInterval(
+  public synchronized void setAttemptFailuresValidityInterval(
       long attemptFailuresValidityInterval) {
     maybeInitBuilder();
     builder.setAttemptFailuresValidityInterval(attemptFailuresValidityInterval);
@@ -530,7 +569,7 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public LogAggregationContext getLogAggregationContext() {
+  public synchronized LogAggregationContext getLogAggregationContext() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     if (this.logAggregationContext != null) {
       return this.logAggregationContext;
@@ -543,7 +582,7 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public void setLogAggregationContext(
+  public synchronized void setLogAggregationContext(
       LogAggregationContext logAggregationContext) {
     maybeInitBuilder();
     if (logAggregationContext == null)
@@ -560,7 +599,8 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public Map<ApplicationTimeoutType, Long> getApplicationTimeouts() {
+  public synchronized
+      Map<ApplicationTimeoutType, Long> getApplicationTimeouts() {
     initApplicationTimeout();
     return this.applicationTimeouts;
   }
@@ -582,7 +622,7 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
-  public void setApplicationTimeouts(
+  public synchronized void setApplicationTimeouts(
       Map<ApplicationTimeoutType, Long> appTimeouts) {
     if (appTimeouts == null) {
       return;
@@ -631,4 +671,72 @@ extends ApplicationSubmissionContext {
         };
     this.builder.addAllApplicationTimeouts(values);
   }
-}  
+
+  private void addApplicationSchedulingProperties() {
+    maybeInitBuilder();
+    builder.clearApplicationSchedulingProperties();
+    if (this.schedulingProperties == null) {
+      return;
+    }
+    Iterable<? extends StringStringMapProto> values =
+        new Iterable<StringStringMapProto>() {
+
+      @Override
+      public Iterator<StringStringMapProto> iterator() {
+        return new Iterator<StringStringMapProto>() {
+          private Iterator<String> iterator = schedulingProperties.keySet()
+              .iterator();
+
+          @Override
+          public boolean hasNext() {
+            return iterator.hasNext();
+          }
+
+          @Override
+          public StringStringMapProto next() {
+            String key = iterator.next();
+            return StringStringMapProto.newBuilder()
+                .setValue(schedulingProperties.get(key)).setKey(key).build();
+          }
+
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException();
+          }
+        };
+      }
+    };
+    this.builder.addAllApplicationSchedulingProperties(values);
+  }
+
+  private void initApplicationSchedulingProperties() {
+    if (this.schedulingProperties != null) {
+      return;
+    }
+    ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
+    List<StringStringMapProto> properties = p
+        .getApplicationSchedulingPropertiesList();
+    this.schedulingProperties = new HashMap<String, String>(properties.size());
+    for (StringStringMapProto envProto : properties) {
+      this.schedulingProperties.put(envProto.getKey(), envProto.getValue());
+    }
+  }
+
+  @Override
+  public synchronized
+      Map<String, String> getApplicationSchedulingPropertiesMap() {
+    initApplicationSchedulingProperties();
+    return this.schedulingProperties;
+  }
+
+  @Override
+  public synchronized void setApplicationSchedulingPropertiesMap(
+      Map<String, String> schedulingPropertyMap) {
+    if (schedulingPropertyMap == null) {
+      return;
+    }
+    initApplicationSchedulingProperties();
+    this.schedulingProperties.clear();
+    this.schedulingProperties.putAll(schedulingPropertyMap);
+  }
+}

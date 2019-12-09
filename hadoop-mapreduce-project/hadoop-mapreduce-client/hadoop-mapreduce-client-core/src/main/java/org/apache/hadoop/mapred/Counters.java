@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 import org.apache.commons.collections.IteratorUtils;
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
@@ -44,6 +43,7 @@ import org.apache.hadoop.mapreduce.counters.GenericCounter;
 import org.apache.hadoop.mapreduce.counters.Limits;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormatCounter;
+import org.slf4j.Logger;
 
 import com.google.common.collect.Iterators;
 
@@ -596,7 +596,7 @@ public class Counters
    * Logs the current counter values.
    * @param log The log to use.
    */
-  public void log(Log log) {
+  public void log(Logger log) {
     log.info("Counters: " + size());
     for(Group group: this) {
       log.info("  " + group.getDisplayName());

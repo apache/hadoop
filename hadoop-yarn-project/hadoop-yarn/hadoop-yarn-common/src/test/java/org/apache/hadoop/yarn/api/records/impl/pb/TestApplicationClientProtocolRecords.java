@@ -25,11 +25,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.LocalResourceType;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -65,5 +71,80 @@ public class TestApplicationClientProtocolRecords {
     Assert.assertEquals("",
         clcProto.getEnvironment().get("testCLCPBImplNullEnv"));
 
+  }
+
+  /*
+   * This test validates the scenario in which the client sets a null value for
+   * local resource URL.
+   */
+  @Test
+  public void testCLCPBImplNullResourceURL() throws IOException {
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+    try {
+      LocalResource rsrc_alpha = recordFactory.newRecordInstance(LocalResource.class);
+      rsrc_alpha.setResource(null);
+      rsrc_alpha.setSize(-1);
+      rsrc_alpha.setVisibility(LocalResourceVisibility.APPLICATION);
+      rsrc_alpha.setType(LocalResourceType.FILE);
+      rsrc_alpha.setTimestamp(System.currentTimeMillis());
+      Map<String, LocalResource> localResources =
+          new HashMap<String, LocalResource>();
+      localResources.put("null_url_resource", rsrc_alpha);
+      ContainerLaunchContext containerLaunchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
+      containerLaunchContext.setLocalResources(localResources);
+      Assert.fail("Setting an invalid local resource should be an error!");
+    } catch (NullPointerException e) {
+      Assert.assertTrue(e.getMessage().contains("Null resource URL for local resource"));
+    }
+  }
+
+  /*
+   * This test validates the scenario in which the client sets a null value for
+   * local resource type.
+   */
+  @Test
+  public void testCLCPBImplNullResourceType() throws IOException {
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+    try {
+      LocalResource resource = recordFactory.newRecordInstance(LocalResource.class);
+      resource.setResource(URL.fromPath(new Path(".")));
+      resource.setSize(-1);
+      resource.setVisibility(LocalResourceVisibility.APPLICATION);
+      resource.setType(null);
+      resource.setTimestamp(System.currentTimeMillis());
+      Map<String, LocalResource> localResources =
+          new HashMap<String, LocalResource>();
+      localResources.put("null_type_resource", resource);
+      ContainerLaunchContext containerLaunchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
+      containerLaunchContext.setLocalResources(localResources);
+      Assert.fail("Setting an invalid local resource should be an error!");
+    } catch (NullPointerException e) {
+      Assert.assertTrue(e.getMessage().contains("Null resource type for local resource"));
+    }
+  }
+
+  /*
+   * This test validates the scenario in which the client sets a null value for
+   * local resource type.
+   */
+  @Test
+  public void testCLCPBImplNullResourceVisibility() throws IOException {
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+    try {
+      LocalResource resource = recordFactory.newRecordInstance(LocalResource.class);
+      resource.setResource(URL.fromPath(new Path(".")));
+      resource.setSize(-1);
+      resource.setVisibility(null);
+      resource.setType(LocalResourceType.FILE);
+      resource.setTimestamp(System.currentTimeMillis());
+      Map<String, LocalResource> localResources =
+          new HashMap<String, LocalResource>();
+      localResources.put("null_visibility_resource", resource);
+      ContainerLaunchContext containerLaunchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
+      containerLaunchContext.setLocalResources(localResources);
+      Assert.fail("Setting an invalid local resource should be an error!");
+    } catch (NullPointerException e) {
+      Assert.assertTrue(e.getMessage().contains("Null resource visibility for local resource"));
+    }
   }
 }

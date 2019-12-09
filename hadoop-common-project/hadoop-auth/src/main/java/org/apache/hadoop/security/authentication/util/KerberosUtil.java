@@ -21,15 +21,20 @@ import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.charset.IllegalCharsetNameException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -50,7 +55,24 @@ public class KerberosUtil {
       ? "com.ibm.security.auth.module.Krb5LoginModule"
       : "com.sun.security.auth.module.Krb5LoginModule";
   }
-  
+
+  public static final Oid GSS_SPNEGO_MECH_OID =
+      getNumericOidInstance("1.3.6.1.5.5.2");
+  public static final Oid GSS_KRB5_MECH_OID =
+      getNumericOidInstance("1.2.840.113554.1.2.2");
+  public static final Oid NT_GSS_KRB5_PRINCIPAL_OID =
+      getNumericOidInstance("1.2.840.113554.1.2.2.1");
+
+  // numeric oids will never generate a GSSException for a malformed oid.
+  // use to initialize statics.
+  private static Oid getNumericOidInstance(String oidName) {
+    try {
+      return new Oid(oidName);
+    } catch (GSSException ex) {
+      throw new IllegalArgumentException(ex);
+    }
+  }
+
   public static Oid getOidInstance(String oidName) 
       throws ClassNotFoundException, GSSException, NoSuchFieldException,
       IllegalAccessException {
@@ -254,5 +276,179 @@ public class KerberosUtil {
    */
   public static boolean hasKerberosTicket(Subject subject) {
     return !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
+  }
+
+  /**
+   * Extract the TGS server principal from the given gssapi kerberos or spnego
+   * wrapped token.
+   * @param rawToken bytes of the gss token
+   * @return String of server principal
+   * @throws IllegalArgumentException if token is undecodable
+   */
+  public static String getTokenServerName(byte[] rawToken) {
+    // subsequent comments include only relevant portions of the kerberos
+    // DER encoding that will be extracted.
+    DER token = new DER(rawToken);
+    // InitialContextToken ::= [APPLICATION 0] IMPLICIT SEQUENCE {
+    //     mech   OID
+    //     mech-token  (NegotiationToken or InnerContextToken)
+    // }
+    DER oid = token.next();
+    if (oid.equals(DER.SPNEGO_MECH_OID)) {
+      // NegotiationToken ::= CHOICE {
+      //     neg-token-init[0] NegTokenInit
+      // }
+      // NegTokenInit ::= SEQUENCE {
+      //     mech-token[2]     InitialContextToken
+      // }
+      token = token.next().get(0xa0, 0x30, 0xa2, 0x04).next();
+      oid = token.next();
+    }
+    if (!oid.equals(DER.KRB5_MECH_OID)) {
+      throw new IllegalArgumentException("Malformed gss token");
+    }
+    // InnerContextToken ::= {
+    //     token-id[1]
+    //     AP-REQ
+    // }
+    if (token.next().getTag() != 1) {
+      throw new IllegalArgumentException("Not an AP-REQ token");
+    }
+    // AP-REQ ::= [APPLICATION 14] SEQUENCE {
+    //     ticket[3]      Ticket
+    // }
+    DER ticket = token.next().get(0x6e, 0x30, 0xa3, 0x61, 0x30);
+    // Ticket ::= [APPLICATION 1] SEQUENCE {
+    //     realm[1]       String
+    //     sname[2]       PrincipalName
+    // }
+    // PrincipalName ::= SEQUENCE {
+    //     name-string[1] SEQUENCE OF String
+    // }
+    String realm = ticket.get(0xa1, 0x1b).getAsString();
+    DER names = ticket.get(0xa2, 0x30, 0xa1, 0x30);
+    StringBuilder sb = new StringBuilder();
+    while (names.hasNext()) {
+      if (sb.length() > 0) {
+        sb.append('/');
+      }
+      sb.append(names.next().getAsString());
+    }
+    return sb.append('@').append(realm).toString();
+  }
+
+  // basic ASN.1 DER decoder to traverse encoded byte arrays.
+  private static class DER implements Iterator<DER> {
+    static final DER SPNEGO_MECH_OID = getDER(GSS_SPNEGO_MECH_OID);
+    static final DER KRB5_MECH_OID = getDER(GSS_KRB5_MECH_OID);
+
+    private static DER getDER(Oid oid) {
+      try {
+        return new DER(oid.getDER());
+      } catch (GSSException ex) {
+        // won't happen.  a proper OID is encodable.
+        throw new IllegalArgumentException(ex);
+      }
+    }
+
+    private final int tag;
+    private final ByteBuffer bb;
+
+    DER(byte[] buf) {
+      this(ByteBuffer.wrap(buf));
+    }
+
+    DER(ByteBuffer srcbb) {
+      tag = srcbb.get() & 0xff;
+      int length = readLength(srcbb);
+      bb = srcbb.slice();
+      bb.limit(length);
+      srcbb.position(srcbb.position() + length);
+    }
+
+    int getTag() {
+      return tag;
+    }
+
+    // standard ASN.1 encoding.
+    private static int readLength(ByteBuffer bb) {
+      int length = bb.get();
+      if ((length & (byte)0x80) != 0) {
+        int varlength = length & 0x7f;
+        length = 0;
+        for (int i=0; i < varlength; i++) {
+          length = (length << 8) | (bb.get() & 0xff);
+        }
+      }
+      return length;
+    }
+
+    DER choose(int subtag) {
+      while (hasNext()) {
+        DER der = next();
+        if (der.getTag() == subtag) {
+          return der;
+        }
+      }
+      return null;
+    }
+
+    DER get(int... tags) {
+      DER der = this;
+      for (int i=0; i < tags.length; i++) {
+        int expectedTag = tags[i];
+        // lookup for exact match, else scan if it's sequenced.
+        if (der.getTag() != expectedTag) {
+          der = der.hasNext() ? der.choose(expectedTag) : null;
+        }
+        if (der == null) {
+          StringBuilder sb = new StringBuilder("Tag not found:");
+          for (int ii=0; ii <= i; ii++) {
+            sb.append(" 0x").append(Integer.toHexString(tags[ii]));
+          }
+          throw new IllegalStateException(sb.toString());
+        }
+      }
+      return der;
+    }
+
+    String getAsString() {
+      try {
+        return new String(bb.array(), bb.arrayOffset() + bb.position(),
+            bb.remaining(), "UTF-8");
+      } catch (UnsupportedEncodingException e) {
+        throw new IllegalCharsetNameException("UTF-8"); // won't happen.
+      }
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * tag + bb.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return (o instanceof DER) &&
+          tag == ((DER)o).tag && bb.equals(((DER)o).bb);
+    }
+
+    @Override
+    public boolean hasNext() {
+      // it's a sequence or an embedded octet.
+      return ((tag & 0x30) != 0 || tag == 0x04) && bb.hasRemaining();
+    }
+
+    @Override
+    public DER next() {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      return new DER(bb);
+    }
+
+    @Override
+    public String toString() {
+      return "[tag=0x"+Integer.toHexString(tag)+" bb="+bb+"]";
+    }
   }
 }

@@ -33,7 +33,9 @@ import java.io.IOException;
 import java.io.LineNumberReader;
 import java.io.StringReader;
 
-import junit.framework.TestCase;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.TaskReport;
@@ -43,8 +45,6 @@ import org.apache.log4j.Layout;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.WriterAppender;
-import org.junit.Before;
-import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -53,7 +53,7 @@ import org.mockito.stubbing.Answer;
  * job monitoring is correct and prints 100% for map and reduce before 
  * successful completion.
  */
-public class TestJobMonitorAndPrint extends TestCase {
+public class TestJobMonitorAndPrint {
   private Job job;
   private Configuration conf;
   private ClientProtocol clientProtocol;

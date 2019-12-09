@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.client.cli;
 
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -39,10 +42,12 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableSet;
 
 public class TestClusterCLI {
+
   ByteArrayOutputStream sysOutStream;
   private PrintStream sysOut;
   ByteArrayOutputStream sysErrStream;
   private PrintStream sysErr;
+  private YarnClient client = mock(YarnClient.class);
 
   @Before
   public void setup() {
@@ -55,14 +60,10 @@ public class TestClusterCLI {
   
   @Test
   public void testGetClusterNodeLabels() throws Exception {
-    YarnClient client = mock(YarnClient.class);
     when(client.getClusterNodeLabels()).thenReturn(
         Arrays.asList(NodeLabel.newInstance("label1"),
             NodeLabel.newInstance("label2")));
-    ClusterCLI cli = new ClusterCLI();
-    cli.setClient(client);
-    cli.setSysOutPrintStream(sysOut);
-    cli.setSysErrPrintStream(sysErr);
+    ClusterCLI cli = createAndGetClusterCLI();
     
     int rc =
         cli.run(new String[] { ClusterCLI.CMD, "-" + ClusterCLI.LIST_LABELS_CMD });
@@ -74,17 +75,34 @@ public class TestClusterCLI {
     pw.close();
     verify(sysOut).println(baos.toString("UTF-8"));
   }
-  
+
+  @Test
+  public void testGetClusterNodeAttributes() throws Exception {
+    when(client.getClusterAttributes()).thenReturn(ImmutableSet
+        .of(NodeAttributeInfo.newInstance(NodeAttributeKey.newInstance("GPU"),
+            NodeAttributeType.STRING), NodeAttributeInfo
+            .newInstance(NodeAttributeKey.newInstance("CPU"),
+                NodeAttributeType.STRING)));
+    ClusterCLI cli = createAndGetClusterCLI();
+
+    int rc = cli.run(new String[] {ClusterCLI.CMD,
+        "-" + ClusterCLI.LIST_CLUSTER_ATTRIBUTES});
+    assertEquals(0, rc);
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("rm.yarn.io/GPU(STRING)");
+    pw.println("rm.yarn.io/CPU(STRING)");
+    pw.close();
+    verify(sysOut).println(baos.toString("UTF-8"));
+  }
+
   @Test
   public void testGetClusterNodeLabelsWithLocalAccess() throws Exception {
-    YarnClient client = mock(YarnClient.class);
     when(client.getClusterNodeLabels()).thenReturn(
         Arrays.asList(NodeLabel.newInstance("remote1"),
             NodeLabel.newInstance("remote2")));
-    ClusterCLI cli = new ClusterCLI();
-    cli.setClient(client);
-    cli.setSysOutPrintStream(sysOut);
-    cli.setSysErrPrintStream(sysErr);
+    ClusterCLI cli = createAndGetClusterCLI();
     ClusterCLI.localNodeLabelsManager = mock(CommonNodeLabelsManager.class);
     when(ClusterCLI.localNodeLabelsManager.getClusterNodeLabels()).thenReturn(
         Arrays.asList(NodeLabel.newInstance("local1"),
@@ -106,12 +124,8 @@ public class TestClusterCLI {
   
   @Test
   public void testGetEmptyClusterNodeLabels() throws Exception {
-    YarnClient client = mock(YarnClient.class);
     when(client.getClusterNodeLabels()).thenReturn(new ArrayList<NodeLabel>());
-    ClusterCLI cli = new ClusterCLI();
-    cli.setClient(client);
-    cli.setSysOutPrintStream(sysOut);
-    cli.setSysErrPrintStream(sysErr);
+    ClusterCLI cli = createAndGetClusterCLI();
 
     int rc =
         cli.run(new String[] { ClusterCLI.CMD, "-" + ClusterCLI.LIST_LABELS_CMD });
@@ -126,9 +140,7 @@ public class TestClusterCLI {
   
   @Test
   public void testHelp() throws Exception {
-    ClusterCLI cli = new ClusterCLI();
-    cli.setSysOutPrintStream(sysOut);
-    cli.setSysErrPrintStream(sysErr);
+    ClusterCLI cli = createAndGetClusterCLI();
 
     int rc =
         cli.run(new String[] { "cluster", "--help" });
@@ -157,9 +169,22 @@ public class TestClusterCLI {
     pw.println("                                           option is UNSTABLE, could be");
     pw.println("                                           removed in future releases.");
     pw.println(" -h,--help                                 Displays help for all commands.");
+    pw.println(" -lna,--list-node-attributes               List cluster node-attribute");
+    pw.println("                                           collection");
     pw.println(" -lnl,--list-node-labels                   List cluster node-label");
     pw.println("                                           collection");
     pw.close();
     verify(sysOut).println(baos.toString("UTF-8"));
+  }
+
+  private ClusterCLI createAndGetClusterCLI() {
+    ClusterCLI cli = new ClusterCLI() {
+      @Override protected void createAndStartYarnClient() {
+      }
+    };
+    cli.setClient(client);
+    cli.setSysOutPrintStream(sysOut);
+    cli.setSysErrPrintStream(sysErr);
+    return cli;
   }
 }

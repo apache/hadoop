@@ -22,8 +22,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -45,8 +45,8 @@ import org.apache.hadoop.util.Time;
 @InterfaceStability.Unstable
 public class OfflineEditsViewerHelper {
 
-  private static final Log LOG = 
-    LogFactory.getLog(OfflineEditsViewerHelper.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OfflineEditsViewerHelper.class);
 
     final long           blockSize = 512;
     MiniDFSCluster cluster   = null;
@@ -98,8 +98,10 @@ public class OfflineEditsViewerHelper {
     config.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     config.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    final int numDataNodes = 9;
     cluster =
-      new MiniDFSCluster.Builder(config).manageNameDfsDirs(false).build();
+      new MiniDFSCluster.Builder(config).manageNameDfsDirs(false)
+          .numDataNodes(numDataNodes).build();
     cluster.waitClusterUp();
   }
 

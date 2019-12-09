@@ -18,13 +18,12 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
@@ -35,8 +34,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
-import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
-import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -47,7 +46,8 @@ import java.util.Map;
  */
 public class ContainerRelaunch extends ContainerLaunch {
 
-  private static final Log LOG = LogFactory.getLog(ContainerRelaunch.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(ContainerRelaunch.class);
 
   public ContainerRelaunch(Context context, Configuration configuration,
       Dispatcher dispatcher, ContainerExecutor exec, Application app,
@@ -58,7 +58,6 @@ public class ContainerRelaunch extends ContainerLaunch {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public Integer call() {
     if (!validateContainerState()) {
       return 0;
@@ -70,7 +69,8 @@ public class ContainerRelaunch extends ContainerLaunch {
     Path containerLogDir;
     try {
       Path containerWorkDir = getContainerWorkDir();
-      cleanupPreviousContainerFiles(containerWorkDir);
+      // Clean up container's previous files for container relaunch.
+      cleanupContainerFiles(containerWorkDir);
 
       containerLogDir = getContainerLogDir();
 
@@ -95,6 +95,11 @@ public class ContainerRelaunch extends ContainerLaunch {
       List<String> logDirs = dirsHandler.getLogDirs();
       List<String> containerLocalDirs = getContainerLocalDirs(localDirs);
       List<String> containerLogDirs = getContainerLogDirs(logDirs);
+      List<String> filecacheDirs = getNMFilecacheDirs(localDirs);
+      List<String> userLocalDirs = getUserLocalDirs(localDirs);
+      List<String> userFilecacheDirs = getUserFilecacheDirs(localDirs);
+      List<String> applicationLocalDirs = getApplicationLocalDirs(localDirs,
+          appIdStr);
 
       if (!dirsHandler.areDisksHealthy()) {
         ret = ContainerExitStatus.DISKS_FAILED;
@@ -102,7 +107,7 @@ public class ContainerRelaunch extends ContainerLaunch {
             + dirsHandler.getDisksHealthReport(false));
       }
 
-      ret = launchContainer(new ContainerStartContext.Builder()
+      ret = relaunchContainer(new ContainerStartContext.Builder()
           .setContainer(container)
           .setLocalizedResources(localResources)
           .setNmPrivateContainerScriptPath(nmPrivateContainerScriptPath)
@@ -112,9 +117,21 @@ public class ContainerRelaunch extends ContainerLaunch {
           .setContainerWorkDir(containerWorkDir)
           .setLocalDirs(localDirs)
           .setLogDirs(logDirs)
+          .setFilecacheDirs(filecacheDirs)
+          .setUserLocalDirs(userLocalDirs)
           .setContainerLocalDirs(containerLocalDirs)
           .setContainerLogDirs(containerLogDirs)
+          .setUserFilecacheDirs(userFilecacheDirs)
+          .setApplicationLocalDirs(applicationLocalDirs)
           .build());
+    } catch (ConfigurationException e) {
+      LOG.error("Failed to launch container due to configuration error.", e);
+      dispatcher.getEventHandler().handle(new ContainerExitEvent(
+          containerId, ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
+          e.getMessage()));
+      // Mark the node as unhealthy
+      getContext().getNodeStatusUpdater().reportException(e);
+      return ret;
     } catch (Throwable e) {
       LOG.warn("Failed to relaunch container.", e);
       dispatcher.getEventHandler().handle(new ContainerExitEvent(
@@ -130,17 +147,6 @@ public class ContainerRelaunch extends ContainerLaunch {
     return ret;
   }
 
-  private Path getContainerWorkDir() throws IOException {
-    String containerWorkDir = container.getWorkDir();
-    if (containerWorkDir == null
-        || !dirsHandler.isGoodLocalDir(containerWorkDir)) {
-      throw new IOException(
-          "Could not find a good work dir " + containerWorkDir
-          + " for container " + container);
-    }
-
-    return new Path(containerWorkDir);
-  }
 
   private Path getContainerLogDir() throws IOException {
     String containerLogDir = container.getLogDir();
@@ -171,26 +177,5 @@ public class ContainerRelaunch extends ContainerLaunch {
       String containerIdStr) throws IOException {
     return dirsHandler.getLocalPathForRead(
         getPidFileSubpath(appIdStr, containerIdStr));
-  }
-
-  /**
-   * Clean up container's previous files for container relaunch.
-   */
-  private void cleanupPreviousContainerFiles(Path containerWorkDir) {
-    // delete ContainerScriptPath
-    deleteAsUser(new Path(containerWorkDir, CONTAINER_SCRIPT));
-    // delete TokensPath
-    deleteAsUser(new Path(containerWorkDir, FINAL_CONTAINER_TOKENS_FILE));
-  }
-
-  private void deleteAsUser(Path path) {
-    try {
-      exec.deleteAsUser(new DeletionAsUserContext.Builder()
-          .setUser(container.getUser())
-          .setSubDir(path)
-          .build());
-    } catch (Exception e) {
-      LOG.warn("Failed to delete " + path, e);
-    }
   }
 }

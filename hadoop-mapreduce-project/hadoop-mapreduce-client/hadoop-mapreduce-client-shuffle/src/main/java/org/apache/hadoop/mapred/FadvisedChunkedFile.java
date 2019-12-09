@@ -22,11 +22,12 @@ import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.io.ReadaheadPool.ReadaheadRequest;
 import org.apache.hadoop.io.nativeio.NativeIO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_DONTNEED;
 
@@ -34,15 +35,17 @@ import org.jboss.netty.handler.stream.ChunkedFile;
 
 public class FadvisedChunkedFile extends ChunkedFile {
 
-  private static final Log LOG = LogFactory.getLog(FadvisedChunkedFile.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FadvisedChunkedFile.class);
 
+  private final Object closeLock = new Object();
   private final boolean manageOsCache;
   private final int readaheadLength;
   private final ReadaheadPool readaheadPool;
   private final FileDescriptor fd;
   private final String identifier;
 
-  private ReadaheadRequest readaheadRequest;
+  private volatile ReadaheadRequest readaheadRequest;
 
   public FadvisedChunkedFile(RandomAccessFile file, long position, long count,
       int chunkSize, boolean manageOsCache, int readaheadLength,
@@ -55,31 +58,50 @@ public class FadvisedChunkedFile extends ChunkedFile {
     this.identifier = identifier;
   }
 
+  @VisibleForTesting
+  FileDescriptor getFd() {
+    return fd;
+  }
+
   @Override
   public Object nextChunk() throws Exception {
-    if (manageOsCache && readaheadPool != null) {
-      readaheadRequest = readaheadPool
-          .readaheadStream(identifier, fd, getCurrentOffset(), readaheadLength,
-              getEndOffset(), readaheadRequest);
+    synchronized (closeLock) {
+      if (fd.valid()) {
+        if (manageOsCache && readaheadPool != null) {
+          readaheadRequest = readaheadPool
+              .readaheadStream(
+                  identifier, fd, getCurrentOffset(), readaheadLength,
+                  getEndOffset(), readaheadRequest);
+        }
+        return super.nextChunk();
+      } else {
+        return null;
+      }
     }
-    return super.nextChunk();
   }
 
   @Override
   public void close() throws Exception {
-    if (readaheadRequest != null) {
-      readaheadRequest.cancel();
-    }
-    if (manageOsCache && getEndOffset() - getStartOffset() > 0) {
-      try {
-        NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(identifier,
-            fd,
-            getStartOffset(), getEndOffset() - getStartOffset(),
-            POSIX_FADV_DONTNEED);
-      } catch (Throwable t) {
-        LOG.warn("Failed to manage OS cache for " + identifier, t);
+    synchronized (closeLock) {
+      if (readaheadRequest != null) {
+        readaheadRequest.cancel();
+        readaheadRequest = null;
       }
+      if (fd.valid() &&
+          manageOsCache && getEndOffset() - getStartOffset() > 0) {
+        try {
+          NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(
+              identifier,
+              fd,
+              getStartOffset(), getEndOffset() - getStartOffset(),
+              POSIX_FADV_DONTNEED);
+        } catch (Throwable t) {
+          LOG.warn("Failed to manage OS cache for " + identifier +
+              " fd " + fd.toString(), t);
+        }
+      }
+      // fd becomes invalid upon closing
+      super.close();
     }
-    super.close();
   }
 }

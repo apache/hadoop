@@ -308,9 +308,7 @@ public class LocalReplicaInPipeline extends LocalReplica
     FileOutputStream crcOut = null;
     try {
       blockOut = fileIoProvider.getFileOutputStream(
-          getVolume(),
-          fileIoProvider.getRandomAccessFile(getVolume(), blockFile, "rw")
-              .getFD());
+          getVolume(), new RandomAccessFile(blockFile, "rw").getFD());
       crcOut = fileIoProvider.getFileOutputStream(getVolume(), metaRAF.getFD());
       if (!isCreate) {
         blockOut.getChannel().position(blockDiskSize);

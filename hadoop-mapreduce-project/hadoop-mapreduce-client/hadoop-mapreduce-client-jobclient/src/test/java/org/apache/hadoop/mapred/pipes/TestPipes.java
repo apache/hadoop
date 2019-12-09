@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileUtil;
@@ -45,14 +43,16 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 
 @Ignore
 public class TestPipes {
-  private static final Log LOG =
-    LogFactory.getLog(TestPipes.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(TestPipes.class);
 
   private static Path cppExamples =
     new Path(System.getProperty("install.c++.examples"));

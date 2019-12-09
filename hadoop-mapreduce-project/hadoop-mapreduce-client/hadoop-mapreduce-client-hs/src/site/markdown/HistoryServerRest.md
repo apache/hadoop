@@ -15,27 +15,7 @@
 MapReduce History Server REST API's.
 ====================================
 
-* [MapReduce History Server REST API's.](#MapReduce_History_Server_REST_APIs.)
-    * [Overview](#Overview)
-    * [History Server Information API](#History_Server_Information_API)
-        * [URI](#URI)
-        * [HTTP Operations Supported](#HTTP_Operations_Supported)
-        * [Query Parameters Supported](#Query_Parameters_Supported)
-        * [Elements of the historyInfo object](#Elements_of_the_historyInfo_object)
-        * [Response Examples](#Response_Examples)
-    * [MapReduce API's](#MapReduce_APIs)
-        * [Jobs API](#Jobs_API)
-        * [Job API](#Job_API)
-        * [Elements of the acls object](#Elements_of_the_acls_object)
-        * [Job Attempts API](#Job_Attempts_API)
-        * [Job Counters API](#Job_Counters_API)
-        * [Job Conf API](#Job_Conf_API)
-        * [Tasks API](#Tasks_API)
-        * [Task API](#Task_API)
-        * [Task Counters API](#Task_Counters_API)
-        * [Task Attempts API](#Task_Attempts_API)
-        * [Task Attempt API](#Task_Attempt_API)
-        * [Task Attempt Counters API](#Task_Attempt_Counters_API)
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
 
 Overview
 --------
@@ -51,8 +31,8 @@ The history server information resource provides overall information about the h
 
 Both of the following URI's give you the history server information, from an application id identified by the appid value.
 
-      * http://<history server http address:port>/ws/v1/history
-      * http://<history server http address:port>/ws/v1/history/info
+      * http://history-server-http-address:port/ws/v1/history
+      * http://history-server-http-address:port/ws/v1/history/info
 
 ### HTTP Operations Supported
 
@@ -77,7 +57,7 @@ Both of the following URI's give you the history server information, from an app
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/info
+      GET http://history-server-http-address:port/ws/v1/history/info
 
 Response Header:
 
@@ -88,7 +68,7 @@ Response Header:
 
 Response Body:
 
-    {   
+    {
        "historyInfo" : {
           "startedOn":1353512830963,
           "hadoopVersionBuiltOn" : "Wed Jan 11 21:18:36 UTC 2012",
@@ -101,7 +81,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/info
+      GET http://history-server-http-address:port/ws/v1/history/info
       Accept: application/xml
 
 Response Header:
@@ -132,7 +112,7 @@ The jobs resource provides a list of the MapReduce jobs that have finished. It d
 
 #### URI
 
-      *  http://<history server http address:port>/ws/v1/history/mapreduce/jobs
+      *  http://history-server-http-address:port/ws/v1/history/mapreduce/jobs
 
 #### HTTP Operations Supported
 
@@ -167,7 +147,7 @@ for syntax of the job object. Except this is a subset of a full job. Only startT
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs
 
 Response Header:
 
@@ -217,7 +197,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs
       Accept: application/xml
 
 Response Header:
@@ -267,7 +247,7 @@ A Job resource contains information about a particular job identified by jobid.
 
 #### URI
 
-      * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}
+      * http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/{jobid}
 
 #### HTTP Operations Supported
 
@@ -320,7 +300,7 @@ A Job resource contains information about a particular job identified by jobid.
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2
 
 Response Header:
 
@@ -374,7 +354,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2
       Accept: application/xml
 
 Response Header:
@@ -428,7 +408,7 @@ With the job attempts API, you can obtain a collection of resources that represe
 
 #### URI
 
-      * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/jobattempts
+      * http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/{jobid}/jobattempts
 
 #### HTTP Operations Supported
 
@@ -465,7 +445,7 @@ jobAttempts:
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/jobattempts
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/jobattempts
 
 Response Header:
 
@@ -495,7 +475,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/jobattmpts
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/jobattmpts
       Accept: application/xml
 
 Response Header:
@@ -525,7 +505,7 @@ With the job counters API, you can object a collection of resources that represe
 
 #### URI
 
-      * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/counters
+      * http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/{jobid}/counters
 
 #### HTTP Operations Supported
 
@@ -564,7 +544,7 @@ With the job counters API, you can object a collection of resources that represe
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/counters
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/counters
 
 Response Header:
 
@@ -840,7 +820,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/counters
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/counters
       Accept: application/xml
 
 Response Header:
@@ -1108,7 +1088,7 @@ A job configuration resource contains information about the job configuration fo
 
 Use the following URI to obtain th job configuration information, from a job identified by the jobid value.
 
-      * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/conf
+      * http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/{jobid}/conf
 
 #### HTTP Operations Supported
 
@@ -1139,7 +1119,7 @@ Use the following URI to obtain th job configuration information, from a job ide
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/conf
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/conf
 
 Response Header:
 
@@ -1156,7 +1136,7 @@ This is a small snippet of the output as the output if very large. The real outp
        "conf" : {
           "path" : "hdfs://host.domain.com:9000/user/user1/.staging/job_1326381300833_0002/job.xml",
           "property" : [
-             {  
+             {
                 "value" : "/home/hadoop/hdfs/data",
                 "name" : "dfs.datanode.data.dir"
                 "source" : ["hdfs-site.xml", "job.xml"]
@@ -1180,7 +1160,7 @@ This is a small snippet of the output as the output if very large. The real outp
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/conf
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/conf
       Accept: application/xml
 
 Response Header:
@@ -1221,7 +1201,7 @@ With the tasks API, you can obtain a collection of resources that represent a ta
 
 #### URI
 
-      * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks
+      * http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/{jobid}/tasks
 
 #### HTTP Operations Supported
 
@@ -1247,7 +1227,7 @@ for syntax of the task object.
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks
 
 Response Header:
 
@@ -1289,7 +1269,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks
       Accept: application/xml
 
 Response Header:
@@ -1333,7 +1313,7 @@ A Task resource contains information about a particular task within a job.
 
 Use the following URI to obtain an Task Object, from a task identified by the taskid value.
 
-      * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}
+      * http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}
 
 #### HTTP Operations Supported
 
@@ -1362,7 +1342,7 @@ Use the following URI to obtain an Task Object, from a task identified by the ta
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0
 
 Response Header:
 
@@ -1390,7 +1370,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0
       Accept: application/xml
 
 Response Header:
@@ -1420,7 +1400,7 @@ With the task counters API, you can object a collection of resources that repres
 
 #### URI
 
-      * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/counters
+      * http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/counters
 
 #### HTTP Operations Supported
 
@@ -1457,7 +1437,7 @@ With the task counters API, you can object a collection of resources that repres
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/counters
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/counters
 
 Response Header:
 
@@ -1628,7 +1608,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/counters
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/counters
       Accept: application/xml
 
 Response Header:
@@ -1791,7 +1771,7 @@ With the task attempts API, you can obtain a collection of resources that repres
 
 #### URI
 
-      * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts
+      * http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts
 
 #### HTTP Operations Supported
 
@@ -1817,7 +1797,7 @@ for syntax of the task object.
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts
 
 Response Header:
 
@@ -1852,7 +1832,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts
       Accept: application/xml
 
 Response Header:
@@ -1889,7 +1869,7 @@ A Task Attempt resource contains information about a particular task attempt wit
 
 Use the following URI to obtain an Task Attempt Object, from a task identified by the attemptid value.
 
-      * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}
+      * http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}
 
 #### HTTP Operations Supported
 
@@ -1931,7 +1911,7 @@ For reduce task attempts you also have the following fields:
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts/attempt_1326381300833_2_2_m_0_0 
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts/attempt_1326381300833_2_2_m_0_0
 
 Response Header:
 
@@ -1962,7 +1942,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts/attempt_1326381300833_2_2_m_0_0 
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts/attempt_1326381300833_2_2_m_0_0
       Accept: application/xml
 
 Response Header:
@@ -1995,7 +1975,7 @@ With the task attempt counters API, you can object a collection of resources tha
 
 #### URI
 
-      * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/counters
+      * http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/counters
 
 #### HTTP Operations Supported
 
@@ -2032,7 +2012,7 @@ With the task attempt counters API, you can object a collection of resources tha
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts/attempt_1326381300833_2_2_m_0_0/counters
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts/attempt_1326381300833_2_2_m_0_0/counters
 
 Response Header:
 
@@ -2203,7 +2183,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts/attempt_1326381300833_2_2_m_0_0/counters
+      GET http://history-server-http-address:port/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts/attempt_1326381300833_2_2_m_0_0/counters
       Accept: application/xml
 
 Response Header:

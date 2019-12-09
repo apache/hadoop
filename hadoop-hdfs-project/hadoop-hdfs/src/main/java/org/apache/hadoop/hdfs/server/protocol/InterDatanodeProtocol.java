@@ -19,14 +19,13 @@
 package org.apache.hadoop.hdfs.server.protocol;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.security.KerberosInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** An inter-datanode protocol for updating generation stamp
  */
@@ -35,7 +34,7 @@ import org.apache.hadoop.security.KerberosInfo;
     clientPrincipal = DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY)
 @InterfaceAudience.Private
 public interface InterDatanodeProtocol {
-  public static final Log LOG = LogFactory.getLog(InterDatanodeProtocol.class);
+  Logger LOG = LoggerFactory.getLogger(InterDatanodeProtocol.class.getName());
 
   /**
    * Until version 9, this class InterDatanodeProtocol served as both

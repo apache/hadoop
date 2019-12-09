@@ -29,6 +29,8 @@ public class PostOpParam extends HttpOpParam<PostOpParam.Op> {
 
     TRUNCATE(false, HttpURLConnection.HTTP_OK),
 
+    UNSETECPOLICY(false, HttpURLConnection.HTTP_OK),
+
     UNSETSTORAGEPOLICY(false, HttpURLConnection.HTTP_OK),
 
     NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED);
@@ -80,7 +82,16 @@ public class PostOpParam extends HttpOpParam<PostOpParam.Op> {
    * @param str a string representation of the parameter value.
    */
   public PostOpParam(final String str) {
-    super(DOMAIN, DOMAIN.parse(str));
+    super(DOMAIN, getOp(str));
+  }
+
+  private static Op getOp(String str) {
+    try {
+      return DOMAIN.parse(str);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(str + " is not a valid " + Type.POST
+          + " operation.");
+    }
   }
 
   @Override

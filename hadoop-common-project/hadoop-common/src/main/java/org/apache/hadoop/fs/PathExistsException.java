@@ -27,7 +27,7 @@ public class PathExistsException extends PathIOException {
     super(path, "File exists");
   }
   
-  protected PathExistsException(String path, String error) {
+  public PathExistsException(String path, String error) {
     super(path, error);
   }
 }

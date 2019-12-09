@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import Constants from 'yarn-ui/constants';
-
 export default {
   preDefinedColors : ["#1f77b4", "#aec7e8", "#ffbb78",
     "#98df8a", "#ff9896", "#9467bd", "#c5b0d5", "#8c564b",
@@ -25,10 +23,10 @@ export default {
     "#dbdb8d", "#17becf", "#9edae5"],
 
   colorMap: {
-    "warn": "#ff7f0e",
-    "good": "#2ca02c",
-    "error": "#d62728",
-    "others": "#7f7f7f",
+    "warn": "#ffbc0b",
+    "good": "#60cea5",
+    "error": "#cc6164",
+    "others": "#26bbf0",
   },
 
   getColors: function(nColors, colorsTarget, reverse = false) {
@@ -43,21 +41,20 @@ export default {
       startIdx = Math.max(nColors - colorsTarget.length, 0);
     }
 
-    for (var i = 0; i < colorsTarget.length; i++) {
+    for (i = 0; i < colorsTarget.length; i++) {
       if (i + startIdx < nColors) {
         colors[i + startIdx] = this.getColorByTarget(colorsTarget[i]);
       }
     }
 
     var idx = 0;
-    for (var i = 0; i < nColors; i++) {
+    for (i = 0; i < nColors; i++) {
       if (!colors[i]) {
         colors[i] = this.preDefinedColors[i % this.preDefinedColors.length];
         idx ++;
       }
     }
 
-    console.log(colors);
     return colors;
   },
 

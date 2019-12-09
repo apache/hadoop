@@ -25,8 +25,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
@@ -47,7 +47,8 @@ import com.google.common.base.Predicate;
  */
 @InterfaceAudience.Private
 public class NameNodeResourceChecker {
-  private static final Log LOG = LogFactory.getLog(NameNodeResourceChecker.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NameNodeResourceChecker.class.getName());
 
   // Space (in bytes) reserved per volume.
   private final long duReserved;

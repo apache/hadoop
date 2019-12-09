@@ -80,7 +80,8 @@ public class DFSck extends Configured implements Tool {
       + "[-files [-blocks [-locations | -racks | -replicaDetails | " +
           "-upgradedomains]]]] "
       + "[-includeSnapshots] [-showprogress] "
-      + "[-storagepolicies] [-blockId <blk_Id>]\n"
+      + "[-storagepolicies] [-maintenance] "
+      + "[-blockId <blk_Id>]\n"
       + "\t<path>\tstart checking from this path\n"
       + "\t-move\tmove corrupted files to /lost+found\n"
       + "\t-delete\tdelete corrupted files\n"
@@ -99,6 +100,7 @@ public class DFSck extends Configured implements Tool {
       + "\t-files -blocks -upgradedomains\tprint out upgrade domains for " +
           "every block\n"
       + "\t-storagepolicies\tprint out storage policy summary for the blocks\n"
+      + "\t-maintenance\tprint out maintenance state node details\n"
       + "\t-showprogress\tshow progress in output. Default is OFF (no progress)\n"
       + "\t-blockId\tprint out which file this blockId belongs to, locations"
       + " (nodes, racks) of this block, and other diagnostics info"
@@ -208,8 +210,14 @@ public class DFSck extends Configured implements Tool {
             allDone = true;
             break;
           }
+          if (line.startsWith("Access denied for user")) {
+            out.println("Failed to open path '" + dir + "': Permission denied");
+            errCode = -1;
+            return errCode;
+          }
           if ((line.isEmpty())
               || (line.startsWith("FSCK started by"))
+              || (line.startsWith("FSCK ended at"))
               || (line.startsWith("The filesystem under path")))
             continue;
           numCorrupt++;
@@ -286,6 +294,8 @@ public class DFSck extends Configured implements Tool {
         doListCorruptFileBlocks = true;
       } else if (args[idx].equals("-includeSnapshots")) {
         url.append("&includeSnapshots=1");
+      } else if (args[idx].equals("-maintenance")) {
+        url.append("&maintenance=1");
       } else if (args[idx].equals("-blockId")) {
         StringBuilder sb = new StringBuilder();
         idx++;
@@ -350,7 +360,7 @@ public class DFSck extends Configured implements Tool {
     BufferedReader input = new BufferedReader(new InputStreamReader(
                                               stream, "UTF-8"));
     String line = null;
-    String lastLine = null;
+    String lastLine = NamenodeFsck.CORRUPT_STATUS;
     int errCode = -1;
     try {
       while ((line = input.readLine()) != null) {
@@ -372,6 +382,10 @@ public class DFSck extends Configured implements Tool {
       errCode = 2;
     } else if (lastLine.endsWith(NamenodeFsck.DECOMMISSIONING_STATUS)) {
       errCode = 3;
+    } else if (lastLine.endsWith(NamenodeFsck.IN_MAINTENANCE_STATUS))  {
+      errCode = 4;
+    } else if (lastLine.endsWith(NamenodeFsck.ENTERING_MAINTENANCE_STATUS)) {
+      errCode = 5;
     }
     return errCode;
   }

@@ -19,9 +19,6 @@ package org.apache.hadoop.ha;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -32,6 +29,8 @@ import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.ipc.RPC;
 
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The FailOverController is responsible for electing an active service
@@ -43,7 +42,8 @@ import com.google.common.base.Preconditions;
 @InterfaceStability.Evolving
 public class FailoverController {
 
-  private static final Log LOG = LogFactory.getLog(FailoverController.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FailoverController.class);
 
   private final int gracefulFenceTimeout;
   private final int rpcTimeoutToNewActive;
@@ -123,13 +123,13 @@ public class FailoverController {
       toSvcStatus = toSvc.getServiceStatus();
     } catch (IOException e) {
       String msg = "Unable to get service state for " + target;
-      LOG.error(msg + ": " + e.getLocalizedMessage());
+      LOG.error(msg, e);
       throw new FailoverFailedException(msg, e);
     }
 
     if (!toSvcStatus.getState().equals(HAServiceState.STANDBY)) {
       throw new FailoverFailedException(
-          "Can't failover to an active service");
+          "Can't failover to an " + toSvcStatus.getState() + " service");
     }
     
     if (!toSvcStatus.isReadyToBecomeActive()) {
@@ -139,7 +139,7 @@ public class FailoverController {
             target + " is not ready to become active: " +
             notReadyReason);
       } else {
-        LOG.warn("Service is not ready to become active, but forcing: " +
+        LOG.warn("Service is not ready to become active, but forcing: {}",
             notReadyReason);
       }
     }
@@ -172,11 +172,11 @@ public class FailoverController {
       proxy.transitionToStandby(createReqInfo());
       return true;
     } catch (ServiceFailedException sfe) {
-      LOG.warn("Unable to gracefully make " + svc + " standby (" +
-          sfe.getMessage() + ")");
+      LOG.warn("Unable to gracefully make {} standby ({})",
+          svc, sfe.getMessage());
     } catch (IOException ioe) {
-      LOG.warn("Unable to gracefully make " + svc +
-          " standby (unable to connect)", ioe);
+      LOG.warn("Unable to gracefully make {} standby (unable to connect)",
+          svc, ioe);
     } finally {
       if (proxy != null) {
         RPC.stopProxy(proxy);
@@ -227,13 +227,13 @@ public class FailoverController {
           toSvc.getProxy(conf, rpcTimeoutToNewActive),
           createReqInfo());
     } catch (ServiceFailedException sfe) {
-      LOG.error("Unable to make " + toSvc + " active (" +
-          sfe.getMessage() + "). Failing back.");
+      LOG.error("Unable to make {} active ({}). Failing back.",
+          toSvc, sfe.getMessage());
       failed = true;
       cause = sfe;
     } catch (IOException ioe) {
-      LOG.error("Unable to make " + toSvc +
-          " active (unable to connect). Failing back.", ioe);
+      LOG.error("Unable to make {} active (unable to connect). Failing back.",
+          toSvc, ioe);
       failed = true;
       cause = ioe;
     }
@@ -252,7 +252,7 @@ public class FailoverController {
         } catch (FailoverFailedException ffe) {
           msg += ". Failback to " + fromSvc +
             " failed (" + ffe.getMessage() + ")";
-          LOG.fatal(msg);
+          LOG.error(msg);
         }
       }
       throw new FailoverFailedException(msg, cause);

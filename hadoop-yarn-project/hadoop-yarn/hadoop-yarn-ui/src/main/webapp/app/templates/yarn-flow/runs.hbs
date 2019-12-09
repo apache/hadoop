@@ -1,0 +1,131 @@
+{{!--
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+--}}
+
+<div class="yarn-flow-runs">
+
+  {{#if (or (or elapsedTimeVizData.length cpuVCoresVizData.length) memoryVizData.length)}}
+  <div class="dropdown pull-right">
+    <button class="btn btn-sm btn-primary dropdown-toggle" type="button" data-toggle="dropdown">
+      Add Metrics Widget <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+      {{#if elapsedTimeVizData.length}}
+        <li>
+          <a href="#" {{action "addVizWidget" "runDuration"}}>
+            <div class="item-icon">
+              {{#if vizWidgets.runDuration}}
+                <i class="glyphicon glyphicon-ok text-success"></i>
+              {{/if}}
+            </div>
+            <div class="item-text">Flow Run Vs Run Duration</div>
+          </a>
+        </li>
+      {{/if}}
+      {{#if cpuVCoresVizData.length}}
+        <li>
+          <a href="#" {{action "addVizWidget" "cpuVcores"}}>
+            <div class="item-icon">
+              {{#if vizWidgets.cpuVcores}}
+                <i class="glyphicon glyphicon-ok text-success"></i>
+              {{/if}}
+            </div>
+            <div class="item-text">Flow Run Vs Cpu Vcores</div>
+          </a>
+        </li>
+      {{/if}}
+      {{#if memoryVizData.length}}
+        <li>
+          <a href="#" {{action "addVizWidget" "memoryUsed"}}>
+            <div class="item-icon">
+              {{#if vizWidgets.memoryUsed}}
+                <i class="glyphicon glyphicon-ok text-success"></i>
+              {{/if}}
+            </div>
+            <div class="item-text">Flow Run Vs Memory Used</div>
+          </a>
+        </li>
+      {{/if}}
+    </ul>
+  </div>
+  {{/if}}
+
+  <h3>Flow Runs</h3>
+  {{em-table columns=columns rows=model.flowRuns definition=tableDefinition}}
+
+  <div class="col-md-12">
+    {{#if (and elapsedTimeVizData.length vizWidgets.runDuration)}}
+      <div class="row">
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <div class="glyphicon glyphicon-remove pull-right" {{action "removeVizWidget" "runDuration"}}></div>
+            <h4 class="text-center">Flow Run Vs Run Duration</h4>
+            {{simple-bar-chart
+              class="chart-panel"
+              data=elapsedTimeVizData
+              xAxisTickFormatter=flowrunIdFormatter
+              yAxisTickFormatter=elapsedTimeFormatter
+              xAxisText="Flow Run"
+              yAxisText="Run Duration"
+              onBarChartClickCallback=onBarChartClick
+            }}
+          </div>
+        </div>
+      </div>
+    {{/if}}
+
+    {{#if (and cpuVCoresVizData.length vizWidgets.cpuVcores)}}
+      <div class="row">
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <div class="glyphicon glyphicon-remove pull-right" {{action "removeVizWidget" "cpuVcores"}}></div>
+            <h4 class="text-center">Flow Run Vs CPU VCores</h4>
+            {{simple-bar-chart
+              class="chart-panel"
+              data=cpuVCoresVizData
+              xAxisTickFormatter=flowrunIdFormatter
+              xAxisText="Flow Run"
+              yAxisText="CPU VCores"
+              onBarChartClickCallback=onBarChartClick
+            }}
+          </div>
+        </div>
+      </div>
+    {{/if}}
+
+    {{#if (and memoryVizData.length vizWidgets.memoryUsed)}}
+      <div class="row">
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <div class="glyphicon glyphicon-remove pull-right" {{action "removeVizWidget" "memoryUsed"}}></div>
+            <h4 class="text-center">Flow Run Vs Memory Used</h4>
+            {{simple-bar-chart
+              class="chart-panel"
+              data=memoryVizData
+              xAxisTickFormatter=flowrunIdFormatter
+              yAxisTickFormatter=memoryFormatter
+              xAxisText="Flow Run"
+              yAxisText="Memory Used"
+              onBarChartClickCallback=onBarChartClick
+            }}
+          </div>
+        </div>
+      </div>
+    {{/if}}
+  </div>
+
+</div>

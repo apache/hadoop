@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -50,7 +50,8 @@ import java.util.HashSet;
  * resolutions are only done during the loading time to minimize the latency.
  */
 public class HostFileManager extends HostConfigManager {
-  private static final Log LOG = LogFactory.getLog(HostFileManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HostFileManager.class);
   private Configuration conf;
   private HostSet includes = new HostSet();
   private HostSet excludes = new HostSet();

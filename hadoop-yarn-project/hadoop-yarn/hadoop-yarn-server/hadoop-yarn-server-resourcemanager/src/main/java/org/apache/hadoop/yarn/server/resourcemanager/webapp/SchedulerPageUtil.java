@@ -27,7 +27,7 @@ public class SchedulerPageUtil {
     private void reopenQueue(Block html) {
       html.
           script().$type("text/javascript").
-          _("function reopenQueryNodes() {",
+          __("function reopenQueryNodes() {",
             "  var currentParam = window.location.href.split('?');",
             "  var tmpCurrentParam = currentParam;",
             "  var queryQueuesString = '';",
@@ -52,13 +52,13 @@ public class SchedulerPageUtil {
             "                  'open_node.jstree' :function(e, data) { storeExpandedQueue(e, data); },",
             "                  'close_node.jstree':function(e, data) { storeExpandedQueue(e, data); }",
             "  });",
-            "}")._();
+            "}").__();
     }
 
     private void storeExpandedQueue (Block html) {
       html.
           script().$type("text/javascript").
-          _("function storeExpandedQueue(e, data) {",
+          __("function storeExpandedQueue(e, data) {",
             "  var OPEN_QUEUES = 'openQueues';",
             "  var ACTION_OPEN = 'open';",
             "  var ACTION_CLOSED = 'closed';",
@@ -166,7 +166,7 @@ public class SchedulerPageUtil {
             "    queryString = queryString + '#' + queueName;",
             "  }",
             "  return queryString;",
-            "}")._();
+            "}").__();
     }
 
     @Override protected void render(Block html) {

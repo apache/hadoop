@@ -28,8 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.examples.pi.math.Summation;
@@ -53,8 +51,11 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The main class for computing sums using map/reduce jobs.
@@ -66,7 +67,7 @@ import org.apache.hadoop.util.ToolRunner;
  * a mix-type job may be executed on either side.
  */
 public final class DistSum extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(DistSum.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DistSum.class);
 
   private static final String NAME = DistSum.class.getSimpleName();
   private static final String N_PARTS = "mapreduce.pi." + NAME + ".nParts";
@@ -162,9 +163,9 @@ public final class DistSum extends Configured implements Tool {
       LOG.info(s = "sigma=" + sigma);
       context.setStatus(s);
 
-      final long start = System.currentTimeMillis();
+      final long start = Time.monotonicNow();
       sigma.compute();
-      final long duration = System.currentTimeMillis() - start;
+      final long duration = Time.monotonicNow() - start;
       final TaskResult result = new TaskResult(sigma, duration);
 
       LOG.info(s = "result=" + result);

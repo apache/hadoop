@@ -19,11 +19,12 @@ package org.apache.hadoop.mapred.nativetask.buffer;
 
 import java.io.IOException;
 
-import junit.framework.TestCase;
-
+import org.junit.Test;
 import org.junit.Assert;
 
-public class TestInputBuffer extends TestCase {
+public class TestInputBuffer {
+
+  @Test
   public void testInputBuffer() throws IOException {
     final int size = 100;
     final InputBuffer input1 = new InputBuffer(BufferType.DIRECT_BUFFER, size);

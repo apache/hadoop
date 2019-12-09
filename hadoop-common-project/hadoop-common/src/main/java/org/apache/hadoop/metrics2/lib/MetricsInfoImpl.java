@@ -19,8 +19,11 @@
 package org.apache.hadoop.metrics2.lib;
 
 import com.google.common.base.Objects;
-import static com.google.common.base.Preconditions.*;
 import org.apache.hadoop.metrics2.MetricsInfo;
+
+import java.util.StringJoiner;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Making implementing metric info a little easier
@@ -55,8 +58,9 @@ class MetricsInfoImpl implements MetricsInfo {
   }
 
   @Override public String toString() {
-    return Objects.toStringHelper(this)
-        .add("name", name).add("description", description)
+    return new StringJoiner(", ", this.getClass().getSimpleName() + "{", "}")
+        .add("name=" + name)
+        .add("description=" + description)
         .toString();
   }
 }

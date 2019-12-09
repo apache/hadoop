@@ -52,6 +52,18 @@ public abstract class ContainerReport {
       long creationTime, long finishTime, String diagnosticInfo, String logUrl,
       int containerExitStatus, ContainerState containerState,
       String nodeHttpAddress) {
+    return newInstance(containerId, allocatedResource, assignedNode, priority,
+        creationTime, finishTime, diagnosticInfo, logUrl, containerExitStatus,
+        containerState, nodeHttpAddress, ExecutionType.GUARANTEED);
+  }
+
+  @Private
+  @Unstable
+  public static ContainerReport newInstance(ContainerId containerId,
+      Resource allocatedResource, NodeId assignedNode, Priority priority,
+      long creationTime, long finishTime, String diagnosticInfo, String logUrl,
+      int containerExitStatus, ContainerState containerState,
+      String nodeHttpAddress, ExecutionType executionType) {
     ContainerReport report = Records.newRecord(ContainerReport.class);
     report.setContainerId(containerId);
     report.setAllocatedResource(allocatedResource);
@@ -64,6 +76,7 @@ public abstract class ContainerReport {
     report.setContainerExitStatus(containerExitStatus);
     report.setContainerState(containerState);
     report.setNodeHttpAddress(nodeHttpAddress);
+    report.setExecutionType(executionType);
     return report;
   }
 
@@ -209,4 +222,17 @@ public abstract class ContainerReport {
   @Private
   @Unstable
   public abstract void setNodeHttpAddress(String nodeHttpAddress);
+
+  /**
+   * Get the execution type of the container.
+   *
+   * @return the execution type of the container
+   */
+  @Public
+  @Unstable
+  public abstract ExecutionType getExecutionType();
+
+  @Private
+  @Unstable
+  public abstract void setExecutionType(ExecutionType executionType);
 }

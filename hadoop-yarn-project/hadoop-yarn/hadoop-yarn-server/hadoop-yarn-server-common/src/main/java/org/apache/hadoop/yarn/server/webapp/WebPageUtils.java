@@ -47,20 +47,27 @@ public class WebPageUtils {
 
   private static String getAppsTableColumnDefs(
       boolean isFairSchedulerPage, boolean isResourceManager) {
+    // default progress column index is 11
+    String progressIndex = "[11]";
     StringBuilder sb = new StringBuilder();
     sb.append("[\n")
       .append("{'sType':'natural', 'aTargets': [0]")
       .append(", 'mRender': parseHadoopID }")
-      .append("\n, {'sType':'numeric', 'aTargets': [6, 7]")
-      .append(", 'mRender': renderHadoopDate }")
-      .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets':");
-    if (isFairSchedulerPage) {
-      sb.append("[13]");
-    } else if (isResourceManager) {
-      sb.append("[15]");
-    } else {
-      sb.append("[9]");
+      .append("\n, {'sType':'num-ignore-str', 'aTargets': [6, 7, 8]")
+      .append(", 'mRender': renderHadoopDate }");
+    if (isResourceManager) {
+      // Update following line if any column added in RM page before column 11
+      sb.append("\n, {'sType':'num-ignore-str', 'aTargets': [11, 12, 13, 14, 15] }");
+      // set progress column index to 18
+      progressIndex = "[18]";
+    } else if (isFairSchedulerPage) {
+      // Update following line if any column added in scheduler page before column 11
+      sb.append("\n, {'sType':'num-ignore-str', 'aTargets': [11, 12, 13, 14, 15] }");
+      // set progress column index to 16
+      progressIndex = "[16]";
     }
+    sb.append("\n, {'sType':'numeric', bSearchable:false, 'aTargets':");
+    sb.append(progressIndex);
     sb.append(", 'mRender': parseHadoopProgress }]");
     return sb.toString();
   }

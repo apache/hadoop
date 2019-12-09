@@ -20,11 +20,10 @@ package org.apache.hadoop.mapreduce.lib.db;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.Job;
@@ -36,6 +35,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A OutputFormat that sends the reduce output to a SQL table.
@@ -50,7 +51,10 @@ import org.apache.hadoop.util.StringUtils;
 public class DBOutputFormat<K  extends DBWritable, V> 
 extends OutputFormat<K,V> {
 
-  private static final Log LOG = LogFactory.getLog(DBOutputFormat.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DBOutputFormat.class);
+  public String dbProductName = "DEFAULT";
+
   public void checkOutputSpecs(JobContext context) 
       throws IOException, InterruptedException {}
 
@@ -158,7 +162,12 @@ extends OutputFormat<K,V> {
         query.append(",");
       }
     }
-    query.append(");");
+
+    if (dbProductName.startsWith("DB2") || dbProductName.startsWith("ORACLE")) {
+      query.append(")");
+    } else {
+      query.append(");");
+    }
 
     return query.toString();
   }
@@ -177,7 +186,10 @@ extends OutputFormat<K,V> {
     try {
       Connection connection = dbConf.getConnection();
       PreparedStatement statement = null;
-  
+
+      DatabaseMetaData dbMeta = connection.getMetaData();
+      this.dbProductName = dbMeta.getDatabaseProductName().toUpperCase();
+
       statement = connection.prepareStatement(
                     constructQuery(tableName, fieldNames));
       return new DBRecordWriter(connection, statement);

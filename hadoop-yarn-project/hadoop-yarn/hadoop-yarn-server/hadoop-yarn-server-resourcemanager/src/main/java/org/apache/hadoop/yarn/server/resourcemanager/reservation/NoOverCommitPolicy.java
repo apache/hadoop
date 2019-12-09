@@ -40,19 +40,24 @@ public class NoOverCommitPolicy implements SharingPolicy {
 
     RLESparseResourceAllocation available = plan.getAvailableResourceOverTime(
         reservation.getUser(), reservation.getReservationId(),
-        reservation.getStartTime(), reservation.getEndTime());
+        reservation.getStartTime(), reservation.getEndTime(),
+        reservation.getPeriodicity());
 
     // test the reservation does not exceed what is available
     try {
+
+      RLESparseResourceAllocation ask = reservation.getResourcesOverTime(
+              reservation.getStartTime(), reservation.getEndTime());
       RLESparseResourceAllocation
           .merge(plan.getResourceCalculator(), plan.getTotalCapacity(),
-              available, reservation.getResourcesOverTime(),
+              available, ask,
               RLESparseResourceAllocation.RLEOperator.subtractTestNonNegative,
               reservation.getStartTime(), reservation.getEndTime());
     } catch (PlanningException p) {
       throw new ResourceOverCommitException(
-          "Resources at time " + " would be overcommitted by "
-              + "accepting reservation: " + reservation.getReservationId());
+          "Resources at time " + reservation.getStartTime()
+          + " would be overcommitted by accepting reservation: "
+              + reservation.getReservationId(), p);
     }
   }
 

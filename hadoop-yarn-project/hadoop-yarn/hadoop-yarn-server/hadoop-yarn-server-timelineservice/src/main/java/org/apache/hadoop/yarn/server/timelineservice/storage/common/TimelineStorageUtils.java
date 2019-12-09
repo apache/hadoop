@@ -23,8 +23,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -47,8 +45,6 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyVa
 public final class TimelineStorageUtils {
   private TimelineStorageUtils() {
   }
-
-  private static final Log LOG = LogFactory.getLog(TimelineStorageUtils.class);
 
   /**
    * Matches key-values filter. Used for relatesTo/isRelatedTo filters.
@@ -375,5 +371,4 @@ public final class TimelineStorageUtils {
     return (obj instanceof Short) || (obj instanceof Integer) ||
         (obj instanceof Long);
   }
-
 }

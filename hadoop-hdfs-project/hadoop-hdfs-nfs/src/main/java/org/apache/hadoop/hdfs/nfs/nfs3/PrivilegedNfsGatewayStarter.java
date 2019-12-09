@@ -18,9 +18,12 @@ package org.apache.hadoop.hdfs.nfs.nfs3;
 
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 
 import org.apache.commons.daemon.Daemon;
 import org.apache.commons.daemon.DaemonContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 
@@ -34,9 +37,11 @@ import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
  * Debian: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=594880
  */
 public class PrivilegedNfsGatewayStarter implements Daemon {
-	
+  static final Logger LOG =
+      LoggerFactory.getLogger(PrivilegedNfsGatewayStarter.class);
   private String[] args = null;
   private DatagramSocket registrationSocket = null;
+  private Nfs3 nfs3Server = null;
 
   @Override
   public void init(DaemonContext context) throws Exception {
@@ -49,20 +54,30 @@ public class PrivilegedNfsGatewayStarter implements Daemon {
           NfsConfigKeys.DFS_NFS_REGISTRATION_PORT_KEY + "' configured to a " +
           "privileged port.");
     }
-    registrationSocket = new DatagramSocket(
-        new InetSocketAddress("localhost", clientPort));
-    registrationSocket.setReuseAddress(true);
+
+    try {
+      InetSocketAddress socketAddress =
+                new InetSocketAddress("localhost", clientPort);
+      registrationSocket = new DatagramSocket(null);
+      registrationSocket.setReuseAddress(true);
+      registrationSocket.bind(socketAddress);
+    } catch (SocketException e) {
+      LOG.error("Init failed for port=" + clientPort, e);
+      throw e;
+    }
     args = context.getArguments();
   }
 
   @Override
   public void start() throws Exception {
-    Nfs3.startService(args, registrationSocket);
+    nfs3Server = Nfs3.startService(args, registrationSocket);
   }
 
   @Override
   public void stop() throws Exception {
-    // Nothing to do.
+    if (nfs3Server != null) {
+      nfs3Server.stop();
+    }
   }
 
   @Override

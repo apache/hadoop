@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.tools.mapred.lib;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.mapreduce.*;
@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit;
  *    transparently.
  */
 public class DynamicRecordReader<K, V> extends RecordReader<K, V> {
-  private static final Log LOG = LogFactory.getLog(DynamicRecordReader.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DynamicRecordReader.class);
   private TaskAttemptContext taskAttemptContext;
   private Configuration configuration;
   private DynamicInputChunk<K, V> chunk;

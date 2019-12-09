@@ -18,31 +18,57 @@
 
 package org.apache.hadoop.tools.util;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.EnumSet;
-import java.util.Random;
-import java.util.Stack;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.tools.ECAdmin;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpOptionSwitch;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.google.common.collect.Lists;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Stack;
+
+import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
+import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
+import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
+import static org.apache.hadoop.fs.permission.AclEntryType.OTHER;
+import static org.apache.hadoop.fs.permission.AclEntryType.USER;
+import static org.apache.hadoop.fs.permission.FsAction.ALL;
+import static org.apache.hadoop.fs.permission.FsAction.EXECUTE;
+import static org.apache.hadoop.fs.permission.FsAction.READ;
+import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
+import static org.apache.hadoop.fs.permission.FsAction.READ_WRITE;
+import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 public class TestDistCpUtils {
-  private static final Log LOG = LogFactory.getLog(TestDistCpUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDistCpUtils.class);
 
   private static final Configuration config = new Configuration();
   private static MiniDFSCluster cluster;
@@ -52,10 +78,12 @@ public class TestDistCpUtils {
   
   @BeforeClass
   public static void create() throws IOException {
+    config.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     cluster = new MiniDFSCluster.Builder(config)
-        .numDataNodes(1)
+        .numDataNodes(2)
         .format(true)
-        .build(); 
+        .build();
+    cluster.getFileSystem().enableErasureCodingPolicy("XOR-2-1-1024k");
   }
 
   @AfterClass
@@ -171,7 +199,76 @@ public class TestDistCpUtils {
     Assert.assertTrue(srcStatus.getModificationTime() == dstStatus.getModificationTime());
     Assert.assertTrue(srcStatus.getReplication() == dstStatus.getReplication());
   }
-  
+
+  @Test
+  public void testPreserveAclsforDefaultACL() throws IOException {
+    FileSystem fs = FileSystem.get(config);
+
+    EnumSet<FileAttribute> attributes = EnumSet.of(FileAttribute.ACL,
+        FileAttribute.PERMISSION, FileAttribute.XATTR, FileAttribute.GROUP,
+        FileAttribute.USER, FileAttribute.REPLICATION, FileAttribute.XATTR,
+        FileAttribute.TIMES);
+
+    Path dest = new Path("/tmpdest");
+    Path src = new Path("/testsrc");
+
+    fs.mkdirs(src);
+    fs.mkdirs(dest);
+
+    List<AclEntry> acls = Lists.newArrayList(
+        aclEntry(DEFAULT, USER, "foo", READ_EXECUTE),
+        aclEntry(ACCESS, USER, READ_WRITE), aclEntry(ACCESS, GROUP, READ),
+        aclEntry(ACCESS, OTHER, READ), aclEntry(ACCESS, USER, "bar", ALL));
+    final List<AclEntry> acls1 = Lists.newArrayList(aclEntry(ACCESS, USER, ALL),
+        aclEntry(ACCESS, USER, "user1", ALL),
+        aclEntry(ACCESS, GROUP, READ_EXECUTE),
+        aclEntry(ACCESS, OTHER, EXECUTE));
+
+    fs.setPermission(src, fullPerm);
+    fs.setOwner(src, "somebody", "somebody-group");
+    fs.setTimes(src, 0, 0);
+    fs.setReplication(src, (short) 1);
+    fs.setAcl(src, acls);
+
+    fs.setPermission(dest, noPerm);
+    fs.setOwner(dest, "nobody", "nobody-group");
+    fs.setTimes(dest, 100, 100);
+    fs.setReplication(dest, (short) 2);
+    fs.setAcl(dest, acls1);
+
+    List<AclEntry> en1 = fs.getAclStatus(src).getEntries();
+    List<AclEntry> dd2 = fs.getAclStatus(dest).getEntries();
+
+    Assert.assertNotEquals(en1, dd2);
+
+    CopyListingFileStatus srcStatus = new CopyListingFileStatus(
+        fs.getFileStatus(src));
+
+    en1 = srcStatus.getAclEntries();
+
+    DistCpUtils.preserve(fs, dest, srcStatus, attributes, false);
+
+    CopyListingFileStatus dstStatus = new CopyListingFileStatus(
+        fs.getFileStatus(dest));
+
+    dd2 = dstStatus.getAclEntries();
+    en1 = srcStatus.getAclEntries();
+
+    // FileStatus.equals only compares path field, must explicitly compare all
+    // fields
+    Assert.assertEquals("getPermission", srcStatus.getPermission(),
+        dstStatus.getPermission());
+    Assert.assertEquals("Owner", srcStatus.getOwner(), dstStatus.getOwner());
+    Assert.assertEquals("Group", srcStatus.getGroup(), dstStatus.getGroup());
+    Assert.assertEquals("AccessTime", srcStatus.getAccessTime(),
+        dstStatus.getAccessTime());
+    Assert.assertEquals("ModificationTime", srcStatus.getModificationTime(),
+        dstStatus.getModificationTime());
+    Assert.assertEquals("Replication", srcStatus.getReplication(),
+        dstStatus.getReplication());
+    Assert.assertArrayEquals(en1.toArray(), dd2.toArray());
+  }
+
   @Test
   public void testPreserveNothingOnDirectory() throws IOException {
     FileSystem fs = FileSystem.get(config);
@@ -537,6 +634,117 @@ public class TestDistCpUtils {
     Assert.assertFalse(srcStatus.getAccessTime() == dstStatus.getAccessTime());
     Assert.assertFalse(srcStatus.getModificationTime() == dstStatus.getModificationTime());
     Assert.assertTrue(srcStatus.getReplication() == dstStatus.getReplication());
+  }
+
+  @Test (timeout = 60000)
+  public void testReplFactorNotPreservedOnErasureCodedFile() throws Exception {
+    FileSystem fs = FileSystem.get(config);
+
+    // Case 1: Verify replication attribute not preserved when the source
+    // file is erasure coded and the target file is replicated.
+    Path srcECDir = new Path("/tmp/srcECDir");
+    Path srcECFile = new Path(srcECDir, "srcECFile");
+    Path dstReplDir = new Path("/tmp/dstReplDir");
+    Path dstReplFile = new Path(dstReplDir, "destReplFile");
+    fs.mkdirs(srcECDir);
+    fs.mkdirs(dstReplDir);
+    String[] args = {"-setPolicy", "-path", "/tmp/srcECDir",
+        "-policy", "XOR-2-1-1024k"};
+    int res = ToolRunner.run(config, new ECAdmin(config), args);
+    assertEquals("Setting EC policy should succeed!", 0, res);
+    verifyReplFactorNotPreservedOnErasureCodedFile(srcECFile, true,
+        dstReplFile, false);
+
+    // Case 2: Verify replication attribute not preserved when the source
+    // file is replicated and the target file is erasure coded.
+    Path srcReplDir = new Path("/tmp/srcReplDir");
+    Path srcReplFile = new Path(srcReplDir, "srcReplFile");
+    Path dstECDir = new Path("/tmp/dstECDir");
+    Path dstECFile = new Path(dstECDir, "destECFile");
+    fs.mkdirs(srcReplDir);
+    fs.mkdirs(dstECDir);
+    args = new String[]{"-setPolicy", "-path", "/tmp/dstECDir",
+        "-policy", "XOR-2-1-1024k"};
+    res = ToolRunner.run(config, new ECAdmin(config), args);
+    assertEquals("Setting EC policy should succeed!", 0, res);
+    verifyReplFactorNotPreservedOnErasureCodedFile(srcReplFile,
+        false, dstECFile, true);
+
+    // Case 3: Verify replication attribute not altered from the default
+    // INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS when both source and
+    // target files are erasure coded.
+    verifyReplFactorNotPreservedOnErasureCodedFile(srcECFile,
+        true, dstECFile, true);
+  }
+
+  private void verifyReplFactorNotPreservedOnErasureCodedFile(Path srcFile,
+      boolean isSrcEC, Path dstFile, boolean isDstEC) throws Exception {
+    FileSystem fs = FileSystem.get(config);
+    createFile(fs, srcFile);
+    CopyListingFileStatus srcStatus = new CopyListingFileStatus(
+        fs.getFileStatus(srcFile));
+    if (isSrcEC) {
+      assertTrue(srcFile + "should be erasure coded!",
+          srcStatus.isErasureCoded());
+      assertEquals(INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS,
+          srcStatus.getReplication());
+    } else {
+      assertEquals("Unexpected replication factor for " + srcFile,
+          fs.getDefaultReplication(srcFile), srcStatus.getReplication());
+    }
+
+    createFile(fs, dstFile);
+    CopyListingFileStatus dstStatus = new CopyListingFileStatus(
+        fs.getFileStatus(dstFile));
+    if (isDstEC) {
+      assertTrue(dstFile + "should be erasure coded!",
+          dstStatus.isErasureCoded());
+      assertEquals("Unexpected replication factor for erasure coded file!",
+          INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS,
+          dstStatus.getReplication());
+    } else {
+      assertEquals("Unexpected replication factor for " + dstFile,
+          fs.getDefaultReplication(dstFile), dstStatus.getReplication());
+    }
+
+    // Let srcFile and dstFile differ on their FileAttribute
+    fs.setPermission(srcFile, fullPerm);
+    fs.setOwner(srcFile, "ec", "ec-group");
+    fs.setTimes(srcFile, 0, 0);
+
+    fs.setPermission(dstFile, noPerm);
+    fs.setOwner(dstFile, "normal", "normal-group");
+    fs.setTimes(dstFile, 100, 100);
+
+    // Running preserve operations only for replication attribute
+    srcStatus = new CopyListingFileStatus(fs.getFileStatus(srcFile));
+    EnumSet<FileAttribute> attributes = EnumSet.of(FileAttribute.REPLICATION);
+    DistCpUtils.preserve(fs, dstFile, srcStatus, attributes, false);
+    dstStatus = new CopyListingFileStatus(fs.getFileStatus(dstFile));
+
+    assertFalse("Permission for " + srcFile + " and " + dstFile +
+            " should not be same after preserve only for replication attr!",
+        srcStatus.getPermission().equals(dstStatus.getPermission()));
+    assertFalse("File ownership should not match!",
+        srcStatus.getOwner().equals(dstStatus.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == dstStatus.getAccessTime());
+    assertFalse(
+        srcStatus.getModificationTime() == dstStatus.getModificationTime());
+    if (isDstEC) {
+      assertEquals("Unexpected replication factor for erasure coded file!",
+          INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS,
+          dstStatus.getReplication());
+    } else {
+      assertEquals(dstFile + " replication factor should be same as dst " +
+              "filesystem!", fs.getDefaultReplication(dstFile),
+          dstStatus.getReplication());
+    }
+    if (!isSrcEC || !isDstEC) {
+      assertFalse(dstFile + " replication factor should not be " +
+              "same as " + srcFile,
+          srcStatus.getReplication() == dstStatus.getReplication());
+    }
   }
 
   @Test
@@ -999,6 +1207,71 @@ public class TestDistCpUtils {
     Assert.assertFalse(srcStatus.getReplication() == f2Status.getReplication());
   }
 
+  @Test
+  public void testCompareFileLengthsAndChecksums() throws IOException {
+
+    String base = "/tmp/verify-checksum/";
+    long srcSeed = System.currentTimeMillis();
+    long dstSeed = srcSeed + rand.nextLong();
+    short replFactor = 2;
+
+    FileSystem fs = FileSystem.get(config);
+    Path basePath = new Path(base);
+    fs.mkdirs(basePath);
+
+    // empty lengths comparison
+    Path srcWithLen0 = new Path(base + "srcLen0");
+    Path dstWithLen0 = new Path(base + "dstLen0");
+    fs.create(srcWithLen0).close();
+    fs.create(dstWithLen0).close();
+    DistCpUtils.compareFileLengthsAndChecksums(fs, srcWithLen0,
+        null, fs, dstWithLen0, false);
+
+    // different lengths comparison
+    Path srcWithLen1 = new Path(base + "srcLen1");
+    Path dstWithLen2 = new Path(base + "dstLen2");
+    DFSTestUtil.createFile(fs, srcWithLen1, 1, replFactor, srcSeed);
+    DFSTestUtil.createFile(fs, dstWithLen2, 2, replFactor, srcSeed);
+    try {
+      DistCpUtils.compareFileLengthsAndChecksums(fs, srcWithLen1,
+          null, fs, dstWithLen2, false);
+      Assert.fail("Expected different lengths comparison to fail!");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Mismatch in length", e);
+    }
+
+    // checksums matched
+    Path srcWithChecksum1 = new Path(base + "srcChecksum1");
+    Path dstWithChecksum1 = new Path(base + "dstChecksum1");
+    DFSTestUtil.createFile(fs, srcWithChecksum1, 1024,
+        replFactor, srcSeed);
+    DFSTestUtil.createFile(fs, dstWithChecksum1, 1024,
+        replFactor, srcSeed);
+    DistCpUtils.compareFileLengthsAndChecksums(fs, srcWithChecksum1,
+        null, fs, dstWithChecksum1, false);
+    DistCpUtils.compareFileLengthsAndChecksums(fs, srcWithChecksum1,
+        fs.getFileChecksum(srcWithChecksum1), fs, dstWithChecksum1,
+        false);
+
+    // checksums mismatched
+    Path dstWithChecksum2 = new Path(base + "dstChecksum2");
+    DFSTestUtil.createFile(fs, dstWithChecksum2, 1024,
+        replFactor, dstSeed);
+    try {
+      DistCpUtils.compareFileLengthsAndChecksums(fs, srcWithChecksum1,
+          null, fs, dstWithChecksum2, false);
+      Assert.fail("Expected different checksums comparison to fail!");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Checksum mismatch", e);
+    }
+
+    // checksums mismatched but skipped
+    DistCpUtils.compareFileLengthsAndChecksums(fs, srcWithChecksum1,
+        null, fs, dstWithChecksum2, true);
+  }
+
   private static Random rand = new Random();
 
   public static String createTestSetup(FileSystem fs) throws IOException {
@@ -1068,26 +1341,33 @@ public class TestDistCpUtils {
     }
   }
 
-  public static boolean checkIfFoldersAreInSync(FileSystem fs, String targetBase, String sourceBase)
-      throws IOException {
+  public static void verifyFoldersAreInSync(FileSystem fs, String targetBase,
+      String sourceBase) throws IOException {
     Path base = new Path(targetBase);
 
-     Stack<Path> stack = new Stack<Path>();
-     stack.push(base);
-     while (!stack.isEmpty()) {
-       Path file = stack.pop();
-       if (!fs.exists(file)) continue;
-       FileStatus[] fStatus = fs.listStatus(file);
-       if (fStatus == null || fStatus.length == 0) continue;
+    Stack<Path> stack = new Stack<>();
+    stack.push(base);
+    while (!stack.isEmpty()) {
+      Path file = stack.pop();
+      if (!fs.exists(file)) {
+        continue;
+      }
+      FileStatus[] fStatus = fs.listStatus(file);
+      if (fStatus == null || fStatus.length == 0) {
+        continue;
+      }
 
-       for (FileStatus status : fStatus) {
-         if (status.isDirectory()) {
-           stack.push(status.getPath());
-         }
-         Assert.assertTrue(fs.exists(new Path(sourceBase + "/" +
-             DistCpUtils.getRelativePath(new Path(targetBase), status.getPath()))));
-       }
-     }
-     return true;
+      for (FileStatus status : fStatus) {
+        if (status.isDirectory()) {
+          stack.push(status.getPath());
+        }
+        Path p = new Path(sourceBase + "/" +
+            DistCpUtils.getRelativePath(new Path(targetBase),
+                status.getPath()));
+        ContractTestUtils.assertPathExists(fs,
+            "path in sync with " + status.getPath(), p);
+      }
+    }
   }
+
 }

@@ -1,4 +1,3 @@
-package org.apache.hadoop.maven.plugin.shade.resource;
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,6 +17,9 @@ package org.apache.hadoop.maven.plugin.shade.resource;
  * under the License.
  *
  */
+
+package org.apache.hadoop.maven.plugin.shade.resource;
+
 import java.io.BufferedReader;
 import org.apache.maven.plugins.shade.relocation.Relocator;
 import org.apache.maven.plugins.shade.resource.ResourceTransformer;

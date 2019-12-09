@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.conf;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -44,6 +43,7 @@ import java.util.Collection;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 

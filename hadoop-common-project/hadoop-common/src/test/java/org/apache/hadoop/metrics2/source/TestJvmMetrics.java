@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.metrics2.source;
 
+import org.apache.hadoop.util.GcTimeMonitor;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -35,6 +36,9 @@ import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JvmPauseMonitor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.apache.hadoop.metrics2.source.JvmMetricsInfo.*;
 import static org.apache.hadoop.metrics2.impl.MsInfo.*;
 
@@ -43,17 +47,21 @@ public class TestJvmMetrics {
   @Rule
   public Timeout timeout = new Timeout(30000);
   private JvmPauseMonitor pauseMonitor;
+  private GcTimeMonitor gcTimeMonitor;
 
   /**
-   * Robust shutdown of the pause monitor if it hasn't been stopped already.
+   * Robust shutdown of the monitors if they haven't been stopped already.
    */
   @After
   public void teardown() {
     ServiceOperations.stop(pauseMonitor);
+    if (gcTimeMonitor != null) {
+      gcTimeMonitor.shutdown();
+    }
   }
 
   @Test
-  public void testPresence() {
+  public void testJvmPauseMonitorPresence() {
     pauseMonitor = new JvmPauseMonitor();
     pauseMonitor.init(new Configuration());
     pauseMonitor.start();
@@ -66,14 +74,35 @@ public class TestJvmMetrics {
     verify(rb).tag(ProcessName, "test");
     verify(rb).tag(SessionId, "test");
     for (JvmMetricsInfo info : JvmMetricsInfo.values()) {
-      if (info.name().startsWith("Mem"))
+      if (info.name().startsWith("Mem")) {
         verify(rb).addGauge(eq(info), anyFloat());
-      else if (info.name().startsWith("Gc"))
+      } else if (info.name().startsWith("Gc") &&
+          !info.name().equals("GcTimePercentage")) {
         verify(rb).addCounter(eq(info), anyLong());
-      else if (info.name().startsWith("Threads"))
+      } else if (info.name().startsWith("Threads")) {
         verify(rb).addGauge(eq(info), anyInt());
-      else if (info.name().startsWith("Log"))
+      } else if (info.name().startsWith("Log")) {
         verify(rb).addCounter(eq(info), anyLong());
+      }
+    }
+  }
+
+  @Test
+  public void testGcTimeMonitorPresence() {
+    gcTimeMonitor = new GcTimeMonitor(60000, 1000, 70, null);
+    gcTimeMonitor.start();
+    JvmMetrics jvmMetrics = new JvmMetrics("test", "test");
+    jvmMetrics.setGcTimeMonitor(gcTimeMonitor);
+    MetricsRecordBuilder rb = getMetrics(jvmMetrics);
+    MetricsCollector mc = rb.parent();
+
+    verify(mc).addRecord(JvmMetrics);
+    verify(rb).tag(ProcessName, "test");
+    verify(rb).tag(SessionId, "test");
+    for (JvmMetricsInfo info : JvmMetricsInfo.values()) {
+      if (info.name().equals("GcTimePercentage")) {
+        verify(rb).addGauge(eq(info), anyInt());
+      }
     }
   }
 
@@ -120,4 +149,81 @@ public class TestJvmMetrics {
     }
   }
 
+  @Test
+  public void testGcTimeMonitor() {
+    class Alerter implements GcTimeMonitor.GcTimeAlertHandler {
+      private volatile int numAlerts;
+      private volatile int maxGcTimePercentage;
+      @Override
+      public void alert(GcTimeMonitor.GcData gcData) {
+        numAlerts++;
+        if (gcData.getGcTimePercentage() > maxGcTimePercentage) {
+          maxGcTimePercentage = gcData.getGcTimePercentage();
+        }
+      }
+    }
+    Alerter alerter = new Alerter();
+
+    int alertGcPerc = 10;  // Alerter should be called if GC takes >= 10%
+    gcTimeMonitor = new GcTimeMonitor(60*1000, 100, alertGcPerc, alerter);
+    gcTimeMonitor.start();
+
+    int maxGcTimePercentage = 0;
+    long gcCount = 0;
+
+    // Generate a lot of garbage for some time and verify that the monitor
+    // reports at least some percentage of time in GC pauses, and that the
+    // alerter is invoked at least once.
+
+    List<String> garbageStrings = new ArrayList<>();
+
+    long startTime = System.currentTimeMillis();
+    // Run this for at least 1 sec for our monitor to collect enough data
+    while (System.currentTimeMillis() - startTime < 1000) {
+      for (int j = 0; j < 100000; j++) {
+        garbageStrings.add(
+            "Long string prefix just to fill memory with garbage " + j);
+      }
+      garbageStrings.clear();
+      System.gc();
+
+      GcTimeMonitor.GcData gcData = gcTimeMonitor.getLatestGcData();
+      int gcTimePercentage = gcData.getGcTimePercentage();
+      if (gcTimePercentage > maxGcTimePercentage) {
+        maxGcTimePercentage = gcTimePercentage;
+      }
+      gcCount = gcData.getAccumulatedGcCount();
+    }
+
+    Assert.assertTrue(maxGcTimePercentage > 0);
+    Assert.assertTrue(gcCount > 0);
+    Assert.assertTrue(alerter.numAlerts > 0);
+    Assert.assertTrue(alerter.maxGcTimePercentage >= alertGcPerc);
+  }
+
+  @Test
+  public void testJvmMetricsSingletonWithSameProcessName() {
+    JvmMetrics jvmMetrics1 = org.apache.hadoop.metrics2.source.JvmMetrics
+        .initSingleton("test", null);
+    JvmMetrics jvmMetrics2 = org.apache.hadoop.metrics2.source.JvmMetrics
+        .initSingleton("test", null);
+    Assert.assertEquals("initSingleton should return the singleton instance",
+        jvmMetrics1, jvmMetrics2);
+  }
+
+  @Test
+  public void testJvmMetricsSingletonWithDifferentProcessNames() {
+    final String process1Name = "process1";
+    JvmMetrics jvmMetrics1 = org.apache.hadoop.metrics2.source.JvmMetrics
+        .initSingleton(process1Name, null);
+    final String process2Name = "process2";
+    JvmMetrics jvmMetrics2 = org.apache.hadoop.metrics2.source.JvmMetrics
+        .initSingleton(process2Name, null);
+    Assert.assertEquals("initSingleton should return the singleton instance",
+        jvmMetrics1, jvmMetrics2);
+    Assert.assertEquals("unexpected process name of the singleton instance",
+        process1Name, jvmMetrics1.processName);
+    Assert.assertEquals("unexpected process name of the singleton instance",
+        process1Name, jvmMetrics2.processName);
+  }
 }

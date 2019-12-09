@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.mapreduce;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -33,6 +31,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -60,7 +60,8 @@ import static org.junit.Assert.fail;
  */
 public class TestMRJobClient extends ClusterMapReduceTestCase {
 
-  private static final Log LOG = LogFactory.getLog(TestMRJobClient.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMRJobClient.class);
 
   private Job runJob(Configuration conf) throws Exception {
     String input = "hello1\nhello2\nhello3\n";

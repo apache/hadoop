@@ -17,10 +17,13 @@
  */
 package org.apache.hadoop.io.erasurecode;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -29,7 +32,10 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public final class ECSchema {
+public final class ECSchema implements Serializable {
+
+  private static final long serialVersionUID = 0x10953aa0;
+
   public static final String NUM_DATA_UNITS_KEY = "numDataUnits";
   public static final String NUM_PARITY_UNITS_KEY = "numParityUnits";
   public static final String CODEC_NAME_KEY = "codec";
@@ -187,8 +193,8 @@ public final class ECSchema {
     sb.append((extraOptions.isEmpty() ? "" : ", "));
 
     int i = 0;
-    for (String opt : extraOptions.keySet()) {
-      sb.append(opt + "=" + extraOptions.get(opt) +
+    for (Map.Entry<String, String> entry : extraOptions.entrySet()) {
+      sb.append(entry.getKey() + "=" + entry.getValue() +
           (++i < extraOptions.size() ? ", " : ""));
     }
 
@@ -197,36 +203,34 @@ public final class ECSchema {
     return sb.toString();
   }
 
+  // Todo: Further use `extraOptions` to compare ECSchemas
   @Override
   public boolean equals(Object o) {
-    if (this == o) {
+    if (o == null) {
+      return false;
+    }
+    if (o == this) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (o.getClass() != getClass()) {
       return false;
     }
-
-    ECSchema ecSchema = (ECSchema) o;
-
-    if (numDataUnits != ecSchema.numDataUnits) {
-      return false;
-    }
-    if (numParityUnits != ecSchema.numParityUnits) {
-      return false;
-    }
-    if (!codecName.equals(ecSchema.codecName)) {
-      return false;
-    }
-    return extraOptions.equals(ecSchema.extraOptions);
+    ECSchema rhs = (ECSchema) o;
+    return new EqualsBuilder()
+        .append(codecName, rhs.codecName)
+        .append(extraOptions, rhs.extraOptions)
+        .append(numDataUnits, rhs.numDataUnits)
+        .append(numParityUnits, rhs.numParityUnits)
+        .isEquals();
   }
 
   @Override
   public int hashCode() {
-    int result = codecName.hashCode();
-    result = 31 * result + extraOptions.hashCode();
-    result = 31 * result + numDataUnits;
-    result = 31 * result + numParityUnits;
-
-    return result;
+    return new HashCodeBuilder(1273158869, 1555022101)
+        .append(codecName)
+        .append(extraOptions)
+        .append(numDataUnits)
+        .append(numParityUnits)
+        .toHashCode();
   }
 }

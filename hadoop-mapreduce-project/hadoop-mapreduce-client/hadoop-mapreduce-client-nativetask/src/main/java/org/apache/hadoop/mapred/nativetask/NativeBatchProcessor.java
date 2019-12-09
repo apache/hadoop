@@ -21,8 +21,6 @@ package org.apache.hadoop.mapred.nativetask;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
@@ -31,13 +29,16 @@ import org.apache.hadoop.mapred.nativetask.buffer.InputBuffer;
 import org.apache.hadoop.mapred.nativetask.buffer.OutputBuffer;
 import org.apache.hadoop.mapred.nativetask.util.ReadWriteBuffer;
 import org.apache.hadoop.mapred.nativetask.util.ConfigUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * used to create channel, transfer data and command between Java and native
  */
 @InterfaceAudience.Private
 public class NativeBatchProcessor implements INativeHandler {
-  private static Log LOG = LogFactory.getLog(NativeBatchProcessor.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NativeBatchProcessor.class);
 
   private final String nativeHandlerName;
   private long nativeHandlerAddr;
@@ -128,7 +129,7 @@ public class NativeBatchProcessor implements INativeHandler {
       NativeRuntime.releaseNativeObject(nativeHandlerAddr);
       nativeHandlerAddr = 0;
     }
-    IOUtils.cleanup(LOG, in);
+    IOUtils.cleanupWithLogger(LOG, in);
     in = null;
   }
 

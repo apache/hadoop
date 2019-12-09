@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
@@ -40,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -184,7 +186,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
       String userName, String partition, int memory) {
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
     LeafQueue queue = (LeafQueue) scheduler.getQueue(queueName);
-    LeafQueue.User user = queue.getUser(userName);
+    UsersManager.User user = queue.getUser(userName);
     Assert.assertEquals(memory,
         user.getResourceUsage().getUsed(partition).getMemorySize());
   }
@@ -241,7 +243,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     LeafQueue queue =
         (LeafQueue) ((CapacityScheduler) rm.getResourceScheduler())
             .getQueue("a");
-    ArrayList<UserInfo> users = queue.getUsers();
+    ArrayList<UserInfo> users = queue.getUsersManager().getUsersInfo();
     for (UserInfo userInfo : users) {
       if (userInfo.getUsername().equals("user")) {
         ResourceInfo resourcesUsed = userInfo.getResourcesUsed();
@@ -721,6 +723,77 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     rm.close();
   }
 
+  @Test(timeout = 30000)
+  public void testBlacklistAMDisableLabel() throws Exception {
+    conf.setBoolean(YarnConfiguration.AM_SCHEDULING_NODE_BLACKLISTING_ENABLED,
+        true);
+    conf.setFloat(
+        YarnConfiguration.AM_SCHEDULING_NODE_BLACKLISTING_DISABLE_THRESHOLD,
+        0.5f);
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
+    mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h2", 0), toSet("x"),
+        NodeId.newInstance("h3", 0), toSet("x"), NodeId.newInstance("h6", 0),
+        toSet("x")));
+    mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h4", 0), toSet("y"),
+        NodeId.newInstance("h5", 0), toSet("y"), NodeId.newInstance("h7", 0),
+        toSet("y")));
+
+    MockRM rm = new MockRM(getConfigurationWithQueueLabels(conf)) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+    rm.getRMContext().setNodeLabelManager(mgr);
+    rm.start();
+    // Nodes in label default h1,h8,h9
+    // Nodes in label x h2,h3,h6
+    // Nodes in label y h4,h5,h7
+    MockNM nm1 = rm.registerNode("h1:1234", 2048);
+    MockNM nm2 = rm.registerNode("h2:1234", 2048);
+    rm.registerNode("h3:1234", 2048);
+    rm.registerNode("h4:1234", 2048);
+    rm.registerNode("h5:1234", 2048);
+    rm.registerNode("h6:1234", 2048);
+    rm.registerNode("h7:1234", 2048);
+    rm.registerNode("h8:1234", 2048);
+    rm.registerNode("h9:1234", 2048);
+
+    // Submit app with AM container launched on default partition i.e. h1.
+    RMApp app = rm.submitApp(GB, "app", "user", null, "a");
+    MockRM.launchAndRegisterAM(app, rm, nm1);
+    RMAppAttempt appAttempt = app.getCurrentAppAttempt();
+    // Add default node blacklist from default
+    appAttempt.getAMBlacklistManager().addNode("h1");
+    ResourceBlacklistRequest blacklistUpdates =
+        appAttempt.getAMBlacklistManager().getBlacklistUpdates();
+    Assert.assertEquals(1, blacklistUpdates.getBlacklistAdditions().size());
+    Assert.assertEquals(0, blacklistUpdates.getBlacklistRemovals().size());
+    // Adding second node from default parition
+    appAttempt.getAMBlacklistManager().addNode("h8");
+    blacklistUpdates = appAttempt.getAMBlacklistManager().getBlacklistUpdates();
+    Assert.assertEquals(0, blacklistUpdates.getBlacklistAdditions().size());
+    Assert.assertEquals(2, blacklistUpdates.getBlacklistRemovals().size());
+
+    // Submission in label x
+    RMApp applabel = rm.submitApp(GB, "app", "user", null, "a", "x");
+    MockRM.launchAndRegisterAM(applabel, rm, nm2);
+    RMAppAttempt appAttemptlabelx = applabel.getCurrentAppAttempt();
+    appAttemptlabelx.getAMBlacklistManager().addNode("h2");
+    ResourceBlacklistRequest blacklistUpdatesOnx =
+        appAttemptlabelx.getAMBlacklistManager().getBlacklistUpdates();
+    Assert.assertEquals(1, blacklistUpdatesOnx.getBlacklistAdditions().size());
+    Assert.assertEquals(0, blacklistUpdatesOnx.getBlacklistRemovals().size());
+    // Adding second node from default parition
+    appAttemptlabelx.getAMBlacklistManager().addNode("h3");
+    blacklistUpdatesOnx =
+        appAttempt.getAMBlacklistManager().getBlacklistUpdates();
+    Assert.assertEquals(0, blacklistUpdatesOnx.getBlacklistAdditions().size());
+    Assert.assertEquals(2, blacklistUpdatesOnx.getBlacklistRemovals().size());
+
+    rm.close();
+  }
+
   private void checkAMResourceLimit(MockRM rm, String queuename, int memory,
       String label) throws InterruptedException {
     Assert.assertEquals(memory,
@@ -743,5 +816,75 @@ public class TestCapacitySchedulerNodeLabelUpdate {
       Thread.sleep(100);
     }
     return memorySize;
+  }
+
+  private long waitForNodeLabelSchedulerEventUpdate(MockRM rm, String partition,
+      long expectedNodeCount, long timeout) throws InterruptedException {
+    long start = System.currentTimeMillis();
+    long size = 0;
+    while (System.currentTimeMillis() - start < timeout) {
+      CapacityScheduler scheduler = (CapacityScheduler) rm
+          .getResourceScheduler();
+      size = scheduler.getNodeTracker().getNodesPerPartition(partition).size();
+      if (size == expectedNodeCount) {
+        return size;
+      }
+      Thread.sleep(100);
+    }
+    return size;
+  }
+
+  @Test
+  public void testNodeCountBasedOnNodeLabelsFromClusterNodeTracker()
+      throws Exception {
+    // set node -> label
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(
+        ImmutableSet.of("x", "y", "z"));
+
+    // set mapping:
+    // h1 -> x
+    // h2 -> y
+    mgr.addLabelsToNode(
+        ImmutableMap.of(NodeId.newInstance("h1", 1234), toSet("x")));
+    mgr.addLabelsToNode(
+        ImmutableMap.of(NodeId.newInstance("h2", 1234), toSet("x")));
+
+    // inject node label manager
+    MockRM rm = new MockRM(getConfigurationWithQueueLabels(conf)) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm.getRMContext().setNodeLabelManager(mgr);
+    rm.start();
+    MockNM nm1 = rm.registerNode("h1:1234", 8000);
+    rm.registerNode("h2:1234", 8000);
+    rm.registerNode("h3:1234", 8000);
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+    // Ensure that cluster node tracker is updated with correct set of node
+    // after Node registration.
+    Assert.assertEquals(2,
+        cs.getNodeTracker().getNodesPerPartition("x").size());
+    Assert.assertEquals(1, cs.getNodeTracker().getNodesPerPartition("").size());
+
+    rm.unRegisterNode(nm1);
+    rm.registerNode("h4:1234", 8000);
+
+    // Ensure that cluster node tracker is updated with correct set of node
+    // after new Node registration and old node label change.
+    Assert.assertEquals(1,
+        cs.getNodeTracker().getNodesPerPartition("x").size());
+    Assert.assertEquals(2, cs.getNodeTracker().getNodesPerPartition("").size());
+
+    mgr.replaceLabelsOnNode(
+        ImmutableMap.of(NodeId.newInstance("h2", 1234), toSet("")));
+
+    // Last node with label x is replaced by CLI or REST.
+    Assert.assertEquals(0,
+        waitForNodeLabelSchedulerEventUpdate(rm, "x", 0, 3000L));
   }
 }

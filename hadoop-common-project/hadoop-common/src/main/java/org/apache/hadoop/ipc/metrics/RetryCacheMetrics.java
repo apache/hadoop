@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.ipc.metrics;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ipc.RetryCache;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.annotation.Metric;
@@ -26,6 +24,8 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is for maintaining the various RetryCache-related statistics
@@ -35,7 +35,7 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 @Metrics(about="Aggregate RetryCache metrics", context="rpc")
 public class RetryCacheMetrics {
 
-  static final Log LOG = LogFactory.getLog(RetryCacheMetrics.class);
+  static final Logger LOG = LoggerFactory.getLogger(RetryCacheMetrics.class);
   final MetricsRegistry registry;
   final String name;
 

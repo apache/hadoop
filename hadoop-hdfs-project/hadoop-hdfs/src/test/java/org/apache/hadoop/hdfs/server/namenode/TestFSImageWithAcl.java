@@ -138,13 +138,15 @@ public class TestFSImageWithAcl {
       aclEntry(DEFAULT, MASK, ALL),
       aclEntry(DEFAULT, OTHER, READ_EXECUTE) };
 
+    short permExpected = (short)010775;
+
     AclEntry[] fileReturned = fs.getAclStatus(filePath).getEntries()
       .toArray(new AclEntry[0]);
     Assert.assertArrayEquals(fileExpected, fileReturned);
     AclEntry[] subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
     Assert.assertArrayEquals(subdirExpected, subdirReturned);
-    assertPermission(fs, subdirPath, (short)010755);
+    assertPermission(fs, subdirPath, permExpected);
 
     restart(fs, persistNamespace);
 
@@ -154,7 +156,7 @@ public class TestFSImageWithAcl {
     subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
     Assert.assertArrayEquals(subdirExpected, subdirReturned);
-    assertPermission(fs, subdirPath, (short)010755);
+    assertPermission(fs, subdirPath, permExpected);
 
     aclSpec = Lists.newArrayList(aclEntry(DEFAULT, USER, "foo", READ_WRITE));
     fs.modifyAclEntries(dirPath, aclSpec);
@@ -165,7 +167,7 @@ public class TestFSImageWithAcl {
     subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
     Assert.assertArrayEquals(subdirExpected, subdirReturned);
-    assertPermission(fs, subdirPath, (short)010755);
+    assertPermission(fs, subdirPath, permExpected);
 
     restart(fs, persistNamespace);
 
@@ -175,7 +177,7 @@ public class TestFSImageWithAcl {
     subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
     Assert.assertArrayEquals(subdirExpected, subdirReturned);
-    assertPermission(fs, subdirPath, (short)010755);
+    assertPermission(fs, subdirPath, permExpected);
 
     fs.removeAcl(dirPath);
 
@@ -185,7 +187,7 @@ public class TestFSImageWithAcl {
     subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
     Assert.assertArrayEquals(subdirExpected, subdirReturned);
-    assertPermission(fs, subdirPath, (short)010755);
+    assertPermission(fs, subdirPath, permExpected);
 
     restart(fs, persistNamespace);
 
@@ -195,7 +197,7 @@ public class TestFSImageWithAcl {
     subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
     Assert.assertArrayEquals(subdirExpected, subdirReturned);
-    assertPermission(fs, subdirPath, (short)010755);
+    assertPermission(fs, subdirPath, permExpected);
   }
 
   @Test

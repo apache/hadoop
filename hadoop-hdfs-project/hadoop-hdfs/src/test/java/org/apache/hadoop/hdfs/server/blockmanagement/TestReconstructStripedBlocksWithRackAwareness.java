@@ -23,23 +23,23 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.Whitebox;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mockito.internal.util.reflection.Whitebox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +59,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
   }
 
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final int cellSize = ecPolicy.getCellSize();
   private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
   private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
@@ -145,12 +145,14 @@ public class TestReconstructStripedBlocksWithRackAwareness {
   public void testReconstructForNotEnoughRacks() throws Exception {
     LOG.info("cluster hosts: {}, racks: {}", Arrays.asList(hosts),
         Arrays.asList(racks));
-
     cluster = new MiniDFSCluster.Builder(conf).racks(racks).hosts(hosts)
         .numDataNodes(hosts.length).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
-    fs.setErasureCodingPolicy(new Path("/"), null);
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
+    fs.setErasureCodingPolicy(new Path("/"),
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     FSNamesystem fsn = cluster.getNamesystem();
     BlockManager bm = fsn.getBlockManager();
 
@@ -160,7 +162,9 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     // the file's block is in 9 dn but 5 racks
     DFSTestUtil.createFile(fs, file,
         cellSize * dataBlocks * 2, (short) 1, 0L);
-    Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
+    GenericTestUtils.waitFor(() ->
+        bm.numOfUnderReplicatedBlocks() == 0, 100, 30000);
+    LOG.info("Created file {}", file);
 
     final INodeFile fileNode = fsn.getFSDirectory()
         .getINode4Write(file.toString()).asFile();
@@ -171,7 +175,8 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     for (DatanodeStorageInfo storage : blockInfo.storages) {
       rackSet.add(storage.getDatanodeDescriptor().getNetworkLocation());
     }
-    Assert.assertEquals(dataBlocks - 1, rackSet.size());
+    Assert.assertEquals("rackSet size is wrong: " + rackSet, dataBlocks - 1,
+        rackSet.size());
 
     // restart the stopped datanode
     cluster.restartDataNode(lastHost);
@@ -179,6 +184,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
 
     // make sure we have 6 racks again
     NetworkTopology topology = bm.getDatanodeManager().getNetworkTopology();
+    LOG.info("topology is: {}", topology);
     Assert.assertEquals(hosts.length, topology.getNumOfLeaves());
     Assert.assertEquals(dataBlocks, topology.getNumOfRacks());
 
@@ -200,7 +206,8 @@ public class TestReconstructStripedBlocksWithRackAwareness {
       for (DatanodeStorageInfo storage : blockInfo.storages) {
         if (storage != null) {
           DatanodeDescriptor dn = storage.getDatanodeDescriptor();
-          Assert.assertEquals(0, dn.getNumberOfBlocksToBeErasureCoded());
+          Assert.assertEquals("Block to be erasure coded is wrong for datanode:"
+              + dn, 0, dn.getNumberOfBlocksToBeErasureCoded());
           if (dn.getNumberOfBlocksToBeReplicated() == 1) {
             scheduled = true;
           }
@@ -220,7 +227,10 @@ public class TestReconstructStripedBlocksWithRackAwareness {
         .numDataNodes(hosts.length).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
-    fs.setErasureCodingPolicy(new Path("/"), null);
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
+    fs.setErasureCodingPolicy(new Path("/"),
+        StripedFileTestUtil.getDefaultECPolicy().getName());
 
     MiniDFSCluster.DataNodeProperties lastHost = stopDataNode(
         hosts[hosts.length - 1]);
@@ -273,7 +283,10 @@ public class TestReconstructStripedBlocksWithRackAwareness {
         .numDataNodes(hostNames.length).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
-    fs.setErasureCodingPolicy(new Path("/"), null);
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
+    fs.setErasureCodingPolicy(new Path("/"),
+        StripedFileTestUtil.getDefaultECPolicy().getName());
 
     final BlockManager bm = cluster.getNamesystem().getBlockManager();
     final DatanodeManager dm = bm.getDatanodeManager();
@@ -321,8 +334,9 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     // start decommissioning h9
     boolean satisfied = bm.isPlacementPolicySatisfied(blockInfo);
     Assert.assertFalse(satisfied);
-    final DecommissionManager decomManager =
-        (DecommissionManager) Whitebox.getInternalState(dm, "decomManager");
+    final DatanodeAdminManager decomManager =
+        (DatanodeAdminManager) Whitebox.getInternalState(
+            dm, "datanodeAdminManager");
     cluster.getNamesystem().writeLock();
     try {
       dn9.stopDecommission();

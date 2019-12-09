@@ -22,9 +22,6 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.Log;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -36,6 +33,9 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+
 import static org.junit.Assert.*;
 
 /**
@@ -54,7 +54,8 @@ public class TestJobCleanup {
   private static Path emptyInDir = null;
   private static int outDirs = 0;
 
-  private static Log LOG = LogFactory.getLog(TestJobCleanup.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestJobCleanup.class);
 
   @BeforeClass
   public static void setUp() throws IOException {

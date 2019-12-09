@@ -39,7 +39,6 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 
 import com.google.common.base.Predicate;
 
@@ -212,7 +211,7 @@ public class CombinedHostFileManager extends HostConfigManager {
   }
   private void refresh(final String hostsFile) throws IOException {
     HostProperties hostProps = new HostProperties();
-    Set<DatanodeAdminProperties> all =
+    DatanodeAdminProperties[] all =
         CombinedHostsFileReader.readFile(hostsFile);
     for(DatanodeAdminProperties properties : all) {
       InetSocketAddress addr = parseEntry(hostsFile,

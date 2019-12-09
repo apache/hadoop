@@ -18,23 +18,7 @@
 HDFS Rolling Upgrade
 ====================
 
-* [Introduction](#Introduction)
-* [Upgrade](#Upgrade)
-    * [Upgrade without Downtime](#Upgrade_without_Downtime)
-        * [Upgrading Non-Federated Clusters](#Upgrading_Non-Federated_Clusters)
-        * [Upgrading Federated Clusters](#Upgrading_Federated_Clusters)
-    * [Upgrade with Downtime](#Upgrade_with_Downtime)
-        * [Upgrading Non-HA Clusters](#Upgrading_Non-HA_Clusters)
-* [Downgrade and Rollback](#Downgrade_and_Rollback)
-* [Downgrade](#Downgrade)
-* [Rollback](#Rollback)
-* [Commands and Startup Options for Rolling Upgrade](#Commands_and_Startup_Options_for_Rolling_Upgrade)
-    * [DFSAdmin Commands](#DFSAdmin_Commands)
-        * [dfsadmin -rollingUpgrade](#dfsadmin_-rollingUpgrade)
-        * [dfsadmin -getDatanodeInfo](#dfsadmin_-getDatanodeInfo)
-        * [dfsadmin -shutdownDatanode](#dfsadmin_-shutdownDatanode)
-    * [NameNode Startup Options](#NameNode_Startup_Options)
-        * [namenode -rollingUpgrade](#namenode_-rollingUpgrade)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 
 Introduction
@@ -65,7 +49,7 @@ Note that rolling upgrade is supported only from Hadoop-2.4.0 onwards.
 
 ### Upgrade without Downtime
 
-In a HA cluster, there are two or more *NameNodes (NNs)*, many *DataNodes (DNs)*,
+In an HA cluster, there are two or more *NameNodes (NNs)*, many *DataNodes (DNs)*,
 a few *JournalNodes (JNs)* and a few *ZooKeeperNodes (ZKNs)*.
 *JNs* is relatively stable and does not require upgrade when upgrading HDFS in most of the cases.
 In the rolling upgrade procedure described here,
@@ -76,7 +60,7 @@ Upgrading *JNs* and *ZKNs* may incur cluster downtime.
 
 Suppose there are two namenodes *NN1* and *NN2*,
 where *NN1* and *NN2* are respectively in active and standby states.
-The following are the steps for upgrading a HA cluster:
+The following are the steps for upgrading an HA cluster:
 
 1. Prepare Rolling Upgrade
     1. Run "[`hdfs dfsadmin -rollingUpgrade prepare`](#dfsadmin_-rollingUpgrade)"
@@ -133,7 +117,7 @@ However, datanodes can still be upgraded in a rolling manner.
 
 In a non-HA cluster, there are a *NameNode (NN)*, a *SecondaryNameNode (SNN)*
 and many *DataNodes (DNs)*.
-The procedure for upgrading a non-HA cluster is similar to upgrading a HA cluster
+The procedure for upgrading a non-HA cluster is similar to upgrading an HA cluster
 except that Step 2 "Upgrade Active and Standby *NNs*" is changed to below:
 
 * Upgrade *NN* and *SNN*
@@ -175,7 +159,7 @@ A newer release is downgradable to the pre-upgrade release
 only if both the namenode layout version and the datanode layout version
 are not changed between these two releases.
 
-In a HA cluster,
+In an HA cluster,
 when a rolling upgrade from an old software release to a new software release is in progress,
 it is possible to downgrade, in a rolling fashion, the upgraded machines back to the old software release.
 Same as before, suppose *NN1* and *NN2* are respectively in active and standby states.
@@ -195,7 +179,7 @@ Below are the steps for rolling downgrade without downtime:
     1. Start *NN2* as standby normally.
     1. Failover from *NN1* to *NN2*
        so that *NN2* becomes active and *NN1* becomes standby.
-    1. Shutdown and upgrade *NN1*.
+    1. Shutdown and downgrade *NN1*.
     1. Start *NN1* as standby normally.
 1. Finalize Rolling Downgrade
     1. Run "[`hdfs dfsadmin -rollingUpgrade finalize`](#dfsadmin_-rollingUpgrade)"

@@ -25,9 +25,9 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A JNI-based implementation of {@link GroupMappingServiceProvider} 
@@ -38,8 +38,8 @@ import org.apache.hadoop.util.NativeCodeLoader;
 @InterfaceStability.Evolving
 public class JniBasedUnixGroupsMapping implements GroupMappingServiceProvider {
   
-  private static final Log LOG = 
-    LogFactory.getLog(JniBasedUnixGroupsMapping.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(JniBasedUnixGroupsMapping.class);
 
   static {
     if (!NativeCodeLoader.isNativeCodeLoaded()) {

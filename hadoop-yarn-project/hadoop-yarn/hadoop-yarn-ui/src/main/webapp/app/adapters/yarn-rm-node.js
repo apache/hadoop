@@ -23,14 +23,14 @@ export default AbstractAdapter.extend({
   restNameSpace: "cluster",
   serverName: "RM",
 
-  pathForType(modelName) {
+  pathForType(/*modelName*/) {
     return 'nodes';
   },
 
-  urlForFindRecord(id, modelName, snapshot) {
+  urlForFindRecord(id/*, modelName, snapshot*/) {
     var url = this._buildURL();
     url = url + "/nodes/" + id;
     return url;
-  },
+  }
 
 });

@@ -18,16 +18,17 @@
 
 package org.apache.hadoop.net;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 public class ServerSocketUtil {
 
-  private static final Log LOG = LogFactory.getLog(ServerSocketUtil.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ServerSocketUtil.class);
   private static Random rand = new Random();
 
   /**

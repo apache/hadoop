@@ -24,6 +24,9 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 public enum ContainerSchedulerEventType {
   SCHEDULE_CONTAINER,
   CONTAINER_COMPLETED,
+  UPDATE_CONTAINER,
   // Producer: Node HB response - RM has asked to shed the queue
   SHED_QUEUED_CONTAINERS,
+  CONTAINER_PAUSED,
+  RECOVERY_COMPLETED
 }

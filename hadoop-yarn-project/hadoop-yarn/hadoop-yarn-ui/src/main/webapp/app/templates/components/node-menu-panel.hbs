@@ -24,18 +24,24 @@
       <div class="panel-body">
         <ul class="nav nav-pills nav-stacked" id="stacked-menu">
           <ul class="nav nav-pills nav-stacked collapse in">
-            {{#link-to 'yarn-node' tagName="li"}}
-              {{#link-to 'yarn-node' nodeId nodeAddr}}Node Information
+            {{#link-to 'yarn-node.info' tagName="li"}}
+              {{#link-to 'yarn-node.info' nodeId encodedAddr}}Node Information
               {{/link-to}}
             {{/link-to}}
             {{#link-to 'yarn-node-apps' tagName="li"}}
-              {{#link-to 'yarn-node-apps' nodeId nodeAddr}}List of Applications
+              {{#link-to 'yarn-node-apps' nodeId encodedAddr}}List of Applications on this Node
               {{/link-to}}
             {{/link-to}}
             {{#link-to 'yarn-node-containers' tagName="li"}}
-              {{#link-to 'yarn-node-containers' nodeId nodeAddr}}List of Containers
+              {{#link-to 'yarn-node-containers' nodeId encodedAddr}}List of Containers on this Node
               {{/link-to}}
             {{/link-to}}
+            {{#if (and nmGpuInfo nmGpuInfo.info.totalGpuDevices)}}
+              {{#link-to 'yarn-node.yarn-nm-gpu' tagName="li"}}
+                {{#link-to 'yarn-node.yarn-nm-gpu' nodeId encodedAddr }}GPU Information
+                {{/link-to}}
+              {{/link-to}}
+            {{/if}}
           </ul>
         </ul>
       </div>

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs;
 
-import com.google.common.collect.Iterators;
+import java.util.Collections;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.inotify.EventBatch;
@@ -72,7 +72,7 @@ public class DFSInotifyEventInputStream {
   DFSInotifyEventInputStream(ClientProtocol namenode, Tracer tracer,
       long lastReadTxid) {
     this.namenode = namenode;
-    this.it = Iterators.emptyIterator();
+    this.it = Collections.emptyIterator();
     this.lastReadTxid = lastReadTxid;
     this.tracer = tracer;
   }
@@ -139,7 +139,7 @@ public class DFSInotifyEventInputStream {
    * are falling behind (i.e. transaction are being generated faster than the
    * client is reading them). If a client falls too far behind events may be
    * deleted before the client can read them.
-   * <p/>
+   * <p>
    * A return value of -1 indicates that an estimate could not be produced, and
    * should be ignored. The value returned by this method is really only useful
    * when compared to previous or subsequent returned values.

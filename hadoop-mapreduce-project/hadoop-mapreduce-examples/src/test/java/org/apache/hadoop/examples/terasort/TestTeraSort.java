@@ -20,8 +20,6 @@ package org.apache.hadoop.examples.terasort;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileAlreadyExistsException;
@@ -29,12 +27,14 @@ import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 public class TestTeraSort extends HadoopTestCase {
-  private static Log LOG = LogFactory.getLog(TestTeraSort.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestTeraSort.class);
   
   public TestTeraSort()
       throws IOException {
@@ -61,7 +61,7 @@ public class TestTeraSort extends HadoopTestCase {
     String[] genArgs = {NUM_ROWS, sortInput.toString()};
 
     // Run TeraGen
-    assertEquals(ToolRunner.run(conf, new TeraGen(), genArgs), 0);
+    assertEquals(0, ToolRunner.run(conf, new TeraGen(), genArgs));
   }
 
   private void runTeraSort(Configuration conf,
@@ -71,7 +71,7 @@ public class TestTeraSort extends HadoopTestCase {
     String[] sortArgs = {sortInput.toString(), sortOutput.toString()};
 
     // Run Sort
-    assertEquals(ToolRunner.run(conf, new TeraSort(), sortArgs), 0);
+    assertEquals(0, ToolRunner.run(conf, new TeraSort(), sortArgs));
   }
 
   private void runTeraValidator(Configuration job,
@@ -80,7 +80,7 @@ public class TestTeraSort extends HadoopTestCase {
     String[] svArgs = {sortOutput.toString(), valOutput.toString()};
 
     // Run Tera-Validator
-    assertEquals(ToolRunner.run(job, new TeraValidate(), svArgs), 0);
+    assertEquals(0, ToolRunner.run(job, new TeraValidate(), svArgs));
   }
 
   @Test

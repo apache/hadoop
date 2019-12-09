@@ -29,8 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
@@ -81,6 +79,8 @@ import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class TestRuntimeEstimators {
@@ -98,7 +98,8 @@ public class TestRuntimeEstimators {
 
   AppContext myAppContext;
 
-  private static final Log LOG = LogFactory.getLog(TestRuntimeEstimators.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRuntimeEstimators.class);
 
   private final AtomicInteger slotsInUse = new AtomicInteger(0);
 
@@ -124,6 +125,9 @@ public class TestRuntimeEstimators {
     estimator = testedEstimator;
 	clock = new ControlledClock();
 	dispatcher = new AsyncDispatcher();
+    Configuration conf = new Configuration();
+    dispatcher.init(conf);
+
     myJob = null;
     slotsInUse.set(0);
     completedMaps.set(0);
@@ -132,8 +136,6 @@ public class TestRuntimeEstimators {
     taskTimeSavedBySpeculation.set(0);
 
     clock.tickMsec(1000);
-
-    Configuration conf = new Configuration();
 
     myAppContext = new MyAppContext(MAP_TASKS, REDUCE_TASKS);
     myJob = myAppContext.getAllJobs().values().iterator().next();
@@ -161,7 +163,6 @@ public class TestRuntimeEstimators {
 
     dispatcher.register(TaskEventType.class, new SpeculationRequestEventHandler());
 
-    dispatcher.init(conf);
     dispatcher.start();
 
 
@@ -533,6 +534,26 @@ public class TestRuntimeEstimators {
     public void setJobPriority(Priority priority) {
       // do nothing
     }
+
+    @Override
+    public int getFailedMaps() {
+      return 0;
+    }
+
+    @Override
+    public int getFailedReduces() {
+      return 0;
+    }
+
+    @Override
+    public int getKilledMaps() {
+      return 0;
+    }
+
+    @Override
+    public int getKilledReduces() {
+      return 0;
+    }
   }
 
   /*
@@ -895,6 +916,16 @@ public class TestRuntimeEstimators {
     @Override
     public TaskAttemptFinishingMonitor getTaskAttemptFinishingMonitor() {
       return null;
+    }
+
+    @Override
+    public String getHistoryUrl() {
+      return null;
+    }
+
+    @Override
+    public void setHistoryUrl(String historyUrl) {
+      return;
     }
   }
 }

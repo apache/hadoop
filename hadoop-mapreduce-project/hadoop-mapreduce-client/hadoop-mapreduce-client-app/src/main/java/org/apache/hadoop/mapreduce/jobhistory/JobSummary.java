@@ -30,10 +30,12 @@ public class JobSummary {
   private long firstReduceTaskLaunchTime; // ReduceAttemptStarted |
                                           // TaskAttemptStartEvent
   private long jobFinishTime;
-  private int numFinishedMaps;
+  private int numSucceededMaps;
   private int numFailedMaps;
-  private int numFinishedReduces;
+  private int numSucceededReduces;
   private int numFailedReduces;
+  private int numKilledMaps;
+  private int numKilledReduces;
   private int resourcesPerMap; // resources used per map/min resource
   private int resourcesPerReduce; // resources used per reduce/min resource
   // resource models
@@ -98,12 +100,12 @@ public class JobSummary {
     this.jobFinishTime = jobFinishTime;
   }
 
-  public int getNumFinishedMaps() {
-    return numFinishedMaps;
+  public int getNumSucceededMaps() {
+    return numSucceededMaps;
   }
 
-  public void setNumFinishedMaps(int numFinishedMaps) {
-    this.numFinishedMaps = numFinishedMaps;
+  public void setNumSucceededMaps(int numSucceededMaps) {
+    this.numSucceededMaps = numSucceededMaps;
   }
 
   public int getNumFailedMaps() {
@@ -114,6 +116,22 @@ public class JobSummary {
     this.numFailedMaps = numFailedMaps;
   }
 
+  public int getKilledMaps() {
+    return numKilledMaps;
+  }
+
+  public void setNumKilledMaps(int numKilledMaps) {
+    this.numKilledMaps = numKilledMaps;
+  }
+
+  public int getKilledReduces() {
+    return numKilledReduces;
+  }
+
+  public void setNumKilledReduces(int numKilledReduces) {
+    this.numKilledReduces = numKilledReduces;
+  }
+
   public int getResourcesPerMap() {
     return resourcesPerMap;
   }
@@ -122,12 +140,12 @@ public class JobSummary {
     this.resourcesPerMap = resourcesPerMap;
   }
   
-  public int getNumFinishedReduces() {
-    return numFinishedReduces;
+  public int getNumSucceededReduces() {
+    return numSucceededReduces;
   }
 
-  public void setNumFinishedReduces(int numFinishedReduces) {
-    this.numFinishedReduces = numFinishedReduces;
+  public void setNumSucceededReduces(int numSucceededReduces) {
+    this.numSucceededReduces = numSucceededReduces;
   }
 
   public int getNumFailedReduces() {
@@ -204,8 +222,15 @@ public class JobSummary {
       .add("finishTime", jobFinishTime)
       .add("resourcesPerMap", resourcesPerMap)
       .add("resourcesPerReduce", resourcesPerReduce)
-      .add("numMaps", numFinishedMaps + numFailedMaps)
-      .add("numReduces", numFinishedReduces + numFailedReduces)
+      .add("numMaps", numSucceededMaps + numFailedMaps + numKilledMaps)
+      .add("numReduces", numSucceededReduces + numFailedReduces
+          + numKilledReduces)
+      .add("succededMaps", numSucceededMaps)
+      .add("succeededReduces", numSucceededReduces)
+      .add("failedMaps", numFailedMaps)
+      .add("failedReduces", numFailedReduces)
+      .add("killedMaps", numKilledMaps)
+      .add("killedReduces", numKilledReduces)
       .add("user", user)
       .add("queue", queue)
       .add("status", jobStatus)

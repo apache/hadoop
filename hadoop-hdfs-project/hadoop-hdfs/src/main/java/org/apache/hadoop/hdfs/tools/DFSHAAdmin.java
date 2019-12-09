@@ -21,8 +21,8 @@ import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAAdmin;
@@ -38,7 +38,7 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class DFSHAAdmin extends HAAdmin {
 
-  private static final Log LOG = LogFactory.getLog(DFSHAAdmin.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DFSHAAdmin.class);
 
   private String nameserviceId;
 

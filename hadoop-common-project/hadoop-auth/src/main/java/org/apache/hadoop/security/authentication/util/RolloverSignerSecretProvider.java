@@ -18,6 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import javax.servlet.ServletContext;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;
@@ -38,6 +39,7 @@ import org.slf4j.LoggerFactory;
 public abstract class RolloverSignerSecretProvider
     extends SignerSecretProvider {
 
+  @VisibleForTesting
   static Logger LOG = LoggerFactory.getLogger(
     RolloverSignerSecretProvider.class);
   /**

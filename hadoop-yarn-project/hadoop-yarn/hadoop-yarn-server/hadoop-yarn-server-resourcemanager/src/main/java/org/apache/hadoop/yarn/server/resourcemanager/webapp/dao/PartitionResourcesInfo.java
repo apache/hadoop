@@ -33,13 +33,15 @@ public class PartitionResourcesInfo {
   private ResourceInfo pending;
   private ResourceInfo amUsed;
   private ResourceInfo amLimit = new ResourceInfo();
+  private ResourceInfo userAmLimit;
 
   public PartitionResourcesInfo() {
   }
 
   public PartitionResourcesInfo(String partitionName, ResourceInfo used,
       ResourceInfo reserved, ResourceInfo pending,
-      ResourceInfo amResourceUsed, ResourceInfo amResourceLimit) {
+      ResourceInfo amResourceUsed, ResourceInfo amResourceLimit,
+      ResourceInfo perUserAmResourceLimit) {
     super();
     this.partitionName = partitionName;
     this.used = used;
@@ -47,6 +49,7 @@ public class PartitionResourcesInfo {
     this.pending = pending;
     this.amUsed = amResourceUsed;
     this.amLimit = amResourceLimit;
+    this.userAmLimit = perUserAmResourceLimit;
   }
 
   public String getPartitionName() {
@@ -95,5 +98,19 @@ public class PartitionResourcesInfo {
 
   public void setAMLimit(ResourceInfo amLimit) {
     this.amLimit = amLimit;
+  }
+
+  /**
+   * @return the userAmLimit
+   */
+  public ResourceInfo getUserAmLimit() {
+    return userAmLimit;
+  }
+
+  /**
+   * @param userAmLimit the userAmLimit to set
+   */
+  public void setUserAmLimit(ResourceInfo userAmLimit) {
+    this.userAmLimit = userAmLimit;
   }
 }

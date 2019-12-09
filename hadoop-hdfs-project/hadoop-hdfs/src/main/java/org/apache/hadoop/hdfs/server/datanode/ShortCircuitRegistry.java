@@ -32,8 +32,8 @@ import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
 import org.apache.hadoop.io.nativeio.SharedFileDescriptorFactory;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.DomainSocketWatcher;
+import org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -80,7 +81,8 @@ import com.google.common.collect.HashMultimap;
  * The counterpart of this class on the client is {@link DfsClientShmManager}.
  */
 public class ShortCircuitRegistry {
-  public static final Log LOG = LogFactory.getLog(ShortCircuitRegistry.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(ShortCircuitRegistry.class);
 
   private static final int SHM_LENGTH = 8192;
 
@@ -113,7 +115,7 @@ public class ShortCircuitRegistry {
 
   public synchronized void removeShm(ShortCircuitShm shm) {
     if (LOG.isTraceEnabled()) {
-      LOG.debug("removing shm " + shm);
+      LOG.trace("removing shm " + shm);
     }
     // Stop tracking the shmId.
     RegisteredShm removedShm = segments.remove(shm.getShmId());

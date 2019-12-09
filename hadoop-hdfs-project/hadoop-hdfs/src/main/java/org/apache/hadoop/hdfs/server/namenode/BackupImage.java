@@ -55,7 +55,7 @@ public class BackupImage extends FSImage {
    *   stopApplyingOnNextRoll is true.
    */
   volatile BNState bnState;
-  static enum BNState {
+  enum BNState {
     /**
      * Edits from the NN should be dropped. On the next log roll,
      * transition to JOURNAL_ONLY state

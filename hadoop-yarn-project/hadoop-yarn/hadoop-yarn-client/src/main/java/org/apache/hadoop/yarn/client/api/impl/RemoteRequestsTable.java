@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -35,14 +33,13 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl.ResourceRequestInfo;
-import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl.ResourceReverseMemoryThenCpuComparator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
 
-  private static final Log LOG = LogFactory.getLog(RemoteRequestsTable.class);
-
-  static ResourceReverseMemoryThenCpuComparator resourceComparator =
-      new ResourceReverseMemoryThenCpuComparator();
+  private static final Logger LOG =
+          LoggerFactory.getLogger(RemoteRequestsTable.class);
 
   /**
    * Nested Iterator that iterates over just the ResourceRequestInfo
@@ -131,6 +128,7 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
     return capabilityMap.get(capability);
   }
 
+  @SuppressWarnings("unchecked")
   void put(Priority priority, String resourceName, ExecutionType execType,
       Resource capability, ResourceRequestInfo resReqInfo) {
     Map<String, Map<ExecutionType, TreeMap<Resource,
@@ -143,8 +141,8 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
         LOG.debug("Added priority=" + priority);
       }
     }
-    Map<ExecutionType, TreeMap<Resource, ResourceRequestInfo>> execTypeMap =
-        locationMap.get(resourceName);
+    Map<ExecutionType, TreeMap<Resource, ResourceRequestInfo>>
+        execTypeMap = locationMap.get(resourceName);
     if (execTypeMap == null) {
       execTypeMap = new HashMap<>();
       locationMap.put(resourceName, execTypeMap);
@@ -155,7 +153,7 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
     TreeMap<Resource, ResourceRequestInfo> capabilityMap =
         execTypeMap.get(execType);
     if (capabilityMap == null) {
-      capabilityMap = new TreeMap<>(resourceComparator);
+      capabilityMap = new TreeMap<>(new AMRMClientImpl.ResourceReverseComparator());
       execTypeMap.put(execType, capabilityMap);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Added Execution Type=" + execType);
@@ -268,8 +266,8 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
       Priority priority, String resourceName, ExecutionTypeRequest execTypeReq,
       Resource capability, T req, boolean relaxLocality,
       String labelExpression) {
-    ResourceRequestInfo resourceRequestInfo = get(priority, resourceName,
-        execTypeReq.getExecutionType(), capability);
+    ResourceRequestInfo resourceRequestInfo =
+        get(priority, resourceName, execTypeReq.getExecutionType(), capability);
     if (resourceRequestInfo == null) {
       resourceRequestInfo =
           new ResourceRequestInfo(allocationRequestId, priority, resourceName,
@@ -287,6 +285,9 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
 
     if (ResourceRequest.ANY.equals(resourceName)) {
       resourceRequestInfo.remoteRequest.setNodeLabelExpression(labelExpression);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Adding request to ask " + resourceRequestInfo.remoteRequest);
     }
     return resourceRequestInfo;
   }
@@ -329,5 +330,4 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
   boolean isEmpty() {
     return remoteRequestsTable.isEmpty();
   }
-
 }

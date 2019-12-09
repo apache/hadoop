@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.NavigableMap;
 import java.util.TreeSet;
 
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -27,46 +31,55 @@ import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation.RLEOperator;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInterval;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
  * A stage allocator that iteratively allocates containers in the
  * {@link DurationInterval} with lowest overall cost. The algorithm only
- * considers intervals of the form: [stageDeadline - (n+1)*duration,
- * stageDeadline - n*duration) for an integer n. This guarantees that the
- * allocations are aligned (as opposed to overlapping duration intervals).
- *
- * The smoothnessFactor parameter controls the number of containers that are
- * simultaneously allocated in each iteration of the algorithm.
+ * considers non-overlapping intervals of length 'duration'. This guarantees
+ * that the allocations are aligned. If 'allocateLeft == true', the intervals
+ * considered by the algorithm are aligned to stageArrival; otherwise, they are
+ * aligned to stageDeadline. The smoothnessFactor parameter controls the number
+ * of containers that are simultaneously allocated in each iteration of the
+ * algorithm.
  */
 
 public class StageAllocatorLowCostAligned implements StageAllocator {
 
+  private final boolean allocateLeft;
   // Smoothness factor
   private int smoothnessFactor = 10;
 
   // Constructor
-  public StageAllocatorLowCostAligned() {
+  public StageAllocatorLowCostAligned(boolean allocateLeft) {
+    this.allocateLeft = allocateLeft;
   }
 
   // Constructor
-  public StageAllocatorLowCostAligned(int smoothnessFactor) {
+  public StageAllocatorLowCostAligned(int smoothnessFactor,
+      boolean allocateLeft) {
+    this.allocateLeft = allocateLeft;
     this.smoothnessFactor = smoothnessFactor;
   }
 
-  // computeJobAllocation()
   @Override
-  public Map<ReservationInterval, Resource> computeStageAllocation(
-      Plan plan, Map<Long, Resource> planLoads,
+  public Map<ReservationInterval, Resource> computeStageAllocation(Plan plan,
+      RLESparseResourceAllocation planLoads,
       RLESparseResourceAllocation planModifications, ReservationRequest rr,
-      long stageEarliestStart, long stageDeadline, String user,
-      ReservationId oldId) {
+      long stageArrival, long stageDeadline, long period, String user,
+      ReservationId oldId) throws PlanningException {
 
     // Initialize
     ResourceCalculator resCalc = plan.getResourceCalculator();
     Resource capacity = plan.getTotalCapacity();
+
+    RLESparseResourceAllocation netRLERes = plan.getAvailableResourceOverTime(
+        user, oldId, stageArrival, stageDeadline, period);
+
     long step = plan.getStep();
 
     // Create allocationRequestsearlies
@@ -76,22 +89,23 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
     // Initialize parameters
     long duration = stepRoundUp(rr.getDuration(), step);
     int windowSizeInDurations =
-        (int) ((stageDeadline - stageEarliestStart) / duration);
+        (int) ((stageDeadline - stageArrival) / duration);
     int totalGangs = rr.getNumContainers() / rr.getConcurrency();
     int numContainersPerGang = rr.getConcurrency();
     Resource gang =
         Resources.multiply(rr.getCapability(), numContainersPerGang);
 
     // Set maxGangsPerUnit
-    int maxGangsPerUnit =
-        (int) Math.max(
-            Math.floor(((double) totalGangs) / windowSizeInDurations), 1);
+    int maxGangsPerUnit = (int) Math
+        .max(Math.floor(((double) totalGangs) / windowSizeInDurations), 1);
     maxGangsPerUnit = Math.max(maxGangsPerUnit / smoothnessFactor, 1);
 
     // If window size is too small, return null
     if (windowSizeInDurations <= 0) {
       return null;
     }
+
+    final int preferLeft = allocateLeft ? 1 : -1;
 
     // Initialize tree sorted by costs
     TreeSet<DurationInterval> durationIntervalsSortedByCost =
@@ -104,23 +118,26 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
               return cmp;
             }
 
-            return (-1) * Long.compare(val1.getEndTime(), val2.getEndTime());
+            return preferLeft
+                * Long.compare(val1.getEndTime(), val2.getEndTime());
           }
         });
 
+    List<Long> intervalEndTimes =
+        computeIntervalEndTimes(stageArrival, stageDeadline, duration);
+
     // Add durationIntervals that end at (endTime - n*duration) for some n.
-    for (long intervalEnd = stageDeadline; intervalEnd >= stageEarliestStart
-        + duration; intervalEnd -= duration) {
+    for (long intervalEnd : intervalEndTimes) {
 
       long intervalStart = intervalEnd - duration;
 
       // Get duration interval [intervalStart,intervalEnd)
       DurationInterval durationInterval =
           getDurationInterval(intervalStart, intervalEnd, planLoads,
-              planModifications, capacity, resCalc, step);
+              planModifications, capacity, netRLERes, resCalc, step, gang);
 
       // If the interval can fit a gang, add it to the tree
-      if (durationInterval.canAllocate(gang, capacity, resCalc)) {
+      if (durationInterval.canAllocate()) {
         durationIntervalsSortedByCost.add(durationInterval);
       }
     }
@@ -139,8 +156,7 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
           durationIntervalsSortedByCost.first();
       int numGangsToAllocate = Math.min(maxGangsPerUnit, remainingGangs);
       numGangsToAllocate =
-          Math.min(numGangsToAllocate,
-              bestDurationInterval.numCanFit(gang, capacity, resCalc));
+          Math.min(numGangsToAllocate, bestDurationInterval.numCanFit());
       // Add it
       remainingGangs -= numGangsToAllocate;
 
@@ -148,9 +164,8 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
           new ReservationInterval(bestDurationInterval.getStartTime(),
               bestDurationInterval.getEndTime());
 
-      Resource reservationRes =
-          Resources.multiply(rr.getCapability(), rr.getConcurrency()
-              * numGangsToAllocate);
+      Resource reservationRes = Resources.multiply(rr.getCapability(),
+          rr.getConcurrency() * numGangsToAllocate);
 
       planModifications.addInterval(reservationInt, reservationRes);
       allocationRequests.addInterval(reservationInt, reservationRes);
@@ -162,10 +177,10 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
       DurationInterval updatedDurationInterval =
           getDurationInterval(bestDurationInterval.getStartTime(),
               bestDurationInterval.getStartTime() + duration, planLoads,
-              planModifications, capacity, resCalc, step);
+              planModifications, capacity, netRLERes, resCalc, step, gang);
 
       // Add to tree, if possible
-      if (updatedDurationInterval.canAllocate(gang, capacity, resCalc)) {
+      if (updatedDurationInterval.canAllocate()) {
         durationIntervalsSortedByCost.add(updatedDurationInterval);
       }
 
@@ -180,10 +195,12 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
       return allocations;
     } else {
 
-      // If we are here is because we did not manage to satisfy this request.
-      // We remove unwanted side-effect from planModifications (needed for ANY).
-      for (Map.Entry<ReservationInterval, Resource> tempAllocation
-          : allocations.entrySet()) {
+      // If we are here is because we did not manage to satisfy this
+      // request.
+      // We remove unwanted side-effect from planModifications (needed for
+      // ANY).
+      for (Map.Entry<ReservationInterval, Resource> tempAllocation : allocations
+          .entrySet()) {
 
         planModifications.removeInterval(tempAllocation.getKey(),
             tempAllocation.getValue());
@@ -196,37 +213,144 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
 
   }
 
-  protected DurationInterval getDurationInterval(long startTime, long endTime,
-      Map<Long, Resource> planLoads,
-      RLESparseResourceAllocation planModifications, Resource capacity,
-      ResourceCalculator resCalc, long step) {
+  private List<Long> computeIntervalEndTimes(long stageEarliestStart,
+      long stageDeadline, long duration) {
 
-    // Initialize the dominant loads structure
-    Resource dominantResources = Resource.newInstance(0, 0);
-
-    // Calculate totalCost and maxLoad
-    double totalCost = 0.0;
-    for (long t = startTime; t < endTime; t += step) {
-
-      // Get the load
-      Resource load = getLoadAtTime(t, planLoads, planModifications);
-
-      // Increase the total cost
-      totalCost += calcCostOfLoad(load, capacity, resCalc);
-
-      // Update the dominant resources
-      dominantResources = Resources.componentwiseMax(dominantResources, load);
-
+    List<Long> intervalEndTimes = new ArrayList<Long>();
+    if (!allocateLeft) {
+      for (long intervalEnd = stageDeadline; intervalEnd >= stageEarliestStart
+          + duration; intervalEnd -= duration) {
+        intervalEndTimes.add(intervalEnd);
+      }
+    } else {
+      for (long intervalStart =
+          stageEarliestStart; intervalStart <= stageDeadline
+              - duration; intervalStart += duration) {
+        intervalEndTimes.add(intervalStart + duration);
+      }
     }
 
-    // Return the corresponding durationInterval
-    return new DurationInterval(startTime, endTime, totalCost,
-        dominantResources);
+    return intervalEndTimes;
+  }
+
+  protected static DurationInterval getDurationInterval(long startTime,
+      long endTime, RLESparseResourceAllocation planLoads,
+      RLESparseResourceAllocation planModifications, Resource capacity,
+      RLESparseResourceAllocation netRLERes, ResourceCalculator resCalc,
+      long step, Resource requestedResources) throws PlanningException {
+
+    // Get the total cost associated with the duration interval
+    double totalCost = getDurationIntervalTotalCost(startTime, endTime,
+        planLoads, planModifications, capacity, resCalc, step);
+
+    // Calculate how many gangs can fit, i.e., how many times can 'capacity'
+    // be allocated within the duration interval [startTime, endTime)
+    int gangsCanFit = getDurationIntervalGangsCanFit(startTime, endTime,
+        planModifications, capacity, netRLERes, resCalc, requestedResources);
+
+    // Return the desired durationInterval
+    return new DurationInterval(startTime, endTime, totalCost, gangsCanFit);
 
   }
 
+  protected static double getDurationIntervalTotalCost(long startTime,
+      long endTime, RLESparseResourceAllocation planLoads,
+      RLESparseResourceAllocation planModifications, Resource capacity,
+      ResourceCalculator resCalc, long step) throws PlanningException {
+
+    // Compute the current resource load within the interval [startTime,endTime)
+    // by adding planLoads (existing load) and planModifications (load that
+    // corresponds to the current job).
+    RLESparseResourceAllocation currentLoad =
+        RLESparseResourceAllocation.merge(resCalc, capacity, planLoads,
+            planModifications, RLEOperator.add, startTime, endTime);
+
+    // Convert load from RLESparseResourceAllocation to a Map representation
+    NavigableMap<Long, Resource> mapCurrentLoad = currentLoad.getCumulative();
+
+    // Initialize auxiliary variables
+    double totalCost = 0.0;
+    Long tPrev = -1L;
+    Resource loadPrev = Resources.none();
+    double cost = 0.0;
+
+    // Iterate over time points. For each point 't', accumulate the total cost
+    // that corresponds to the interval [tPrev, t). The cost associated within
+    // this interval is fixed for each of the time steps, therefore the cost of
+    // a single step is multiplied by (t - tPrev) / step.
+    for (Entry<Long, Resource> e : mapCurrentLoad.entrySet()) {
+      Long t = e.getKey();
+      Resource load = e.getValue();
+      if (tPrev != -1L) {
+        tPrev = Math.max(tPrev, startTime);
+        cost = calcCostOfLoad(loadPrev, capacity, resCalc);
+        totalCost = totalCost + cost * (t - tPrev) / step;
+      }
+
+      tPrev = t;
+      loadPrev = load;
+    }
+
+    // Add the cost associated with the last interval (the for loop does not
+    // calculate it).
+    if (loadPrev != null) {
+
+      // This takes care of the corner case of a single entry
+      tPrev = Math.max(tPrev, startTime);
+      cost = calcCostOfLoad(loadPrev, capacity, resCalc);
+      totalCost = totalCost + cost * (endTime - tPrev) / step;
+    }
+
+    // Return the overall cost
+    return totalCost;
+  }
+
+  protected static int getDurationIntervalGangsCanFit(long startTime,
+      long endTime, RLESparseResourceAllocation planModifications,
+      Resource capacity, RLESparseResourceAllocation netRLERes,
+      ResourceCalculator resCalc, Resource requestedResources)
+      throws PlanningException {
+
+    // Initialize auxiliary variables
+    int gangsCanFit = Integer.MAX_VALUE;
+    int curGangsCanFit;
+
+    // Calculate the total amount of available resources between startTime
+    // and endTime, by subtracting planModifications from netRLERes
+    RLESparseResourceAllocation netAvailableResources =
+        RLESparseResourceAllocation.merge(resCalc, capacity, netRLERes,
+            planModifications, RLEOperator.subtractTestNonNegative, startTime,
+            endTime);
+
+    // Convert result to a map
+    NavigableMap<Long, Resource> mapAvailableCapacity =
+        netAvailableResources.getCumulative();
+
+    // Iterate over the map representation.
+    // At each point, calculate how many times does 'requestedResources' fit.
+    // The result is the minimum over all time points.
+    for (Entry<Long, Resource> e : mapAvailableCapacity.entrySet()) {
+      Long t = e.getKey();
+      Resource curAvailable = e.getValue();
+      if (t >= endTime) {
+        break;
+      }
+
+      if (curAvailable == null) {
+        gangsCanFit = 0;
+      } else {
+        curGangsCanFit = (int) Math.floor(Resources.divide(resCalc, capacity,
+            curAvailable, requestedResources));
+        if (curGangsCanFit < gangsCanFit) {
+          gangsCanFit = curGangsCanFit;
+        }
+      }
+    }
+    return gangsCanFit;
+  }
+
   protected double calcCostOfInterval(long startTime, long endTime,
-      Map<Long, Resource> planLoads,
+      RLESparseResourceAllocation planLoads,
       RLESparseResourceAllocation planModifications, Resource capacity,
       ResourceCalculator resCalc, long step) {
 
@@ -242,7 +366,8 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
 
   }
 
-  protected double calcCostOfTimeSlot(long t, Map<Long, Resource> planLoads,
+  protected double calcCostOfTimeSlot(long t,
+      RLESparseResourceAllocation planLoads,
       RLESparseResourceAllocation planModifications, Resource capacity,
       ResourceCalculator resCalc) {
 
@@ -254,17 +379,17 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
 
   }
 
-  protected Resource getLoadAtTime(long t, Map<Long, Resource> planLoads,
+  protected Resource getLoadAtTime(long t,
+      RLESparseResourceAllocation planLoads,
       RLESparseResourceAllocation planModifications) {
 
-    Resource planLoad = planLoads.get(t);
-    planLoad = (planLoad == null) ? Resource.newInstance(0, 0) : planLoad;
+    Resource planLoad = planLoads.getCapacityAtTime(t);
 
     return Resources.add(planLoad, planModifications.getCapacityAtTime(t));
 
   }
 
-  protected double calcCostOfLoad(Resource load, Resource capacity,
+  protected static double calcCostOfLoad(Resource load, Resource capacity,
       ResourceCalculator resCalc) {
 
     return resCalc.ratio(load, capacity);
@@ -289,42 +414,30 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
     private long startTime;
     private long endTime;
     private double cost;
-    private Resource maxLoad;
+    private final int gangsCanFit;
 
     // Constructor
     public DurationInterval(long startTime, long endTime, double cost,
-        Resource maxLoad) {
+        int gangsCanfit) {
       this.startTime = startTime;
       this.endTime = endTime;
       this.cost = cost;
-      this.maxLoad = maxLoad;
+      this.gangsCanFit = gangsCanfit;
     }
 
     // canAllocate() - boolean function, returns whether requestedResources
     // can be allocated during the durationInterval without
     // violating capacity constraints
-    public boolean canAllocate(Resource requestedResources, Resource capacity,
-        ResourceCalculator resCalc) {
-
-      Resource updatedMaxLoad = Resources.add(maxLoad, requestedResources);
-      return (resCalc.compare(capacity, updatedMaxLoad, capacity) <= 0);
-
+    public boolean canAllocate() {
+      return (gangsCanFit > 0);
     }
 
     // numCanFit() - returns the maximal number of requestedResources can be
     // allocated during the durationInterval without violating
     // capacity constraints
-    public int numCanFit(Resource requestedResources, Resource capacity,
-        ResourceCalculator resCalc) {
 
-      // Represents the largest resource demand that can be satisfied throughout
-      // the entire DurationInterval (i.e., during [startTime,endTime))
-      Resource availableResources = Resources.subtract(capacity, maxLoad);
-
-      // Maximal number of requestedResources that fit inside the interval
-      return (int) Math.floor(Resources.divide(resCalc, capacity,
-          availableResources, requestedResources));
-
+    public int numCanFit() {
+      return gangsCanFit;
     }
 
     public long getStartTime() {
@@ -343,14 +456,6 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
       this.endTime = value;
     }
 
-    public Resource getMaxLoad() {
-      return this.maxLoad;
-    }
-
-    public void setMaxLoad(Resource value) {
-      this.maxLoad = value;
-    }
-
     public double getTotalCost() {
       return this.cost;
     }
@@ -359,11 +464,17 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
       this.cost = value;
     }
 
+    @Override
     public String toString() {
+
       StringBuilder sb = new StringBuilder();
+
       sb.append(" start: " + startTime).append(" end: " + endTime)
-          .append(" cost: " + cost).append(" maxLoad: " + maxLoad);
+          .append(" cost: " + cost).append(" gangsCanFit: " + gangsCanFit);
+
       return sb.toString();
+
     }
+
   }
 }

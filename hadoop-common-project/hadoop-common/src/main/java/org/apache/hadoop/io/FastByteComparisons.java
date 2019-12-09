@@ -22,12 +22,10 @@ import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import com.google.common.primitives.Longs;
 import com.google.common.primitives.UnsignedBytes;
 
 /**
@@ -36,7 +34,7 @@ import com.google.common.primitives.UnsignedBytes;
  * class to be able to compare arrays that start at non-zero offsets.
  */
 abstract class FastByteComparisons {
-  static final Log LOG = LogFactory.getLog(FastByteComparisons.class);
+  static final Logger LOG = LoggerFactory.getLogger(FastByteComparisons.class);
 
   /**
    * Lexicographically compare two byte arrays.
@@ -196,52 +194,43 @@ abstract class FastByteComparisons {
             length1 == length2) {
           return 0;
         }
+        final int stride = 8;
         int minLength = Math.min(length1, length2);
-        int minWords = minLength / Longs.BYTES;
+        int strideLimit = minLength & ~(stride - 1);
         int offset1Adj = offset1 + BYTE_ARRAY_BASE_OFFSET;
         int offset2Adj = offset2 + BYTE_ARRAY_BASE_OFFSET;
+        int i;
 
         /*
          * Compare 8 bytes at a time. Benchmarking shows comparing 8 bytes at a
          * time is no slower than comparing 4 bytes at a time even on 32-bit.
          * On the other hand, it is substantially faster on 64-bit.
          */
-        for (int i = 0; i < minWords * Longs.BYTES; i += Longs.BYTES) {
+        for (i = 0; i < strideLimit; i += stride) {
           long lw = theUnsafe.getLong(buffer1, offset1Adj + (long) i);
           long rw = theUnsafe.getLong(buffer2, offset2Adj + (long) i);
-          long diff = lw ^ rw;
 
-          if (diff != 0) {
+          if (lw != rw) {
             if (!littleEndian) {
               return lessThanUnsigned(lw, rw) ? -1 : 1;
             }
 
-            // Use binary search
-            int n = 0;
-            int y;
-            int x = (int) diff;
-            if (x == 0) {
-              x = (int) (diff >>> 32);
-              n = 32;
-            }
-
-            y = x << 16;
-            if (y == 0) {
-              n += 16;
-            } else {
-              x = y;
-            }
-
-            y = x << 8;
-            if (y == 0) {
-              n += 8;
-            }
-            return (int) (((lw >>> n) & 0xFFL) - ((rw >>> n) & 0xFFL));
+            /*
+             * We want to compare only the first index where left[index] !=
+             * right[index]. This corresponds to the least significant nonzero
+             * byte in lw ^ rw, since lw and rw are little-endian.
+             * Long.numberOfTrailingZeros(diff) tells us the least significant
+             * nonzero bit, and zeroing out the first three bits of L.nTZ gives
+             * us the shift to get that least significant nonzero byte. This
+             * comparison logic is based on UnsignedBytes from Guava v21
+             */
+            int n = Long.numberOfTrailingZeros(lw ^ rw) & ~0x7;
+            return ((int) ((lw >>> n) & 0xFF)) - ((int) ((rw >>> n) & 0xFF));
           }
         }
 
         // The epilogue to cover the last (minLength % 8) elements.
-        for (int i = minWords * Longs.BYTES; i < minLength; i++) {
+        for (; i < minLength; i++) {
           int result = UnsignedBytes.compare(
               buffer1[offset1 + i],
               buffer2[offset2 + i]);

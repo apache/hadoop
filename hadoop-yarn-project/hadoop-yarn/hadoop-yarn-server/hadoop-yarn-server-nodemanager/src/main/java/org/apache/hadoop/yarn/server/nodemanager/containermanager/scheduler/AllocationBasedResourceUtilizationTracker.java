@@ -118,17 +118,38 @@ public class AllocationBasedResourceUtilizationTracker implements
       return false;
     }
 
-    float vCores = (float) cpuVcores /
-        getContainersMonitor().getVCoresAllocatedForContainers();
     if (LOG.isDebugEnabled()) {
       LOG.debug("before cpuCheck [asked={} > allowed={}]",
-          this.containersAllocation.getCPU(), vCores);
+          this.containersAllocation.getCPU(),
+          getContainersMonitor().getVCoresAllocatedForContainers());
     }
-    // Check CPU.
-    if (this.containersAllocation.getCPU() + vCores > 1.0f) {
+    // Check CPU. Compare using integral values of cores to avoid decimal
+    // inaccuracies.
+    if (!hasEnoughCpu(this.containersAllocation.getCPU(),
+        getContainersMonitor().getVCoresAllocatedForContainers(), cpuVcores)) {
       return false;
     }
     return true;
+  }
+
+  /**
+   * Returns whether there is enough space for coresRequested in totalCores.
+   * Converts currentAllocation usage to nearest integer count before comparing,
+   * as floats are inherently imprecise. NOTE: this calculation assumes that
+   * requested core counts must be integers, and currentAllocation core count
+   * must also be an integer.
+   *
+   * @param currentAllocation The current allocation, a float value from 0 to 1.
+   * @param totalCores The total cores in the system.
+   * @param coresRequested The number of cores requested.
+   * @return True if currentAllocationtotalCores*coresRequested &lt;=
+   *         totalCores.
+   */
+  public boolean hasEnoughCpu(float currentAllocation, long totalCores,
+      int coresRequested) {
+    // Must not cast here, as it would truncate the decimal digits.
+    return Math.round(currentAllocation * totalCores)
+        + coresRequested <= totalCores;
   }
 
   public ContainersMonitor getContainersMonitor() {

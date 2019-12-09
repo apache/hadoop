@@ -24,12 +24,12 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FileNameIndexUtils {
 
@@ -37,7 +37,8 @@ public class FileNameIndexUtils {
   static final String DELIMITER = "-";
   static final String DELIMITER_ESCAPE = "%2D";
 
-  private static final Log LOG = LogFactory.getLog(FileNameIndexUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FileNameIndexUtils.class);
 
   // Job history file names need to be backwards compatible
   // Only append new elements to the end of this list

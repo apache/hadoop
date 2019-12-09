@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -59,7 +59,20 @@ public class FSParentQueue extends FSQueue {
       FSParentQueue parent) {
     super(name, scheduler, parent);
   }
-  
+
+  @Override
+  public Resource getMaximumContainerAllocation() {
+    if (getName().equals("root")) {
+      return maxContainerAllocation;
+    }
+    if (maxContainerAllocation.equals(Resources.unbounded())
+        && getParent() != null) {
+      return getParent().getMaximumContainerAllocation();
+    } else {
+      return maxContainerAllocation;
+    }
+  }
+
   void addChildQueue(FSQueue child) {
     writeLock.lock();
     try {
@@ -79,13 +92,13 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
-  public void updateInternal(boolean checkStarvation) {
+  void updateInternal() {
     readLock.lock();
     try {
       policy.computeShares(childQueues, getFairShare());
       for (FSQueue childQueue : childQueues) {
         childQueue.getMetrics().setFairShare(childQueue.getFairShare());
-        childQueue.updateInternal(checkStarvation);
+        childQueue.updateInternal();
       }
     } finally {
       readLock.unlock();
@@ -109,21 +122,6 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
-  public void updatePreemptionVariables() {
-    super.updatePreemptionVariables();
-    // For child queues
-
-    readLock.lock();
-    try {
-      for (FSQueue childQueue : childQueues) {
-        childQueue.updatePreemptionVariables();
-      }
-    } finally {
-      readLock.unlock();
-    }
-  }
-
-  @Override
   public Resource getDemand() {
     readLock.lock();
     try {
@@ -131,20 +129,6 @@ public class FSParentQueue extends FSQueue {
     } finally {
       readLock.unlock();
     }
-  }
-
-  @Override
-  public Resource getResourceUsage() {
-    Resource usage = Resources.createResource(0);
-    readLock.lock();
-    try {
-      for (FSQueue child : childQueues) {
-        Resources.addTo(usage, child.getResourceUsage());
-      }
-    } finally {
-      readLock.unlock();
-    }
-    return usage;
   }
 
   @Override
@@ -165,13 +149,13 @@ public class FSParentQueue extends FSQueue {
         }
       }
       // Cap demand to maxShare to limit allocation to maxShare
-      demand = Resources.componentwiseMin(demand, maxShare);
+      demand = Resources.componentwiseMin(demand, getMaxShare());
     } finally {
       writeLock.unlock();
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("The updated demand for " + getName() + " is " + demand +
-          "; the max is " + maxShare);
+          "; the max is " + getMaxShare());
     }    
   }
   
@@ -211,28 +195,25 @@ public class FSParentQueue extends FSQueue {
 
     // If this queue is over its limit, reject
     if (!assignContainerPreCheck(node)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Assign container precheck on node " + node + " failed");
+      }
       return assigned;
     }
 
-    // Hold the write lock when sorting childQueues
-    writeLock.lock();
-    try {
-      Collections.sort(childQueues, policy.getComparator());
-    } finally {
-      writeLock.unlock();
-    }
-
-    /*
-     * We are releasing the lock between the sort and iteration of the
-     * "sorted" list. There could be changes to the list here:
-     * 1. Add a child queue to the end of the list, this doesn't affect
-     * container assignment.
-     * 2. Remove a child queue, this is probably good to take care of so we
-     * don't assign to a queue that is going to be removed shortly.
-     */
+    // Sort the queues while holding a read lock on this parent only.
+    // The individual entries are not locked and can change which means that
+    // the collection of childQueues can not be sorted by calling Sort().
+    // Locking each childqueue to prevent changes would have a large
+    // performance impact.
+    // We do not have to handle the queue removal case as a queue must be
+    // empty before removal. Assigning an application to a queue and removal of
+    // that queue both need the scheduler lock.
+    TreeSet<FSQueue> sortedChildQueues = new TreeSet<>(policy.getComparator());
     readLock.lock();
     try {
-      for (FSQueue child : childQueues) {
+      sortedChildQueues.addAll(childQueues);
+      for (FSQueue child : sortedChildQueues) {
         assigned = child.assignContainer(node);
         if (!Resources.equals(assigned, Resources.none())) {
           break;
@@ -252,19 +233,6 @@ public class FSParentQueue extends FSQueue {
     } finally {
       readLock.unlock();
     }
-  }
-
-  @Override
-  public void setPolicy(SchedulingPolicy policy)
-      throws AllocationConfigurationException {
-    boolean allowed =
-        SchedulingPolicy.isApplicableTo(policy, (parent == null)
-            ? SchedulingPolicy.DEPTH_ROOT
-            : SchedulingPolicy.DEPTH_INTERMEDIATE);
-    if (!allowed) {
-      throwPolicyDoesnotApplyException(policy);
-    }
-    super.policy = policy;
   }
 
   void incrementRunnableApps() {
@@ -309,7 +277,7 @@ public class FSParentQueue extends FSQueue {
   }
   
   @Override
-  public ActiveUsersManager getActiveUsersManager() {
+  public ActiveUsersManager getAbstractUsersManager() {
     // Should never be called since all applications are submitted to LeafQueues
     return null;
   }
@@ -319,5 +287,26 @@ public class FSParentQueue extends FSQueue {
       SchedulerApplicationAttempt schedulerAttempt, RMContainer rmContainer) {
     // TODO Auto-generated method stub
     
+  }
+
+  @Override
+  protected void dumpStateInternal(StringBuilder sb) {
+    sb.append("{Name: " + getName() +
+        ", Weight: " + weights +
+        ", Policy: " + policy.getName() +
+        ", FairShare: " + getFairShare() +
+        ", SteadyFairShare: " + getSteadyFairShare() +
+        ", MaxShare: " + getMaxShare() +
+        ", MinShare: " + minShare +
+        ", ResourceUsage: " + getResourceUsage() +
+        ", Demand: " + getDemand() +
+        ", MaxAMShare: " + maxAMShare +
+        ", Runnable: " + getNumRunnableApps() +
+        "}");
+
+    for(FSQueue child : getChildQueues()) {
+      sb.append(", ");
+      child.dumpStateInternal(sb);
+    }
   }
 }

@@ -155,7 +155,11 @@ public abstract class ReservationDefinition {
    * are explicitly cancelled and have higher priority than non-periodic jobs
    * (during initial placement and replanning). Periodic job allocations are
    * consistent across runs (flexibility in allocation is leveraged only during
-   * initial placement, allocations remain consistent thereafter).
+   * initial placement, allocations remain consistent thereafter). Note that
+   * as a long, the recurrence expression must be greater than the duration of
+   * the reservation (deadline - arrival). Also note that the configured max
+   * period must be divisible by the recurrence expression if expressed as a
+   * long.
    *
    * @return recurrence of this reservation
    */
@@ -173,7 +177,11 @@ public abstract class ReservationDefinition {
    * are explicitly cancelled and have higher priority than non-periodic jobs
    * (during initial placement and replanning). Periodic job allocations are
    * consistent across runs (flexibility in allocation is leveraged only during
-   * initial placement, allocations remain consistent thereafter).
+   * initial placement, allocations remain consistent thereafter). Note that
+   * as a long, the recurrence expression must be greater than the duration of
+   * the reservation (deadline - arrival). Also note that the configured max
+   * period must be divisible by the recurrence expression if expressed as a
+   * long.
    *
    * @param recurrenceExpression recurrence interval of this reservation
    */

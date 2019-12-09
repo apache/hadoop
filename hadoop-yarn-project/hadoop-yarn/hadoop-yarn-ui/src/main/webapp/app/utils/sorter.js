@@ -51,19 +51,19 @@ export default {
  */
 function naturalSort(a, b) {
   var diff = a.length - b.length;
-  if (diff != 0) {
+  if (diff !== 0) {
     var splitA = a.split("_");
     var splitB = b.split("_");
-    if (splitA.length != splitB.length) {
+    if (splitA.length !== splitB.length) {
       return a.localeCompare(b);
     }
     for (var i = 1; i < splitA.length; i++) {
       var splitdiff = splitA[i].length - splitB[i].length;
-      if (splitdiff != 0) {
+      if (splitdiff !== 0) {
         return splitdiff;
       }
       var splitCompare = splitA[i].localeCompare(splitB[i]);
-      if (splitCompare != 0) {
+      if (splitCompare !== 0) {
         return splitCompare;
       }
     }

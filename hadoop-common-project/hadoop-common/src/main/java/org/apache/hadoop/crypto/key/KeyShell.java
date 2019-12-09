@@ -27,7 +27,7 @@ import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider.Metadata;
@@ -46,7 +46,8 @@ public class KeyShell extends CommandShell {
       "   [" + CreateCommand.USAGE + "]\n" +
       "   [" + RollCommand.USAGE + "]\n" +
       "   [" + DeleteCommand.USAGE + "]\n" +
-      "   [" + ListCommand.USAGE + "]\n";
+      "   [" + ListCommand.USAGE + "]\n" +
+      "   [" + InvalidateCacheCommand.USAGE + "]\n";
   private static final String LIST_METADATA = "keyShell.list.metadata";
   @VisibleForTesting
   public static final String NO_VALID_PROVIDERS =
@@ -70,6 +71,7 @@ public class KeyShell extends CommandShell {
    * % hadoop key roll keyName [-provider providerPath]
    * % hadoop key list [-provider providerPath]
    * % hadoop key delete keyName [-provider providerPath] [-i]
+   * % hadoop key invalidateCache keyName [-provider providerPath]
    * </pre>
    * @param args Command line arguments.
    * @return 0 on success, 1 on failure.
@@ -111,6 +113,15 @@ public class KeyShell extends CommandShell {
         }
       } else if ("list".equals(args[i])) {
         setSubCommand(new ListCommand());
+      } else if ("invalidateCache".equals(args[i])) {
+        String keyName = "-help";
+        if (moreTokens) {
+          keyName = args[++i];
+        }
+        setSubCommand(new InvalidateCacheCommand(keyName));
+        if ("-help".equals(keyName)) {
+          return 1;
+        }
       } else if ("-size".equals(args[i]) && moreTokens) {
         options.setBitLength(Integer.parseInt(args[++i]));
       } else if ("-cipher".equals(args[i]) && moreTokens) {
@@ -168,6 +179,9 @@ public class KeyShell extends CommandShell {
     sbuf.append(DeleteCommand.USAGE + ":\n\n" + DeleteCommand.DESC + "\n");
     sbuf.append(banner + "\n");
     sbuf.append(ListCommand.USAGE + ":\n\n" + ListCommand.DESC + "\n");
+    sbuf.append(banner + "\n");
+    sbuf.append(InvalidateCacheCommand.USAGE + ":\n\n"
+        + InvalidateCacheCommand.DESC + "\n");
     return sbuf.toString();
   }
 
@@ -251,8 +265,7 @@ public class KeyShell extends CommandShell {
           }
         }
       } catch (IOException e) {
-        getOut().println("Cannot list keys for KeyProvider: " + provider
-            + ": " + e.toString());
+        getOut().println("Cannot list keys for KeyProvider: " + provider);
         throw e;
       }
     }
@@ -304,12 +317,12 @@ public class KeyShell extends CommandShell {
           printProviderWritten();
         } catch (NoSuchAlgorithmException e) {
           getOut().println("Cannot roll key: " + keyName +
-              " within KeyProvider: " + provider + ". " + e.toString());
+              " within KeyProvider: " + provider + ".");
           throw e;
         }
       } catch (IOException e1) {
         getOut().println("Cannot roll key: " + keyName + " within KeyProvider: "
-            + provider + ". " + e1.toString());
+            + provider + ".");
         throw e1;
       }
     }
@@ -360,8 +373,8 @@ public class KeyShell extends CommandShell {
           }
           return cont;
         } catch (IOException e) {
-          getOut().println(keyName + " will not be deleted.");
-          e.printStackTrace(getErr());
+          getOut().println(keyName + " will not be deleted. "
+              + prettifyException(e));
         }
       }
       return true;
@@ -378,7 +391,7 @@ public class KeyShell extends CommandShell {
           getOut().println(keyName + " has been successfully deleted.");
           printProviderWritten();
         } catch (IOException e) {
-          getOut().println(keyName + " has not been deleted. " + e.toString());
+          getOut().println(keyName + " has not been deleted.");
           throw e;
         }
       }
@@ -449,13 +462,13 @@ public class KeyShell extends CommandShell {
             "with options " + options.toString() + ".");
         printProviderWritten();
       } catch (InvalidParameterException e) {
-        getOut().println(keyName + " has not been created. " + e.toString());
+        getOut().println(keyName + " has not been created.");
         throw e;
       } catch (IOException e) {
-        getOut().println(keyName + " has not been created. " + e.toString());
+        getOut().println(keyName + " has not been created.");
         throw e;
       } catch (NoSuchAlgorithmException e) {
-        getOut().println(keyName + " has not been created. " + e.toString());
+        getOut().println(keyName + " has not been created.");
         throw e;
       }
     }
@@ -464,6 +477,68 @@ public class KeyShell extends CommandShell {
     public String getUsage() {
       return USAGE + ":\n\n" + DESC;
     }
+  }
+
+  private class InvalidateCacheCommand extends Command {
+    public static final String USAGE =
+        "invalidateCache <keyname> [-provider <provider>] [-help]";
+    public static final String DESC =
+        "The invalidateCache subcommand invalidates the cached key versions\n"
+            + "of the specified key, on the provider indicated using the"
+            + " -provider argument.\n";
+
+    private String keyName = null;
+
+    InvalidateCacheCommand(String keyName) {
+      this.keyName = keyName;
+    }
+
+    public boolean validate() {
+      boolean rc = true;
+      provider = getKeyProvider();
+      if (provider == null) {
+        getOut().println("Invalid provider.");
+        rc = false;
+      }
+      if (keyName == null) {
+        getOut().println("Please provide a <keyname>.\n" +
+            "See the usage description by using -help.");
+        rc = false;
+      }
+      return rc;
+    }
+
+    public void execute() throws NoSuchAlgorithmException, IOException {
+      try {
+        warnIfTransientProvider();
+        getOut().println("Invalidating cache on KeyProvider: "
+            + provider + "\n  for key name: " + keyName);
+        provider.invalidateCache(keyName);
+        getOut().println("Cached keyversions of " + keyName
+            + " has been successfully invalidated.");
+        printProviderWritten();
+      } catch (IOException e) {
+        getOut().println("Cannot invalidate cache for key: " + keyName +
+            " within KeyProvider: " + provider + ".");
+        throw e;
+      }
+    }
+
+    @Override
+    public String getUsage() {
+      return USAGE + ":\n\n" + DESC;
+    }
+  }
+
+  @Override
+  protected void printException(Exception e){
+    getErr().println("Executing command failed with " +
+        "the following exception: " + prettifyException(e));
+  }
+
+  private String prettifyException(Exception e) {
+    return e.getClass().getSimpleName() + ": " +
+        e.getLocalizedMessage().split("\n")[0];
   }
 
   /**

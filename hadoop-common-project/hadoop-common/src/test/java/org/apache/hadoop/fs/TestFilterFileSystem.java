@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.Progressable;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -79,6 +80,7 @@ public class TestFilterFileSystem {
 
     public boolean mkdirs(Path f);
     public FSDataInputStream open(Path f);
+    public FSDataInputStream open(PathHandle f);
     public FSDataOutputStream create(Path f);
     public FSDataOutputStream create(Path f, boolean overwrite);
     public FSDataOutputStream create(Path f, Progressable progress);
@@ -124,6 +126,8 @@ public class TestFilterFileSystem {
     public int getDefaultPort();
     public String getCanonicalServiceName();
     public Token<?> getDelegationToken(String renewer) throws IOException;
+    public DelegationTokenIssuer[] getAdditionalTokenIssuers()
+        throws IOException;
     public boolean deleteOnExit(Path f) throws IOException;
     public boolean cancelDeleteOnExit(Path f) throws IOException;
     public Token<?>[] addDelegationTokens(String renewer, Credentials creds)

@@ -98,7 +98,7 @@ public class TestConfServlet {
       Mockito.when(request.getHeader(HttpHeaders.ACCEPT))
           .thenReturn(contentTypeExpected);
       assertEquals(contenTypeActual,
-          ConfServlet.parseAccecptHeader(request));
+          ConfServlet.parseAcceptHeader(request));
     }
   }
 

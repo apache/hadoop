@@ -27,15 +27,16 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathNotFoundException;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An abstract class for the execution of a file system command
@@ -59,7 +60,7 @@ abstract public class Command extends Configured {
   private int depth = 0;
   protected ArrayList<Exception> exceptions = new ArrayList<Exception>();
 
-  private static final Log LOG = LogFactory.getLog(Command.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Command.class);
 
   /** allows stdout to be captured if necessary */
   public PrintStream out = System.out;
@@ -101,7 +102,17 @@ abstract public class Command extends Configured {
    * @throws IOException if any error occurs
    */
   abstract protected void run(Path path) throws IOException;
-  
+
+  /**
+   * Execute the command on the input path data. Commands can override to make
+   * use of the resolved filesystem.
+   * @param pathData The input path with resolved filesystem
+   * @throws IOException
+   */
+  protected void run(PathData pathData) throws IOException {
+    run(pathData.path);
+  }
+
   /** 
    * For each source path, execute the command
    * 
@@ -113,7 +124,7 @@ abstract public class Command extends Configured {
       try {
         PathData[] srcs = PathData.expandAsGlob(src, getConf());
         for (PathData s : srcs) {
-          run(s.path);
+          run(s);
         }
       } catch (IOException e) {
         exitCode = -1;
@@ -315,18 +326,66 @@ abstract public class Command extends Configured {
    */
   protected void processPaths(PathData parent, PathData ... items)
   throws IOException {
-    // TODO: this really should be iterative
     for (PathData item : items) {
       try {
-        processPath(item);
-        if (recursive && isPathRecursable(item)) {
-          recursePath(item);
-        }
-        postProcessPath(item);
+        processPathInternal(item);
       } catch (IOException e) {
         displayError(e);
       }
     }
+  }
+
+  /**
+   * Iterates over the given expanded paths and invokes
+   * {@link #processPath(PathData)} on each element. If "recursive" is true,
+   * will do a post-visit DFS on directories.
+   * @param parent if called via a recurse, will be the parent dir, else null
+   * @param itemsIterator a iterator of {@link PathData} objects to process
+   * @throws IOException if anything goes wrong...
+   */
+  protected void processPaths(PathData parent,
+      RemoteIterator<PathData> itemsIterator) throws IOException {
+    int groupSize = getListingGroupSize();
+    if (groupSize == 0) {
+      // No grouping of contents required.
+      while (itemsIterator.hasNext()) {
+        processPaths(parent, itemsIterator.next());
+      }
+    } else {
+      List<PathData> items = new ArrayList<PathData>(groupSize);
+      while (itemsIterator.hasNext()) {
+        items.add(itemsIterator.next());
+        if (!itemsIterator.hasNext() || items.size() == groupSize) {
+          processPaths(parent, items.toArray(new PathData[items.size()]));
+          items.clear();
+        }
+      }
+    }
+  }
+
+  private void processPathInternal(PathData item) throws IOException {
+    processPath(item);
+    if (recursive && isPathRecursable(item)) {
+      recursePath(item);
+    }
+    postProcessPath(item);
+  }
+
+  /**
+   * Whether the directory listing for a path should be sorted.?
+   * @return true/false.
+   */
+  protected boolean isSorted() {
+    return false;
+  }
+
+  /**
+   * While using iterator method for listing for a path, whether to group items
+   * and process as array? If so what is the size of array?
+   * @return size of the grouping array.
+   */
+  protected int getListingGroupSize() {
+    return 0;
   }
 
   /**
@@ -374,7 +433,13 @@ abstract public class Command extends Configured {
   protected void recursePath(PathData item) throws IOException {
     try {
       depth++;
-      processPaths(item, item.getDirectoryContents());
+      if (isSorted()) {
+        // use the non-iterative method for listing because explicit sorting is
+        // required. Iterators not guaranteed to return sorted elements
+        processPaths(item, item.getDirectoryContents());
+      } else {
+        processPaths(item, item.getDirectoryContentsIterator());
+      }
     } finally {
       depth--;
     }

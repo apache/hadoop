@@ -124,6 +124,14 @@
   </property>
 
   <property>
+    <name>security.interqjournal.service.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for InterQJournalProtocol, used by the JN to
+    communicate with other JN
+    </description>
+  </property>
+
+  <property>
     <name>security.mrhs.client.protocol.acl</name>
     <value>*</value>
     <description>ACL for HSClientProtocol, used by job clients to
@@ -223,4 +231,35 @@
     group list is separated by a blank. For e.g. "alice,bob users,wheel".
     A special value of "*" means all users are allowed.</description>
   </property>
+
+  <property>
+    <name>security.collector-nodemanager.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for CollectorNodemanagerProtocol, used by nodemanager
+    if timeline service v2 is enabled, for the timeline collector and nodemanager
+    to communicate with each other.
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
+
+  <property>
+    <name>security.applicationmaster-nodemanager.applicationmaster.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for ApplicationMasterProtocol, used by the Nodemanager
+        and ApplicationMasters to communicate.
+        The ACL is a comma-separated list of user and group names. The user and
+        group list is separated by a blank. For e.g. "alice,bob users,wheel".
+        A special value of "*" means all users are allowed.</description>
+  </property>
+
+  <property>
+    <name>security.distributedscheduling.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for DistributedSchedulingAMProtocol, used by the Nodemanager
+        and Resourcemanager to communicate.
+        The ACL is a comma-separated list of user and group names. The user and
+        group list is separated by a blank. For e.g. "alice,bob users,wheel".
+        A special value of "*" means all users are allowed.</description>
+    </property>
 </configuration>

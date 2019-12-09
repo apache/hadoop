@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
@@ -53,26 +54,30 @@ public interface QJournalProtocol {
    * @return true if the given journal has been formatted and
    * contains valid data.
    */
-  public boolean isFormatted(String journalId) throws IOException;
+  boolean isFormatted(String journalId,
+                      String nameServiceId) throws IOException;
 
   /**
    * Get the current state of the journal, including the most recent
    * epoch number and the HTTP port.
    */
-  public GetJournalStateResponseProto getJournalState(String journalId)
+  GetJournalStateResponseProto getJournalState(String journalId,
+                                               String nameServiceId)
       throws IOException;
   
   /**
    * Format the underlying storage for the given namespace.
    */
-  public void format(String journalId,
-      NamespaceInfo nsInfo) throws IOException;
+  void format(String journalId, String nameServiceId,
+      NamespaceInfo nsInfo, boolean force) throws IOException;
 
   /**
    * Begin a new epoch. See the HDFS-3077 design doc for details.
    */
-  public NewEpochResponseProto newEpoch(String journalId,
-      NamespaceInfo nsInfo, long epoch) throws IOException;
+  NewEpochResponseProto newEpoch(String journalId,
+                                        String nameServiceId,
+                                        NamespaceInfo nsInfo,
+                                        long epoch) throws IOException;
   
   /**
    * Journal edit records.
@@ -130,10 +135,33 @@ public interface QJournalProtocol {
    *        segment       
    * @return a list of edit log segments since the given transaction ID.
    */
-  public GetEditLogManifestResponseProto getEditLogManifest(String jid,
-      long sinceTxId, boolean inProgressOk)
+  GetEditLogManifestResponseProto getEditLogManifest(String jid,
+                                                     String nameServiceId,
+                                                     long sinceTxId,
+                                                     boolean inProgressOk)
       throws IOException;
-  
+
+  /**
+   * Fetch edit logs present in the Journal's in-memory cache of edits
+   * ({@link org.apache.hadoop.hdfs.qjournal.server.JournaledEditsCache}).
+   * To enable this cache, in-progress edit log tailing must be enabled via the
+   * {@value DFSConfigKeys#DFS_HA_TAILEDITS_INPROGRESS_KEY} configuration key.
+   *
+   * @param jid The ID of the journal from which to fetch edits.
+   * @param nameServiceId The ID of the namespace for which to fetch edits.
+   * @param sinceTxId Fetch edits starting at this transaction ID
+   * @param maxTxns Request at most this many transactions to be returned
+   * @throws IOException If there was an issue encountered while fetching edits
+   *     from the cache, including a cache miss (cache does not contain the
+   *     requested edits). The caller should then attempt to fetch the edits via
+   *     the streaming mechanism (starting with
+   *     {@link #getEditLogManifest(String, String, long, boolean)}).
+   * @return Response containing serialized edits to be loaded
+   * @see org.apache.hadoop.hdfs.qjournal.server.JournaledEditsCache
+   */
+  GetJournaledEditsResponseProto getJournaledEdits(String jid,
+      String nameServiceId, long sinceTxId, int maxTxns) throws IOException;
+
   /**
    * Begin the recovery process for a given segment. See the HDFS-3077
    * design document for details.
@@ -147,24 +175,30 @@ public interface QJournalProtocol {
   public void acceptRecovery(RequestInfo reqInfo,
       SegmentStateProto stateToAccept, URL fromUrl) throws IOException;
 
-  public void doPreUpgrade(String journalId) throws IOException;
+  void doPreUpgrade(String journalId) throws IOException;
 
   public void doUpgrade(String journalId, StorageInfo sInfo) throws IOException;
 
-  public void doFinalize(String journalId) throws IOException;
+  void doFinalize(String journalId,
+                         String nameServiceid) throws IOException;
 
-  public Boolean canRollBack(String journalId, StorageInfo storage,
-      StorageInfo prevStorage, int targetLayoutVersion) throws IOException;
+  Boolean canRollBack(String journalId, String nameServiceid,
+                      StorageInfo storage, StorageInfo prevStorage,
+                      int targetLayoutVersion) throws IOException;
 
-  public void doRollback(String journalId) throws IOException;
+  void doRollback(String journalId,
+                         String nameServiceid) throws IOException;
 
   /**
    * Discard journal segments whose first TxId is greater than or equal to the
    * given txid.
    */
   @Idempotent
-  public void discardSegments(String journalId, long startTxId)
+  void discardSegments(String journalId,
+                       String nameServiceId,
+                       long startTxId)
       throws IOException;
 
-  public Long getJournalCTime(String journalId) throws IOException;
+  Long getJournalCTime(String journalId,
+                       String nameServiceId) throws IOException;
 }

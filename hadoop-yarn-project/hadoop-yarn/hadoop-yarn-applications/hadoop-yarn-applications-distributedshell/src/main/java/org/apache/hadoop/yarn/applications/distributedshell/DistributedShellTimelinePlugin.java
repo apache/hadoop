@@ -52,7 +52,7 @@ public class DistributedShellTimelinePlugin extends TimelineEntityGroupPlugin {
   @Override
   public Set<TimelineEntityGroupId> getTimelineEntityGroupId(String entityId,
       String entityType) {
-    if (ApplicationMaster.DSEntity.DS_CONTAINER.toString().equals(entityId)) {
+    if (ApplicationMaster.DSEntity.DS_CONTAINER.toString().equals(entityType)) {
       ContainerId containerId = ContainerId.fromString(entityId);
       ApplicationId appId = containerId.getApplicationAttemptId()
           .getApplicationId();

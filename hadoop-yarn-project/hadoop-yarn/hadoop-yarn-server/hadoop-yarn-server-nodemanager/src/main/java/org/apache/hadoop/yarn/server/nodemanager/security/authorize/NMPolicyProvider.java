@@ -21,8 +21,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocolPB;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocolPB;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocolPB;
 
 /**
@@ -31,19 +33,42 @@ import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocolPB;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class NMPolicyProvider extends PolicyProvider {
-  
-  private static final Service[] nodeManagerServices = 
+
+  private static NMPolicyProvider nmPolicyProvider = null;
+
+  private NMPolicyProvider() {}
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public static NMPolicyProvider getInstance() {
+    if (nmPolicyProvider == null) {
+      synchronized(NMPolicyProvider.class) {
+        if (nmPolicyProvider == null) {
+          nmPolicyProvider = new NMPolicyProvider();
+        }
+      }
+    }
+    return nmPolicyProvider;
+  }
+
+  private static final Service[] NODE_MANAGER_SERVICES =
       new Service[] {
-    new Service(
-        YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_CONTAINER_MANAGEMENT_PROTOCOL, 
-        ContainerManagementProtocolPB.class),
-    new Service(YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCE_LOCALIZER, 
-        LocalizationProtocolPB.class)
-  };
+          new Service(YarnConfiguration.
+            YARN_SECURITY_SERVICE_AUTHORIZATION_CONTAINER_MANAGEMENT_PROTOCOL,
+            ContainerManagementProtocolPB.class),
+          new Service(YarnConfiguration.
+            YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCE_LOCALIZER,
+            LocalizationProtocolPB.class),
+          new Service(YarnConfiguration.
+            YARN_SECURITY_SERVICE_AUTHORIZATION_COLLECTOR_NODEMANAGER_PROTOCOL,
+            CollectorNodemanagerProtocolPB.class),
+          new Service(YarnConfiguration.
+              YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONMASTER_NODEMANAGER_PROTOCOL,
+              ApplicationMasterProtocolPB.class),
+      };
 
   @Override
   public Service[] getServices() {
-    return nodeManagerServices;
+    return NODE_MANAGER_SERVICES;
   }
-
 }

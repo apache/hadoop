@@ -605,6 +605,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * Rename files/dirs
    */
   @Override
+  @SuppressWarnings("deprecation")
   public boolean rename(Path src, Path dst) throws IOException {
     if (fs.isDirectory(src)) {
       return fs.rename(src, dst);
@@ -676,7 +677,14 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   public FileStatus[] listStatus(Path f) throws IOException {
     return fs.listStatus(f, DEFAULT_FILTER);
   }
-  
+
+  @Override
+  public RemoteIterator<FileStatus> listStatusIterator(final Path p)
+      throws IOException {
+    // Not-using fs#listStatusIterator() since it includes crc files as well
+    return new DirListingIterator<>(p);
+  }
+
   /**
    * List the statuses of the files/directories in the given path if the path is
    * a directory.
@@ -721,6 +729,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * If src and dst are directories, the copyCrc parameter
    * determines whether to copy CRC files.
    */
+  @SuppressWarnings("deprecation")
   public void copyToLocalFile(Path src, Path dst, boolean copyCrc)
     throws IOException {
     if (!fs.isDirectory(src)) { // source is a file

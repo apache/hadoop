@@ -26,10 +26,10 @@ export default Ember.Helper.helper(function(params,hash) {
   var nodeHTTPAddress = hash.nodeHTTPAddress;
   var nodeId = hash.nodeId;
   var html = '<td>';
-  if (nodeState == "SHUTDOWN" || nodeState == "LOST") {
+  if (nodeState === "SHUTDOWN" || nodeState === "LOST") {
     html = html + nodeHTTPAddress;
   } else {
-    html = html + '<a href="#/yarn-node/' + nodeId + "/" + nodeHTTPAddress + '">' +
+    html = html + '<a href="#/yarn-node/' + nodeId + "/" + encodeURIComponent(nodeHTTPAddress) + '">' +
         nodeHTTPAddress + '</a>';
   }
   html = html + '</td>';

@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.webproxy;
 
 import java.io.IOException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
@@ -42,7 +40,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
  */
 public class AppReportFetcher {
   enum AppReportSource { RM, AHS }
-  private static final Log LOG = LogFactory.getLog(AppReportFetcher.class);
   private final Configuration conf;
   private final ApplicationClientProtocol applicationsManager;
   private final ApplicationHistoryProtocol historyManager;

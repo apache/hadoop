@@ -19,9 +19,13 @@
 # Stop hadoop dfs daemons.
 # Run this on master node.
 
+## @description  usage info
+## @audience     private
+## @stability    evolving
+## @replaceable  no
 function hadoop_usage
 {
-  echo "Usage: stop-dfs.sh [-upgrade|-rollback] [-clusterId]"
+  echo "Usage: stop-dfs.sh"
 }
 
 this="${BASH_SOURCE-$0}"
@@ -55,7 +59,7 @@ fi
 
 echo "Stopping namenodes on [${NAMENODES}]"
 
-  "${HADOOP_HDFS_HOME}/bin/hdfs" \
+  hadoop_uservar_su hdfs namenode "${HADOOP_HDFS_HOME}/bin/hdfs" \
     --workers \
     --config "${HADOOP_CONF_DIR}" \
     --hostnames "${NAMENODES}" \
@@ -65,21 +69,13 @@ echo "Stopping namenodes on [${NAMENODES}]"
 #---------------------------------------------------------
 # datanodes (using default workers file)
 
-if [[ -n "${HADOOP_SECURE_DN_USER}" ]] &&
-[[ -z "${HADOOP_SECURE_COMMAND}" ]]; then
-  echo "ERROR: Attempting to stop secure cluster, skipping datanodes. "
-  echo "Run stop-secure-dns.sh as root or configure "
-  echo "\${HADOOP_SECURE_COMMAND} to complete stop."
-else
+echo "Stopping datanodes"
 
-  echo "Stopping datanodes"
-
-  "${HADOOP_HDFS_HOME}/bin/hdfs" \
-    --workers \
-    --config "${HADOOP_CONF_DIR}" \
-    --daemon stop \
-    datanode
-fi
+hadoop_uservar_su hdfs datanode "${HADOOP_HDFS_HOME}/bin/hdfs" \
+  --workers \
+  --config "${HADOOP_CONF_DIR}" \
+  --daemon stop \
+  datanode
 
 #---------------------------------------------------------
 # secondary namenodes (if any)
@@ -93,7 +89,7 @@ fi
 if [[ -n "${SECONDARY_NAMENODES}" ]]; then
   echo "Stopping secondary namenodes [${SECONDARY_NAMENODES}]"
 
-  "${HADOOP_HDFS_HOME}/bin/hdfs" \
+  hadoop_uservar_su hdfs secondarynamenode "${HADOOP_HDFS_HOME}/bin/hdfs" \
     --workers \
     --config "${HADOOP_CONF_DIR}" \
     --hostnames "${SECONDARY_NAMENODES}" \
@@ -104,21 +100,18 @@ fi
 #---------------------------------------------------------
 # quorumjournal nodes (if any)
 
-SHARED_EDITS_DIR=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey dfs.namenode.shared.edits.dir 2>&-)
+JOURNAL_NODES=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -journalNodes 2>&-)
 
-case "${SHARED_EDITS_DIR}" in
-  qjournal://*)
-    JOURNAL_NODES=$(echo "${SHARED_EDITS_DIR}" | sed 's,qjournal://\([^/]*\)/.*,\1,g; s/;/ /g; s/:[0-9]*//g')
-    echo "Stopping journal nodes [${JOURNAL_NODES}]"
+if [[ "${#JOURNAL_NODES}" != 0 ]]; then
+  echo "Stopping journal nodes [${JOURNAL_NODES}]"
 
-    "${HADOOP_HDFS_HOME}/bin/hdfs" \
-      --workers \
-      --config "${HADOOP_CONF_DIR}" \
-      --hostnames "${JOURNAL_NODES}" \
-      --daemon stop \
-      journalnode
-  ;;
-esac
+  hadoop_uservar_su hdfs journalnode "${HADOOP_HDFS_HOME}/bin/hdfs" \
+    --workers \
+    --config "${HADOOP_CONF_DIR}" \
+    --hostnames "${JOURNAL_NODES}" \
+    --daemon stop \
+    journalnode
+fi
 
 #---------------------------------------------------------
 # ZK Failover controllers, if auto-HA is enabled
@@ -126,7 +119,7 @@ AUTOHA_ENABLED=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey dfs.ha.automati
 if [[ "${AUTOHA_ENABLED}" = "true" ]]; then
   echo "Stopping ZK Failover Controllers on NN hosts [${NAMENODES}]"
 
-  "${HADOOP_HDFS_HOME}/bin/hdfs" \
+  hadoop_uservar_su hdfs zkfc "${HADOOP_HDFS_HOME}/bin/hdfs" \
     --workers \
     --config "${HADOOP_CONF_DIR}" \
     --hostnames "${NAMENODES}" \

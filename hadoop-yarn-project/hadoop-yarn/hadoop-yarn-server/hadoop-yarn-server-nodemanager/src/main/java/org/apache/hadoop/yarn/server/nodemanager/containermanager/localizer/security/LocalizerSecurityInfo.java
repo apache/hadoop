@@ -19,9 +19,9 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security;
 
 import java.lang.annotation.Annotation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SecurityInfo;
@@ -32,7 +32,8 @@ import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocolPB;
 
 public class LocalizerSecurityInfo extends SecurityInfo {
 
-  private static final Log LOG = LogFactory.getLog(LocalizerSecurityInfo.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(LocalizerSecurityInfo.class);
 
   @Override
   public KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {

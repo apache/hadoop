@@ -13,19 +13,19 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.2.1</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-mapreduce</artifactId>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
+  <version>3.2.1</version>
   <packaging>pom</packaging>
   <name>Apache Hadoop MapReduce</name>
-  <url>http://hadoop.apache.org/mapreduce/</url>
+  <url>https://hadoop.apache.org/</url>
 
   <properties>
     <test.logs>true</test.logs>
@@ -194,6 +194,7 @@
           <excludes>
             <exclude>.eclipse.templates/</exclude>
             <exclude>lib/jdiff/**</exclude>
+            <exclude>dev-support/jdiff/**</exclude>
           </excludes>
         </configuration>
       </plugin>

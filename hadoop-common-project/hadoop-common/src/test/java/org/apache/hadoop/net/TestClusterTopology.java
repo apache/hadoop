@@ -20,8 +20,10 @@ package org.apache.hadoop.net;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Arrays;
 
 import org.apache.commons.math3.stat.inference.ChiSquareTest;
+import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -80,7 +82,7 @@ public class TestClusterTopology extends Assert {
   @Test
   public void testCountNumNodes() throws Exception {
     // create the topology
-    NetworkTopology cluster = new NetworkTopology();
+    NetworkTopology cluster = NetworkTopology.getInstance(new Configuration());
     NodeElement node1 = getNewNode("node1", "/d1/r1");
     cluster.add(node1);
     NodeElement node2 = getNewNode("node2", "/d1/r2");
@@ -128,7 +130,7 @@ public class TestClusterTopology extends Assert {
   @Test
   public void testChooseRandom() {
     // create the topology
-    NetworkTopology cluster = new NetworkTopology();
+    NetworkTopology cluster = NetworkTopology.getInstance(new Configuration());
     NodeElement node1 = getNewNode("node1", "/d1/r1");
     cluster.add(node1);
     NodeElement node2 = getNewNode("node2", "/d1/r2");
@@ -138,38 +140,50 @@ public class TestClusterTopology extends Assert {
     NodeElement node4 = getNewNode("node4", "/d1/r3");
     cluster.add(node4);
 
+    // Number of test runs
+    int numTestRuns = 3;
+    int chiSquareTestRejectedCounter = 0;
+
     // Number of iterations to do the test
     int numIterations = 100;
 
-    // Pick random nodes
-    HashMap<String,Integer> histogram = new HashMap<String,Integer>();
-    for (int i=0; i<numIterations; i++) {
-      String randomNode = cluster.chooseRandom(NodeBase.ROOT).getName();
-      if (!histogram.containsKey(randomNode)) {
-        histogram.put(randomNode, 0);
-      }
-      histogram.put(randomNode, histogram.get(randomNode) + 1);
-    }
-    assertEquals("Random is not selecting all nodes", 4, histogram.size());
+    for (int testRun = 0; testRun < numTestRuns; ++testRun) {
 
-    // Check with 99% confidence (alpha=0.01 as confidence = (100 * (1 - alpha)
-    ChiSquareTest chiSquareTest = new ChiSquareTest();
-    double[] expected = new double[histogram.size()];
-    long[] observed = new long[histogram.size()];
-    int j=0;
-    for (Integer occurrence : histogram.values()) {
-      expected[j] = 1.0 * numIterations / histogram.size();
-      observed[j] = occurrence;
-      j++;
+      // Pick random nodes
+      HashMap<String, Integer> histogram = new HashMap<String, Integer>();
+      for (int i = 0; i < numIterations; i++) {
+        String randomNode = cluster.chooseRandom(NodeBase.ROOT).getName();
+        if (!histogram.containsKey(randomNode)) {
+          histogram.put(randomNode, 0);
+        }
+        histogram.put(randomNode, histogram.get(randomNode) + 1);
+      }
+      assertEquals("Random is not selecting all nodes", 4, histogram.size());
+
+      // Check with 99% confidence alpha=0.01 as confidence = 100 * (1 - alpha)
+      ChiSquareTest chiSquareTest = new ChiSquareTest();
+      double[] expected = new double[histogram.size()];
+      long[] observed = new long[histogram.size()];
+      int j = 0;
+      for (Integer occurrence : histogram.values()) {
+        expected[j] = 1.0 * numIterations / histogram.size();
+        observed[j] = occurrence;
+        j++;
+      }
+      boolean chiSquareTestRejected =
+            chiSquareTest.chiSquareTest(expected, observed, 0.01);
+
+      if (chiSquareTestRejected) {
+        ++chiSquareTestRejectedCounter;
+      }
     }
-    boolean chiSquareTestRejected =
-        chiSquareTest.chiSquareTest(expected, observed, 0.01);
 
     // Check that they have the proper distribution
-    assertFalse("Not choosing nodes randomly", chiSquareTestRejected);
+    assertFalse("Random not choosing nodes with proper distribution",
+            chiSquareTestRejectedCounter==3);
 
     // Pick random nodes excluding the 2 nodes in /d1/r3
-    histogram = new HashMap<String,Integer>();
+    HashMap<String, Integer> histogram = new HashMap<String, Integer>();
     for (int i=0; i<numIterations; i++) {
       String randomNode = cluster.chooseRandom("~/d1/r3").getName();
       if (!histogram.containsKey(randomNode)) {
@@ -179,6 +193,40 @@ public class TestClusterTopology extends Assert {
     }
     assertEquals("Random is not selecting the nodes it should",
         2, histogram.size());
+  }
+
+  @Test
+  public void testChooseRandomExcluded() {
+    // create the topology
+    //                        a1
+    //                b1------|--------b2
+    //                 |                |
+    //          c1-----|-----c2         c3
+    //         /  \          |          |
+    //        /    \         |          |
+    //     node1    node2   node3      node4
+
+    NetworkTopology cluster = NetworkTopology.getInstance(new Configuration());
+    NodeElement node1 = getNewNode("node1", "/a1/b1/c1");
+    cluster.add(node1);
+    NodeElement node2 = getNewNode("node2", "/a1/b1/c1");
+    cluster.add(node2);
+    NodeElement node3 = getNewNode("node3", "/a1/b1/c2");
+    cluster.add(node3);
+    NodeElement node4 = getNewNode("node4", "/a1/b2/c3");
+    cluster.add(node4);
+
+    Node node = cluster.chooseRandom("/a1/b1", "/a1/b1/c1", null);
+    assertSame("node3", node.getName());
+
+    node = cluster.chooseRandom("/a1/b1", "/a1/b1/c1", Arrays.asList(node1));
+    assertSame("node3", node.getName());
+
+    node = cluster.chooseRandom("/a1/b1", "/a1/b1/c1", Arrays.asList(node3));
+    assertNull(node);
+
+    node = cluster.chooseRandom("/a1/b1", "/a1/b1/c1", Arrays.asList(node4));
+    assertSame("node3", node.getName());
   }
 
   private NodeElement getNewNode(String name, String rackLocation) {

@@ -18,19 +18,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.nodelabels;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Set;
-import java.util.Timer;
 import java.util.TimerTask;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
@@ -40,20 +32,12 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
  * pattern which will be used to search node label partition from the out put of
  * the NodeLabels provider script
  */
-public class ScriptBasedNodeLabelsProvider extends AbstractNodeLabelsProvider {
-  /** Absolute path to the node labels script. */
-  private String nodeLabelsScriptPath;
-
-  /** Time after which the script should be timed out */
-  private long scriptTimeout;
-
-  /** ShellCommandExecutor used to execute monitoring script */
-  ShellCommandExecutor shexec = null;
+public class ScriptBasedNodeLabelsProvider extends NodeLabelsProvider {
 
   /** Pattern used for searching in the output of the node labels script */
   public static final String NODE_LABEL_PARTITION_PATTERN = "NODE_PARTITION:";
 
-  private String[] scriptArgs;
+  private NodeDescriptorsScriptRunner runner;
 
   public ScriptBasedNodeLabelsProvider() {
     super(ScriptBasedNodeLabelsProvider.class.getName());
@@ -64,48 +48,24 @@ public class ScriptBasedNodeLabelsProvider extends AbstractNodeLabelsProvider {
    */
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    super.serviceInit(conf);
-    this.nodeLabelsScriptPath =
+    String nodeLabelsScriptPath =
         conf.get(YarnConfiguration.NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_PATH);
-    this.scriptTimeout =
+    long scriptTimeout =
         conf.getLong(YarnConfiguration.NM_NODE_LABELS_PROVIDER_FETCH_TIMEOUT_MS,
             YarnConfiguration.DEFAULT_NM_NODE_LABELS_PROVIDER_FETCH_TIMEOUT_MS);
-    scriptArgs = conf.getStrings(
+    String[] scriptArgs = conf.getStrings(
         YarnConfiguration.NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_SCRIPT_OPTS,
         new String[] {});
+    verifyConfiguredScript(nodeLabelsScriptPath);
 
-    verifyConfiguredScript();
-  }
+    long taskInterval = conf.getLong(
+        YarnConfiguration.NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS);
+    this.setIntervalTime(taskInterval);
+    this.runner = new NodeLabelScriptRunner(nodeLabelsScriptPath, scriptArgs,
+            scriptTimeout, this);
 
-  /**
-   * Method used to determine if or not node labels fetching script is
-   * configured and whether it is fit to run. Returns true if following
-   * conditions are met:
-   *
-   * <ol>
-   * <li>Path to Node Labels fetch script is not empty</li>
-   * <li>Node Labels fetch script file exists</li>
-   * </ol>
-   *
-   * @throws IOException
-   */
-  private void verifyConfiguredScript()
-      throws IOException {
-    boolean invalidConfiguration = false;
-    if (nodeLabelsScriptPath == null
-        || nodeLabelsScriptPath.trim().isEmpty()) {
-      invalidConfiguration = true;
-    } else {
-      File f = new File(nodeLabelsScriptPath);
-      invalidConfiguration = !f.exists() || !FileUtil.canExecute(f);
-    }
-    if (invalidConfiguration) {
-      throw new IOException(
-          "Distributed Node labels provider script \"" + nodeLabelsScriptPath
-              + "\" is not configured properly. Please check whether the script "
-              + "path exists, owner and the access rights are suitable for NM "
-              + "process to execute it");
-    }
+    super.serviceInit(conf);
   }
 
   /**
@@ -113,52 +73,19 @@ public class ScriptBasedNodeLabelsProvider extends AbstractNodeLabelsProvider {
    */
   @Override
   public void cleanUp() {
-    if (shexec != null) {
-      Process p = shexec.getProcess();
-      if (p != null) {
-        p.destroy();
-      }
+    if (runner != null) {
+      runner.cleanUp();
     }
   }
 
-  @Override
-  public TimerTask createTimerTask() {
-    return new NodeLabelsScriptRunner();
-  }
+  // A script runner periodically runs a script to get node labels,
+  // and sets these labels to the given provider.
+  private static class NodeLabelScriptRunner extends
+      NodeDescriptorsScriptRunner<NodeLabel> {
 
-  /**
-   * Class which is used by the {@link Timer} class to periodically execute the
-   * node labels script.
-   */
-  private class NodeLabelsScriptRunner extends TimerTask {
-
-    private final Log LOG = LogFactory.getLog(NodeLabelsScriptRunner.class);
-
-    public NodeLabelsScriptRunner() {
-      ArrayList<String> execScript = new ArrayList<String>();
-      execScript.add(nodeLabelsScriptPath);
-      if (scriptArgs != null) {
-        execScript.addAll(Arrays.asList(scriptArgs));
-      }
-      shexec = new ShellCommandExecutor(
-          execScript.toArray(new String[execScript.size()]), null, null,
-          scriptTimeout);
-    }
-
-    @Override
-    public void run() {
-      try {
-        shexec.execute();
-        setNodeLabels(fetchLabelsFromScriptOutput(shexec.getOutput()));
-      } catch (Exception e) {
-        if (shexec.isTimedOut()) {
-          LOG.warn("Node Labels script timed out, Caught exception : "
-              + e.getMessage(), e);
-        } else {
-          LOG.warn("Execution of Node Labels script failed, Caught exception : "
-              + e.getMessage(), e);
-        }
-      }
+    NodeLabelScriptRunner(String scriptPath, String[] scriptArgs,
+        long scriptTimeout, ScriptBasedNodeLabelsProvider provider) {
+      super(scriptPath, scriptArgs, scriptTimeout, provider);
     }
 
     /**
@@ -169,7 +96,8 @@ public class ScriptBasedNodeLabelsProvider extends AbstractNodeLabelsProvider {
      * @return true if output string has error pattern in it.
      * @throws IOException
      */
-    private Set<NodeLabel> fetchLabelsFromScriptOutput(String scriptOutput)
+    @Override
+    Set<NodeLabel> parseOutput(String scriptOutput)
         throws IOException {
       String nodePartitionLabel = null;
       String[] splits = scriptOutput.split("\n");
@@ -182,5 +110,10 @@ public class ScriptBasedNodeLabelsProvider extends AbstractNodeLabelsProvider {
       }
       return convertToNodeLabelSet(nodePartitionLabel);
     }
+  }
+
+  @Override
+  public TimerTask createTimerTask() {
+    return runner;
   }
 }

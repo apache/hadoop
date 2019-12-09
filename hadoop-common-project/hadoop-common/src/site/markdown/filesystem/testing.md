@@ -195,21 +195,21 @@ equivalent. Furthermore, the build MUST be configured to never bundle this file 
 In addition, `src/test/resources/auth-keys.xml` will need to be created.  It can be a copy of `contract-test-options.xml`.
 The `AbstractFSContract` class automatically loads this resource file if present; specific keys for specific test cases can be added.
 
-As an example, here are what S3N test keys look like:
+As an example, here are what S3A test keys look like:
 
     <configuration>
       <property>
-        <name>fs.contract.test.fs.s3n</name>
-        <value>s3n://tests3contract</value>
+        <name>fs.contract.test.fs.s3a</name>
+        <value>s3a://tests3contract</value>
       </property>
 
       <property>
-        <name>fs.s3n.awsAccessKeyId</name>
+        <name>fs.s3a.access.key</name>
         <value>DONOTPCOMMITTHISKEYTOSCM</value>
       </property>
 
       <property>
-        <name>fs.s3n.awsSecretAccessKey</name>
+        <name>fs.s3a.secret.key</name>
         <value>DONOTEVERSHARETHISSECRETKEY!</value>
       </property>
     </configuration>

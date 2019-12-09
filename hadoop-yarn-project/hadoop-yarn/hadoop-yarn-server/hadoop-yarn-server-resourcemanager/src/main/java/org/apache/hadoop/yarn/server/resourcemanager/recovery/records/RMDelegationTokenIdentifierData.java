@@ -58,4 +58,12 @@ public class RMDelegationTokenIdentifierData {
   public long getRenewDate() {
     return builder.getRenewDate();
   }
+
+  public void setIdentifier(YARNDelegationTokenIdentifier identifier) {
+    builder.setTokenIdentifier(identifier.getProto());
+  }
+
+  public void setRenewDate(long renewDate) {
+    builder.setRenewDate(renewDate);
+  }
 }

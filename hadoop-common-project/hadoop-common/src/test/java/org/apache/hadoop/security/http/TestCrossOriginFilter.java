@@ -128,6 +128,85 @@ public class TestCrossOriginFilter {
   }
 
   @Test
+  public void testRegexPatternMatchingOrigins() throws ServletException, IOException {
+
+    // Setup the configuration settings of the server
+    Map<String, String> conf = new HashMap<String, String>();
+    conf.put(CrossOriginFilter.ALLOWED_ORIGINS, "regex:.*[.]example[.]com");
+    FilterConfig filterConfig = new FilterConfigTest(conf);
+
+    // Object under test
+    CrossOriginFilter filter = new CrossOriginFilter();
+    filter.init(filterConfig);
+
+    // match multiple sub-domains
+    Assert.assertFalse(filter.areOriginsAllowed("example.com"));
+    Assert.assertFalse(filter.areOriginsAllowed("foo:example.com"));
+    Assert.assertTrue(filter.areOriginsAllowed("foo.example.com"));
+    Assert.assertTrue(filter.areOriginsAllowed("foo.bar.example.com"));
+
+    // First origin is allowed
+    Assert.assertTrue(filter.areOriginsAllowed("foo.example.com foo.nomatch.com"));
+    // Second origin is allowed
+    Assert.assertTrue(filter.areOriginsAllowed("foo.nomatch.com foo.example.com"));
+    // No origin in list is allowed
+    Assert.assertFalse(filter.areOriginsAllowed("foo.nomatch1.com foo.nomatch2.com"));
+  }
+
+  @Test
+  public void testComplexRegexPatternMatchingOrigins() throws ServletException, IOException {
+
+    // Setup the configuration settings of the server
+    Map<String, String> conf = new HashMap<String, String>();
+    conf.put(CrossOriginFilter.ALLOWED_ORIGINS, "regex:https?:\\/\\/sub1[.]example[.]com(:[0-9]+)?");
+    FilterConfig filterConfig = new FilterConfigTest(conf);
+
+    // Object under test
+    CrossOriginFilter filter = new CrossOriginFilter();
+    filter.init(filterConfig);
+
+    Assert.assertTrue(filter.areOriginsAllowed("http://sub1.example.com"));
+    Assert.assertTrue(filter.areOriginsAllowed("https://sub1.example.com"));
+    Assert.assertTrue(filter.areOriginsAllowed("http://sub1.example.com:1234"));
+    Assert.assertTrue(filter.areOriginsAllowed("https://sub1.example.com:8080"));
+
+    // No origin in list is allowed
+    Assert.assertFalse(filter.areOriginsAllowed("foo.nomatch1.com foo.nomatch2.com"));
+  }
+
+  @Test
+  public void testMixedRegexPatternMatchingOrigins() throws ServletException, IOException {
+
+    // Setup the configuration settings of the server
+    Map<String, String> conf = new HashMap<String, String>();
+    conf.put(CrossOriginFilter.ALLOWED_ORIGINS, "regex:https?:\\/\\/sub1[.]example[.]com(:[0-9]+)?, "
+            + "*.example2.com");
+    FilterConfig filterConfig = new FilterConfigTest(conf);
+
+    // Object under test
+    CrossOriginFilter filter = new CrossOriginFilter();
+    filter.init(filterConfig);
+
+    Assert.assertTrue(filter.areOriginsAllowed("http://sub1.example.com"));
+    Assert.assertTrue(filter.areOriginsAllowed("https://sub1.example.com"));
+    Assert.assertTrue(filter.areOriginsAllowed("http://sub1.example.com:1234"));
+    Assert.assertTrue(filter.areOriginsAllowed("https://sub1.example.com:8080"));
+
+    // match multiple sub-domains
+    Assert.assertFalse(filter.areOriginsAllowed("example2.com"));
+    Assert.assertFalse(filter.areOriginsAllowed("foo:example2.com"));
+    Assert.assertTrue(filter.areOriginsAllowed("foo.example2.com"));
+    Assert.assertTrue(filter.areOriginsAllowed("foo.bar.example2.com"));
+
+    // First origin is allowed
+    Assert.assertTrue(filter.areOriginsAllowed("foo.example2.com foo.nomatch.com"));
+    // Second origin is allowed
+    Assert.assertTrue(filter.areOriginsAllowed("foo.nomatch.com foo.example2.com"));
+    // No origin in list is allowed
+    Assert.assertFalse(filter.areOriginsAllowed("foo.nomatch1.com foo.nomatch2.com"));
+  }
+
+  @Test
   public void testDisallowedOrigin() throws ServletException, IOException {
 
     // Setup the configuration settings of the server

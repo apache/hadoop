@@ -25,8 +25,12 @@ import static org.mockito.Mockito.*;
 import java.io.FileNotFoundException;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 
+import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -34,6 +38,10 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
 import org.junit.Test;
 
 /**
@@ -48,23 +56,31 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     ObjectMetadata meta = new ObjectMetadata();
     meta.setContentLength(1L);
     meta.setLastModified(new Date(2L));
-    when(s3.getObjectMetadata(BUCKET, key)).thenReturn(meta);
+    when(s3.getObjectMetadata(argThat(correctGetMetadataRequest(BUCKET, key))))
+      .thenReturn(meta);
     FileStatus stat = fs.getFileStatus(path);
     assertNotNull(stat);
     assertEquals(fs.makeQualified(path), stat.getPath());
     assertTrue(stat.isFile());
     assertEquals(meta.getContentLength(), stat.getLen());
     assertEquals(meta.getLastModified().getTime(), stat.getModificationTime());
+    ContractTestUtils.assertNotErasureCoded(fs, path);
+    assertTrue(path + " should have erasure coding unset in " +
+            "FileStatus#toString(): " + stat,
+        stat.toString().contains("isErasureCoded=false"));
   }
 
   @Test
   public void testFakeDirectory() throws Exception {
     Path path = new Path("/dir");
     String key = path.toUri().getPath().substring(1);
-    when(s3.getObjectMetadata(BUCKET, key)).thenThrow(NOT_FOUND);
+    when(s3.getObjectMetadata(argThat(correctGetMetadataRequest(BUCKET, key))))
+      .thenThrow(NOT_FOUND);
     ObjectMetadata meta = new ObjectMetadata();
     meta.setContentLength(0L);
-    when(s3.getObjectMetadata(BUCKET, key + "/")).thenReturn(meta);
+    when(s3.getObjectMetadata(argThat(
+        correctGetMetadataRequest(BUCKET, key + "/"))
+    )).thenReturn(meta);
     FileStatus stat = fs.getFileStatus(path);
     assertNotNull(stat);
     assertEquals(fs.makeQualified(path), stat.getPath());
@@ -75,32 +91,32 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
   public void testImplicitDirectory() throws Exception {
     Path path = new Path("/dir");
     String key = path.toUri().getPath().substring(1);
-    when(s3.getObjectMetadata(BUCKET, key)).thenThrow(NOT_FOUND);
-    when(s3.getObjectMetadata(BUCKET, key + "/")).thenThrow(NOT_FOUND);
-    ObjectListing objects = mock(ObjectListing.class);
-    when(objects.getCommonPrefixes()).thenReturn(
-        Collections.singletonList("dir/"));
-    when(objects.getObjectSummaries()).thenReturn(
-        Collections.<S3ObjectSummary>emptyList());
-    when(s3.listObjects(any(ListObjectsRequest.class))).thenReturn(objects);
+    when(s3.getObjectMetadata(argThat(correctGetMetadataRequest(BUCKET,  key))))
+      .thenThrow(NOT_FOUND);
+    when(s3.getObjectMetadata(argThat(
+      correctGetMetadataRequest(BUCKET, key + "/"))
+    )).thenThrow(NOT_FOUND);
+    setupListMocks(Collections.singletonList("dir/"), Collections.emptyList());
     FileStatus stat = fs.getFileStatus(path);
     assertNotNull(stat);
     assertEquals(fs.makeQualified(path), stat.getPath());
     assertTrue(stat.isDirectory());
+    ContractTestUtils.assertNotErasureCoded(fs, path);
+    assertTrue(path + " should have erasure coding unset in " +
+            "FileStatus#toString(): " + stat,
+        stat.toString().contains("isErasureCoded=false"));
   }
 
   @Test
   public void testRoot() throws Exception {
     Path path = new Path("/");
     String key = path.toUri().getPath().substring(1);
-    when(s3.getObjectMetadata(BUCKET, key)).thenThrow(NOT_FOUND);
-    when(s3.getObjectMetadata(BUCKET, key + "/")).thenThrow(NOT_FOUND);
-    ObjectListing objects = mock(ObjectListing.class);
-    when(objects.getCommonPrefixes()).thenReturn(
-        Collections.<String>emptyList());
-    when(objects.getObjectSummaries()).thenReturn(
-        Collections.<S3ObjectSummary>emptyList());
-    when(s3.listObjects(any(ListObjectsRequest.class))).thenReturn(objects);
+    when(s3.getObjectMetadata(argThat(correctGetMetadataRequest(BUCKET, key))))
+      .thenThrow(NOT_FOUND);
+    when(s3.getObjectMetadata(argThat(
+      correctGetMetadataRequest(BUCKET, key + "/")
+    ))).thenThrow(NOT_FOUND);
+    setupListMocks(Collections.emptyList(), Collections.emptyList());
     FileStatus stat = fs.getFileStatus(path);
     assertNotNull(stat);
     assertEquals(fs.makeQualified(path), stat.getPath());
@@ -112,15 +128,52 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
   public void testNotFound() throws Exception {
     Path path = new Path("/dir");
     String key = path.toUri().getPath().substring(1);
-    when(s3.getObjectMetadata(BUCKET, key)).thenThrow(NOT_FOUND);
-    when(s3.getObjectMetadata(BUCKET, key + "/")).thenThrow(NOT_FOUND);
-    ObjectListing objects = mock(ObjectListing.class);
-    when(objects.getCommonPrefixes()).thenReturn(
-        Collections.<String>emptyList());
-    when(objects.getObjectSummaries()).thenReturn(
-        Collections.<S3ObjectSummary>emptyList());
-    when(s3.listObjects(any(ListObjectsRequest.class))).thenReturn(objects);
+    when(s3.getObjectMetadata(argThat(correctGetMetadataRequest(BUCKET, key))))
+      .thenThrow(NOT_FOUND);
+    when(s3.getObjectMetadata(argThat(
+      correctGetMetadataRequest(BUCKET, key + "/")
+    ))).thenThrow(NOT_FOUND);
+    setupListMocks(Collections.emptyList(), Collections.emptyList());
     exception.expect(FileNotFoundException.class);
     fs.getFileStatus(path);
+  }
+
+  private void setupListMocks(List<String> prefixes,
+      List<S3ObjectSummary> summaries) {
+
+    // V1 list API mock
+    ObjectListing objects = mock(ObjectListing.class);
+    when(objects.getCommonPrefixes()).thenReturn(prefixes);
+    when(objects.getObjectSummaries()).thenReturn(summaries);
+    when(s3.listObjects(any(ListObjectsRequest.class))).thenReturn(objects);
+
+    // V2 list API mock
+    ListObjectsV2Result v2Result = mock(ListObjectsV2Result.class);
+    when(v2Result.getCommonPrefixes()).thenReturn(prefixes);
+    when(v2Result.getObjectSummaries()).thenReturn(summaries);
+    when(s3.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(v2Result);
+  }
+
+  private Matcher<GetObjectMetadataRequest> correctGetMetadataRequest(
+      String bucket, String key) {
+    return new BaseMatcher<GetObjectMetadataRequest>() {
+
+      @Override
+      public void describeTo(Description description) {
+        description.appendText("bucket and key match");
+      }
+
+      @Override
+      public boolean matches(Object o) {
+        if(o instanceof GetObjectMetadataRequest) {
+          GetObjectMetadataRequest getObjectMetadataRequest =
+              (GetObjectMetadataRequest)o;
+          return getObjectMetadataRequest.getBucketName().equals(bucket)
+            && getObjectMetadataRequest.getKey().equals(key);
+        }
+        return false;
+      }
+    };
   }
 }

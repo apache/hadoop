@@ -19,10 +19,13 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
+import org.apache.hadoop.util.PerformanceAdvisory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Abstract native raw encoder for all native coders to extend with.
@@ -32,38 +35,55 @@ abstract class AbstractNativeRawEncoder extends RawErasureEncoder {
   public static Logger LOG =
       LoggerFactory.getLogger(AbstractNativeRawEncoder.class);
 
+  // Protect ISA-L coder data structure in native layer from being accessed and
+  // updated concurrently by the init, release and encode functions.
+  protected final ReentrantReadWriteLock encoderLock =
+      new ReentrantReadWriteLock();
+
   public AbstractNativeRawEncoder(ErasureCoderOptions coderOptions) {
     super(coderOptions);
   }
 
   @Override
-  protected void doEncode(ByteBufferEncodingState encodingState) {
-    int[] inputOffsets = new int[encodingState.inputs.length];
-    int[] outputOffsets = new int[encodingState.outputs.length];
-    int dataLen = encodingState.inputs[0].remaining();
+  protected void doEncode(ByteBufferEncodingState encodingState)
+      throws IOException {
+    encoderLock.readLock().lock();
+    try {
+      if (nativeCoder == 0) {
+        throw new IOException(String.format("%s closed",
+            getClass().getSimpleName()));
+      }
+      int[] inputOffsets = new int[encodingState.inputs.length];
+      int[] outputOffsets = new int[encodingState.outputs.length];
+      int dataLen = encodingState.inputs[0].remaining();
 
-    ByteBuffer buffer;
-    for (int i = 0; i < encodingState.inputs.length; ++i) {
-      buffer = encodingState.inputs[i];
-      inputOffsets[i] = buffer.position();
+      ByteBuffer buffer;
+      for (int i = 0; i < encodingState.inputs.length; ++i) {
+        buffer = encodingState.inputs[i];
+        inputOffsets[i] = buffer.position();
+      }
+
+      for (int i = 0; i < encodingState.outputs.length; ++i) {
+        buffer = encodingState.outputs[i];
+        outputOffsets[i] = buffer.position();
+      }
+
+      performEncodeImpl(encodingState.inputs, inputOffsets, dataLen,
+          encodingState.outputs, outputOffsets);
+    } finally {
+      encoderLock.readLock().unlock();
     }
-
-    for (int i = 0; i < encodingState.outputs.length; ++i) {
-      buffer = encodingState.outputs[i];
-      outputOffsets[i] = buffer.position();
-    }
-
-    performEncodeImpl(encodingState.inputs, inputOffsets, dataLen,
-        encodingState.outputs, outputOffsets);
   }
 
   protected abstract void performEncodeImpl(
           ByteBuffer[] inputs, int[] inputOffsets,
-          int dataLen, ByteBuffer[] outputs, int[] outputOffsets);
+          int dataLen, ByteBuffer[] outputs, int[] outputOffsets)
+      throws IOException;
 
   @Override
-  protected void doEncode(ByteArrayEncodingState encodingState) {
-    LOG.warn("convertToByteBufferState is invoked, " +
+  protected void doEncode(ByteArrayEncodingState encodingState)
+      throws IOException {
+    PerformanceAdvisory.LOG.debug("convertToByteBufferState is invoked, " +
         "not efficiently. Please use direct ByteBuffer inputs/outputs");
 
     ByteBufferEncodingState bbeState = encodingState.convertToByteBufferState();
@@ -73,6 +93,11 @@ abstract class AbstractNativeRawEncoder extends RawErasureEncoder {
       bbeState.outputs[i].get(encodingState.outputs[i],
           encodingState.outputOffsets[i], encodingState.encodeLength);
     }
+  }
+
+  @Override
+  public boolean preferDirectBuffer() {
+    return true;
   }
 
   // To link with the underlying data structure in the native layer.

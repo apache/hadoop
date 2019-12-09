@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy.IntraQueuePreemptionOrderPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
@@ -28,7 +30,11 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-interface CapacitySchedulerPreemptionContext {
+/**
+ * This interface provides context for the calculation of ideal allocation
+ * and preemption for the {@code CapacityScheduler}.
+ */
+public interface CapacitySchedulerPreemptionContext {
   CapacityScheduler getScheduler();
 
   TempQueuePerPartition getQueueByPartition(String queueName,
@@ -63,4 +69,9 @@ interface CapacitySchedulerPreemptionContext {
   float getMinimumThresholdForIntraQueuePreemption();
 
   float getMaxAllowableLimitForIntraQueuePreemption();
+
+  long getDefaultMaximumKillWaitTimeout();
+
+  @Unstable
+  IntraQueuePreemptionOrderPolicy getIntraQueuePreemptionOrderPolicy();
 }

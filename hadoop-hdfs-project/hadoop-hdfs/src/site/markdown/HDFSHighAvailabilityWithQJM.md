@@ -15,30 +15,7 @@
 HDFS High Availability Using the Quorum Journal Manager
 =======================================================
 
-* [HDFS High Availability Using the Quorum Journal Manager](#HDFS_High_Availability_Using_the_Quorum_Journal_Manager)
-    * [Purpose](#Purpose)
-    * [Note: Using the Quorum Journal Manager or Conventional Shared Storage](#Note:_Using_the_Quorum_Journal_Manager_or_Conventional_Shared_Storage)
-    * [Background](#Background)
-    * [Architecture](#Architecture)
-    * [Hardware resources](#Hardware_resources)
-    * [Deployment](#Deployment)
-        * [Configuration overview](#Configuration_overview)
-        * [Configuration details](#Configuration_details)
-        * [Deployment details](#Deployment_details)
-        * [Administrative commands](#Administrative_commands)
-    * [Automatic Failover](#Automatic_Failover)
-        * [Introduction](#Introduction)
-        * [Components](#Components)
-        * [Deploying ZooKeeper](#Deploying_ZooKeeper)
-        * [Before you begin](#Before_you_begin)
-        * [Configuring automatic failover](#Configuring_automatic_failover)
-        * [Initializing HA state in ZooKeeper](#Initializing_HA_state_in_ZooKeeper)
-        * [Starting the cluster with start-dfs.sh](#Starting_the_cluster_with_start-dfs.sh)
-        * [Starting the cluster manually](#Starting_the_cluster_manually)
-        * [Securing access to ZooKeeper](#Securing_access_to_ZooKeeper)
-        * [Verifying automatic failover](#Verifying_automatic_failover)
-    * [Automatic Failover FAQ](#Automatic_Failover_FAQ)
-    * [HDFS Upgrade/Finalization/Rollback with HA Enabled](#HDFS_UpgradeFinalizationRollback_with_HA_Enabled)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Purpose
 -------
@@ -50,7 +27,12 @@ This document assumes that the reader has a general understanding of general com
 Note: Using the Quorum Journal Manager or Conventional Shared Storage
 ---------------------------------------------------------------------
 
-This guide discusses how to configure and use HDFS HA using the Quorum Journal Manager (QJM) to share edit logs between the Active and Standby NameNodes. For information on how to configure HDFS HA using NFS for shared storage instead of the QJM, please see [this alternative guide.](./HDFSHighAvailabilityWithNFS.html)
+This guide discusses how to configure and use HDFS HA using the Quorum
+Journal Manager (QJM) to share edit logs between the Active and Standby
+NameNodes. For information on how to configure HDFS HA using NFS for
+shared storage instead of the QJM, please see [this alternative
+guide.](./HDFSHighAvailabilityWithNFS.html). For information on how to
+configure HDFS HA with Observer NameNode, please see [this guide](./ObserverNameNode.html)
 
 Background
 ----------
@@ -72,7 +54,7 @@ Architecture
 
 In a typical HA cluster, two or more separate machines are configured as NameNodes. At any point in time, exactly one of the NameNodes is in an *Active* state, and the others are in a *Standby* state. The Active NameNode is responsible for all client operations in the cluster, while the Standbys are simply acting as workers, maintaining enough state to provide a fast failover if necessary.
 
-In order for the Standby node to keep its state synchronized with the Active node, both nodes communicate with a group of separate daemons called "JournalNodes" (JNs). When any namespace modification is performed by the Active node, it durably logs a record of the modification to a majority of these JNs. The Standby node is capable of reading the edits from the JNs, and is constantly watching them for changes to the edit log. As the Standby Node sees the edits, it applies them to its own namespace. In the event of a failover, the Standby will ensure that it has read all of the edits from the JounalNodes before promoting itself to the Active state. This ensures that the namespace state is fully synchronized before a failover occurs.
+In order for the Standby node to keep its state synchronized with the Active node, both nodes communicate with a group of separate daemons called "JournalNodes" (JNs). When any namespace modification is performed by the Active node, it durably logs a record of the modification to a majority of these JNs. The Standby node is capable of reading the edits from the JNs, and is constantly watching them for changes to the edit log. As the Standby Node sees the edits, it applies them to its own namespace. In the event of a failover, the Standby will ensure that it has read all of the edits from the JournalNodes before promoting itself to the Active state. This ensures that the namespace state is fully synchronized before a failover occurs.
 
 In order to provide a fast failover, it is also necessary that the Standby node have up-to-date information regarding the location of blocks in the cluster. In order to achieve this, the DataNodes are configured with the location of all NameNodes, and send block location information and heartbeats to all.
 
@@ -155,15 +137,15 @@ The order in which you set these configurations is unimportant, but the values y
 
         <property>
           <name>dfs.namenode.rpc-address.mycluster.nn1</name>
-          <value>machine1.example.com:9820</value>
+          <value>machine1.example.com:8020</value>
         </property>
         <property>
           <name>dfs.namenode.rpc-address.mycluster.nn2</name>
-          <value>machine2.example.com:9820</value>
+          <value>machine2.example.com:8020</value>
         </property>
         <property>
           <name>dfs.namenode.rpc-address.mycluster.nn3</name>
-          <value>machine3.example.com:9820</value>
+          <value>machine3.example.com:8020</value>
         </property>
 
     **Note:** You may similarly configure the "**servicerpc-address**" setting if you so desire.
@@ -399,6 +381,7 @@ Now that your HA NameNodes are configured and started, you will have access to s
         [-transitionToStandby <serviceId>]
         [-failover [--forcefence] [--forceactive] <serviceId> <serviceId>]
         [-getServiceState <serviceId>]
+        [-getAllServiceState]
         [-checkHealth <serviceId>]
         [-help <command>]
 
@@ -430,6 +413,11 @@ This guide describes high-level uses of each of these subcommands. For specific 
     used by cron jobs or monitoring scripts which need to behave differently based
     on whether the NameNode is currently Active or Standby.
 
+*   **getAllServiceState** - returns the state of all the NameNodes
+
+    Connect to the configured NameNodes to determine the current state, print
+    either "standby" or "active" to STDOUT appropriately.
+
 *   **checkHealth** - check the health of the given NameNode
 
     Connect to the provided NameNode to check its health. The NameNode is capable
@@ -439,6 +427,42 @@ This guide describes high-level uses of each of these subcommands. For specific 
 
     **Note:** This is not yet implemented, and at present will always return
     success, unless the given NameNode is completely down.
+
+
+### Load Balancer Setup
+
+If you are running a set of NameNodes behind a Load Balancer (e.g. [Azure](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-custom-probe-overview) or [AWS](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-healthchecks.html) ) and would like the Load Balancer to point to the active NN, you can use the /isActive HTTP endpoint as a health probe.
+http://NN_HOSTNAME/isActive will return a 200 status code response if the NN is in Active HA State, 405 otherwise.
+
+
+
+### In-Progress Edit Log Tailing
+
+Under the default settings, the Standby NameNode will only apply edits that are present in an edit
+log segments which has been finalized. If it is desirable to have a Standby NameNode which has more
+up-to-date namespace information, it is possible to enable tailing of in-progress edit segments.
+This setting will attempt to fetch edits from an in-memory cache on the JournalNodes and can reduce
+the lag time before a transaction is applied on the Standby NameNode to the order of milliseconds.
+If an edit cannot be served from the cache, the Standby will still be able to retrieve it, but the
+lag time will be much longer. The relevant configurations are:
+
+*   **dfs.ha.tail-edits.in-progress** - Whether or not to enable tailing on in-progress edits logs.
+    This will also enable the in-memory edit cache on the JournalNodes. Disabled by default.
+
+*   **dfs.journalnode.edit-cache-size.bytes** - The size of the in-memory cache of edits on the
+    JournalNode. Edits take around 200 bytes each in a typical environment, so, for example, the
+    default of 1048576 (1MB) can hold around 5000 transactions. It is recommended to monitor the
+    JournalNode metrics RpcRequestCacheMissAmountNumMisses and RpcRequestCacheMissAmountAvgTxns,
+    which respectively count the number of requests unable to be served by the cache, and the extra
+    number of transactions which would have needed to have been in the cache for the request to
+    succeed. For example, if a request attempted to fetch edits starting at transaction ID 10, but
+    the oldest data in the cache was at transaction ID 20, a value of 10 would be added to the
+    average.
+
+This feature is primarily useful in conjunction with the Standby/Observer Read feature. Using this
+feature, read requests can be serviced from non-active NameNodes; thus tailing in-progress edits
+provides these nodes with the ability to serve requests with data which is much more fresh. See the
+Apache JIRA ticket HDFS-12943 for more information on this feature.
 
 Automatic Failover
 ------------------
@@ -552,7 +576,7 @@ In order to secure the information in ZooKeeper, first add the following to your
        <value>@/path/to/zk-acl.txt</value>
      </property>
 
-Please note the '@' character in these values -- this specifies that the configurations are not inline, but rather point to a file on disk.
+Please note the '@' character in these values -- this specifies that the configurations are not inline, but rather point to a file on disk. The authentication info may also be read via a CredentialProvider (pls see the CredentialProviderAPI Guide in the hadoop-common project).
 
 The first configured file specifies a list of ZooKeeper authentications, in the same format as used by the ZK CLI. For example, you may specify something like:
 
@@ -648,6 +672,8 @@ When moving between versions of HDFS, sometimes the newer software can simply be
     the `'-upgrade'` flag.
 
 Note that if at any time you want to restart the NameNodes before finalizing or rolling back the upgrade, you should start the NNs as normal, i.e. without any special startup flag.
+
+**To query status of upgrade**, the operator will use the `` `hdfs dfsadmin -upgrade query' `` command while atleast one of the NNs is running. The command will return whether the NN upgrade process is finalized or not, for each NN.
 
 **To finalize an HA upgrade**, the operator will use the `` `hdfs dfsadmin -finalizeUpgrade' `` command while the NNs are running and one of them is active. The active NN at the time this happens will perform the finalization of the shared log, and the NN whose local storage directories contain the previous FS state will delete its local state.
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -51,6 +52,9 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
 
   @Override
   DatanodeDescriptor[] getDatanodeDescriptors(Configuration conf) {
+    // default is true, in this case this test will against DFSNetworkTopology
+    // but it run on NetworkTopologyWithNodeGroup, so set to false.
+    conf.setBoolean(DFS_USE_DFS_NETWORK_TOPOLOGY_KEY, false);
     conf.set(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY,
             NetworkTopologyWithNodeGroup.class.getName());
     final String[] racks = {
@@ -625,16 +629,21 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
   public void testChooseReplicaToDelete() throws Exception {
     List<DatanodeStorageInfo> replicaList = new ArrayList<>();
     final Map<String, List<DatanodeStorageInfo>> rackMap = new HashMap<>();
-    dataNodes[0].setRemaining(4*1024*1024);
+    storages[0].setRemainingForTests(4*1024*1024);
+    dataNodes[0].setRemaining(calculateRemaining(dataNodes[0]));
     replicaList.add(storages[0]);
 
-    dataNodes[1].setRemaining(3*1024*1024);
+    storages[1].setRemainingForTests(3*1024*1024);
+    dataNodes[1].setRemaining(calculateRemaining(dataNodes[1]));
     replicaList.add(storages[1]);
 
-    dataNodes[2].setRemaining(2*1024*1024);
+    storages[2].setRemainingForTests(2*1024*1024);
+    dataNodes[2].setRemaining(calculateRemaining(dataNodes[2]));
     replicaList.add(storages[2]);
 
-    dataNodes[5].setRemaining(1*1024*1024);
+    storages[4].setRemainingForTests(100 * 1024 * 1024);
+    storages[5].setRemainingForTests(512 * 1024);
+    dataNodes[5].setRemaining(calculateRemaining(dataNodes[5]));
     replicaList.add(storages[5]);
 
     List<DatanodeStorageInfo> first = new ArrayList<>();
@@ -671,7 +680,15 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
         first, second, excessTypes, rackMap);
     assertEquals(chosen, storages[5]);
   }
-  
+
+  private long calculateRemaining(DatanodeDescriptor dataNode) {
+    long sum = 0;
+    for (DatanodeStorageInfo storageInfo: dataNode.getStorageInfos()){
+      sum += storageInfo.getRemaining();
+    }
+    return sum;
+  }
+
   /**
    * Test replica placement policy in case of boundary topology.
    * Rack 2 has only 1 node group & can't be placed with two replicas

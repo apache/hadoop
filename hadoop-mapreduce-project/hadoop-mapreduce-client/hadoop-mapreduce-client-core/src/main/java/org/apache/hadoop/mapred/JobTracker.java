@@ -28,7 +28,7 @@ public class JobTracker {
    * <code>State</code> is no longer used since M/R 2.x. It is kept in case
    * that M/R 1.x applications may still use it.
    */
-  public static enum State {
+  public enum State {
     INITIALIZING, RUNNING
   }
 

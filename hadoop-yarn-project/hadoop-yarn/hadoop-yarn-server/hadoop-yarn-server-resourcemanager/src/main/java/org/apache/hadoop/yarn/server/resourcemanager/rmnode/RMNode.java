@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.net.Node;
@@ -30,8 +31,10 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 
 /**
  * Node managers information on available resources 
@@ -141,10 +144,11 @@ public interface RMNode {
 
   /**
    * Update a {@link NodeHeartbeatResponse} with the list of containers and
-   * applications to clean up for this node.
+   * applications to clean up for this node, and the containers to be updated.
+   *
    * @param response the {@link NodeHeartbeatResponse} to update
    */
-  public void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response);
+  void setAndUpdateNodeHeartbeatResponse(NodeHeartbeatResponse response);
 
   public NodeHeartbeatResponse getLastNodeHeartBeatResponse();
 
@@ -167,13 +171,7 @@ public interface RMNode {
    * @return labels in this node
    */
   public Set<String> getNodeLabels();
-  
-  /**
-   * Update containers to be decreased
-   */
-  public void updateNodeHeartbeatResponseForContainersDecreasing(
-      NodeHeartbeatResponse response);
-  
+
   public List<Container> pullNewlyIncreasedContainers();
 
   OpportunisticContainersStatus getOpportunisticContainersStatus();
@@ -183,8 +181,24 @@ public interface RMNode {
   void setUntrackedTimeStamp(long timeStamp);
   /*
    * Optional decommissioning timeout in second
-   * (null indicates default timeout).
+   * (null indicates absent timeout).
    * @return the decommissioning timeout in second.
    */
   Integer getDecommissioningTimeout();
+
+  /**
+   * Get the allocation tags and their counts associated with this node.
+   * @return a map of each allocation tag and its count.
+   */
+  Map<String, Long> getAllocationTagsWithCount();
+
+  /**
+   * @return the RM context associated with this RM node.
+   */
+  RMContext getRMContext();
+
+  /**
+   * @return all node attributes as a Set.
+   */
+  Set<NodeAttribute> getAllNodeAttributes();
 }

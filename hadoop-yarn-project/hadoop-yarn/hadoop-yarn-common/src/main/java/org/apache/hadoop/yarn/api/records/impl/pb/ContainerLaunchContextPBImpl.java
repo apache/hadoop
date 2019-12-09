@@ -27,6 +27,7 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
@@ -54,6 +55,7 @@ extends ContainerLaunchContext {
   
   private Map<String, LocalResource> localResources = null;
   private ByteBuffer tokens = null;
+  private ByteBuffer tokensConf = null;
   private Map<String, ByteBuffer> serviceData = null;
   private Map<String, String> environment = null;
   private List<String> commands = null;
@@ -110,6 +112,9 @@ extends ContainerLaunchContext {
     }
     if (this.tokens != null) {
       builder.setTokens(convertToProtoFormat(this.tokens));
+    }
+    if (this.tokensConf != null) {
+      builder.setTokensConf(convertToProtoFormat(this.tokensConf));
     }
     if (this.serviceData != null) {
       addServiceDataToProto();
@@ -204,11 +209,32 @@ extends ContainerLaunchContext {
       final Map<String, LocalResource> localResources) {
     if (localResources == null)
       return;
+    checkLocalResources(localResources);
     initLocalResources();
     this.localResources.clear();
     this.localResources.putAll(localResources);
   }
   
+  private void checkLocalResources(Map<String, LocalResource> localResources) {
+    for (Map.Entry<String, LocalResource> rsrcEntry : localResources
+        .entrySet()) {
+      if (rsrcEntry.getValue() == null
+          || rsrcEntry.getValue().getResource() == null) {
+        throw new NullPointerException(
+            "Null resource URL for local resource " + rsrcEntry.getKey() + " : "
+                + rsrcEntry.getValue());
+      } else if (rsrcEntry.getValue().getType() == null) {
+        throw new NullPointerException(
+            "Null resource type for local resource " + rsrcEntry.getKey() + " : "
+                + rsrcEntry.getValue());
+      } else if (rsrcEntry.getValue().getVisibility() == null) {
+          throw new NullPointerException(
+            "Null resource visibility for local resource " + rsrcEntry.getKey() + " : "
+                + rsrcEntry.getValue());
+      }
+    }
+  }
+
   private void addLocalResourcesToProto() {
     maybeInitBuilder();
     builder.clearLocalResources();
@@ -265,6 +291,28 @@ extends ContainerLaunchContext {
       builder.clearTokens();
     }
     this.tokens = tokens;
+  }
+
+  @Override
+  public ByteBuffer getTokensConf() {
+    ContainerLaunchContextProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.tokensConf != null) {
+      return this.tokensConf;
+    }
+    if (!p.hasTokensConf()) {
+      return null;
+    }
+    this.tokensConf = convertFromProtoFormat(p.getTokensConf());
+    return this.tokensConf;
+  }
+
+  @Override
+  public void setTokensConf(ByteBuffer tokensConf) {
+    maybeInitBuilder();
+    if (tokensConf == null) {
+      builder.clearTokensConf();
+    }
+    this.tokensConf = tokensConf;
   }
 
   @Override
@@ -345,7 +393,8 @@ extends ContainerLaunchContext {
     this.environment = new HashMap<String, String>();
 
     for (StringStringMapProto c : list) {
-      this.environment.put(c.getKey(), c.getValue());
+      this.environment.put(StringInterner.weakIntern(c.getKey()),
+          StringInterner.weakIntern(c.getValue()));
     }
   }
   
@@ -355,7 +404,10 @@ extends ContainerLaunchContext {
       return;
     initEnv();
     this.environment.clear();
-    this.environment.putAll(env);
+    for (Map.Entry<String, String> e : env.entrySet()) {
+      this.environment.put(StringInterner.weakIntern(e.getKey()),
+          StringInterner.weakIntern(e.getValue()));
+    }
   }
   
   private void addEnvToProto() {
@@ -417,7 +469,7 @@ extends ContainerLaunchContext {
 
     for (ApplicationACLMapProto aclProto : list) {
       this.applicationACLS.put(ProtoUtils.convertFromProtoFormat(aclProto
-          .getAccessType()), aclProto.getAcl());
+          .getAccessType()), StringInterner.weakIntern(aclProto.getAcl()));
     }
   }
 
@@ -466,7 +518,10 @@ extends ContainerLaunchContext {
       return;
     initApplicationACLs();
     this.applicationACLS.clear();
-    this.applicationACLS.putAll(appACLs);
+    for (Map.Entry<ApplicationAccessType, String> e : appACLs.entrySet()) {
+      this.applicationACLS.put(e.getKey(),
+          StringInterner.weakIntern(e.getValue()));
+    }
   }
 
   public ContainerRetryContext getContainerRetryContext() {

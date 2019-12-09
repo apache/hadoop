@@ -30,12 +30,11 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
@@ -43,7 +42,7 @@ import com.google.inject.Inject;
 
 public class ApplicationPage extends NMView implements YarnWebParams {
 
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
 
     set(DATATABLES_ID, "containers");
@@ -80,30 +79,30 @@ public class ApplicationPage extends NMView implements YarnWebParams {
       try {
         applicationID = ApplicationId.fromString($(APPLICATION_ID));
       } catch (IllegalArgumentException e) {
-        html.p()._("Invalid Application Id " + $(APPLICATION_ID))._();
+        html.p().__("Invalid Application Id " + $(APPLICATION_ID)).__();
         return;
       }
       DIV<Hamlet> div = html.div("#content");
       Application app = this.nmContext.getApplications().get(applicationID);
       if (app == null) {
         div.h1("Unknown application with id " + applicationID
-            + ". Application might have been completed")._();
+            + ". Application might have been completed").__();
         return;
       }
       AppInfo info = new AppInfo(app);
       info("Application's information")
-            ._("ApplicationId", info.getId())
-            ._("ApplicationState", info.getState())
-            ._("User", info.getUser());
-      TABLE<Hamlet> containersListBody = html._(InfoBlock.class)
+            .__("ApplicationId", info.getId())
+            .__("ApplicationState", info.getState())
+            .__("User", info.getUser());
+      TABLE<Hamlet> containersListBody = html.__(InfoBlock.class)
           .table("#containers");
       for (String containerIdStr : info.getContainers()) {
         containersListBody
                .tr().td()
                  .a(url("container", containerIdStr), containerIdStr)
-                 ._()._();
+                 .__().__();
       }
-      containersListBody._();
+      containersListBody.__();
     }
   }
 }

@@ -60,12 +60,12 @@ public class MyApp {
   public static class MyView extends HtmlPage {
     // You can inject the app in views if needed.
     @Override
-    public void render(Page.HTML<_> html) {
+    public void render(Page.HTML<__> html) {
       html.
         title("My App").
         p("#content_id_for_css_styling").
-          _("You can have", $("anything"))._()._();
-      // Note, there is no _(); (to parent element) method at root level.
+          __("You can have", $("anything")).__().__();
+      // Note, there is no __(); (to parent element) method at root level.
       // and IDE provides instant feedback on what level you're on in
       // the auto-completion drop-downs.
     }

@@ -24,18 +24,18 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.App;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.MapTaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ReduceTaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TFOOT;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.THEAD;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
-import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.InputType;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TFOOT;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.THEAD;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TR;
+import org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.InputType;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -74,10 +74,10 @@ public class HsTasksBlock extends HtmlBlock {
     //Create the spanning row
     int attemptColSpan = type == TaskType.REDUCE ? 8 : 3;
     thead.tr().
-      th().$colspan(5).$class("ui-state-default")._("Task")._().
+      th().$colspan(5).$class("ui-state-default").__("Task").__().
       th().$colspan(attemptColSpan).$class("ui-state-default").
-        _("Successful Attempt")._().
-    _();
+        __("Successful Attempt").__().
+        __();
 
     TR<THEAD<TABLE<Hamlet>>> theadRow = thead.
           tr().
@@ -102,7 +102,7 @@ public class HsTasksBlock extends HtmlBlock {
     }
     theadRow.th("Elapsed Time"); //Attempt
 
-    TBODY<TABLE<Hamlet>> tbody = theadRow._()._().tbody();
+    TBODY<TABLE<Hamlet>> tbody = theadRow.__().__().tbody();
 
     // Write all the data into a JavaScript array of arrays for JQuery
     // DataTables to display
@@ -130,7 +130,7 @@ public class HsTasksBlock extends HtmlBlock {
       if(successful != null) {
         TaskAttemptInfo ta;
         if(type == TaskType.REDUCE) {
-          ReduceTaskAttemptInfo rta = new ReduceTaskAttemptInfo(successful, type);
+          ReduceTaskAttemptInfo rta = new ReduceTaskAttemptInfo(successful);
           shuffleFinishTime = rta.getShuffleFinishTime();
           sortFinishTime = rta.getMergeFinishTime();
           elapsedShuffleTime = rta.getElapsedShuffleTime();
@@ -138,7 +138,7 @@ public class HsTasksBlock extends HtmlBlock {
           elapsedReduceTime = rta.getElapsedReduceTime();
           ta = rta;
         } else {
-          ta = new TaskAttemptInfo(successful, type, false);
+          ta = new MapTaskAttemptInfo(successful, false);
         }
         attemptStartTime = ta.getStartTime();
         attemptFinishTime = ta.getFinishTime();
@@ -173,41 +173,41 @@ public class HsTasksBlock extends HtmlBlock {
     }
     tasksTableData.append("]");
     html.script().$type("text/javascript").
-    _("var tasksTableData=" + tasksTableData)._();
+        __("var tasksTableData=" + tasksTableData).__();
     
-    TR<TFOOT<TABLE<Hamlet>>> footRow = tbody._().tfoot().tr();
+    TR<TFOOT<TABLE<Hamlet>>> footRow = tbody.__().tfoot().tr();
     footRow.th().input("search_init").$type(InputType.text).$name("task")
-        .$value("ID")._()._().th().input("search_init").$type(InputType.text)
-        .$name("state").$value("State")._()._().th().input("search_init")
-        .$type(InputType.text).$name("start_time").$value("Start Time")._()._()
+        .$value("ID").__().__().th().input("search_init").$type(InputType.text)
+        .$name("state").$value("State").__().__().th().input("search_init")
+        .$type(InputType.text).$name("start_time").$value("Start Time").__().__()
         .th().input("search_init").$type(InputType.text).$name("finish_time")
-        .$value("Finish Time")._()._().th().input("search_init")
-        .$type(InputType.text).$name("elapsed_time").$value("Elapsed Time")._()
-        ._().th().input("search_init").$type(InputType.text)
-        .$name("attempt_start_time").$value("Start Time")._()._();
+        .$value("Finish Time").__().__().th().input("search_init")
+        .$type(InputType.text).$name("elapsed_time").$value("Elapsed Time").__()
+        .__().th().input("search_init").$type(InputType.text)
+        .$name("attempt_start_time").$value("Start Time").__().__();
 
     if(type == TaskType.REDUCE) {
       footRow.th().input("search_init").$type(InputType.text)
-          .$name("shuffle_time").$value("Shuffle Time")._()._();
+          .$name("shuffle_time").$value("Shuffle Time").__().__();
       footRow.th().input("search_init").$type(InputType.text)
-          .$name("merge_time").$value("Merge Time")._()._();
+          .$name("merge_time").$value("Merge Time").__().__();
     }
 
     footRow.th().input("search_init").$type(InputType.text)
-        .$name("attempt_finish").$value("Finish Time")._()._();
+        .$name("attempt_finish").$value("Finish Time").__().__();
 
     if(type == TaskType.REDUCE) {
       footRow.th().input("search_init").$type(InputType.text)
-          .$name("elapsed_shuffle_time").$value("Elapsed Shuffle Time")._()._();
+          .$name("elapsed_shuffle_time").$value("Elapsed Shuffle Time").__().__();
       footRow.th().input("search_init").$type(InputType.text)
-          .$name("elapsed_merge_time").$value("Elapsed Merge Time")._()._();
+          .$name("elapsed_merge_time").$value("Elapsed Merge Time").__().__();
       footRow.th().input("search_init").$type(InputType.text)
-          .$name("elapsed_reduce_time").$value("Elapsed Reduce Time")._()._();
+          .$name("elapsed_reduce_time").$value("Elapsed Reduce Time").__().__();
     }
 
     footRow.th().input("search_init").$type(InputType.text)
-        .$name("attempt_elapsed").$value("Elapsed Time")._()._();
+        .$name("attempt_elapsed").$value("Elapsed Time").__().__();
 
-    footRow._()._()._();
+    footRow.__().__().__();
   }
 }

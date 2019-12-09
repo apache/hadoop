@@ -57,12 +57,25 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
 
   @Before
   public void nameThread() {
-    Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
+    Thread.currentThread().setName("JUnit-" + getMethodName());
+  }
+
+  protected String getMethodName() {
+    return methodName.getMethodName();
   }
 
   @Override
   protected int getTestTimeoutMillis() {
     return S3A_TEST_TIMEOUT;
+  }
+
+  /**
+   * Create a configuration, possibly patching in S3Guard options.
+   * @return a configuration
+   */
+  @Override
+  protected Configuration createConfiguration() {
+    return S3ATestUtils.prepareTestConfiguration(super.createConfiguration());
   }
 
   protected Configuration getConfiguration() {
@@ -85,7 +98,7 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
    */
   protected void describe(String text, Object... args) {
     LOG.info("\n\n{}: {}\n",
-        methodName.getMethodName(),
+        getMethodName(),
         String.format(text, args));
   }
 
@@ -99,10 +112,21 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
    */
   protected Path writeThenReadFile(String name, int len) throws IOException {
     Path path = path(name);
+    writeThenReadFile(path, len);
+    return path;
+  }
+
+  /**
+   * Write a file, read it back, validate the dataset. Overwrites the file
+   * if it is present
+   * @param path path to file
+   * @param len length of file
+   * @throws IOException any IO problem
+   */
+  protected void writeThenReadFile(Path path, int len) throws IOException {
     byte[] data = dataset(len, 'a', 'z');
     writeDataset(getFileSystem(), path, data, data.length, 1024 * 1024, true);
     ContractTestUtils.verifyFileContents(getFileSystem(), path, data);
-    return path;
   }
 
   /**

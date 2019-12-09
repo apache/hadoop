@@ -250,18 +250,43 @@ public class CommonConfigurationKeysPublic {
    * @deprecated Moved to mapreduce, see mapreduce.task.io.sort.mb
    * in mapred-default.xml
    * See https://issues.apache.org/jira/browse/HADOOP-6801
+   *
+   * For {@link org.apache.hadoop.io.SequenceFile.Sorter} control
+   * instead, see {@link #SEQ_IO_SORT_MB_KEY}.
    */
   public static final String  IO_SORT_MB_KEY = "io.sort.mb";
-  /** Default value for IO_SORT_MB_DEFAULT */
+  /** Default value for {@link #IO_SORT_MB_KEY}. */
   public static final int     IO_SORT_MB_DEFAULT = 100;
   /**
    * @deprecated Moved to mapreduce, see mapreduce.task.io.sort.factor
    * in mapred-default.xml
    * See https://issues.apache.org/jira/browse/HADOOP-6801
+   *
+   * For {@link org.apache.hadoop.io.SequenceFile.Sorter} control
+   * instead, see {@link #SEQ_IO_SORT_FACTOR_KEY}.
    */
   public static final String  IO_SORT_FACTOR_KEY = "io.sort.factor";
-  /** Default value for IO_SORT_FACTOR_DEFAULT */
+  /** Default value for {@link #IO_SORT_FACTOR_KEY}. */
   public static final int     IO_SORT_FACTOR_DEFAULT = 100;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String  SEQ_IO_SORT_MB_KEY = "seq.io.sort.mb";
+  /** Default value for {@link #SEQ_IO_SORT_MB_KEY}. */
+  public static final int     SEQ_IO_SORT_MB_DEFAULT = 100;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String  SEQ_IO_SORT_FACTOR_KEY = "seq.io.sort.factor";
+  /** Default value for {@link #SEQ_IO_SORT_FACTOR_KEY}. */
+  public static final int     SEQ_IO_SORT_FACTOR_DEFAULT = 100;
+
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
@@ -517,6 +542,36 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
+  public static final String HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_KEY =
+      "hadoop.security.groups.shell.command.timeout";
+  /**
+   * @deprecated use
+   * {@link CommonConfigurationKeysPublic#HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_KEY}
+   * instead.
+   */
+  public static final String HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_SECS =
+      HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_KEY;
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final long
+      HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_DEFAULT =
+      0L;
+  /**
+   * @deprecated use
+   * {@link CommonConfigurationKeysPublic#HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_DEFAULT}
+   * instead.
+   */
+  public static final long
+      HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_SECS_DEFAULT =
+      HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_DEFAULT;
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
   public static final String  HADOOP_SECURITY_AUTHENTICATION =
     "hadoop.security.authentication";
   /**
@@ -552,6 +607,13 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
+  public static final String  HADOOP_SECURITY_AUTH_TO_LOCAL_MECHANISM =
+    "hadoop.security.auth_to_local.mechanism";
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
   public static final String HADOOP_SECURITY_DNS_INTERFACE_KEY =
     "hadoop.security.dns.interface";
   /**
@@ -568,6 +630,8 @@ public class CommonConfigurationKeysPublic {
    */
   public static final String HADOOP_TOKEN_FILES =
       "hadoop.token.files";
+  public static final String HADOOP_HTTP_AUTHENTICATION_TYPE =
+    "hadoop.http.authentication.type";
 
   /**
    * @see
@@ -620,6 +684,13 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
+  public static final String HADOOP_SECURITY_CRYPTO_JCEKS_KEY_SERIALFILTER =
+      "hadoop.security.crypto.jceks.key.serialfilter";
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
   public static final String HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_KEY = 
     "hadoop.security.crypto.buffer.size";
   /** Defalt value for HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_KEY */
@@ -635,6 +706,27 @@ public class CommonConfigurationKeysPublic {
    */
   public static final String HADOOP_SECURITY_KEY_PROVIDER_PATH =
       "hadoop.security.key.provider.path";
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_KEY =
+      "hadoop.security.key.default.bitlength";
+  /** Defalt value for HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_KEY. */
+  public static final int HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_DEFAULT = 128;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_SECURITY_KEY_DEFAULT_CIPHER_KEY =
+      "hadoop.security.key.default.cipher";
+  /** Defalt value for HADOOP_SECURITY_KEY_DEFAULT_CIPHER_KEY. */
+  public static final String HADOOP_SECURITY_KEY_DEFAULT_CIPHER_DEFAULT =
+      "AES/CTR/NoPadding";
 
   //  <!-- KMSClientProvider configurations -->
   /**
@@ -678,6 +770,44 @@ public class CommonConfigurationKeysPublic {
       "hadoop.security.kms.client.encrypted.key.cache.expiry";
   /** Default value for KMS_CLIENT_ENC_KEY_CACHE_EXPIRY (12 hrs)*/
   public static final int KMS_CLIENT_ENC_KEY_CACHE_EXPIRY_DEFAULT = 43200000;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String KMS_CLIENT_TIMEOUT_SECONDS =
+      "hadoop.security.kms.client.timeout";
+  public static final int KMS_CLIENT_TIMEOUT_DEFAULT = 60;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  /** Default value is the number of providers specified. */
+  public static final String KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY =
+      "hadoop.security.kms.client.failover.max.retries";
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String KMS_CLIENT_FAILOVER_SLEEP_BASE_MILLIS_KEY =
+      "hadoop.security.kms.client.failover.sleep.base.millis";
+  /**  Default value is 100 ms. */
+  public static final int KMS_CLIENT_FAILOVER_SLEEP_BASE_MILLIS_DEFAULT  = 100;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String KMS_CLIENT_FAILOVER_SLEEP_MAX_MILLIS_KEY =
+      "hadoop.security.kms.client.failover.sleep.max.millis";
+  /** Default value is 2 secs. */
+  public static final int KMS_CLIENT_FAILOVER_SLEEP_MAX_MILLIS_DEFAULT  = 2000;
 
   /**
    * @see
@@ -770,12 +900,43 @@ public class CommonConfigurationKeysPublic {
   public static final String HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS =
       "hadoop.security.sensitive-config-keys";
   public static final String HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS_DEFAULT =
-      "secret$" + "," +
-      "password$" + "," +
-      "ssl.keystore.pass$" + "," +
-      "fs.s3.*[Ss]ecret.?[Kk]ey" + "," +
-      "fs.azure\\.account.key.*" + "," +
-      "dfs.webhdfs.oauth2.[a-z]+.token" + "," +
-      HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS;
+      String.join(",",
+          "secret$",
+          "password$",
+          "ssl.keystore.pass$",
+          "fs.s3.*[Ss]ecret.?[Kk]ey",
+          "fs.s3a.*.server-side-encryption.key",
+          "fs.azure\\.account.key.*",
+          "credential$",
+          "oauth.*secret",
+          "oauth.*password",
+          "oauth.*token",
+          HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS);
+
+  /**
+   * @deprecated Please use
+   * {@link CommonConfigurationKeysPublic#HADOOP_TAGS_SYSTEM} instead
+   * See https://issues.apache.org/jira/browse/HADOOP-15474
+   */
+  public static final String HADOOP_SYSTEM_TAGS = "hadoop.system.tags";
+
+  /**
+   * @deprecated Please use
+   * {@link CommonConfigurationKeysPublic#HADOOP_TAGS_CUSTOM} instead
+   * See https://issues.apache.org/jira/browse/HADOOP-15474
+   */
+  public static final String HADOOP_CUSTOM_TAGS = "hadoop.custom.tags";
+
+  public static final String HADOOP_TAGS_SYSTEM = "hadoop.tags.system";
+  public static final String HADOOP_TAGS_CUSTOM = "hadoop.tags.custom";
+
+  /** Configuration option for the shutdown hook manager shutdown time:
+   *  {@value}. */
+  public static final String SERVICE_SHUTDOWN_TIMEOUT =
+      "hadoop.service.shutdown.timeout";
+
+  /** Default shutdown hook timeout: {@value} seconds. */
+  public static final long SERVICE_SHUTDOWN_TIMEOUT_DEFAULT = 30;
+
 }
 

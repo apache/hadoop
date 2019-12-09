@@ -31,10 +31,10 @@ import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.CredentialsNone;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mockito.internal.util.reflection.Whitebox;
 
 public class TestPortmap {
   private static Portmap pm = new Portmap();
@@ -53,7 +53,7 @@ public class TestPortmap {
     pm.shutdown();
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testIdle() throws InterruptedException, IOException {
     Socket s = new Socket();
     try {
@@ -75,7 +75,7 @@ public class TestPortmap {
     }
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testRegistration() throws IOException, InterruptedException {
     XDR req = new XDR();
     RpcCall.getInstance(++xid, RpcProgramPortmap.PROGRAM,

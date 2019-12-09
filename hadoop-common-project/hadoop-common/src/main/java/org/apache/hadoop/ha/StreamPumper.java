@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.ha;
 
+import org.slf4j.Logger;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-
-import org.apache.commons.logging.Log;
 
 /**
  * Class responsible for pumping the streams of the subprocess
@@ -35,7 +35,7 @@ class StreamPumper {
     STDOUT, STDERR;
   }
 
-  private final Log log;
+  private final Logger log;
   
   final Thread thread;
   final String logPrefix;
@@ -43,7 +43,7 @@ class StreamPumper {
   private final InputStream stream;
   private boolean started = false;
   
-  StreamPumper(final Log log, final String logPrefix,
+  StreamPumper(final Logger log, final String logPrefix,
       final InputStream stream, final StreamType type) {
     this.log = log;
     this.logPrefix = logPrefix;

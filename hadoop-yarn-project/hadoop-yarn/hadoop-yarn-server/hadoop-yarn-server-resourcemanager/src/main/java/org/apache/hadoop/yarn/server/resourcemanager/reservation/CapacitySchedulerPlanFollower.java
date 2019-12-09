@@ -31,7 +31,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicE
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlanQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ReservationQueue;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .ReservationQueue;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;

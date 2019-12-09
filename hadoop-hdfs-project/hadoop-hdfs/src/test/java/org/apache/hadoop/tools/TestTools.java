@@ -1,5 +1,3 @@
-package org.apache.hadoop.tools;
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,6 +15,9 @@ package org.apache.hadoop.tools;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+package org.apache.hadoop.tools;
+
 import static org.junit.Assert.*;
 
 import java.io.ByteArrayOutputStream;

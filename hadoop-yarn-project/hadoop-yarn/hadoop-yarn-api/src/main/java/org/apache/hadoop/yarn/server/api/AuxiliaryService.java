@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 public abstract class AuxiliaryService extends AbstractService {
 
   private Path recoveryPath = null;
+  private AuxiliaryLocalPathHandler auxiliaryLocalPathHandler;
 
   protected AuxiliaryService(String name) {
     super(name);
@@ -122,5 +123,25 @@ public abstract class AuxiliaryService extends AbstractService {
    */
   public void setRecoveryPath(Path recoveryPath) {
     this.recoveryPath = recoveryPath;
+  }
+
+  /**
+   * Method that gets the local dirs path handler for this Auxiliary Service.
+   *
+   * @return auxiliaryPathHandler object that is used to read from and write to
+   * valid local Dirs.
+   */
+  public AuxiliaryLocalPathHandler getAuxiliaryLocalPathHandler() {
+    return this.auxiliaryLocalPathHandler;
+  }
+
+  /**
+   * Method that sets the local dirs path handler for this Auxiliary Service.
+   *
+   * @param auxiliaryLocalPathHandler the pathHandler for this auxiliary service
+   */
+  public void setAuxiliaryLocalPathHandler(
+      AuxiliaryLocalPathHandler auxiliaryLocalPathHandler) {
+    this.auxiliaryLocalPathHandler = auxiliaryLocalPathHandler;
   }
 }

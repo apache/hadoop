@@ -18,19 +18,20 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class TestJobSummary {
 
-  private static final Log LOG = LogFactory.getLog(TestJobSummary.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestJobSummary.class);
   private JobSummary summary = new JobSummary();
 
   @Before
@@ -43,10 +44,12 @@ public class TestJobSummary {
     summary.setFirstMapTaskLaunchTime(4L);
     summary.setFirstReduceTaskLaunchTime(5L);
     summary.setJobFinishTime(6L);
-    summary.setNumFinishedMaps(1);
+    summary.setNumSucceededMaps(1);
     summary.setNumFailedMaps(0);
-    summary.setNumFinishedReduces(1);
+    summary.setNumSucceededReduces(1);
     summary.setNumFailedReduces(0);
+    summary.setNumKilledMaps(0);
+    summary.setNumKilledReduces(0);
     summary.setUser("testUser");
     summary.setQueue("testQueue");
     summary.setJobStatus("testJobStatus");

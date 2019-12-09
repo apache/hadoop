@@ -21,11 +21,11 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.FileDescriptor;
 
-import org.apache.commons.lang.SystemUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A factory for creating shared file descriptors inside a given directory.
@@ -45,7 +45,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class SharedFileDescriptorFactory {
-  public static final Log LOG = LogFactory.getLog(SharedFileDescriptorFactory.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SharedFileDescriptorFactory.class);
   private final String prefix;
   private final String path;
 

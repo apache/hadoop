@@ -45,6 +45,8 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.FormatReq
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.FormatResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalCTimeRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalCTimeResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateRequestProto;
@@ -101,7 +103,8 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
       IsFormattedRequestProto request) throws ServiceException {
     try {
       boolean ret = impl.isFormatted(
-          convert(request.getJid()));
+          convert(request.getJid()),
+          request.hasNameServiceId() ? request.getNameServiceId() : null);
       return IsFormattedResponseProto.newBuilder()
           .setIsFormatted(ret)
           .build();
@@ -116,7 +119,8 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
       GetJournalStateRequestProto request) throws ServiceException {
     try {
       return impl.getJournalState(
-          convert(request.getJid()));
+          convert(request.getJid()),
+          request.hasNameServiceId() ? request.getNameServiceId() : null);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -132,6 +136,7 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
     try {
       return impl.newEpoch(
           request.getJid().getIdentifier(),
+          request.hasNameServiceId() ? request.getNameServiceId() : null,
           PBHelper.convert(request.getNsInfo()),
           request.getEpoch());
     } catch (IOException ioe) {
@@ -143,7 +148,8 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
       FormatRequestProto request) throws ServiceException {
     try {
       impl.format(request.getJid().getIdentifier(),
-          PBHelper.convert(request.getNsInfo()));
+          request.hasNameServiceId() ? request.getNameServiceId() : null,
+          PBHelper.convert(request.getNsInfo()), request.getForce());
       return FormatResponseProto.getDefaultInstance();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -223,6 +229,7 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
     try {
       return impl.getEditLogManifest(
           request.getJid().getIdentifier(),
+          request.hasNameServiceId() ? request.getNameServiceId() : null,
           request.getSinceTxId(),
           request.getInProgressOk());
     } catch (IOException e) {
@@ -230,6 +237,18 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
     }
   }
 
+  @Override
+  public GetJournaledEditsResponseProto getJournaledEdits(
+      RpcController controller, GetJournaledEditsRequestProto request)
+      throws ServiceException {
+    try {
+      return impl.getJournaledEdits(request.getJid().getIdentifier(),
+          request.hasNameServiceId() ? request.getNameServiceId() : null,
+          request.getSinceTxId(), request.getMaxTxns());
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
 
   @Override
   public PrepareRecoveryResponseProto prepareRecovery(RpcController controller,
@@ -260,6 +279,8 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
       QJournalProtocolProtos.RequestInfoProto reqInfo) {
     return new RequestInfo(
         reqInfo.getJournalId().getIdentifier(),
+        reqInfo.hasNameServiceId() ?
+            reqInfo.getNameServiceId() : null,
         reqInfo.getEpoch(),
         reqInfo.getIpcSerialNumber(),
         reqInfo.hasCommittedTxId() ?
@@ -294,7 +315,8 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
   public DoFinalizeResponseProto doFinalize(RpcController controller,
       DoFinalizeRequestProto request) throws ServiceException {
     try {
-      impl.doFinalize(convert(request.getJid()));
+      impl.doFinalize(convert(request.getJid()),
+          request.hasNameServiceId() ? request.getNameServiceId() : null);
       return DoFinalizeResponseProto.getDefaultInstance();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -306,7 +328,9 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
       CanRollBackRequestProto request) throws ServiceException {
     try {
       StorageInfo si = PBHelper.convert(request.getStorage(), NodeType.JOURNAL_NODE);
-      Boolean result = impl.canRollBack(convert(request.getJid()), si,
+      Boolean result = impl.canRollBack(convert(request.getJid()),
+          request.hasNameServiceId() ? request.getNameServiceId() : null,
+          si,
           PBHelper.convert(request.getPrevStorage(), NodeType.JOURNAL_NODE),
           request.getTargetLayoutVersion());
       return CanRollBackResponseProto.newBuilder()
@@ -321,7 +345,7 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
   public DoRollbackResponseProto doRollback(RpcController controller, DoRollbackRequestProto request)
       throws ServiceException {
     try {
-      impl.doRollback(convert(request.getJid()));
+      impl.doRollback(convert(request.getJid()), request.getNameserviceId());
       return DoRollbackResponseProto.getDefaultInstance();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -333,7 +357,9 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
       RpcController controller, DiscardSegmentsRequestProto request)
       throws ServiceException {
     try {
-      impl.discardSegments(convert(request.getJid()), request.getStartTxId());
+      impl.discardSegments(convert(request.getJid()),
+          request.hasNameServiceId() ? request.getNameServiceId() : null,
+          request.getStartTxId());
       return DiscardSegmentsResponseProto.getDefaultInstance();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -344,7 +370,8 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
   public GetJournalCTimeResponseProto getJournalCTime(RpcController controller,
       GetJournalCTimeRequestProto request) throws ServiceException {
     try {
-      Long resultCTime = impl.getJournalCTime(convert(request.getJid()));
+      Long resultCTime = impl.getJournalCTime(convert(request.getJid()),
+          request.getNameServiceId());
       return GetJournalCTimeResponseProto.newBuilder()
           .setResultCTime(resultCTime)
           .build();

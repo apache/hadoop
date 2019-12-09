@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -35,8 +36,8 @@ import java.util.Stack;
 import java.util.TreeSet;
 import java.util.Map.Entry;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import javax.annotation.Nonnull;
+
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -63,6 +64,8 @@ import org.apache.hadoop.util.ShutdownHookManager;
 
 import com.google.common.base.Preconditions;
 import org.apache.htrace.core.Tracer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The FileContext class provides an interface for users of the Hadoop
@@ -169,7 +172,7 @@ import org.apache.htrace.core.Tracer;
 @InterfaceStability.Stable
 public class FileContext {
   
-  public static final Log LOG = LogFactory.getLog(FileContext.class);
+  public static final Logger LOG = LoggerFactory.getLogger(FileContext.class);
   /**
    * Default permission for directory and symlink
    * In previous versions, this default permission was also used to
@@ -216,10 +219,12 @@ public class FileContext {
    * The FileContext is defined by.
    *  1) defaultFS (slash)
    *  2) wd
-   *  3) umask (Obtained by FsPermission.getUMask(conf))
+   *  3) umask (explicitly set via setUMask(),
+   *      falling back to FsPermission.getUMask(conf))
    */   
   private final AbstractFileSystem defaultFS; //default FS for this FileContext.
   private Path workingDir;          // Fully qualified
+  private FsPermission umask;
   private final Configuration conf;
   private final UserGroupInformation ugi;
   final boolean resolveSymlinks;
@@ -331,8 +336,17 @@ public class FileContext {
           return AbstractFileSystem.get(uri, conf);
         }
       });
+    } catch (RuntimeException ex) {
+      // RTEs can wrap other exceptions; if there is an IOException inner,
+      // throw it direct.
+      Throwable cause = ex.getCause();
+      if (cause instanceof IOException) {
+        throw (IOException) cause;
+      } else {
+        throw ex;
+      }
     } catch (InterruptedException ex) {
-      LOG.error(ex);
+      LOG.error(ex.toString());
       throw new IOException("Failed to get the AbstractFileSystem for path: "
           + uri, ex);
     }
@@ -446,7 +460,7 @@ public class FileContext {
     } catch (UnsupportedFileSystemException ex) {
       throw ex;
     } catch (IOException ex) {
-      LOG.error(ex);
+      LOG.error(ex.toString());
       throw new RuntimeException(ex);
     }
     return getFileContext(defaultAfs, aConf);
@@ -563,7 +577,7 @@ public class FileContext {
    * @return the umask of this FileContext
    */
   public FsPermission getUMask() {
-    return FsPermission.getUMask(conf);
+    return (umask != null ? umask : FsPermission.getUMask(conf));
   }
   
   /**
@@ -571,9 +585,8 @@ public class FileContext {
    * @param newUmask  the new umask
    */
   public void setUMask(final FsPermission newUmask) {
-    FsPermission.setUMask(conf, newUmask);
+    this.umask = newUmask;
   }
-  
   
   /**
    * Resolve the path following any symlinks or mount points
@@ -683,6 +696,69 @@ public class FileContext {
         return fs.create(p, createFlag, updatedOpts);
       }
     }.resolve(this, absF);
+  }
+
+  /**
+   * {@link FSDataOutputStreamBuilder} for {@liink FileContext}.
+   */
+  private static final class FCDataOutputStreamBuilder extends
+      FSDataOutputStreamBuilder<
+        FSDataOutputStream, FCDataOutputStreamBuilder> {
+    private final FileContext fc;
+
+    private FCDataOutputStreamBuilder(
+        @Nonnull FileContext fc, @Nonnull Path p) throws IOException {
+      super(fc, p);
+      this.fc = fc;
+      Preconditions.checkNotNull(fc);
+    }
+
+    @Override
+    protected FCDataOutputStreamBuilder getThisBuilder() {
+      return this;
+    }
+
+    @Override
+    public FSDataOutputStream build() throws IOException {
+      final EnumSet<CreateFlag> flags = getFlags();
+      List<CreateOpts> createOpts = new ArrayList<>(Arrays.asList(
+          CreateOpts.blockSize(getBlockSize()),
+          CreateOpts.bufferSize(getBufferSize()),
+          CreateOpts.repFac(getReplication()),
+          CreateOpts.perms(getPermission())
+      ));
+      if (getChecksumOpt() != null) {
+        createOpts.add(CreateOpts.checksumParam(getChecksumOpt()));
+      }
+      if (getProgress() != null) {
+        createOpts.add(CreateOpts.progress(getProgress()));
+      }
+      if (isRecursive()) {
+        createOpts.add(CreateOpts.createParent());
+      }
+      return fc.create(getPath(), flags,
+          createOpts.toArray(new CreateOpts[0]));
+    }
+  }
+
+  /**
+   * Create a {@link FSDataOutputStreamBuilder} for creating or overwriting
+   * a file on indicated path.
+   *
+   * @param f the file path to create builder for.
+   * @return {@link FSDataOutputStreamBuilder} to build a
+   *         {@link FSDataOutputStream}.
+   *
+   * Upon {@link FSDataOutputStreamBuilder#build()} being invoked,
+   * builder parameters will be verified by {@link FileContext} and
+   * {@link AbstractFileSystem#create}. And filesystem states will be modified.
+   *
+   * Client should expect {@link FSDataOutputStreamBuilder#build()} throw the
+   * same exceptions as create(Path, EnumSet, CreateOpts...).
+   */
+  public FSDataOutputStreamBuilder<FSDataOutputStream, ?> create(final Path f)
+      throws IOException {
+    return new FCDataOutputStreamBuilder(this, f).create();
   }
 
   /**
@@ -1284,7 +1360,36 @@ public class FileContext {
    *
    * This call is most helpful with DFS, where it returns 
    * hostnames of machines that contain the given file.
-   * 
+   *
+   * In HDFS, if file is three-replicated, the returned array contains
+   * elements like:
+   * <pre>
+   * BlockLocation(offset: 0, length: BLOCK_SIZE,
+   *   hosts: {"host1:9866", "host2:9866, host3:9866"})
+   * BlockLocation(offset: BLOCK_SIZE, length: BLOCK_SIZE,
+   *   hosts: {"host2:9866", "host3:9866, host4:9866"})
+   * </pre>
+   *
+   * And if a file is erasure-coded, the returned BlockLocation are logical
+   * block groups.
+   *
+   * Suppose we have a RS_3_2 coded file (3 data units and 2 parity units).
+   * 1. If the file size is less than one stripe size, say 2 * CELL_SIZE, then
+   * there will be one BlockLocation returned, with 0 offset, actual file size
+   * and 4 hosts (2 data blocks and 2 parity blocks) hosting the actual blocks.
+   * 3. If the file size is less than one group size but greater than one
+   * stripe size, then there will be one BlockLocation returned, with 0 offset,
+   * actual file size with 5 hosts (3 data blocks and 2 parity blocks) hosting
+   * the actual blocks.
+   * 4. If the file size is greater than one group size, 3 * BLOCK_SIZE + 123
+   * for example, then the result will be like:
+   * <pre>
+   * BlockLocation(offset: 0, length: 3 * BLOCK_SIZE, hosts: {"host1:9866",
+   *   "host2:9866","host3:9866","host4:9866","host5:9866"})
+   * BlockLocation(offset: 3 * BLOCK_SIZE, length: 123, hosts: {"host1:9866",
+   *   "host4:9866", "host5:9866"})
+   * </pre>
+   *
    * @param f - get blocklocations of this file
    * @param start position (byte offset)
    * @param len (in bytes)
@@ -1518,7 +1623,7 @@ public class FileContext {
    * Return the file's status and block locations If the path is a file.
    * 
    * If a returned status is a file, it contains the file's block locations.
-   * 
+   *
    * @param f is the path
    *
    * @return an iterator that traverses statuses of the files/directories 
@@ -1974,7 +2079,7 @@ public class FileContext {
      *  </dd>
      * </dl>
      *
-     * @param pathPattern a regular expression specifying a pth pattern
+     * @param pathPattern a glob specifying a path pattern
      *
      * @return an array of paths that match the path pattern
      *
@@ -2002,7 +2107,7 @@ public class FileContext {
      * Return null if pathPattern has no glob and the path does not exist.
      * Return an empty array if pathPattern has a glob and no path matches it. 
      * 
-     * @param pathPattern regular expression specifying the path pattern
+     * @param pathPattern glob specifying the path pattern
      * @param filter user-supplied path filter
      *
      * @return an array of FileStatus objects
@@ -2083,17 +2188,13 @@ public class FileContext {
               content.getPath().getName())), deleteSource, overwrite);
         }
       } else {
-        InputStream in=null;
-        OutputStream out = null;
-        try {
-          in = open(qSrc);
-          EnumSet<CreateFlag> createFlag = overwrite ? EnumSet.of(
-              CreateFlag.CREATE, CreateFlag.OVERWRITE) : 
-                EnumSet.of(CreateFlag.CREATE);
-          out = create(qDst, createFlag);
+        EnumSet<CreateFlag> createFlag = overwrite ? EnumSet.of(
+            CreateFlag.CREATE, CreateFlag.OVERWRITE) :
+            EnumSet.of(CreateFlag.CREATE);
+        InputStream in = open(qSrc);
+        try (OutputStream out = create(qDst, createFlag)) {
           IOUtils.copyBytes(in, out, conf, true);
         } finally {
-          IOUtils.closeStream(out);
           IOUtils.closeStream(in);
         }
       }

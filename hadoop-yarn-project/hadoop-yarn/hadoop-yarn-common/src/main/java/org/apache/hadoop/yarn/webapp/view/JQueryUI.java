@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.webapp.view;
 
-import static org.apache.commons.lang.StringEscapeUtils.escapeJavaScript;
+import static org.apache.commons.text.StringEscapeUtils.escapeEcmaScript;
 import static org.apache.hadoop.yarn.util.StringHelper.djoin;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.util.StringHelper.split;
@@ -26,7 +26,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.split;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.HTML;
+import org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.HTML;
 
 import com.google.common.collect.Lists;
 
@@ -66,10 +66,10 @@ public class JQueryUI extends HtmlBlock {
   @Override
   protected void render(Block html) {
     html.link(root_url("static/jquery/themes-1.9.1/base/jquery-ui.css"))
-        .link(root_url("static/dt-1.9.4/css/jui-dt.css"))
-        .script(root_url("static/jquery/jquery-1.8.2.min.js"))
-        .script(root_url("static/jquery/jquery-ui-1.9.1.custom.min.js"))
-        .script(root_url("static/dt-1.9.4/js/jquery.dataTables.min.js"))
+        .link(root_url("static/dt-1.10.7/css/jui-dt.css"))
+        .script(root_url("static/jquery/jquery-3.3.1.min.js"))
+        .script(root_url("static/jquery/jquery-ui-1.12.1.custom.min.js"))
+        .script(root_url("static/dt-1.10.7/js/jquery.dataTables.min.js"))
         .script(root_url("static/yarn.dt.plugins.js"))
         .script(root_url("static/dt-sorting/natural.js"))
         .style("#jsnotice { padding: 0.2em; text-align: center; }",
@@ -82,19 +82,19 @@ public class JQueryUI extends HtmlBlock {
     initProgressBars(list);
 
     if (!list.isEmpty()) {
-      html.script().$type("text/javascript")._("$(function() {")
-          ._(list.toArray())._("});")._();
+      html.script().$type("text/javascript").__("$(function() {")
+          .__(list.toArray()).__("});").__();
     }
   }
 
   public static void jsnotice(HTML html) {
     html.
       div("#jsnotice.ui-state-error").
-          _("This page will not function without javascript enabled."
-            + " Please enable javascript on your browser.")._();
+        __("This page will not function without javascript enabled."
+            + " Please enable javascript on your browser.").__();
     html.
       script().$type("text/javascript").
-        _("$('#jsnotice').hide();")._();
+        __("$('#jsnotice').hide();").__();
   }
 
   protected void initAccordions(List<String> list) {
@@ -130,7 +130,7 @@ public class JQueryUI extends HtmlBlock {
         // for inserting stateSaveInit
         int pos = init.indexOf('{') + 1;  
         init = new StringBuffer(init).insert(pos, stateSaveInit).toString(); 
-        list.add(join(id,"DataTable =  $('#", id, "').dataTable(", init,
+        list.add(join(id, "DataTable =  $('#", id, "').dataTable(", init,
                       ").fnSetFilteringDelay(188);"));
         String postInit = $(postInitID(DATATABLES, id));
         if(!postInit.isEmpty()) {
@@ -146,7 +146,7 @@ public class JQueryUI extends HtmlBlock {
       }      
       int pos = init.indexOf('{') + 1;  
       init = new StringBuffer(init).insert(pos, stateSaveInit).toString();  
-      list.add(join("  $('", escapeJavaScript(selector), "').dataTable(", init,
+      list.add(join("  $('", escapeEcmaScript(selector), "').dataTable(", init,
                ").fnSetFilteringDelay(288);"));      
       
     }
@@ -174,7 +174,7 @@ public class JQueryUI extends HtmlBlock {
       if (init.isEmpty()) {
         init = defaultInit;
       }
-      list.add(join("  $('", escapeJavaScript(selector),
+      list.add(join("  $('", escapeEcmaScript(selector),
                "').click(function() { $(this).children('.dialog').dialog(",
                init, "); return false; });"));
     }

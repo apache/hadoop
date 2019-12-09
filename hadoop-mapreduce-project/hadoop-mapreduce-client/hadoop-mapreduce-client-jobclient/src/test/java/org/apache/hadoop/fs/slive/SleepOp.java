@@ -21,10 +21,10 @@ package org.apache.hadoop.fs.slive;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.slive.OperationOutput.OutputType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Operation which sleeps for a given number of milliseconds according to the
@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.slive.OperationOutput.OutputType;
  */
 class SleepOp extends Operation {
 
-  private static final Log LOG = LogFactory.getLog(SleepOp.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SleepOp.class);
 
   SleepOp(ConfigExtractor cfg, Random rnd) {
     super(SleepOp.class.getSimpleName(), cfg, rnd);

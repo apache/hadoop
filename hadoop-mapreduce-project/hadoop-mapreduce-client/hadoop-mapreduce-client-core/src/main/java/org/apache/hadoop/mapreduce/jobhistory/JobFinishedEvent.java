@@ -36,16 +36,18 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class JobFinishedEvent  implements HistoryEvent {
+public class JobFinishedEvent implements HistoryEvent {
 
   private JobFinished datum = null;
 
   private JobID jobId;
   private long finishTime;
-  private int finishedMaps;
-  private int finishedReduces;
+  private int succeededMaps;
+  private int succeededReduces;
   private int failedMaps;
   private int failedReduces;
+  private int killedMaps;
+  private int killedReduces;
   private Counters mapCounters;
   private Counters reduceCounters;
   private Counters totalCounters;
@@ -54,8 +56,8 @@ public class JobFinishedEvent  implements HistoryEvent {
    * Create an event to record successful job completion
    * @param id Job ID
    * @param finishTime Finish time of the job
-   * @param finishedMaps The number of finished maps
-   * @param finishedReduces The number of finished reduces
+   * @param succeededMaps The number of succeeded maps
+   * @param succeededReduces The number of succeeded reduces
    * @param failedMaps The number of failed maps
    * @param failedReduces The number of failed reduces
    * @param mapCounters Map Counters for the job
@@ -63,16 +65,19 @@ public class JobFinishedEvent  implements HistoryEvent {
    * @param totalCounters Total Counters for the job
    */
   public JobFinishedEvent(JobID id, long finishTime,
-      int finishedMaps, int finishedReduces,
+      int succeededMaps, int succeededReduces,
       int failedMaps, int failedReduces,
+      int killedMaps, int killedReduces,
       Counters mapCounters, Counters reduceCounters,
       Counters totalCounters) {
     this.jobId = id;
     this.finishTime = finishTime;
-    this.finishedMaps = finishedMaps;
-    this.finishedReduces = finishedReduces;
+    this.succeededMaps = succeededMaps;
+    this.succeededReduces = succeededReduces;
     this.failedMaps = failedMaps;
     this.failedReduces = failedReduces;
+    this.killedMaps = killedMaps;
+    this.killedReduces = killedReduces;
     this.mapCounters = mapCounters;
     this.reduceCounters = reduceCounters;
     this.totalCounters = totalCounters;
@@ -85,10 +90,14 @@ public class JobFinishedEvent  implements HistoryEvent {
       datum = new JobFinished();
       datum.setJobid(new Utf8(jobId.toString()));
       datum.setFinishTime(finishTime);
-      datum.setFinishedMaps(finishedMaps);
-      datum.setFinishedReduces(finishedReduces);
+      // using finishedMaps & finishedReduces in the Avro schema for backward
+      // compatibility
+      datum.setFinishedMaps(succeededMaps);
+      datum.setFinishedReduces(succeededReduces);
       datum.setFailedMaps(failedMaps);
       datum.setFailedReduces(failedReduces);
+      datum.setKilledMaps(killedMaps);
+      datum.setKilledReduces(killedReduces);
       datum.setMapCounters(EventWriter.toAvro(mapCounters, "MAP_COUNTERS"));
       datum.setReduceCounters(EventWriter.toAvro(reduceCounters,
           "REDUCE_COUNTERS"));
@@ -102,10 +111,12 @@ public class JobFinishedEvent  implements HistoryEvent {
     this.datum = (JobFinished) oDatum;
     this.jobId = JobID.forName(datum.getJobid().toString());
     this.finishTime = datum.getFinishTime();
-    this.finishedMaps = datum.getFinishedMaps();
-    this.finishedReduces = datum.getFinishedReduces();
+    this.succeededMaps = datum.getFinishedMaps();
+    this.succeededReduces = datum.getFinishedReduces();
     this.failedMaps = datum.getFailedMaps();
     this.failedReduces = datum.getFailedReduces();
+    this.killedMaps = datum.getKilledMaps();
+    this.killedReduces = datum.getKilledReduces();
     this.mapCounters = EventReader.fromAvro(datum.getMapCounters());
     this.reduceCounters = EventReader.fromAvro(datum.getReduceCounters());
     this.totalCounters = EventReader.fromAvro(datum.getTotalCounters());
@@ -120,13 +131,17 @@ public class JobFinishedEvent  implements HistoryEvent {
   /** Get the job finish time */
   public long getFinishTime() { return finishTime; }
   /** Get the number of finished maps for the job */
-  public int getFinishedMaps() { return finishedMaps; }
+  public int getSucceededMaps() { return succeededMaps; }
   /** Get the number of finished reducers for the job */
-  public int getFinishedReduces() { return finishedReduces; }
+  public int getSucceededReduces() { return succeededReduces; }
   /** Get the number of failed maps for the job */
   public int getFailedMaps() { return failedMaps; }
   /** Get the number of failed reducers for the job */
   public int getFailedReduces() { return failedReduces; }
+  /** Get the number of killed maps */
+  public int getKilledMaps() { return killedMaps; }
+  /** Get the number of killed reduces */
+  public int getKilledReduces() { return killedReduces; }
   /** Get the counters for the job */
   public Counters getTotalCounters() {
     return totalCounters;
@@ -145,12 +160,16 @@ public class JobFinishedEvent  implements HistoryEvent {
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setId(StringUtils.toUpperCase(getEventType().name()));
     tEvent.addInfo("FINISH_TIME", getFinishTime());
-    tEvent.addInfo("NUM_MAPS", getFinishedMaps());
-    tEvent.addInfo("NUM_REDUCES", getFinishedReduces());
+    tEvent.addInfo("NUM_MAPS", getSucceededMaps() + getFailedMaps()
+        + getKilledMaps());
+    tEvent.addInfo("NUM_REDUCES", getSucceededReduces() + getFailedReduces()
+        + getKilledReduces());
     tEvent.addInfo("FAILED_MAPS", getFailedMaps());
     tEvent.addInfo("FAILED_REDUCES", getFailedReduces());
-    tEvent.addInfo("FINISHED_MAPS", getFinishedMaps());
-    tEvent.addInfo("FINISHED_REDUCES", getFinishedReduces());
+    tEvent.addInfo("SUCCESSFUL_MAPS", getSucceededMaps());
+    tEvent.addInfo("SUCCESSFUL_REDUCES", getSucceededReduces());
+    tEvent.addInfo("KILLED_MAPS", getKilledMaps());
+    tEvent.addInfo("KILLED_REDUCES", getKilledReduces());
     // TODO replace SUCCEEDED with JobState.SUCCEEDED.toString()
     tEvent.addInfo("JOB_STATUS", "SUCCEEDED");
     return tEvent;

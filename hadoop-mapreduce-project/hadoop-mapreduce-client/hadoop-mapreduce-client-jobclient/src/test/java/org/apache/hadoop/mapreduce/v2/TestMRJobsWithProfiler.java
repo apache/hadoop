@@ -27,8 +27,6 @@ import java.util.regex.Pattern;
 import org.junit.AfterClass;
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
@@ -42,11 +40,13 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestMRJobsWithProfiler {
 
-  private static final Log LOG =
-    LogFactory.getLog(TestMRJobsWithProfiler.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMRJobsWithProfiler.class);
 
   private static final EnumSet<RMAppState> TERMINAL_RM_APP_STATES =
     EnumSet.of(RMAppState.FINISHED, RMAppState.FAILED, RMAppState.KILLED);

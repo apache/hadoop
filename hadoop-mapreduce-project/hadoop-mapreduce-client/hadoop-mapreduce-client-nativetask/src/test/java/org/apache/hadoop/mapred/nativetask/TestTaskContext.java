@@ -22,23 +22,30 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.Assert;
 
-public class TestTaskContext extends TestCase {
-  
+public class TestTaskContext {
+
+  @Test
   public void testTaskContext() {
-    TaskContext context = new TaskContext(null, null, null, null, null, null, null);
+    TaskContext context = new TaskContext(null, null, null, null, null, null,
+        null);
     
     context.setInputKeyClass(IntWritable.class);
-    assertEquals(IntWritable.class.getName(), context.getInputKeyClass().getName());
+    Assert.assertEquals(IntWritable.class.getName(), context.getInputKeyClass
+        ().getName());
  
     context.setInputValueClass(Text.class);
-    assertEquals(Text.class.getName(), context.getInputValueClass().getName()); 
+    Assert.assertEquals(Text.class.getName(), context.getInputValueClass()
+        .getName());
    
     context.setOutputKeyClass(LongWritable.class);
-    assertEquals(LongWritable.class.getName(), context.getOutputKeyClass().getName()); 
+    Assert.assertEquals(LongWritable.class.getName(), context
+        .getOutputKeyClass().getName());
 
     context.setOutputValueClass(FloatWritable.class);
-    assertEquals(FloatWritable.class.getName(), context.getOutputValueClass().getName()); 
+    Assert.assertEquals(FloatWritable.class.getName(), context
+        .getOutputValueClass().getName());
   }
 }

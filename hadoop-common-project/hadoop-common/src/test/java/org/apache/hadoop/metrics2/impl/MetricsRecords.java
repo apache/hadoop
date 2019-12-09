@@ -49,6 +49,22 @@ public class MetricsRecords {
     assertEquals(expectedValue, resourceLimitMetric.value());
   }
 
+  public static Number getMetricValueByName(MetricsRecord record,
+      String metricName) {
+    AbstractMetric resourceLimitMetric = getFirstMetricByName(
+        record, metricName);
+    assertNotNull(resourceLimitMetric);
+    return resourceLimitMetric.value();
+  }
+
+  public static void assertMetricNotNull(MetricsRecord record,
+      String metricName) {
+    AbstractMetric resourceLimitMetric = getFirstMetricByName(
+        record, metricName);
+    assertNotNull("Metric " + metricName + " doesn't exist",
+        resourceLimitMetric);
+  }
+
   private static MetricsTag getFirstTagByName(MetricsRecord record, String name) {
     return Iterables.getFirst(Iterables.filter(record.tags(),
         new MetricsTagPredicate(name)), null);

@@ -21,6 +21,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -33,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat;
@@ -46,6 +49,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ShortWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 
@@ -534,7 +538,7 @@ public class FSImageSerialization {
       writeString(directive.getPool(), out);
     }
     if (directive.getExpiration() != null) {
-      writeLong(directive.getExpiration().getMillis(), out);
+      writeLong(directive.getExpiration().getAbsoluteMillis(), out);
     }
   }
 
@@ -606,7 +610,7 @@ public class FSImageSerialization {
     }
     if (directive.getExpiration() != null) {
       XMLUtils.addSaxString(contentHandler, "EXPIRATION",
-          "" + directive.getExpiration().getMillis());
+          "" + directive.getExpiration().getAbsoluteMillis());
     }
   }
 
@@ -750,4 +754,45 @@ public class FSImageSerialization {
     return info;
   }
 
+  public static void writeErasureCodingPolicy(DataOutputStream out,
+      ErasureCodingPolicy ecPolicy) throws IOException {
+    writeString(ecPolicy.getSchema().getCodecName(), out);
+    writeInt(ecPolicy.getNumDataUnits(), out);
+    writeInt(ecPolicy.getNumParityUnits(), out);
+    writeInt(ecPolicy.getCellSize(), out);
+
+    Map<String, String> extraOptions = ecPolicy.getSchema().getExtraOptions();
+    if (extraOptions == null || extraOptions.isEmpty()) {
+      writeInt(0, out);
+      return;
+    }
+
+    writeInt(extraOptions.size(), out);
+    for (Map.Entry<String, String> entry : extraOptions.entrySet()) {
+      writeString(entry.getKey(), out);
+      writeString(entry.getValue(), out);
+    }
+  }
+
+  public static ErasureCodingPolicy readErasureCodingPolicy(DataInput in)
+      throws IOException {
+    String codecName = readString(in);
+    int numDataUnits = readInt(in);
+    int numParityUnits = readInt(in);
+    int cellSize = readInt(in);
+
+    int size = readInt(in);
+    Map<String, String> extraOptions = new HashMap<>(size);
+
+    if (size != 0) {
+      for (int i = 0; i < size; i++) {
+        String key = readString(in);
+        String value = readString(in);
+        extraOptions.put(key, value);
+      }
+    }
+    ECSchema ecSchema = new ECSchema(codecName, numDataUnits,
+        numParityUnits, extraOptions);
+    return new ErasureCodingPolicy(ecSchema, cellSize);
+  }
 }

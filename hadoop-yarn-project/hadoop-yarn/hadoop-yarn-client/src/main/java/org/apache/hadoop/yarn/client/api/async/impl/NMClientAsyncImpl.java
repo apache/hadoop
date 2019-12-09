@@ -36,8 +36,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -63,12 +61,15 @@ import org.apache.hadoop.yarn.state.StateMachineFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 @Unstable
 public class NMClientAsyncImpl extends NMClientAsync {
 
-  private static final Log LOG = LogFactory.getLog(NMClientAsyncImpl.class);
+  private static final Logger LOG =
+          LoggerFactory.getLogger(NMClientAsyncImpl.class);
 
   protected static final int INITIAL_THREAD_POOL_SIZE = 10;
 
@@ -259,6 +260,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
     }
   }
 
+  @Deprecated
   public void increaseContainerResourceAsync(Container container) {
     if (!(callbackHandler instanceof AbstractCallbackHandler)) {
       LOG.error("Callback handler does not implement container resource "
@@ -274,11 +276,132 @@ public class NMClientAsyncImpl extends NMClientAsync {
                   " is neither started nor scheduled to start"));
     }
     try {
-      events.put(new IncreaseContainerResourceEvent(container));
+      events.put(new UpdateContainerResourceEvent(container, true));
     } catch (InterruptedException e) {
       LOG.warn("Exception when scheduling the event of increasing resource of "
           + "Container " + container.getId());
       handler.onIncreaseContainerResourceError(container.getId(), e);
+    }
+  }
+
+  @Override
+  public void updateContainerResourceAsync(Container container) {
+    if (!(callbackHandler instanceof AbstractCallbackHandler)) {
+      LOG.error("Callback handler does not implement container resource "
+          + "increase callback methods");
+      return;
+    }
+    AbstractCallbackHandler handler = (AbstractCallbackHandler) callbackHandler;
+    if (containers.get(container.getId()) == null) {
+      handler.onUpdateContainerResourceError(
+          container.getId(),
+          RPCUtil.getRemoteException(
+              "Container " + container.getId() +
+                  " is neither started nor scheduled to start"));
+    }
+    try {
+      events.put(new UpdateContainerResourceEvent(container, false));
+    } catch (InterruptedException e) {
+      LOG.warn("Exception when scheduling the event of increasing resource of "
+          + "Container " + container.getId());
+      handler.onUpdateContainerResourceError(container.getId(), e);
+    }
+  }
+
+  @Override
+  public void reInitializeContainerAsync(ContainerId containerId,
+      ContainerLaunchContext containerLaunchContex, boolean autoCommit){
+    if (!(callbackHandler instanceof AbstractCallbackHandler)) {
+      LOG.error("Callback handler does not implement container re-initialize "
+          + "callback methods");
+      return;
+    }
+    AbstractCallbackHandler handler = (AbstractCallbackHandler) callbackHandler;
+    if (containers.get(containerId) == null) {
+      handler.onContainerReInitializeError(
+          containerId, RPCUtil.getRemoteException(
+              "Container " + containerId + " is not started"));
+    }
+    try {
+      events.put(new ReInitializeContainerEvevnt(containerId,
+          client.getNodeIdOfStartedContainer(containerId),
+          containerLaunchContex, autoCommit));
+    } catch (InterruptedException e) {
+      LOG.warn("Exception when scheduling the event of re-initializing of "
+          + "Container " + containerId);
+      handler.onContainerReInitializeError(containerId, e);
+    }
+  }
+
+  @Override
+  public void restartContainerAsync(ContainerId containerId){
+    if (!(callbackHandler instanceof AbstractCallbackHandler)) {
+      LOG.error("Callback handler does not implement container restart "
+          + "callback methods");
+      return;
+    }
+    AbstractCallbackHandler handler = (AbstractCallbackHandler) callbackHandler;
+    if (containers.get(containerId) == null) {
+      handler.onContainerRestartError(
+          containerId, RPCUtil.getRemoteException(
+              "Container " + containerId + " is not started"));
+    }
+    try {
+      events.put(new ContainerEvent(containerId,
+          client.getNodeIdOfStartedContainer(containerId),
+          null, ContainerEventType.RESTART_CONTAINER));
+    } catch (InterruptedException e) {
+      LOG.warn("Exception when scheduling the event of restart of "
+          + "Container " + containerId);
+      handler.onContainerRestartError(containerId, e);
+    }
+  }
+
+  @Override
+  public void rollbackLastReInitializationAsync(ContainerId containerId){
+    if (!(callbackHandler instanceof AbstractCallbackHandler)) {
+      LOG.error("Callback handler does not implement container rollback "
+          + "callback methods");
+      return;
+    }
+    AbstractCallbackHandler handler = (AbstractCallbackHandler) callbackHandler;
+    if (containers.get(containerId) == null) {
+      handler.onRollbackLastReInitializationError(
+          containerId, RPCUtil.getRemoteException(
+              "Container " + containerId + " is not started"));
+    }
+    try {
+      events.put(new ContainerEvent(containerId,
+          client.getNodeIdOfStartedContainer(containerId),
+          null, ContainerEventType.ROLLBACK_LAST_REINIT));
+    } catch (InterruptedException e) {
+      LOG.warn("Exception when scheduling the event Rollback re-initialization"
+          + " of Container " + containerId);
+      handler.onRollbackLastReInitializationError(containerId, e);
+    }
+  }
+
+  @Override
+  public void commitLastReInitializationAsync(ContainerId containerId){
+    if (!(callbackHandler instanceof AbstractCallbackHandler)) {
+      LOG.error("Callback handler does not implement container commit last " +
+          "re-initialization callback methods");
+      return;
+    }
+    AbstractCallbackHandler handler = (AbstractCallbackHandler) callbackHandler;
+    if (containers.get(containerId) == null) {
+      handler.onCommitLastReInitializationError(
+          containerId, RPCUtil.getRemoteException(
+              "Container " + containerId + " is not started"));
+    }
+    try {
+      events.put(new ContainerEvent(containerId,
+          client.getNodeIdOfStartedContainer(containerId),
+          null, ContainerEventType.COMMIT_LAST_REINT));
+    } catch (InterruptedException e) {
+      LOG.warn("Exception when scheduling the event Commit re-initialization"
+          + " of Container " + containerId);
+      handler.onCommitLastReInitializationError(containerId, e);
     }
   }
 
@@ -309,7 +432,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
     }
   }
 
-  protected static enum ContainerState {
+  protected enum ContainerState {
     PREP, FAILED, RUNNING, DONE,
   }
 
@@ -326,11 +449,15 @@ public class NMClientAsyncImpl extends NMClientAsync {
   /**
    * The type of the event of interacting with a container
    */
-  protected static enum ContainerEventType {
+  protected enum ContainerEventType {
     START_CONTAINER,
     STOP_CONTAINER,
     QUERY_CONTAINER,
-    INCREASE_CONTAINER_RESOURCE
+    UPDATE_CONTAINER_RESOURCE,
+    REINITIALIZE_CONTAINER,
+    RESTART_CONTAINER,
+    ROLLBACK_LAST_REINIT,
+    COMMIT_LAST_REINT
   }
 
   protected static class ContainerEvent
@@ -381,14 +508,41 @@ public class NMClientAsyncImpl extends NMClientAsync {
     }
   }
 
-  protected static class IncreaseContainerResourceEvent extends ContainerEvent {
-    private Container container;
+  protected static class ReInitializeContainerEvevnt extends ContainerEvent {
+    private ContainerLaunchContext containerLaunchContext;
+    private boolean autoCommit;
 
-    public IncreaseContainerResourceEvent(Container container) {
+    public ReInitializeContainerEvevnt(ContainerId containerId, NodeId nodeId,
+        ContainerLaunchContext containerLaunchContext, boolean autoCommit) {
+      super(containerId, nodeId, null,
+          ContainerEventType.REINITIALIZE_CONTAINER);
+      this.containerLaunchContext = containerLaunchContext;
+      this.autoCommit = autoCommit;
+    }
+
+    public ContainerLaunchContext getContainerLaunchContext() {
+      return containerLaunchContext;
+    }
+
+    public boolean isAutoCommit() {
+      return autoCommit;
+    }
+  }
+
+  protected static class UpdateContainerResourceEvent extends ContainerEvent {
+    private Container container;
+    private boolean isIncreaseEvent;
+
+    // UpdateContainerResourceEvent constructor takes in a
+    // flag to support callback API's calling through the deprecated
+    // increaseContainerResource
+    public UpdateContainerResourceEvent(Container container,
+        boolean isIncreaseEvent) {
       super(container.getId(), container.getNodeId(),
           container.getContainerToken(),
-              ContainerEventType.INCREASE_CONTAINER_RESOURCE);
+          ContainerEventType.UPDATE_CONTAINER_RESOURCE);
       this.container = container;
+      this.isIncreaseEvent = isIncreaseEvent;
     }
 
     public Container getContainer() {
@@ -414,8 +568,27 @@ public class NMClientAsyncImpl extends NMClientAsync {
 
             // Transitions from RUNNING state
             .addTransition(ContainerState.RUNNING, ContainerState.RUNNING,
-                ContainerEventType.INCREASE_CONTAINER_RESOURCE,
-                new IncreaseContainerResourceTransition())
+                ContainerEventType.UPDATE_CONTAINER_RESOURCE,
+                new UpdateContainerResourceTransition())
+
+            // Transitions for Container Upgrade
+            .addTransition(ContainerState.RUNNING,
+                EnumSet.of(ContainerState.RUNNING, ContainerState.FAILED),
+                ContainerEventType.REINITIALIZE_CONTAINER,
+                new ReInitializeContainerTransition())
+            .addTransition(ContainerState.RUNNING,
+                EnumSet.of(ContainerState.RUNNING, ContainerState.FAILED),
+                ContainerEventType.RESTART_CONTAINER,
+                new ReInitializeContainerTransition())
+            .addTransition(ContainerState.RUNNING,
+                EnumSet.of(ContainerState.RUNNING, ContainerState.FAILED),
+                ContainerEventType.ROLLBACK_LAST_REINIT,
+                new ReInitializeContainerTransition())
+            .addTransition(ContainerState.RUNNING,
+                EnumSet.of(ContainerState.RUNNING, ContainerState.FAILED),
+                ContainerEventType.COMMIT_LAST_REINT,
+                new ReInitializeContainerTransition())
+
             .addTransition(ContainerState.RUNNING,
                 EnumSet.of(ContainerState.DONE, ContainerState.FAILED),
                 ContainerEventType.STOP_CONTAINER,
@@ -425,13 +598,17 @@ public class NMClientAsyncImpl extends NMClientAsync {
             .addTransition(ContainerState.DONE, ContainerState.DONE,
                 EnumSet.of(ContainerEventType.START_CONTAINER,
                     ContainerEventType.STOP_CONTAINER,
-                    ContainerEventType.INCREASE_CONTAINER_RESOURCE))
+                    ContainerEventType.UPDATE_CONTAINER_RESOURCE))
 
             // Transition from FAILED state
             .addTransition(ContainerState.FAILED, ContainerState.FAILED,
                 EnumSet.of(ContainerEventType.START_CONTAINER,
                     ContainerEventType.STOP_CONTAINER,
-                    ContainerEventType.INCREASE_CONTAINER_RESOURCE));
+                    ContainerEventType.REINITIALIZE_CONTAINER,
+                    ContainerEventType.RESTART_CONTAINER,
+                    ContainerEventType.COMMIT_LAST_REINT,
+                    ContainerEventType.ROLLBACK_LAST_REINIT,
+                    ContainerEventType.UPDATE_CONTAINER_RESOURCE));
 
     protected static class StartContainerTransition implements
         MultipleArcTransition<StatefulContainer, ContainerEvent,
@@ -483,49 +660,177 @@ public class NMClientAsyncImpl extends NMClientAsync {
       }
     }
 
-    protected static class IncreaseContainerResourceTransition implements
+    protected static class UpdateContainerResourceTransition implements
         SingleArcTransition<StatefulContainer, ContainerEvent> {
+
+      @SuppressWarnings("deprecation")
       @Override
       public void transition(
           StatefulContainer container, ContainerEvent event) {
+        boolean isIncreaseEvent = false;
         if (!(container.nmClientAsync.getCallbackHandler()
             instanceof AbstractCallbackHandler)) {
           LOG.error("Callback handler does not implement container resource "
-              + "increase callback methods");
+              + "update callback methods");
           return;
         }
         AbstractCallbackHandler handler =
             (AbstractCallbackHandler) container.nmClientAsync
                 .getCallbackHandler();
         try {
-          if (!(event instanceof IncreaseContainerResourceEvent)) {
+          if (!(event instanceof UpdateContainerResourceEvent)) {
             throw new AssertionError("Unexpected event type. Expecting:"
-                + "IncreaseContainerResourceEvent. Got:" + event);
+                + "UpdateContainerResourceEvent. Got:" + event);
           }
-          IncreaseContainerResourceEvent increaseEvent =
-              (IncreaseContainerResourceEvent) event;
-          container.nmClientAsync.getClient().increaseContainerResource(
-              increaseEvent.getContainer());
+          UpdateContainerResourceEvent updateEvent =
+              (UpdateContainerResourceEvent) event;
+          container.nmClientAsync.getClient().updateContainerResource(
+              updateEvent.getContainer());
+          isIncreaseEvent = updateEvent.isIncreaseEvent;
           try {
-            handler.onContainerResourceIncreased(
-                increaseEvent.getContainerId(), increaseEvent.getContainer()
-                    .getResource());
+            //If isIncreaseEvent is set, set the appropriate callbacks
+            //for backward compatibility
+            if (isIncreaseEvent) {
+              handler.onContainerResourceIncreased(updateEvent.getContainerId(),
+                  updateEvent.getContainer().getResource());
+            } else {
+              handler.onContainerResourceUpdated(updateEvent.getContainerId(),
+                  updateEvent.getContainer().getResource());
+            }
           } catch (Throwable thr) {
             // Don't process user created unchecked exception
             LOG.info("Unchecked exception is thrown from "
-                + "onContainerResourceIncreased for Container "
+                + "onContainerResourceUpdated for Container "
                 + event.getContainerId(), thr);
           }
         } catch (Exception e) {
           try {
-            handler.onIncreaseContainerResourceError(event.getContainerId(), e);
+            if (isIncreaseEvent) {
+              handler
+                  .onIncreaseContainerResourceError(event.getContainerId(), e);
+            } else {
+              handler.onUpdateContainerResourceError(event.getContainerId(), e);
+            }
           } catch (Throwable thr) {
             // Don't process user created unchecked exception
             LOG.info("Unchecked exception is thrown from "
-                + "onIncreaseContainerResourceError for Container "
+                + "onUpdateContainerResourceError for Container "
                 + event.getContainerId(), thr);
           }
         }
+      }
+    }
+
+    protected static class ReInitializeContainerTransition implements
+        MultipleArcTransition<StatefulContainer, ContainerEvent,
+            ContainerState> {
+
+      @Override
+      public ContainerState transition(StatefulContainer container,
+          ContainerEvent containerEvent) {
+        ContainerId containerId = containerEvent.getContainerId();
+        AbstractCallbackHandler handler = (AbstractCallbackHandler) container
+                .nmClientAsync.getCallbackHandler();
+        Throwable handlerError = null;
+        try {
+          switch(containerEvent.getType()) {
+          case REINITIALIZE_CONTAINER:
+            if (!(containerEvent instanceof ReInitializeContainerEvevnt)) {
+              LOG.error("Unexpected Event.. [" +containerEvent.getType() + "]");
+              return ContainerState.FAILED;
+            }
+            ReInitializeContainerEvevnt rEvent =
+                (ReInitializeContainerEvevnt)containerEvent;
+            container.nmClientAsync.getClient().reInitializeContainer(
+                containerId, rEvent.getContainerLaunchContext(),
+                rEvent.isAutoCommit());
+            try {
+              handler.onContainerReInitialize(containerId);
+            } catch (Throwable tr) {
+              handlerError = tr;
+            }
+            break;
+          case RESTART_CONTAINER:
+            container.nmClientAsync.getClient().restartContainer(containerId);
+            try {
+              handler.onContainerRestart(containerId);
+            } catch (Throwable tr) {
+              handlerError = tr;
+            }
+            break;
+          case ROLLBACK_LAST_REINIT:
+            container.nmClientAsync.getClient()
+                .rollbackLastReInitialization(containerId);
+            try {
+              handler.onRollbackLastReInitialization(containerId);
+            } catch (Throwable tr) {
+              handlerError = tr;
+            }
+            break;
+          case COMMIT_LAST_REINT:
+            container.nmClientAsync.getClient()
+                .commitLastReInitialization(containerId);
+            try {
+              handler.onCommitLastReInitialization(containerId);
+            } catch (Throwable tr) {
+              handlerError = tr;
+            }
+            break;
+          default:
+            LOG.warn("Event of type [" + containerEvent.getType() + "] not" +
+                " expected here..");
+            break;
+          }
+          if (handlerError != null) {
+            LOG.info("Unchecked exception is thrown in handler for event ["
+                + containerEvent.getType() + "] for Container "
+                + containerId, handlerError);
+          }
+
+          return ContainerState.RUNNING;
+        } catch (Throwable t) {
+          switch(containerEvent.getType()) {
+          case REINITIALIZE_CONTAINER:
+            try {
+              handler.onContainerReInitializeError(containerId, t);
+            } catch (Throwable tr) {
+              handlerError = tr;
+            }
+            break;
+          case RESTART_CONTAINER:
+            try {
+              handler.onContainerRestartError(containerId, t);
+            } catch (Throwable tr) {
+              handlerError = tr;
+            }
+            break;
+          case ROLLBACK_LAST_REINIT:
+            try {
+              handler.onRollbackLastReInitializationError(containerId, t);
+            } catch (Throwable tr) {
+              handlerError = tr;
+            }
+            break;
+          case COMMIT_LAST_REINT:
+            try {
+              handler.onCommitLastReInitializationError(containerId, t);
+            } catch (Throwable tr) {
+              handlerError = tr;
+            }
+            break;
+          default:
+            LOG.warn("Event of type [" + containerEvent.getType() + "] not" +
+                " expected here..");
+            break;
+          }
+          if (handlerError != null) {
+            LOG.info("Unchecked exception is thrown in handler for event ["
+                + containerEvent.getType() + "] for Container "
+                + containerId, handlerError);
+          }
+        }
+
+        return ContainerState.FAILED;
       }
     }
 

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.tools;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,7 +35,7 @@ import java.util.ArrayList;
  * listing-file by "globbing" all specified source paths (wild-cards and all.)
  */
 public class GlobbedCopyListing extends CopyListing {
-  private static final Log LOG = LogFactory.getLog(GlobbedCopyListing.class);
+  private static final Logger LOG = LoggerFactory.getLogger(GlobbedCopyListing.class);
 
   private final CopyListing simpleListing;
   /**
@@ -51,7 +51,7 @@ public class GlobbedCopyListing extends CopyListing {
 
   /** {@inheritDoc} */
   @Override
-  protected void validatePaths(DistCpOptions options)
+  protected void validatePaths(DistCpContext context)
       throws IOException, InvalidInputException {
   }
 
@@ -60,19 +60,19 @@ public class GlobbedCopyListing extends CopyListing {
    * Creates the copy listing by "globbing" all source-paths.
    * @param pathToListingFile The location at which the copy-listing file
    *                           is to be created.
-   * @param options Input Options for DistCp (indicating source/target paths.)
+   * @param context The distcp context with associated input options.
    * @throws IOException
    */
   @Override
-  public void doBuildListing(Path pathToListingFile,
-                             DistCpOptions options) throws IOException {
+  public void doBuildListing(Path pathToListingFile, DistCpContext context)
+      throws IOException {
 
     List<Path> globbedPaths = new ArrayList<Path>();
-    if (options.getSourcePaths().isEmpty()) {
+    if (context.getSourcePaths().isEmpty()) {
       throw new InvalidInputException("Nothing to process. Source paths::EMPTY");  
     }
 
-    for (Path p : options.getSourcePaths()) {
+    for (Path p : context.getSourcePaths()) {
       FileSystem fs = p.getFileSystem(getConf());
       FileStatus[] inputs = fs.globStatus(p);
 
@@ -85,9 +85,8 @@ public class GlobbedCopyListing extends CopyListing {
       }
     }
 
-    DistCpOptions optionsGlobbed = new DistCpOptions(options);
-    optionsGlobbed.setSourcePaths(globbedPaths);
-    simpleListing.buildListing(pathToListingFile, optionsGlobbed);
+    context.setSourcePaths(globbedPaths);
+    simpleListing.buildListing(pathToListingFile, context);
   }
 
   /** {@inheritDoc} */

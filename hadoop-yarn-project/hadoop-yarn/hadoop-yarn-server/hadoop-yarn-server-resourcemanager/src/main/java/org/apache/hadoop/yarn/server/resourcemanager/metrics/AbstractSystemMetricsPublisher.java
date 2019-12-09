@@ -111,14 +111,14 @@ public abstract class AbstractSystemMetricsPublisher extends CompositeService
     }
 
     protected AsyncDispatcher createDispatcher() {
-      return new AsyncDispatcher();
+      return new AsyncDispatcher("RM Timeline dispatcher");
     }
   }
 
   /**
    * EventType which is used while publishing the events.
    */
-  protected static enum SystemMetricsEventType {
+  protected enum SystemMetricsEventType {
     PUBLISH_ENTITY, PUBLISH_APPLICATION_FINISHED_ENTITY
   }
 

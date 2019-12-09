@@ -25,17 +25,17 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.WebAppException;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 
 /**
  * The parent class of all HTML pages.  Override 
- * {@link #render(org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML)}
+ * {@link #render(org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.HTML)}
  * to actually render the page.
  */
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public abstract class HtmlPage extends TextView {
 
-  public static class _ implements Hamlet._ {
+  public static class __ implements Hamlet.__ {
   }
 
   public class Page extends Hamlet {
@@ -50,8 +50,8 @@ public abstract class HtmlPage extends TextView {
       setWasInline(context().wasInline());
     }
 
-    public HTML<HtmlPage._> html() {
-      return new HTML<HtmlPage._>("html", null, EnumSet.of(EOpt.ENDTAG));
+    public HTML<HtmlPage.__> html() {
+      return new HTML<HtmlPage.__>("html", null, EnumSet.of(EOpt.ENDTAG));
     }
   }
 
@@ -91,6 +91,6 @@ public abstract class HtmlPage extends TextView {
    * Render the the HTML page.
    * @param html the page to render data to.
    */
-  protected abstract void render(Page.HTML<_> html);
+  protected abstract void render(Page.HTML<__> html);
 }
 

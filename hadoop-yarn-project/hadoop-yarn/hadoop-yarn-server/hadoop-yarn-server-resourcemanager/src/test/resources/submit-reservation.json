@@ -5,6 +5,7 @@
      "arrival" : %s,
      "deadline" : %s,
      "reservation-name" : "%s",
+     %s
      "reservation-requests" : {
         "reservation-request-interpreter" : 0,
         "reservation-request" : [

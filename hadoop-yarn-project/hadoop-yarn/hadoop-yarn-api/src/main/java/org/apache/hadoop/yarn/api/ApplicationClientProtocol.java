@@ -27,8 +27,12 @@ import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
@@ -39,6 +43,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
@@ -65,6 +71,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -75,6 +87,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 
 /**
  * <p>The protocol between clients and the <code>ResourceManager</code>
@@ -578,7 +591,7 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
    * <b>Note:</b> If application timeout value is less than or equal to current
    * time then update application throws YarnException.
    * @param request to set ApplicationTimeouts of an application
-   * @return an empty response that the update has completed successfully.
+   * @return a response with updated timeouts.
    * @throws YarnException if update request has empty values or application is
    *           in completing states.
    * @throws IOException on IO failures
@@ -589,4 +602,99 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
   public UpdateApplicationTimeoutsResponse updateApplicationTimeouts(
       UpdateApplicationTimeoutsRequest request)
       throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by clients to get all the resource profiles that are
+   * available on the ResourceManager.
+   * </p>
+   * @param request request to get all the resource profiles
+   * @return Response containing a map of the profile name to Resource
+   *         capabilities
+   * @throws YARNFeatureNotEnabledException if resource-profile is disabled
+   * @throws YarnException if any error happens inside YARN
+   * @throws IOException in case of other errors
+   */
+  @Public
+  @Unstable
+  GetAllResourceProfilesResponse getResourceProfiles(
+      GetAllResourceProfilesRequest request) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface to get the details for a specific resource profile.
+   * </p>
+   * @param request request to get the details of a resource profile
+   * @return Response containing the details for a particular resource profile
+   * @throws YARNFeatureNotEnabledException if resource-profile is disabled
+   * @throws YarnException if any error happens inside YARN
+   * @throws IOException in case of other errors
+   */
+  @Public
+  @Unstable
+  GetResourceProfileResponse getResourceProfile(
+      GetResourceProfileRequest request) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface to get the details for a specific resource profile.
+   * </p>
+   * @param request request to get the details of a resource profile
+   * @return Response containing the details for a particular resource profile
+   * @throws YarnException if any error happens inside YARN
+   * @throws IOException in case of other errors
+   */
+  @Public
+  @Unstable
+  GetAllResourceTypeInfoResponse getResourceTypeInfo(
+      GetAllResourceTypeInfoRequest request) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to get attributes to nodes mappings
+   * available in ResourceManager.
+   * </p>
+   *
+   * @param request request to get details of attributes to nodes mapping.
+   * @return Response containing the details of attributes to nodes mappings.
+   * @throws YarnException if any error happens inside YARN
+   * @throws IOException   incase of other errors
+   */
+  @Public
+  @Unstable
+  GetAttributesToNodesResponse getAttributesToNodes(
+      GetAttributesToNodesRequest request) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to get node attributes available in
+   * ResourceManager.
+   * </p>
+   *
+   * @param request request to get node attributes collection of this cluster.
+   * @return Response containing node attributes collection.
+   * @throws YarnException if any error happens inside YARN.
+   * @throws IOException   incase of other errors.
+   */
+  @Public
+  @Unstable
+  GetClusterNodeAttributesResponse getClusterNodeAttributes(
+      GetClusterNodeAttributesRequest request)
+      throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to get node to attributes mappings.
+   * in existing cluster.
+   * </p>
+   *
+   * @param request request to get nodes to attributes mapping.
+   * @return nodes to attributes mappings.
+   * @throws YarnException if any error happens inside YARN.
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  GetNodesToAttributesResponse getNodesToAttributes(
+      GetNodesToAttributesRequest request) throws YarnException, IOException;
 }

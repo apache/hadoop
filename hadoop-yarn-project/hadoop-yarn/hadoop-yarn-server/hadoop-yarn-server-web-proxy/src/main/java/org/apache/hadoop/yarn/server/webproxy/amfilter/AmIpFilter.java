@@ -18,15 +18,14 @@
 
 package org.apache.hadoop.yarn.server.webproxy.amfilter;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUtils;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -37,15 +36,17 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.yarn.conf.HAUtil;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.webproxy.ProxyUtils;
-import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
-import org.apache.hadoop.yarn.util.RMHAUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 @Public
 public class AmIpFilter implements Filter {
@@ -61,12 +62,14 @@ public class AmIpFilter implements Filter {
   public static final String PROXY_URI_BASES_DELIMITER = ",";
   private static final String PROXY_PATH = "/proxy";
   //update the proxy IP list about every 5 min
-  private static final long UPDATE_INTERVAL = 5 * 60 * 1000;
+  private static long updateInterval = TimeUnit.MINUTES.toMillis(5);
 
   private String[] proxyHosts;
   private Set<String> proxyAddresses = null;
   private long lastUpdate;
-  private Map<String, String> proxyUriBases;
+  @VisibleForTesting
+  Map<String, String> proxyUriBases;
+  String rmUrls[] = null;
 
   @Override
   public void init(FilterConfig conf) throws ServletException {
@@ -92,12 +95,16 @@ public class AmIpFilter implements Filter {
         }
       }
     }
+
+    if (conf.getInitParameter(AmFilterInitializer.RM_HA_URLS) != null) {
+      rmUrls = conf.getInitParameter(AmFilterInitializer.RM_HA_URLS).split(",");
+    }
   }
 
   protected Set<String> getProxyAddresses() throws ServletException {
-    long now = System.currentTimeMillis();
+    long now = Time.monotonicNow();
     synchronized(this) {
-      if (proxyAddresses == null || (lastUpdate + UPDATE_INTERVAL) >= now) {
+      if (proxyAddresses == null || (lastUpdate + updateInterval) <= now) {
         proxyAddresses = new HashSet<>();
         for (String proxyHost : proxyHosts) {
           try {
@@ -150,6 +157,12 @@ public class AmIpFilter implements Filter {
         insertPoint += PROXY_PATH.length();
         redirect.insert(insertPoint, "/redirect");
       }
+      // add the query parameters on the redirect if there were any
+      String queryString = httpReq.getQueryString();
+      if (queryString != null && !queryString.isEmpty()) {
+        redirect.append("?");
+        redirect.append(queryString);
+      }
 
       ProxyUtils.sendRedirect(httpReq, httpResp, redirect.toString());
     } else {
@@ -181,24 +194,54 @@ public class AmIpFilter implements Filter {
     }
   }
 
-  protected String findRedirectUrl() throws ServletException {
-    String addr;
-    if (proxyUriBases.size() == 1) {  // external proxy or not RM HA
+  @VisibleForTesting
+  public String findRedirectUrl() throws ServletException {
+    String addr = null;
+    if (proxyUriBases.size() == 1) {
+      // external proxy or not RM HA
       addr = proxyUriBases.values().iterator().next();
-    } else {                          // RM HA
-      YarnConfiguration conf = new YarnConfiguration();
-      String activeRMId = RMHAUtils.findActiveRMHAId(conf);
-      String addressPropertyPrefix = YarnConfiguration.useHttps(conf)
-          ? YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS
-          : YarnConfiguration.RM_WEBAPP_ADDRESS;
-      String host = conf.get(
-          HAUtil.addSuffix(addressPropertyPrefix, activeRMId));
-      addr = proxyUriBases.get(host);
+    } else if (rmUrls != null) {
+      for (String url : rmUrls) {
+        String host = proxyUriBases.get(url);
+        if (isValidUrl(host)) {
+          addr = host;
+          break;
+        }
+      }
     }
+
     if (addr == null) {
       throw new ServletException(
           "Could not determine the proxy server for redirection");
     }
     return addr;
+  }
+
+  @VisibleForTesting
+  public boolean isValidUrl(String url) {
+    boolean isValid = false;
+    try {
+      HttpURLConnection conn = (HttpURLConnection) new URL(url)
+          .openConnection();
+      conn.connect();
+      isValid = conn.getResponseCode() == HttpURLConnection.HTTP_OK;
+      // If security is enabled, any valid RM which can give 401 Unauthorized is
+      // good enough to access. Since AM doesn't have enough credential, auth
+      // cannot be completed and hence 401 is fine in such case.
+      if (!isValid && UserGroupInformation.isSecurityEnabled()) {
+        isValid = (conn
+            .getResponseCode() == HttpURLConnection.HTTP_UNAUTHORIZED)
+            || (conn.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN);
+        return isValid;
+      }
+    } catch (Exception e) {
+      LOG.warn("Failed to connect to " + url + ": " + e.toString());
+    }
+    return isValid;
+  }
+
+  @VisibleForTesting
+  protected static void setUpdateInterval(long updateInterval) {
+    AmIpFilter.updateInterval = updateInterval;
   }
 }

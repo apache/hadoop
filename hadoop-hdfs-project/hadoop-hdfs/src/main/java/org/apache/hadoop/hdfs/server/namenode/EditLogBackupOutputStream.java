@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -43,7 +43,8 @@ import org.apache.hadoop.security.UserGroupInformation;
  *  int, int, byte[])
  */
 class EditLogBackupOutputStream extends EditLogOutputStream {
-  private static final Log LOG = LogFactory.getLog(EditLogFileOutputStream.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(EditLogFileOutputStream.class);
   static final int DEFAULT_BUFFER_SIZE = 256;
 
   private final JournalProtocol backupNode;  // RPC proxy to backup node
@@ -53,8 +54,8 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
   private EditsDoubleBuffer doubleBuf;
 
   EditLogBackupOutputStream(NamenodeRegistration bnReg, // backup node
-                            JournalInfo journalInfo) // active name-node
-  throws IOException {
+      JournalInfo journalInfo, int logVersion) // active name-node
+      throws IOException {
     super();
     this.bnRegistration = bnReg;
     this.journalInfo = journalInfo;
@@ -70,11 +71,12 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     }
     this.doubleBuf = new EditsDoubleBuffer(DEFAULT_BUFFER_SIZE);
     this.out = new DataOutputBuffer(DEFAULT_BUFFER_SIZE);
+    setCurrentLogVersion(logVersion);
   }
   
   @Override // EditLogOutputStream
   public void write(FSEditLogOp op) throws IOException {
-    doubleBuf.writeOp(op);
+    doubleBuf.writeOp(op, getCurrentLogVersion());
  }
 
   @Override
@@ -89,6 +91,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
   public void create(int layoutVersion) throws IOException {
     assert doubleBuf.isFlushed() : "previous data is not flushed yet";
     this.doubleBuf = new EditsDoubleBuffer(DEFAULT_BUFFER_SIZE);
+    setCurrentLogVersion(layoutVersion);
   }
 
   @Override // EditLogOutputStream

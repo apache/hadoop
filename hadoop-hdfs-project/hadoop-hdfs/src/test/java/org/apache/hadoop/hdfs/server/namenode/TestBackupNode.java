@@ -29,8 +29,8 @@ import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
@@ -52,7 +52,7 @@ import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -62,12 +62,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
 public class TestBackupNode {
-  public static final Log LOG = LogFactory.getLog(TestBackupNode.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestBackupNode.class);
 
   
   static {
-    GenericTestUtils.setLogLevel(Checkpointer.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(BackupImage.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(Checkpointer.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(BackupImage.LOG, Level.TRACE);
   }
   
   static final String BASE_DIR = MiniDFSCluster.getBaseDirectory();
@@ -274,7 +275,8 @@ public class TestBackupNode {
       backup = startBackupNode(conf, StartupOption.BACKUP, 1);
 
       testBNInSync(cluster, backup, 4);
-      assertNotNull(backup.getNamesystem().getFileInfo("/edit-while-bn-down", false));
+      assertNotNull(backup.getNamesystem()
+          .getFileInfo("/edit-while-bn-down", false, false, false));
       
       // Trigger an unclean shutdown of the backup node. Backup node will not
       // unregister from the active when this is done simulating a node crash.
@@ -314,7 +316,8 @@ public class TestBackupNode {
         public Boolean get() {
           LOG.info("Checking for " + src + " on BN");
           try {
-            boolean hasFile = backup.getNamesystem().getFileInfo(src, false) != null;
+            boolean hasFile = backup.getNamesystem()
+                .getFileInfo(src, false, false, false) != null;
             boolean txnIdMatch =
               backup.getRpcServer().getTransactionID() ==
               nn.getRpcServer().getTransactionID();
@@ -465,7 +468,7 @@ public class TestBackupNode {
       assertTrue("file3 does not exist on BackupNode",
           op != StartupOption.BACKUP ||
           backup.getNamesystem().getFileInfo(
-              file3.toUri().getPath(), false) != null);
+              file3.toUri().getPath(), false, false, false) != null);
 
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode:", e);

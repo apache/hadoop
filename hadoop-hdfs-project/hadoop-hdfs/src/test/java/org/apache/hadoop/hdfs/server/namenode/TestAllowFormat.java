@@ -29,8 +29,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -53,8 +53,8 @@ import org.junit.Test;
 public class TestAllowFormat {
   public static final String NAME_NODE_HOST = "localhost:";
   public static final String NAME_NODE_HTTP_HOST = "0.0.0.0:";
-  private static final Log LOG =
-    LogFactory.getLog(TestAllowFormat.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestAllowFormat.class.getName());
   private static final File DFS_BASE_DIR = new File(PathUtils.getTestDir(TestAllowFormat.class), "dfs");
   private static Configuration config;
   private static MiniDFSCluster cluster = null;
@@ -163,8 +163,8 @@ public class TestAllowFormat {
     // is configured in HA, then only DFS_NAMENODE_SHARED_EDITS_DIR_KEY
     // is considered.
     String localhost = "127.0.0.1";
-    InetSocketAddress nnAddr1 = new InetSocketAddress(localhost, 9820);
-    InetSocketAddress nnAddr2 = new InetSocketAddress(localhost, 9820);
+    InetSocketAddress nnAddr1 = new InetSocketAddress(localhost, 8020);
+    InetSocketAddress nnAddr2 = new InetSocketAddress(localhost, 8020);
     HATestUtil.setFailoverConfigurations(conf, logicalName, nnAddr1, nnAddr2);
 
     conf.set(DFS_NAMENODE_NAME_DIR_KEY,

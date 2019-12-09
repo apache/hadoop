@@ -18,41 +18,27 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.hadoop.fs.Path;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * Tests for the upload, buffering and flush logic in WASB.
  */
-public class TestNativeAzureFileSystemUploadLogic {
-  private AzureBlobStorageTestAccount testAccount;
+public class TestNativeAzureFileSystemUploadLogic extends AbstractWasbTestBase {
 
   // Just an arbitrary number so that the values I write have a predictable
   // pattern: 0, 1, 2, .. , 45, 46, 0, 1, 2, ...
   static final int byteValuePeriod = 47;
 
-  @Before
-  public void setUp() throws Exception {
-    testAccount = AzureBlobStorageTestAccount.createMock();
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    if (testAccount != null) {
-      testAccount.cleanup();
-      testAccount = null;
-    }
+  @Override
+  protected AzureBlobStorageTestAccount createTestAccount() throws Exception {
+    return AzureBlobStorageTestAccount.createMock();
   }
 
   /**
@@ -126,9 +112,9 @@ public class TestNativeAzureFileSystemUploadLogic {
    * @param expectedSize The expected size of the data in there.
    */
   private void assertDataInFile(Path file, int expectedSize) throws Exception {
-    InputStream inStream = testAccount.getFileSystem().open(file);
-    assertDataInStream(inStream, expectedSize);
-    inStream.close();
+    try(InputStream inStream = getFileSystem().open(file)) {
+      assertDataInStream(inStream, expectedSize);
+    }
   }
 
   /**
@@ -139,7 +125,7 @@ public class TestNativeAzureFileSystemUploadLogic {
   private void assertDataInTempBlob(int expectedSize) throws Exception {
     // Look for the temporary upload blob in the backing store.
     InMemoryBlockBlobStore backingStore =
-        testAccount.getMockStorage().getBackingStore();
+        getTestAccount().getMockStorage().getBackingStore();
     String tempKey = null;
     for (String key : backingStore.getKeys()) {
       if (key.contains(NativeAzureFileSystem.AZURE_TEMP_FOLDER)) {
@@ -149,9 +135,10 @@ public class TestNativeAzureFileSystemUploadLogic {
       }
     }
     assertNotNull(tempKey);
-    InputStream inStream = new ByteArrayInputStream(backingStore.getContent(tempKey));
-    assertDataInStream(inStream, expectedSize);
-    inStream.close();
+    try (InputStream inStream = new ByteArrayInputStream(
+        backingStore.getContent(tempKey))) {
+      assertDataInStream(inStream, expectedSize);
+    }
   }
 
   /**
@@ -162,25 +149,30 @@ public class TestNativeAzureFileSystemUploadLogic {
    */
   private void testConsistencyAfterManyFlushes(FlushFrequencyVariation variation)
       throws Exception {
-    Path uploadedFile = new Path("/uploadedFile");
-    OutputStream outStream = testAccount.getFileSystem().create(uploadedFile);
-    final int totalSize = 9123;
-    int flushPeriod;
-    switch (variation) {
-      case BeforeSingleBufferFull: flushPeriod = 300; break;
-      case AfterSingleBufferFull: flushPeriod = 600; break;
-      case AfterAllRingBufferFull: flushPeriod = 1600; break;
-      default:
-        throw new IllegalArgumentException("Unknown variation: " + variation);
-    }
-    for (int i = 0; i < totalSize; i++) {
-      outStream.write(i % byteValuePeriod);
-      if ((i + 1) % flushPeriod == 0) {
-        outStream.flush();
-        assertDataInTempBlob(i + 1);
+    Path uploadedFile = methodPath();
+    try {
+      OutputStream outStream = getFileSystem().create(uploadedFile);
+      final int totalSize = 9123;
+      int flushPeriod;
+      switch (variation) {
+        case BeforeSingleBufferFull: flushPeriod = 300; break;
+        case AfterSingleBufferFull: flushPeriod = 600; break;
+        case AfterAllRingBufferFull: flushPeriod = 1600; break;
+        default:
+          throw new IllegalArgumentException("Unknown variation: " + variation);
       }
+      for (int i = 0; i < totalSize; i++) {
+        outStream.write(i % byteValuePeriod);
+        if ((i + 1) % flushPeriod == 0) {
+          outStream.flush();
+          assertDataInTempBlob(i + 1);
+        }
+      }
+      outStream.close();
+      assertDataInFile(uploadedFile, totalSize);
+    } finally {
+      getFileSystem().delete(uploadedFile, false);
+
     }
-    outStream.close();
-    assertDataInFile(uploadedFile, totalSize);
   }
 }

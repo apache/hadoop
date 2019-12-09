@@ -23,8 +23,6 @@ import java.util.zip.CRC32;
 
 import com.google.common.primitives.Longs;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,11 +35,13 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.StopWatch;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class KVJob {
   public static final String INPUTPATH = "nativetask.kvtest.inputfile.path";
   public static final String OUTPUTPATH = "nativetask.kvtest.outputfile.path";
-  private static final Log LOG = LogFactory.getLog(KVJob.class);
+  private static final Logger LOG = LoggerFactory.getLogger(KVJob.class);
   Job job = null;
 
   public static class ValueMapper<KTYPE, VTYPE> extends Mapper<KTYPE, VTYPE, KTYPE, VTYPE> {

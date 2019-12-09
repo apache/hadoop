@@ -25,8 +25,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -41,6 +39,8 @@ import org.apache.zookeeper.server.ZooKeeperServer;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Harness for starting two dummy ZK FailoverControllers, associated with
@@ -57,7 +57,8 @@ public class MiniZKFCCluster {
   
   private DummySharedResource sharedResource = new DummySharedResource();
   
-  private static final Log LOG = LogFactory.getLog(MiniZKFCCluster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MiniZKFCCluster
+      .class);
   
   public MiniZKFCCluster(Configuration conf, ZooKeeperServer zks) {
     this.conf = conf;
@@ -184,6 +185,10 @@ public class MiniZKFCCluster {
   
   public void setUnreachable(int idx, boolean unreachable) {
     svcs.get(idx).actUnreachable = unreachable;
+  }
+
+  public void setFailToBecomeObserver(int idx, boolean doFail) {
+    svcs.get(idx).failToBecomeObserver = doFail;
   }
 
   /**

@@ -227,10 +227,10 @@ public final class DistributedScheduler extends AbstractRequestInterceptor {
         .partitionAskList(request.getAllocateRequest().getAskList());
 
     // Allocate OPPORTUNISTIC containers.
-    request.getAllocateRequest().setAskList(partitionedAsks.getOpportunistic());
     List<Container> allocatedContainers =
         containerAllocator.allocateContainers(
-            request.getAllocateRequest(), applicationAttemptId,
+            request.getAllocateRequest().getResourceBlacklistRequest(),
+            partitionedAsks.getOpportunistic(), applicationAttemptId,
             oppContainerContext, rmIdentifier, appSubmitter);
 
     // Prepare request for sending to RM for scheduling GUARANTEED containers.
@@ -252,18 +252,11 @@ public final class DistributedScheduler extends AbstractRequestInterceptor {
       nodeTokens.put(nmToken.getNodeId(), nmToken);
     }
 
-    oppContainerContext.updateCompletedContainers(dsResp.getAllocateResponse());
-
     // Check if we have NM tokens for all the allocated containers. If not
     // generate one and update the response.
     updateAllocateResponse(
         dsResp.getAllocateResponse(), nmTokens, allocatedContainers);
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Number of opportunistic containers currently" +
-          "allocated by application: " + oppContainerContext
-          .getContainersAllocated().size());
-    }
     return dsResp;
   }
 }

@@ -108,6 +108,8 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
         app.getApplicationSubmissionContext().getAMContainerSpec();
     entityInfo.put(ApplicationMetricsConstants.AM_CONTAINER_LAUNCH_COMMAND,
         amContainerSpec.getCommands());
+    entityInfo.put(ApplicationMetricsConstants.STATE_EVENT_INFO,
+        RMServerUtils.createApplicationState(app.getState()).toString());
 
     entity.setOtherInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
@@ -151,9 +153,9 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
     tEvent.setEventInfo(eventInfo);
 
     entity.addEvent(tEvent);
-    // sync sending of finish event to avoid possibility of saving application
-    // finished state in RMStateStore save without publishing in ATS.
-    putEntity(entity); // sync event so that ATS update is done without fail.
+
+    getDispatcher().getEventHandler().handle(new TimelineV1PublishEvent(
+        SystemMetricsEventType.PUBLISH_ENTITY, entity, app.getApplicationId()));
   }
 
   @SuppressWarnings("unchecked")

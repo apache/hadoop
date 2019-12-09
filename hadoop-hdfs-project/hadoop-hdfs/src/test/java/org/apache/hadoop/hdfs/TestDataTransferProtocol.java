@@ -33,8 +33,8 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -73,7 +73,7 @@ import org.mockito.Mockito;
  */
 public class TestDataTransferProtocol {
   
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
                     "org.apache.hadoop.hdfs.TestDataTransferProtocol");
 
   private static final DataChecksum DEFAULT_CHECKSUM =
@@ -133,7 +133,7 @@ public class TestDataTransferProtocol {
       LOG.info("Expected: " + expected);
       
       if (eofExpected) {
-        throw new IOException("Did not recieve IOException when an exception " +
+        throw new IOException("Did not receive IOException when an exception " +
                               "is expected while reading from " + datanode); 
       }
       assertEquals(expected, received);
@@ -559,6 +559,7 @@ public class TestDataTransferProtocol {
         BlockTokenSecretManager.DUMMY_TOKEN, "cl",
         new DatanodeInfo[1], new StorageType[1], null, stage,
         0, block.getNumBytes(), block.getNumBytes(), newGS,
-        checksum, CachingStrategy.newDefaultStrategy(), false, false, null);
+        checksum, CachingStrategy.newDefaultStrategy(), false, false,
+        null, null, new String[0]);
   }
 }

@@ -23,18 +23,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class Globber {
-  public static final Log LOG = LogFactory.getLog(Globber.class.getName());
+  public static final Logger LOG =
+      LoggerFactory.getLogger(Globber.class.getName());
 
   private final FileSystem fs;
   private final FileContext fc;
@@ -244,7 +245,18 @@ class Globber {
               // incorrectly conclude that /a/b was a file and should not match
               // /a/*/*.  So we use getFileStatus of the path we just listed to
               // disambiguate.
-              if (!getFileStatus(candidate.getPath()).isDirectory()) {
+              Path path = candidate.getPath();
+              FileStatus status = getFileStatus(path);
+              if (status == null) {
+                // null means the file was not found
+                LOG.warn("File/directory {} not found:"
+                    + " it may have been deleted."
+                    + " If this is an object store, this can be a sign of"
+                    + " eventual consistency problems.",
+                    path);
+                continue;
+              }
+              if (!status.isDirectory()) {
                 continue;
               }
             }

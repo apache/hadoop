@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -38,6 +36,8 @@ import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Generates the sampled split points, launches the job, and waits for it to
@@ -47,7 +47,7 @@ import org.apache.hadoop.util.ToolRunner;
  * <b>bin/hadoop jar hadoop-*-examples.jar terasort in-dir out-dir</b>
  */
 public class TeraSort extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(TeraSort.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TeraSort.class);
 
   /**
    * A partitioner that splits text keys into roughly equal partitions
@@ -321,7 +321,7 @@ public class TeraSort extends Configured implements Tool {
       try {
         TeraInputFormat.writePartitionFile(job, partitionFile);
       } catch (Throwable e) {
-        LOG.error(e.getMessage());
+        LOG.error("{}", e.getMessage(), e);
         return -1;
       }
       job.addCacheFile(partitionUri);  

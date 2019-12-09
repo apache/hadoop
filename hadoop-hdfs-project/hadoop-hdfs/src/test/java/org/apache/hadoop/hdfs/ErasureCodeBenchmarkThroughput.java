@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -42,9 +41,7 @@ import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -81,7 +78,7 @@ public class ErasureCodeBenchmarkThroughput
   private static final String EC_FILE_BASE = "ec-file-";
   private static final String TMP_FILE_SUFFIX = ".tmp";
   private static final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private static final byte[] data = new byte[BUFFER_SIZE_MB * 1024 * 1024];
 
   static {
@@ -192,7 +189,8 @@ public class ErasureCodeBenchmarkThroughput
     }
     if (!dfs.exists(ecPath)) {
       dfs.mkdirs(ecPath);
-      dfs.getClient().setErasureCodingPolicy(ecPath.toString(), ecPolicy);
+      dfs.getClient()
+          .setErasureCodingPolicy(ecPath.toString(), ecPolicy.getName());
     } else {
       Preconditions.checkArgument(
           dfs.getClient().

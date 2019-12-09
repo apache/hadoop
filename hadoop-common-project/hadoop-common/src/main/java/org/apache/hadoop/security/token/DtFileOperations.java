@@ -24,23 +24,26 @@ import java.io.PrintStream;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * DtFileOperations is a collection of delegation token file operations.
  */
 public final class DtFileOperations {
-  private static final Log LOG = LogFactory.getLog(DtFileOperations.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DtFileOperations.class);
 
   /** No public constructor as per checkstyle. */
   private DtFileOperations() { }
@@ -101,11 +104,13 @@ public final class DtFileOperations {
   public static void doFormattedWrite(
       File f, String format, Credentials creds, Configuration conf)
       throws IOException {
-    if (format == null || format.equals(FORMAT_PB)) {
-      creds.writeTokenStorageFile(fileToPath(f), conf);
-    } else { // if (format != null && format.equals(FORMAT_JAVA)) {
-      creds.writeLegacyTokenStorageLocalFile(f);
+    // default to oldest supported format for compatibility
+    Credentials.SerializedFormat credsFormat =
+        Credentials.SerializedFormat.WRITABLE;
+    if (format.equals(FORMAT_PB)) {
+      credsFormat = Credentials.SerializedFormat.PROTOBUF;
     }
+    creds.writeTokenStorageFile(fileToPath(f), conf, credsFormat);
   }
 
   /** Print out a Credentials file from the local filesystem.
@@ -127,7 +132,7 @@ public final class DtFileOperations {
    *  @param creds the Credentials object to be printed out.
    *  @param alias print only tokens matching alias (null matches all).
    *  @param out print to this stream.
-   *  @throws IOException
+   *  @throws IOException failure to unmarshall a token identifier.
    */
   public static void printCredentials(
       Credentials creds, Text alias, PrintStream out)
@@ -142,8 +147,13 @@ public final class DtFileOperations {
           out.println(StringUtils.repeat("-", 80));
           tokenHeader = false;
         }
-        AbstractDelegationTokenIdentifier id =
-            (AbstractDelegationTokenIdentifier) token.decodeIdentifier();
+        AbstractDelegationTokenIdentifier id;
+        try {
+          id = (AbstractDelegationTokenIdentifier) token.decodeIdentifier();
+        } catch (IllegalStateException e) {
+          LOG.debug("Failed to decode token identifier", e);
+          id = null;
+        }
         out.printf(fmt, token.getKind(), token.getService(),
                    (id != null) ? id.getRenewer() : NA_STRING,
                    (id != null) ? formatDate(id.getMaxDate()) : NA_STRING,
@@ -169,7 +179,17 @@ public final class DtFileOperations {
     Credentials creds = tokenFile.exists() ?
         Credentials.readTokenStorageFile(tokenFile, conf) : new Credentials();
     ServiceLoader<DtFetcher> loader = ServiceLoader.load(DtFetcher.class);
-    for (DtFetcher fetcher : loader) {
+    Iterator<DtFetcher> iterator = loader.iterator();
+    while (iterator.hasNext()) {
+      DtFetcher fetcher;
+      try {
+        fetcher = iterator.next();
+      } catch (ServiceConfigurationError e) {
+        // failure to load a token implementation
+        // log at debug and continue.
+        LOG.debug("Failed to load token fetcher implementation", e);
+        continue;
+      }
       if (matchService(fetcher, service, url)) {
         if (!fetcher.isTokenRequired()) {
           String message = "DtFetcher for service '" + service +

@@ -54,7 +54,8 @@ import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_
  *   attributes that sometimes need to be exposed. Like SYSTEM namespace
  *   attributes they are not visible to the user except when getXAttr/getXAttrs
  *   is called on a file or directory in the /.reserved/raw HDFS directory
- *   hierarchy. These attributes can only be accessed by the superuser.
+ *   hierarchy. These attributes can only be accessed by the user who have
+ *   read access.
  * </br>
  */
 @InterfaceAudience.Private
@@ -68,8 +69,7 @@ public class XAttrPermissionFilter {
         (xAttr.getNameSpace() == XAttr.NameSpace.TRUSTED && isSuperUser)) {
       return;
     }
-    if (xAttr.getNameSpace() == XAttr.NameSpace.RAW &&
-        isRawPath && isSuperUser) {
+    if (xAttr.getNameSpace() == XAttr.NameSpace.RAW && isRawPath) {
       return;
     }
     if (XAttrHelper.getPrefixedName(xAttr).
@@ -112,15 +112,13 @@ public class XAttrPermissionFilter {
       } else if (xAttr.getNameSpace() == XAttr.NameSpace.TRUSTED && 
           isSuperUser) {
         filteredXAttrs.add(xAttr);
-      } else if (xAttr.getNameSpace() == XAttr.NameSpace.RAW &&
-          isSuperUser && isRawPath) {
+      } else if (xAttr.getNameSpace() == XAttr.NameSpace.RAW && isRawPath) {
         filteredXAttrs.add(xAttr);
       } else if (XAttrHelper.getPrefixedName(xAttr).
           equals(SECURITY_XATTR_UNREADABLE_BY_SUPERUSER)) {
         filteredXAttrs.add(xAttr);
       }
     }
-    
     return filteredXAttrs;
   }
 }

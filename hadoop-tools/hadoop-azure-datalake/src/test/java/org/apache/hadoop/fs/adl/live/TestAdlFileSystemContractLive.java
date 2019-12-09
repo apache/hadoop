@@ -22,7 +22,8 @@ package org.apache.hadoop.fs.adl.live;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
-import org.junit.Assume;
+import org.junit.After;
+import static org.junit.Assume.*;
 import org.junit.Before;
 
 import java.io.IOException;
@@ -33,36 +34,29 @@ import java.io.IOException;
 public class TestAdlFileSystemContractLive extends FileSystemContractBaseTest {
   private FileSystem adlStore;
 
-  @Override
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
+    skipTestCheck();
     adlStore = AdlStorageConfiguration.createStorageConnector();
     if (AdlStorageConfiguration.isContractTestEnabled()) {
       fs = adlStore;
     }
+    assumeNotNull(fs);
   }
 
-  @Override
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     if (AdlStorageConfiguration.isContractTestEnabled()) {
       cleanup();
-      adlStore = null;
-      fs = null;
     }
+    super.tearDown();
   }
 
   private void cleanup() throws IOException {
     adlStore.delete(new Path("/test"), true);
   }
 
-  @Override
-  protected void runTest() throws Throwable {
-    if (AdlStorageConfiguration.isContractTestEnabled()) {
-      super.runTest();
-    }
-  }
-
-  @Before
-  public void skipTestCheck() {
-    Assume.assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
+  private void skipTestCheck() {
+    assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
   }
 }

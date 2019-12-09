@@ -39,6 +39,7 @@ public class TestMetricsAnnotations {
     @Metric({"Counter2", "Counter2 desc"}) MutableCounterLong c2;
     @Metric MutableGaugeInt g1, g2;
     @Metric("g3 desc") MutableGaugeLong g3;
+    @Metric("g4 desc") MutableGaugeFloat g4;
     @Metric MutableRate r1;
     @Metric MutableStat s1;
     @Metric MutableRates rs1;
@@ -53,6 +54,7 @@ public class TestMetricsAnnotations {
     metrics.g1.incr();
     metrics.g2.incr();
     metrics.g3.incr();
+    metrics.g4.incr();
     metrics.r1.add(1);
     metrics.s1.add(1);
     metrics.rs1.add("rs1", 1);
@@ -64,6 +66,7 @@ public class TestMetricsAnnotations {
     verify(rb).addGauge(info("G1", "G1"), 1);
     verify(rb).addGauge(info("G2", "G2"), 1);
     verify(rb).addGauge(info("G3", "g3 desc"), 1L);
+    verify(rb).addGauge(info("G4", "g4 desc"), 1f);
     verify(rb).addCounter(info("R1NumOps", "Number of ops for r1"), 1L);
     verify(rb).addGauge(info("R1AvgTime", "Average time for r1"), 1.0);
     verify(rb).addCounter(info("S1NumOps", "Number of ops for s1"), 1L);

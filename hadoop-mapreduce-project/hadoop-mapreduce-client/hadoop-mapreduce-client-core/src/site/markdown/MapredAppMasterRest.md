@@ -15,26 +15,12 @@
 MapReduce Application Master REST API's.
 ========================================
 
-* [MapReduce Application Master REST API's.](#MapReduce_Application_Master_REST_APIs.)
-    * [Overview](#Overview)
-    * [Mapreduce Application Master Info API](#Mapreduce_Application_Master_Info_API)
-    * [Jobs API](#Jobs_API)
-    * [Job API](#Job_API)
-    * [Job Attempts API](#Job_Attempts_API)
-    * [Job Counters API](#Job_Counters_API)
-    * [Job Conf API](#Job_Conf_API)
-    * [Tasks API](#Tasks_API)
-    * [Task API](#Task_API)
-    * [Task Counters API](#Task_Counters_API)
-    * [Task Attempts API](#Task_Attempts_API)
-    * [Task Attempt API](#Task_Attempt_API)
-    * [Task Attempt State API](#Task_Attempt_State_API)
-    * [Task Attempt Counters API](#Task_Attempt_Counters_API)
+<!-- MACRO{toc|fromDepth=0|toDepth=1} -->
 
 Overview
 --------
 
-The MapReduce Application Master REST API's allow the user to get status on the running MapReduce application master. Currently this is the equivalent to a running MapReduce job. The information includes the jobs the app master is running and all the job particulars like tasks, counters, configuration, attempts, etc. The application master should be accessed via the proxy. This proxy is configurable to run either on the resource manager or on a separate host. The proxy URL usually looks like: `http://<proxy http address:port>/proxy/appid`.
+The MapReduce Application Master REST API's allow the user to get status on the running MapReduce application master. Currently this is the equivalent to a running MapReduce job. The information includes the jobs the app master is running and all the job particulars like tasks, counters, configuration, attempts, etc. The application master should be accessed via the proxy. This proxy is configurable to run either on the resource manager or on a separate host. The proxy URL usually looks like: `http://proxy-http-address:port/proxy/appid`.
 
 Mapreduce Application Master Info API
 -------------------------------------
@@ -45,8 +31,8 @@ The MapReduce application master information resource provides overall informati
 
 Both of the following URI's give you the MapReduce application master information, from an application id identified by the appid value.
 
-      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce
-      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/info
+      * http://proxy-http-address:port/proxy/{appid}/ws/v1/mapreduce
+      * http://proxy-http-address:port/proxy/{appid}/ws/v1/mapreduce/info
 
 ### HTTP Operations Supported
 
@@ -74,7 +60,7 @@ When you make a request for the mapreduce application master information, the in
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0003/ws/v1/mapreduce/info
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0003/ws/v1/mapreduce/info
 
 Response Header:
 
@@ -85,7 +71,7 @@ Response Header:
 
 Response Body:
 
-    {   
+    {
       "info" : {
           "appId" : "application_1326232085508_0003",
           "startedOn" : 1326238244047,
@@ -100,7 +86,7 @@ Response Body:
 HTTP Request:
 
       Accept: application/xml
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0003/ws/v1/mapreduce/info
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0003/ws/v1/mapreduce/info
 
 Response Header:
 
@@ -127,7 +113,7 @@ The jobs resource provides a list of the jobs running on this application master
 
 ### URI
 
-      *  http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs
+      *  http://proxy-http-address:port/proxy/{appid}/ws/v1/mapreduce/jobs
 
 ### HTTP Operations Supported
 
@@ -151,7 +137,7 @@ When you make a request for the list of jobs, the information will be returned a
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs
 
 Response Header:
 
@@ -214,14 +200,14 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs
       Accept: application/xml
 
 Response Header:
 
       HTTP/1.1 200 OK
       Content-Type: application/xml
-      Content-Length: 1214 
+      Content-Length: 1214
       Server: Jetty(6.1.26)
 
 Response Body:
@@ -278,7 +264,7 @@ A job resource contains information about a particular job that was started by t
 
 Use the following URI to obtain a job object, for a job identified by the jobid value.
 
-      * http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/{jobid}
+      * http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/{jobid}
 
 ### HTTP Operations Supported
 
@@ -334,7 +320,7 @@ Use the following URI to obtain a job object, for a job identified by the jobid 
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4
 
 Response Header:
 
@@ -356,11 +342,11 @@ Response Body:
           "successfulReduceAttempts" : 0,
           "reducesRunning" : 1,
           "acls" : [
-             {  
+             {
                 "value" : " ",
                 "name" : "mapreduce.job.acl-modify-job"
              },
-             {  
+             {
                 "value" : " ",
                 "name" : "mapreduce.job.acl-view-job"
              }
@@ -393,7 +379,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4
       Accept: application/xml
 
 Response Header:
@@ -425,7 +411,7 @@ Response Body:
       <reducesPending>0</reducesPending>
       <reducesRunning>1</reducesRunning>
       <uberized>false</uberized>
-      <diagnostics/>  
+      <diagnostics/>
       <newReduceAttempts>0</newReduceAttempts>
       <runningReduceAttempts>1</runningReduceAttempts>
       <failedReduceAttempts>0</failedReduceAttempts>
@@ -452,7 +438,7 @@ With the job attempts API, you can obtain a collection of resources that represe
 
 ### URI
 
-      * http://<history server http address:port>/ws/v1/history/jobs/{jobid}/jobattempts
+      * http://history-server-http-address:port/ws/v1/history/jobs/{jobid}/jobattempts
 
 ### HTTP Operations Supported
 
@@ -487,7 +473,7 @@ When you make a request for the list of job attempts, the information will be re
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/jobattempts
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/jobattempts
 
 Response Header:
 
@@ -501,14 +487,14 @@ Response Body:
     {
        "jobAttempts" : {
           "jobAttempt" : [
-             {    
+             {
                 "nodeId" : "host.domain.com:8041",
                 "nodeHttpAddress" : "host.domain.com:8042",
                 "startTime" : 1326238773493,
-                "id" : 1, 
+                "id" : 1,
                 "logsLink" : "http://host.domain.com:8042/node/containerlogs/container_1326232085508_0004_01_000001",
                 "containerId" : "container_1326232085508_0004_01_000001"
-             }  
+             }
           ]
        }
     }
@@ -517,7 +503,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/jobattempts
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/jobattempts
       Accept: application/xml
 
 Response Header:
@@ -548,7 +534,7 @@ With the job counters API, you can object a collection of resources that represe
 
 ### URI
 
-      * http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/{jobid}/counters
+      * http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/{jobid}/counters
 
 ### HTTP Operations Supported
 
@@ -587,7 +573,7 @@ With the job counters API, you can object a collection of resources that represe
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/counters
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/counters
 
 Response Header:
 
@@ -605,77 +591,77 @@ Response Body:
              {
                 "counterGroupName" : "Shuffle Errors",
                 "counter" : [
-                   {   
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "BAD_ID"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "CONNECTION"
-                   }, 
+                   },
                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "IO_ERROR"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "WRONG_LENGTH"
-                   },                {   
+                   },                {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "WRONG_MAP"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "WRONG_REDUCE"
                    }
                 ]
-             }, 
-             {  
+             },
+             {
                 "counterGroupName" : "org.apache.hadoop.mapreduce.FileSystemCounter",
                 "counter" : [
-                   {   
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 2483,
                       "name" : "FILE_BYTES_READ"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 108763,
                       "name" : "FILE_BYTES_WRITTEN"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "FILE_READ_OPS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "FILE_LARGE_READ_OPS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "FILE_WRITE_OPS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 48,
@@ -686,144 +672,144 @@ Response Body:
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "HDFS_BYTES_WRITTEN"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 1,
                       "name" : "HDFS_READ_OPS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "HDFS_LARGE_READ_OPS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "HDFS_WRITE_OPS"
                    }
                 ]
-             }, 
-             {  
+             },
+             {
                 "counterGroupName" : "org.apache.hadoop.mapreduce.TaskCounter",
                 "counter" : [
-                   {   
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 1,
                       "name" : "MAP_INPUT_RECORDS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 1200,
                       "name" : "MAP_OUTPUT_RECORDS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 4800,
                       "name" : "MAP_OUTPUT_BYTES"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 2235,
                       "name" : "MAP_OUTPUT_MATERIALIZED_BYTES"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 48,
                       "name" : "SPLIT_RAW_BYTES"
-                   }, 
-                  {   
+                   },
+                  {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "COMBINE_INPUT_RECORDS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "COMBINE_OUTPUT_RECORDS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 460,
                       "name" : "REDUCE_INPUT_GROUPS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 2235,
                       "name" : "REDUCE_SHUFFLE_BYTES"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 460,
                       "name" : "REDUCE_INPUT_RECORDS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "REDUCE_OUTPUT_RECORDS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 1200,
                       "name" : "SPILLED_RECORDS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 1,
                       "name" : "SHUFFLED_MAPS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
                       "name" : "FAILED_SHUFFLE"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 1,
                       "name" : "MERGED_MAP_OUTPUTS"
-                   },                {   
+                   },                {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 58,
                       "name" : "GC_TIME_MILLIS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 1580,
                       "name" : "CPU_MILLISECONDS"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 462643200,
                       "name" : "PHYSICAL_MEMORY_BYTES"
-                   }, 
-                   {   
+                   },
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 2149728256,
                       "name" : "VIRTUAL_MEMORY_BYTES"
-                   }, 
-                  {  
+                   },
+                  {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 357957632,
@@ -831,10 +817,10 @@ Response Body:
                    }
                 ]
              },
-             {  
+             {
                 "counterGroupName" : "org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter",
                 "counter" : [
-                   {  
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
@@ -845,7 +831,7 @@ Response Body:
              {
                 "counterGroupName" : "org.apache.hadoop.mapreduce.lib.output.FileOutputFormatCounter",
                 "counter" : [
-                   {  
+                   {
                       "reduceCounterValue" : 0,
                       "mapCounterValue" : 0,
                       "totalCounterValue" : 0,
@@ -861,7 +847,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/counters
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/counters
       Accept: application/xml
 
 Response Header:
@@ -979,7 +965,7 @@ Response Body:
         </counter>
       </counterGroup>
       <counterGroup>
-        <counterGroupName>org.apache.hadoop.mapreduce.TaskCounter</counterGroupName> 
+        <counterGroupName>org.apache.hadoop.mapreduce.TaskCounter</counterGroupName>
         <counter>
           <name>MAP_INPUT_RECORDS</name>
           <totalCounterValue>1</totalCounterValue>
@@ -1127,7 +1113,7 @@ A job configuration resource contains information about the job configuration fo
 
 Use the following URI to obtain th job configuration information, from a job identified by the jobid value.
 
-      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/conf
+      * http://proxy-http-address:port/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/conf
 
 ### HTTP Operations Supported
 
@@ -1158,7 +1144,7 @@ Use the following URI to obtain th job configuration information, from a job ide
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/conf
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/conf
 
 Response Header:
 
@@ -1175,7 +1161,7 @@ This is a small snippet of the output as the output if very large. The real outp
        "conf" : {
           "path" : "hdfs://host.domain.com:9000/user/user1/.staging/job_1326232085508_0004/job.xml",
           "property" : [
-             {  
+             {
                 "value" : "/home/hadoop/hdfs/data",
                 "name" : "dfs.datanode.data.dir",
                 "source" : ["hdfs-site.xml", "job.xml"]
@@ -1199,7 +1185,7 @@ This is a small snippet of the output as the output if very large. The real outp
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/conf
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/conf
       Accept: application/xml
 
 Response Header:
@@ -1241,7 +1227,7 @@ With the tasks API, you can obtain a collection of resources that represent all 
 
 ### URI
 
-      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks
+      * http://proxy-http-address:port/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks
 
 ### HTTP Operations Supported
 
@@ -1265,7 +1251,7 @@ When you make a request for the list of tasks , the information will be returned
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks
 
 Response Header:
 
@@ -1307,7 +1293,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks
       Accept: application/xml
 
 Response Header:
@@ -1352,7 +1338,7 @@ A Task resource contains information about a particular task within a job.
 
 Use the following URI to obtain an Task Object, from a task identified by the taskid value.
 
-      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}
+      * http://proxy-http-address:port/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}
 
 ### HTTP Operations Supported
 
@@ -1381,7 +1367,7 @@ Use the following URI to obtain an Task Object, from a task identified by the ta
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0
 
 Response Header:
 
@@ -1409,7 +1395,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0
       Accept: application/xml
 
 Response Header:
@@ -1440,7 +1426,7 @@ With the task counters API, you can object a collection of resources that repres
 
 ### URI
 
-      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/counters
+      * http://proxy-http-address:port/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/counters
 
 ### HTTP Operations Supported
 
@@ -1477,7 +1463,7 @@ With the task counters API, you can object a collection of resources that repres
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/counters
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/counters
 
 Response Header:
 
@@ -1648,7 +1634,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/counters
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/counters
       Accept: application/xml
 
 Response Header:
@@ -1812,7 +1798,7 @@ With the task attempts API, you can obtain a collection of resources that repres
 
 ### URI
 
-      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts
+      * http://proxy-http-address:port/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts
 
 ### HTTP Operations Supported
 
@@ -1836,7 +1822,7 @@ When you make a request for the list of task attempts, the information will be r
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts
 
 Response Header:
 
@@ -1875,7 +1861,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts
       Accept: application/xml
 
 Response Header:
@@ -1889,7 +1875,7 @@ Response Body:
 
     <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <taskAttempts>
-      <taskAttempt xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="reduceTaskAttemptInfo">
+      <taskAttempt>
         <startTime>1326238777460</startTime>
         <finishTime>0</finishTime>
         <elapsedTime>0</elapsedTime>
@@ -1917,7 +1903,7 @@ A Task Attempt resource contains information about a particular task attempt wit
 
 Use the following URI to obtain an Task Attempt Object, from a task identified by the attemptid value.
 
-      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}
+      * http://proxy-http-address:port/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}
 
 ### HTTP Operations Supported
 
@@ -1959,7 +1945,7 @@ For reduce task attempts you also have the following fields:
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts/attempt_1326232085508_4_4_r_0_0 
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts/attempt_1326232085508_4_4_r_0_0
 
 Response Header:
 
@@ -1994,7 +1980,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts/attempt_1326232085508_4_4_r_0_0 
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts/attempt_1326232085508_4_4_r_0_0
       Accept: application/xml
 
 Response Header:
@@ -2035,7 +2021,7 @@ This feature is currently in the alpha stage and may change in the future.
 
 ### URI
 
-      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/state
+      * http://proxy-http-address:port/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/state
 
 ### HTTP Operations Supported
 
@@ -2060,7 +2046,7 @@ When you make a request for the state of an app, the information returned has th
 
 HTTP Request
 
-      GET http://<proxy http address:port>/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
+      GET http://proxy-http-address:port/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
 
 Response Header:
 
@@ -2077,7 +2063,7 @@ Response Body:
 
 HTTP Request
 
-      PUT http://<proxy http address:port>/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
+      PUT http://proxy-http-address:port/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
 
 Request Body:
 
@@ -2102,7 +2088,7 @@ Response Body:
 
 HTTP Request
 
-      GET http://<proxy http address:port>/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
+      GET http://proxy-http-address:port/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
 
 Response Header:
 
@@ -2120,7 +2106,7 @@ Response Body:
 
 HTTP Request
 
-      PUT http://<proxy http address:port>/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
+      PUT http://proxy-http-address:port/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
 
 Request Body:
 
@@ -2147,7 +2133,7 @@ Response Body:
 
 HTTP Request
 
-      PUT http://<proxy http address:port>/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
+      PUT http://proxy-http-address:port/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
 
 Request Body:
 
@@ -2166,7 +2152,7 @@ Response Header:
 
 HTTP Request
 
-      PUT http://<proxy http address:port>/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
+      PUT http://proxy-http-address:port/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
 
 Request Body:
 
@@ -2198,7 +2184,7 @@ With the task attempt counters API, you can object a collection of resources tha
 
 ### URI
 
-      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/counters
+      * http://proxy-http-address:port/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/counters
 
 ### HTTP Operations Supported
 
@@ -2235,7 +2221,7 @@ With the task attempt counters API, you can object a collection of resources tha
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts/attempt_1326232085508_4_4_r_0_0/counters
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts/attempt_1326232085508_4_4_r_0_0/counters
 
 Response Header:
 
@@ -2406,7 +2392,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts/attempt_1326232085508_4_4_r_0_0/counters
+      GET http://proxy-http-address:port/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts/attempt_1326232085508_4_4_r_0_0/counters
       Accept: application/xml
 
 Response Header:

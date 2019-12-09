@@ -50,8 +50,8 @@ public class MiniMRClientClusterFactory {
 
     FileSystem fs = FileSystem.get(conf);
 
-    Path testRootDir = new Path("target", identifier + "-tmpDir")
-        .makeQualified(fs);
+    Path testRootDir = fs.makeQualified(
+        new Path("target", identifier + "-tmpDir"));
     Path appJar = new Path(testRootDir, "MRAppJar.jar");
 
     // Copy MRAppJar and make it private.

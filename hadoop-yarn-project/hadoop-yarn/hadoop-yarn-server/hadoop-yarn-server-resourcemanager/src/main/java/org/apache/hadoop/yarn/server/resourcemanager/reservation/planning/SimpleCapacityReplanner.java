@@ -42,7 +42,7 @@ import com.google.common.annotations.VisibleForTesting;
  * This (re)planner scan a period of time from now to a maximum time window (or
  * the end of the last session, whichever comes first) checking the overall
  * capacity is not violated.
- * 
+ *
  * It greedily removes sessions in reversed order of acceptance (latest accepted
  * is the first removed).
  */
@@ -90,8 +90,8 @@ public class SimpleCapacityReplanner implements Planner {
 
     // loop on all moment in time from now to the end of the check Zone
     // or the end of the planned sessions whichever comes first
-    for (long t = now; 
-         (t < plan.getLastEndTime() && t < (now + lengthOfCheckZone)); 
+    for (long t = now;
+         (t < plan.getLastEndTime() && t < (now + lengthOfCheckZone));
          t += plan.getStep()) {
       Resource excessCap =
           Resources.subtract(plan.getTotalCommittedResources(t), totCap);
@@ -102,7 +102,7 @@ public class SimpleCapacityReplanner implements Planner {
             new TreeSet<ReservationAllocation>(plan.getReservationsAtTime(t));
         for (Iterator<ReservationAllocation> resIter =
             curReservations.iterator(); resIter.hasNext()
-            && Resources.greaterThan(resCalc, totCap, excessCap, 
+            && Resources.greaterThan(resCalc, totCap, excessCap,
                 ZERO_RESOURCE);) {
           ReservationAllocation reservation = resIter.next();
           plan.deleteReservation(reservation.getReservationId());

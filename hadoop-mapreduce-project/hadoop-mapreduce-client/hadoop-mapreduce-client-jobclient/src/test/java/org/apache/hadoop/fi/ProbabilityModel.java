@@ -19,9 +19,9 @@ package org.apache.hadoop.fi;
 
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is responsible for the decision of when a fault 
@@ -42,7 +42,8 @@ import org.apache.hadoop.conf.Configuration;
  */
 public class ProbabilityModel {
   private static Random generator = new Random();
-  private static final Log LOG = LogFactory.getLog(ProbabilityModel.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ProbabilityModel.class);
 
   static final String FPROB_NAME = "fi.";
   private static final String ALL_PROBABILITIES = FPROB_NAME + "*";

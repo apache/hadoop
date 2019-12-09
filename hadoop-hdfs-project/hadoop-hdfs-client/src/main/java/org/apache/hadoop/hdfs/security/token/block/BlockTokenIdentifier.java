@@ -19,11 +19,20 @@
 package org.apache.hadoop.hdfs.security.token.block;
 
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.Optional;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.AccessModeProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenSecretProto;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -44,20 +53,32 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   private String blockPoolId;
   private long blockId;
   private final EnumSet<AccessMode> modes;
+  private StorageType[] storageTypes;
+  private String[] storageIds;
+  private boolean useProto;
+  private byte[] handshakeMsg;
 
   private byte [] cache;
 
   public BlockTokenIdentifier() {
-    this(null, null, 0, EnumSet.noneOf(AccessMode.class));
+    this(null, null, 0, EnumSet.noneOf(AccessMode.class), null, null,
+        false);
   }
 
   public BlockTokenIdentifier(String userId, String bpid, long blockId,
-      EnumSet<AccessMode> modes) {
+      EnumSet<AccessMode> modes, StorageType[] storageTypes,
+      String[] storageIds, boolean useProto) {
     this.cache = null;
     this.userId = userId;
     this.blockPoolId = bpid;
     this.blockId = blockId;
     this.modes = modes == null ? EnumSet.noneOf(AccessMode.class) : modes;
+    this.storageTypes = Optional.ofNullable(storageTypes)
+                                .orElse(StorageType.EMPTY_ARRAY);
+    this.storageIds = Optional.ofNullable(storageIds)
+                              .orElse(new String[0]);
+    this.useProto = useProto;
+    this.handshakeMsg = new byte[0];
   }
 
   @Override
@@ -108,13 +129,31 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     return modes;
   }
 
+  public StorageType[] getStorageTypes(){
+    return storageTypes;
+  }
+
+  public String[] getStorageIds(){
+    return storageIds;
+  }
+
+  public byte[] getHandshakeMsg() {
+    return handshakeMsg;
+  }
+
+  public void setHandshakeMsg(byte[] bytes) {
+    handshakeMsg = bytes;
+  }
+
   @Override
   public String toString() {
     return "block_token_identifier (expiryDate=" + this.getExpiryDate()
         + ", keyId=" + this.getKeyId() + ", userId=" + this.getUserId()
         + ", blockPoolId=" + this.getBlockPoolId()
         + ", blockId=" + this.getBlockId() + ", access modes="
-        + this.getAccessModes() + ")";
+        + this.getAccessModes() + ", storageTypes= "
+        + Arrays.toString(this.getStorageTypes()) + ", storageIds= "
+        + Arrays.toString(this.getStorageIds()) + ")";
   }
 
   static boolean isEqual(Object a, Object b) {
@@ -132,7 +171,9 @@ public class BlockTokenIdentifier extends TokenIdentifier {
           && isEqual(this.userId, that.userId)
           && isEqual(this.blockPoolId, that.blockPoolId)
           && this.blockId == that.blockId
-          && isEqual(this.modes, that.modes);
+          && isEqual(this.modes, that.modes)
+          && Arrays.equals(this.storageTypes, that.storageTypes)
+          && Arrays.equals(this.storageIds, that.storageIds);
     }
     return false;
   }
@@ -141,12 +182,50 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   public int hashCode() {
     return (int) expiryDate ^ keyId ^ (int) blockId ^ modes.hashCode()
         ^ (userId == null ? 0 : userId.hashCode())
-        ^ (blockPoolId == null ? 0 : blockPoolId.hashCode());
+        ^ (blockPoolId == null ? 0 : blockPoolId.hashCode())
+        ^ (storageTypes == null ? 0 : Arrays.hashCode(storageTypes))
+        ^ (storageIds == null ? 0 : Arrays.hashCode(storageIds));
   }
 
+  /**
+   * readFields peeks at the first byte of the DataInput and determines if it
+   * was written using WritableUtils ("Legacy") or Protobuf. We can do this
+   * because we know the first field is the Expiry date.
+   *
+   * In the case of the legacy buffer, the expiry date is a VInt, so the size
+   * (which should always be &gt;1) is encoded in the first byte - which is
+   * always negative due to this encoding. However, there are sometimes null
+   * BlockTokenIdentifier written so we also need to handle the case there
+   * the first byte is also 0.
+   *
+   * In the case of protobuf, the first byte is a type tag for the expiry date
+   * which is written as <code>field_number &lt;&lt; 3 | wire_type</code>.
+   * So as long as the field_number  is less than 16, but also positive, then
+   * we know we have a Protobuf.
+   *
+   * @param in <code>DataInput</code> to deserialize this object from.
+   * @throws IOException
+   */
   @Override
   public void readFields(DataInput in) throws IOException {
     this.cache = null;
+
+    final DataInputStream dis = (DataInputStream)in;
+    if (!dis.markSupported()) {
+      throw new IOException("Could not peek first byte.");
+    }
+    dis.mark(1);
+    final byte firstByte = dis.readByte();
+    dis.reset();
+    if (firstByte <= 0) {
+      readFieldsLegacy(dis);
+    } else {
+      readFieldsProtobuf(dis);
+    }
+  }
+
+  @VisibleForTesting
+  void readFieldsLegacy(DataInput in) throws IOException {
     expiryDate = WritableUtils.readVLong(in);
     keyId = WritableUtils.readVInt(in);
     userId = WritableUtils.readString(in);
@@ -157,10 +236,82 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     for (int i = 0; i < length; i++) {
       modes.add(WritableUtils.readEnum(in, AccessMode.class));
     }
+
+    length = WritableUtils.readVInt(in);
+    StorageType[] readStorageTypes = new StorageType[length];
+    for (int i = 0; i < length; i++) {
+      readStorageTypes[i] = WritableUtils.readEnum(in, StorageType.class);
+    }
+    storageTypes = readStorageTypes;
+
+    length = WritableUtils.readVInt(in);
+    String[] readStorageIds = new String[length];
+    for (int i = 0; i < length; i++) {
+      readStorageIds[i] = WritableUtils.readString(in);
+    }
+    storageIds = readStorageIds;
+
+    useProto = false;
+
+    try {
+      int handshakeMsgLen = WritableUtils.readVInt(in);
+      if (handshakeMsgLen != 0) {
+        handshakeMsg = new byte[handshakeMsgLen];
+        in.readFully(handshakeMsg);
+      }
+    } catch (EOFException eof) {
+
+    }
+  }
+
+  @VisibleForTesting
+  void readFieldsProtobuf(DataInput in) throws IOException {
+    BlockTokenSecretProto blockTokenSecretProto =
+        BlockTokenSecretProto.parseFrom((DataInputStream)in);
+    expiryDate = blockTokenSecretProto.getExpiryDate();
+    keyId = blockTokenSecretProto.getKeyId();
+    if (blockTokenSecretProto.hasUserId()) {
+      userId = blockTokenSecretProto.getUserId();
+    } else {
+      userId = null;
+    }
+    if (blockTokenSecretProto.hasBlockPoolId()) {
+      blockPoolId = blockTokenSecretProto.getBlockPoolId();
+    } else {
+      blockPoolId = null;
+    }
+    blockId = blockTokenSecretProto.getBlockId();
+    for (int i = 0; i < blockTokenSecretProto.getModesCount(); i++) {
+      AccessModeProto accessModeProto = blockTokenSecretProto.getModes(i);
+      modes.add(PBHelperClient.convert(accessModeProto));
+    }
+
+    storageTypes = blockTokenSecretProto.getStorageTypesList().stream()
+        .map(PBHelperClient::convertStorageType)
+        .toArray(StorageType[]::new);
+    storageIds = blockTokenSecretProto.getStorageIdsList().stream()
+        .toArray(String[]::new);
+    useProto = true;
+
+    if(blockTokenSecretProto.hasHandshakeSecret()) {
+      handshakeMsg = blockTokenSecretProto
+          .getHandshakeSecret().toByteArray();
+    } else {
+      handshakeMsg = new byte[0];
+    }
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
+    if (useProto) {
+      writeProtobuf(out);
+    } else {
+      writeLegacy(out);
+    }
+  }
+
+  @VisibleForTesting
+  void writeLegacy(DataOutput out) throws IOException {
     WritableUtils.writeVLong(out, expiryDate);
     WritableUtils.writeVInt(out, keyId);
     WritableUtils.writeString(out, userId);
@@ -170,6 +321,24 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     for (AccessMode aMode : modes) {
       WritableUtils.writeEnum(out, aMode);
     }
+    WritableUtils.writeVInt(out, storageTypes.length);
+    for (StorageType type: storageTypes){
+      WritableUtils.writeEnum(out, type);
+    }
+    WritableUtils.writeVInt(out, storageIds.length);
+    for (String id: storageIds) {
+      WritableUtils.writeString(out, id);
+    }
+    if (handshakeMsg != null && handshakeMsg.length > 0) {
+      WritableUtils.writeVInt(out, handshakeMsg.length);
+      out.write(handshakeMsg);
+    }
+  }
+
+  @VisibleForTesting
+  void writeProtobuf(DataOutput out) throws IOException {
+    BlockTokenSecretProto secret = PBHelperClient.convert(this);
+    out.write(secret.toByteArray());
   }
 
   @Override

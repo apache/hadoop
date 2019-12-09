@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +44,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public abstract class BlockPlacementPolicy {
-  static final Logger LOG = LoggerFactory.getLogger(
+  public static final Logger LOG = LoggerFactory.getLogger(
       BlockPlacementPolicy.class);
 
   @InterfaceAudience.Private
@@ -99,6 +100,17 @@ public abstract class BlockPlacementPolicy {
     return chooseTarget(src, numOfReplicas, writer, 
         new ArrayList<DatanodeStorageInfo>(numOfReplicas), false,
         excludedNodes, blocksize, storagePolicy, flags);
+  }
+
+  /**
+   * @param storageTypes storage types that should be used as targets.
+   */
+  public DatanodeStorageInfo[] chooseTarget(String srcPath, int numOfReplicas,
+      Node writer, List<DatanodeStorageInfo> chosen, boolean returnChosenNodes,
+      Set<Node> excludedNodes, long blocksize, BlockStoragePolicy storagePolicy,
+      EnumSet<AddBlockFlag> flags, EnumMap<StorageType, Integer> storageTypes) {
+    return chooseTarget(srcPath, numOfReplicas, writer, chosen,
+        returnChosenNodes, excludedNodes, blocksize, storagePolicy, flags);
   }
 
   /**

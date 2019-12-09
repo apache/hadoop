@@ -19,18 +19,18 @@ package org.apache.hadoop.mapreduce.task.reduce;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.MapTaskCompletionEventsUpdate;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class EventFetcher<K,V> extends Thread {
   private static final long SLEEP_TIME = 1000;
   private static final int MAX_RETRIES = 10;
   private static final int RETRY_PERIOD = 5000;
-  private static final Log LOG = LogFactory.getLog(EventFetcher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(EventFetcher.class);
 
   private final TaskAttemptID reduce;
   private final TaskUmbilicalProtocol umbilical;

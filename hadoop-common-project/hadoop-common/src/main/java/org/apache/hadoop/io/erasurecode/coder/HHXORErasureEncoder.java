@@ -61,7 +61,7 @@ public class HHXORErasureEncoder extends ErasureEncoder {
   private RawErasureEncoder checkCreateRSRawEncoder() {
     if (rsRawEncoder == null) {
       rsRawEncoder = CodecUtil.createRawEncoder(getConf(),
-          ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, getOptions());
+          ErasureCodeConstants.RS_CODEC_NAME, getOptions());
     }
     return rsRawEncoder;
   }

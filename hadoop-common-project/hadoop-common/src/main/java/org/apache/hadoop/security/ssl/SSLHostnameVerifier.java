@@ -1,9 +1,4 @@
 /*
- * $HeadURL$
- * $Revision$
- * $Date$
- *
- * ====================================================================
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,12 +15,6 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- * ====================================================================
- *
- * This software consists of voluntary contributions made by many
- * individuals on behalf of the Apache Software Foundation.  For more
- * information on the Apache Software Foundation, please see
- * <http://www.apache.org/>.
  *
  */
 
@@ -53,6 +42,8 @@ import javax.net.ssl.SSLSocket;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  ************************************************************************
@@ -229,6 +220,12 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
     abstract class AbstractVerifier implements SSLHostnameVerifier {
 
         /**
+         * Writes as SSLFactory logs as it is the only consumer of this verifier
+         * class.
+         */
+        static final Logger LOG = LoggerFactory.getLogger(SSLFactory.class);
+
+        /**
          * This contains a list of 2nd-level domains that aren't allowed to
          * have wildcards when combined with country-codes.
          * For example: [*.co.uk].
@@ -354,13 +351,24 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
             throws SSLException {
             String[] cns = Certificates.getCNs(cert);
             String[] subjectAlts = Certificates.getDNSSubjectAlts(cert);
-            check(host, cns, subjectAlts);
+            try {
+                check(host, cns, subjectAlts);
+            } catch (SSLException e) {
+                LOG.error("Host check error {}", e);
+                throw e;
+            }
         }
 
         public void check(final String[] hosts, final String[] cns,
                           final String[] subjectAlts, final boolean ie6,
                           final boolean strictWithSubDomains)
             throws SSLException {
+            if (LOG.isTraceEnabled()) {
+                LOG.trace("Hosts:{}, CNs:{} subjectAlts:{}, ie6:{}, " +
+                    "strictWithSubDomains{}", Arrays.toString(hosts),
+                    Arrays.toString(cns), Arrays.toString(subjectAlts), ie6,
+                    strictWithSubDomains);
+            }
             // Build up lists of allowed hosts For logging/debugging purposes.
             StringBuffer buf = new StringBuffer(32);
             buf.append('<');

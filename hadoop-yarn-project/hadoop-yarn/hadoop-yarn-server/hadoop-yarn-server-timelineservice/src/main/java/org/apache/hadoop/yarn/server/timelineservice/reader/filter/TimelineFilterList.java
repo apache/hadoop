@@ -41,7 +41,7 @@ public class TimelineFilterList extends TimelineFilter {
    */
   @Private
   @Unstable
-  public static enum Operator {
+  public enum Operator {
     AND,
     OR
   }

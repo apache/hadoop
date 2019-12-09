@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs;
 
-import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.fs.StorageStatistics.LongStatistic;
 
 import org.junit.Before;
@@ -51,7 +51,8 @@ public class TestFileSystemStorageStatistics {
       "bytesReadLocalHost",
       "bytesReadDistanceOfOneOrTwo",
       "bytesReadDistanceOfThreeOrFour",
-      "bytesReadDistanceOfFiveOrLarger"
+      "bytesReadDistanceOfFiveOrLarger",
+      "bytesReadErasureCoded"
   };
 
   private FileSystem.Statistics statistics =
@@ -66,14 +67,15 @@ public class TestFileSystemStorageStatistics {
 
   @Before
   public void setup() {
-    statistics.incrementBytesRead(RandomUtils.nextInt(100));
-    statistics.incrementBytesWritten(RandomUtils.nextInt(100));
-    statistics.incrementLargeReadOps(RandomUtils.nextInt(100));
-    statistics.incrementWriteOps(RandomUtils.nextInt(100));
+    statistics.incrementBytesRead(RandomUtils.nextInt(0, 100));
+    statistics.incrementBytesWritten(RandomUtils.nextInt(0, 100));
+    statistics.incrementLargeReadOps(RandomUtils.nextInt(0, 100));
+    statistics.incrementWriteOps(RandomUtils.nextInt(0, 100));
 
-    statistics.incrementBytesReadByDistance(0, RandomUtils.nextInt(100));
-    statistics.incrementBytesReadByDistance(1, RandomUtils.nextInt(100));
-    statistics.incrementBytesReadByDistance(3, RandomUtils.nextInt(100));
+    statistics.incrementBytesReadByDistance(0, RandomUtils.nextInt(0, 100));
+    statistics.incrementBytesReadByDistance(1, RandomUtils.nextInt(0, 100));
+    statistics.incrementBytesReadByDistance(3, RandomUtils.nextInt(0, 100));
+    statistics.incrementBytesReadErasureCoded(RandomUtils.nextInt(0, 100));
   }
 
   @Test
@@ -126,6 +128,8 @@ public class TestFileSystemStorageStatistics {
       return statistics.getBytesReadByDistance(3);
     case "bytesReadDistanceOfFiveOrLarger":
       return statistics.getBytesReadByDistance(5);
+    case "bytesReadErasureCoded":
+      return statistics.getBytesReadErasureCoded();
     default:
       return 0;
     }

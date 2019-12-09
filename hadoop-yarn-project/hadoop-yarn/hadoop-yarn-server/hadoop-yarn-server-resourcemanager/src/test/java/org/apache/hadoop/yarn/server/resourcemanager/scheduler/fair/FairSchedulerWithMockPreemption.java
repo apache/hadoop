@@ -21,6 +21,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class FairSchedulerWithMockPreemption extends FairScheduler {
+  static final long DELAY_FOR_NEXT_STARVATION_CHECK_MS = 10 * 60 * 1000;
+
   @Override
   protected void createPreemptionThread() {
     preemptionThread = new MockPreemptionThread(this);
@@ -30,7 +32,7 @@ public class FairSchedulerWithMockPreemption extends FairScheduler {
     private Set<FSAppAttempt> appsAdded = new HashSet<>();
     private int totalAppsAdded = 0;
 
-    MockPreemptionThread(FairScheduler scheduler) {
+    private MockPreemptionThread(FairScheduler scheduler) {
       super(scheduler);
     }
 
@@ -41,6 +43,7 @@ public class FairSchedulerWithMockPreemption extends FairScheduler {
           FSAppAttempt app = context.getStarvedApps().take();
           appsAdded.add(app);
           totalAppsAdded++;
+          app.preemptionTriggered(DELAY_FOR_NEXT_STARVATION_CHECK_MS);
         } catch (InterruptedException e) {
           return;
         }

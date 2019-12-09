@@ -84,7 +84,7 @@ public class TestResolveHdfsSymlink {
 
     final String localTestRoot = helper.getAbsoluteTestRootDir(fcLocal);
     Path alphaLocalPath = new Path(fcLocal.getDefaultFileSystem().getUri()
-        .toString(), new File(localTestRoot, "alpha").getAbsolutePath());
+        .toString(), new File(localTestRoot, "alpha").getPath());
     DFSTestUtil.createFile(FileSystem.getLocal(conf), alphaLocalPath, 16,
         (short) 1, 2);
 

@@ -23,22 +23,27 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Service that handles writes to the timeline service and writes them to the
@@ -51,7 +56,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 @Unstable
 public abstract class TimelineCollector extends CompositeService {
 
-  private static final Log LOG = LogFactory.getLog(TimelineCollector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineCollector.class);
   public static final String SEPARATOR = "_";
 
   private TimelineWriter writer;
@@ -59,8 +65,11 @@ public abstract class TimelineCollector extends CompositeService {
       = new ConcurrentHashMap<>();
   private static Set<String> entityTypesSkipAggregation
       = new HashSet<>();
+  private ThreadPoolExecutor pool;
 
   private volatile boolean readyToAggregate = false;
+
+  private volatile boolean isStopped = false;
 
   public TimelineCollector(String name) {
     super(name);
@@ -69,6 +78,14 @@ public abstract class TimelineCollector extends CompositeService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     super.serviceInit(conf);
+    int capacity = conf.getInt(
+        YarnConfiguration.TIMELINE_SERVICE_WRITER_ASYNC_QUEUE_CAPACITY,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WRITER_ASYNC_QUEUE_CAPACITY
+    );
+    pool = new ThreadPoolExecutor(1, 1, 3, TimeUnit.SECONDS,
+        new ArrayBlockingQueue<>(capacity));
+    pool.setRejectedExecutionHandler(
+        new ThreadPoolExecutor.DiscardOldestPolicy());
   }
 
   @Override
@@ -78,15 +95,17 @@ public abstract class TimelineCollector extends CompositeService {
 
   @Override
   protected void serviceStop() throws Exception {
+    isStopped = true;
+    pool.shutdownNow();
     super.serviceStop();
+  }
+
+  boolean isStopped() {
+    return isStopped;
   }
 
   protected void setWriter(TimelineWriter w) {
     this.writer = w;
-  }
-
-  protected TimelineWriter getWriter() {
-    return writer;
   }
 
   protected Map<String, AggregationStatusTable> getAggregationGroups() {
@@ -133,19 +152,67 @@ public abstract class TimelineCollector extends CompositeService {
   public TimelineWriteResponse putEntities(TimelineEntities entities,
       UserGroupInformation callerUgi) throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("SUCCESS - TIMELINE V2 PROTOTYPE");
       LOG.debug("putEntities(entities=" + entities + ", callerUgi="
           + callerUgi + ")");
     }
-    TimelineCollectorContext context = getTimelineEntityContext();
 
+    TimelineWriteResponse response;
+    // synchronize on the writer object so that no other threads can
+    // flush the writer buffer concurrently and swallow any exception
+    // caused by the timeline enitites that are being put here.
+    synchronized (writer) {
+      response = writeTimelineEntities(entities, callerUgi);
+      flushBufferedTimelineEntities();
+    }
+
+    return response;
+  }
+
+  /**
+   * Add or update an domain. If the domain already exists, only the owner
+   * and the admin can update it.
+   *
+   * @param domain    domain to post
+   * @param callerUgi the caller UGI
+   * @return the response that contains the result of the post.
+   * @throws IOException if there is any exception encountered while putting
+   *                     domain.
+   */
+  public TimelineWriteResponse putDomain(TimelineDomain domain,
+      UserGroupInformation callerUgi) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+          "putDomain(domain=" + domain + ", callerUgi=" + callerUgi + ")");
+    }
+
+    TimelineWriteResponse response;
+    synchronized (writer) {
+      final TimelineCollectorContext context = getTimelineEntityContext();
+      response = writer.write(context, domain);
+      flushBufferedTimelineEntities();
+    }
+
+    return response;
+  }
+
+  private TimelineWriteResponse writeTimelineEntities(
+      TimelineEntities entities, UserGroupInformation callerUgi)
+      throws IOException {
     // Update application metrics for aggregation
     updateAggregateStatus(entities, aggregationGroups,
         getEntityTypesSkipAggregation());
 
-    return writer.write(context.getClusterId(), context.getUserId(),
-        context.getFlowName(), context.getFlowVersion(), context.getFlowRunId(),
-        context.getAppId(), entities);
+    final TimelineCollectorContext context = getTimelineEntityContext();
+    return writer.write(context, entities, callerUgi);
+  }
+
+  /**
+   * Flush buffered timeline entities, if any.
+   * @throws IOException if there is any exception encountered while
+   *      flushing buffered entities.
+   */
+  private void flushBufferedTimelineEntities() throws IOException {
+    writer.flush();
   }
 
   /**
@@ -158,14 +225,25 @@ public abstract class TimelineCollector extends CompositeService {
    *
    * @param entities entities to post
    * @param callerUgi the caller UGI
+   * @throws IOException if there is any exception encounted while putting
+   *     entities.
    */
   public void putEntitiesAsync(TimelineEntities entities,
-      UserGroupInformation callerUgi) {
-    // TODO implement
+      UserGroupInformation callerUgi) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("putEntitiesAsync(entities=" + entities + ", callerUgi=" +
           callerUgi + ")");
     }
+
+    pool.execute(new Runnable() {
+      @Override public void run() {
+        try {
+          writeTimelineEntities(entities, callerUgi);
+        } catch (IOException ie) {
+          LOG.error("Got an exception while writing entity", ie);
+        }
+      }
+    });
   }
 
   /**
@@ -289,13 +367,15 @@ public abstract class TimelineCollector extends CompositeService {
         // Update aggregateTable
         Map<String, TimelineMetric> aggrRow = aggregateTable.get(m);
         if (aggrRow == null) {
-          Map<String, TimelineMetric> tempRow = new ConcurrentHashMap<>();
+          Map<String, TimelineMetric> tempRow = new HashMap<>();
           aggrRow = aggregateTable.putIfAbsent(m, tempRow);
           if (aggrRow == null) {
             aggrRow = tempRow;
           }
         }
-        aggrRow.put(entityId, m);
+        synchronized (aggrRow) {
+          aggrRow.put(entityId, m);
+        }
       }
     }
 
@@ -314,14 +394,17 @@ public abstract class TimelineCollector extends CompositeService {
         }
         aggrMetric.setRealtimeAggregationOp(TimelineMetricOperation.NOP);
         Map<Object, Object> status = new HashMap<>();
-        for (TimelineMetric m : aggrRow.values()) {
-          TimelineMetric.aggregateTo(m, aggrMetric, status);
-          // getRealtimeAggregationOp returns an enum so we can directly
-          // compare with "!=".
-          if (m.getRealtimeAggregationOp()
-              != aggrMetric.getRealtimeAggregationOp()) {
-            aggrMetric.setRealtimeAggregationOp(m.getRealtimeAggregationOp());
+        synchronized (aggrRow) {
+          for (TimelineMetric m : aggrRow.values()) {
+            TimelineMetric.aggregateTo(m, aggrMetric, status);
+            // getRealtimeAggregationOp returns an enum so we can directly
+            // compare with "!=".
+            if (m.getRealtimeAggregationOp()
+                != aggrMetric.getRealtimeAggregationOp()) {
+              aggrMetric.setRealtimeAggregationOp(m.getRealtimeAggregationOp());
+            }
           }
+          aggrRow.clear();
         }
         Set<TimelineMetric> metrics = e.getMetrics();
         metrics.remove(aggrMetric);

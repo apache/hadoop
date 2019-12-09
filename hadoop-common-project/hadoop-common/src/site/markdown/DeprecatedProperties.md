@@ -62,6 +62,7 @@ The following table lists the configuration property names that are deprecated i
 | fs.checkpoint.edits.dir | dfs.namenode.checkpoint.edits.dir |
 | fs.checkpoint.period | dfs.namenode.checkpoint.period |
 | fs.default.name | fs.defaultFS |
+| fs.s3a.server-side-encryption-key | fs.s3a.server-side-encryption.key |
 | hadoop.configured.node.mapping | net.topology.configured.node.mapping |
 | hadoop.native.lib | io.native.lib.available |
 | hadoop.net.static.resolutions | mapreduce.tasktracker.net.static.resolutions |

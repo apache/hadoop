@@ -23,8 +23,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -35,6 +33,8 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.util.Daemon;
 
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is a daemon which runs in a loop, periodically heartbeating
@@ -47,7 +47,7 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public class HealthMonitor {
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       HealthMonitor.class);
 
   private Daemon daemon;
@@ -204,12 +204,11 @@ public class HealthMonitor {
         healthy = true;
       } catch (Throwable t) {
         if (isHealthCheckFailedException(t)) {
-          LOG.warn("Service health check failed for " + targetToMonitor
-              + ": " + t.getMessage());
+          LOG.warn("Service health check failed for {}", targetToMonitor, t);
           enterState(State.SERVICE_UNHEALTHY);
         } else {
-          LOG.warn("Transport-level exception trying to monitor health of " +
-              targetToMonitor + ": " + t.getCause() + " " + t.getLocalizedMessage());
+          LOG.warn("Transport-level exception trying to monitor health of {}",
+              targetToMonitor, t);
           RPC.stopProxy(proxy);
           proxy = null;
           enterState(State.SERVICE_NOT_RESPONDING);
@@ -246,7 +245,7 @@ public class HealthMonitor {
 
   private synchronized void enterState(State newState) {
     if (newState != state) {
-      LOG.info("Entering state " + newState);
+      LOG.info("Entering state {}", newState);
       state = newState;
       synchronized (callbacks) {
         for (Callback cb : callbacks) {
@@ -283,7 +282,7 @@ public class HealthMonitor {
       setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
         @Override
         public void uncaughtException(Thread t, Throwable e) {
-          LOG.fatal("Health monitor failed", e);
+          LOG.error("Health monitor failed", e);
           enterState(HealthMonitor.State.HEALTH_MONITOR_FAILED);
         }
       });

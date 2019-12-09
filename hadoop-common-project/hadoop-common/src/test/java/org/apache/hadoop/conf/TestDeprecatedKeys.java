@@ -21,24 +21,24 @@ package org.apache.hadoop.conf;
 import java.io.ByteArrayOutputStream;
 import java.util.Map;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.junit.Test;
+import static org.junit.Assert.*;
 
-import junit.framework.TestCase;
-
-public class TestDeprecatedKeys extends TestCase {
+public class TestDeprecatedKeys {
  
   //Tests a deprecated key
+  @Test
   public void testDeprecatedKeys() throws Exception {
     Configuration conf = new Configuration();
     conf.set("topology.script.file.name", "xyz");
     conf.set("topology.script.file.name", "xyz");
     String scriptFile = conf.get(CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY);
-    assertTrue(scriptFile.equals("xyz")) ;
+    assertEquals("xyz", scriptFile) ;
   }
   
   //Tests reading / writing a conf file with deprecation after setting
+  @Test
   public void testReadWriteWithDeprecatedKeys() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean("old.config.yet.to.be.deprecated", true);

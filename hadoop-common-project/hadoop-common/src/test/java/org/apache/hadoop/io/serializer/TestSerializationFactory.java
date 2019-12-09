@@ -18,21 +18,21 @@
 package org.apache.hadoop.io.serializer;
 
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Writable;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 
 public class TestSerializationFactory {
 
   static {
-    ((Log4JLogger) SerializationFactory.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(SerializationFactory.LOG, Level.TRACE);
   }
 
   static Configuration conf;
@@ -48,6 +48,19 @@ public class TestSerializationFactory {
   public void testSerializationKeyIsEmpty() {
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.IO_SERIALIZATIONS_KEY, "");
+    SerializationFactory factory = new SerializationFactory(conf);
+  }
+
+  /**
+   * Test the case when {@code IO_SERIALIZATIONS_KEY}
+   * is not set at all, because something unset this key.
+   * This shouldn't result in any error, the defaults present
+   * in construction should be used in this case.
+   */
+  @Test
+  public void testSerializationKeyIsUnset() {
+    Configuration conf = new Configuration();
+    conf.unset(CommonConfigurationKeys.IO_SERIALIZATIONS_KEY);
     SerializationFactory factory = new SerializationFactory(conf);
   }
 

@@ -43,7 +43,7 @@ public class CMgrCompletedAppsEvent extends ContainerManagerEvent {
     return reason;
   }
 
-  public static enum Reason {
+  public enum Reason {
     /**
      * Application is killed as NodeManager is shut down
      */

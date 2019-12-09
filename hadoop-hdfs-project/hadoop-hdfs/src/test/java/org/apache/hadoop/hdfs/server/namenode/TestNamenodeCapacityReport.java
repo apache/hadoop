@@ -25,8 +25,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -52,7 +52,8 @@ import org.junit.Test;
  * This tests InterDataNodeProtocol for block handling. 
  */
 public class TestNamenodeCapacityReport {
-  private static final Log LOG = LogFactory.getLog(TestNamenodeCapacityReport.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestNamenodeCapacityReport.class);
 
   /**
    * The following test first creates a file.
@@ -349,18 +350,18 @@ public class TestNamenodeCapacityReport {
   private void startDecommissionOrMaintenance(DatanodeManager dnm,
       DatanodeDescriptor dnd, boolean decomm) {
     if (decomm) {
-      dnm.getDecomManager().startDecommission(dnd);
+      dnm.getDatanodeAdminManager().startDecommission(dnd);
     } else {
-      dnm.getDecomManager().startMaintenance(dnd, Long.MAX_VALUE);
+      dnm.getDatanodeAdminManager().startMaintenance(dnd, Long.MAX_VALUE);
     }
   }
 
   private void stopDecommissionOrMaintenance(DatanodeManager dnm,
       DatanodeDescriptor dnd, boolean decomm) {
     if (decomm) {
-      dnm.getDecomManager().stopDecommission(dnd);
+      dnm.getDatanodeAdminManager().stopDecommission(dnd);
     } else {
-      dnm.getDecomManager().stopMaintenance(dnd);
+      dnm.getDatanodeAdminManager().stopMaintenance(dnd);
     }
   }
 

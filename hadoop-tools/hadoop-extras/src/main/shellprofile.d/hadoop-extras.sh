@@ -18,7 +18,7 @@
 if ! declare -f hadoop_subcommand_distch >/dev/null 2>/dev/null; then
 
   if [[ "${HADOOP_SHELL_EXECNAME}" = hadoop ]]; then
-    hadoop_add_subcommand "distch" "distributed metadata changer"
+    hadoop_add_subcommand "distch" client "distributed metadata changer"
   fi
 
   # this can't be indented otherwise shelldocs won't get it

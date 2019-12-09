@@ -27,7 +27,7 @@ import org.apache.hadoop.yarn.webapp.SubView;
 
 public class JobPage extends AppView {
 
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
     String jobID = $(JOB_ID);
     set(TITLE, jobID.isEmpty() ? "Bad request: missing job ID"
                : join("MapReduce Job ", $(JOB_ID)));

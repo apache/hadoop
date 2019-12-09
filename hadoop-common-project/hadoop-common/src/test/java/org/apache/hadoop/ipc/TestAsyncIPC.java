@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.ipc;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.LongWritable;
@@ -34,6 +32,8 @@ import org.apache.hadoop.util.concurrent.AsyncGetFuture;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -49,7 +49,7 @@ import static org.junit.Assert.assertFalse;
 public class TestAsyncIPC {
 
   private static Configuration conf;
-  private static final Log LOG = LogFactory.getLog(TestAsyncIPC.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestAsyncIPC.class);
 
   static <T extends Writable> AsyncGetFuture<T, IOException>
       getAsyncRpcResponseFuture() {
@@ -183,7 +183,7 @@ public class TestAsyncIPC {
           final long param = TestIPC.RANDOM.nextLong();
           runCall(i, param);
         } catch (Exception e) {
-          LOG.fatal(String.format("Caller-%d Call-%d caught: %s", callerId, i,
+          LOG.error(String.format("Caller-%d Call-%d caught: %s", callerId, i,
               StringUtils.stringifyException(e)));
           failed = true;
         }
@@ -219,7 +219,7 @@ public class TestAsyncIPC {
       for (int i = start; i < end; i++) {
         LongWritable value = returnFutures.get(i).get();
         if (expectedValues.get(i) != value.get()) {
-          LOG.fatal(String.format("Caller-%d Call-%d failed!", callerId, i));
+          LOG.error(String.format("Caller-%d Call-%d failed!", callerId, i));
           failed = true;
           break;
         }

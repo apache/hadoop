@@ -26,6 +26,8 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -49,15 +51,11 @@ class JNStorage extends Storage {
   private final FileJournalManager fjm;
   private final StorageDirectory sd;
   private StorageState state;
-  
 
-  private static final List<Pattern> CURRENT_DIR_PURGE_REGEXES =
-      ImmutableList.of(
-        Pattern.compile("edits_\\d+-(\\d+)"),
-        Pattern.compile("edits_inprogress_(\\d+)(?:\\..*)?"));
-  
-  private static final List<Pattern> PAXOS_DIR_PURGE_REGEXES = 
+  private static final List<Pattern> PAXOS_DIR_PURGE_REGEXES =
       ImmutableList.of(Pattern.compile("(\\d+)"));
+
+  private static final String STORAGE_EDITS_SYNC = "edits.sync";
 
   /**
    * @param conf Configuration object
@@ -69,7 +67,9 @@ class JNStorage extends Storage {
       StorageErrorReporter errorReporter) throws IOException {
     super(NodeType.JOURNAL_NODE);
     
-    sd = new StorageDirectory(logDir);
+    sd = new StorageDirectory(logDir, null, false, new FsPermission(conf.get(
+        DFSConfigKeys.DFS_JOURNAL_EDITS_DIR_PERMISSION_KEY,
+        DFSConfigKeys.DFS_JOURNAL_EDITS_DIR_PERMISSION_DEFAULT)));
     this.addStorageDir(sd);
     this.fjm = new FileJournalManager(conf, sd, errorReporter);
 
@@ -81,7 +81,8 @@ class JNStorage extends Storage {
   }
 
   @Override
-  public boolean isPreUpgradableLayout(StorageDirectory sd) throws IOException {
+  public boolean isPreUpgradableLayout(StorageDirectory sd)
+      throws IOException {
     return false;
   }
 
@@ -89,7 +90,8 @@ class JNStorage extends Storage {
    * Find an edits file spanning the given transaction ID range.
    * If no such file exists, an exception is thrown.
    */
-  File findFinalizedEditsFile(long startTxId, long endTxId) throws IOException {
+  File findFinalizedEditsFile(long startTxId, long endTxId)
+      throws IOException {
     File ret = new File(sd.getCurrentDir(),
         NNStorage.getFinalizedEditsFileName(startTxId, endTxId));
     if (!ret.exists()) {
@@ -121,16 +123,48 @@ class JNStorage extends Storage {
     return new File(sd.getCurrentDir(), name);
   }
 
+  File getCurrentDir() {
+    return sd.getCurrentDir();
+  }
+
+  /**
+   * Directory {@code edits.sync} temporarily holds the log segments
+   * downloaded through {@link JournalNodeSyncer} before they are moved to
+   * {@code current} directory.
+   *
+   * @return the directory path
+   */
+  File getEditsSyncDir() {
+    return new File(sd.getRoot(), STORAGE_EDITS_SYNC);
+  }
+
+  File getTemporaryEditsFile(long startTxId, long endTxId) {
+    return new File(getEditsSyncDir(), String.format("%s_%019d-%019d",
+            NNStorage.NameNodeFile.EDITS.getName(), startTxId, endTxId));
+  }
+
+  File getFinalizedEditsFile(long startTxId, long endTxId) {
+    return new File(sd.getCurrentDir(), String.format("%s_%019d-%019d",
+            NNStorage.NameNodeFile.EDITS.getName(), startTxId, endTxId));
+  }
+
   /**
    * @return the path for the file which contains persisted data for the
    * paxos-like recovery process for the given log segment.
    */
   File getPaxosFile(long segmentTxId) {
-    return new File(getPaxosDir(), String.valueOf(segmentTxId));
+    return new File(getOrCreatePaxosDir(), String.valueOf(segmentTxId));
   }
   
-  File getPaxosDir() {
-    return new File(sd.getCurrentDir(), "paxos");
+  File getOrCreatePaxosDir() {
+    File paxosDir = new File(sd.getCurrentDir(), "paxos");
+    if(!paxosDir.exists()) {
+      LOG.info("Creating paxos dir: {}", paxosDir.toPath());
+      if(!paxosDir.mkdir()) {
+        LOG.error("Could not create paxos dir: {}", paxosDir.toPath());
+      }
+    }
+    return paxosDir;
   }
   
   File getRoot() {
@@ -142,9 +176,10 @@ class JNStorage extends Storage {
    * the given txid.
    */
   void purgeDataOlderThan(long minTxIdToKeep) throws IOException {
-    purgeMatching(sd.getCurrentDir(),
-        CURRENT_DIR_PURGE_REGEXES, minTxIdToKeep);
-    purgeMatching(getPaxosDir(), PAXOS_DIR_PURGE_REGEXES, minTxIdToKeep);
+    fjm.purgeLogsOlderThan(minTxIdToKeep);
+
+    purgeMatching(getOrCreatePaxosDir(),
+        PAXOS_DIR_PURGE_REGEXES, minTxIdToKeep);
   }
   
   /**
@@ -167,10 +202,9 @@ class JNStorage extends Storage {
           // /\d+/ in the regex itself.
           long txid = Long.parseLong(matcher.group(1));
           if (txid < minTxIdToKeep) {
-            LOG.info("Purging no-longer needed file " + txid);
+            LOG.info("Purging no-longer needed file {}", txid);
             if (!f.delete()) {
-              LOG.warn("Unable to delete no-longer-needed data " +
-                  f);
+              LOG.warn("Unable to delete no-longer-needed data {}", f);
             }
             break;
           }
@@ -179,9 +213,16 @@ class JNStorage extends Storage {
     }
   }
 
-  void format(NamespaceInfo nsInfo) throws IOException {
+  void format(NamespaceInfo nsInfo, boolean force) throws IOException {
+    unlockAll();
+    try {
+      sd.analyzeStorage(StartupOption.FORMAT, this, !force);
+    } finally {
+      sd.unlock();
+    }
     setStorageInfo(nsInfo);
-    LOG.info("Formatting journal " + sd + " with nsid: " + getNamespaceID());
+
+    LOG.info("Formatting journal {} with nsid: {}", sd, getNamespaceID());
     // Unlock the directory before formatting, because we will
     // re-analyze it after format(). The analyzeStorage() call
     // below is reponsible for re-locking it. This is a no-op
@@ -189,14 +230,8 @@ class JNStorage extends Storage {
     unlockAll();
     sd.clearDirectory();
     writeProperties(sd);
-    createPaxosDir();
+    getOrCreatePaxosDir();
     analyzeStorage();
-  }
-  
-  void createPaxosDir() throws IOException {
-    if (!getPaxosDir().mkdirs()) {
-      throw new IOException("Could not create paxos dir: " + getPaxosDir());
-    }
   }
   
   void analyzeStorage() throws IOException {
@@ -245,7 +280,7 @@ class JNStorage extends Storage {
   }
 
   public void close() throws IOException {
-    LOG.info("Closing journal storage for " + sd);
+    LOG.info("Closing journal storage for {}", sd);
     unlockAll();
   }
 

@@ -24,7 +24,6 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -41,6 +40,28 @@ public class TestYarnConfiguration {
     // specifically add slashes and Jetty doesn't handle double slashes.
     Assert.assertNotSame("RM Web Url is not correct", "http://0.0.0.0:8088",
         rmWebUrl);
+
+    // test it in HA scenario
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.set(YarnConfiguration.RM_HA_IDS, "rm1, rm2");
+    conf.set("yarn.resourcemanager.webapp.address.rm1", "10.10.10.10:18088");
+    conf.set("yarn.resourcemanager.webapp.address.rm2", "20.20.20.20:28088");
+    String rmWebUrlinHA = WebAppUtils.getRMWebAppURLWithScheme(conf);
+    Assert.assertEquals("http://10.10.10.10:18088", rmWebUrlinHA);
+
+    YarnConfiguration conf2 = new YarnConfiguration();
+    conf2.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf2.set(YarnConfiguration.RM_HA_IDS, "rm1, rm2");
+    conf2.set("yarn.resourcemanager.hostname.rm1", "30.30.30.30");
+    conf2.set("yarn.resourcemanager.hostname.rm2", "40.40.40.40");
+    String rmWebUrlinHA2 = WebAppUtils.getRMWebAppURLWithScheme(conf2);
+    Assert.assertEquals("http://30.30.30.30:8088", rmWebUrlinHA2);
+
+    rmWebUrlinHA2 = WebAppUtils.getRMWebAppURLWithScheme(conf2, 0);
+    Assert.assertEquals("http://30.30.30.30:8088", rmWebUrlinHA2);
+
+    rmWebUrlinHA2 = WebAppUtils.getRMWebAppURLWithScheme(conf2, 1);
+    Assert.assertEquals("http://40.40.40.40:8088", rmWebUrlinHA2);
   }
 
   @Test

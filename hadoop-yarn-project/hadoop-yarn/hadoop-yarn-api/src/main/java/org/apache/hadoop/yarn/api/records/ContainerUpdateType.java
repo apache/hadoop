@@ -39,7 +39,12 @@ public enum ContainerUpdateType {
   DECREASE_RESOURCE,
 
   /**
-   * Execution Type change.
+   * Execution Type promotion.
    */
-  UPDATE_EXECUTION_TYPE
+  PROMOTE_EXECUTION_TYPE,
+
+  /**
+   * Execution Type demotion.
+   */
+  DEMOTE_EXECUTION_TYPE
 }

@@ -21,11 +21,11 @@ import java.io.IOException;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Plugin to calculate resource information on Windows systems.
@@ -34,7 +34,8 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 @InterfaceStability.Evolving
 public class SysInfoWindows extends SysInfo {
 
-  private static final Log LOG = LogFactory.getLog(SysInfoWindows.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SysInfoWindows.class);
 
   private long vmemSize;
   private long memSize;
@@ -90,7 +91,7 @@ public class SysInfoWindows extends SysInfo {
     return null;
   }
 
-  void refreshIfNeeded() {
+  synchronized void refreshIfNeeded() {
     long now = now();
     if (now - lastRefreshTime > REFRESH_INTERVAL_MS) {
       long refreshInterval = now - lastRefreshTime;
@@ -169,7 +170,7 @@ public class SysInfoWindows extends SysInfo {
 
   /** {@inheritDoc} */
   @Override
-  public int getNumProcessors() {
+  public synchronized int getNumProcessors() {
     refreshIfNeeded();
     return numProcessors;
   }
@@ -196,7 +197,7 @@ public class SysInfoWindows extends SysInfo {
 
   /** {@inheritDoc} */
   @Override
-  public float getCpuUsagePercentage() {
+  public synchronized float getCpuUsagePercentage() {
     refreshIfNeeded();
     float ret = cpuUsage;
     if (ret != -1) {
@@ -207,7 +208,7 @@ public class SysInfoWindows extends SysInfo {
 
   /** {@inheritDoc} */
   @Override
-  public float getNumVCoresUsed() {
+  public synchronized float getNumVCoresUsed() {
     refreshIfNeeded();
     float ret = cpuUsage;
     if (ret != -1) {

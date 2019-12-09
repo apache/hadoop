@@ -23,15 +23,19 @@ export default Ember.Controller.extend({
   breadcrumbs: Ember.computed('model.nodeInfo', 'model.containerInfo', function () {
     var nodeInfo = this.get('model.nodeInfo'),
         containerInfo = this.get('model.containerInfo');
+    var nodeAddr = encodeURIComponent(nodeInfo.addr);
     return [{
       text: "Home",
       routeName: 'application'
     }, {
+      text: "Nodes",
+      routeName: 'yarn-nodes.table'
+    }, {
       text: `Node [ ${nodeInfo.id} ]`,
-      href: `/#/yarn-node/${nodeInfo.id}/${nodeInfo.addr}`,
+      href: `#/yarn-node/${nodeInfo.id}/${nodeAddr}/info`,
     }, {
       text: `Container [ ${containerInfo.id} ]`,
-      href: `/#/yarn-node-container/${nodeInfo.id}/${nodeInfo.addr}/${containerInfo.id}`,
+      href: `#/yarn-node-container/${nodeInfo.id}/${nodeAddr}/${containerInfo.id}`,
     }, {
       text: "Log",
     }];

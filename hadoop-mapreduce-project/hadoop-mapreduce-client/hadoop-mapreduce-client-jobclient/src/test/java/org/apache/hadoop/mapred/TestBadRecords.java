@@ -30,8 +30,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -41,6 +39,8 @@ import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -48,8 +48,8 @@ import static org.junit.Assert.assertNotNull;
 @Ignore
 public class TestBadRecords extends ClusterMapReduceTestCase {
   
-  private static final Log LOG = 
-    LogFactory.getLog(TestBadRecords.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestBadRecords.class);
   
   private static final List<String> MAPPER_BAD_RECORDS = 
     Arrays.asList("hello01","hello04","hello05");

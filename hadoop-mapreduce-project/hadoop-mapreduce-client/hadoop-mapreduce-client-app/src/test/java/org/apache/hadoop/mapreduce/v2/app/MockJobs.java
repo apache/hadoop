@@ -640,6 +640,25 @@ public class MockJobs extends MockApps {
       public void setJobPriority(Priority priority) {
         // do nothing
       }
+
+      public int getFailedMaps() {
+        return 0;
+      }
+
+      @Override
+      public int getFailedReduces() {
+        return 0;
+      }
+
+      @Override
+      public int getKilledMaps() {
+        return 0;
+      }
+
+      @Override
+      public int getKilledReduces() {
+        return 0;
+      }
     };
   }
 

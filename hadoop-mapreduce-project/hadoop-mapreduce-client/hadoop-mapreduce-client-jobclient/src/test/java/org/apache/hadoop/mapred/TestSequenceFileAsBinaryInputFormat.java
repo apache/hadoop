@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.mapred;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
+import org.slf4j.Logger;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -34,7 +34,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class TestSequenceFileAsBinaryInputFormat {
-  private static final Log LOG = FileInputFormat.LOG;
+  private static final Logger LOG = FileInputFormat.LOG;
   private static final int RECORDS = 10000;
 
   @Test

@@ -24,23 +24,28 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.microsoft.azure.datalake.store.ADLStoreClient;
 import com.microsoft.azure.datalake.store.ADLStoreOptions;
 import com.microsoft.azure.datalake.store.DirectoryEntry;
-import com.microsoft.azure.datalake.store.DirectoryEntryType;
 import com.microsoft.azure.datalake.store.IfExists;
 import com.microsoft.azure.datalake.store.LatencyTracker;
+import com.microsoft.azure.datalake.store.UserGroupRepresentation;
 import com.microsoft.azure.datalake.store.oauth2.AccessTokenProvider;
 import com.microsoft.azure.datalake.store.oauth2.ClientCredsTokenProvider;
+import com.microsoft.azure.datalake.store.oauth2.DeviceCodeTokenProvider;
+import com.microsoft.azure.datalake.store.oauth2.MsiTokenProvider;
 import com.microsoft.azure.datalake.store.oauth2.RefreshTokenBasedTokenProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.ContentSummary.Builder;
 import org.apache.hadoop.fs.CreateFlag;
@@ -58,10 +63,12 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.VersionInfo;
+
 import static org.apache.hadoop.fs.adl.AdlConfKeys.*;
 
 /**
@@ -70,7 +77,9 @@ import static org.apache.hadoop.fs.adl.AdlConfKeys.*;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class AdlFileSystem extends FileSystem {
-  static final String SCHEME = "adl";
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AdlFileSystem.class);
+  public static final String SCHEME = "adl";
   static final int DEFAULT_PORT = 443;
   private URI uri;
   private String userName;
@@ -78,10 +87,16 @@ public class AdlFileSystem extends FileSystem {
   private ADLStoreClient adlClient;
   private Path workingDirectory;
   private boolean aclBitStatus;
+  private UserGroupRepresentation oidOrUpn;
+
 
   // retained for tests
   private AccessTokenProvider tokenProvider;
   private AzureADTokenProvider azureTokenProvider;
+
+  static {
+    AdlConfKeys.addDeprecatedKeys();
+  }
 
   @Override
   public String getScheme() {
@@ -105,12 +120,19 @@ public class AdlFileSystem extends FileSystem {
   /**
    * Called after a new FileSystem instance is constructed.
    *
-   * @param storeUri a uri whose authority section names the host, port, etc.
-   *                 for this FileSystem
-   * @param conf     the configuration
+   * @param storeUri      a uri whose authority section names the host, port,
+   *                      etc. for this FileSystem
+   * @param originalConf  the configuration to use for the FS. The account-
+   *                      specific options are patched over the base ones
+   *                      before any use is made of the config.
    */
   @Override
-  public void initialize(URI storeUri, Configuration conf) throws IOException {
+  public void initialize(URI storeUri, Configuration originalConf)
+      throws IOException {
+    String hostname = storeUri.getHost();
+    String accountName = getAccountNameFromFQDN(hostname);
+    Configuration conf = propagateAccountOptions(originalConf, accountName);
+
     super.initialize(storeUri, conf);
     this.setConf(conf);
     this.uri = URI
@@ -120,6 +142,8 @@ public class AdlFileSystem extends FileSystem {
       userName = UserGroupInformation.getCurrentUser().getShortUserName();
     } catch (IOException e) {
       userName = "hadoop";
+      LOG.warn("Got exception when getting Hadoop user name."
+          + " Set the user name to '" + userName + "'.", e);
     }
 
     this.setWorkingDirectory(getHomeDirectory());
@@ -132,7 +156,6 @@ public class AdlFileSystem extends FileSystem {
 
     String accountFQDN = null;
     String mountPoint = null;
-    String hostname = storeUri.getHost();
     if (!hostname.contains(".") && !hostname.equalsIgnoreCase(
         "localhost")) {  // this is a symbolic name. Resolve it.
       String hostNameProperty = "dfs.adls." + hostname + ".hostname";
@@ -172,6 +195,14 @@ public class AdlFileSystem extends FileSystem {
         VersionInfo.getVersion().trim() + "/" + clusterName + "/"
         + clusterType);
 
+    int timeout = conf.getInt(ADL_HTTP_TIMEOUT, -1);
+    if (timeout > 0) {
+      // only set timeout if specified in config. Otherwise use SDK default
+      options.setDefaultTimeout(timeout);
+    } else {
+      LOG.info("No valid ADL SDK timeout configured: using SDK default.");
+    }
+
     adlClient.setOptions(options);
 
     boolean trackLatency = conf
@@ -179,6 +210,11 @@ public class AdlFileSystem extends FileSystem {
     if (!trackLatency) {
       LatencyTracker.disable();
     }
+
+    boolean enableUPN = conf.getBoolean(ADL_ENABLEUPN_FOR_OWNERGROUP_KEY,
+        ADL_ENABLEUPN_FOR_OWNERGROUP_DEFAULT);
+    oidOrUpn = enableUPN ? UserGroupRepresentation.UPN :
+        UserGroupRepresentation.OID;
   }
 
   /**
@@ -224,10 +260,13 @@ public class AdlFileSystem extends FileSystem {
     return azureTokenProvider;
   }
 
-  private AccessTokenProvider getAccessTokenProvider(Configuration conf)
+  private AccessTokenProvider getAccessTokenProvider(Configuration config)
       throws IOException {
+    Configuration conf = ProviderUtils.excludeIncompatibleCredentialProviders(
+        config, AdlFileSystem.class);
     TokenProviderType type = conf.getEnum(
-        AdlConfKeys.AZURE_AD_TOKEN_PROVIDER_TYPE_KEY, TokenProviderType.Custom);
+        AdlConfKeys.AZURE_AD_TOKEN_PROVIDER_TYPE_KEY,
+        AdlConfKeys.AZURE_AD_TOKEN_PROVIDER_TYPE_DEFAULT);
 
     switch (type) {
     case RefreshToken:
@@ -235,6 +274,12 @@ public class AdlFileSystem extends FileSystem {
       break;
     case ClientCredential:
       tokenProvider = getConfCredentialBasedTokenProvider(conf);
+      break;
+    case MSI:
+      tokenProvider = getMsiBasedTokenProvider(conf);
+      break;
+    case DeviceCode:
+      tokenProvider = getDeviceCodeTokenProvider(conf);
       break;
     case Custom:
     default:
@@ -248,18 +293,29 @@ public class AdlFileSystem extends FileSystem {
   }
 
   private AccessTokenProvider getConfCredentialBasedTokenProvider(
-      Configuration conf) {
-    String clientId = getNonEmptyVal(conf, AZURE_AD_CLIENT_ID_KEY);
-    String refreshUrl = getNonEmptyVal(conf, AZURE_AD_REFRESH_URL_KEY);
-    String clientSecret = getNonEmptyVal(conf, AZURE_AD_CLIENT_SECRET_KEY);
+      Configuration conf) throws IOException {
+    String clientId = getPasswordString(conf, AZURE_AD_CLIENT_ID_KEY);
+    String refreshUrl = getPasswordString(conf, AZURE_AD_REFRESH_URL_KEY);
+    String clientSecret = getPasswordString(conf, AZURE_AD_CLIENT_SECRET_KEY);
     return new ClientCredsTokenProvider(refreshUrl, clientId, clientSecret);
   }
 
   private AccessTokenProvider getConfRefreshTokenBasedTokenProvider(
-      Configuration conf) {
-    String clientId = getNonEmptyVal(conf, AZURE_AD_CLIENT_ID_KEY);
-    String refreshToken = getNonEmptyVal(conf, AZURE_AD_REFRESH_TOKEN_KEY);
+      Configuration conf) throws IOException {
+    String clientId = getPasswordString(conf, AZURE_AD_CLIENT_ID_KEY);
+    String refreshToken = getPasswordString(conf, AZURE_AD_REFRESH_TOKEN_KEY);
     return new RefreshTokenBasedTokenProvider(clientId, refreshToken);
+  }
+
+  private AccessTokenProvider getMsiBasedTokenProvider(
+          Configuration conf) throws IOException {
+    return new MsiTokenProvider(conf.getInt(MSI_PORT, -1));
+  }
+
+  private AccessTokenProvider getDeviceCodeTokenProvider(
+          Configuration conf) throws IOException {
+    String clientAppId = getNonEmptyVal(conf, DEVICE_CODE_CLIENT_APP_ID);
+    return new DeviceCodeTokenProvider(clientAppId);
   }
 
   @VisibleForTesting
@@ -270,6 +326,11 @@ public class AdlFileSystem extends FileSystem {
   @VisibleForTesting
   AzureADTokenProvider getAzureTokenProvider() {
     return azureTokenProvider;
+  }
+
+  @VisibleForTesting
+  public ADLStoreClient getAdlClient() {
+    return adlClient;
   }
 
   /**
@@ -435,7 +496,8 @@ public class AdlFileSystem extends FileSystem {
   @Override
   public FileStatus getFileStatus(final Path f) throws IOException {
     statistics.incrementReadOps(1);
-    DirectoryEntry entry = adlClient.getDirectoryEntry(toRelativeFilePath(f));
+    DirectoryEntry entry =
+        adlClient.getDirectoryEntry(toRelativeFilePath(f), oidOrUpn);
     return toFileStatus(entry, f);
   }
 
@@ -452,7 +514,7 @@ public class AdlFileSystem extends FileSystem {
   public FileStatus[] listStatus(final Path f) throws IOException {
     statistics.incrementReadOps(1);
     List<DirectoryEntry> entries =
-        adlClient.enumerateDirectory(toRelativeFilePath(f));
+        adlClient.enumerateDirectory(toRelativeFilePath(f), oidOrUpn);
     return toFileStatuses(entries, f);
   }
 
@@ -586,26 +648,12 @@ public class AdlFileSystem extends FileSystem {
   }
 
   private FileStatus toFileStatus(final DirectoryEntry entry, final Path f) {
-    boolean isDirectory = entry.type == DirectoryEntryType.DIRECTORY;
-    long lastModificationData = entry.lastModifiedTime.getTime();
-    long lastAccessTime = entry.lastAccessTime.getTime();
-    FsPermission permission = new AdlPermission(aclBitStatus,
-        Short.valueOf(entry.permission, 8));
-    String user = entry.user;
-    String group = entry.group;
-
-    FileStatus status;
+    Path p = makeQualified(f);
+    boolean aclBit = aclBitStatus ? entry.aclBit : false;
     if (overrideOwner) {
-      status = new FileStatus(entry.length, isDirectory, ADL_REPLICATION_FACTOR,
-          ADL_BLOCK_SIZE, lastModificationData, lastAccessTime, permission,
-          userName, "hdfs", this.makeQualified(f));
-    } else {
-      status = new FileStatus(entry.length, isDirectory, ADL_REPLICATION_FACTOR,
-          ADL_BLOCK_SIZE, lastModificationData, lastAccessTime, permission,
-          user, group, this.makeQualified(f));
+      return new AdlFileStatus(entry, p, userName, "hdfs", aclBit);
     }
-
-    return status;
+    return new AdlFileStatus(entry, p, aclBit);
   }
 
   /**
@@ -741,8 +789,8 @@ public class AdlFileSystem extends FileSystem {
   @Override
   public AclStatus getAclStatus(final Path path) throws IOException {
     statistics.incrementReadOps(1);
-    com.microsoft.azure.datalake.store.acl.AclStatus adlStatus = adlClient
-        .getAclStatus(toRelativeFilePath(path));
+    com.microsoft.azure.datalake.store.acl.AclStatus adlStatus =
+        adlClient.getAclStatus(toRelativeFilePath(path), oidOrUpn);
     AclStatus.Builder aclStatusBuilder = new AclStatus.Builder();
     aclStatusBuilder.owner(adlStatus.owner);
     aclStatusBuilder.group(adlStatus.group);
@@ -874,45 +922,6 @@ public class AdlFileSystem extends FileSystem {
     return ADL_BLOCK_SIZE;
   }
 
-  @Override
-  public BlockLocation[] getFileBlockLocations(final FileStatus status,
-      final long offset, final long length) throws IOException {
-    if (status == null) {
-      return null;
-    }
-
-    if ((offset < 0) || (length < 0)) {
-      throw new IllegalArgumentException("Invalid start or len parameter");
-    }
-
-    if (status.getLen() < offset) {
-      return new BlockLocation[0];
-    }
-
-    final String[] name = {"localhost"};
-    final String[] host = {"localhost"};
-    long blockSize = ADL_BLOCK_SIZE;
-    int numberOfLocations =
-        (int) (length / blockSize) + ((length % blockSize == 0) ? 0 : 1);
-    BlockLocation[] locations = new BlockLocation[numberOfLocations];
-    for (int i = 0; i < locations.length; i++) {
-      long currentOffset = offset + (i * blockSize);
-      long currentLength = Math.min(blockSize, offset + length - currentOffset);
-      locations[i] = new BlockLocation(name, host, currentOffset,
-          currentLength);
-    }
-
-    return locations;
-  }
-
-  @Override
-  public BlockLocation[] getFileBlockLocations(final Path p, final long offset,
-      final long length) throws IOException {
-    // read ops incremented in getFileStatus
-    FileStatus fileStatus = getFileStatus(p);
-    return getFileBlockLocations(fileStatus, offset, length);
-  }
-
   /**
    * Get replication.
    *
@@ -938,4 +947,86 @@ public class AdlFileSystem extends FileSystem {
     return value;
   }
 
+  /**
+   * A wrapper of {@link Configuration#getPassword(String)}. It returns
+   * <code>String</code> instead of <code>char[]</code>.
+   *
+   * @param conf the configuration
+   * @param key the property key
+   * @return the password string
+   * @throws IOException if the password was not found
+   */
+  private static String getPasswordString(Configuration conf, String key)
+      throws IOException {
+    char[] passchars = conf.getPassword(key);
+    if (passchars == null) {
+      throw new IOException("Password " + key + " not found");
+    }
+    return new String(passchars);
+  }
+
+  @VisibleForTesting
+  public void setUserGroupRepresentationAsUPN(boolean enableUPN) {
+    oidOrUpn = enableUPN ? UserGroupRepresentation.UPN :
+        UserGroupRepresentation.OID;
+  }
+
+  /**
+   * Gets ADL account name from ADL FQDN.
+   * @param accountFQDN ADL account fqdn
+   * @return ADL account name
+   */
+  public static String getAccountNameFromFQDN(String accountFQDN) {
+    return accountFQDN.contains(".")
+            ? accountFQDN.substring(0, accountFQDN.indexOf("."))
+            : accountFQDN;
+  }
+
+  /**
+   * Propagates account-specific settings into generic ADL configuration keys.
+   * This is done by propagating the values of the form
+   * {@code fs.adl.account.${account_name}.key} to
+   * {@code fs.adl.key}, for all values of "key"
+   *
+   * The source of the updated property is set to the key name of the account
+   * property, to aid in diagnostics of where things came from.
+   *
+   * Returns a new configuration. Why the clone?
+   * You can use the same conf for different filesystems, and the original
+   * values are not updated.
+   *
+   *
+   * @param source Source Configuration object
+   * @param accountName account name. Must not be empty
+   * @return a (potentially) patched clone of the original
+   */
+  public static Configuration propagateAccountOptions(Configuration source,
+      String accountName) {
+
+    Preconditions.checkArgument(StringUtils.isNotEmpty(accountName),
+        "accountName");
+    final String accountPrefix = AZURE_AD_ACCOUNT_PREFIX + accountName +'.';
+    LOG.debug("Propagating entries under {}", accountPrefix);
+    final Configuration dest = new Configuration(source);
+    for (Map.Entry<String, String> entry : source) {
+      final String key = entry.getKey();
+      // get the (unexpanded) value.
+      final String value = entry.getValue();
+      if (!key.startsWith(accountPrefix) || accountPrefix.equals(key)) {
+        continue;
+      }
+      // there's a account prefix, so strip it
+      final String stripped = key.substring(accountPrefix.length());
+
+      // propagate the value, building a new origin field.
+      // to track overwrites, the generic key is overwritten even if
+      // already matches the new one.
+      String origin = "[" + StringUtils.join(
+              source.getPropertySources(key), ", ") +"]";
+      final String generic = AZURE_AD_PREFIX + stripped;
+      LOG.debug("Updating {} from {}", generic, origin);
+      dest.set(generic, value, key + " via " + origin);
+    }
+    return dest;
+  }
 }

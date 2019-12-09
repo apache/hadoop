@@ -45,7 +45,7 @@ public interface ReconfigurationProtocol {
 
   /**
    * Get the status of the previously issued reconfig task.
-   * @see {@link org.apache.hadoop.conf.ReconfigurationTaskStatus}.
+   * @see org.apache.hadoop.conf.ReconfigurationTaskStatus
    */
   @Idempotent
   ReconfigurationTaskStatus getReconfigurationStatus() throws IOException;

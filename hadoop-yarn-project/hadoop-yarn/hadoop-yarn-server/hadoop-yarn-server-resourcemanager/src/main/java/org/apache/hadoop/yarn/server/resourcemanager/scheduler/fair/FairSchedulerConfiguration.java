@@ -17,7 +17,10 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import java.io.File;
+import static org.apache.hadoop.yarn.util.resource.ResourceUtils.RESOURCE_REQUEST_VALUE_PATTERN;
+
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,8 +31,12 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
@@ -38,14 +45,30 @@ public class FairSchedulerConfiguration extends Configuration {
 
   public static final Log LOG = LogFactory.getLog(
       FairSchedulerConfiguration.class.getName());
-  
-  /** Increment request grant-able by the RM scheduler. 
-   * These properties are looked up in the yarn-site.xml  */
+
+  /**
+   * Resource Increment request grant-able by the FairScheduler.
+   * This property is looked up in the yarn-site.xml.
+   * @deprecated The preferred way to configure the increment is by using the
+   * yarn.resource-types.{RESOURCE_NAME}.increment-allocation property,
+   * for memory: yarn.resource-types.memory-mb.increment-allocation
+   */
+  @Deprecated
   public static final String RM_SCHEDULER_INCREMENT_ALLOCATION_MB =
     YarnConfiguration.YARN_PREFIX + "scheduler.increment-allocation-mb";
+  @Deprecated
   public static final int DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB = 1024;
+  /**
+   * Resource Increment request grant-able by the FairScheduler.
+   * This property is looked up in the yarn-site.xml.
+   * @deprecated The preferred way to configure the increment is by using the
+   * yarn.resource-types.{RESOURCE_NAME}.increment-allocation property,
+   * for CPU: yarn.resource-types.vcores.increment-allocation
+   */
+  @Deprecated
   public static final String RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES =
     YarnConfiguration.YARN_PREFIX + "scheduler.increment-allocation-vcores";
+  @Deprecated
   public static final int DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES = 1;
 
   /** Threshold for container size for making a container reservation as a
@@ -63,12 +86,6 @@ public class FairSchedulerConfiguration extends Configuration {
   public static final String ALLOCATION_FILE = CONF_PREFIX + "allocation.file";
   protected static final String DEFAULT_ALLOCATION_FILE = "fair-scheduler.xml";
   
-  /** Whether to enable the Fair Scheduler event log */
-  public static final String EVENT_LOG_ENABLED = CONF_PREFIX + "event-log-enabled";
-  public static final boolean DEFAULT_EVENT_LOG_ENABLED = false;
-
-  protected static final String EVENT_LOG_DIR = "eventlog.dir";
-
   /** Whether pools can be created that were not specified in the FS configuration file
    */
   protected static final String ALLOW_UNDECLARED_POOLS = CONF_PREFIX + "allow-undeclared-pools";
@@ -91,20 +108,49 @@ public class FairSchedulerConfiguration extends Configuration {
   protected static final float  DEFAULT_LOCALITY_THRESHOLD_RACK =
 		  DEFAULT_LOCALITY_THRESHOLD;
 
-  /** Delay for node locality. */
-  protected static final String LOCALITY_DELAY_NODE_MS = CONF_PREFIX + "locality-delay-node-ms";
+  /**
+   * Delay for node locality.
+   * @deprecated Continuous scheduling is known to cause locking issue inside
+   * Only used when {@link #CONTINUOUS_SCHEDULING_ENABLED} is enabled
+   */
+  @Deprecated
+  protected static final String LOCALITY_DELAY_NODE_MS = CONF_PREFIX +
+      "locality-delay-node-ms";
+  @Deprecated
   protected static final long DEFAULT_LOCALITY_DELAY_NODE_MS = -1L;
 
-  /** Delay for rack locality. */
-  protected static final String LOCALITY_DELAY_RACK_MS = CONF_PREFIX + "locality-delay-rack-ms";
+  /**
+   * Delay for rack locality.
+   * @deprecated Continuous scheduling is known to cause locking issue inside
+   * Only used when {@link #CONTINUOUS_SCHEDULING_ENABLED} is enabled
+   */
+  @Deprecated
+  protected static final String LOCALITY_DELAY_RACK_MS = CONF_PREFIX +
+      "locality-delay-rack-ms";
+  @Deprecated
   protected static final long DEFAULT_LOCALITY_DELAY_RACK_MS = -1L;
 
-  /** Enable continuous scheduling or not. */
-  protected static final String CONTINUOUS_SCHEDULING_ENABLED = CONF_PREFIX + "continuous-scheduling-enabled";
+  /**
+   * Enable continuous scheduling or not.
+   * @deprecated Continuous scheduling is known to cause locking issue inside
+   * the scheduler in larger cluster, more than 100 nodes, use
+   * {@link #ASSIGN_MULTIPLE} to improve  container allocation ramp up.
+   */
+  @Deprecated
+  protected static final String CONTINUOUS_SCHEDULING_ENABLED = CONF_PREFIX +
+      "continuous-scheduling-enabled";
+  @Deprecated
   protected static final boolean DEFAULT_CONTINUOUS_SCHEDULING_ENABLED = false;
 
-  /** Sleep time of each pass in continuous scheduling (5ms in default) */
-  protected static final String CONTINUOUS_SCHEDULING_SLEEP_MS = CONF_PREFIX + "continuous-scheduling-sleep-ms";
+  /**
+   * Sleep time of each pass in continuous scheduling (5ms in default).
+   * @deprecated Continuous scheduling is known to cause locking issue inside
+   * Only used when {@link #CONTINUOUS_SCHEDULING_ENABLED} is enabled
+   */
+  @Deprecated
+  protected static final String CONTINUOUS_SCHEDULING_SLEEP_MS = CONF_PREFIX +
+      "continuous-scheduling-sleep-ms";
+  @Deprecated
   protected static final int DEFAULT_CONTINUOUS_SCHEDULING_SLEEP_MS = 5;
 
   /** Whether preemption is enabled. */
@@ -114,11 +160,29 @@ public class FairSchedulerConfiguration extends Configuration {
   protected static final String PREEMPTION_THRESHOLD =
       CONF_PREFIX + "preemption.cluster-utilization-threshold";
   protected static final float DEFAULT_PREEMPTION_THRESHOLD = 0.8f;
-  
-  protected static final String PREEMPTION_INTERVAL = CONF_PREFIX + "preemptionInterval";
-  protected static final int DEFAULT_PREEMPTION_INTERVAL = 5000;
+
   protected static final String WAIT_TIME_BEFORE_KILL = CONF_PREFIX + "waitTimeBeforeKill";
   protected static final int DEFAULT_WAIT_TIME_BEFORE_KILL = 15000;
+
+  /**
+   * Postfix for resource allocation increments in the
+   * yarn.resource-types.{RESOURCE_NAME}.increment-allocation property.
+   */
+  static final String INCREMENT_ALLOCATION = ".increment-allocation";
+
+  /**
+   * Configurable delay (ms) before an app's starvation is considered after
+   * it is identified. This is to give the scheduler enough time to
+   * allocate containers post preemption. This delay is added to the
+   * {@link #WAIT_TIME_BEFORE_KILL} and enough heartbeats.
+   *
+   * This is intended to be a backdoor on production clusters, and hence
+   * intentionally not documented.
+   */
+  protected static final String WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS =
+      CONF_PREFIX + "waitTimeBeforeNextStarvationCheck";
+  protected static final long
+      DEFAULT_WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS = 10000;
 
   /** Whether to assign multiple containers in one check-in. */
   public static final String  ASSIGN_MULTIPLE = CONF_PREFIX + "assignmultiple";
@@ -150,6 +214,9 @@ public class FairSchedulerConfiguration extends Configuration {
           CONF_PREFIX + "reservable-nodes";
   public static final float RESERVABLE_NODES_DEFAULT = 0.05f;
 
+  private static final String INVALID_RESOURCE_DEFINITION_PREFIX =
+          "Error reading resource config--invalid resource definition: ";
+
   public FairSchedulerConfiguration() {
     super();
   }
@@ -179,13 +246,69 @@ public class FairSchedulerConfiguration extends Configuration {
   }
 
   public Resource getIncrementAllocation() {
-    int incrementMemory = getInt(
-      RM_SCHEDULER_INCREMENT_ALLOCATION_MB,
-      DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB);
-    int incrementCores = getInt(
-      RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES,
-      DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES);
-    return Resources.createResource(incrementMemory, incrementCores);
+    Long memory = null;
+    Integer vCores = null;
+    Map<String, Long> others = new HashMap<>();
+    ResourceInformation[] resourceTypes = ResourceUtils.getResourceTypesArray();
+    for (int i=0; i < resourceTypes.length; ++i) {
+      String name = resourceTypes[i].getName();
+      String propertyKey = getAllocationIncrementPropKey(name);
+      String propValue = get(propertyKey);
+      if (propValue != null) {
+        Matcher matcher = RESOURCE_REQUEST_VALUE_PATTERN.matcher(propValue);
+        if (matcher.matches()) {
+          long value = Long.parseLong(matcher.group(1));
+          String unit = matcher.group(2);
+          long valueInDefaultUnits = getValueInDefaultUnits(value, unit, name);
+          others.put(name, valueInDefaultUnits);
+        } else {
+          throw new IllegalArgumentException("Property " + propertyKey +
+              " is not in \"value [unit]\" format: " + propValue);
+        }
+      }
+    }
+    if (others.containsKey(ResourceInformation.MEMORY_MB.getName())) {
+      memory = others.get(ResourceInformation.MEMORY_MB.getName());
+      if (get(RM_SCHEDULER_INCREMENT_ALLOCATION_MB) != null) {
+        String overridingKey = getAllocationIncrementPropKey(
+                ResourceInformation.MEMORY_MB.getName());
+        LOG.warn("Configuration " + overridingKey + "=" + get(overridingKey) +
+            " is overriding the " + RM_SCHEDULER_INCREMENT_ALLOCATION_MB +
+            "=" + get(RM_SCHEDULER_INCREMENT_ALLOCATION_MB) + " property");
+      }
+      others.remove(ResourceInformation.MEMORY_MB.getName());
+    } else {
+      memory = getLong(
+          RM_SCHEDULER_INCREMENT_ALLOCATION_MB,
+          DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB);
+    }
+    if (others.containsKey(ResourceInformation.VCORES.getName())) {
+      vCores = others.get(ResourceInformation.VCORES.getName()).intValue();
+      if (get(RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES) != null) {
+        String overridingKey = getAllocationIncrementPropKey(
+            ResourceInformation.VCORES.getName());
+        LOG.warn("Configuration " + overridingKey + "=" + get(overridingKey) +
+            " is overriding the " + RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES +
+            "=" + get(RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES) + " property");
+      }
+      others.remove(ResourceInformation.VCORES.getName());
+    } else {
+      vCores = getInt(
+          RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES,
+          DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES);
+    }
+    return Resource.newInstance(memory, vCores, others);
+  }
+
+  private long getValueInDefaultUnits(long value, String unit,
+      String resourceName) {
+    return unit.isEmpty() ? value : UnitsConversionUtil.convert(unit,
+        ResourceUtils.getDefaultUnit(resourceName), value);
+  }
+
+  private String getAllocationIncrementPropKey(String resourceName) {
+    return YarnConfiguration.RESOURCE_TYPES + "." + resourceName +
+        INCREMENT_ALLOCATION;
   }
 
   public float getReservationThresholdIncrementMultiple() {
@@ -202,18 +325,45 @@ public class FairSchedulerConfiguration extends Configuration {
     return getFloat(LOCALITY_THRESHOLD_RACK, DEFAULT_LOCALITY_THRESHOLD_RACK);
   }
 
+  /**
+   * Whether continuous scheduling is turned on.
+   * @deprecated use {@link #ASSIGN_MULTIPLE} to improve container allocation
+   * ramp up.
+   * @return whether continuous scheduling is enabled
+   */
+  @Deprecated
   public boolean isContinuousSchedulingEnabled() {
-    return getBoolean(CONTINUOUS_SCHEDULING_ENABLED, DEFAULT_CONTINUOUS_SCHEDULING_ENABLED);
+    return getBoolean(CONTINUOUS_SCHEDULING_ENABLED,
+        DEFAULT_CONTINUOUS_SCHEDULING_ENABLED);
   }
 
+  /**
+   * The sleep time of the continuous scheduler thread.
+   * @deprecated linked to {@link #CONTINUOUS_SCHEDULING_ENABLED} deprecation
+   * @return sleep time in ms
+   */
+  @Deprecated
   public int getContinuousSchedulingSleepMs() {
-    return getInt(CONTINUOUS_SCHEDULING_SLEEP_MS, DEFAULT_CONTINUOUS_SCHEDULING_SLEEP_MS);
+    return getInt(CONTINUOUS_SCHEDULING_SLEEP_MS,
+        DEFAULT_CONTINUOUS_SCHEDULING_SLEEP_MS);
   }
 
+  /**
+   * Delay in milliseconds for locality fallback node to rack.
+   * @deprecated linked to {@link #CONTINUOUS_SCHEDULING_ENABLED} deprecation
+   * @return delay in ms
+   */
+  @Deprecated
   public long getLocalityDelayNodeMs() {
     return getLong(LOCALITY_DELAY_NODE_MS, DEFAULT_LOCALITY_DELAY_NODE_MS);
   }
 
+  /**
+   * Delay in milliseconds for locality fallback rack to other.
+   * @deprecated linked to {@link #CONTINUOUS_SCHEDULING_ENABLED} deprecation
+   * @return delay in ms
+   */
+  @Deprecated
   public long getLocalityDelayRackMs() {
     return getLong(LOCALITY_DELAY_RACK_MS, DEFAULT_LOCALITY_DELAY_RACK_MS);
   }
@@ -242,17 +392,9 @@ public class FairSchedulerConfiguration extends Configuration {
     return getBoolean(SIZE_BASED_WEIGHT, DEFAULT_SIZE_BASED_WEIGHT);
   }
 
-  public boolean isEventLogEnabled() {
-    return getBoolean(EVENT_LOG_ENABLED, DEFAULT_EVENT_LOG_ENABLED);
-  }
-  
-  public String getEventlogDir() {
-    return get(EVENT_LOG_DIR, new File(System.getProperty("hadoop.log.dir",
-    		"/tmp/")).getAbsolutePath() + File.separator + "fairscheduler");
-  }
-  
-  public int getPreemptionInterval() {
-    return getInt(PREEMPTION_INTERVAL, DEFAULT_PREEMPTION_INTERVAL);
+  public long getWaitTimeBeforeNextStarvationCheck() {
+    return getLong(WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS,
+        DEFAULT_WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS);
   }
   
   public int getWaitTimeBeforeKill() {
@@ -269,23 +411,194 @@ public class FairSchedulerConfiguration extends Configuration {
   }
 
   /**
-   * Parses a resource config value of a form like "1024", "1024 mb",
-   * or "1024 mb, 3 vcores". If no units are given, megabytes are assumed.
-   * 
-   * @throws AllocationConfigurationException
+   * Parses a resource config value in one of three forms:
+   * <ol>
+   * <li>Percentage: &quot;50%&quot; or &quot;40% memory, 60% cpu&quot;</li>
+   * <li>New style resources: &quot;vcores=10, memory-mb=1024&quot;
+   * or &quot;vcores=60%, memory-mb=40%&quot;</li>
+   * <li>Old style resources: &quot;1024 mb, 10 vcores&quot;</li>
+   * </ol>
+   * In new style resources, any resource that is not specified will be
+   * set to {@link Long#MAX_VALUE} or 100%, as appropriate. Also, in the new
+   * style resources, units are not allowed. Units are assumed from the resource
+   * manager's settings for the resources when the value isn't a percentage.
+   *
+   * @param value the resource definition to parse
+   * @return a {@link ConfigurableResource} that represents the parsed value
+   * @throws AllocationConfigurationException if the raw value is not a valid
+   * resource definition
    */
-  public static Resource parseResourceConfigValue(String val)
+  public static ConfigurableResource parseResourceConfigValue(String value)
       throws AllocationConfigurationException {
+    return parseResourceConfigValue(value, Long.MAX_VALUE);
+  }
+
+  /**
+   * Parses a resource config value in one of three forms:
+   * <ol>
+   * <li>Percentage: &quot;50%&quot; or &quot;40% memory, 60% cpu&quot;</li>
+   * <li>New style resources: &quot;vcores=10, memory-mb=1024&quot;
+   * or &quot;vcores=60%, memory-mb=40%&quot;</li>
+   * <li>Old style resources: &quot;1024 mb, 10 vcores&quot;</li>
+   * </ol>
+   * In new style resources, any resource that is not specified will be
+   * set to {@code missing} or 0%, as appropriate. Also, in the new style
+   * resources, units are not allowed. Units are assumed from the resource
+   * manager's settings for the resources when the value isn't a percentage.
+   *
+   * The {@code missing} parameter is only used in the case of new style
+   * resources without percentages. With new style resources with percentages,
+   * any missing resources will be assumed to be 100% because percentages are
+   * only used with maximum resource limits.
+   *
+   * @param value the resource definition to parse
+   * @param missing the value to use for any unspecified resources
+   * @return a {@link ConfigurableResource} that represents the parsed value
+   * @throws AllocationConfigurationException if the raw value is not a valid
+   * resource definition
+   */
+  public static ConfigurableResource parseResourceConfigValue(String value,
+      long missing) throws AllocationConfigurationException {
+    ConfigurableResource configurableResource;
+
+    if (value.trim().isEmpty()) {
+      throw new AllocationConfigurationException("Error reading resource "
+          + "config--the resource string is empty.");
+    }
+
     try {
-      val = StringUtils.toLowerCase(val);
-      int memory = findResource(val, "mb");
-      int vcores = findResource(val, "vcores");
-      return BuilderUtils.newResource(memory, vcores);
-    } catch (AllocationConfigurationException ex) {
-      throw ex;
-    } catch (Exception ex) {
+      if (value.contains("=")) {
+        configurableResource = parseNewStyleResource(value, missing);
+      } else if (value.contains("%")) {
+        configurableResource = parseOldStyleResourceAsPercentage(value);
+      } else {
+        configurableResource = parseOldStyleResource(value);
+      }
+    } catch (RuntimeException ex) {
       throw new AllocationConfigurationException(
           "Error reading resource config", ex);
+    }
+
+    return configurableResource;
+  }
+
+  private static ConfigurableResource parseNewStyleResource(String value,
+          long missing) throws AllocationConfigurationException {
+
+    final ConfigurableResource configurableResource;
+    boolean asPercent = value.contains("%");
+    if (asPercent) {
+      configurableResource = new ConfigurableResource();
+    } else {
+      configurableResource = new ConfigurableResource(missing);
+    }
+
+    String[] resources = value.split(",");
+    for (String resource : resources) {
+      String[] parts = resource.split("=");
+
+      if (parts.length != 2) {
+        throw createConfigException(value,
+                        "Every resource must be of the form: name=value.");
+      }
+
+      String resourceName = parts[0].trim();
+      String resourceValue = parts[1].trim();
+      try {
+        if (asPercent) {
+          configurableResource.setPercentage(resourceName,
+              findPercentage(resourceValue, ""));
+        } else {
+          configurableResource.setValue(resourceName,
+              Long.parseLong(resourceValue));
+        }
+      } catch (ResourceNotFoundException ex) {
+        throw createConfigException(value, "The "
+            + "resource name, \"" + resourceName + "\" was not "
+            + "recognized. Please check the value of "
+            + YarnConfiguration.RESOURCE_TYPES + " in the Resource "
+            + "Manager's configuration files.", ex);
+      } catch (NumberFormatException ex) {
+        // This only comes from Long.parseLong()
+        throw createConfigException(value, "The "
+            + "resource values must all be integers. \"" + resourceValue
+            + "\" is not an integer.", ex);
+      } catch (AllocationConfigurationException ex) {
+        // This only comes from findPercentage()
+        throw createConfigException(value, "The "
+            + "resource values must all be percentages. \""
+            + resourceValue + "\" is either not a number or does not "
+            + "include the '%' symbol.", ex);
+      }
+    }
+    return configurableResource;
+  }
+
+  private static ConfigurableResource parseOldStyleResourceAsPercentage(
+          String value) throws AllocationConfigurationException {
+    return new ConfigurableResource(
+            getResourcePercentage(StringUtils.toLowerCase(value)));
+  }
+
+  private static ConfigurableResource parseOldStyleResource(String value)
+          throws AllocationConfigurationException {
+    final String lCaseValue = StringUtils.toLowerCase(value);
+    int memory = findResource(lCaseValue, "mb");
+    int vcores = findResource(lCaseValue, "vcores");
+
+    return new ConfigurableResource(
+            BuilderUtils.newResource(memory, vcores));
+  }
+
+  private static double[] getResourcePercentage(
+      String val) throws AllocationConfigurationException {
+    int numberOfKnownResourceTypes = ResourceUtils
+        .getNumberOfKnownResourceTypes();
+    double[] resourcePercentage = new double[numberOfKnownResourceTypes];
+    String[] strings = val.split(",");
+
+    if (strings.length == 1) {
+      double percentage = findPercentage(strings[0], "");
+      for (int i = 0; i < numberOfKnownResourceTypes; i++) {
+        resourcePercentage[i] = percentage;
+      }
+    } else {
+      resourcePercentage[0] = findPercentage(val, "memory");
+      resourcePercentage[1] = findPercentage(val, "cpu");
+    }
+
+    return resourcePercentage;
+  }
+
+  private static double findPercentage(String val, String units)
+      throws AllocationConfigurationException {
+    final Pattern pattern =
+        Pattern.compile("((\\d+)(\\.\\d*)?)\\s*%\\s*" + units);
+    Matcher matcher = pattern.matcher(val);
+    if (!matcher.find()) {
+      if (units.equals("")) {
+        throw new AllocationConfigurationException("Invalid percentage: " +
+            val);
+      } else {
+        throw new AllocationConfigurationException("Missing resource: " +
+            units);
+      }
+    }
+    return Double.parseDouble(matcher.group(1)) / 100.0;
+  }
+
+  private static AllocationConfigurationException createConfigException(
+          String value, String message) {
+    return createConfigException(value, message, null);
+  }
+
+  private static AllocationConfigurationException createConfigException(
+      String value, String message, Throwable t) {
+    String msg = INVALID_RESOURCE_DEFINITION_PREFIX + value + ". " + message;
+    if (t != null) {
+      return new AllocationConfigurationException(msg, t);
+    } else {
+      return new AllocationConfigurationException(msg);
     }
   }
 
@@ -294,8 +607,8 @@ public class FairSchedulerConfiguration extends Configuration {
   }
   
   private static int findResource(String val, String units)
-    throws AllocationConfigurationException {
-    Pattern pattern = Pattern.compile("(\\d+)(\\.\\d*)?\\s*" + units);
+      throws AllocationConfigurationException {
+    final Pattern pattern = Pattern.compile("(\\d+)(\\.\\d*)?\\s*" + units);
     Matcher matcher = pattern.matcher(val);
     if (!matcher.find()) {
       throw new AllocationConfigurationException("Missing resource: " + units);

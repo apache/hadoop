@@ -26,8 +26,6 @@ import java.net.UnknownHostException;
 import java.util.EnumSet;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CreateFlag;
@@ -50,6 +48,8 @@ import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** The load generator is a tool for testing NameNode behavior under
  * different client loads.
@@ -63,7 +63,7 @@ import org.apache.hadoop.util.ToolRunner;
  *
  */
 public class LoadGeneratorMR extends LoadGenerator {
-  public static final Log LOG = LogFactory.getLog(LoadGenerator.class);
+  public static final Logger LOG = LoggerFactory.getLogger(LoadGenerator.class);
   private static int numMapTasks = 1;
   private String mrOutDir;
   

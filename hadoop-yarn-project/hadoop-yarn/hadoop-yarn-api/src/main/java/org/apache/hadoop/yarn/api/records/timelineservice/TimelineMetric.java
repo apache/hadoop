@@ -43,7 +43,7 @@ public class TimelineMetric {
   /**
    * Type of metric.
    */
-  public static enum Type {
+  public enum Type {
     SINGLE_VALUE,
     TIME_SERIES
   }

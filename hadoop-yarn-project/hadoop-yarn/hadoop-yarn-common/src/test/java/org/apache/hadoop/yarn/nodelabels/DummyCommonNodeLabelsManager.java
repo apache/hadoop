@@ -44,6 +44,12 @@ public class DummyCommonNodeLabelsManager extends CommonNodeLabelsManager {
       }
 
       @Override
+      public void init(Configuration conf, CommonNodeLabelsManager mgr)
+          throws Exception {
+
+      }
+
+      @Override
       public void removeClusterNodeLabels(Collection<String> labels)
           throws IOException {
         lastRemovedlabels = labels;
@@ -65,8 +71,6 @@ public class DummyCommonNodeLabelsManager extends CommonNodeLabelsManager {
         // do nothing 
       }
     };
-
-    this.store.setNodeLabelsManager(this);
   }
 
   @Override

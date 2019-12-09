@@ -26,22 +26,29 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeLabelPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeAttributePBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeLabelProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.LogAggregationReportProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NMContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeLabelsProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeLabelsProto.Builder;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeAttributesProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeManagerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeManagerRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
     
@@ -55,6 +62,9 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
   private List<NMContainerStatus> containerStatuses = null;
   private List<ApplicationId> runningApplications = null;
   private Set<NodeLabel> labels = null;
+  private Set<NodeAttribute> attributes = null;
+
+  private List<LogAggregationReport> logAggregationReportsForApps = null;
 
   /** Physical resources in the node. */
   private Resource physicalResource = null;
@@ -96,9 +106,60 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
       }
       builder.setNodeLabels(newBuilder.build());
     }
+    if (this.attributes != null) {
+      builder.clearNodeAttributes();
+      NodeAttributesProto.Builder attributesBuilder =
+          NodeAttributesProto.newBuilder();
+      for (NodeAttribute attribute : attributes) {
+        attributesBuilder.addNodeAttributes(convertToProtoFormat(attribute));
+      }
+      builder.setNodeAttributes(attributesBuilder.build());
+    }
     if (this.physicalResource != null) {
       builder.setPhysicalResource(convertToProtoFormat(this.physicalResource));
     }
+    if (this.logAggregationReportsForApps != null) {
+      addLogAggregationStatusForAppsToProto();
+    }
+  }
+
+  private void addLogAggregationStatusForAppsToProto() {
+    maybeInitBuilder();
+    builder.clearLogAggregationReportsForApps();
+    if (this.logAggregationReportsForApps == null) {
+      return;
+    }
+    Iterable<LogAggregationReportProto> it =
+        new Iterable<LogAggregationReportProto>() {
+          @Override
+          public Iterator<LogAggregationReportProto> iterator() {
+            return new Iterator<LogAggregationReportProto>() {
+              private Iterator<LogAggregationReport> iter =
+                  logAggregationReportsForApps.iterator();
+
+              @Override
+              public boolean hasNext() {
+                return iter.hasNext();
+              }
+
+              @Override
+              public LogAggregationReportProto next() {
+                return convertToProtoFormat(iter.next());
+              }
+
+              @Override
+              public void remove() {
+                throw new UnsupportedOperationException();
+              }
+            };
+          }
+        };
+    builder.addAllLogAggregationReportsForApps(it);
+  }
+
+  private LogAggregationReportProto convertToProtoFormat(
+      LogAggregationReport value) {
+    return ((LogAggregationReportPBImpl) value).getProto();
   }
 
   private synchronized void addNMContainerStatusesToProto() {
@@ -357,12 +418,51 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
     }
   }
 
+  @Override
+  public synchronized Set<NodeAttribute> getNodeAttributes() {
+    initNodeAttributes();
+    return this.attributes;
+  }
+
+  @Override
+  public synchronized void setNodeAttributes(
+      Set<NodeAttribute> nodeAttributes) {
+    maybeInitBuilder();
+    builder.clearNodeAttributes();
+    this.attributes = nodeAttributes;
+  }
+
+  private synchronized void initNodeAttributes() {
+    if (this.attributes != null) {
+      return;
+    }
+    RegisterNodeManagerRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasNodeAttributes()) {
+      attributes=null;
+      return;
+    }
+    NodeAttributesProto nodeAttributes = p.getNodeAttributes();
+    attributes = new HashSet<>();
+    for(NodeAttributeProto nap : nodeAttributes.getNodeAttributesList()) {
+      attributes.add(convertFromProtoFormat(nap));
+    }
+  }
+
   private static NodeLabelPBImpl convertFromProtoFormat(NodeLabelProto p) {
     return new NodeLabelPBImpl(p);
   }
 
   private static NodeLabelProto convertToProtoFormat(NodeLabel t) {
     return ((NodeLabelPBImpl)t).getProto();
+  }
+
+  private static NodeAttributePBImpl convertFromProtoFormat(
+      NodeAttributeProto p) {
+    return new NodeAttributePBImpl(p);
+  }
+
+  private static NodeAttributeProto convertToProtoFormat(NodeAttribute t) {
+    return ((NodeAttributePBImpl)t).getProto();
   }
 
   private static ApplicationIdPBImpl convertFromProtoFormat(
@@ -387,7 +487,7 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
   }
 
   private static ResourceProto convertToProtoFormat(Resource t) {
-    return ((ResourcePBImpl)t).getProto();
+    return ProtoUtils.convertToProtoFormat(t);
   }
 
   private static NMContainerStatusPBImpl convertFromProtoFormat(
@@ -398,5 +498,39 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
   private static NMContainerStatusProto convertToProtoFormat(
       NMContainerStatus c) {
     return ((NMContainerStatusPBImpl)c).getProto();
+  }
+
+  @Override
+  public synchronized List<LogAggregationReport>
+      getLogAggregationReportsForApps() {
+    if (this.logAggregationReportsForApps != null) {
+      return this.logAggregationReportsForApps;
+    }
+    initLogAggregationReportsForApps();
+    return logAggregationReportsForApps;
+  }
+
+  private void initLogAggregationReportsForApps() {
+    RegisterNodeManagerRequestProtoOrBuilder p = viaProto ? proto : builder;
+    List<LogAggregationReportProto> list =
+        p.getLogAggregationReportsForAppsList();
+    this.logAggregationReportsForApps = new ArrayList<LogAggregationReport>();
+    for (LogAggregationReportProto c : list) {
+      this.logAggregationReportsForApps.add(convertFromProtoFormat(c));
+    }
+  }
+
+  private LogAggregationReport convertFromProtoFormat(
+      LogAggregationReportProto logAggregationReport) {
+    return new LogAggregationReportPBImpl(logAggregationReport);
+  }
+
+  @Override
+  public synchronized void setLogAggregationReportsForApps(
+      List<LogAggregationReport> logAggregationStatusForApps) {
+    if(logAggregationStatusForApps == null) {
+      builder.clearLogAggregationReportsForApps();
+    }
+    this.logAggregationReportsForApps = logAggregationStatusForApps;
   }
 }

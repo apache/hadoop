@@ -49,7 +49,7 @@ public enum Quota {
    * Is quota violated?
    * The quota is violated if quota is set and usage > quota. 
    */
-  static boolean isViolated(final long quota, final long usage) {
+  public static boolean isViolated(final long quota, final long usage) {
     return quota >= 0 && usage > quota;
   }
 

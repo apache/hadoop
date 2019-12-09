@@ -23,12 +23,12 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 
 import org.apache.hadoop.security.NetgroupCache;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A simple shell-based implementation of {@link GroupMappingServiceProvider} 
@@ -40,8 +40,8 @@ import org.apache.hadoop.security.NetgroupCache;
 public class ShellBasedUnixGroupsNetgroupMapping
   extends ShellBasedUnixGroupsMapping {
   
-  private static final Log LOG =
-    LogFactory.getLog(ShellBasedUnixGroupsNetgroupMapping.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ShellBasedUnixGroupsNetgroupMapping.class);
 
   /**
    * Get unix groups (parent) and netgroups for given user
@@ -133,7 +133,7 @@ public class ShellBasedUnixGroupsNetgroupMapping
       throws IOException {
     String result = "";
     try {
-      // shell command does not expect '@' at the begining of the group name
+      // shell command does not expect '@' at the beginning of the group name
       result = Shell.execCommand(
         Shell.getUsersForNetgroupCommand(netgroup.substring(1)));
     } catch (ExitCodeException e) {

@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.client.api.impl.SharedCacheClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
@@ -55,21 +56,27 @@ public abstract class SharedCacheClient extends AbstractService {
    * {@link ApplicationId} to identify which application will be using the
    * resource.
    * </p>
-   * 
+   *
    * <p>
    * The <code>SharedCacheManager</code> responds with whether or not the
-   * resource exists in the cache. If the resource exists, a <code>Path</code>
-   * to the resource in the shared cache is returned. If the resource does not
+   * resource exists in the cache. If the resource exists, a <code>URL</code> to
+   * the resource in the shared cache is returned. If the resource does not
    * exist, null is returned instead.
    * </p>
-   * 
+   *
+   * <p>
+   * Once a URL has been returned for a resource, that URL is safe to use for
+   * the lifetime of the application that corresponds to the provided
+   * ApplicationId.
+   * </p>
+   *
    * @param applicationId ApplicationId of the application using the resource
    * @param resourceKey the key (i.e. checksum) that identifies the resource
-   * @return Path to the resource, or null if it does not exist
+   * @return URL to the resource, or null if it does not exist
    */
   @Public
   @Unstable
-  public abstract Path use(ApplicationId applicationId, String resourceKey)
+  public abstract URL use(ApplicationId applicationId, String resourceKey)
       throws YarnException;
 
   /**

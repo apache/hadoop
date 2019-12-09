@@ -21,14 +21,12 @@ package org.apache.hadoop.yarn.client.api;
 import java.io.Flushable;
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
@@ -39,24 +37,22 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 
 /**
  * A client library that can be used to post some information in terms of a
- * number of conceptual entities.
+ * number of conceptual entities. This client library needs to be used along
+ * with Timeline V.1.x server versions.
+ * Refer {@link TimelineV2Client} for ATS V2 interface.
  */
 @Public
 @Evolving
-public abstract class TimelineClient extends AbstractService implements
+public abstract class TimelineClient extends CompositeService implements
     Flushable {
 
   /**
-   * Create a timeline client. The current UGI when the user initialize the
-   * client will be used to do the put and the delegation token operations. The
-   * current user may use {@link UserGroupInformation#doAs} another user to
-   * construct and initialize a timeline client if the following operations are
-   * supposed to be conducted by that user.
-   */
-  private ApplicationId contextAppId;
-
-  /**
    * Creates an instance of the timeline v.1.x client.
+   * The current UGI when the user initialize the client will be used to do the
+   * put and the delegation token operations. The current user may use
+   * {@link UserGroupInformation#doAs} another user to construct and initialize
+   * a timeline client if the following operations are supposed to be conducted
+   * by that user.
    *
    * @return the created timeline client instance
    */
@@ -66,23 +62,8 @@ public abstract class TimelineClient extends AbstractService implements
     return client;
   }
 
-  /**
-   * Creates an instance of the timeline v.2 client.
-   *
-   * @param appId the application id with which the timeline client is
-   * associated
-   * @return the created timeline client instance
-   */
-  @Public
-  public static TimelineClient createTimelineClient(ApplicationId appId) {
-    TimelineClient client = new TimelineClientImpl(appId);
-    return client;
-  }
-
-  @Private
-  protected TimelineClient(String name, ApplicationId appId) {
+  protected TimelineClient(String name) {
     super(name);
-    setContextAppId(appId);
   }
 
   /**
@@ -207,57 +188,4 @@ public abstract class TimelineClient extends AbstractService implements
   public abstract void cancelDelegationToken(
       Token<TimelineDelegationTokenIdentifier> timelineDT)
           throws IOException, YarnException;
-
-  /**
-   * <p>
-   * Send the information of a number of conceptual entities to the timeline
-   * service v.2 collector. It is a blocking API. The method will not return
-   * until all the put entities have been persisted. If this method is invoked
-   * for a non-v.2 timeline client instance, a YarnException is thrown.
-   * </p>
-   *
-   * @param entities the collection of {@link
-   * org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity}
-   * @throws IOException
-   * @throws YarnException
-   */
-  @Public
-  public abstract void putEntities(
-      org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity...
-          entities) throws IOException, YarnException;
-
-  /**
-   * <p>
-   * Send the information of a number of conceptual entities to the timeline
-   * service v.2 collector. It is an asynchronous API. The method will return
-   * once all the entities are received. If this method is invoked for a
-   * non-v.2 timeline client instance, a YarnException is thrown.
-   * </p>
-   *
-   * @param entities the collection of {@link
-   * org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity}
-   * @throws IOException
-   * @throws YarnException
-   */
-  @Public
-  public abstract void putEntitiesAsync(
-      org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity...
-          entities) throws IOException, YarnException;
-
-  /**
-   * <p>
-   * Update the timeline service address where the request will be sent to.
-   * </p>
-   * @param address
-   *          the timeline service address
-   */
-  public abstract void setTimelineServiceAddress(String address);
-
-  protected ApplicationId getContextAppId() {
-    return contextAppId;
-  }
-
-  protected void setContextAppId(ApplicationId appId) {
-    this.contextAppId = appId;
-  }
 }

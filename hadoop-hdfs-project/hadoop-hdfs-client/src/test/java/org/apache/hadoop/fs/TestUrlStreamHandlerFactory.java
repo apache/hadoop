@@ -18,14 +18,19 @@
 
 package org.apache.hadoop.fs;
 
+import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Test of the URL stream handler factory.
@@ -35,7 +40,9 @@ public class TestUrlStreamHandlerFactory {
   private static final int RUNS = 20;
   private static final int THREADS = 10;
   private static final int TASKS = 200;
-  private static final int TIMEOUT = 30;
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(30000);
 
   @Test
   public void testConcurrency() throws Exception {
@@ -62,12 +69,6 @@ public class TestUrlStreamHandlerFactory {
     }
 
     executor.shutdown();
-    try {
-      executor.awaitTermination(TIMEOUT, TimeUnit.SECONDS);
-      executor.shutdownNow();
-    } catch (InterruptedException e) {
-      // pass
-    }
 
     // check for exceptions
     for (Future future : futures) {
@@ -76,5 +77,24 @@ public class TestUrlStreamHandlerFactory {
       }
       future.get();
     }
+  }
+
+  @Test
+  public void testFsUrlStreamHandlerFactory() throws IOException {
+    File myFile = new File(GenericTestUtils.getTestDir(), "foo bar.txt");
+    myFile.createNewFile();
+
+    // Create URL directly from File (JRE builds it).
+    URL myUrl = myFile.toURI().toURL();
+
+    // Succeeds.
+    myUrl.openStream().close();
+
+    // Replace handling of file: scheme with FsUrlStreamHandler.
+    URL.setURLStreamHandlerFactory(new FsUrlStreamHandlerFactory());
+
+    URL myUrl2 = myFile.toURI().toURL();
+
+    myUrl2.openStream();
   }
 }

@@ -20,8 +20,6 @@ package org.apache.hadoop.oncrpc;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
@@ -30,12 +28,15 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple UDP server implemented using netty.
  */
 public class SimpleTcpServer {
-  public static final Log LOG = LogFactory.getLog(SimpleTcpServer.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SimpleTcpServer.class);
   protected final int port;
   protected int boundPort = -1; // Will be set after server starts
   protected final SimpleChannelUpstreamHandler rpcProgram;
@@ -81,6 +82,8 @@ public class SimpleTcpServer {
     });
     server.setOption("child.tcpNoDelay", true);
     server.setOption("child.keepAlive", true);
+    server.setOption("child.reuseAddress", true);
+    server.setOption("reuseAddress", true);
 
     // Listen to TCP port
     ch = server.bind(new InetSocketAddress(port));

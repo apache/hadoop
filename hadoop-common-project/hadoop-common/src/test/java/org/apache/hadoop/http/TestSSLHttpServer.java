@@ -32,8 +32,6 @@ import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.IOUtils;
@@ -41,13 +39,16 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This testcase issues SSL certificates configures the HttpServer to serve
- * HTTPS using the created certficates and calls an echo servlet using the
+ * HTTPS using the created certificates and calls an echo servlet using the
  * corresponding HTTPS URL.
  */
 public class TestSSLHttpServer extends HttpServerFunctionalTest {
@@ -55,34 +56,42 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   private static final String BASEDIR =
       GenericTestUtils.getTempPath(TestSSLHttpServer.class.getSimpleName());
 
-  private static final Log LOG = LogFactory.getLog(TestSSLHttpServer.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSSLHttpServer.class);
+  private static final String HTTPS_CIPHER_SUITES_KEY = "https.cipherSuites";
+  private static final String JAVAX_NET_DEBUG_KEY = "javax.net.debug";
   private static Configuration conf;
   private static HttpServer2 server;
   private static String keystoresDir;
   private static String sslConfDir;
   private static SSLFactory clientSslFactory;
+  private static String cipherSuitesPropertyValue;
+  private static String sslDebugPropertyValue;
   private static final String excludeCiphers = "TLS_ECDHE_RSA_WITH_RC4_128_SHA,"
-      + "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA,"
+      + "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA, \n"
       + "SSL_RSA_WITH_DES_CBC_SHA,"
-      + "SSL_DHE_RSA_WITH_DES_CBC_SHA,"
-      + "SSL_RSA_EXPORT_WITH_RC4_40_MD5,"
+      + "SSL_DHE_RSA_WITH_DES_CBC_SHA,  "
+      + "SSL_RSA_EXPORT_WITH_RC4_40_MD5,\t \n"
       + "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA,"
-      + "SSL_RSA_WITH_RC4_128_MD5";
+      + "SSL_RSA_WITH_RC4_128_MD5 \t";
   private static final String oneEnabledCiphers = excludeCiphers
       + ",TLS_RSA_WITH_AES_128_CBC_SHA";
   private static final String exclusiveEnabledCiphers
-      = "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,"
+      = "\tTLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, \n"
       + "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,"
       + "TLS_RSA_WITH_AES_128_CBC_SHA,"
-      + "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA,"
+      + "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA,  "
       + "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,"
-      + "TLS_DHE_RSA_WITH_AES_128_CBC_SHA,"
+      + "TLS_DHE_RSA_WITH_AES_128_CBC_SHA,\t\n "
       + "TLS_DHE_DSS_WITH_AES_128_CBC_SHA";
 
   @BeforeClass
   public static void setup() throws Exception {
+    turnOnSSLDebugLogging();
+    storeHttpsCipherSuites();
+
     conf = new Configuration();
-    conf.setInt(HttpServer2.HTTP_MAX_THREADS, 10);
+    conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, 10);
 
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
@@ -125,6 +134,51 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     FileUtil.fullyDelete(new File(BASEDIR));
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
     clientSslFactory.destroy();
+    restoreHttpsCipherSuites();
+    restoreSSLDebugLogging();
+  }
+
+  /**
+   * Stores the JVM property value of https.cipherSuites and sets its
+   * value to an empty string.
+   * This ensures that the value https.cipherSuites does
+   * not affect the result of tests.
+   */
+  private static void storeHttpsCipherSuites() {
+    String cipherSuites = System.getProperty(HTTPS_CIPHER_SUITES_KEY);
+    if (cipherSuites != null) {
+      LOG.info(
+          "Found value for property {}: {}", HTTPS_CIPHER_SUITES_KEY,
+          cipherSuites);
+      cipherSuitesPropertyValue = cipherSuites;
+    }
+    System.clearProperty(HTTPS_CIPHER_SUITES_KEY);
+  }
+
+  private static void restoreHttpsCipherSuites() {
+    if (cipherSuitesPropertyValue != null) {
+      LOG.info("Restoring property {} to value: {}", HTTPS_CIPHER_SUITES_KEY,
+          cipherSuitesPropertyValue);
+      System.setProperty(HTTPS_CIPHER_SUITES_KEY, cipherSuitesPropertyValue);
+      cipherSuitesPropertyValue = null;
+    }
+  }
+
+  private static void turnOnSSLDebugLogging() {
+    String sslDebug = System.getProperty(JAVAX_NET_DEBUG_KEY);
+    if (sslDebug != null) {
+      sslDebugPropertyValue = sslDebug;
+    }
+    System.setProperty(JAVAX_NET_DEBUG_KEY, "all");
+  }
+
+  private static void restoreSSLDebugLogging() {
+    if (sslDebugPropertyValue != null) {
+      System.setProperty(JAVAX_NET_DEBUG_KEY, sslDebugPropertyValue);
+      sslDebugPropertyValue = null;
+    } else {
+      System.clearProperty(JAVAX_NET_DEBUG_KEY);
+    }
   }
 
   @Test
@@ -169,7 +223,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     SSLSocketFactory sslSocketF = clientSslFactory.createSSLSocketFactory();
     PrefferedCipherSSLSocketFactory testPreferredCipherSSLSocketF
         = new PrefferedCipherSSLSocketFactory(sslSocketF,
-            excludeCiphers.split(","));
+        StringUtils.getTrimmedStrings(excludeCiphers));
     conn.setSSLSocketFactory(testPreferredCipherSSLSocketF);
     assertFalse("excludedCipher list is empty", excludeCiphers.isEmpty());
     try {
@@ -193,7 +247,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     SSLSocketFactory sslSocketF = clientSslFactory.createSSLSocketFactory();
     PrefferedCipherSSLSocketFactory testPreferredCipherSSLSocketF
         = new PrefferedCipherSSLSocketFactory(sslSocketF,
-            oneEnabledCiphers.split(","));
+        StringUtils.getTrimmedStrings(oneEnabledCiphers));
     conn.setSSLSocketFactory(testPreferredCipherSSLSocketF);
     assertFalse("excludedCipher list is empty", oneEnabledCiphers.isEmpty());
     try {
@@ -219,7 +273,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     SSLSocketFactory sslSocketF = clientSslFactory.createSSLSocketFactory();
     PrefferedCipherSSLSocketFactory testPreferredCipherSSLSocketF
         = new PrefferedCipherSSLSocketFactory(sslSocketF,
-            exclusiveEnabledCiphers.split(","));
+        StringUtils.getTrimmedStrings(exclusiveEnabledCiphers));
     conn.setSSLSocketFactory(testPreferredCipherSSLSocketF);
     assertFalse("excludedCipher list is empty",
         exclusiveEnabledCiphers.isEmpty());

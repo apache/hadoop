@@ -30,24 +30,24 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public class ErrorPage extends HtmlPage {
 
   @Override
-  protected void render(Page.HTML<_> html) {
+  protected void render(Page.HTML<__> html) {
     set(JQueryUI.ACCORDION_ID, "msg");
     String title = "Sorry, got error "+ status();
     html.
       title(title).
-      link(root_url("static","yarn.css")).
-      _(JQueryUI.class). // an embedded sub-view
+      link(root_url("static", "yarn.css")).
+        __(JQueryUI.class). // an embedded sub-view
       style("#msg { margin: 1em auto; width: 88%; }",
             "#msg h1 { padding: 0.2em 1.5em; font: bold 1.3em serif; }").
       div("#msg").
         h1(title).
         div().
-          _("Please consult").
+        __("Please consult").
           a("http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html",
-            "RFC 2616")._(" for meanings of the error code.")._().
+            "RFC 2616").__(" for meanings of the error code.").__().
         h1("Error Details").
         pre().
-          _(errorDetails())._()._()._();
+        __(errorDetails()).__().__().__();
   }
 
   protected String errorDetails() {

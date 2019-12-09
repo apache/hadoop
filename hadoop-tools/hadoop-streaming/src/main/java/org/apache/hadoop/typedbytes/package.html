@@ -25,8 +25,8 @@ Typed bytes are sequences of bytes in which the first byte is a type code. They 
 <h3>Type Codes</h3>
 
 Each typed bytes sequence starts with an unsigned byte that contains the type code. Possible values are:
-<p>
-<table border="1" cellpadding="2">
+
+<table border="1" cellpadding="2" summary="Type Codes">
 <tr><th>Code</th><th>Type</th></tr>
 <tr><td><i>0</i></td><td>A sequence of bytes.</td></tr>
 <tr><td><i>1</i></td><td>A byte.</td></tr>
@@ -40,19 +40,19 @@ Each typed bytes sequence starts with an unsigned byte that contains the type co
 <tr><td><i>9</i></td><td>A list.</td></tr>
 <tr><td><i>10</i></td><td>A map.</td></tr>
 </table>
-</p>
+
 The type codes <i>50</i> to <i>200</i> are treated as aliases for <i>0</i>, and can thus be used for
 application-specific serialization.
 
 <h3>Subsequent Bytes</h3>
 
 These are the subsequent bytes for the different type codes (everything is big-endian and unpadded):
-<p>
-<table border="1" cellpadding="2">
+
+<table border="1" cellpadding="2" summary="Subsequent Bytes">
 <tr><th>Code</th><th>Subsequent Bytes</th></tr>
 <tr><td><i>0</i></td><td>&lt;32-bit signed integer&gt; &lt;as many bytes as indicated by the integer&gt;</td></tr>
 <tr><td><i>1</i></td><td>&lt;signed byte&gt;</td></tr>
-<tr><td><i>2</i></td><td>&lt;signed byte (<i>0 = <i>false</i> and <i>1</i> = <i>true</i>)&gt;</td></tr>
+<tr><td><i>2</i></td><td>&lt;signed byte (<i>0</i> = <i>false</i> and <i>1</i> = <i>true</i>)&gt;</td></tr>
 <tr><td><i>3</i></td><td>&lt;32-bit signed integer&gt;</td></tr>
 <tr><td><i>4</i></td><td>&lt;64-bit signed integer&gt;</td></tr>
 <tr><td><i>5</i></td><td>&lt;32-bit IEEE floating point number&gt;</td></tr>
@@ -62,7 +62,6 @@ These are the subsequent bytes for the different type codes (everything is big-e
 <tr><td><i>9</i></td><td>&lt;variable number of typed bytes sequences&gt; &lt;<i>255</i> written as an unsigned byte&gt;</td></tr>
 <tr><td><i>10</i></td><td>&lt;32-bit signed integer&gt; &lt;as many (key-value) pairs of typed bytes sequences as indicated by the integer&gt;</td></tr>
 </table>
-</p>
 
 </body>
 </html>

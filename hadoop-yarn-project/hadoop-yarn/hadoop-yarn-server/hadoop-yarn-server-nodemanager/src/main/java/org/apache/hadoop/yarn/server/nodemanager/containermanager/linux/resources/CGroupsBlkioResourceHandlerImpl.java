@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -45,8 +45,8 @@ import java.util.List;
 @InterfaceStability.Unstable
 public class CGroupsBlkioResourceHandlerImpl implements DiskResourceHandler {
 
-  static final Log LOG = LogFactory
-      .getLog(CGroupsBlkioResourceHandlerImpl.class);
+  static final Logger LOG =
+       LoggerFactory.getLogger(CGroupsBlkioResourceHandlerImpl.class);
 
   private CGroupsHandler cGroupsHandler;
   // Arbitrarily choose a weight - all that matters is that all containers
@@ -120,7 +120,7 @@ public class CGroupsBlkioResourceHandlerImpl implements DiskResourceHandler {
     // if bootstrap is called on this class, disk is already enabled
     // so no need to check again
     this.cGroupsHandler
-      .mountCGroupController(CGroupsHandler.CGroupController.BLKIO);
+      .initializeCGroupController(CGroupsHandler.CGroupController.BLKIO);
     return null;
   }
 
@@ -156,6 +156,12 @@ public class CGroupsBlkioResourceHandlerImpl implements DiskResourceHandler {
   }
 
   @Override
+  public List<PrivilegedOperation> updateContainer(Container container)
+      throws ResourceHandlerException {
+    return null;
+  }
+
+  @Override
   public List<PrivilegedOperation> postComplete(ContainerId containerId)
       throws ResourceHandlerException {
     cGroupsHandler.deleteCGroup(CGroupsHandler.CGroupController.BLKIO,
@@ -166,5 +172,10 @@ public class CGroupsBlkioResourceHandlerImpl implements DiskResourceHandler {
   @Override
   public List<PrivilegedOperation> teardown() throws ResourceHandlerException {
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return CGroupsBlkioResourceHandlerImpl.class.getName();
   }
 }

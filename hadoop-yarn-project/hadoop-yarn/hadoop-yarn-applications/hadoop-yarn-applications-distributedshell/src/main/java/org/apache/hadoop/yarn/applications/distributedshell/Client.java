@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.applications.distributedshell;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -27,7 +28,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
+import java.util.Arrays;
+import java.util.Base64;
 
+import com.google.common.base.Joiner;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -35,9 +39,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -63,6 +65,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -70,18 +73,30 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
+import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.DockerClientConfigHandler;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Client for Distributed Shell application submission to YARN.
@@ -90,7 +105,7 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
  * the provided shell command on a set of containers. </p>
  * 
  * <p>This client is meant to act as an example on how to write yarn-based applications. </p>
- * 
+ *
  * <p> To submit an application, a client first needs to connect to the <code>ResourceManager</code> 
  * aka ApplicationsManager or ASM via the {@link ApplicationClientProtocol}. The {@link ApplicationClientProtocol} 
  * provides a way for the client to get access to cluster information and to request for a
@@ -118,7 +133,13 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 @InterfaceStability.Unstable
 public class Client {
 
-  private static final Log LOG = LogFactory.getLog(Client.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(Client.class);
+
+  private static final int DEFAULT_AM_MEMORY = 100;
+  private static final int DEFAULT_AM_VCORES = 1;
+  private static final int DEFAULT_CONTAINER_MEMORY = 10;
+  private static final int DEFAULT_CONTAINER_VCORES = 1;
   
   // Configuration
   private Configuration conf;
@@ -130,9 +151,13 @@ public class Client {
   // Queue for App master
   private String amQueue = "";
   // Amt. of memory resource to request for to run the App Master
-  private long amMemory = 100;
+  private long amMemory = DEFAULT_AM_MEMORY;
   // Amt. of virtual core resource to request for to run the App Master
-  private int amVCores = 1;
+  private int amVCores = DEFAULT_AM_VCORES;
+  // Amount of resources to request to run the App Master
+  private Map<String, Long> amResources = new HashMap<>();
+  // AM resource profile
+  private String amResourceProfile = "";
 
   // Application master jar file
   private String appMasterJar = ""; 
@@ -151,16 +176,33 @@ public class Client {
   private int shellCmdPriority = 0;
 
   // Amt of memory to request for container in which shell script will be executed
-  private int containerMemory = 10; 
+  private long containerMemory = DEFAULT_CONTAINER_MEMORY;
   // Amt. of virtual cores to request for container in which shell script will be executed
-  private int containerVirtualCores = 1;
+  private int containerVirtualCores = DEFAULT_CONTAINER_VCORES;
+  // Amt. of resources to request for container
+  // in which shell script will be executed
+  private Map<String, Long> containerResources = new HashMap<>();
+  // container resource profile
+  private String containerResourceProfile = "";
   // No. of containers in which the shell script needs to be executed
   private int numContainers = 1;
   private String nodeLabelExpression = null;
+  // Container type, default GUARANTEED.
+  private ExecutionType containerType = ExecutionType.GUARANTEED;
+  // Whether to auto promote opportunistic containers
+  private boolean autoPromoteContainers = false;
+  // Whether to enforce execution type of containers
+  private boolean enforceExecType = false;
 
+  // Placement specification
+  private String placementSpec = "";
+  // Node Attribute specification
+  private String nodeAttributeSpec = "";
   // log4j.properties file 
   // if available, add to local resources and set into classpath 
-  private String log4jPropFile = "";	
+  private String log4jPropFile = "";
+  // rolling
+  private String rollingFilesPattern = "";
 
   // Start time for client
   private final long clientStartTime = System.currentTimeMillis();
@@ -193,6 +235,12 @@ public class Client {
   private String flowVersion = null;
   private long flowRunId = 0L;
 
+  // Docker client configuration
+  private String dockerClientConfig = null;
+
+  // Application tags
+  private Set<String> applicationTags = new HashSet<>();
+
   // Command line options
   private Options opts;
 
@@ -224,12 +272,12 @@ public class Client {
       }
       result = client.run();
     } catch (Throwable t) {
-      LOG.fatal("Error running Client", t);
+      LOG.error("Error running Client", t);
       System.exit(1);
     }
     if (result) {
       LOG.info("Application completed successfully");
-      System.exit(0);			
+      System.exit(0);
     } 
     LOG.error("Application failed to complete successfully");
     System.exit(2);
@@ -245,6 +293,8 @@ public class Client {
 
   Client(String appMasterMainClass, Configuration conf) {
     this.conf = conf;
+    this.conf.setBoolean(
+        YarnConfiguration.YARN_CLIENT_LOAD_RESOURCETYPES_FROM_SERVER, true);
     this.appMasterMainClass = appMasterMainClass;
     yarnClient = YarnClient.createYarnClient();
     yarnClient.init(conf);
@@ -254,8 +304,14 @@ public class Client {
     opts.addOption("queue", true, "RM Queue in which this application is to be submitted");
     opts.addOption("timeout", true, "Application timeout in milliseconds");
     opts.addOption("master_memory", true, "Amount of memory in MB to be requested to run the application master");
-    opts.addOption("master_vcores", true, "Amount of virtual cores to be requested to run the application master");
+    opts.addOption("master_vcores", true, "Amount of virtual cores " +
+        "to be requested to run the application master");
+    opts.addOption("master_resources", true, "Amount of resources " +
+        "to be requested to run the application master. " +
+        "Specified as resource type=value pairs separated by commas." +
+        "E.g. -master_resources memory-mb=512,vcores=2");
     opts.addOption("jar", true, "Jar file containing the application master");
+    opts.addOption("master_resource_profile", true, "Resource profile for the application master");
     opts.addOption("shell_command", true, "Shell command to be executed by " +
         "the Application Master. Can only specify either --shell_command " +
         "or --shell_script");
@@ -267,15 +323,33 @@ public class Client {
     opts.addOption("shell_env", true,
         "Environment for shell script. Specified as env_key=env_val pairs");
     opts.addOption("shell_cmd_priority", true, "Priority for the shell command containers");
-    opts.addOption("container_memory", true, "Amount of memory in MB to be requested to run the shell command");
-    opts.addOption("container_vcores", true, "Amount of virtual cores to be requested to run the shell command");
+    opts.addOption("container_type", true,
+        "Container execution type, GUARANTEED or OPPORTUNISTIC");
+    opts.addOption("container_memory", true, "Amount of memory in MB " +
+        "to be requested to run the shell command");
+    opts.addOption("container_vcores", true, "Amount of virtual cores " +
+        "to be requested to run the shell command");
+    opts.addOption("container_resources", true, "Amount of resources " +
+        "to be requested to run the shell command. " +
+        "Specified as resource type=value pairs separated by commas. " +
+        "E.g. -container_resources memory-mb=256,vcores=1");
+    opts.addOption("container_resource_profile", true, "Resource profile for the shell command");
     opts.addOption("num_containers", true, "No. of containers on which the shell command needs to be executed");
+    opts.addOption("promote_opportunistic_after_start", false,
+        "Flag to indicate whether to automatically promote opportunistic"
+            + " containers to guaranteed.");
+    opts.addOption("enforce_execution_type", false,
+        "Flag to indicate whether to enforce execution type of containers");
     opts.addOption("log_properties", true, "log4j.properties file");
+    opts.addOption("rolling_log_pattern", true,
+        "pattern for files that should be aggregated in a rolling fashion");
     opts.addOption("keep_containers_across_application_attempts", false,
-      "Flag to indicate whether to keep containers across application attempts." +
-      " If the flag is true, running containers will not be killed when" +
-      " application attempt fails and these containers will be retrieved by" +
-      " the new application attempt ");
+        "Flag to indicate whether to keep containers across application "
+            + "attempts."
+            + " If the flag is true, running containers will not be killed when"
+            + " application attempt fails and these containers will be "
+            + "retrieved by"
+            + " the new application attempt ");
     opts.addOption("attempt_failures_validity_interval", true,
       "when attempt_failures_validity_interval in milliseconds is set to > 0," +
       "the failure number will not take failures which happen out of " +
@@ -316,6 +390,18 @@ public class Client {
         "If container could retry, it specifies max retires");
     opts.addOption("container_retry_interval", true,
         "Interval between each retry, unit is milliseconds");
+    opts.addOption("container_failures_validity_interval", true,
+        "Failures which are out of the time window will not be added to"
+            + " the number of container retry attempts");
+    opts.addOption("docker_client_config", true,
+        "The docker client configuration path. The scheme should be supplied"
+            + " (i.e. file:// or hdfs://)."
+            + " Only used when the Docker runtime is enabled and requested.");
+    opts.addOption("placement_spec", true,
+        "Placement specification. Please note, if this option is specified,"
+            + " The \"num_containers\" option will be ignored. All requested"
+            + " containers will be of type GUARANTEED" );
+    opts.addOption("application_tags", true, "Application tags.");
   }
 
   /**
@@ -354,6 +440,10 @@ public class Client {
       }
     }
 
+    if (cliParser.hasOption("rolling_log_pattern")) {
+      rollingFilesPattern = cliParser.getOptionValue("rolling_log_pattern");
+    }
+
     if (cliParser.hasOption("help")) {
       printUsage();
       return false;
@@ -369,24 +459,37 @@ public class Client {
       keepContainers = true;
     }
 
+    if (cliParser.hasOption("placement_spec")) {
+      placementSpec = cliParser.getOptionValue("placement_spec");
+      // Check if it is parsable
+      PlacementSpec.parse(this.placementSpec);
+    }
+
     appName = cliParser.getOptionValue("appname", "DistributedShell");
     amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
     amQueue = cliParser.getOptionValue("queue", "default");
-    amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory", "100"));
-    amVCores = Integer.parseInt(cliParser.getOptionValue("master_vcores", "1"));
-
-    if (amMemory < 0) {
-      throw new IllegalArgumentException("Invalid memory specified for application master, exiting."
-          + " Specified memory=" + amMemory);
+    amMemory =
+        Integer.parseInt(cliParser.getOptionValue("master_memory", "-1"));
+    amVCores =
+        Integer.parseInt(cliParser.getOptionValue("master_vcores", "-1"));
+    if (cliParser.hasOption("master_resources")) {
+      Map<String, Long> masterResources =
+          parseResourcesString(cliParser.getOptionValue("master_resources"));
+      for (Map.Entry<String, Long> entry : masterResources.entrySet()) {
+        if (entry.getKey().equals(ResourceInformation.MEMORY_URI)) {
+          amMemory = entry.getValue();
+        } else if (entry.getKey().equals(ResourceInformation.VCORES_URI)) {
+          amVCores = entry.getValue().intValue();
+        } else {
+          amResources.put(entry.getKey(), entry.getValue());
+        }
+      }
     }
-    if (amVCores < 0) {
-      throw new IllegalArgumentException("Invalid virtual cores specified for application master, exiting."
-          + " Specified virtual cores=" + amVCores);
-    }
+    amResourceProfile = cliParser.getOptionValue("master_resource_profile", "");
 
     if (!cliParser.hasOption("jar")) {
       throw new IllegalArgumentException("No jar file specified for application master");
-    }		
+    }
 
     appMasterJar = cliParser.getOptionValue("jar");
 
@@ -423,17 +526,47 @@ public class Client {
     }
     shellCmdPriority = Integer.parseInt(cliParser.getOptionValue("shell_cmd_priority", "0"));
 
-    containerMemory = Integer.parseInt(cliParser.getOptionValue("container_memory", "10"));
-    containerVirtualCores = Integer.parseInt(cliParser.getOptionValue("container_vcores", "1"));
-    numContainers = Integer.parseInt(cliParser.getOptionValue("num_containers", "1"));
-    
+    if (cliParser.hasOption("container_type")) {
+      String containerTypeStr = cliParser.getOptionValue("container_type");
+      if (Arrays.stream(ExecutionType.values()).noneMatch(
+          executionType -> executionType.toString()
+          .equals(containerTypeStr))) {
+        throw new IllegalArgumentException("Invalid container_type: "
+            + containerTypeStr);
+      }
+      containerType = ExecutionType.valueOf(containerTypeStr);
+    }
+    if (cliParser.hasOption("promote_opportunistic_after_start")) {
+      autoPromoteContainers = true;
+    }
+    if (cliParser.hasOption("enforce_execution_type")) {
+      enforceExecType = true;
+    }
+    containerMemory =
+        Integer.parseInt(cliParser.getOptionValue("container_memory", "-1"));
+    containerVirtualCores =
+        Integer.parseInt(cliParser.getOptionValue("container_vcores", "-1"));
+    if (cliParser.hasOption("container_resources")) {
+      Map<String, Long> resources =
+          parseResourcesString(cliParser.getOptionValue("container_resources"));
+      for (Map.Entry<String, Long> entry : resources.entrySet()) {
+        if (entry.getKey().equals(ResourceInformation.MEMORY_URI)) {
+          containerMemory = entry.getValue();
+        } else if (entry.getKey().equals(ResourceInformation.VCORES_URI)) {
+          containerVirtualCores = entry.getValue().intValue();
+        } else {
+          containerResources.put(entry.getKey(), entry.getValue());
+        }
+      }
+    }
+    containerResourceProfile =
+        cliParser.getOptionValue("container_resource_profile", "");
+    numContainers =
+        Integer.parseInt(cliParser.getOptionValue("num_containers", "1"));
 
-    if (containerMemory < 0 || containerVirtualCores < 0 || numContainers < 1) {
-      throw new IllegalArgumentException("Invalid no. of containers or container memory/vcores specified,"
-          + " exiting."
-          + " Specified containerMemory=" + containerMemory
-          + ", containerVirtualCores=" + containerVirtualCores
-          + ", numContainer=" + numContainers);
+    if (numContainers < 1) {
+      throw new IllegalArgumentException("Invalid no. of containers specified,"
+          + " exiting. Specified numContainer=" + numContainers);
     }
     
     nodeLabelExpression = cliParser.getOptionValue("node_label_expression", null);
@@ -475,6 +608,10 @@ public class Client {
       containerRetryOptions.add("--container_retry_interval "
           + cliParser.getOptionValue("container_retry_interval"));
     }
+    if (cliParser.hasOption("container_failures_validity_interval")) {
+      containerRetryOptions.add("--container_failures_validity_interval "
+          + cliParser.getOptionValue("container_failures_validity_interval"));
+    }
 
     if (cliParser.hasOption("flow_name")) {
       flowName = cliParser.getOptionValue("flow_name");
@@ -488,6 +625,17 @@ public class Client {
       } catch (NumberFormatException e) {
         throw new IllegalArgumentException(
             "Flow run is not a valid long value", e);
+      }
+    }
+    if (cliParser.hasOption("docker_client_config")) {
+      dockerClientConfig = cliParser.getOptionValue("docker_client_config");
+    }
+
+    if (cliParser.hasOption("application_tags")) {
+      String applicationTagsStr = cliParser.getOptionValue("application_tags");
+      String[] appTags = applicationTagsStr.split(",");
+      for (String appTag : appTags) {
+        this.applicationTags.add(appTag.trim());
       }
     }
     return true;
@@ -520,24 +668,56 @@ public class Client {
     }
 
     QueueInfo queueInfo = yarnClient.getQueueInfo(this.amQueue);
+    if (queueInfo == null) {
+      throw new IllegalArgumentException(String
+          .format("Queue %s not present in scheduler configuration.",
+              this.amQueue));
+    }
+
     LOG.info("Queue info"
         + ", queueName=" + queueInfo.getQueueName()
         + ", queueCurrentCapacity=" + queueInfo.getCurrentCapacity()
         + ", queueMaxCapacity=" + queueInfo.getMaximumCapacity()
         + ", queueApplicationCount=" + queueInfo.getApplications().size()
-        + ", queueChildQueueCount=" + queueInfo.getChildQueues().size());		
+        + ", queueChildQueueCount=" + queueInfo.getChildQueues().size());
 
     List<QueueUserACLInfo> listAclInfo = yarnClient.getQueueAclsInfo();
     for (QueueUserACLInfo aclInfo : listAclInfo) {
       for (QueueACL userAcl : aclInfo.getUserAcls()) {
         LOG.info("User ACL Info for Queue"
-            + ", queueName=" + aclInfo.getQueueName()			
+            + ", queueName=" + aclInfo.getQueueName()
             + ", userAcl=" + userAcl.name());
       }
-    }		
+    }
 
     if (domainId != null && domainId.length() > 0 && toCreateDomain) {
       prepareTimelineDomain();
+    }
+
+    Map<String, Resource> profiles;
+    try {
+      profiles = yarnClient.getResourceProfiles();
+    } catch (YARNFeatureNotEnabledException re) {
+      profiles = null;
+    }
+
+    List<String> appProfiles = new ArrayList<>(2);
+    appProfiles.add(amResourceProfile);
+    appProfiles.add(containerResourceProfile);
+    for (String appProfile : appProfiles) {
+      if (appProfile != null && !appProfile.isEmpty()) {
+        if (profiles == null) {
+          String message = "Resource profiles is not enabled";
+          LOG.error(message);
+          throw new IOException(message);
+        }
+        if (!profiles.containsKey(appProfile)) {
+          String message = "Unknown resource profile '" + appProfile
+              + "'. Valid resource profiles are " + profiles.keySet();
+          LOG.error(message);
+          throw new IOException(message);
+        }
+      }
     }
 
     // Get a new application id
@@ -573,6 +753,13 @@ public class Client {
     ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
     ApplicationId appId = appContext.getApplicationId();
 
+    // Set up resource type requirements
+    // For now, both memory and vcores are supported, so we set memory and
+    // vcores requirements
+    List<ResourceTypeInfo> resourceTypes = yarnClient.getResourceTypeInfo();
+    setAMResourceCapability(appContext, profiles, resourceTypes);
+    setContainerResources(profiles, resourceTypes);
+
     appContext.setKeepContainersAcrossApplicationAttempts(keepContainers);
     appContext.setApplicationName(appName);
 
@@ -582,6 +769,9 @@ public class Client {
     }
 
     Set<String> tags = new HashSet<String>();
+    if (applicationTags != null) {
+      tags.addAll(applicationTags);
+    }
     if (flowName != null) {
       tags.add(TimelineUtils.generateFlowNameTag(flowName));
     }
@@ -595,7 +785,7 @@ public class Client {
 
     // set local resources for the application master
     // local files or archives as needed
-    // In this scenario, the jar file for the application master is part of the local resources			
+    // In this scenario, the jar file for the application master is part of the local resources
     Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
 
     LOG.info("Copy App Master jar from local filesystem and add to local environment");
@@ -616,7 +806,7 @@ public class Client {
     // To do this, we need to first copy into the filesystem that is visible 
     // to the yarn framework. 
     // We do not need to set this as a local resource for the application 
-    // master as the application master does not need it. 		
+    // master as the application master does not need it.
     String hdfsShellScriptLocation = ""; 
     long hdfsShellScriptLen = 0;
     long hdfsShellScriptTimestamp = 0;
@@ -660,7 +850,7 @@ public class Client {
       env.put(DSConstants.DISTRIBUTEDSHELLTIMELINEDOMAIN, domainId);
     }
 
-    // Add AppMaster.jar location to classpath 		
+    // Add AppMaster.jar location to classpath
     // At some point we should not be required to add 
     // the hadoop specific classpaths to the env. 
     // It should be provided out of the box. 
@@ -690,19 +880,53 @@ public class Client {
 
     // Set java executable command 
     LOG.info("Setting up app master command");
-    vargs.add(Environment.JAVA_HOME.$$() + "/bin/java");
+    // Need extra quote here because JAVA_HOME might contain space on Windows,
+    // e.g. C:/Program Files/Java...
+    vargs.add("\"" + Environment.JAVA_HOME.$$() + "/bin/java\"");
     // Set Xmx based on am memory size
     vargs.add("-Xmx" + amMemory + "m");
     // Set class name 
     vargs.add(appMasterMainClass);
     // Set params for Application Master
-    vargs.add("--container_memory " + String.valueOf(containerMemory));
-    vargs.add("--container_vcores " + String.valueOf(containerVirtualCores));
+    if (containerType != null) {
+      vargs.add("--container_type " + String.valueOf(containerType));
+    }
+    if (autoPromoteContainers) {
+      vargs.add("--promote_opportunistic_after_start");
+    }
+    if (enforceExecType) {
+      vargs.add("--enforce_execution_type");
+    }
+    if (containerMemory > 0) {
+      vargs.add("--container_memory " + String.valueOf(containerMemory));
+    }
+    if (containerVirtualCores > 0) {
+      vargs.add("--container_vcores " + String.valueOf(containerVirtualCores));
+    }
+    if (!containerResources.isEmpty()) {
+      Joiner.MapJoiner joiner = Joiner.on(',').withKeyValueSeparator("=");
+      vargs.add("--container_resources " + joiner.join(containerResources));
+    }
+    if (containerResourceProfile != null && !containerResourceProfile
+        .isEmpty()) {
+      vargs.add("--container_resource_profile " + containerResourceProfile);
+    }
     vargs.add("--num_containers " + String.valueOf(numContainers));
+    if (placementSpec != null && placementSpec.length() > 0) {
+      // Encode the spec to avoid passing special chars via shell arguments.
+      String encodedSpec = Base64.getEncoder()
+          .encodeToString(placementSpec.getBytes(StandardCharsets.UTF_8));
+      LOG.info("Encode placement spec: " + encodedSpec);
+      vargs.add("--placement_spec " + encodedSpec);
+    }
     if (null != nodeLabelExpression) {
       appContext.setNodeLabelExpression(nodeLabelExpression);
     }
     vargs.add("--priority " + String.valueOf(shellCmdPriority));
+
+    if (keepContainers) {
+      vargs.add("--keep_containers_across_application_attempts");
+    }
 
     for (Map.Entry<String, String> entry : shellEnv.entrySet()) {
       vargs.add("--shell_env " + entry.getKey() + "=" + entry.getValue());
@@ -724,26 +948,21 @@ public class Client {
 
     LOG.info("Completed setting up app master command " + command.toString());
     List<String> commands = new ArrayList<String>();
-    commands.add(command.toString());		
+    commands.add(command.toString());
 
     // Set up the container launch context for the application master
     ContainerLaunchContext amContainer = ContainerLaunchContext.newInstance(
       localResources, env, commands, null, null, null);
-
-    // Set up resource type requirements
-    // For now, both memory and vcores are supported, so we set memory and 
-    // vcores requirements
-    Resource capability = Resource.newInstance(amMemory, amVCores);
-    appContext.setResource(capability);
 
     // Service data is a binary blob that can be passed to the application
     // Not needed in this scenario
     // amContainer.setServiceData(serviceData);
 
     // Setup security tokens
+    Credentials rmCredentials = null;
     if (UserGroupInformation.isSecurityEnabled()) {
       // Note: Credentials class is marked as LimitedPrivate for HDFS and MapReduce
-      Credentials credentials = new Credentials();
+      rmCredentials = new Credentials();
       String tokenRenewer = YarnClientUtils.getRmPrincipal(conf);
       if (tokenRenewer == null || tokenRenewer.length() == 0) {
         throw new IOException(
@@ -752,16 +971,32 @@ public class Client {
 
       // For now, only getting tokens for the default file-system.
       final Token<?> tokens[] =
-          fs.addDelegationTokens(tokenRenewer, credentials);
+          fs.addDelegationTokens(tokenRenewer, rmCredentials);
       if (tokens != null) {
         for (Token<?> token : tokens) {
           LOG.info("Got dt for " + fs.getUri() + "; " + token);
         }
       }
+    }
+
+    // Add the docker client config credentials if supplied.
+    Credentials dockerCredentials = null;
+    if (dockerClientConfig != null) {
+      dockerCredentials =
+          DockerClientConfigHandler.readCredentialsFromConfigFile(
+              new Path(dockerClientConfig), conf, appId.toString());
+    }
+
+    if (rmCredentials != null || dockerCredentials != null) {
       DataOutputBuffer dob = new DataOutputBuffer();
-      credentials.writeTokenStorageToStream(dob);
-      ByteBuffer fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
-      amContainer.setTokens(fsTokens);
+      if (rmCredentials != null) {
+        rmCredentials.writeTokenStorageToStream(dob);
+      }
+      if (dockerCredentials != null) {
+        dockerCredentials.writeTokenStorageToStream(dob);
+      }
+      ByteBuffer tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+      amContainer.setTokens(tokens);
     }
 
     appContext.setAMContainerSpec(amContainer);
@@ -773,6 +1008,8 @@ public class Client {
 
     // Set the queue to which this application is to be submitted in the RM
     appContext.setQueue(amQueue);
+
+    specifyLogAggregationContext(appContext);
 
     // Submit the application to the applications manager
     // SubmitApplicationResponse submitResp = applicationsManager.submitApplication(appRequest);
@@ -789,6 +1026,15 @@ public class Client {
     // Monitor the application
     return monitorApplication(appId);
 
+  }
+
+  @VisibleForTesting
+  void specifyLogAggregationContext(ApplicationSubmissionContext appContext) {
+    if (!rollingFilesPattern.isEmpty()) {
+      LogAggregationContext logAggregationContext = LogAggregationContext
+          .newInstance(null, null, rollingFilesPattern, "");
+      appContext.setLogAggregationContext(logAggregationContext);
+    }
   }
 
   /**
@@ -839,22 +1085,25 @@ public class Client {
               + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
               + ". Breaking monitoring loop");
           return false;
-        }			  
+        }
       }
-      else if (YarnApplicationState.KILLED == state	
+      else if (YarnApplicationState.KILLED == state
           || YarnApplicationState.FAILED == state) {
         LOG.info("Application did not finish."
             + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
             + ". Breaking monitoring loop");
         return false;
-      }			
-
-      if (System.currentTimeMillis() > (clientStartTime + clientTimeout)) {
-        LOG.info("Reached client specified timeout for application. Killing application");
-        forceKillApplication(appId);
-        return false;				
       }
-    }			
+
+      // The value equal or less than 0 means no timeout
+      if (clientTimeout > 0
+          && System.currentTimeMillis() > (clientStartTime + clientTimeout)) {
+        LOG.info("Reached client specified timeout for application. " +
+            "Killing application");
+        forceKillApplication(appId);
+        return false;
+      }
+    }
 
   }
 
@@ -872,7 +1121,7 @@ public class Client {
 
     // Response can be ignored as it is non-null on success or 
     // throws an exception in case of failures
-    yarnClient.killApplication(appId);	
+    yarnClient.killApplication(appId);
   }
 
   private void addToLocalResources(FileSystem fs, String fileSrcPath,
@@ -932,5 +1181,123 @@ public class Client {
     } finally {
       timelineClient.stop();
     }
+  }
+
+  private void setAMResourceCapability(ApplicationSubmissionContext appContext,
+      Map<String, Resource> profiles, List<ResourceTypeInfo> resourceTypes)
+      throws IllegalArgumentException, IOException, YarnException {
+    if (amMemory < -1 || amMemory == 0) {
+      throw new IllegalArgumentException("Invalid memory specified for"
+          + " application master, exiting. Specified memory=" + amMemory);
+    }
+    if (amVCores < -1 || amVCores == 0) {
+      throw new IllegalArgumentException("Invalid virtual cores specified for"
+          + " application master, exiting. " +
+          "Specified virtual cores=" + amVCores);
+    }
+    Resource capability = Resource.newInstance(0, 0);
+
+    if (!amResourceProfile.isEmpty()) {
+      if (!profiles.containsKey(amResourceProfile)) {
+        throw new IllegalArgumentException(
+            "Failed to find specified resource profile for application master="
+                + amResourceProfile);
+      }
+      capability = Resources.clone(profiles.get(amResourceProfile));
+    }
+
+    if (appContext.getAMContainerResourceRequests() == null) {
+      List<ResourceRequest> amResourceRequests = new ArrayList<ResourceRequest>();
+      amResourceRequests
+          .add(ResourceRequest.newInstance(Priority.newInstance(amPriority),
+              "*", Resources.clone(Resources.none()), 1));
+      appContext.setAMContainerResourceRequests(amResourceRequests);
+    }
+
+    validateResourceTypes(amResources.keySet(), resourceTypes);
+    for (Map.Entry<String, Long> entry : amResources.entrySet()) {
+      capability.setResourceValue(entry.getKey(), entry.getValue());
+    }
+    // set amMemory because it's used to set Xmx param
+    if (amMemory == -1) {
+      amMemory = DEFAULT_AM_MEMORY;
+      LOG.warn("AM Memory not specified, use " + DEFAULT_AM_MEMORY
+          + " mb as AM memory");
+    }
+    if (amVCores == -1) {
+      amVCores = DEFAULT_AM_VCORES;
+      LOG.warn("AM vcore not specified, use " + DEFAULT_AM_VCORES
+          + " mb as AM vcores");
+    }
+    capability.setMemorySize(amMemory);
+    capability.setVirtualCores(amVCores);
+    appContext.getAMContainerResourceRequests().get(0).setCapability(
+        capability);
+    LOG.warn("AM Resource capability=" + capability);
+  }
+
+  private void setContainerResources(Map<String, Resource> profiles,
+      List<ResourceTypeInfo> resourceTypes) throws IllegalArgumentException {
+    if (containerMemory < -1 || containerMemory == 0) {
+      throw new IllegalArgumentException("Container memory '" +
+          containerMemory + "' has to be greated than 0");
+    }
+    if (containerVirtualCores < -1 || containerVirtualCores == 0) {
+      throw new IllegalArgumentException("Container vcores '" +
+          containerVirtualCores + "' has to be greated than 0");
+    }
+    validateResourceTypes(containerResources.keySet(), resourceTypes);
+    if (profiles == null) {
+      containerMemory = containerMemory == -1 ?
+          DEFAULT_CONTAINER_MEMORY : containerMemory;
+      containerVirtualCores = containerVirtualCores == -1 ?
+          DEFAULT_CONTAINER_VCORES : containerVirtualCores;
+    }
+  }
+
+  private void validateResourceTypes(Iterable<String> resourceNames,
+      List<ResourceTypeInfo> resourceTypes) {
+    for (String resourceName : resourceNames) {
+      if (!resourceTypes.stream().anyMatch(e ->
+          e.getName().equals(resourceName))) {
+        throw new ResourceNotFoundException("Unknown resource: " +
+            resourceName);
+      }
+    }
+  }
+
+  static Map<String, Long> parseResourcesString(String resourcesStr) {
+    Map<String, Long> resources = new HashMap<>();
+
+    // Ignore the grouping "[]"
+    if (resourcesStr.startsWith("[")) {
+      resourcesStr = resourcesStr.substring(1);
+    }
+    if (resourcesStr.endsWith("]")) {
+      resourcesStr = resourcesStr.substring(0, resourcesStr.length());
+    }
+
+    for (String resource : resourcesStr.trim().split(",")) {
+      resource = resource.trim();
+      if (!resource.matches("^[^=]+=\\d+\\s?\\w*$")) {
+        throw new IllegalArgumentException("\"" + resource + "\" is not a " +
+            "valid resource type/amount pair. " +
+            "Please provide key=amount pairs separated by commas.");
+      }
+      String[] splits = resource.split("=");
+      String key = splits[0], value = splits[1];
+      String units = ResourceUtils.getUnits(value);
+      String valueWithoutUnit = value.substring(
+          0, value.length() - units.length()).trim();
+      Long resourceValue = Long.valueOf(valueWithoutUnit);
+      if (!units.isEmpty()) {
+        resourceValue = UnitsConversionUtil.convert(units, "Mi", resourceValue);
+      }
+      if (key.equals("memory")) {
+        key = ResourceInformation.MEMORY_URI;
+      }
+      resources.put(key, resourceValue);
+    }
+    return resources;
   }
 }

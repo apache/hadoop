@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import com.google.common.base.Supplier;
-import org.apache.commons.lang.UnhandledException;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
@@ -26,6 +25,7 @@ import static org.apache.hadoop.fs.CreateFlag.LAZY_PERSIST;
 import static org.apache.hadoop.fs.StorageType.DEFAULT;
 import static org.apache.hadoop.fs.StorageType.RAM_DISK;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
+import static org.apache.hadoop.util.Shell.getMemlockLimit;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -43,8 +43,8 @@ import java.util.concurrent.TimeoutException;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -89,7 +89,8 @@ public abstract class LazyPersistTestCase {
   private static final String JMX_SERVICE_NAME = "DataNode";
   protected static final int LAZY_WRITE_FILE_SCRUBBER_INTERVAL_SEC = 3;
   protected static final int LAZY_WRITER_INTERVAL_SEC = 1;
-  protected static final Log LOG = LogFactory.getLog(LazyPersistTestCase.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(LazyPersistTestCase.class);
   protected static final short REPL_FACTOR = 1;
   protected final long osPageSize =
       NativeIO.POSIX.getCacheManipulator().getOperatingSystemPageSize();
@@ -422,7 +423,7 @@ public abstract class LazyPersistTestCase {
     private StorageType[] storageTypes = null;
     private int ramDiskReplicaCapacity = -1;
     private long ramDiskStorageLimit = -1;
-    private long maxLockedMemory = Long.MAX_VALUE;
+    private long maxLockedMemory = getMemlockLimit(Long.MAX_VALUE);
     private boolean hasTransientStorage = true;
     private boolean useScr = false;
     private boolean useLegacyBlockReaderLocal = false;

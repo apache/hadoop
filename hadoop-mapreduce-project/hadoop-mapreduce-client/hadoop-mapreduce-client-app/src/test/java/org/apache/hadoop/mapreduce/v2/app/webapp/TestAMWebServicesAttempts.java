@@ -1,5 +1,4 @@
 /**
-/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.app.webapp;
 
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -484,6 +484,8 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
       Boolean found = false;
       for (int i = 0; i < nodes.getLength(); i++) {
         Element element = (Element) nodes.item(i);
+        assertFalse("task attempt should not contain any attributes, it can lead to incorrect JSON marshaling",
+            element.hasAttributes());
 
         if (attid.matches(WebServicesTestUtils.getXmlString(element, "id"))) {
           found = true;

@@ -28,8 +28,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -48,7 +48,8 @@ import org.junit.Test;
  */
 public class TestDataNodeReconfiguration {
 
-  private static final Log LOG = LogFactory.getLog(TestBlockRecovery.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestBlockRecovery.class);
   private static final String DATA_DIR = MiniDFSCluster.getBaseDirectory()
       + "data";
   private final static InetSocketAddress NN_ADDR = new InetSocketAddress(

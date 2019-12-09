@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
@@ -27,8 +28,14 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
+import java.util.Queue;
+import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -41,14 +48,15 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -60,7 +68,7 @@ import org.mockito.Mockito;
 @RunWith(Parameterized.class)
 public class TestEditLogTailer {
   static {
-    GenericTestUtils.setLogLevel(FSEditLog.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FSEditLog.LOG, Level.DEBUG);
   }
 
   @Parameters
@@ -82,9 +90,9 @@ public class TestEditLogTailer {
   static final long NN_LAG_TIMEOUT = 10 * 1000;
   
   static {
-    GenericTestUtils.setLogLevel(FSImage.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(FSEditLog.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(EditLogTailer.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FSImage.LOG, Level.DEBUG);
+    GenericTestUtils.setLogLevel(FSEditLog.LOG, org.slf4j.event.Level.DEBUG);
+    GenericTestUtils.setLogLevel(EditLogTailer.LOG, Level.DEBUG);
   }
 
   private static Configuration getConf() {
@@ -98,8 +106,9 @@ public class TestEditLogTailer {
   public void testTailer() throws IOException, InterruptedException,
       ServiceFailedException {
     Configuration conf = getConf();
-    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 0);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_KEY, 100);
+    conf.setLong(EditLogTailer.DFS_HA_TAILEDITS_MAX_TXNS_PER_LOCK_KEY, 3);
 
     HAUtil.setAllowStandbyReads(conf, true);
     
@@ -121,10 +130,13 @@ public class TestEditLogTailer {
       }
       
       HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
-      
+      assertEquals("Inconsistent number of applied txns on Standby",
+          nn1.getNamesystem().getEditLog().getLastWrittenTxId(),
+          nn2.getNamesystem().getFSImage().getLastAppliedTxId() + 1);
+
       for (int i = 0; i < DIRS_TO_MAKE / 2; i++) {
         assertTrue(NameNodeAdapter.getFileInfo(nn2,
-            getDirPath(i), false).isDir());
+            getDirPath(i), false, false, false).isDirectory());
       }
       
       for (int i = DIRS_TO_MAKE / 2; i < DIRS_TO_MAKE; i++) {
@@ -134,16 +146,59 @@ public class TestEditLogTailer {
       }
       
       HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
-      
+      assertEquals("Inconsistent number of applied txns on Standby",
+          nn1.getNamesystem().getEditLog().getLastWrittenTxId(),
+          nn2.getNamesystem().getFSImage().getLastAppliedTxId() + 1);
+
       for (int i = DIRS_TO_MAKE / 2; i < DIRS_TO_MAKE; i++) {
         assertTrue(NameNodeAdapter.getFileInfo(nn2,
-            getDirPath(i), false).isDir());
+            getDirPath(i), false, false, false).isDirectory());
       }
     } finally {
       cluster.shutdown();
     }
   }
-  
+
+  @Test
+  public void testTailerBackoff() throws Exception {
+    Configuration conf = new Configuration();
+    NameNode.initMetrics(conf, HdfsServerConstants.NamenodeRole.NAMENODE);
+    conf.setTimeDuration(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY,
+        1, TimeUnit.MILLISECONDS);
+    conf.setTimeDuration(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_BACKOFF_MAX_KEY,
+        10, TimeUnit.MILLISECONDS);
+    FSNamesystem mockNamesystem = mock(FSNamesystem.class);
+    FSImage mockImage = mock(FSImage.class);
+    NNStorage mockStorage = mock(NNStorage.class);
+    when(mockNamesystem.getFSImage()).thenReturn(mockImage);
+    when(mockImage.getStorage()).thenReturn(mockStorage);
+    final Queue<Long> sleepDurations = new ConcurrentLinkedQueue<>();
+    final int zeroEditCount = 5;
+    final AtomicInteger tailEditsCallCount = new AtomicInteger(0);
+    EditLogTailer tailer = new EditLogTailer(mockNamesystem, conf) {
+      @Override
+      void sleep(long sleepTimeMs) {
+        if (sleepDurations.size() <= zeroEditCount) {
+          sleepDurations.add(sleepTimeMs);
+        }
+      }
+
+      @Override
+      public long doTailEdits() {
+        return tailEditsCallCount.getAndIncrement() < zeroEditCount ? 0 : 1;
+      }
+    };
+    tailer.start();
+    try {
+      GenericTestUtils.waitFor(
+          () -> sleepDurations.size() > zeroEditCount, 50, 10000);
+    } finally {
+      tailer.stop();
+    }
+    List<Long> expectedDurations = Arrays.asList(2L, 4L, 8L, 10L, 10L, 1L);
+    assertEquals(expectedDurations, new ArrayList<>(sleepDurations));
+  }
+
   @Test
   public void testNN0TriggersLogRolls() throws Exception {
     testStandbyTriggersLogRolls(0);
@@ -170,21 +225,7 @@ public class TestEditLogTailer {
     MiniDFSCluster cluster = null;
     for (int i = 0; i < 5; i++) {
       try {
-        // Have to specify IPC ports so the NNs can talk to each other.
-        int[] ports = ServerSocketUtil.getPorts(3);
-        MiniDFSNNTopology topology = new MiniDFSNNTopology()
-            .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-                .addNN(new MiniDFSNNTopology.NNConf("nn1")
-                    .setIpcPort(ports[0]))
-                .addNN(new MiniDFSNNTopology.NNConf("nn2")
-                    .setIpcPort(ports[1]))
-                .addNN(new MiniDFSNNTopology.NNConf("nn3")
-                    .setIpcPort(ports[2])));
-
-        cluster = new MiniDFSCluster.Builder(conf)
-          .nnTopology(topology)
-          .numDataNodes(0)
-          .build();
+        cluster = createMiniDFSCluster(conf, 3);
         break;
       } catch (BindException e) {
         // retry if race on ports given by ServerSocketUtil#getPorts
@@ -215,21 +256,9 @@ public class TestEditLogTailer {
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_KEY, 100);
 
-    // Have to specify IPC ports so the NNs can talk to each other.
-    MiniDFSNNTopology topology = new MiniDFSNNTopology()
-        .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-            .addNN(new MiniDFSNNTopology.NNConf("nn1")
-                .setIpcPort(ServerSocketUtil.getPort(0, 100)))
-            .addNN(new MiniDFSNNTopology.NNConf("nn2")
-                .setIpcPort(ServerSocketUtil.getPort(0, 100)))
-            .addNN(new MiniDFSNNTopology.NNConf("nn3")
-                .setIpcPort(ServerSocketUtil.getPort(0, 100))));
-
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .nnTopology(topology)
-        .numDataNodes(0)
-        .build();
+    MiniDFSCluster cluster = null;
     try {
+      cluster = createMiniDFSCluster(conf, 3);
       cluster.transitionToStandby(0);
       cluster.transitionToStandby(1);
       cluster.transitionToStandby(2);
@@ -242,7 +271,9 @@ public class TestEditLogTailer {
       cluster.transitionToActive(0);
       waitForLogRollInSharedDir(cluster, 3);
     } finally {
-      cluster.shutdown();
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
   
@@ -308,5 +339,153 @@ public class TestEditLogTailer {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testRollEditLogIOExceptionForRemoteNN() throws IOException {
+    Configuration conf = getConf();
+
+    // Roll every 1s
+    conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = createMiniDFSCluster(conf, 3);
+      cluster.transitionToActive(0);
+      EditLogTailer tailer = Mockito.spy(
+          cluster.getNamesystem(1).getEditLogTailer());
+
+      final AtomicInteger invokedTimes = new AtomicInteger(0);
+
+      // It should go on to next name node when IOException happens.
+      when(tailer.getNameNodeProxy()).thenReturn(
+          tailer.new MultipleNameNodeProxy<Void>() {
+            @Override
+            protected Void doWork() throws IOException {
+              invokedTimes.getAndIncrement();
+              throw new IOException("It is an IO Exception.");
+            }
+          }
+      );
+
+      tailer.triggerActiveLogRoll();
+
+      // MultipleNameNodeProxy uses Round-robin to look for active NN
+      // to do RollEditLog. If doWork() fails, then IOException throws,
+      // it continues to try next NN. triggerActiveLogRoll finishes
+      // either due to success, or using up retries.
+      // In this test case, there are 2 remote name nodes, default retry is 3.
+      // For test purpose, doWork() always returns IOException,
+      // so the total invoked times will be default retry 3 * remote NNs 2 = 6
+      assertEquals(6, invokedTimes.get());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testStandbyTriggersLogRollsWhenTailInProgressEdits()
+      throws Exception {
+    // Time in seconds to wait for standby to catch up to edits from active
+    final int standbyCatchupWaitTime = 2;
+    // Time in seconds to wait before checking if edit logs are rolled while
+    // expecting no edit log roll
+    final int noLogRollWaitTime = 2;
+    // Time in seconds to wait before checking if edit logs are rolled while
+    // expecting edit log roll
+    final int logRollWaitTime = 3;
+
+    Configuration conf = getConf();
+    conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY,
+        standbyCatchupWaitTime + noLogRollWaitTime + 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
+
+    MiniDFSCluster cluster = createMiniDFSCluster(conf, 2);
+    if (cluster == null) {
+      fail("failed to start mini cluster.");
+    }
+
+    try {
+      int activeIndex = new Random().nextBoolean() ? 1 : 0;
+      int standbyIndex = (activeIndex == 0) ? 1 : 0;
+      cluster.transitionToActive(activeIndex);
+      NameNode active = cluster.getNameNode(activeIndex);
+      NameNode standby = cluster.getNameNode(standbyIndex);
+
+      long origTxId = active.getNamesystem().getFSImage().getEditLog()
+          .getCurSegmentTxId();
+      for (int i = 0; i < DIRS_TO_MAKE / 2; i++) {
+        NameNodeAdapter.mkdirs(active, getDirPath(i),
+            new PermissionStatus("test", "test",
+            new FsPermission((short)00755)), true);
+      }
+
+      long activeTxId = active.getNamesystem().getFSImage().getEditLog()
+          .getLastWrittenTxId();
+      waitForStandbyToCatchUpWithInProgressEdits(standby, activeTxId,
+          standbyCatchupWaitTime);
+
+      for (int i = DIRS_TO_MAKE / 2; i < DIRS_TO_MAKE; i++) {
+        NameNodeAdapter.mkdirs(active, getDirPath(i),
+            new PermissionStatus("test", "test",
+            new FsPermission((short)00755)), true);
+      }
+
+      boolean exceptionThrown = false;
+      try {
+        checkForLogRoll(active, origTxId, noLogRollWaitTime);
+      } catch (TimeoutException e) {
+        exceptionThrown = true;
+      }
+      assertTrue(exceptionThrown);
+
+      checkForLogRoll(active, origTxId, logRollWaitTime);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  private static void waitForStandbyToCatchUpWithInProgressEdits(
+      final NameNode standby, final long activeTxId,
+      int maxWaitSec) throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        long standbyTxId = standby.getNamesystem().getFSImage()
+            .getLastAppliedTxId();
+        return (standbyTxId >= activeTxId);
+      }
+    }, 100, maxWaitSec * 1000);
+  }
+
+  private static void checkForLogRoll(final NameNode active,
+      final long origTxId, int maxWaitSec) throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        long curSegmentTxId = active.getNamesystem().getFSImage().getEditLog()
+            .getCurSegmentTxId();
+        return (origTxId != curSegmentTxId);
+      }
+    }, 100, maxWaitSec * 1000);
+  }
+
+  private static MiniDFSCluster createMiniDFSCluster(Configuration conf,
+      int nnCount) throws IOException {
+    int basePort = 10060 + new Random().nextInt(1000) * 2;
+
+    // By passing in basePort, name node will have IPC port set,
+    // which is needed for enabling roll log.
+    MiniDFSNNTopology topology =
+            MiniDFSNNTopology.simpleHATopology(nnCount, basePort);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(topology)
+        .numDataNodes(0)
+        .build();
+    return cluster;
   }
 }

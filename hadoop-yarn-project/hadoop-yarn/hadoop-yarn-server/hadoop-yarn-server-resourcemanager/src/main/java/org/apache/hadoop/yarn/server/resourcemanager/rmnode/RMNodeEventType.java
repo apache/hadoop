@@ -42,7 +42,7 @@ public enum RMNodeEventType {
   // Source: Container
   CONTAINER_ALLOCATED,
   CLEANUP_CONTAINER,
-  DECREASE_CONTAINER,
+  UPDATE_CONTAINER,
 
   // Source: ClientRMService
   SIGNAL_CONTAINER,

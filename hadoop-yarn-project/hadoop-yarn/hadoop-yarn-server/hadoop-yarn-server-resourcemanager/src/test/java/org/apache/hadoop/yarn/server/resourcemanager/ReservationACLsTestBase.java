@@ -47,7 +47,6 @@ import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
 import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -463,9 +462,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
       int attempts = 10;
       Collection<Plan> plans;
       do {
-        DrainDispatcher dispatcher =
-                (DrainDispatcher) resourceManager.getRMContext().getDispatcher();
-        dispatcher.await();
+        resourceManager.drainEvents();
         LOG.info("Waiting for node capacity to be added to plan");
         plans = resourceManager.getRMContext().getReservationSystem()
                 .getAllPlans().values();

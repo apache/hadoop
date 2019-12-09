@@ -21,8 +21,6 @@ package org.apache.hadoop.io.serializer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -31,6 +29,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.serializer.avro.AvroReflectSerialization;
 import org.apache.hadoop.io.serializer.avro.AvroSpecificSerialization;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <p>
@@ -41,8 +41,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 @InterfaceStability.Evolving
 public class SerializationFactory extends Configured {
 
-  static final Log LOG =
-    LogFactory.getLog(SerializationFactory.class.getName());
+  static final Logger LOG =
+      LoggerFactory.getLogger(SerializationFactory.class.getName());
 
   private List<Serialization<?>> serializations = new ArrayList<Serialization<?>>();
 
@@ -55,18 +55,12 @@ public class SerializationFactory extends Configured {
    */
   public SerializationFactory(Configuration conf) {
     super(conf);
-    if (conf.get(CommonConfigurationKeys.IO_SERIALIZATIONS_KEY).equals("")) {
-      LOG.warn("Serialization for various data types may not be available. Please configure "
-          + CommonConfigurationKeys.IO_SERIALIZATIONS_KEY
-          + " properly to have serialization support (it is currently not set).");
-    } else {
-      for (String serializerName : conf.getTrimmedStrings(
-          CommonConfigurationKeys.IO_SERIALIZATIONS_KEY, new String[] {
-              WritableSerialization.class.getName(),
-              AvroSpecificSerialization.class.getName(),
-              AvroReflectSerialization.class.getName() })) {
-        add(conf, serializerName);
-      }
+    for (String serializerName : conf.getTrimmedStrings(
+            CommonConfigurationKeys.IO_SERIALIZATIONS_KEY,
+            new String[]{WritableSerialization.class.getName(),
+                    AvroSpecificSerialization.class.getName(),
+                    AvroReflectSerialization.class.getName()})) {
+      add(conf, serializerName);
     }
   }
 

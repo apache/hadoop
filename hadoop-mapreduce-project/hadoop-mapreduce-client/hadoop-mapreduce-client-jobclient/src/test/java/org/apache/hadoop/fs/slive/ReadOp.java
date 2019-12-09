@@ -24,12 +24,12 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.slive.DataVerifier.VerifyOutput;
 import org.apache.hadoop.fs.slive.OperationOutput.OutputType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Operation which selects a random file and selects a random read size (from
@@ -43,7 +43,7 @@ import org.apache.hadoop.fs.slive.OperationOutput.OutputType;
  * number of failures and the amount of time taken to fail
  */
 class ReadOp extends Operation {
-  private static final Log LOG = LogFactory.getLog(ReadOp.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReadOp.class);
 
   ReadOp(ConfigExtractor cfg, Random rnd) {
     super(ReadOp.class.getSimpleName(), cfg, rnd);

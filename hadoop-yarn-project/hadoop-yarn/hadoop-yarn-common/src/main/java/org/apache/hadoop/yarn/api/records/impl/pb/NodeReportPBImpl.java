@@ -18,16 +18,21 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.NodeUpdateType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProtoOrBuilder;
@@ -49,6 +54,7 @@ public class NodeReportPBImpl extends NodeReport {
   private ResourceUtilization containersUtilization = null;
   private ResourceUtilization nodeUtilization = null;
   Set<String> labels;
+  private Set<NodeAttribute> nodeAttributes;
 
   public NodeReportPBImpl() {
     builder = NodeReportProto.newBuilder();
@@ -150,8 +156,9 @@ public class NodeReportPBImpl extends NodeReport {
   @Override
   public void setNodeId(NodeId nodeId) {
     maybeInitBuilder();
-    if (nodeId == null)
+    if (nodeId == null) {
       builder.clearNodeId();
+    }
     this.nodeId = nodeId;
   }
   
@@ -177,8 +184,9 @@ public class NodeReportPBImpl extends NodeReport {
   @Override
   public void setCapability(Resource capability) {
     maybeInitBuilder();
-    if (capability == null)
+    if (capability == null) {
       builder.clearCapability();
+    }
     this.capability = capability;
   }
 
@@ -215,8 +223,9 @@ public class NodeReportPBImpl extends NodeReport {
   @Override
   public void setUsed(Resource used) {
     maybeInitBuilder();
-    if (used == null)
+    if (used == null) {
       builder.clearUsed();
+    }
     this.used = used;
   }
 
@@ -234,8 +243,9 @@ public class NodeReportPBImpl extends NodeReport {
 
   @Override
   public boolean equals(Object other) {
-    if (other == null)
+    if (other == null) {
       return false;
+    }
     if (other.getClass().isAssignableFrom(this.getClass())) {
       return this.getProto().equals(this.getClass().cast(other).getProto());
     }
@@ -253,19 +263,23 @@ public class NodeReportPBImpl extends NodeReport {
             builder.getNodeId())) {
       builder.setNodeId(convertToProtoFormat(this.nodeId));
     }
-    if (this.used != null
-        && !((ResourcePBImpl) this.used).getProto().equals(
-            builder.getUsed())) {
+    if (this.used != null) {
       builder.setUsed(convertToProtoFormat(this.used));
     }
-    if (this.capability != null
-        && !((ResourcePBImpl) this.capability).getProto().equals(
-            builder.getCapability())) {
+    if (this.capability != null) {
       builder.setCapability(convertToProtoFormat(this.capability));
     }
     if (this.labels != null) {
       builder.clearNodeLabels();
       builder.addAllNodeLabels(this.labels);
+    }
+    if (this.nodeAttributes != null) {
+      builder.clearNodeAttributes();
+      List<NodeAttributeProto> attrList = new ArrayList<>();
+      for (NodeAttribute attr : this.nodeAttributes) {
+        attrList.add(convertToProtoFormat(attr));
+      }
+      builder.addAllNodeAttributes(attrList);
     }
     if (this.nodeUtilization != null
         && !((ResourceUtilizationPBImpl) this.nodeUtilization).getProto()
@@ -282,8 +296,9 @@ public class NodeReportPBImpl extends NodeReport {
   }
 
   private void mergeLocalToProto() {
-    if (viaProto)
+    if (viaProto) {
       maybeInitBuilder();
+    }
     mergeLocalToBuilder();
     proto = builder.build();
     viaProto = true;
@@ -304,13 +319,22 @@ public class NodeReportPBImpl extends NodeReport {
   private NodeIdProto convertToProtoFormat(NodeId nodeId) {
     return ((NodeIdPBImpl) nodeId).getProto();
   }
-  
+
+  private NodeAttributeProto convertToProtoFormat(NodeAttribute nodeAttr) {
+    return ((NodeAttributePBImpl) nodeAttr).getProto();
+  }
+
+  private NodeAttributePBImpl convertFromProtoFormat(
+      NodeAttributeProto nodeAttr) {
+    return new NodeAttributePBImpl(nodeAttr);
+  }
+
   private ResourcePBImpl convertFromProtoFormat(ResourceProto p) {
     return new ResourcePBImpl(p);
   }
 
   private ResourceProto convertToProtoFormat(Resource r) {
-    return ((ResourcePBImpl) r).getProto();
+    return ProtoUtils.convertToProtoFormat(r);
   }
 
   private ResourceUtilizationPBImpl convertFromProtoFormat(
@@ -390,5 +414,59 @@ public class NodeReportPBImpl extends NodeReport {
       builder.clearNodeUtilization();
     }
     this.nodeUtilization = nodeResourceUtilization;
+  }
+
+  @Override
+  public Integer getDecommissioningTimeout() {
+    NodeReportProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasDecommissioningTimeout())
+        ? p.getDecommissioningTimeout() : null;
+  }
+
+  @Override
+  public void setDecommissioningTimeout(Integer decommissioningTimeout) {
+    maybeInitBuilder();
+    if (decommissioningTimeout == null || decommissioningTimeout < 0) {
+      builder.clearDecommissioningTimeout();
+      return;
+    }
+    builder.setDecommissioningTimeout(decommissioningTimeout);
+  }
+
+  @Override
+  public NodeUpdateType getNodeUpdateType() {
+    NodeReportProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasNodeUpdateType()) ?
+        ProtoUtils.convertFromProtoFormat(p.getNodeUpdateType()) : null;
+  }
+
+  @Override
+  public void setNodeUpdateType(NodeUpdateType nodeUpdateType) {
+    maybeInitBuilder();
+    if (nodeUpdateType == null) {
+      builder.clearNodeUpdateType();
+      return;
+    }
+    builder.setNodeUpdateType(ProtoUtils.convertToProtoFormat(nodeUpdateType));
+  }
+
+  @Override
+  public void setNodeAttributes(Set<NodeAttribute> nodeAttrs) {
+    maybeInitBuilder();
+    builder.clearNodeAttributes();
+    this.nodeAttributes = nodeAttrs;
+  }
+
+  @Override
+  public Set<NodeAttribute> getNodeAttributes() {
+    if (nodeAttributes != null) {
+      return nodeAttributes;
+    }
+    NodeReportProtoOrBuilder p = viaProto ? proto : builder;
+    this.nodeAttributes = new HashSet<>();
+    for (NodeAttributeProto nattrProto : p.getNodeAttributesList()) {
+      nodeAttributes.add(convertFromProtoFormat(nattrProto));
+    }
+    return nodeAttributes;
   }
 }

@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
@@ -85,6 +87,7 @@ public class TestApplicationLimits {
   final static int GB = 1024;
 
   LeafQueue queue;
+  CSQueue root;
   
   private final ResourceCalculator resourceCalculator = new DefaultResourceCalculator();
 
@@ -99,7 +102,7 @@ public class TestApplicationLimits {
     setupQueueConfiguration(csConf);
     
     rmContext = TestUtils.getMockRMContext();
-
+    Resource clusterResource = Resources.createResource(10 * 16 * GB, 10 * 32);
 
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConfiguration()).thenReturn(csConf);
@@ -109,13 +112,11 @@ public class TestApplicationLimits {
     when(csContext.getMaximumResourceCapability()).
         thenReturn(Resources.createResource(16*GB, 32));
     when(csContext.getClusterResource()).
-        thenReturn(Resources.createResource(10 * 16 * GB, 10 * 32));
-    when(csContext.getNonPartitionedQueueComparator()).
-        thenReturn(
-            CapacitySchedulerQueueManager.NON_PARTITIONED_QUEUE_COMPARATOR);
+        thenReturn(clusterResource);
     when(csContext.getResourceCalculator()).
         thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
+    when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
     
     RMContainerTokenSecretManager containerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);
@@ -124,13 +125,17 @@ public class TestApplicationLimits {
         containerTokenSecretManager);
 
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
-    CSQueue root = CapacitySchedulerQueueManager
+    root = CapacitySchedulerQueueManager
         .parseQueue(csContext, csConf, null, "root",
             queues, queues,
             TestUtils.spyHook);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
-    
     queue = spy(new LeafQueue(csContext, A, root, null));
+    QueueResourceQuotas queueResourceQuotas = ((LeafQueue) queues.get(A))
+        .getQueueResourceQuotas();
+    doReturn(queueResourceQuotas).when(queue).getQueueResourceQuotas();
 
     // Stub out ACL checks
     doReturn(true).
@@ -191,11 +196,13 @@ public class TestApplicationLimits {
     // when there is only 1 user, and drops to 2G (the userlimit) when there
     // is a second user
     Resource clusterResource = Resource.newInstance(80 * GB, 40);
+    root.updateClusterResource(clusterResource, new ResourceLimits(
+        clusterResource));
     queue.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
     
     ActiveUsersManager activeUsersManager = mock(ActiveUsersManager.class);
-    when(queue.getActiveUsersManager()).thenReturn(activeUsersManager);
+    when(queue.getAbstractUsersManager()).thenReturn(activeUsersManager);
 
     assertEquals(Resource.newInstance(8 * GB, 1),
         queue.calculateAndGetAMResourceLimit());
@@ -276,9 +283,6 @@ public class TestApplicationLimits {
         thenReturn(Resources.createResource(GB, 1));
     when(csContext.getMaximumResourceCapability()).
         thenReturn(Resources.createResource(16*GB, 16));
-    when(csContext.getNonPartitionedQueueComparator()).
-        thenReturn(
-            CapacitySchedulerQueueManager.NON_PARTITIONED_QUEUE_COMPARATOR);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
@@ -292,6 +296,8 @@ public class TestApplicationLimits {
     CSQueue root = 
         CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             "root", queues, queues, TestUtils.spyHook);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     LeafQueue queue = (LeafQueue)queues.get(A);
     
@@ -362,6 +368,8 @@ public class TestApplicationLimits {
         csContext, csConf, null, "root",
         queues, queues, TestUtils.spyHook);
     clusterResource = Resources.createResource(100 * 16 * GB);
+    root.updateClusterResource(clusterResource, new ResourceLimits(
+        clusterResource));
 
     queue = (LeafQueue)queues.get(A);
 
@@ -383,6 +391,8 @@ public class TestApplicationLimits {
     root = CapacitySchedulerQueueManager.parseQueue(
         csContext, csConf, null, "root",
         queues, queues, TestUtils.spyHook);
+    root.updateClusterResource(clusterResource, new ResourceLimits(
+        clusterResource));
 
     queue = (LeafQueue)queues.get(A);
     assertEquals(9999, (int)csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
@@ -398,7 +408,7 @@ public class TestApplicationLimits {
     final String user_0 = "user_0";
     final String user_1 = "user_1";
     final String user_2 = "user_2";
-    
+
     assertEquals(Resource.newInstance(16 * GB, 1),
         queue.calculateAndGetAMResourceLimit());
     assertEquals(Resource.newInstance(8 * GB, 1),
@@ -581,11 +591,9 @@ public class TestApplicationLimits {
         thenReturn(Resources.createResource(GB));
     when(csContext.getMaximumResourceCapability()).
         thenReturn(Resources.createResource(16*GB));
-    when(csContext.getNonPartitionedQueueComparator()).
-        thenReturn(
-            CapacitySchedulerQueueManager.NON_PARTITIONED_QUEUE_COMPARATOR);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
+    when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
     
     // Say cluster has 100 nodes of 16G each
     Resource clusterResource = Resources.createResource(100 * 16 * GB);
@@ -594,6 +602,8 @@ public class TestApplicationLimits {
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(csContext,
         csConf, null, "root", queues, queues, TestUtils.spyHook);
+    rootQueue.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     ResourceUsage queueCapacities = rootQueue.getQueueResourceUsage();
     when(csContext.getClusterResourceUsage())
@@ -622,7 +632,8 @@ public class TestApplicationLimits {
     ResourceRequest amResourceRequest = mock(ResourceRequest.class);
     Resource amResource = Resources.createResource(0, 0);
     when(amResourceRequest.getCapability()).thenReturn(amResource);
-    when(rmApp.getAMResourceRequest()).thenReturn(amResourceRequest);
+    when(rmApp.getAMResourceRequests()).thenReturn(
+        Collections.singletonList(amResourceRequest));
     Mockito.doReturn(rmApp).when(spyApps).get((ApplicationId)Matchers.any());
     when(spyRMContext.getRMApps()).thenReturn(spyApps);
     RMAppAttempt rmAppAttempt = mock(RMAppAttempt.class);
@@ -641,7 +652,7 @@ public class TestApplicationLimits {
         TestUtils.getMockApplicationAttemptId(0, 0); 
     FiCaSchedulerApp app_0_0 = new FiCaSchedulerApp(
       appAttemptId_0_0, user_0, queue, 
-            queue.getActiveUsersManager(), spyRMContext);
+            queue.getAbstractUsersManager(), spyRMContext);
     queue.submitApplicationAttempt(app_0_0, user_0);
 
     List<ResourceRequest> app_0_0_requests = new ArrayList<ResourceRequest>();
@@ -653,7 +664,7 @@ public class TestApplicationLimits {
     // Schedule to compute 
     queue.assignContainers(clusterResource, node_0, new ResourceLimits(
         clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    Resource expectedHeadroom = Resources.createResource(10*16*GB, 1);
+    Resource expectedHeadroom = Resources.createResource(5*16*GB, 1);
     assertEquals(expectedHeadroom, app_0_0.getHeadroom());
 
     // Submit second application from user_0, check headroom
@@ -661,7 +672,7 @@ public class TestApplicationLimits {
         TestUtils.getMockApplicationAttemptId(1, 0); 
     FiCaSchedulerApp app_0_1 = new FiCaSchedulerApp(
       appAttemptId_0_1, user_0, queue, 
-            queue.getActiveUsersManager(), spyRMContext);
+            queue.getAbstractUsersManager(), spyRMContext);
     queue.submitApplicationAttempt(app_0_1, user_0);
     
     List<ResourceRequest> app_0_1_requests = new ArrayList<ResourceRequest>();
@@ -681,7 +692,7 @@ public class TestApplicationLimits {
         TestUtils.getMockApplicationAttemptId(2, 0); 
     FiCaSchedulerApp app_1_0 = new FiCaSchedulerApp(
       appAttemptId_1_0, user_1, queue, 
-            queue.getActiveUsersManager(), spyRMContext);
+            queue.getAbstractUsersManager(), spyRMContext);
     queue.submitApplicationAttempt(app_1_0, user_1);
 
     List<ResourceRequest> app_1_0_requests = new ArrayList<ResourceRequest>();
@@ -700,6 +711,13 @@ public class TestApplicationLimits {
 
     // Now reduce cluster size and check for the smaller headroom
     clusterResource = Resources.createResource(90*16*GB);
+    rootQueue.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
+
+    // Any change is cluster resource needs to enforce user-limit recomputation.
+    // In existing code, LeafQueue#updateClusterResource handled this. However
+    // here that method was not used.
+    queue.getUsersManager().userLimitNeedsRecompute();
     queue.assignContainers(clusterResource, node_0, new ResourceLimits(
         clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY); // Schedule to compute
     expectedHeadroom = Resources.createResource(9*16*GB / 2, 1); // changes

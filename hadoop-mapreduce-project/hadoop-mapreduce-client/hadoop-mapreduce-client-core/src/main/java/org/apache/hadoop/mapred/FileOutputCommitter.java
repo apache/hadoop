@@ -20,12 +20,12 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** An {@link OutputCommitter} that commits files specified 
  * in job output directory i.e. ${mapreduce.output.fileoutputformat.outputdir}. 
@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.Path;
 @InterfaceStability.Stable
 public class FileOutputCommitter extends OutputCommitter {
 
-  public static final Log LOG = LogFactory.getLog(
+  public static final Logger LOG = LoggerFactory.getLogger(
       "org.apache.hadoop.mapred.FileOutputCommitter");
   
   /**

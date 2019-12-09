@@ -38,8 +38,8 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -103,8 +103,8 @@ public class SecondaryNameNode implements Runnable,
   static{
     HdfsConfiguration.init();
   }
-  public static final Log LOG = 
-    LogFactory.getLog(SecondaryNameNode.class.getName());
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SecondaryNameNode.class.getName());
 
   private final long starttime = Time.now();
   private volatile long lastCheckpointTime = 0;
@@ -367,12 +367,12 @@ public class SecondaryNameNode implements Runnable,
         // Prevent a huge number of edits from being created due to
         // unrecoverable conditions and endless retries.
         if (checkpointImage.getMergeErrorCount() > maxRetries) {
-          LOG.fatal("Merging failed " + 
+          LOG.error("Merging failed " +
               checkpointImage.getMergeErrorCount() + " times.");
           terminate(1);
         }
       } catch (Throwable e) {
-        LOG.fatal("Throwable Exception in doCheckpoint", e);
+        LOG.error("Throwable Exception in doCheckpoint", e);
         e.printStackTrace();
         terminate(1, e);
       }
@@ -478,6 +478,16 @@ public class SecondaryNameNode implements Runnable,
         httpAddr, httpsAddr, "secondary", DFSConfigKeys.
             DFS_SECONDARY_NAMENODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
         DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY);
+
+    final boolean xFrameEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_XFRAME_OPTION_ENABLED,
+        DFSConfigKeys.DFS_XFRAME_OPTION_ENABLED_DEFAULT);
+
+    final String xFrameOptionValue = conf.getTrimmed(
+        DFSConfigKeys.DFS_XFRAME_OPTION_VALUE,
+        DFSConfigKeys.DFS_XFRAME_OPTION_VALUE_DEFAULT);
+
+    builder.configureXFrame(xFrameEnabled).setXFrameOption(xFrameOptionValue);
 
     infoServer = builder.build();
     infoServer.setAttribute("secondary.name.node", this);
@@ -666,7 +676,7 @@ public class SecondaryNameNode implements Runnable,
   public static void main(String[] argv) throws Exception {
     CommandLineOpts opts = SecondaryNameNode.parseArgs(argv);
     if (opts == null) {
-      LOG.fatal("Failed to parse options");
+      LOG.error("Failed to parse options");
       terminate(1);
     } else if (opts.shouldPrintHelp()) {
       opts.usage();
@@ -693,7 +703,7 @@ public class SecondaryNameNode implements Runnable,
         secondary.join();
       }
     } catch (Throwable e) {
-      LOG.fatal("Failed to start secondary namenode", e);
+      LOG.error("Failed to start secondary namenode", e);
       terminate(1);
     }
   }
@@ -710,6 +720,11 @@ public class SecondaryNameNode implements Runnable,
   @Override // SecondaryNameNodeInfoMXBean
   public String getHostAndPort() {
     return NetUtils.getHostPortString(nameNodeAddr);
+  }
+
+  @Override
+  public boolean isSecurityEnabled() {
+    return UserGroupInformation.isSecurityEnabled();
   }
 
   @Override // SecondaryNameNodeInfoMXBean
@@ -1064,7 +1079,7 @@ public class SecondaryNameNode implements Runnable,
 
   }
     
-  static void doMerge(
+  void doMerge(
       CheckpointSignature sig, RemoteEditLogManifest manifest,
       boolean loadImage, FSImage dstImage, FSNamesystem dstNamesystem)
       throws IOException {   
@@ -1093,8 +1108,8 @@ public class SecondaryNameNode implements Runnable,
     Checkpointer.rollForwardByApplyingLogs(manifest, dstImage, dstNamesystem);
     // The following has the side effect of purging old fsimages/edit logs.
     dstImage.saveFSImageInAllDirs(dstNamesystem, dstImage.getLastAppliedTxId());
-    if (!dstNamesystem.isRollingUpgrade()) {
-      dstStorage.writeAll();
+    if (!namenode.isRollingUpgrade()) {
+      dstImage.updateStorageVersion();
     }
   }
 }

@@ -56,12 +56,10 @@ public class TestNMProxy extends BaseContainerManagerTest {
   }
 
   int retryCount = 0;
-  boolean shouldThrowNMNotYetReadyException = false;
 
   @Before
   public void setUp() throws Exception {
     containerManager.start();
-    containerManager.setBlockNewContainerRequests(false);
   }
 
   @Override
@@ -75,21 +73,13 @@ public class TestNMProxy extends BaseContainerManagerTest {
           StartContainersRequest requests) throws YarnException, IOException {
         if (retryCount < 5) {
           retryCount++;
-          if (shouldThrowNMNotYetReadyException) {
-            // This causes super to throw an NMNotYetReadyException
-            containerManager.setBlockNewContainerRequests(true);
+          if (isRetryPolicyRetryForEver()) {
+            // Throw non network exception
+            throw new IOException(
+                new UnreliableInterface.UnreliableException());
           } else {
-            if (isRetryPolicyRetryForEver()) {
-              // Throw non network exception
-              throw new IOException(
-                  new UnreliableInterface.UnreliableException());
-            } else {
-              throw new java.net.ConnectException("start container exception");
-            }
+            throw new java.net.ConnectException("start container exception");
           }
-        } else {
-          // This stops super from throwing an NMNotYetReadyException
-          containerManager.setBlockNewContainerRequests(false);
         }
         return super.startContainers(requests);
       }
@@ -131,25 +121,16 @@ public class TestNMProxy extends BaseContainerManagerTest {
 
     ContainerManagementProtocol proxy = getNMProxy(conf);
 
-    retryCount = 0;
-    shouldThrowNMNotYetReadyException = false;
     proxy.startContainers(allRequests);
     Assert.assertEquals(5, retryCount);
 
     retryCount = 0;
-    shouldThrowNMNotYetReadyException = false;
     proxy.stopContainers(Records.newRecord(StopContainersRequest.class));
     Assert.assertEquals(5, retryCount);
 
     retryCount = 0;
-    shouldThrowNMNotYetReadyException = false;
     proxy.getContainerStatuses(Records
       .newRecord(GetContainerStatusesRequest.class));
-    Assert.assertEquals(5, retryCount);
-
-    retryCount = 0;
-    shouldThrowNMNotYetReadyException = true;
-    proxy.startContainers(allRequests);
     Assert.assertEquals(5, retryCount);
   }
 
@@ -162,7 +143,6 @@ public class TestNMProxy extends BaseContainerManagerTest {
 
     ContainerManagementProtocol proxy = getNMProxy(conf);
 
-    shouldThrowNMNotYetReadyException = false;
     retryCount = 0;
     proxy.startContainers(allRequests);
   }
@@ -181,7 +161,7 @@ public class TestNMProxy extends BaseContainerManagerTest {
         IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY, 100);
     // connect to some dummy address so that it can trigger
     // connection failure and RPC level retires.
-    newConf.set(YarnConfiguration.NM_ADDRESS, "1234");
+    newConf.set(YarnConfiguration.NM_ADDRESS, "0.0.0.0:1234");
     ContainerManagementProtocol proxy = getNMProxy(newConf);
     try {
       proxy.startContainers(allRequests);

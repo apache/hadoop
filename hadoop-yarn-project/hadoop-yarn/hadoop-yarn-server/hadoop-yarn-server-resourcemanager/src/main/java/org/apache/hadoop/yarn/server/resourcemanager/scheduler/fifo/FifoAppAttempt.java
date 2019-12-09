@@ -33,9 +33,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+
+
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
 import java.util.List;
 
@@ -49,8 +52,7 @@ public class FifoAppAttempt extends FiCaSchedulerApp {
   }
 
   public RMContainer allocate(NodeType type, FiCaSchedulerNode node,
-      SchedulerRequestKey schedulerKey, ResourceRequest request,
-      Container container) {
+      SchedulerRequestKey schedulerKey, Container container) {
     try {
       writeLock.lock();
 
@@ -60,34 +62,33 @@ public class FifoAppAttempt extends FiCaSchedulerApp {
 
       // Required sanity check - AM can call 'allocate' to update resource
       // request without locking the scheduler, hence we need to check
-      if (getTotalRequiredResources(schedulerKey) <= 0) {
+      if (getOutstandingAsksCount(schedulerKey) <= 0) {
         return null;
       }
 
       // Create RMContainer
       RMContainer rmContainer = new RMContainerImpl(container,
-          this.getApplicationAttemptId(), node.getNodeID(),
-          appSchedulingInfo.getUser(), this.rmContext,
-          request.getNodeLabelExpression());
+          schedulerKey, this.getApplicationAttemptId(), node.getNodeID(),
+          appSchedulingInfo.getUser(), this.rmContext, node.getPartition());
       ((RMContainerImpl) rmContainer).setQueueName(this.getQueueName());
 
       updateAMContainerDiagnostics(AMState.ASSIGNED, null);
 
       // Add it to allContainers list.
-      newlyAllocatedContainers.add(rmContainer);
+      addToNewlyAllocatedContainers(node, rmContainer);
 
       ContainerId containerId = container.getId();
       liveContainers.put(containerId, rmContainer);
 
       // Update consumption and track allocations
-      List<ResourceRequest> resourceRequestList = appSchedulingInfo.allocate(
-          type, node, schedulerKey, request, container);
+      ContainerRequest containerRequest = appSchedulingInfo.allocate(
+          type, node, schedulerKey, container);
 
       attemptResourceUsage.incUsed(node.getPartition(),
           container.getResource());
 
       // Update resource requests related to "request" and store in RMContainer
-      ((RMContainerImpl) rmContainer).setResourceRequests(resourceRequestList);
+      ((RMContainerImpl) rmContainer).setContainerRequest(containerRequest);
 
       // Inform the container
       rmContainer.handle(
@@ -98,9 +99,17 @@ public class FifoAppAttempt extends FiCaSchedulerApp {
             .getApplicationAttemptId() + " container=" + containerId + " host="
             + container.getNodeId().getHost() + " type=" + type);
       }
+      // In order to save space in the audit log, only include the partition
+      // if it is not the default partition.
+      String partition = null;
+      if (appAMNodePartitionName != null &&
+            !appAMNodePartitionName.isEmpty()) {
+        partition = appAMNodePartitionName;
+      }
       RMAuditLogger.logSuccess(getUser(),
           RMAuditLogger.AuditConstants.ALLOC_CONTAINER, "SchedulerApp",
-          getApplicationId(), containerId, container.getResource());
+          getApplicationId(), containerId, container.getResource(),
+          getQueueName(), partition);
 
       return rmContainer;
     } finally {

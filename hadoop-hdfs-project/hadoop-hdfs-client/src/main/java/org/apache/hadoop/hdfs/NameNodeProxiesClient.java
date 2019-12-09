@@ -28,6 +28,10 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.hdfs.server.namenode.ha.ClientHAProxyFactory;
+import org.apache.hadoop.hdfs.server.namenode.ha.HAProxyFactory;
+import org.apache.hadoop.ipc.AlignmentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,19 +63,25 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
- * Create proxy objects with {@link ClientProtocol} to communicate with a remote
- * NN. Generally use {@link NameNodeProxiesClient#createProxyWithClientProtocol(
+ * Create proxy objects with {@link ClientProtocol} and
+ * {@link HAServiceProtocol} to communicate with a remote NN. For the former,
+ * generally use {@link NameNodeProxiesClient#createProxyWithClientProtocol(
  * Configuration, URI, AtomicBoolean)}, which will create either an HA- or
  * non-HA-enabled client proxy as appropriate.
  *
  * For creating proxy objects with other protocols, please see
- * {@link NameNodeProxies#createProxy(Configuration, URI, Class)}.
+ * NameNodeProxies#createProxy(Configuration, URI, Class).
  */
 @InterfaceAudience.Private
 public class NameNodeProxiesClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       NameNodeProxiesClient.class);
+
+  /** Maximum # of retries for HAProxy with HAServiceProtocol. */
+  private static final int MAX_RETRIES = 3;
+  /** Initial retry delay for HAProxy with HAServiceProtocol. */
+  private static final int DELAY_MILLISECONDS = 200;
 
   /**
    * Wrapper for a client proxy as well as its associated service ID.
@@ -116,7 +126,6 @@ public class NameNodeProxiesClient {
    * @return an object containing both the proxy and the associated
    *         delegation token service it corresponds to
    * @throws IOException if there is an error creating the proxy
-   * @see {@link NameNodeProxies#createProxy(Configuration, URI, Class)}.
    */
   public static ProxyAndInfo<ClientProtocol> createProxyWithClientProtocol(
       Configuration conf, URI nameNodeUri, AtomicBoolean fallbackToSimpleAuth)
@@ -212,6 +221,14 @@ public class NameNodeProxiesClient {
   public static <T> AbstractNNFailoverProxyProvider<T> createFailoverProxyProvider(
       Configuration conf, URI nameNodeUri, Class<T> xface, boolean checkPort,
       AtomicBoolean fallbackToSimpleAuth) throws IOException {
+    return createFailoverProxyProvider(conf, nameNodeUri, xface, checkPort,
+      fallbackToSimpleAuth, new ClientHAProxyFactory<T>());
+  }
+
+  protected static <T> AbstractNNFailoverProxyProvider<T> createFailoverProxyProvider(
+      Configuration conf, URI nameNodeUri, Class<T> xface, boolean checkPort,
+      AtomicBoolean fallbackToSimpleAuth, HAProxyFactory<T> proxyFactory)
+      throws IOException {
     Class<FailoverProxyProvider<T>> failoverProxyProviderClass = null;
     AbstractNNFailoverProxyProvider<T> providerNN;
     try {
@@ -223,9 +240,10 @@ public class NameNodeProxiesClient {
       }
       // Create a proxy provider instance.
       Constructor<FailoverProxyProvider<T>> ctor = failoverProxyProviderClass
-          .getConstructor(Configuration.class, URI.class, Class.class);
+          .getConstructor(Configuration.class, URI.class,
+              Class.class, HAProxyFactory.class);
       FailoverProxyProvider<T> provider = ctor.newInstance(conf, nameNodeUri,
-          xface);
+          xface, proxyFactory);
 
       // If the proxy provider is of an old implementation, wrap it.
       if (!(provider instanceof AbstractNNFailoverProxyProvider)) {
@@ -327,6 +345,15 @@ public class NameNodeProxiesClient {
       InetSocketAddress address, Configuration conf, UserGroupInformation ugi,
       boolean withRetries, AtomicBoolean fallbackToSimpleAuth)
       throws IOException {
+    return createProxyWithAlignmentContext(address, conf, ugi, withRetries,
+        fallbackToSimpleAuth, null);
+  }
+
+  public static ClientProtocol createProxyWithAlignmentContext(
+      InetSocketAddress address, Configuration conf, UserGroupInformation ugi,
+      boolean withRetries, AtomicBoolean fallbackToSimpleAuth,
+      AlignmentContext alignmentContext)
+      throws IOException {
     RPC.setProtocolEngine(conf, ClientNamenodeProtocolPB.class,
         ProtobufRpcEngine.class);
 
@@ -344,7 +371,7 @@ public class NameNodeProxiesClient {
         ClientNamenodeProtocolPB.class, version, address, ugi, conf,
         NetUtils.getDefaultSocketFactory(conf),
         org.apache.hadoop.ipc.Client.getTimeout(conf), defaultPolicy,
-        fallbackToSimpleAuth).getProxy();
+        fallbackToSimpleAuth, alignmentContext).getProxy();
 
     if (withRetries) { // create the proxy with retries
       Map<String, RetryPolicy> methodNameToPolicyMap = new HashMap<>();

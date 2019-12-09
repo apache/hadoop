@@ -31,7 +31,7 @@
 typedef struct _XOREncoder {
   IsalCoder isalCoder;
   unsigned char* inputs[MMAX];
-  unsigned char* outputs[1];
+  unsigned char* outputs[KMAX];
 } XOREncoder;
 
 JNIEXPORT void JNICALL
@@ -54,6 +54,10 @@ Java_org_apache_hadoop_io_erasurecode_rawcoder_NativeXORRawEncoder_encodeImpl(
   XOREncoder* xorEncoder;
 
   xorEncoder = (XOREncoder*)getCoder(env, thiz);
+  if (!xorEncoder) {
+    THROW(env, "java/io/IOException", "NativeXORRawEncoder closed");
+    return;
+  }
   numDataUnits = ((IsalCoder*)xorEncoder)->numDataUnits;
   numParityUnits = ((IsalCoder*)xorEncoder)->numParityUnits;
   chunkSize = (int)dataLen;
@@ -78,5 +82,8 @@ JNIEXPORT void JNICALL
 Java_org_apache_hadoop_io_erasurecode_rawcoder_NativeXORRawEncoder_destroyImpl
   (JNIEnv *env, jobject thiz) {
   XOREncoder* xorEncoder = (XOREncoder*)getCoder(env, thiz);
-  free(xorEncoder);
+  if (xorEncoder) {
+    free(xorEncoder);
+    setCoder(env, thiz, NULL);
+  }
 }

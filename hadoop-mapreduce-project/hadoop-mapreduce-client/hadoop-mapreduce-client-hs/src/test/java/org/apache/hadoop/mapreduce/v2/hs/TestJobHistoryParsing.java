@@ -36,10 +36,9 @@ import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
@@ -79,9 +78,12 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.hs.TestJobHistoryEvents.MRAppWithHistory;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.net.DNSToSwitchMapping;
@@ -93,9 +95,12 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestJobHistoryParsing {
-  private static final Log LOG = LogFactory.getLog(TestJobHistoryParsing.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestJobHistoryParsing.class);
 
   private static final String RACK_NAME = "/MyRackName";
 
@@ -292,7 +297,7 @@ public class TestJobHistoryParsing {
     Assert.assertEquals("incorrect finishedMap ", numSuccessfulMaps,
         numFinishedMaps);
     Assert.assertEquals("incorrect finishedReduces ", numReduces,
-        jobInfo.getFinishedReduces());
+        jobInfo.getSucceededReduces());
     Assert.assertEquals("incorrect uberized ", job.isUber(),
         jobInfo.getUberized());
     Map<TaskID, TaskInfo> allTasks = jobInfo.getAllTasks();
@@ -379,7 +384,7 @@ public class TestJobHistoryParsing {
   private long computeFinishedMaps(JobInfo jobInfo, int numMaps,
       int numSuccessfulMaps) {
     if (numMaps == numSuccessfulMaps) {
-      return jobInfo.getFinishedMaps();
+      return jobInfo.getSucceededMaps();
     }
 
     long numFinishedMaps = 0;
@@ -455,6 +460,76 @@ public class TestJobHistoryParsing {
           noOffailedAttempts);
     } finally {
       LOG.info("FINISHED testHistoryParsingForFailedAttempts");
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testHistoryParsingForKilledAndFailedAttempts() throws Exception {
+    MRApp app = null;
+    JobHistory jobHistory = null;
+    LOG.info("STARTING testHistoryParsingForKilledAndFailedAttempts");
+    try {
+      Configuration conf = new Configuration();
+      conf.setClass(
+          NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+          MyResolver.class, DNSToSwitchMapping.class);
+      conf.set(JHAdminConfig.MR_HS_JHIST_FORMAT, "json");
+      // "CommitterEventHandler" thread could be slower in some cases,
+      // which might cause a failed map/reduce task to fail the job
+      // immediately (see JobImpl.checkJobAfterTaskCompletion()). If there are
+      // killed events in progress, those will not be counted. Instead,
+      // we allow a 50% failure rate, so the job will always succeed and kill
+      // events will not be ignored.
+      conf.setInt(MRJobConfig.MAP_FAILURES_MAX_PERCENT, 50);
+      conf.setInt(MRJobConfig.REDUCE_FAILURES_MAXPERCENT, 50);
+      RackResolver.init(conf);
+      app = new MRAppWithHistoryWithFailedAndKilledTask(3, 3, true, this
+          .getClass().getName(), true);
+      app.submit(conf);
+      Job job = app.getContext().getAllJobs().values().iterator().next();
+      JobId jobId = job.getID();
+      app.waitForState(job, JobState.SUCCEEDED);
+
+      // make sure all events are flushed
+      app.waitForState(Service.STATE.STOPPED);
+
+      jobHistory = new JobHistory();
+      jobHistory.init(conf);
+      HistoryFileInfo fileInfo = jobHistory.getJobFileInfo(jobId);
+
+      JobHistoryParser parser;
+      JobInfo jobInfo;
+      synchronized (fileInfo) {
+        Path historyFilePath = fileInfo.getHistoryFile();
+        FSDataInputStream in = null;
+        FileContext fc = null;
+        try {
+          fc = FileContext.getFileContext(conf);
+          in = fc.open(fc.makeQualified(historyFilePath));
+        } catch (IOException ioe) {
+          LOG.info("Can not open history file: " + historyFilePath, ioe);
+          throw (new Exception("Can not open History File"));
+        }
+
+        parser = new JobHistoryParser(in);
+        jobInfo = parser.parse();
+      }
+      Exception parseException = parser.getParseException();
+      Assert.assertNull("Caught an expected exception " + parseException,
+          parseException);
+
+      assertEquals("FailedMaps", 1, jobInfo.getFailedMaps());
+      assertEquals("KilledMaps", 1, jobInfo.getKilledMaps());
+      assertEquals("FailedReduces", 1, jobInfo.getFailedReduces());
+      assertEquals("KilledReduces", 1, jobInfo.getKilledReduces());
+    } finally {
+      LOG.info("FINISHED testHistoryParsingForKilledAndFailedAttempts");
+      if (app != null) {
+        app.close();
+      }
+      if (jobHistory != null) {
+        jobHistory.close();
+      }
     }
   }
 
@@ -638,7 +713,7 @@ public class TestJobHistoryParsing {
     protected void attemptLaunched(TaskAttemptId attemptID) {
       if (attemptID.getTaskId().getId() == 0 && attemptID.getId() == 0) {
         getContext().getEventHandler().handle(
-            new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_FAILMSG));
+            new TaskAttemptFailEvent(attemptID));
       } else {
         getContext().getEventHandler().handle(
             new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_DONE));
@@ -658,7 +733,41 @@ public class TestJobHistoryParsing {
     protected void attemptLaunched(TaskAttemptId attemptID) {
       if (attemptID.getTaskId().getId() == 0) {
         getContext().getEventHandler().handle(
-            new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_FAILMSG));
+            new TaskAttemptFailEvent(attemptID));
+      } else {
+        getContext().getEventHandler().handle(
+            new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_DONE));
+      }
+    }
+  }
+
+  static class MRAppWithHistoryWithFailedAndKilledTask
+    extends MRAppWithHistory {
+
+    MRAppWithHistoryWithFailedAndKilledTask(int maps, int reduces,
+        boolean autoComplete, String testName, boolean cleanOnStart) {
+      super(maps, reduces, autoComplete, testName, cleanOnStart);
+    }
+
+    @Override
+    protected void attemptLaunched(TaskAttemptId attemptID) {
+      final int taskId = attemptID.getTaskId().getId();
+      final TaskType taskType = attemptID.getTaskId().getTaskType();
+
+      // map #0 --> kill
+      // reduce #0 --> fail
+      if (taskType == TaskType.MAP && taskId == 0) {
+        getContext().getEventHandler().handle(
+            new TaskEvent(attemptID.getTaskId(), TaskEventType.T_KILL));
+      } else if (taskType == TaskType.MAP && taskId == 1) {
+        getContext().getEventHandler().handle(
+            new TaskAttemptFailEvent(attemptID));
+      } else if (taskType == TaskType.REDUCE && taskId == 0) {
+        getContext().getEventHandler().handle(
+            new TaskAttemptFailEvent(attemptID));
+      } else if (taskType == TaskType.REDUCE && taskId == 1) {
+        getContext().getEventHandler().handle(
+            new TaskEvent(attemptID.getTaskId(), TaskEventType.T_KILL));
       } else {
         getContext().getEventHandler().handle(
             new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_DONE));
@@ -864,6 +973,7 @@ public class TestJobHistoryParsing {
             if (eventId < 5) {
               JobUnsuccessfulCompletionEvent juce =
                   new JobUnsuccessfulCompletionEvent(jid, 100L, 2, 0,
+                          0, 0, 0, 0,
                       "JOB_FAILED", Collections.singletonList(
                           "Task failed: " + tids[0].toString()));
               return juce;
@@ -907,9 +1017,9 @@ public class TestJobHistoryParsing {
           (new Configuration()), histPath);
       JobInfo jobInfo = parser.parse(); 
       LOG.info(" job info: " + jobInfo.getJobname() + " "
-        + jobInfo.getFinishedMaps() + " " 
-        + jobInfo.getTotalMaps() + " " 
-        + jobInfo.getJobId() ) ;
+          + jobInfo.getSucceededMaps() + " "
+          + jobInfo.getTotalMaps() + " "
+          + jobInfo.getJobId() ) ;
     }
   
   /**
@@ -925,7 +1035,7 @@ public class TestJobHistoryParsing {
           (new Configuration()), histPath);
       JobInfo jobInfo = parser.parse(); 
       LOG.info(" job info: " + jobInfo.getJobname() + " "
-        + jobInfo.getFinishedMaps() + " "
+        + jobInfo.getSucceededMaps() + " "
         + jobInfo.getTotalMaps() + " "
         + jobInfo.getJobId() );
     }
@@ -943,7 +1053,7 @@ public class TestJobHistoryParsing {
           (new Configuration()), histPath);
       JobInfo jobInfo = parser.parse(); 
       LOG.info(" job info: " + jobInfo.getJobname() + " "
-        + jobInfo.getFinishedMaps() + " " 
+        + jobInfo.getSucceededMaps() + " "
         + jobInfo.getTotalMaps() + " " 
         + jobInfo.getJobId() ) ;
       }

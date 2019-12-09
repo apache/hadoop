@@ -27,8 +27,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -50,7 +50,8 @@ import org.junit.Test;
 
 public class TestInitializeSharedEdits {
 
-  private static final Log LOG = LogFactory.getLog(TestInitializeSharedEdits.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestInitializeSharedEdits.class);
   
   private static final Path TEST_PATH = new Path("/test");
   private Configuration conf;
@@ -128,7 +129,7 @@ public class TestInitializeSharedEdits {
       HATestUtil.waitForStandbyToCatchUp(cluster.getNameNode(0),
           cluster.getNameNode(1));
       assertTrue(NameNodeAdapter.getFileInfo(cluster.getNameNode(1),
-          newPath.toString(), false).isDir());
+          newPath.toString(), false, false, false).isDirectory());
     } finally {
       if (fs != null) {
         fs.close();

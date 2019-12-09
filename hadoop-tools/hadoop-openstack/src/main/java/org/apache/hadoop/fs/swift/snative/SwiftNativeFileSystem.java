@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.swift.snative;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -54,8 +54,8 @@ public class SwiftNativeFileSystem extends FileSystem {
 
   /** filesystem prefix: {@value} */
   public static final String SWIFT = "swift";
-  private static final Log LOG =
-          LogFactory.getLog(SwiftNativeFileSystem.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SwiftNativeFileSystem.class);
 
   /**
    * path to user work directory for storing temporary files
@@ -201,6 +201,7 @@ public class SwiftNativeFileSystem extends FileSystem {
   }
 
   @Override
+  @SuppressWarnings("deprecation")
   public boolean isFile(Path f) throws IOException {
     try {
       FileStatus fileStatus = getFileStatus(f);
@@ -210,6 +211,7 @@ public class SwiftNativeFileSystem extends FileSystem {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public boolean isDirectory(Path f) throws IOException {
 

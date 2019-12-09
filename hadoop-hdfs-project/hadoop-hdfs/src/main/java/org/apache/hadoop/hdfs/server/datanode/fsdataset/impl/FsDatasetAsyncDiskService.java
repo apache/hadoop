@@ -30,12 +30,13 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
@@ -58,7 +59,8 @@ import org.apache.hadoop.io.nativeio.NativeIOException;
  * They should be combined.
  */
 class FsDatasetAsyncDiskService {
-  public static final Log LOG = LogFactory.getLog(FsDatasetAsyncDiskService.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FsDatasetAsyncDiskService.class);
   
   // ThreadPool core pool size
   private static final int CORE_THREADS_PER_VOLUME = 1;
@@ -137,7 +139,7 @@ class FsDatasetAsyncDiskService {
 
   /**
    * Stops AsyncDiskService for a volume.
-   * @param volume the root of the volume.
+   * @param storageId id of {@link StorageDirectory}.
    */
   synchronized void removeVolume(String storageId) {
     if (executors == null) {
@@ -227,7 +229,19 @@ class FsDatasetAsyncDiskService {
         volumeRef, replicaToDelete, block, trashDirectory);
     execute(((FsVolumeImpl) volumeRef.getVolume()), deletionTask);
   }
-  
+
+  /**
+   * Delete the block file and meta file from the disk synchronously, adjust
+   * dfsUsed statistics accordingly.
+   */
+  void deleteSync(FsVolumeReference volumeRef, ReplicaInfo replicaToDelete,
+      ExtendedBlock block, String trashDirectory) {
+    LOG.info("Deleting " + block.getLocalBlock() + " replica " + replicaToDelete);
+    ReplicaFileDeleteTask deletionTask = new ReplicaFileDeleteTask(volumeRef,
+        replicaToDelete, block, trashDirectory);
+    deletionTask.run();
+  }
+
   /** A task for deleting a block file and its associated meta file, as well
    *  as decrement the dfs usage of the volume.
    *  Optionally accepts a trash directory. If one is specified then the files

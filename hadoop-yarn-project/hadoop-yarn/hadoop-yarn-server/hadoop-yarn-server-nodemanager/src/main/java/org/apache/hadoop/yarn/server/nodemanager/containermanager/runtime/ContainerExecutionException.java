@@ -32,10 +32,10 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 @InterfaceStability.Unstable
 public class ContainerExecutionException extends YarnException {
   private static final long serialVersionUID = 1L;
-  private static final Integer EXIT_CODE_UNSET = -1;
+  private static final int EXIT_CODE_UNSET = -1;
   private static final String OUTPUT_UNSET = "<unknown>";
 
-  private Integer exitCode;
+  private int exitCode;
   private String output;
   private String errorOutput;
 
@@ -53,8 +53,14 @@ public class ContainerExecutionException extends YarnException {
     errorOutput = OUTPUT_UNSET;
   }
 
+  public ContainerExecutionException(String message, int exitCode) {
+    super(message);
+    this.exitCode = exitCode;
+    this.output = OUTPUT_UNSET;
+    this.errorOutput = OUTPUT_UNSET;
+  }
 
-  public ContainerExecutionException(String message, Integer exitCode, String
+  public ContainerExecutionException(String message, int exitCode, String
       output, String errorOutput) {
     super(message);
     this.exitCode = exitCode;
@@ -62,7 +68,7 @@ public class ContainerExecutionException extends YarnException {
     this.errorOutput = errorOutput;
   }
 
-  public ContainerExecutionException(Throwable cause, Integer exitCode, String
+  public ContainerExecutionException(Throwable cause, int exitCode, String
       output, String errorOutput) {
     super(cause);
     this.exitCode = exitCode;
@@ -70,7 +76,7 @@ public class ContainerExecutionException extends YarnException {
     this.errorOutput = errorOutput;
   }
 
-  public Integer getExitCode() {
+  public int getExitCode() {
     return exitCode;
   }
 

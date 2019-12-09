@@ -22,19 +22,19 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.CommandShell;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *  DtUtilShell is a set of command line token file management operations.
  */
 public class DtUtilShell extends CommandShell {
-  private static final Log LOG = LogFactory.getLog(DtUtilShell.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DtUtilShell.class);
 
   private static final String FORMAT_SUBSTRING = "[-format (" +
       DtFileOperations.FORMAT_JAVA + "|" +

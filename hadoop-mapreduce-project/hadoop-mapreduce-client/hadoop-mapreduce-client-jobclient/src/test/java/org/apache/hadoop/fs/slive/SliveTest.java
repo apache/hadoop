@@ -30,8 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,6 +43,8 @@ import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Slive test entry point + main program
@@ -61,7 +61,7 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class SliveTest implements Tool {
 
-  private static final Log LOG = LogFactory.getLog(SliveTest.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SliveTest.class);
 
   // ensures the hdfs configurations are loaded if they exist
   static {

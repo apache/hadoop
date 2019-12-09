@@ -33,15 +33,17 @@ import org.apache.hadoop.fs.FileStatus;
  * Format sequences:<br>
  *   %a: Permissions in octal<br>
  *   %A: Permissions in symbolic style<br>
- *   %b: Size of file in blocks<br>
+ *   %b: Size of file in bytes<br>
  *   %F: Type<br>
  *   %g: Group name of owner<br>
  *   %n: Filename<br>
  *   %o: Block size<br>
  *   %r: replication<br>
  *   %u: User name of owner<br>
- *   %y: UTC date as &quot;yyyy-MM-dd HH:mm:ss&quot;<br>
- *   %Y: Milliseconds since January 1, 1970 UTC<br>
+ *   %x: atime UTC date as &quot;yyyy-MM-dd HH:mm:ss&quot;<br>
+ *   %X: atime Milliseconds since January 1, 1970 UTC<br>
+ *   %y: mtime UTC date as &quot;yyyy-MM-dd HH:mm:ss&quot;<br>
+ *   %Y: mtime Milliseconds since January 1, 1970 UTC<br>
  * If the format is not specified, %y is used by default.
  */
 @InterfaceAudience.Private
@@ -60,11 +62,12 @@ class Stat extends FsCommand {
     "Print statistics about the file/directory at <path>" + NEWLINE +
     "in the specified format. Format accepts permissions in" + NEWLINE +
     "octal (%a) and symbolic (%A), filesize in" + NEWLINE +
-    "blocks (%b), type (%F), group name of owner (%g)," + NEWLINE +
+    "bytes (%b), type (%F), group name of owner (%g)," + NEWLINE +
     "name (%n), block size (%o), replication (%r), user name" + NEWLINE +
-    "of owner (%u), modification date (%y, %Y)." + NEWLINE +
-    "%y shows UTC date as \"yyyy-MM-dd HH:mm:ss\" and" + NEWLINE +
-    "%Y shows milliseconds since January 1, 1970 UTC." + NEWLINE +
+    "of owner (%u), access date (%x, %X)." + NEWLINE +
+    "modification date (%y, %Y)." + NEWLINE +
+    "%x and %y show UTC date as \"yyyy-MM-dd HH:mm:ss\" and" + NEWLINE +
+    "%X and %Y show milliseconds since January 1, 1970 UTC." + NEWLINE +
     "If the format is not specified, %y is used by default." + NEWLINE;
 
   protected final SimpleDateFormat timeFmt;
@@ -126,6 +129,12 @@ class Stat extends FsCommand {
             break;
           case 'u':
             buf.append(stat.getOwner());
+            break;
+          case 'x':
+            buf.append(timeFmt.format(new Date(stat.getAccessTime())));
+            break;
+          case 'X':
+            buf.append(stat.getAccessTime());
             break;
           case 'y':
             buf.append(timeFmt.format(new Date(stat.getModificationTime())));

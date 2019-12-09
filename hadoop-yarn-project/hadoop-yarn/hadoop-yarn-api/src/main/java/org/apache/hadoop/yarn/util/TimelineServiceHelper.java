@@ -46,4 +46,12 @@ public final class TimelineServiceHelper {
         (HashMap<E, V>) originalMap : new HashMap<E, V>(originalMap);
   }
 
+  /**
+   * Inverts the given key.
+   * @param key value to be inverted .
+   * @return inverted long
+   */
+  public static long invertLong(long key) {
+    return Long.MAX_VALUE - key;
+  }
 }

@@ -23,30 +23,37 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
-* [HADOOP-5077](https://issues.apache.org/jira/browse/HADOOP-5077) | *Blocker* | **JavaDoc errors in 0.18.3**
+* [HADOOP-4150](https://issues.apache.org/jira/browse/HADOOP-4150) | *Blocker* | **Include librecordio as part of the release**
 
-Fix couple of JavaDoc warnings.
-
-
----
-
-* [HADOOP-4997](https://issues.apache.org/jira/browse/HADOOP-4997) | *Blocker* | **workaround for tmp file handling on DataNodes in 0.18 (HADOOP-4663)**
-
-Revert tmp files handling on DataNodes back to 0.17. sync() introduced in 0.18 has less gaurantees.
+Included librecordio in release for use by xerces-c  (ant  -Dlibrecordio=true -Dxercescroot=\<path to the xerces-c root\>)
 
 
 ---
 
-* [HADOOP-4971](https://issues.apache.org/jira/browse/HADOOP-4971) | *Blocker* | **Block report times from datanodes could converge to same time.**
+* [HADOOP-4061](https://issues.apache.org/jira/browse/HADOOP-4061) | *Major* | **Large number of decommission freezes the Namenode**
 
-A long (unexpected) delay at datanodes could make subsequent block reports from many datanode at the same time.
+Added a new conf property dfs.namenode.decommission.nodes.per.interval so that NameNode checks decommission status of x nodes for every y seconds, where x is the value of dfs.namenode.decommission.nodes.per.interval and y is the value of dfs.namenode.decommission.interval.
 
 
 ---
 
-* [HADOOP-4797](https://issues.apache.org/jira/browse/HADOOP-4797) | *Blocker* | **RPC Server can leave a lot of direct buffers**
+* [HADOOP-4659](https://issues.apache.org/jira/browse/HADOOP-4659) | *Blocker* | **Root cause of connection failure is being lost to code that uses it for delaying startup**
 
-Improve how RPC server reads and writes large buffers. Avoids soft-leak of direct buffers and excess copies in NIO layer.
+**WARNING: No release note provided for this change.**
+
+
+---
+
+* [HADOOP-4542](https://issues.apache.org/jira/browse/HADOOP-4542) | *Minor* | **Fault in TestDistributedUpgrade**
+
+TestDistributedUpgrade used succeed for wrong reasons.
+
+
+---
+
+* [HADOOP-4635](https://issues.apache.org/jira/browse/HADOOP-4635) | *Blocker* | **Memory leak ?**
+
+fix memory leak of user/group information in fuse-dfs
 
 
 ---
@@ -55,20 +62,6 @@ Improve how RPC server reads and writes large buffers. Avoids soft-leak of direc
 
 1. Only datanode's offerService thread shutdown the datanode to avoid deadlock;
 2. Datanode checks disk in case of failure on creating a block file.
-
-
----
-
-* [HADOOP-4659](https://issues.apache.org/jira/browse/HADOOP-4659) | *Blocker* | **Root cause of connection failure is being lost to code that uses it for delaying startup**
-
-**WARNING: No release note provided for this incompatible change.**
-
-
----
-
-* [HADOOP-4635](https://issues.apache.org/jira/browse/HADOOP-4635) | *Blocker* | **Memory leak ?**
-
-fix memory leak of user/group information in fuse-dfs
 
 
 ---
@@ -82,23 +75,30 @@ This patch HADOOP-4620.patch
 
 ---
 
-* [HADOOP-4542](https://issues.apache.org/jira/browse/HADOOP-4542) | *Minor* | **Fault in TestDistributedUpgrade**
+* [HADOOP-4797](https://issues.apache.org/jira/browse/HADOOP-4797) | *Blocker* | **RPC Server can leave a lot of direct buffers**
 
-TestDistributedUpgrade used succeed for wrong reasons.
-
-
----
-
-* [HADOOP-4150](https://issues.apache.org/jira/browse/HADOOP-4150) | *Blocker* | **Include librecordio as part of the release**
-
-Included librecordio in release for use by xerces-c  (ant  -Dlibrecordio=true -Dxercescroot=\<path to the xerces-c root\>)
+Improve how RPC server reads and writes large buffers. Avoids soft-leak of direct buffers and excess copies in NIO layer.
 
 
 ---
 
-* [HADOOP-4061](https://issues.apache.org/jira/browse/HADOOP-4061) | *Major* | **Large number of decommission freezes the Namenode**
+* [HADOOP-4971](https://issues.apache.org/jira/browse/HADOOP-4971) | *Blocker* | **Block report times from datanodes could converge to same time.**
 
-Added a new conf property dfs.namenode.decommission.nodes.per.interval so that NameNode checks decommission status of x nodes for every y seconds, where x is the value of dfs.namenode.decommission.nodes.per.interval and y is the value of dfs.namenode.decommission.interval.
+A long (unexpected) delay at datanodes could make subsequent block reports from many datanode at the same time.
+
+
+---
+
+* [HADOOP-4997](https://issues.apache.org/jira/browse/HADOOP-4997) | *Blocker* | **workaround for tmp file handling on DataNodes in 0.18 (HADOOP-4663)**
+
+Revert tmp files handling on DataNodes back to 0.17. sync() introduced in 0.18 has less gaurantees.
+
+
+---
+
+* [HADOOP-5077](https://issues.apache.org/jira/browse/HADOOP-5077) | *Blocker* | **JavaDoc errors in 0.18.3**
+
+Fix couple of JavaDoc warnings.
 
 
 

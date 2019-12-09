@@ -15,4 +15,12 @@
    limitations under the License.
 -->
 <FindBugsFilter>
+    <!-- Disable FindBugs warning and return the buffer to caller directly.
+         It is convenient and efficient because we do not need to copy the buffer
+    -->
+    <Match>
+        <Class name="org.apache.hadoop.fs.aliyun.oss.ReadBuffer" />
+        <Method name="getBuffer" />
+        <Bug pattern="EI_EXPOSE_REP" />
+    </Match>
 </FindBugsFilter>

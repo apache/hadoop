@@ -21,11 +21,13 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.Set;
 
 /**
  * Simple class representing a resource request.
@@ -36,6 +38,8 @@ public class ResourceRequestInfo {
 
   @XmlElement(name = "priority")
   private int priority;
+  @XmlElement(name = "allocationRequestId")
+  private long allocationRequestId;
   @XmlElement(name = "resourceName")
   private String resourceName;
   @XmlElement(name = "capability")
@@ -50,16 +54,17 @@ public class ResourceRequestInfo {
   @XmlElement(name = "executionTypeRequest")
   private ExecutionTypeRequestInfo executionTypeRequest;
 
-  @XmlElement(name = "executionType")
-  private String executionType;
-  @XmlElement(name = "enforceExecutionType")
-  private boolean enforceExecutionType;
+  @XmlElement(name = "placementConstraint")
+  private String placementConstraint;
+  @XmlElement(name = "allocationTags")
+  private Set<String> allocationTags;
 
   public ResourceRequestInfo() {
   }
 
   public ResourceRequestInfo(ResourceRequest request) {
     priority = request.getPriority().getPriority();
+    allocationRequestId = request.getAllocationRequestId();
     resourceName = request.getResourceName();
     capability = new ResourceInfo(request.getCapability());
     numContainers = request.getNumContainers();
@@ -68,6 +73,21 @@ public class ResourceRequestInfo {
     if (request.getExecutionTypeRequest() != null) {
       executionTypeRequest =
           new ExecutionTypeRequestInfo(request.getExecutionTypeRequest());
+    }
+  }
+
+  public ResourceRequestInfo(SchedulingRequest request) {
+    priority = request.getPriority().getPriority();
+    allocationRequestId = request.getAllocationRequestId();
+    capability = new ResourceInfo(request.getResourceSizing().getResources());
+    numContainers = request.getResourceSizing().getNumAllocations();
+    if (request.getExecutionType() != null) {
+      executionTypeRequest =
+          new ExecutionTypeRequestInfo(request.getExecutionType());
+    }
+    allocationTags = request.getAllocationTags();
+    if (request.getPlacementConstraint() != null) {
+      placementConstraint = request.getPlacementConstraint().toString();
     }
   }
 
@@ -127,5 +147,29 @@ public class ResourceRequestInfo {
 
   public ExecutionTypeRequestInfo getExecutionTypeRequest() {
     return executionTypeRequest;
+  }
+
+  public String getPlacementConstraint() {
+    return placementConstraint;
+  }
+
+  public void setPlacementConstraint(String placementConstraint) {
+    this.placementConstraint = placementConstraint;
+  }
+
+  public Set<String> getAllocationTags() {
+    return allocationTags;
+  }
+
+  public void setAllocationTags(Set<String> allocationTags) {
+    this.allocationTags = allocationTags;
+  }
+
+  public long getAllocationRequestId() {
+    return allocationRequestId;
+  }
+
+  public void setAllocationRequestId(long allocationRequestId) {
+    this.allocationRequestId = allocationRequestId;
   }
 }

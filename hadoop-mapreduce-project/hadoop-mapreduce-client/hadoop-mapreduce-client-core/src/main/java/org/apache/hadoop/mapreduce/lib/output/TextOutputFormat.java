@@ -42,7 +42,12 @@ import org.apache.hadoop.util.*;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
-  public static String SEPERATOR = "mapreduce.output.textoutputformat.separator";
+  public static String SEPARATOR = "mapreduce.output.textoutputformat.separator";
+  /**
+   * @deprecated Use {@link #SEPARATOR}
+   */
+  @Deprecated
+  public static String SEPERATOR = SEPARATOR;
   protected static class LineRecordWriter<K, V>
     extends RecordWriter<K, V> {
     private static final byte[] NEWLINE =
@@ -107,25 +112,24 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
                          ) throws IOException, InterruptedException {
     Configuration conf = job.getConfiguration();
     boolean isCompressed = getCompressOutput(job);
-    String keyValueSeparator= conf.get(SEPERATOR, "\t");
+    String keyValueSeparator= conf.get(SEPARATOR, "\t");
     CompressionCodec codec = null;
     String extension = "";
     if (isCompressed) {
       Class<? extends CompressionCodec> codecClass = 
         getOutputCompressorClass(job, GzipCodec.class);
-      codec = (CompressionCodec) ReflectionUtils.newInstance(codecClass, conf);
+      codec = ReflectionUtils.newInstance(codecClass, conf);
       extension = codec.getDefaultExtension();
     }
     Path file = getDefaultWorkFile(job, extension);
     FileSystem fs = file.getFileSystem(conf);
-    if (!isCompressed) {
-      FSDataOutputStream fileOut = fs.create(file, false);
-      return new LineRecordWriter<K, V>(fileOut, keyValueSeparator);
+    FSDataOutputStream fileOut = fs.create(file, false);
+    if (isCompressed) {
+      return new LineRecordWriter<>(
+          new DataOutputStream(codec.createOutputStream(fileOut)),
+          keyValueSeparator);
     } else {
-      FSDataOutputStream fileOut = fs.create(file, false);
-      return new LineRecordWriter<K, V>(new DataOutputStream
-                                        (codec.createOutputStream(fileOut)),
-                                        keyValueSeparator);
+      return new LineRecordWriter<>(fileOut, keyValueSeparator);
     }
   }
 }

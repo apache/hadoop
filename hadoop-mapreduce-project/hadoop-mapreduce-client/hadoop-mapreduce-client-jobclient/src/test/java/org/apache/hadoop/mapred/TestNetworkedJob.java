@@ -381,6 +381,9 @@ public class TestNetworkedJob {
     // Expected queue names depending on Capacity Scheduler queue naming
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         CapacityScheduler.class);
+    // Default value is 90 - if you have low disk space,
+    // testNetworkedJob will fail
+    conf.set(YarnConfiguration.NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE, "99");
     return MiniMRClientClusterFactory.create(this.getClass(), 2, conf);
   }
 }
