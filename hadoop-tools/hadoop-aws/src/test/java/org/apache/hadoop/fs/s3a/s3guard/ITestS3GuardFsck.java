@@ -435,10 +435,126 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
 
       assertComparePairsSize(comparePairs, 1);
 
-      // check fil1 that there's the violation
+      // check if the violation is there
       checkForViolationInPairs(file, comparePairs,
           S3GuardFsck.Violation.TOMBSTONED_IN_MS_NOT_DELETED_IN_S3);
-      // check the child that there's no NO_ETAG violation
+    } finally {
+      cleanup(file, cwd);
+    }
+  }
+
+  @Test
+  public void checkDdbInternalConsistency() throws Exception {
+    final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
+    final DynamoDBMetadataStore ms =
+        (DynamoDBMetadataStore) guardedFs.getMetadataStore();
+    s3GuardFsck.checkDdbInternalConsistency(
+        new Path("s3a://" + guardedFs.getBucket() + "/"));
+  }
+
+  @Test
+  public void testDdbInternalNoLastUpdatedField() throws Exception {
+    final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
+    final Path file = new Path(cwd, "file");
+    try {
+      final S3AFileStatus s3AFileStatus = new S3AFileStatus(100, 100, file, 100,
+          "test", "etag", "version");
+      final PathMetadata pathMetadata = new PathMetadata(s3AFileStatus);
+      pathMetadata.setLastUpdated(0);
+      metadataStore.put(pathMetadata);
+
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
+      final List<S3GuardFsck.ComparePair> comparePairs =
+          s3GuardFsck.checkDdbInternalConsistency(cwd);
+
+      assertComparePairsSize(comparePairs, 1);
+
+      // check if the violation is there
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.NO_LASTUPDATED_FIELD);
+    } finally {
+      cleanup(file, cwd);
+    }
+  }
+
+  @Test
+  public void testDdbInternalOrphanEntry() throws Exception {
+    final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
+    final Path parentDir = new Path(cwd, "directory");
+    final Path file = new Path(parentDir, "file");
+    try {
+      final S3AFileStatus s3AFileStatus = new S3AFileStatus(100, 100, file, 100,
+          "test", "etag", "version");
+      final PathMetadata pathMetadata = new PathMetadata(s3AFileStatus);
+      pathMetadata.setLastUpdated(1000);
+      metadataStore.put(pathMetadata);
+      metadataStore.forgetMetadata(parentDir);
+
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
+      final List<S3GuardFsck.ComparePair> comparePairs =
+          s3GuardFsck.checkDdbInternalConsistency(cwd);
+
+      // check if the violation is there
+      assertComparePairsSize(comparePairs, 1);
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.ORPHAN_DDB_ENTRY);
+    } finally {
+      cleanup(file, cwd);
+    }
+  }
+
+  @Test
+  public void testDdbInternalParentIsAFile() throws Exception {
+    final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
+    final Path parentDir = new Path(cwd, "directory");
+    final Path file = new Path(parentDir, "file");
+    try {
+      final S3AFileStatus s3AFileStatus = new S3AFileStatus(100, 100, file, 100,
+          "test", "etag", "version");
+      final PathMetadata pathMetadata = new PathMetadata(s3AFileStatus);
+      pathMetadata.setLastUpdated(1000);
+      metadataStore.put(pathMetadata);
+
+      final S3AFileStatus dirAsFile = MetadataStoreTestBase
+          .basicFileStatus(parentDir, 1, false, 1);
+      final PathMetadata dirAsFilePm = new PathMetadata(dirAsFile);
+      dirAsFilePm.setLastUpdated(100);
+      metadataStore.put(dirAsFilePm);
+
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
+      final List<S3GuardFsck.ComparePair> comparePairs =
+          s3GuardFsck.checkDdbInternalConsistency(cwd);
+
+      // check if the violation is there
+      assertComparePairsSize(comparePairs, 1);
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.PARENT_IS_A_FILE);
+    } finally {
+      cleanup(file, cwd);
+    }
+  }
+
+  @Test
+  public void testDdbInternalParentTombstoned() throws Exception {
+    final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
+    final Path parentDir = new Path(cwd, "directory");
+    final Path file = new Path(parentDir, "file");
+    try {
+      final S3AFileStatus s3AFileStatus = new S3AFileStatus(100, 100, file, 100,
+          "test", "etag", "version");
+      final PathMetadata pathMetadata = new PathMetadata(s3AFileStatus);
+      pathMetadata.setLastUpdated(1000);
+      metadataStore.put(pathMetadata);
+      metadataStore.delete(parentDir, null);
+
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
+      final List<S3GuardFsck.ComparePair> comparePairs =
+          s3GuardFsck.checkDdbInternalConsistency(cwd);
+
+      // check if the violation is there
+      assertComparePairsSize(comparePairs, 1);
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.PARENT_TOMBSTONED);
     } finally {
       cleanup(file, cwd);
     }
