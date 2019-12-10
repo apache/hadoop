@@ -58,7 +58,7 @@ public class RouterSecurityManager {
         AuthenticationMethod.KERBEROS;
     if (authMethodConfigured.equals(authMethodToInit)) {
       this.dtSecretManager = FederationUtil.newSecretManager(conf);
-      if (this.dtSecretManager == null) {
+      if (this.dtSecretManager == null || !this.dtSecretManager.isRunning()) {
         throw new IOException("Failed to create SecretManager");
       }
     }
