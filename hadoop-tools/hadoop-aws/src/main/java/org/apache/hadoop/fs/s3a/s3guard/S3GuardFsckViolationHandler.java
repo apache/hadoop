@@ -343,4 +343,34 @@ public class S3GuardFsckViolationHandler {
       return "The entry for the path is tombstoned in the MS.";
     }
   }
+
+  /**
+   * The violation handler there's no parent in the MetadataStore.
+   */
+  public static class OrphanDDBEntry extends ViolationHandler {
+
+    public OrphanDDBEntry(S3GuardFsck.ComparePair comparePair) {
+      super(comparePair);
+    }
+
+    @Override
+    public String getError() {
+      return "The DDB entry is orphan - there is no parent in the MS.";
+    }
+  }
+
+  /**
+   * The violation handler when there's no last updated field for the entry.
+   */
+  public static class NoLastUpdatedField extends ViolationHandler {
+
+    public NoLastUpdatedField(S3GuardFsck.ComparePair comparePair) {
+      super(comparePair);
+    }
+
+    @Override
+    public String getError() {
+      return "No lastUpdated field provided for the entry.";
+    }
+  }
 }

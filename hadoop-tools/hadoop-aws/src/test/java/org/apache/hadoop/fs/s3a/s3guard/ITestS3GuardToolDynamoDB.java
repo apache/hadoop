@@ -304,11 +304,11 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testCLIFsckWithParam() throws Exception {
+    LOG.info("This test serves the purpose to run fsck with the correct " +
+        "parameters, so there will be no exception thrown.");
     final int result = run(S3GuardTool.Fsck.NAME, "-check",
         "s3a://" + getFileSystem().getBucket());
-    LOG.info("This test serves the purpose to run fsck with the correct " +
-        "parameters, so there will be no exception thrown. " +
-        "The return value of the run: {}", result);
+    LOG.info("The return value of the run: {}", result);
   }
 
   @Test
@@ -323,5 +323,34 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
     intercept(FileNotFoundException.class, "does not exist",
         () -> run(S3GuardTool.Fsck.NAME, "-check",
             "s3a://this-bucket-does-not-exist-" + UUID.randomUUID()));
+  }
+
+  @Test
+  public void testCLIFsckDDbInternalWrongS3APath() throws Exception {
+    intercept(FileNotFoundException.class, "wrong path",
+        () -> run(S3GuardTool.Fsck.NAME, "-"+Fsck.DDB_MS_CONSISTENCY_FLAG,
+            "s3a://" + getFileSystem().getBucket() + "/" + UUID.randomUUID()));
+  }
+
+  @Test
+  public void testCLIFsckDDbInternalParam() throws Exception {
+    describe("This test serves the purpose to run fsck with the correct " +
+        "parameters, so there will be no exception thrown.");
+    final int result = run(S3GuardTool.Fsck.NAME,
+        "-" + Fsck.DDB_MS_CONSISTENCY_FLAG,
+        "s3a://" + getFileSystem().getBucket());
+    LOG.info("The return value of the run: {}", result);
+  }
+
+  @Test
+  public void testCLIFsckCheckExclusive() throws Exception {
+    describe("There should be only one check param when running fsck." +
+        "If more then one param is passed, the command should fail." +
+        "This provide exclusive run for checks so the user is able to define " +
+        "the order of checking.");
+    intercept(ExitUtil.ExitException.class, "only one parameter",
+        () -> run(S3GuardTool.Fsck.NAME,
+        "-" + Fsck.DDB_MS_CONSISTENCY_FLAG, "-" + Fsck.CHECK_FLAG,
+        "s3a://" + getFileSystem().getBucket()));
   }
 }
