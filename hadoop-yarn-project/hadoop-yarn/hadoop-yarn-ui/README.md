@@ -21,7 +21,12 @@ The YARN UI is an Ember based web-app that provides visualization of the applica
 
 ## Configurations
 
-* You can point the UI to custom locations by setting the environment variables in `src/main/webapp/config/configs.env`
+You can point the UI to custom locations by setting the environment variables in `src/main/webapp/config/configs.env`.
+
+In order to access RM from UI started by `yarn start`,
+you need to enbale CORS by setting `hadoop.http.cross-origin.enabled` to true
+and adding `org.apache.hadoop.security.HttpCrossOriginFilterInitializer`
+to `hadoop.http.filter.initializers` in core-site.xml.
 
 ## Development
 
@@ -32,8 +37,21 @@ All the following commands must be run inside `src/main/webapp`.
 You will need the following things properly installed on your computer.
 
 * Install [Yarn](https://yarnpkg.com) v0.21.3
-* Install [Bower](http://bower.io/) v1.7.7
+* Install [Bower](http://bower.io/) v1.8.8
 * Install all dependencies by running `yarn install` & `bower install`
+
+Instead of manual installation, you can reuse locally installed Node.js,
+Yarn and Bower after building by maven with `-Pyarn-ui` in this directory.
+
+```
+$ mvn package -Pyarn-ui
+$ export PATH=$PWD/target/webapp/node:$PATH
+$ export YARNJS=$PWD/target/webapp/node/yarn/dist/bin/yarn.js
+$ cd src/main/webapp/
+$ node $YARNJS install
+$ node node_modules/.bin/bower install
+$ node $YARNJS start
+```
 
 ### Running UI
 
