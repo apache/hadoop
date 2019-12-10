@@ -3584,12 +3584,10 @@ public class NativeAzureFileSystem extends FileSystem {
       metadata = store.retrieveMetadata(key);
     } catch (IOException ex) {
       Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
-
       if (innerException instanceof StorageException
           && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
         throw new FileNotFoundException("File " + path + " doesn't exists.");
       }
-
       throw ex;
     }
 
@@ -3599,7 +3597,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
     boolean xAttrExists = store.retrieveAttribute(key, xAttrName) != null;
     XAttrSetFlag.validate(xAttrName, xAttrExists, flag);
-
     store.storeAttribute(key, xAttrName, value);
   }
 
@@ -3623,12 +3620,10 @@ public class NativeAzureFileSystem extends FileSystem {
       metadata = store.retrieveMetadata(key);
     } catch (IOException ex) {
       Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
-
       if (innerException instanceof StorageException
               && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
         throw new FileNotFoundException("File " + path + " doesn't exists.");
       }
-
       throw ex;
     }
 
