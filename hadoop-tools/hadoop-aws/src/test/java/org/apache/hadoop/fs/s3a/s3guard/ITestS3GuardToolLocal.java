@@ -230,7 +230,8 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testStoreInfo() throws Throwable {
-    S3GuardTool.BucketInfo cmd = toClose(new S3GuardTool.BucketInfo(getFileSystem().getConf()));
+    S3GuardTool.BucketInfo cmd =
+        toClose(new S3GuardTool.BucketInfo(getFileSystem().getConf()));
     cmd.setStore(getMetadataStore());
     try {
       String output = exec(cmd, cmd.getName(),

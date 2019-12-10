@@ -48,14 +48,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createUploadFileStatus;
-import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.emptyDirectoryMarker;
+import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.authoritativeEmptyDirectoryMarker;
 
 /**
  * Logic for integrating MetadataStore with S3A.
@@ -201,7 +200,7 @@ public final class S3Guard {
       @Nullable final BulkOperationState operationState) throws IOException {
     long startTimeNano = System.nanoTime();
     try {
-      final PathMetadata fileMeta = emptyDirectoryMarker(status);
+      final PathMetadata fileMeta = authoritativeEmptyDirectoryMarker(status);
       putWithTtl(ms, fileMeta, timeProvider, operationState);
     } finally {
       ms.getInstrumentation().entryAdded((System.nanoTime() - startTimeNano));

@@ -227,8 +227,8 @@ public class AuthoritativeAuditOperation extends AbstractStoreOperation {
    * {@link LauncherExitCodes#EXIT_NOT_ACCEPTABLE} -This is what the S3Guard
    * will return.
    */
-  public static class NonAuthoritativeDirException extends PathIOException
-      implements ExitCodeProvider {
+  public static final class NonAuthoritativeDirException
+      extends PathIOException implements ExitCodeProvider {
 
     /**
      * Instantiate.

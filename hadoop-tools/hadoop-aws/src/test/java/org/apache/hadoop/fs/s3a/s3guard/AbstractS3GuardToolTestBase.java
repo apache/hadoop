@@ -364,7 +364,8 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   @Test
   public void testMaybeInitFilesystem() throws Exception {
     Path testPath = path("maybeInitFilesystem");
-    try (S3GuardTool.Prune cmd = new S3GuardTool.Prune(getFileSystem().getConf())) {
+    try (S3GuardTool.Prune cmd =
+             new S3GuardTool.Prune(getFileSystem().getConf())) {
       cmd.maybeInitFilesystem(Collections.singletonList(testPath.toString()));
       assertNotNull("Command did not create a filesystem",
           cmd.getFilesystem());

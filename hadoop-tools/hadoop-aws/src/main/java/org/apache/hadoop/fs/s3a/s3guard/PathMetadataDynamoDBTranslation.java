@@ -405,7 +405,8 @@ public final class PathMetadataDynamoDBTranslation {
    * @param status file status
    * @return path metadata.
    */
-  static PathMetadata emptyDirectoryMarker(final S3AFileStatus status) {
+  static PathMetadata authoritativeEmptyDirectoryMarker(
+      final S3AFileStatus status) {
     return new DDBPathMetadata(status, Tristate.TRUE,
         false, true, 0);
   }

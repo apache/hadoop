@@ -808,7 +808,9 @@ public abstract class S3GuardTool extends Configured implements Tool,
 
       final CommandFormat commandFormat = getCommandFormat();
 
-      final ImportOperation importer = new ImportOperation(getFilesystem(), getStore(),
+      final ImportOperation importer = new ImportOperation(
+          getFilesystem(),
+          getStore(),
           status,
           commandFormat.getOpt(AUTH_FLAG),
           commandFormat.getOpt(VERBOSE));
@@ -1679,7 +1681,8 @@ public abstract class S3GuardTool extends Configured implements Tool,
         + "Options:\n"
         + "  -" + REQUIRE_AUTH + " Require directories under the path to"
         + " be authoritative.\n"
-        +  " -" + CHECK_FLAG + " Check the configuration for the path to be authoritative"
+        +  " -" + CHECK_FLAG + " Check the configuration for the path to"
+        + " be authoritative"
         + "  -" + VERBOSE + " Verbose Output.\n";
 
     Authoritative(Configuration conf) {

@@ -393,7 +393,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
       throws IOException {
     Preconditions.checkNotNull(fs, "Null filesystem");
     Preconditions.checkArgument(fs instanceof S3AFileSystem,
-        "DynamoDBMetadataStore only supports S3A filesystem - not %s", fs );
+        "DynamoDBMetadataStore only supports S3A filesystem - not %s",
+        fs);
     bindToOwnerFilesystem((S3AFileSystem) fs);
     final String bucket = owner.getBucket();
     String confRegion = conf.getTrimmed(S3GUARD_DDB_REGION_KEY);
@@ -773,7 +774,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
               } else {
                 return false;
               }
-        });
+          });
 
         // If directory is authoritative, we can set the empty directory flag
         // to TRUE or FALSE. Otherwise FALSE, or UNKNOWN.

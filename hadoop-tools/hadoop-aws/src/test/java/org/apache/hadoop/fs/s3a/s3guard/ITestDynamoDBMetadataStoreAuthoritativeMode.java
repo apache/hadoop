@@ -57,7 +57,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUESTS;
 import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED;
 import static org.apache.hadoop.fs.s3a.s3guard.AuthoritativeAuditOperation.ERROR_PATH_NOT_AUTH_IN_FS;
-import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.emptyDirectoryMarker;
+import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.authoritativeEmptyDirectoryMarker;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Authoritative.CHECK_FLAG;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Authoritative.REQUIRE_AUTH;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Import.AUTH_FLAG;
@@ -70,7 +70,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test to verify the expected behaviour of DynamoDB and authoritative mode.
- * The main testFS is non-auth; we also create a test FS which runs in auth mode.
+ * The main testFS is non-auth; we also create a test FS which runs in auth
+ * mode.
  * Making the default FS non-auth means that test path cleanup in the
  * superclass isn't going to get mislead by anything authoritative.
  *
@@ -261,7 +262,7 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
   @Test
   public void testEmptyDirMarkerIsAuth() {
     final S3AFileStatus st = new S3AFileStatus(true, dir, "root");
-    final DDBPathMetadata md = (DDBPathMetadata) emptyDirectoryMarker(st);
+    final DDBPathMetadata md = (DDBPathMetadata) authoritativeEmptyDirectoryMarker(st);
     Assertions.assertThat(md)
         .describedAs("Metadata %s", md)
         .matches(DDBPathMetadata::isAuthoritativeDir, "is auth dir")
@@ -497,7 +498,7 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
     unguardedFS.mkdirs(emptydir);
     expected++;
 
-    final S3AFileStatus status1 = (S3AFileStatus) authFS.getFileStatus(subdirfile);
+    S3AFileStatus status1 = (S3AFileStatus) authFS.getFileStatus(subdirfile);
     final MetadataStore authMS = authFS.getMetadataStore();
     final ImportOperation importer = new ImportOperation(unguardedFS,
         authMS,
@@ -509,7 +510,7 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
     expectAuthRecursive(methodAuthPath);
 
     // file entry
-    final S3AFileStatus status2 = (S3AFileStatus) authFS.getFileStatus(subdirfile);
+    S3AFileStatus status2 = (S3AFileStatus) authFS.getFileStatus(subdirfile);
     Assertions.assertThat(status2.getETag())
         .describedAs("Etag of %s", status2)
         .isEqualTo(status1.getETag());
@@ -689,41 +690,41 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
 
   /**
    * Create a directory if needed, force it to be authoritatively listed.
-   * @param dir dir
+   * @param path dir
    */
-  private void mkAuthDir(Path dir) throws IOException {
-    authFS.mkdirs(dir);
-    authFS.listStatus(dir);
+  private void mkAuthDir(Path path) throws IOException {
+    authFS.mkdirs(path);
+    authFS.listStatus(path);
   }
 
   /**
    * Performed a recursive audit of the directory
    * -require everything to be authoritative.
-   * @param dir directory
+   * @param path directory
    */
-  private void expectAuthRecursive(Path dir) throws Exception {
-    auditor.executeAudit(dir, true, true);
+  private void expectAuthRecursive(Path path) throws Exception {
+    auditor.executeAudit(path, true, true);
   }
 
   /**
    * Performed a non-recursive audit of the directory
    * -require the directory to be authoritative.
-   * @param dir directory
+   * @param path directory
    */
-  private void expectAuthNonRecursive(Path dir) throws Exception {
-    auditor.executeAudit(dir, true, false);
+  private void expectAuthNonRecursive(Path path) throws Exception {
+    auditor.executeAudit(path, true, false);
   }
 
   /**
    * Performed a recursive audit of the directory
-   * -expect a failure
-   * @param dir directory
+   * -expect a failure.
+   * @param path directory
    * @return the path returned by the exception
    */
-  private Path expectNonauthRecursive(Path dir) throws Exception {
+  private Path expectNonauthRecursive(Path path) throws Exception {
     return intercept(
         AuthoritativeAuditOperation.NonAuthoritativeDirException.class,
-        () -> auditor.executeAudit(dir, true, true))
+        () -> auditor.executeAudit(path, true, true))
         .getPath();
   }
 
