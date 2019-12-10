@@ -34,6 +34,7 @@ public class MockNotRunningSecretManager
   public MockNotRunningSecretManager(Configuration conf)
       throws IOException {
     super(100000, 100000, 100000, 100000);
+    // It doesn't execute startThreads() to keep the running status false.
   }
 
   @Override
