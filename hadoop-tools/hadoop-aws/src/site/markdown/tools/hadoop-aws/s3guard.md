@@ -923,9 +923,46 @@ Metadata Store Diagnostics:
   table={ ... }
   write-capacity=20
 ```
-
 *Note*: There is a limit to how many times in a 24 hour period the capacity
 of a bucket can be changed, either through this command or the AWS console.
+
+### Check the consistency of the metadata store, `s3guard fsck`
+
+Compares S3 with MetadataStore, and returns a failure status if any
+rules or invariants are violated. Only works with DynamoDB metadata stores.
+
+```bash
+hadoop s3guard fsck [-check | -internal] (s3a://BUCKET | s3a://PATH_PREFIX)
+```
+
+`-check` operation checks the metadata store from the S3 perspective, but
+does not fix any issues.
+The consistency issues will be logged in ERROR loglevel.
+
+`-internal` operation checks the internal consistency of the metadata store,
+but does not fix any issues.
+
+The errors found will be logged at the ERROR log level.
+
+*Note*: `-check` and `-internal` operations can be used only as separate
+commands. Running `fsck` with both will result in an error.
+
+Example
+
+```bash
+hadoop s3guard fsck -check s3a://ireland-1/path_prefix/
+```
+
+Checks the metadata store while iterating through the S3 bucket.
+The path_prefix will be used as the root element of the check.
+
+```bash
+hadoop s3guard fsck -internal s3a://ireland-1/path_prefix/
+```
+
+Checks the metadata store internal consistency.
+The path_prefix will be used as the root element of the check.
+
 
 ## Debugging and Error Handling
 
