@@ -297,4 +297,35 @@ public class TestRunJar {
           "would create file outside of", e);
     }
   }
+
+  /**
+   * Tests that RunJar errors appropriately for classes with non-static main
+   * methods.
+   */
+  public void testRunNonStaticMain() throws Throwable {
+    RunJar runJar = spy(new RunJar());
+    // enable the client classloader
+    when(runJar.useClientClassLoader()).thenReturn(true);
+    // set the system classes and blacklist the test main class and the test
+    // third class so they can be loaded by the application classloader
+    String mainCls = NonStaticMain.class.getName();
+    String systemClasses = "-" + mainCls + "," + ApplicationClassLoader.SYSTEM_CLASSES_DEFAULT;
+    when(runJar.getSystemClasses()).thenReturn(systemClasses);
+
+    // create the test jar
+    File testJar = JarFinder.makeClassLoaderTestJar(this.getClass(), TEST_ROOT_DIR, TEST_JAR_2_NAME, BUFF_SIZE,
+        mainCls);
+    // form the args
+    String[] args = new String[3];
+    args[0] = testJar.getAbsolutePath();
+    args[1] = mainCls;
+
+    // run RunJar
+    try {
+      runJar.run(args);
+      fail("run should throw IOException.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Method main must be static", e);
+    }
+  }
 }
