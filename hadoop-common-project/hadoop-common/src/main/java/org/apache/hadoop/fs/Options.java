@@ -518,4 +518,27 @@ public final class Options {
     MD5MD5CRC,  // MD5 of block checksums, which are MD5 over chunk CRCs
     COMPOSITE_CRC  // Block/chunk-independent composite CRC
   }
+
+  /**
+   * Enum to support the varargs for swapBlockList() options
+   */
+  public enum SwapBlockList {
+    NONE((byte) 0), // No options, swap the block list.
+    ONE_WAY_BLOCK_SWAP((byte) 1), // Skip replacing source with dst info.
+    EXCLUDE_BLOCK_LAYOUT_HEADER_SWAP((byte) 2); // Exclude block layout header swap
+
+    private final byte code;
+
+    private SwapBlockList(byte code) {
+      this.code = code;
+    }
+
+    public static SwapBlockList valueOf(byte code) {
+      return code < 0 || code >= values().length ? null : values()[code];
+    }
+
+    public byte value() {
+      return code;
+    }
+  }
 }
