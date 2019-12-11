@@ -163,6 +163,10 @@ public class INodeFile extends INodeWithAdditionalFields
       return (byte)STORAGE_POLICY_ID.BITS.retrieve(header);
     }
 
+    static byte getBlockLayoutPolicy(long header) {
+      return (byte)BLOCK_LAYOUT_AND_REDUNDANCY.BITS.retrieve(header);
+    }
+
     // Union of all the block type masks. Currently there is only
     // BLOCK_TYPE_MASK_STRIPED
     static final long BLOCK_TYPE_MASK = 1 << 11;
@@ -728,6 +732,15 @@ public class INodeFile extends INodeWithAdditionalFields
     this.blocks = BlockInfo.EMPTY_ARRAY;
   }
 
+  /**
+   * This method replaces blocks in a file with the supplied blocks. Make sure
+   * you know what you are doing when you are calling this!
+   * @param newBlocks List of new blocks.
+   */
+  void replaceBlocks(BlockInfo[] newBlocks) {
+    this.blocks = Arrays.copyOf(newBlocks, newBlocks.length);
+  }
+
   private void updateRemovedUnderConstructionFiles(
       ReclaimContext reclaimContext) {
     if (isUnderConstruction() && reclaimContext.removedUCFiles != null) {
@@ -1218,5 +1231,16 @@ public class INodeFile extends INodeWithAdditionalFields
         .findEarlierSnapshotBlocks(getDiffs().getLastSnapshotId());
     return snapshotBlocks != null &&
         Arrays.asList(snapshotBlocks).contains(block);
+  }
+
+  /**
+   * Update Header with new Block Layout and Redundancy bits.
+   * @param newBlockLayoutPolicy new block layout policy.
+   */
+  void updateHeaderWithNewBlockLayoutPolicy(byte newBlockLayoutPolicy) {
+    this.header = HeaderFormat.toLong(
+        HeaderFormat.getPreferredBlockSize(header),
+        newBlockLayoutPolicy,
+        HeaderFormat.getStoragePolicyID(header));
   }
 }
