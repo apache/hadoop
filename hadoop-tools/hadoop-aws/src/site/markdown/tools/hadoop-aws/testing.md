@@ -151,8 +151,9 @@ Example:
 
 For S3a encryption tests to run correctly, the
 `fs.s3a.server-side-encryption.key` must be configured in the s3a contract xml
-file with a AWS KMS encryption key arn as this value is different for each AWS
-KMS.
+file or `auth-keys.xml` file with a AWS KMS encryption key arn as this value is
+different for each AWS KMS. Please note this KMS key should be created in the
+same region as your S3 bucket. Otherwise, you may get `KMS.NotFoundException`.
 
 Example:
 
@@ -1078,7 +1079,7 @@ mvn -T 1C verify -Dtest=skip -Dit.test=ITestS3AMiscOperations -Ds3guard -Ddynamo
 ### Notes
 
 1. If the `s3guard` profile is not set, then the S3Guard properties are those
-of the test configuration set in `contract-test-options.xml` or `auth-keys.xml`
+of the test configuration set in s3a contract xml file or `auth-keys.xml`
 
 If the `s3guard` profile *is* set:
 1. The S3Guard options from maven (the dynamo and authoritative flags)
