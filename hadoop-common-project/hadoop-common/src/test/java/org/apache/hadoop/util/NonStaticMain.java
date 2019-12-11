@@ -18,6 +18,7 @@
 package org.apache.hadoop.util;
 
 public class NonStaticMain {
+
     public void main(String[] args) {
     }
 }

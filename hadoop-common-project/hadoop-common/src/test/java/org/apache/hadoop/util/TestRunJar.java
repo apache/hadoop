@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.util;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.RunJar.MATCH_ANY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -57,7 +58,7 @@ public class TestRunJar {
   private static final int BUFF_SIZE = 2048;
   private File TEST_ROOT_DIR;
 
-  private static final String TEST_JAR_NAME="test-runjar.jar";
+  private static final String TEST_JAR_NAME = "test-runjar.jar";
   private static final String TEST_JAR_2_NAME = "test-runjar2.jar";
   private static final long MOCKED_NOW = 1_460_389_972_000L;
   private static final long MOCKED_NOW_PLUS_TWO_SEC = MOCKED_NOW + 2_000;
@@ -309,23 +310,18 @@ public class TestRunJar {
     // set the system classes and blacklist the test main class and the test
     // third class so they can be loaded by the application classloader
     String mainCls = NonStaticMain.class.getName();
-    String systemClasses = "-" + mainCls + "," + ApplicationClassLoader.SYSTEM_CLASSES_DEFAULT;
+    String systemClasses = "-" + mainCls + ","
+        + ApplicationClassLoader.SYSTEM_CLASSES_DEFAULT;
     when(runJar.getSystemClasses()).thenReturn(systemClasses);
 
     // create the test jar
-    File testJar = JarFinder.makeClassLoaderTestJar(this.getClass(), TEST_ROOT_DIR, TEST_JAR_2_NAME, BUFF_SIZE,
-        mainCls);
+    File testJar = JarFinder.makeClassLoaderTestJar(this.getClass(),
+        TEST_ROOT_DIR, TEST_JAR_2_NAME, BUFF_SIZE, mainCls);
     // form the args
-    String[] args = new String[3];
-    args[0] = testJar.getAbsolutePath();
-    args[1] = mainCls;
+    String[] args = new String[] { testJar.getAbsolutePath(), mainCls };
 
     // run RunJar
-    try {
-      runJar.run(args);
-      fail("run should throw IOException.");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains("Method main must be static", e);
-    }
+    IOException e = intercept(IOException.class,
+        "Method main must be static", () -> runJar.run(args));
   }
 }
