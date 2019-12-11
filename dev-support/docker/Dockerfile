@@ -147,9 +147,9 @@ ENV FINDBUGS_HOME /usr
 # Install shellcheck (0.4.6, the latest as of 2017-09-26)
 ####
 # hadolint ignore=DL3008
-RUN add-apt-repository -y ppa:jonathonf/ghc-8.0.2 \
+RUN add-apt-repository -y ppa:hvr/ghc \
     && apt-get -q update \
-    && apt-get -q install -y --no-install-recommends shellcheck \
+    && apt-get -q install -y --no-install-recommends shellcheck ghc-8.0.2 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
