@@ -423,6 +423,39 @@ This is the default, as configured in the default configuration options.
 </property>
 ```
 
+### 8.  If creating a table: Enable server side encryption (SSE)
+
+Encryption at rest can help you protect sensitive data in your DynamoDB table.
+When creating a new table, you can set server side encryption on the table
+using the default AWS owned customer master key (CMK), AWS managed CMK, or
+customer managed CMK. S3Guard code accessing the table is all the same whether
+SSE is enabled or not. For more details on DynamoDB table server side
+encryption, see the AWS page on [Encryption at Rest: How It Works](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/encryption.howitworks.html).
+
+This is the default configuration options, as configured in `core-default.xml`.
+
+```xml
+<property>
+  <name>fs.s3a.s3guard.ddb.table.sse.enabled</name>
+  <value>false</value>
+  <description>
+    Whether server-side encryption (SSE) is enabled or disabled on the table.
+    By default it's disabled, meaning SSE is set to AWS owned CMK.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.table.sse.cmk</name>
+  <value/>
+  <description>
+    The KMS Customer Master Key (CMK) used for the KMS encryption on the table.
+    To specify a CMK, this config value can be its key ID, Amazon Resource Name
+    (ARN), alias name, or alias ARN. Users only need to provide this config if
+    the key is different from the default DynamoDB KMS Master Key, which is
+    alias/aws/dynamodb.
+  </description>
+</property>
+```
 
 ## Authenticating with S3Guard
 

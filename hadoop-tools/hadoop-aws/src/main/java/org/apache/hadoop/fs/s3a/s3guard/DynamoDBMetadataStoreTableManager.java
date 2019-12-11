@@ -44,6 +44,7 @@ import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.model.ResourceInUseException;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
+import com.amazonaws.services.dynamodbv2.model.SSESpecification;
 import com.amazonaws.services.dynamodbv2.model.ScanRequest;
 import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
@@ -68,6 +69,8 @@ import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_READ
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CREATE_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_SSE_CMK;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_SSE_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_TAG;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateDynamoDBException;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
@@ -298,6 +301,7 @@ public class DynamoDBMetadataStoreTableManager {
           .withTableName(tableName)
           .withKeySchema(keySchema())
           .withAttributeDefinitions(attributeDefinitions())
+          .withSSESpecification(getSseSpecFromConfig())
           .withTags(getTableTagsFromConfig());
       if (capacity != null) {
         mode = String.format("with provisioned read capacity %d and"
@@ -320,6 +324,23 @@ public class DynamoDBMetadataStoreTableManager {
     }
     waitForTableActive(table);
     putVersionMarkerItemToTable();
+  }
+
+  /**
+   * Get DynamoDB table server side encryption (SSE) settings from configuration.
+   */
+  private SSESpecification getSseSpecFromConfig() {
+    final SSESpecification sseSpecification = new SSESpecification();
+    sseSpecification.setEnabled(conf.getBoolean(S3GUARD_DDB_TABLE_SSE_ENABLED, false));
+    String cmk = conf.get(S3GUARD_DDB_TABLE_SSE_CMK);
+    if (cmk != null) {
+      if (cmk.equals("alias/aws/dynamodb")) {
+        LOG.warn("Ignoring default DynamoDB table KMS Master Key alias/aws/dynamodb in configuration");
+      } else {
+        sseSpecification.withKMSMasterKeyId(cmk);
+      }
+    }
+    return sseSpecification;
   }
 
   /**
