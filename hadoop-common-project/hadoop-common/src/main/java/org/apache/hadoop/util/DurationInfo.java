@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.util;
 
-import com.google.common.base.Suppliers;
 import org.slf4j.Logger;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
