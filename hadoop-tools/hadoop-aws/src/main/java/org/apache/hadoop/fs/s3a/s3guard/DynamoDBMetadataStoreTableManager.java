@@ -337,7 +337,8 @@ public class DynamoDBMetadataStoreTableManager {
       if (cmk.equals("alias/aws/dynamodb")) {
         LOG.warn("Ignoring default DynamoDB table KMS Master Key alias/aws/dynamodb in configuration");
       } else {
-        sseSpecification.withKMSMasterKeyId(cmk);
+        sseSpecification.setSSEType("KMS");
+        sseSpecification.setKMSMasterKeyId(cmk);
       }
     }
     return sseSpecification;

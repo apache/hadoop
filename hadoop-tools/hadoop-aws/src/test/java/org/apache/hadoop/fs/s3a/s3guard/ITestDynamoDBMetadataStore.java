@@ -1120,6 +1120,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     if (conf.getBoolean(S3GUARD_DDB_TABLE_SSE_ENABLED, false)) {
       assertNotNull(sseDescription);
       assertEquals("ENABLED", sseDescription.getStatus());
+      assertEquals("KMS", sseDescription.getSSEType());
       // We do not test key ARN is the same as configured value,
       // because in configuration, the ARN can be specified by alias.
       assertNotNull(sseDescription.getKMSMasterKeyArn());
