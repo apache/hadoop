@@ -8527,8 +8527,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, src, dst, null);
       throw e;
     }
-    logAuditEvent(true, operationName, src, dst, res.dstFileAuditStat);
-    return res.success;
+    logAuditEvent(true, operationName, src, dst, res.getDstFileAuditStat());
+    return res.isSuccess();
   }
 }
 

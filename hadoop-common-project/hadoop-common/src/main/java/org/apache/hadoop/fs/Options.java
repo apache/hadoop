@@ -520,16 +520,17 @@ public final class Options {
   }
 
   /**
-   * Enum to support the varargs for swapBlockList() options
+   * Enum to support the varargs for swapBlockList() options.
    */
   public enum SwapBlockList {
     NONE((byte) 0), // No options, swap the block list.
     ONE_WAY_BLOCK_SWAP((byte) 1), // Skip replacing source with dst info.
-    EXCLUDE_BLOCK_LAYOUT_HEADER_SWAP((byte) 2); // Exclude block layout header swap
+    EXCLUDE_BLOCK_LAYOUT_HEADER_SWAP((byte) 2);
+    // Exclude block layout header swap
 
     private final byte code;
 
-    private SwapBlockList(byte code) {
+    SwapBlockList(byte code) {
       this.code = code;
     }
 

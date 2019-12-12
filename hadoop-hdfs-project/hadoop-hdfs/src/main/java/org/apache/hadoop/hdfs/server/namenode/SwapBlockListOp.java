@@ -38,7 +38,10 @@ import org.apache.hadoop.util.Time;
  * of a file header, which is useful for client operations like converting
  * replicated to EC file.
  */
-public class SwapBlockListOp {
+public final class SwapBlockListOp {
+
+  private SwapBlockListOp() {
+  }
 
   static SwapBlockListResult swapBlocks(FSDirectory fsd, FSPermissionChecker pc,
                           String src, String dst,
@@ -161,9 +164,9 @@ public class SwapBlockListOp {
   }
 
   static class SwapBlockListResult {
-    final boolean success;
-    final FileStatus srcFileAuditStat;
-    final FileStatus dstFileAuditStat;
+    private final boolean success;
+    private final FileStatus srcFileAuditStat;
+    private final FileStatus dstFileAuditStat;
 
     SwapBlockListResult(boolean success,
                         FileStatus srcFileAuditStat,
@@ -171,6 +174,18 @@ public class SwapBlockListOp {
       this.success = success;
       this.srcFileAuditStat = srcFileAuditStat;
       this.dstFileAuditStat = dstFileAuditStat;
+    }
+
+    public boolean isSuccess() {
+      return success;
+    }
+
+    public FileStatus getDstFileAuditStat() {
+      return dstFileAuditStat;
+    }
+
+    public FileStatus getSrcFileAuditStat() {
+      return srcFileAuditStat;
     }
   }
 }
