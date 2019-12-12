@@ -30,7 +30,9 @@ import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
@@ -56,6 +59,9 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthori
  * override {@link MetadataStoreTestBase#allowMissing()}.
  */
 public abstract class MetadataStoreTestBase extends HadoopTestBase {
+
+  @Rule
+  public Timeout timeout = Timeout.millis(getTestTimeoutMillis());
 
   private static final Logger LOG =
       LoggerFactory.getLogger(MetadataStoreTestBase.class);
@@ -1309,4 +1315,12 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
         null, null);
     return new PathMetadata(s3aStatus, Tristate.UNKNOWN, true);
   }
+
+  /**
+   * @return MetadataStore test timeout.
+   */
+  protected int getTestTimeoutMillis() {
+    return S3ATestConstants.S3A_TEST_TIMEOUT;
+  }
+
 }
