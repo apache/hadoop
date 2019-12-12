@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
+import org.apache.hadoop.hdfs.server.federation.resolver.RouterGenericManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.router.NameserviceManager;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
@@ -127,7 +128,8 @@ public class RouterAdmin extends Configured implements Tool {
           {"-add", "-update", "-rm", "-ls", "-getDestination",
               "-setQuota", "-clrQuota",
               "-safemode", "-nameservice", "-getDisabledNameservices",
-              "-refresh", "-refreshRouterArgs"};
+              "-refresh", "-refreshRouterArgs",
+              "-refreshSuperUserGroupsConfiguration"};
       StringBuilder usage = new StringBuilder();
       usage.append("Usage: hdfs dfsrouteradmin :\n");
       for (int i = 0; i < commands.length; i++) {
@@ -170,6 +172,8 @@ public class RouterAdmin extends Configured implements Tool {
       return "\t[-refresh]";
     } else if (cmd.equals("-refreshRouterArgs")) {
       return "\t[-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]";
+    } else if (cmd.equals("-refreshSuperUserGroupsConfiguration")) {
+      return "\t[-refreshSuperUserGroupsConfiguration]";
     }
     return getUsage(null);
   }
@@ -200,6 +204,10 @@ public class RouterAdmin extends Configured implements Tool {
             "Too many arguments, Max=2 arguments allowed");
       }
     } else if (arg[0].equals("-getDisabledNameservices")) {
+      if (arg.length > 1) {
+        throw new IllegalArgumentException("No arguments allowed");
+      }
+    } else if (arg[0].equals("-refreshSuperUserGroupsConfiguration")) {
       if (arg.length > 1) {
         throw new IllegalArgumentException("No arguments allowed");
       }
@@ -348,6 +356,8 @@ public class RouterAdmin extends Configured implements Tool {
         refresh(address);
       } else if ("-refreshRouterArgs".equals(cmd)) {
         exitCode = genericRefresh(argv, i);
+      } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
+        exitCode = refreshSuperUserGroupsConfiguration();
       } else {
         throw new IllegalArgumentException("Unknown Command: " + cmd);
       }
@@ -385,6 +395,25 @@ public class RouterAdmin extends Configured implements Tool {
       LOG.debug("Exception encountered", debugException);
     }
     return exitCode;
+  }
+
+  /**
+   * Refresh superuser proxy groups mappings on Router.
+   *
+   * @throws IOException if the operation was not successful.
+   */
+  private int refreshSuperUserGroupsConfiguration()
+      throws IOException{
+    RouterGenericManager proxy = client.getRouterGenericManager();
+    String address =  getConf().getTrimmed(
+        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
+        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_DEFAULT);
+    if(proxy.refreshSuperUserGroupsConfiguration()){
+      System.out.println(
+          "Successfully updated superuser proxy groups on router " + address);
+      return 0;
+    }
+    return -1;
   }
 
   private void refresh(String address) throws IOException {

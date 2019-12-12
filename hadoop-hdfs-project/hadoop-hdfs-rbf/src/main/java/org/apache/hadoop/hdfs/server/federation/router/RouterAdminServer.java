@@ -84,6 +84,7 @@ import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolPB;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolServerSideTranslatorPB;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.AbstractService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -618,5 +619,11 @@ public class RouterAdminServer extends AbstractService
   public Collection<RefreshResponse> refresh(String identifier, String[] args) {
     // Let the registry handle as needed
     return RefreshRegistry.defaultRegistry().dispatch(identifier, args);
+  }
+
+  @Override // RouterGenericManager
+  public boolean refreshSuperUserGroupsConfiguration() throws IOException {
+    ProxyUsers.refreshSuperUserGroupsConfiguration();
+    return true;
   }
 }
