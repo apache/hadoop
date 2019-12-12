@@ -307,8 +307,8 @@ public class TestRunJar {
     RunJar runJar = spy(new RunJar());
     // enable the client classloader
     when(runJar.useClientClassLoader()).thenReturn(true);
-    // set the system classes and blacklist the test main class and the test
-    // third class so they can be loaded by the application classloader
+    // set the system classes and blacklist the test main class so it
+    // can be loaded by the application classloader
     String mainCls = NonStaticMain.class.getName();
     String systemClasses = "-" + mainCls + ","
         + ApplicationClassLoader.SYSTEM_CLASSES_DEFAULT;
