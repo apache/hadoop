@@ -34,6 +34,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.EOFException;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -62,11 +63,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -85,6 +88,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.TestFileCreation;
+import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -1535,6 +1539,36 @@ public class TestWebHDFS {
     assertEquals(expectedPath.toUri().getPath(), trashPath.toUri().getPath());
   }
 
+  @Test
+  public void testGetEZTrashRoot() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    FileSystemTestHelper fsHelper = new FileSystemTestHelper();
+    File testRootDir = new File(fsHelper.getTestRootDir()).getAbsoluteFile();
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        "jceks://file" + new Path(testRootDir.toString(), "test.jks").toUri());
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+    cluster.waitActive();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    HdfsAdmin dfsAdmin = new HdfsAdmin(cluster.getURI(), conf);
+    fs.getClient().setKeyProvider(
+        cluster.getNameNode().getNamesystem().getProvider());
+    final String testkey = "test_key";
+    DFSTestUtil.createKey(testkey, cluster, conf);
+
+    final Path zone1 = new Path("/zone1");
+    final Path dir1 = new Path(zone1, "dir1");
+    fs.mkdirs(zone1, new FsPermission(700));
+    dfsAdmin.createEncryptionZone(zone1, testkey);
+    fs.mkdirs(dir1, new FsPermission(700));
+
+    final WebHdfsFileSystem webFS = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+        WebHdfsConstants.WEBHDFS_SCHEME);
+    Path trashPath = webFS.getTrashRoot(dir1);
+    Path expectedPath =
+        new Path(new Path(zone1, FileSystem.TRASH_PREFIX),
+            UserGroupInformation.getCurrentUser().getShortUserName());
+    assertEquals(expectedPath.toUri().getPath(), trashPath.toUri().getPath());
+  }
 
   @Test
   public void testStoragePolicy() throws Exception {
