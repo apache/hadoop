@@ -317,7 +317,7 @@ public class TestRunJar {
     File testJar = JarFinder.makeClassLoaderTestJar(this.getClass(),
         TEST_ROOT_DIR, TEST_JAR_2_NAME, BUFF_SIZE, mainCls);
     // form the args
-    String[] args = new String[] { testJar.getAbsolutePath(), mainCls };
+    String[] args = new String[] {testJar.getAbsolutePath(), mainCls};
 
     // run RunJar
     try {

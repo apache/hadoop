@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.util;
 
+/**
+ * NonStaticMain is used to test classes which provide a main which
+ * isn't static.
+ */
 public class NonStaticMain {
-
-    public void main(String[] args) {
-    }
+  public void main(String[] args) {
+  }
 }
