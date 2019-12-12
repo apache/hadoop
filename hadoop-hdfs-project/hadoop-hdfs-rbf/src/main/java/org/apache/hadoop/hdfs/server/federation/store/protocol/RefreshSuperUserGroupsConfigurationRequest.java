@@ -15,22 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocolPB;
+package org.apache.hadoop.hdfs.server.federation.store.protocol;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
-import org.apache.hadoop.hdfs.server.federation.resolver.RouterGenericManager;
-import org.apache.hadoop.hdfs.server.federation.router.NameserviceManager;
-import org.apache.hadoop.hdfs.server.federation.router.RouterStateManager;
-import org.apache.hadoop.ipc.GenericRefreshProtocol;
+import java.io.IOException;
+
+import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerializer;
 
 /**
- * Protocol used by routeradmin to communicate with statestore.
+ * API request for refreshing super user groups on router.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Stable
-public interface RouterAdminProtocol extends MountTableManager,
-    RouterStateManager, NameserviceManager, GenericRefreshProtocol,
-    RouterGenericManager {
+public abstract class RefreshSuperUserGroupsConfigurationRequest {
+  public static RefreshSuperUserGroupsConfigurationRequest newInstance()
+      throws IOException {
+    return StateStoreSerializer
+        .newRecord(RefreshSuperUserGroupsConfigurationRequest.class);
+  }
 }

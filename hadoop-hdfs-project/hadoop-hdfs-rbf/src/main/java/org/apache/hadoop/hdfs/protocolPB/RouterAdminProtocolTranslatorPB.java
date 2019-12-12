@@ -42,11 +42,14 @@ import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProt
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.LeaveSafeModeResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshMountTableEntriesRequestProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshMountTableEntriesResponseProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshSuperUserGroupsConfigurationRequestProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshSuperUserGroupsConfigurationResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RemoveMountTableEntryRequestProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RemoveMountTableEntryResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.UpdateMountTableEntryRequestProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.UpdateMountTableEntryResponseProto;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
+import org.apache.hadoop.hdfs.server.federation.resolver.RouterGenericManager;
 import org.apache.hadoop.hdfs.server.federation.router.NameserviceManager;
 import org.apache.hadoop.hdfs.server.federation.router.RouterStateManager;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
@@ -89,6 +92,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.GetSafeMo
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.LeaveSafeModeResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RefreshMountTableEntriesRequestPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RefreshMountTableEntriesResponsePBImpl;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RefreshSuperUserGroupsConfigurationResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RemoveMountTableEntryRequestPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RemoveMountTableEntryResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.UpdateMountTableEntryRequestPBImpl;
@@ -110,7 +114,8 @@ import com.google.protobuf.ServiceException;
 @InterfaceStability.Stable
 public class RouterAdminProtocolTranslatorPB
     implements ProtocolMetaInterface, MountTableManager,
-    Closeable, ProtocolTranslator, RouterStateManager, NameserviceManager {
+    Closeable, ProtocolTranslator, RouterStateManager, NameserviceManager,
+    RouterGenericManager {
   final private RouterAdminProtocolPB rpcProxy;
 
   public RouterAdminProtocolTranslatorPB(RouterAdminProtocolPB proxy) {
@@ -305,6 +310,20 @@ public class RouterAdminProtocolTranslatorPB
       GetDestinationResponseProto response =
           rpcProxy.getDestination(null, proto);
       return new GetDestinationResponsePBImpl(response);
+    } catch (ServiceException e) {
+      throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
+    }
+  }
+
+  @Override
+  public boolean refreshSuperUserGroupsConfiguration() throws IOException {
+    RefreshSuperUserGroupsConfigurationRequestProto proto =
+        RefreshSuperUserGroupsConfigurationRequestProto.newBuilder().build();
+    try {
+      RefreshSuperUserGroupsConfigurationResponseProto response =
+          rpcProxy.refreshSuperUserGroupsConfiguration(null, proto);
+      return new RefreshSuperUserGroupsConfigurationResponsePBImpl(response)
+          .getStatus();
     } catch (ServiceException e) {
       throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
     }
