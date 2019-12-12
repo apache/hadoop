@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.util;
 
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.RunJar.MATCH_ANY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -321,7 +320,11 @@ public class TestRunJar {
     String[] args = new String[] { testJar.getAbsolutePath(), mainCls };
 
     // run RunJar
-    IOException e = intercept(IOException.class,
-        "Method main must be static", () -> runJar.run(args));
+    try {
+      runJar.run(args);
+      fail("run should throw IOException.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Method main must be static", e);
+    }
   }
 }
