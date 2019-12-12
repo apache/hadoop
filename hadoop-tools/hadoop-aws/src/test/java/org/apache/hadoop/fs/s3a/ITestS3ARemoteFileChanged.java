@@ -49,6 +49,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Mode;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
@@ -429,6 +430,42 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
       } else {
         instream.read();
       }
+    }
+  }
+
+  /**
+   * Verifies that when the openFile builder is passed in a status,
+   * then that is used to eliminate the getFileStatus call in open();
+   * thus the version and etag passed down are still used.
+   */
+  @Test
+  public void testOpenFileWithStatus() throws Throwable {
+    final Path testpath = path("testOpenFileWithStatus.dat");
+    final byte[] dataset = TEST_DATA_BYTES;
+    S3AFileStatus originalStatus =
+        writeFile(testpath, dataset, dataset.length, true);
+
+    // forge a file status with a different tag
+    S3AFileStatus forgedStatus =
+        S3AFileStatus.fromFileStatus(originalStatus, Tristate.FALSE,
+            originalStatus.getETag() + "-fake",
+            originalStatus.getVersionId() + "");
+    fs.getMetadataStore().put(
+        new PathMetadata(forgedStatus, Tristate.FALSE, false));
+
+    // By passing in the status open() doesn't need to check s3guard
+    // And hence the existing file is opened
+    try (FSDataInputStream instream = fs.openFile(testpath)
+        .withFileStatus(originalStatus)
+        .build().get()) {
+       instream.read();
+    }
+
+    // and this holds for S3A Located Status
+    try (FSDataInputStream instream = fs.openFile(testpath)
+        .withFileStatus(new S3ALocatedFileStatus(originalStatus, null))
+        .build().get()) {
+      instream.read();
     }
   }
 
@@ -902,15 +939,11 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   private Path writeOutOfSyncFileVersion(String filename) throws IOException {
     final Path testpath = path(filename);
     final byte[] dataset = TEST_DATA_BYTES;
-    writeDataset(fs, testpath, dataset, dataset.length,
-        1024, false);
-    S3AFileStatus originalStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+    S3AFileStatus originalStatus =
+        writeFile(testpath, dataset, dataset.length, false);
 
     // overwrite with half the content
-    writeDataset(fs, testpath, dataset, dataset.length / 2,
-        1024, true);
-
-    S3AFileStatus newStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+    S3AFileStatus newStatus = writeFile(testpath, dataset, dataset.length / 2, true);
 
     // put back the original etag, versionId
     S3AFileStatus forgedStatus =
@@ -920,6 +953,23 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         new PathMetadata(forgedStatus, Tristate.FALSE, false));
 
     return testpath;
+  }
+
+  /**
+   * Write data to a file; return the status from the filesystem.
+   * @param path file path
+   * @param dataset dataset to write from
+   * @param length number of bytes from the dataset to write.
+   * @param overwrite overwrite flag
+   * @return the retrieved file status.
+   */
+  private S3AFileStatus writeFile(final Path path,
+      final byte[] dataset,
+      final int length,
+      final boolean overwrite) throws IOException {
+    writeDataset(fs, path, dataset, length,
+        1024, overwrite);
+    return (S3AFileStatus) fs.getFileStatus(path);
   }
 
   /**
@@ -1208,9 +1258,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   private Path writeFileWithNoVersionMetadata(String filename)
       throws IOException {
     final Path testpath = path(filename);
-    writeDataset(fs, testpath, TEST_DATA_BYTES, TEST_DATA_BYTES.length,
-        1024, false);
-    S3AFileStatus originalStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+    S3AFileStatus originalStatus = writeFile(testpath, TEST_DATA_BYTES,
+        TEST_DATA_BYTES.length, false);
 
     // remove ETag and versionId
     S3AFileStatus newStatus = S3AFileStatus.fromFileStatus(originalStatus,

@@ -95,6 +95,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Globber;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
@@ -978,23 +979,33 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   public FSDataInputStream open(Path f, int bufferSize)
       throws IOException {
-    return open(f, Optional.empty());
+    return open(f, Optional.empty(), null);
   }
 
   /**
    * Opens an FSDataInputStream at the indicated Path.
-   * @param path the file to open
+   * if status contains an S3AFileStatus reference, it is used
+   * and so a HEAD request to the store is avoided.
+   *
+   * @param file the file to open
    * @param options configuration options if opened with the builder API.
+   * @param status optional file status.
    * @throws IOException IO failure.
    */
   @Retries.RetryTranslated
   private FSDataInputStream open(
-      final Path path,
-      final Optional<Configuration> options)
+      final Path file,
+      final Optional<Configuration> options,
+      final S3AFileStatus status)
       throws IOException {
 
     entryPoint(INVOCATION_OPEN);
-    final S3AFileStatus fileStatus = (S3AFileStatus) getFileStatus(path);
+    final Path path = qualify(file);
+    // if no suitable status was supplied: look for the file.
+    // this will raise an FNFE if there's no normal file there
+    final S3AFileStatus fileStatus = status != null
+        ? status
+        : (S3AFileStatus) getFileStatus(path);
     if (fileStatus.isDirectory()) {
       throw new FileNotFoundException("Can't open " + path
           + " because it is a directory");
@@ -4367,9 +4378,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Initiate the open or select operation.
    * This is invoked from both the FileSystem and FileContext APIs
-   * @param path path to the file
-   * @param mandatoryKeys set of options declared as mandatory.
-   * @param options options set during the build sequence.
+   * @param rawPath path to the file
+   * @param parameters open file parameters from the builder.
    * @return a future which will evaluate to the opened/selected file.
    * @throws IOException failure to resolve the link.
    * @throws PathIOException operation is a select request but S3 select is
@@ -4379,10 +4389,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Override
   @Retries.RetryTranslated
   public CompletableFuture<FSDataInputStream> openFileWithOptions(
-      final Path path,
-      final Set<String> mandatoryKeys,
-      final Configuration options,
-      final int bufferSize) throws IOException {
+      final Path rawPath,
+      final OpenFileParameters parameters) throws IOException {
+    final Path path = qualify(rawPath);
+
+    Configuration options = parameters.getOptions();
+    Set<String> mandatoryKeys = parameters.getMandatoryKeys();
     String sql = options.get(SelectConstants.SELECT_SQL, null);
     boolean isSelect = sql != null;
     // choice of keys depends on open type
@@ -4397,15 +4409,38 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           InternalConstants.STANDARD_OPENFILE_KEYS,
           "for " + path + " in non-select file I/O");
     }
+    FileStatus status = parameters.getStatus();
+    S3AFileStatus fileStatus = null;
+    if (status != null) {
+      Preconditions.checkArgument(path.equals(status.getPath()),
+          "FileStatus parameter is not for the path %s: %s",
+          path, status);
+      if (status instanceof S3AFileStatus) {
+        // can use this status to skip our own probes,
+        // including etag and version.
+        LOG.debug("File was opened with a supplied S3AFileStatus;"
+            + " skipping getFileStatus call in open() operation: {}", status);
+        fileStatus = (S3AFileStatus) status;
+      } else if (status instanceof S3ALocatedFileStatus) {
+        LOG.debug("File was opened with a supplied S3ALocatedFileStatus;"
+            + " skipping getFileStatus call in open() operation: {}", status);
+        fileStatus = ((S3ALocatedFileStatus) status).toS3AFileStatus();
+      } else {
+        LOG.debug("Ignoring file status {}", status);
+      }
+    }
+    // copy reference to stop the compiler complaining about the variable
+    // not being effectively final.
+    S3AFileStatus st = fileStatus;
     CompletableFuture<FSDataInputStream> result = new CompletableFuture<>();
     if (!isSelect) {
       // normal path.
       unboundedThreadPool.submit(() ->
           LambdaUtils.eval(result,
-              () -> open(path, Optional.of(options))));
+              () -> open(path, Optional.of(options), st)));
     } else {
       // it is a select statement.
-      // fail fast if the method is not present
+      // fail fast if the operation is not available
       requireSelectSupport(path);
       // submit the query
       unboundedThreadPool.submit(() ->

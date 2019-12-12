@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
@@ -59,6 +60,12 @@ public abstract class FutureDataInputStreamBuilderImpl
   private final FileSystem fileSystem;
 
   private int bufferSize;
+
+  /**
+   * File status passed in through a {@link #withFileStatus(FileStatus)}
+   * call; null otherwise.
+   */
+  private FileStatus status;
 
   /**
    * Construct from a {@link FileContext}.
@@ -137,5 +144,19 @@ public abstract class FutureDataInputStreamBuilderImpl
   @Override
   public FutureDataInputStreamBuilder getThisBuilder() {
     return this;
+  }
+
+  @Override
+  public FutureDataInputStreamBuilder withFileStatus(FileStatus status) {
+    this.status = checkNotNull(status);
+    return this;
+  }
+
+  /**
+   * Get any status set in {@link #withFileStatus(FileStatus)}
+   * @return a status value or null.
+   */
+  protected FileStatus getStatus() {
+    return status;
   }
 }

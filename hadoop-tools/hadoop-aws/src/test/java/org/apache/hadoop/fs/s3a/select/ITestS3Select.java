@@ -256,6 +256,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
     ContractTestUtils.touch(fs, path);
     parseToLines(fs.openFile(path)
             .must(SELECT_SQL, SELECT_EVERYTHING)
+            .withFileStatus(fs.getFileStatus(path))
             .build()
             .get(),
         0);
