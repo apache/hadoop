@@ -364,7 +364,7 @@ public class DFSInputStream extends FSInputStream
       return 0;
     }
 
-    throw new CannotObtainBlockLengthException(locatedblock);
+    throw new CannotObtainBlockLengthException(locatedblock, src);
   }
 
   public long getFileLength() {
