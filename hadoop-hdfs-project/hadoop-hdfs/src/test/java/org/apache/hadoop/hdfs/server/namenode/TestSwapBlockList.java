@@ -36,11 +36,14 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+/**
+ * Test SwapBlockListOp working.
+ */
 public class TestSwapBlockList {
 
   private static final short REPLICATION = 3;
 
-  private static final long seed = 0;
+  private static final long SEED = 0;
   private final Path rootDir = new Path("/" + getClass().getSimpleName());
 
   private final Path subDir1 = new Path(rootDir, "dir1");
@@ -76,10 +79,10 @@ public class TestSwapBlockList {
 
     hdfs.mkdirs(subDir2);
 
-    DFSTestUtil.createFile(hdfs, file1, 1024, REPLICATION, seed);
-    DFSTestUtil.createFile(hdfs, file2, 1024, REPLICATION, seed);
-    DFSTestUtil.createFile(hdfs, file3, 1024, REPLICATION, seed);
-    DFSTestUtil.createFile(hdfs, file4, 1024, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, file1, 1024, REPLICATION, SEED);
+    DFSTestUtil.createFile(hdfs, file2, 1024, REPLICATION, SEED);
+    DFSTestUtil.createFile(hdfs, file3, 1024, REPLICATION, SEED);
+    DFSTestUtil.createFile(hdfs, file4, 1024, REPLICATION, SEED);
 
   }
 
