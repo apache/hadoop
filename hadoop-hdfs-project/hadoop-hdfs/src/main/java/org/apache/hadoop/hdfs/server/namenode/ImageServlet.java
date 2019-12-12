@@ -573,7 +573,13 @@ public class ImageServlet extends HttpServlet {
               long timeDelta = TimeUnit.MILLISECONDS.toSeconds(
                   now - lastCheckpointTime);
 
+              // Since the goal of the check below is to prevent overly
+              // frequent upload from Standby, the check should only be done
+              // for the periodical upload from Standby. For the other
+              // scenarios such as rollback image and ckpt file, they skip
+              // this check, see HDFS-15036 for more info.
               if (checkRecentImageEnable &&
+                  NameNodeFile.IMAGE.equals(parsedParams.getNameNodeFile()) &&
                   timeDelta < checkpointPeriod &&
                   txid - lastCheckpointTxid < checkpointTxnCount) {
                 // only when at least one of two conditions are met we accept
