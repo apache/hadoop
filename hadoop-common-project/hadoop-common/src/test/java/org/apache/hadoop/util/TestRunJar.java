@@ -302,6 +302,7 @@ public class TestRunJar {
    * Tests that RunJar errors appropriately for classes with non-static main
    * methods.
    */
+  @Test
   public void testRunNonStaticMain() throws Throwable {
     RunJar runJar = spy(new RunJar());
     // enable the client classloader
