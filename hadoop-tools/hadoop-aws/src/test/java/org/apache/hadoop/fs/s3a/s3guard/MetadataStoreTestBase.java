@@ -30,7 +30,6 @@ import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
@@ -59,9 +58,6 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthori
  * override {@link MetadataStoreTestBase#allowMissing()}.
  */
 public abstract class MetadataStoreTestBase extends HadoopTestBase {
-
-  @Rule
-  public Timeout timeout = Timeout.millis(getTestTimeoutMillis());
 
   private static final Logger LOG =
       LoggerFactory.getLogger(MetadataStoreTestBase.class);
@@ -1316,11 +1312,9 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     return new PathMetadata(s3aStatus, Tristate.UNKNOWN, true);
   }
 
-  /**
-   * @return MetadataStore test timeout.
-   */
-  protected int getTestTimeoutMillis() {
-    return S3ATestConstants.S3A_TEST_TIMEOUT;
+  @Override
+  protected Timeout retrieveTestTimeout() {
+    return Timeout.millis(S3ATestConstants.S3A_TEST_TIMEOUT);
   }
 
 }
