@@ -184,6 +184,7 @@
     <jline.version>3.9.0</jline.version>
     <powermock.version>1.5.6</powermock.version>
     <solr.version>7.7.0</solr.version>
+    <openssl-wildfly.version>1.0.7.Final</openssl-wildfly.version>
   </properties>
 
   <dependencyManagement>
@@ -1358,7 +1359,12 @@
       <dependency>
         <groupId>org.wildfly.openssl</groupId>
         <artifactId>wildfly-openssl</artifactId>
-        <version>1.0.7.Final</version>
+        <version>${openssl-wildfly.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.wildfly.openssl</groupId>
+        <artifactId>wildfly-openssl-java</artifactId>
+        <version>${openssl-wildfly.version}</version>
       </dependency>
 
       <dependency>

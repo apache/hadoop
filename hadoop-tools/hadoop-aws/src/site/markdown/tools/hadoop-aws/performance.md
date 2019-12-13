@@ -535,10 +535,41 @@ GCM cipher is only disabled on Java 8. GCM performance has been improved
 in Java 9, so if `default_jsse` is specified and applications run on Java
 9, they should see no difference compared to running with the vanilla JSSE.
 
-Other options for `fs.s3a.ssl.channel.mode` include `default_jsse_with_gcm`.
-This option includes GCM in the list of cipher suites on Java 8, so it is
-equivalent to running with the vanilla JSSE. The naming convention is setup
-in order to preserve backwards compatibility with HADOOP-15669.
+`fs.s3a.ssl.channel.mode` can be set to `default_jsse_with_gcm`. This option
+includes GCM in the list of cipher suites on Java 8, so it is equivalent to
+running with the vanilla JSSE.
+
+### OpenSSL Acceleration
+
+**Experimental Feature**
+
+As of HADOOP-16050 and HADOOP-16346, `fs.s3a.ssl.channel.mode` can be set to
+either `default` or `openssl` to enable native OpenSSL acceleration of HTTPS
+requests. OpenSSL implements the SSL and TLS protocols using native code. For
+users reading a large amount of data over HTTPS, OpenSSL can provide a
+significant performance benefit over the JSSE.
+
+S3A uses the
+[WildFly OpenSSL](https://github.com/wildfly-security/wildfly-openssl) library
+to bind OpenSSL to the Java JSSE APIs. This library allows S3A to
+transparently read data using OpenSSL. The wildfly-openssl library is a
+runtime dependency of S3A and contains native libraries for binding the Java
+JSSE to OpenSSL.
+
+WildFly OpenSSL must load OpenSSL itself. This can be done using the system
+property `org.wildfly.openssl.path`. For example,
+`HADOOP_OPTS="-Dorg.wildfly.openssl.path=<path to OpenSSL libraries>
+${HADOOP_OPTS}"`. See WildFly OpenSSL documentation for more details.
+
+When `fs.s3a.ssl.channel.mode` is set to `default`, S3A will attempt to load
+the OpenSSL libraries using the WildFly library. If it is unsuccessful, it
+will fall back to the `default_jsse` behavior.
+
+When `fs.s3a.ssl.channel.mode` is set to `openssl`, S3A will attempt to load
+the OpenSSL libraries using WildFly. If it is unsuccessful, it will throw an
+exception and S3A initialization will fail.
+
+### `fs.s3a.ssl.channel.mode` Configuration
 
 `fs.s3a.ssl.channel.mode` can be configured as follows:
 
@@ -549,11 +580,16 @@ in order to preserve backwards compatibility with HADOOP-15669.
   <description>
     If secure connections to S3 are enabled, configures the SSL
     implementation used to encrypt connections to S3. Supported values are:
-    "default_jsse" and "default_jsse_with_gcm". "default_jsse" uses the Java
-    Secure Socket Extension package (JSSE). However, when running on Java 8,
-    the GCM cipher is removed from the list of enabled ciphers. This is due
-    to performance issues with GCM in Java 8. "default_jsse_with_gcm" uses
-    the JSSE with the default list of cipher suites.
+    "default_jsse", "default_jsse_with_gcm", "default", and "openssl".
+    "default_jsse" uses the Java Secure Socket Extension package (JSSE).
+    However, when running on Java 8, the GCM cipher is removed from the list
+    of enabled ciphers. This is due to performance issues with GCM in Java 8.
+    "default_jsse_with_gcm" uses the JSSE with the default list of cipher
+    suites. "default_jsse_with_gcm" is equivalent to the behavior prior to
+    this feature being introduced. "default" attempts to use OpenSSL rather
+    than the JSSE for SSL encryption, if OpenSSL libraries cannot be loaded,
+    it falls back to the "default_jsse" behavior. "openssl" attempts to use
+    OpenSSL as well, but fails if OpenSSL libraries cannot be loaded.
   </description>
 </property>
 ```
@@ -564,6 +600,11 @@ Supported values for `fs.s3a.ssl.channel.mode`:
 |-------------------------------|-------------|
 | default_jsse | Uses Java JSSE without GCM on Java 8 |
 | default_jsse_with_gcm | Uses Java JSSE |
+| default | Uses OpenSSL, falls back to default_jsse if OpenSSL cannot be loaded |
+| openssl | Uses OpenSSL, fails if OpenSSL cannot be loaded |
+
+The naming convention is setup in order to preserve backwards compatibility
+with HADOOP-15669.
 
 Other options may be added to `fs.s3a.ssl.channel.mode` in the future as
 further SSL optimizations are made.
