@@ -1157,7 +1157,7 @@ public class TestFsck {
         .listCorruptFileBlocks("/corruptData", null);
     int numCorrupt = corruptFileBlocks.getFiles().length;
     while (numCorrupt == 0) {
-      Thread.sleep(1000);
+      Thread.sleep(5000);
       corruptFileBlocks = namenode
           .listCorruptFileBlocks("/corruptData", null);
       numCorrupt = corruptFileBlocks.getFiles().length;
@@ -2148,7 +2148,7 @@ public class TestFsck {
         .listCorruptFileBlocks("/corruptData", null);
     int numCorrupt = corruptFileBlocks.getFiles().length;
     while (numCorrupt == 0) {
-      Thread.sleep(1000);
+      Thread.sleep(5000);
       corruptFileBlocks = namenode
           .listCorruptFileBlocks("/corruptData", null);
       numCorrupt = corruptFileBlocks.getFiles().length;
