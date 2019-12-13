@@ -61,7 +61,7 @@ public abstract class HadoopTestBase extends Assert {
    * property is not defined.
    * @return the recommended timeout for tests
    */
-  public static Timeout retrieveTestTimeout() {
+  protected Timeout retrieveTestTimeout() {
     String propval = System.getProperty(PROPERTY_TEST_DEFAULT_TIMEOUT,
                                          Integer.toString(
                                            TEST_DEFAULT_TIMEOUT_VALUE));
