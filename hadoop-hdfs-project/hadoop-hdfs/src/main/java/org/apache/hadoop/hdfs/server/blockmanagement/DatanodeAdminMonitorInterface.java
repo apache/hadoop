@@ -15,22 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocolPB;
+package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
-import org.apache.hadoop.hdfs.server.federation.resolver.RouterGenericManager;
-import org.apache.hadoop.hdfs.server.federation.router.NameserviceManager;
-import org.apache.hadoop.hdfs.server.federation.router.RouterStateManager;
-import org.apache.hadoop.ipc.GenericRefreshProtocol;
+import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import java.util.Queue;
 
 /**
- * Protocol used by routeradmin to communicate with statestore.
+ * Interface used to implement a decommission and maintenance monitor class,
+ * which is instantiated by the DatanodeAdminManager class.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Stable
-public interface RouterAdminProtocol extends MountTableManager,
-    RouterStateManager, NameserviceManager, GenericRefreshProtocol,
-    RouterGenericManager {
+
+public interface DatanodeAdminMonitorInterface extends Runnable {
+  void stopTrackingNode(DatanodeDescriptor dn);
+  void startTrackingNode(DatanodeDescriptor dn);
+  int getPendingNodeCount();
+  int getTrackedNodeCount();
+  int getNumNodesChecked();
+  Queue<DatanodeDescriptor> getPendingNodes();
+
+  void setBlockManager(BlockManager bm);
+  void setDatanodeAdminManager(DatanodeAdminManager dnm);
+  void setNameSystem(Namesystem ns);
 }

@@ -109,10 +109,13 @@ public class TestDecommissionWithStriped {
   private BlockManager bm;
   private DFSClient client;
 
+  protected Configuration createConfiguration() {
+    return new HdfsConfiguration();
+  }
+
   @Before
   public void setup() throws IOException {
-    conf = new HdfsConfiguration();
-
+    conf = createConfiguration();
     // Set up the hosts/exclude files.
     localFileSys = FileSystem.getLocal(conf);
     Path workingDir = localFileSys.getWorkingDirectory();

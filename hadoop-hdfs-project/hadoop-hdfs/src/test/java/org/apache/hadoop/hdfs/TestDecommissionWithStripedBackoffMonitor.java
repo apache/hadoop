@@ -15,22 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocolPB;
+package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
-import org.apache.hadoop.hdfs.server.federation.resolver.RouterGenericManager;
-import org.apache.hadoop.hdfs.server.federation.router.NameserviceManager;
-import org.apache.hadoop.hdfs.server.federation.router.RouterStateManager;
-import org.apache.hadoop.ipc.GenericRefreshProtocol;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.blockmanagement
+    .DatanodeAdminBackoffMonitor;
+import org.apache.hadoop.hdfs.server.blockmanagement
+    .DatanodeAdminMonitorInterface;
 
 /**
- * Protocol used by routeradmin to communicate with statestore.
+ * Class to run all the stripped decommission tests with the
+ * DatanodeAdminBackoffMonitor.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Stable
-public interface RouterAdminProtocol extends MountTableManager,
-    RouterStateManager, NameserviceManager, GenericRefreshProtocol,
-    RouterGenericManager {
+public class TestDecommissionWithStripedBackoffMonitor
+    extends TestDecommissionWithStriped{
+
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = new Configuration();
+    conf.setClass(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MONITOR_CLASS,
+        DatanodeAdminBackoffMonitor.class, DatanodeAdminMonitorInterface.class);
+    return conf;
+  }
 }
