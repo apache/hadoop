@@ -1562,7 +1562,6 @@ public class TestWebHDFS {
     fs.mkdirs(zone1, new FsPermission(700));
     dfsAdmin.createEncryptionZone(zone1, testkey,
         EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH));
-    dfsAdmin.createEncryptionZone(zone1, testkey);
 
     fs.mkdirs(dir1, new FsPermission(700));
 
