@@ -360,7 +360,7 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
   public void testCLIInitParamCmkWithoutSse() throws Exception {
     intercept(ExitUtil.ExitException.class, "can only be used with",
         () -> run(S3GuardTool.Init.NAME,
-            "-" + S3GuardTool.Init.CMK_FLAG,
+            "-" + S3GuardTool.CMK_FLAG,
             "alias/" + UUID.randomUUID(),
             "s3a://" + getFileSystem().getBucket() + "/" + UUID.randomUUID()));
   }

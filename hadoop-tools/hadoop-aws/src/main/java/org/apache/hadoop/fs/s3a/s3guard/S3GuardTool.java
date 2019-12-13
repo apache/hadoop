@@ -128,6 +128,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
   public static final String REGION_FLAG = "region";
   public static final String READ_FLAG = "read";
   public static final String WRITE_FLAG = "write";
+  public static final String SSE_FLAG = "sse";
+  public static final String CMK_FLAG = "cmk";
   public static final String TAG_FLAG = "tag";
 
   /**
@@ -455,8 +457,6 @@ public abstract class S3GuardTool extends Configured implements Tool {
    */
   static class Init extends S3GuardTool {
     public static final String NAME = "init";
-    public static final String SSE_FLAG = "sse";
-    public static final String CMK_FLAG = "cmk";
 
     public static final String PURPOSE = "initialize metadata repository";
     private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
@@ -546,6 +546,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         throw invalidArgs("Option %s can only be used with option %s",
             CMK_FLAG, SSE_FLAG);
       }
+
       String tags = commands.getOptValue(TAG_FLAG);
       if (tags != null && !tags.isEmpty()) {
         String[] stringList = tags.split(";");
