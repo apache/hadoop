@@ -616,12 +616,23 @@ of the table.
 [-write PROVISIONED_WRITES] [-read PROVISIONED_READS]
 ```
 
+Server side encryption (SSE) can be enabled with AWS managed customer master key
+(CMK), or customer managed CMK. By default the DynamoDB table will be encrypted
+with AWS owned CMK. To use a customer managed CMK, you can specify its KMS key
+ID, ARN, alias name, or alias ARN. If not specified, the default AWS managed CMK
+for DynamoDB "alias/aws/dynamodb" will be used.
+
+```bash
+[-sse [-cmk KMS_CMK_ID]]
+```
+
 Tag argument can be added with a key=value list of tags. The table for the
 metadata store will be created with these tags in DynamoDB.
 
 ```bash
 [-tag key=value;]
 ```
+
 
 Example 1
 
@@ -641,6 +652,7 @@ hadoop s3guard init -meta dynamodb://ireland-team -region eu-west-1 --read 0 --w
 
 Creates a table "ireland-team" in the region "eu-west-1.amazonaws.com"
 
+
 Example 3
 
 ```bash
@@ -651,6 +663,17 @@ Creates a table "ireland-team" with tags "first" and "second". The read and
 write capacity will be those of the site configuration's values of
 `fs.s3a.s3guard.ddb.table.capacity.read` and `fs.s3a.s3guard.ddb.table.capacity.write`;
 if these are both zero then it will be an on-demand table.
+
+
+Example 4
+
+```bash
+hadoop s3guard init -meta dynamodb://ireland-team -sse
+```
+
+Creates a table "ireland-team" with server side encryption enabled. The CMK will
+be using the default AWS managed "alias/aws/dynamodb".
+
 
 ### Import a bucket: `s3guard import`
 
