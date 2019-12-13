@@ -49,6 +49,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
@@ -88,6 +89,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.TestFileCreation;
+import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
@@ -1558,16 +1560,21 @@ public class TestWebHDFS {
     final Path zone1 = new Path("/zone1");
     final Path dir1 = new Path(zone1, "dir1");
     fs.mkdirs(zone1, new FsPermission(700));
+    dfsAdmin.createEncryptionZone(zone1, testkey,
+        EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH));
     dfsAdmin.createEncryptionZone(zone1, testkey);
+
     fs.mkdirs(dir1, new FsPermission(700));
 
     final WebHdfsFileSystem webFS = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
         WebHdfsConstants.WEBHDFS_SCHEME);
-    Path trashPath = webFS.getTrashRoot(dir1);
-    Path expectedPath =
-        new Path(new Path(zone1, FileSystem.TRASH_PREFIX),
-            UserGroupInformation.getCurrentUser().getShortUserName());
-    assertEquals(expectedPath.toUri().getPath(), trashPath.toUri().getPath());
+    assertEquals(fs.getTrashRoot(dir1).toUri().getPath(),
+        webFS.getTrashRoot(dir1).toUri().getPath());
+
+    final Path dir2 = new Path("/dir2");
+    fs.mkdirs(dir2, new FsPermission(755));
+    assertEquals(fs.getTrashRoot(dir2).toUri().getPath(),
+        webFS.getTrashRoot(dir2).toUri().getPath());
   }
 
   @Test
