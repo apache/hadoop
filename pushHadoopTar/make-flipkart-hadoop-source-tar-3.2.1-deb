@@ -1,0 +1,16 @@
+#! /bin/bash -ex
+#TODO change package name to flipkart-hadoop-DPVersion-hadoopVersion
+
+function die()
+{
+        echo "Error: $1" >&2
+        exit 1
+}
+
+
+## Creating Tar Path
+cp -rf HadoopSourceBinary deb/tmp/
+cp -rf  DEBIAN deb/
+
+exit 0
+#
