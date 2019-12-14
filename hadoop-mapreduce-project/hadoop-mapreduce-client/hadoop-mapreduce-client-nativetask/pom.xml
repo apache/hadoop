@@ -108,7 +108,7 @@
         <snappy.prefix></snappy.prefix>
         <snappy.lib></snappy.lib>
         <snappy.include></snappy.include>
-        <require.snappy>false</require.snappy>
+        <require.snappy>true</require.snappy>
         <zstd.prefix></zstd.prefix>
         <zstd.lib></zstd.lib>
         <zstd.include></zstd.include>
