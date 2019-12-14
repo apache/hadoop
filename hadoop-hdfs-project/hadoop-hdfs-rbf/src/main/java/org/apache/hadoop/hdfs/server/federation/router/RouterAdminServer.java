@@ -241,6 +241,13 @@ public class RouterAdminServer extends AbstractService
     return this.adminAddress;
   }
 
+  void checkSuperuserPrivilege() throws AccessControlException {
+    RouterPermissionChecker pc = RouterAdminServer.getPermissionChecker();
+    if (pc != null) {
+      pc.checkSuperuserPrivilege();
+    }
+  }
+
   @Override
   protected void serviceInit(Configuration configuration) throws Exception {
     this.conf = configuration;
@@ -392,6 +399,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public EnterSafeModeResponse enterSafeMode(EnterSafeModeRequest request)
       throws IOException {
+    checkSuperuserPrivilege();
     boolean success = false;
     RouterSafemodeService safeModeService = this.router.getSafemodeService();
     if (safeModeService != null) {
@@ -412,6 +420,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public LeaveSafeModeResponse leaveSafeMode(LeaveSafeModeRequest request)
       throws IOException {
+    checkSuperuserPrivilege();
     boolean success = false;
     RouterSafemodeService safeModeService = this.router.getSafemodeService();
     if (safeModeService != null) {
@@ -508,11 +517,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public DisableNameserviceResponse disableNameservice(
       DisableNameserviceRequest request) throws IOException {
-
-    RouterPermissionChecker pc = getPermissionChecker();
-    if (pc != null) {
-      pc.checkSuperuserPrivilege();
-    }
+    checkSuperuserPrivilege();
 
     String nsId = request.getNameServiceId();
     boolean success = false;
@@ -545,10 +550,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public EnableNameserviceResponse enableNameservice(
       EnableNameserviceRequest request) throws IOException {
-    RouterPermissionChecker pc = getPermissionChecker();
-    if (pc != null) {
-      pc.checkSuperuserPrivilege();
-    }
+    checkSuperuserPrivilege();
 
     String nsId = request.getNameServiceId();
     DisabledNameserviceStore store = getDisabledNameserviceStore();
