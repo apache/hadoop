@@ -863,6 +863,43 @@ public class TestRouterAdminCLI {
   }
 
   @Test
+  public void testSafeModePermission() throws Exception {
+    // ensure the Router become RUNNING state
+    waitState(RouterServiceState.RUNNING);
+    assertFalse(routerContext.getRouter().getSafemodeService().isInSafeMode());
+
+    UserGroupInformation superUser = UserGroupInformation.createRemoteUser(
+        UserGroupInformation.getCurrentUser().getShortUserName());
+    UserGroupInformation remoteUser = UserGroupInformation
+        .createRemoteUser(TEST_USER);
+    try {
+      // use normal user as current user to test
+      UserGroupInformation.setLoginUser(remoteUser);
+      assertEquals(-1,
+          ToolRunner.run(admin, new String[]{"-safemode", "enter"}));
+
+      // set back login user
+      UserGroupInformation.setLoginUser(superUser);
+      assertEquals(0,
+          ToolRunner.run(admin, new String[]{"-safemode", "enter"}));
+
+      // use normal user as current user to test
+      UserGroupInformation.setLoginUser(remoteUser);
+      assertEquals(-1,
+          ToolRunner.run(admin, new String[]{"-safemode", "leave"}));
+
+      // set back login user
+      UserGroupInformation.setLoginUser(superUser);
+      assertEquals(0,
+          ToolRunner.run(admin, new String[]{"-safemode", "leave"}));
+    } finally {
+      // set back login user to make sure it doesn't pollute other unit tests
+      // even this one fails.
+      UserGroupInformation.setLoginUser(superUser);
+    }
+  }
+
+  @Test
   public void testCreateInvalidEntry() throws Exception {
     String[] argv = new String[] {
         "-add", "test-createInvalidEntry", "ns0", "/createInvalidEntry"};
