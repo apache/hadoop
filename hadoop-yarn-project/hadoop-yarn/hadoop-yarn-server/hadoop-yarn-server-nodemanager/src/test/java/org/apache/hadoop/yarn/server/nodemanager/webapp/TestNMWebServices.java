@@ -47,7 +47,6 @@ import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.TestContainerLogsUtils;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
-import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
@@ -57,6 +56,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.AssignedGpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer.NMWebApp;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformation;
@@ -141,8 +141,8 @@ public class TestNMWebServices extends JerseyTestBase {
       conf.set(YarnConfiguration.YARN_LOG_SERVER_WEBSERVICE_URL,
           LOGSERVICEWSADDR);
       dirsHandler = new LocalDirsHandlerService();
-      NodeHealthCheckerService healthChecker = new NodeHealthCheckerService(
-          NodeManager.getNodeHealthScriptRunner(conf), dirsHandler);
+      NodeHealthCheckerService healthChecker =
+          new NodeHealthCheckerService(dirsHandler);
       healthChecker.init(conf);
       aclsManager = new ApplicationACLsManager(conf);
       nmContext = new NodeManager.NMContext(null, null, dirsHandler,
