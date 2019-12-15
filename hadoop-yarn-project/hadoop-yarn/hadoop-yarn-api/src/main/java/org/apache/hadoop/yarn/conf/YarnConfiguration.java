@@ -1966,24 +1966,37 @@ public class YarnConfiguration extends Configuration {
    */
   public static final long DEFAULT_NM_MIN_PER_DISK_FREE_SPACE_MB = 0;
 
+  /** The health checker scripts. */
+  public static final String NM_HEALTH_CHECK_SCRIPTS =
+      NM_PREFIX + "health-checker.scripts";
+  public static final String[] DEFAULT_NM_HEALTH_CHECK_SCRIPTS = {"script"};
+
   /** Frequency of running node health script.*/
   public static final String NM_HEALTH_CHECK_INTERVAL_MS = 
-    NM_PREFIX + "health-checker.interval-ms";
+      NM_PREFIX + "health-checker.interval-ms";
   public static final long DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
+  /** Health check time out period for all scripts.*/
+  public static final String NM_HEALTH_CHECK_TIMEOUT_MS =
+      NM_PREFIX + "health-checker.timeout-ms";
+  public static final long DEFAULT_NM_HEALTH_CHECK_TIMEOUT_MS =
+      2 * DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS;
+
   /** Health check script time out period.*/  
-  public static final String NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS = 
-    NM_PREFIX + "health-checker.script.timeout-ms";
-  public static final long DEFAULT_NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS = 
-    2 * DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS;
+  public static final String NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS_TEMPLATE =
+      NM_PREFIX + "health-checker.%s.timeout-ms";
   
   /** The health check script to run.*/
-  public static final String NM_HEALTH_CHECK_SCRIPT_PATH = 
-    NM_PREFIX + "health-checker.script.path";
+  public static final String NM_HEALTH_CHECK_SCRIPT_PATH_TEMPLATE =
+      NM_PREFIX + "health-checker.%s.path";
   
   /** The arguments to pass to the health check script.*/
-  public static final String NM_HEALTH_CHECK_SCRIPT_OPTS = 
-    NM_PREFIX + "health-checker.script.opts";
+  public static final String NM_HEALTH_CHECK_SCRIPT_OPTS_TEMPLATE =
+      NM_PREFIX + "health-checker.%s.opts";
+
+  /** Frequency of running node health script. */
+  public static final String NM_HEALTH_CHECK_SCRIPT_INTERVAL_MS_TEMPLATE =
+      NM_PREFIX + "health-checker.%s.interval-ms";
 
   /** The JVM options used on forking ContainerLocalizer process
       by container executor. */
