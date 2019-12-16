@@ -416,27 +416,28 @@ To use Aggregate, simply specify "-reducer aggregate":
       -output myOutputDir \
       -mapper myAggregatorForKeyCount.py \
       -reducer aggregate \
-      -file myAggregatorForKeyCount.py \
+      -file myAggregatorForKeyCount.py
 
 The python program myAggregatorForKeyCount.py looks like:
 
-    #!/usr/bin/python
+    #!/usr/bin/python3
 
-    import sys;
+    import sys
 
     def generateLongCountToken(id):
         return "LongValueSum:" + id + "\t" + "1"
 
     def main(argv):
-        line = sys.stdin.readline();
+        line = sys.stdin.readline()
         try:
             while line:
-                line = line&#91;:-1];
-                fields = line.split("\t");
-                print generateLongCountToken(fields&#91;0]);
-                line = sys.stdin.readline();
+                line = line[:-1]
+                fields = line.split("\t")
+                print(generateLongCountToken(fields[0]))
+                line = sys.stdin.readline()
         except "end of file":
             return None
+
     if __name__ == "__main__":
          main(sys.argv)
 
