@@ -1,7 +1,7 @@
 #!/bin/bash
 
 mkdir pushHadoopTar/HadoopSourceBinary
-cp -rf hadoop-dist/target/hadoop-3.2.1 pushHadoopTar/HadoopSourceBinary/
+cp -rf hadoop-dist/target/hadoop-3.2.1.tar.gz pushHadoopTar/HadoopSourceBinary/
 ls
 
 cd pushHadoopTar
