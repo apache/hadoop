@@ -143,6 +143,14 @@
 
   <!-- see hadoop-project/pom.xml for version number declarations -->
   <dependencies>
+		<!-- https://mvnrepository.com/artifact/org.mockito/mockito-all -->
+		<dependency>
+				<groupId>org.mockito</groupId>
+				<artifactId>mockito-all</artifactId>
+				<version>1.8.4</version>
+				<scope>test</scope>
+		</dependency>
+
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>

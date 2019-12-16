@@ -138,6 +138,11 @@ public class AzureBlobFileSystemStore implements Closeable {
   private final IdentityTransformer identityTransformer;
   private final AbfsPerfTracker abfsPerfTracker;
 
+  /**
+   * The set of directories where we should store files as append blobs.
+   */
+  private Set<String> appendBlobDirSet;
+
   public AzureBlobFileSystemStore(URI uri, boolean isSecureScheme, Configuration configuration)
           throws IOException {
     this.uri = uri;
@@ -178,6 +183,23 @@ public class AzureBlobFileSystemStore implements Closeable {
     initializeClient(uri, fileSystemName, accountName, useHttps);
     this.identityTransformer = new IdentityTransformer(abfsConfiguration.getRawConfiguration());
     LOG.trace("IdentityTransformer init complete");
+
+    // Extract the directories that should contain page blobs
+    String appendBlobDirs = abfsConfiguration.getAppendBlobDirs();
+    if (appendBlobDirs.trim().isEmpty()) {
+      this.appendBlobDirSet = new HashSet<String>();
+    } else {
+      this.appendBlobDirSet = new HashSet<>(Arrays.asList(
+          abfsConfiguration.getAppendBlobDirs().split(AbfsHttpConstants.COMMA)));
+    }
+  }
+
+  /**
+   * Checks if the given key in Azure Storage should be stored as a page
+   * blob instead of block blob.
+   */
+  public boolean isAppendBlobKey(String key) {
+    return isKeyForDirectorySet(key, appendBlobDirSet);
   }
 
   /**
@@ -404,18 +426,24 @@ public class AzureBlobFileSystemStore implements Closeable {
               umask.toString(),
               isNamespaceEnabled);
 
-      final AbfsRestOperation op = client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), true, overwrite,
-              isNamespaceEnabled ? getOctalNotation(permission) : null,
-              isNamespaceEnabled ? getOctalNotation(umask) : null);
-      perfInfo.registerResult(op.getResult()).registerSuccess(true);
+        boolean appendBlob = false;
+        if (isAppendBlobKey(path.toString())) {
+          appendBlob = true;
+        }
+
+      client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), true, overwrite,
+          isNamespaceEnabled ? getOctalNotation(permission) : null,
+          isNamespaceEnabled ? getOctalNotation(umask) : null,
+          appendBlob);
 
       return new AbfsOutputStream(
-              client,
-              AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
-              0,
-              abfsConfiguration.getWriteBufferSize(),
-              abfsConfiguration.isFlushEnabled(),
-              abfsConfiguration.isOutputStreamFlushDisabled());
+          client,
+          AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
+          0,
+          abfsConfiguration.getWriteBufferSize(),
+          abfsConfiguration.isFlushEnabled(),
+          abfsConfiguration.isAppendWithFlushEnabled(),
+          appendBlob);
     }
   }
 
@@ -493,16 +521,23 @@ public class AzureBlobFileSystemStore implements Closeable {
 
       final long offset = overwrite ? 0 : contentLength;
 
-      perfInfo.registerSuccess(true);
+    perfInfo.registerSuccess(true);
 
-      return new AbfsOutputStream(
-              client,
-              AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
-              offset,
-              abfsConfiguration.getWriteBufferSize(),
-              abfsConfiguration.isFlushEnabled(),
-              abfsConfiguration.isOutputStreamFlushDisabled());
+    boolean appendBlob = false;
+    if (isAppendBlobKey(path.toString())) {
+      appendBlob = true;
     }
+
+    final long offset = overwrite ? 0 : contentLength;
+
+    return new AbfsOutputStream(
+        client,
+        AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
+        offset,
+        abfsConfiguration.getWriteBufferSize(),
+        abfsConfiguration.isFlushEnabled(),
+        abfsConfiguration.isAppendWithFlushEnabled(),
+        appendBlob);
   }
 
   public void rename(final Path source, final Path destination) throws

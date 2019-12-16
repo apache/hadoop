@@ -55,6 +55,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private boolean closed;
   private boolean supportFlush;
   private boolean disableOutputStreamFlush;
+  private boolean supportAppendWithFlush;
   private volatile IOException lastError;
 
   private long lastFlushOffset;
@@ -84,13 +85,16 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       final long position,
       final int bufferSize,
       final boolean supportFlush,
-      final boolean disableOutputStreamFlush) {
+      final boolean disableOutputStreamFlush,
+      final boolean supportAppendWithFlush,
+      final boolean appendBlob) {
     this.client = client;
     this.path = path;
     this.position = position;
     this.closed = false;
     this.supportFlush = supportFlush;
     this.disableOutputStreamFlush = disableOutputStreamFlush;
+    this.supportAppendWithFlush = supportAppendWithFlush;
     this.lastError = null;
     this.lastFlushOffset = 0;
     this.bufferSize = bufferSize;
@@ -98,7 +102,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.bufferIndex = 0;
     this.writeOperations = new ConcurrentLinkedDeque<>();
 
-    this.maxConcurrentRequestCount = 4 * Runtime.getRuntime().availableProcessors();
+    if (appendBlob) {
+      this.maxConcurrentRequestCount = 1;
+    } else {
+      this.maxConcurrentRequestCount = 4 * Runtime.getRuntime().availableProcessors();
+    }
 
     this.threadExecutor
         = new ThreadPoolExecutor(maxConcurrentRequestCount,
@@ -170,7 +178,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       if (writableBytes <= numberOfBytesToWrite) {
         System.arraycopy(data, currentOffset, buffer, bufferIndex, writableBytes);
         bufferIndex += writableBytes;
-        writeCurrentBufferToService();
+        writeCurrentBufferToService(false, false);
         currentOffset += writableBytes;
         numberOfBytesToWrite = numberOfBytesToWrite - writableBytes;
       } else {
@@ -268,17 +276,16 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   private synchronized void flushInternal(boolean isClose) throws IOException {
     maybeThrowLastError();
-    writeCurrentBufferToService();
-    flushWrittenBytesToService(isClose);
+    writeAndFlushWrittenBytesToService(isClose);
   }
 
   private synchronized void flushInternalAsync() throws IOException {
     maybeThrowLastError();
-    writeCurrentBufferToService();
+    writeCurrentBufferToService(true, false);
     flushWrittenBytesToServiceAsync();
   }
 
-  private synchronized void writeCurrentBufferToService() throws IOException {
+  private synchronized void writeCurrentBufferToService(final boolean flush, final boolean isClose) throws IOException {
     if (bufferIndex == 0) {
       return;
     }
@@ -326,7 +333,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
             throw new FileNotFoundException(ex.getMessage());
           }
         }
-
         if (ex.getCause() instanceof AzureBlobFileSystemException) {
           ex = (AzureBlobFileSystemException) ex.getCause();
         }
@@ -334,7 +340,16 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         throw lastError;
       }
     }
-    flushWrittenBytesToServiceInternal(position, false, isClose);
+    shrinkWriteOperationQueue();
+  }
+
+  private synchronized void writeAndFlushWrittenBytesToService(boolean isClose) throws IOException {
+    completeExistingTasks();
+    writeCurrentBufferToService(supportAppendWithFlush, isClose);
+    completeExistingTasks();
+    if (this.lastTotalAppendOffset > this.lastFlushOffset) {
+      flushWrittenBytesToServiceInternal(position, false, isClose);
+    }
   }
 
   private synchronized void flushWrittenBytesToServiceAsync() throws IOException {
@@ -373,6 +388,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       while (writeOperations.peek() != null && writeOperations.peek().task.isDone()) {
         writeOperations.peek().task.get();
         lastTotalAppendOffset += writeOperations.peek().length;
+        if (writeOperations.peek().isFlush) {
+          lastFlushOffset = lastTotalAppendOffset;
+        }
         writeOperations.remove();
       }
     } catch (Exception e) {
@@ -405,8 +423,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     private final Future<Void> task;
     private final long startOffset;
     private final long length;
+    private final boolean isFlush;
 
-    WriteOperation(final Future<Void> task, final long startOffset, final long length) {
+    WriteOperation(final Future<Void> task, final long startOffset, final long length, final boolean flush) {
       Preconditions.checkNotNull(task, "task");
       Preconditions.checkArgument(startOffset >= 0, "startOffset");
       Preconditions.checkArgument(length >= 0, "length");
@@ -414,6 +433,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       this.task = task;
       this.startOffset = startOffset;
       this.length = length;
+      this.isFlush = flush;
     }
   }
 
