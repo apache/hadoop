@@ -3,6 +3,5 @@ Version: 3.2.1
 Section: flipkart/base-hadoop-infra-builder
 Priority: standard
 Architecture: amd64
-Depends: fk-ops-servicebuilder
 Maintainer: fdp-infra-dev@flipkart.com
 Description: Hadoop build tar.gz will be pushed to reposervice
