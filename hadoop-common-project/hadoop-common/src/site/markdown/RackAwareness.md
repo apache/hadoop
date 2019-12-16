@@ -64,7 +64,7 @@ rack and is unable to do so as there is only a single rack named
 python Example
 --------------
 ```python
-#!/usr/bin/python
+#!/usr/bin/python3
 # this script makes assumptions about the physical environment.
 #  1) each rack is its own layer 3 network with a /24 subnet, which
 # could be typical where each rack has its own
@@ -94,9 +94,9 @@ for ip in sys.argv:                                              # loop over lis
     address = '{0}/{1}'.format(ip, netmask)                      # format address string so it looks like 'ip/netmask' to make netaddr work
     try:
         network_address = netaddr.IPNetwork(address).network     # calculate and print network address
-        print "/{0}".format(network_address)
+        print("/{0}".format(network_address))
     except:
-        print "/rack-unknown"                                    # print catch-all value if unable to calculate network address
+        print("/rack-unknown")                                   # print catch-all value if unable to calculate network address
 ```
 
 bash Example
