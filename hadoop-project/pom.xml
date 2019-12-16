@@ -1387,6 +1387,20 @@
        <groupId>org.apache.curator</groupId>
        <artifactId>curator-recipes</artifactId>
        <version>${curator.version}</version>
+       <exclusions>
+         <exclusion>
+           <groupId>org.apache.zookeeper</groupId>
+           <artifactId>zookeeper</artifactId>
+         </exclusion>
+         <exclusion>
+           <groupId>com.google.guava</groupId>
+           <artifactId>guava</artifactId>
+         </exclusion>
+         <exclusion>
+           <groupId>org.slf4j</groupId>
+           <artifactId>slf4j-api</artifactId>
+         </exclusion>
+       </exclusions>
      </dependency>
      <dependency>
        <groupId>org.apache.curator</groupId>
@@ -1411,6 +1425,20 @@
        <groupId>org.apache.curator</groupId>
        <artifactId>curator-framework</artifactId>
        <version>${curator.version}</version>
+       <exclusions>
+         <exclusion>
+           <groupId>org.apache.zookeeper</groupId>
+           <artifactId>zookeeper</artifactId>
+         </exclusion>
+         <exclusion>
+           <groupId>com.google.guava</groupId>
+           <artifactId>guava</artifactId>
+         </exclusion>
+         <exclusion>
+           <groupId>org.slf4j</groupId>
+           <artifactId>slf4j-api</artifactId>
+         </exclusion>
+       </exclusions>
      </dependency>
      <dependency>
        <groupId>org.apache.curator</groupId>
