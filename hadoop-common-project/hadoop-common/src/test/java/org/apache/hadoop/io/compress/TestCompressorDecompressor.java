@@ -50,7 +50,7 @@ public class TestCompressorDecompressor {
   
   @Test
   public void testCompressorDecompressor() {
-    // no more for this data
+    // no more for this data, test
     int SIZE = 44 * 1024;
     
     byte[] rawData = generate(SIZE);

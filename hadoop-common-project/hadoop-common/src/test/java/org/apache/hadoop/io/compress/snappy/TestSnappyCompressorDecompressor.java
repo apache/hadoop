@@ -168,6 +168,7 @@ public class TestSnappyCompressorDecompressor {
 
   @Test
   public void testSnappyCompressDecompress() {
+    // test
     int BYTE_SIZE = 1024 * 54;
     byte[] bytes = BytesGenerator.get(BYTE_SIZE);
     SnappyCompressor compressor = new SnappyCompressor();
@@ -395,6 +396,7 @@ public class TestSnappyCompressorDecompressor {
 
   @Test
   public void testSnappyCompressDecompressInMultiThreads() throws Exception {
+    // test
     MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext();
     for(int i=0;i<10;i++) {
       ctx.addThread( new MultithreadedTestUtil.TestingThread(ctx) {

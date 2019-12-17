@@ -1414,6 +1414,7 @@ public class TestDistributedShell {
 
   @Test
   public void testDSShellWithOpportunisticContainers() throws Exception {
+    // test
     Client client = new Client(new Configuration(yarnCluster.getConfig()));
     try {
       String[] args = {
@@ -1444,6 +1445,7 @@ public class TestDistributedShell {
   @Test
   @TimelineVersion(2.0f)
   public void testDSShellWithEnforceExecutionType() throws Exception {
+    // test
     Client client = new Client(new Configuration(yarnCluster.getConfig()));
     try {
       String[] args = {
