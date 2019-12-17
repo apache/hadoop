@@ -14,5 +14,5 @@ cp -rf DEBIAN deb/
 
 sh pushHadoopTar/make-flipkart-hadoop-source-tar-3.2.1-deb
 dpkg -b deb flipkart-hadoop-source-tar-repo.deb
-reposervice --host repo-svc-app-0001.nm.flipkart.com --port "8080" pubrepo --repo  fk-hadoop-source-tar-repo  --appkey dummy --debs flipkart-hadoop-source-tar-repo.deb
+reposervice --host 10.24.0.41 --port "8080" pubrepo --repo  fk-hadoop-source-tar-repo  --appkey dummy --debs flipkart-hadoop-source-tar-repo.deb
 cd $cwd
