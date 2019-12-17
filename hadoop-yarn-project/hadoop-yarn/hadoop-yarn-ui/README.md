@@ -40,19 +40,6 @@ You will need the following things properly installed on your computer.
 * Install [Bower](http://bower.io/) v1.8.8
 * Install all dependencies by running `yarn install` & `bower install`
 
-Instead of manual installation, you can reuse locally installed Node.js,
-Yarn and Bower after building by maven with `-Pyarn-ui` in this directory.
-
-```
-$ mvn package -Pyarn-ui
-$ export PATH=$PWD/target/webapp/node:$PATH
-$ export YARNJS=$PWD/target/webapp/node/yarn/dist/bin/yarn.js
-$ cd src/main/webapp/
-$ node $YARNJS install
-$ node node_modules/.bin/bower install
-$ node $YARNJS start
-```
-
 ### Running UI
 
 * `yarn start`
@@ -80,3 +67,20 @@ YARN UI has replaced NPM with Yarn package manager. And hence Yarn would be used
 ### Adding new routes (pages), controllers, components etc.
 
 * Use ember-cli blueprint generator - [Ember CLI](http://ember-cli.com/extending/#generators-and-blueprints)
+
+### Building with Maven
+
+YARN-6278 added build profile using rontend-maven-plugin which
+automatically installs Node.js and Yarn locally under target/webapp directory.
+After building yarn-ui by `mvn package -Pyarn-ui`, you can reuse
+locally installed Node.js and Yarn instead of manually installing them.
+
+```
+$ mvn package -Pyarn-ui
+$ export PATH=$PWD/target/webapp/node:$PATH
+$ export YARNJS=$PWD/target/webapp/node/yarn/dist/bin/yarn.js
+$ cd src/main/webapp/
+$ node $YARNJS install
+$ node node_modules/.bin/bower install
+$ node $YARNJS start
+```
