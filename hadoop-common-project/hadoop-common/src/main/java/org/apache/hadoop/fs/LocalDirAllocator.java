@@ -393,6 +393,7 @@ public class LocalDirAllocator {
       Context ctx = confChanged(conf);
       int numDirs = ctx.localDirs.length;
       int numDirsSearched = 0;
+      long maxCapacity = 0;
       //remove the leading slash from the path (to make sure that the uri
       //resolution results in a valid path on the dir being checked)
       if (pathStr.startsWith("/")) {
@@ -441,6 +442,9 @@ public class LocalDirAllocator {
         int dirNum = ctx.getAndIncrDirNumLastAccessed(randomInc);
         while (numDirsSearched < numDirs) {
           long capacity = ctx.dirDF[dirNum].getAvailable();
+          if (capacity > maxCapacity) {
+            maxCapacity = capacity;
+          }
           if (capacity > size) {
             returnPath =
                 createPath(ctx.localDirs[dirNum], pathStr, checkWrite);
@@ -460,7 +464,8 @@ public class LocalDirAllocator {
       
       //no path found
       throw new DiskErrorException("Could not find any valid local " +
-          "directory for " + pathStr);
+          "directory for " + pathStr + " with requested size " + size +
+          " as the max capacity in any directory is " + maxCapacity);
     }
 
     /** Creates a file on the local FS. Pass size as 
