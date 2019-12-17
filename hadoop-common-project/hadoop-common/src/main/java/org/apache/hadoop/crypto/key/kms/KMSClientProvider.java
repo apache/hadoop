@@ -1174,7 +1174,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       actualUgi = currentUgi.getRealUser();
     }
     if (UserGroupInformation.isSecurityEnabled() &&
-        !containsKmsDt(actualUgi) && !actualUgi.shouldRelogin()) {
+        !containsKmsDt(actualUgi) &&
+        !(actualUgi.isFromKeytab() || actualUgi.isFromTicket())) {
       // Use login user is only necessary when Kerberos is enabled
       // but the actual user does not have either
       // Kerberos credential or KMS delegation token for KMS operations
