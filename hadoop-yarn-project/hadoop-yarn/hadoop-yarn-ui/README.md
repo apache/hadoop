@@ -23,10 +23,11 @@ The YARN UI is an Ember based web-app that provides visualization of the applica
 
 You can point the UI to custom locations by setting the environment variables in `src/main/webapp/config/configs.env`.
 
-In order to access RM from UI started by `yarn start`,
-you need to enbale CORS by setting `hadoop.http.cross-origin.enabled` to true
+In order to make the UI running on Ember server (started by `yarn start`)
+work with independently running ResouceManager,
+you need to enable CORS by setting `hadoop.http.cross-origin.enabled` to true
 and adding `org.apache.hadoop.security.HttpCrossOriginFilterInitializer`
-to `hadoop.http.filter.initializers` in core-site.xml.
+to `hadoop.http.filter.initializers` in core-site.xml of the ResourceManager.
 
 ## Development
 
@@ -71,10 +72,11 @@ YARN UI has replaced NPM with Yarn package manager. And hence Yarn would be used
 ### Building with Maven
 
 [YARN-6278](https://issues.apache.org/jira/browse/YARN-6278)
-added build profile using frontend-maven-plugin which
+added `yarn-ui` profile to pom.xml leveraging
+[frontend-maven-plugin](https://github.com/eirslett/frontend-maven-plugin) which
 automatically installs Node.js and Yarn locally under target/webapp directory.
 After building yarn-ui by `mvn package -Pyarn-ui`, you can reuse
-locally installed Node.js and Yarn instead of manually installing them.
+the locally installed Node.js and Yarn instead of manually installing them.
 
 ```
 $ mvn package -Pyarn-ui
