@@ -70,7 +70,8 @@ YARN UI has replaced NPM with Yarn package manager. And hence Yarn would be used
 
 ### Building with Maven
 
-YARN-6278 added build profile using rontend-maven-plugin which
+[YARN-6278](https://issues.apache.org/jira/browse/YARN-6278)
+added build profile using rontend-maven-plugin which
 automatically installs Node.js and Yarn locally under target/webapp directory.
 After building yarn-ui by `mvn package -Pyarn-ui`, you can reuse
 locally installed Node.js and Yarn instead of manually installing them.
