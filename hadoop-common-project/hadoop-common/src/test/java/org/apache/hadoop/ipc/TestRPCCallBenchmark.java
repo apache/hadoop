@@ -25,7 +25,7 @@ import org.junit.Test;
 
 public class TestRPCCallBenchmark {
 
-  @Test(timeout=20000)
+  @Test(timeout=80000)
   public void testBenchmarkWithProto() throws Exception {
     int rc = ToolRunner.run(new RPCCallBenchmark(),
         new String[] {
