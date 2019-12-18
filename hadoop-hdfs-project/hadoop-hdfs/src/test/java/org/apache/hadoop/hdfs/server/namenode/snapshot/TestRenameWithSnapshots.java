@@ -49,6 +49,7 @@ import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
@@ -2411,5 +2412,68 @@ public class TestRenameWithSnapshots {
     assertTrue(existsInDiffReport(entries, DiffType.RENAME, "bar", "newDir"));
     assertTrue(existsInDiffReport(entries, DiffType.RENAME, "foo/file2", "newDir/file2"));
     assertTrue(existsInDiffReport(entries, DiffType.RENAME, "foo/file3", "newDir/file1"));
+  }
+
+  @Test (timeout=60000)
+  public void testDoubleRenamesWithSnapshotDelete() throws Exception {
+    hdfs.mkdirs(sub1);
+    hdfs.allowSnapshot(sub1);
+    final Path dir1 = new Path(sub1, "dir1");
+    final Path dir2 = new Path(sub1, "dir2");
+    final Path dir3 = new Path(sub1, "dir3");
+    final String snap3 = "snap3";
+    final String snap4 = "snap4";
+    final String snap5 = "snap5";
+    final String snap6 = "snap6";
+    final Path foo = new Path(dir2, "foo");
+    final Path bar = new Path(dir2, "bar");
+    hdfs.createSnapshot(sub1, snap1);
+    hdfs.mkdirs(dir1, new FsPermission((short) 0777));
+    rename(dir1, dir2);
+    hdfs.createSnapshot(sub1, snap2);
+    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, REPL, SEED);
+    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPL, SEED);
+    hdfs.createSnapshot(sub1, snap3);
+    hdfs.delete(foo, false);
+    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, REPL, SEED);
+    hdfs.createSnapshot(sub1, snap4);
+    hdfs.delete(foo, false);
+    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, REPL, SEED);
+    hdfs.createSnapshot(sub1, snap5);
+    rename(dir2, dir3);
+    hdfs.createSnapshot(sub1, snap6);
+    hdfs.delete(dir3, true);
+    deleteSnapshot(sub1, snap6);
+    deleteSnapshot(sub1, snap3);
+    // save namespace and restart Namenode
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.saveNamespace();
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    cluster.restartNameNode(true);
+  }
+
+
+  void rename(Path src, Path dst) throws Exception {
+    printTree("Before rename " + src + " -> " + dst);
+    hdfs.rename(src, dst);
+    printTree("After rename " + src + " -> " + dst);
+  }
+
+  void deleteSnapshot(Path directory, String snapshotName) throws Exception {
+    hdfs.deleteSnapshot(directory, snapshotName);
+    printTree("deleted snapshot " + snapshotName);
+  }
+
+  private final PrintWriter output = new PrintWriter(System.out, true);
+  private int printTreeCount = 0;
+
+  String printTree(String label) throws Exception {
+    output.println();
+    output.println();
+    output.println("***** " + printTreeCount++ + ": " + label);
+    final String b =
+        fsn.getFSDirectory().getINode("/").dumpTreeRecursively().toString();
+    output.println(b);
+    return b;
   }
 }
