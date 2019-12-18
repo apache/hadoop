@@ -739,8 +739,12 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
           // were created before "prior" will be covered by the later 
           // cleanSubtreeRecursively call.
           if (priorCreated != null) {
-            if (currentINode.isLastReference()) {
-              // if this is the last reference, the created list can be
+            if (currentINode.isLastReference() &&
+                    currentINode.getDiffs().getLastSnapshotId() == prior) {
+              // If this is the last reference of the directory inode and it
+              // can not be accessed in any of the subsequent snapshots i.e,
+              // this is the latest snapshot diff and if this is the last
+              // reference, the created list can be
               // destroyed.
               priorDiff.getChildrenDiff().destroyCreatedList(
                   reclaimContext, currentINode);
