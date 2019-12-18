@@ -20,11 +20,9 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Arrays;
 
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
@@ -44,8 +42,7 @@ public final class SwapBlockListOp {
   }
 
   static SwapBlockListResult swapBlocks(FSDirectory fsd, FSPermissionChecker pc,
-                          String src, String dst,
-                          Options.SwapBlockList... options) throws IOException {
+                          String src, String dst) throws IOException {
 
     final INodesInPath srcIIP = fsd.resolvePath(pc, src, DirOp.WRITE);
     final INodesInPath dstIIP = fsd.resolvePath(pc, dst, DirOp.WRITE);
@@ -60,7 +57,7 @@ public final class SwapBlockListOp {
     SwapBlockListResult result = null;
     fsd.writeLock();
     try {
-      result = swapBlockList(fsd, srcIIP, dstIIP, options);
+      result = swapBlockList(fsd, srcIIP, dstIIP);
     } finally {
       fsd.writeUnlock();
     }
@@ -69,13 +66,12 @@ public final class SwapBlockListOp {
 
   private static SwapBlockListResult swapBlockList(FSDirectory fsd,
                                     final INodesInPath srcIIP,
-                                    final INodesInPath dstIIP,
-                                    Options.SwapBlockList... options)
+                                    final INodesInPath dstIIP)
       throws IOException {
 
     assert fsd.hasWriteLock();
-    validateInode(fsd, srcIIP);
-    validateInode(fsd, dstIIP);
+    validateInode(srcIIP);
+    validateInode(dstIIP);
     fsd.ezManager.checkMoveValidity(srcIIP, dstIIP);
 
     final String src = srcIIP.getPath();
@@ -91,41 +87,28 @@ public final class SwapBlockListOp {
     long mtime = Time.now();
     BlockInfo[] dstINodeFileBlocks = dstINodeFile.getBlocks();
     dstINodeFile.replaceBlocks(srcINodeFile.getBlocks());
+    srcINodeFile.replaceBlocks(dstINodeFileBlocks);
 
-    boolean overwrite = options != null
-        && Arrays.asList(options).contains(
-            Options.SwapBlockList.ONE_WAY_BLOCK_SWAP);
-    if (!overwrite) {
-      srcINodeFile.replaceBlocks(dstINodeFileBlocks);
-    }
+    long srcHeader = srcINodeFile.getHeaderLong();
+    long dstHeader = dstINodeFile.getHeaderLong();
 
-    boolean excludeHeader = options != null &&
-        Arrays.asList(options).contains(
-            Options.SwapBlockList.EXCLUDE_BLOCK_LAYOUT_HEADER_SWAP);
-    if (!excludeHeader) {
-      long srcHeader = srcINodeFile.getHeaderLong();
-      long dstHeader = dstINodeFile.getHeaderLong();
+    byte dstBlockLayoutPolicy =
+        HeaderFormat.getBlockLayoutPolicy(dstHeader);
+    byte srcBlockLayoutPolicy =
+        HeaderFormat.getBlockLayoutPolicy(srcHeader);
 
-      byte srcBlockLayoutPolicy =
-          HeaderFormat.getBlockLayoutPolicy(srcHeader);
-      dstINodeFile.updateHeaderWithNewBlockLayoutPolicy(srcBlockLayoutPolicy);
-
-      if (!overwrite) {
-        byte dstBlockLayoutPolicy =
-            HeaderFormat.getBlockLayoutPolicy(dstHeader);
-        srcINodeFile.updateHeaderWithNewBlockLayoutPolicy(dstBlockLayoutPolicy);
-        srcINodeFile.setModificationTime(mtime);
-      }
-    }
-    // Update modification time.
+    dstINodeFile.updateHeaderWithNewBlockLayoutPolicy(srcBlockLayoutPolicy);
     dstINodeFile.setModificationTime(mtime);
+
+    srcINodeFile.updateHeaderWithNewBlockLayoutPolicy(dstBlockLayoutPolicy);
+    srcINodeFile.setModificationTime(mtime);
 
     return new SwapBlockListResult(true,
         fsd.getAuditFileInfo(srcIIP),
         fsd.getAuditFileInfo(dstIIP));
   }
 
-  private static void validateInode(FSDirectory fsd, INodesInPath srcIIP)
+  private static void validateInode(INodesInPath srcIIP)
       throws IOException {
 
     String errorPrefix = "DIR* FSDirectory.swapBlockList: ";

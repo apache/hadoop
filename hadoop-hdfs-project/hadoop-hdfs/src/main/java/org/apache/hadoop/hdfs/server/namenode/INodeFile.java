@@ -733,12 +733,15 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   /**
-   * This method replaces blocks in a file with the supplied blocks. Make sure
-   * you know what you are doing when you are calling this!
+   * This method replaces blocks in a file with the supplied blocks.
    * @param newBlocks List of new blocks.
+   * @param newId new block collection id.
    */
   void replaceBlocks(BlockInfo[] newBlocks) {
     this.blocks = Arrays.copyOf(newBlocks, newBlocks.length);
+    for (BlockInfo block : blocks) {
+      block.setBlockCollectionId(getId());
+    }
   }
 
   private void updateRemovedUnderConstructionFiles(
