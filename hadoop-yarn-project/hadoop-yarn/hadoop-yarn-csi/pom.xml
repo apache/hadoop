@@ -26,11 +26,9 @@
     <packaging>jar</packaging>
 
     <properties>
-        <protobuf.version>3.6.1</protobuf.version>
         <guava.version>20.0</guava.version>
         <grpc.version>1.15.1</grpc.version>
         <netty-all.version>4.1.27.Final</netty-all.version>
-        <os-maven-plugin.version>1.5.0.Final</os-maven-plugin.version>
     </properties>
 
     <dependencies>
@@ -107,13 +105,6 @@
     </dependencies>
 
     <build>
-        <extensions>
-            <extension>
-                <groupId>kr.motd.maven</groupId>
-                <artifactId>os-maven-plugin</artifactId>
-                <version>${os-maven-plugin.version}</version>
-            </extension>
-        </extensions>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -148,18 +139,21 @@
             <plugin>
                 <groupId>org.xolstice.maven.plugins</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
-                <version>${protobuf-maven-plugin.version}</version>
                 <configuration>
-                    <protocArtifact>com.google.protobuf:protoc:3.6.1:exe:${os.detected.classifier}</protocArtifact>
                     <pluginId>grpc-java</pluginId>
-                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.15.1:exe:${os.detected.classifier}</pluginArtifact>
+                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
                 </configuration>
                 <executions>
                     <execution>
+                        <id>src-compile-protoc</id>
                         <goals>
                             <goal>compile</goal>
                             <goal>compile-custom</goal>
                         </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/generated-sources/protobuf/java</outputDirectory>
+                            <skip>false</skip>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
