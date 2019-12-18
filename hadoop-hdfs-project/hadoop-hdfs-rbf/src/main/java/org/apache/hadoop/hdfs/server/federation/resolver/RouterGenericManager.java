@@ -15,22 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocolPB;
+package org.apache.hadoop.hdfs.server.federation.resolver;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
-import org.apache.hadoop.hdfs.server.federation.resolver.RouterGenericManager;
-import org.apache.hadoop.hdfs.server.federation.router.NameserviceManager;
-import org.apache.hadoop.hdfs.server.federation.router.RouterStateManager;
-import org.apache.hadoop.ipc.GenericRefreshProtocol;
+import java.io.IOException;
 
 /**
- * Protocol used by routeradmin to communicate with statestore.
+ *  Generic methods for managing Router.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Stable
-public interface RouterAdminProtocol extends MountTableManager,
-    RouterStateManager, NameserviceManager, GenericRefreshProtocol,
-    RouterGenericManager {
+public interface RouterGenericManager {
+  /**
+   * Refresh superuser proxy groups mappings (used in RBF).
+   * @return true if the operation was successful.
+   * @throws IOException if operation was not successful.
+   */
+  boolean refreshSuperUserGroupsConfiguration() throws IOException;
 }

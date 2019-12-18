@@ -18,10 +18,14 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static java.util.Arrays.asList;
+import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getFileSystem;
+import static org.apache.hadoop.hdfs.server.federation.MockNamenode.registerSubclusters;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -31,9 +35,15 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.LogVerificationAppender;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.federation.MockNamenode;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
@@ -42,6 +52,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -67,6 +78,8 @@ public class TestRouterNamenodeMonitoring {
   private Map<String, Map<String, MockNamenode>> nns = new HashMap<>();
   /** Nameservices in the federated cluster. */
   private List<String> nsIds = asList("ns0", "ns1");
+  /** Namenodes in the cluster. */
+  private List<String> nnIds = asList("nn0", "nn1");
 
   /** Time the test starts. */
   private long initializedTime;
@@ -77,7 +90,7 @@ public class TestRouterNamenodeMonitoring {
     LOG.info("Initialize the Mock Namenodes to monitor");
     for (String nsId : nsIds) {
       nns.put(nsId, new HashMap<>());
-      for (String nnId : asList("nn0", "nn1")) {
+      for (String nnId : nnIds) {
         nns.get(nsId).put(nnId, new MockNamenode(nsId));
       }
     }
@@ -115,14 +128,14 @@ public class TestRouterNamenodeMonitoring {
     conf.set(DFSConfigKeys.DFS_NAMESERVICES,
         StringUtils.join(",", nns.keySet()));
     for (String nsId : nns.keySet()) {
-      Set<String> nnIds = nns.get(nsId).keySet();
+      Set<String> nsNnIds = nns.get(nsId).keySet();
 
       StringBuilder sb = new StringBuilder();
       sb.append(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX);
       sb.append(".").append(nsId);
-      conf.set(sb.toString(), StringUtils.join(",", nnIds));
+      conf.set(sb.toString(), StringUtils.join(",", nsNnIds));
 
-      for (String nnId : nnIds) {
+      for (String nnId : nsNnIds) {
         final MockNamenode nn = nns.get(nsId).get(nnId);
 
         sb = new StringBuilder();
@@ -312,6 +325,94 @@ public class TestRouterNamenodeMonitoring {
     } else {
       assertEquals(1, appender.countLinesWithMessage("JMX URL: http://"));
       assertEquals(0, appender.countLinesWithMessage("JMX URL: https://"));
+    }
+  }
+
+  /**
+   * Test the view of the Datanodes that the Router sees. If a Datanode is
+   * registered in two subclusters, it should return the most up to date
+   * information.
+   * @throws IOException If the test cannot run.
+   */
+  @Test
+  public void testDatanodesView() throws IOException {
+
+    // Setup the router
+    Configuration routerConf = new RouterConfigBuilder()
+        .stateStore()
+        .rpc()
+        .build();
+    router = new Router();
+    router.init(routerConf);
+    router.start();
+
+    // Setup the namenodes
+    for (String nsId : nsIds) {
+      registerSubclusters(router, nns.get(nsId).values());
+      for (String nnId : nnIds) {
+        MockNamenode nn = nns.get(nsId).get(nnId);
+        if ("nn0".equals(nnId)) {
+          nn.transitionToActive();
+        }
+        nn.addDatanodeMock();
+      }
+    }
+
+    // Set different states for the DNs in each namespace
+    long time = Time.now();
+    for (String nsId : nsIds) {
+      for (String nnId : nnIds) {
+        // dn0 is DECOMMISSIONED in the most recent (ns1)
+        DatanodeInfoBuilder dn0Builder = new DatanodeInfoBuilder()
+            .setDatanodeUuid("dn0")
+            .setHostName("dn0")
+            .setIpAddr("dn0")
+            .setXferPort(10000);
+        if ("ns0".equals(nsId)) {
+          dn0Builder.setLastUpdate(time - 1000);
+          dn0Builder.setAdminState(AdminStates.NORMAL);
+        } else if ("ns1".equals(nsId)) {
+          dn0Builder.setLastUpdate(time - 500);
+          dn0Builder.setAdminState(AdminStates.DECOMMISSIONED);
+        }
+
+        // dn1 is NORMAL in the most recent (ns0)
+        DatanodeInfoBuilder dn1Builder = new DatanodeInfoBuilder()
+            .setDatanodeUuid("dn1")
+            .setHostName("dn1")
+            .setIpAddr("dn1")
+            .setXferPort(10000);
+        if ("ns0".equals(nsId)) {
+          dn1Builder.setLastUpdate(time - 1000);
+          dn1Builder.setAdminState(AdminStates.NORMAL);
+        } else if ("ns1".equals(nsId)) {
+          dn1Builder.setLastUpdate(time - 5 * 1000);
+          dn1Builder.setAdminState(AdminStates.DECOMMISSION_INPROGRESS);
+        }
+
+        // Update the mock NameNode with the DN views
+        MockNamenode nn = nns.get(nsId).get(nnId);
+        List<DatanodeInfo> dns = nn.getDatanodes();
+        dns.add(dn0Builder.build());
+        dns.add(dn1Builder.build());
+      }
+    }
+
+    // Get the datanodes from the Router and check we get the right view
+    DistributedFileSystem dfs = (DistributedFileSystem)getFileSystem(router);
+    DFSClient dfsClient = dfs.getClient();
+    DatanodeStorageReport[] dns = dfsClient.getDatanodeStorageReport(
+        DatanodeReportType.ALL);
+    assertEquals(2, dns.length);
+    for (DatanodeStorageReport dn : dns) {
+      DatanodeInfo dnInfo = dn.getDatanodeInfo();
+      if ("dn0".equals(dnInfo.getHostName())) {
+        assertEquals(AdminStates.DECOMMISSIONED, dnInfo.getAdminState());
+      } else if ("dn1".equals(dnInfo.getHostName())) {
+        assertEquals(AdminStates.NORMAL, dnInfo.getAdminState());
+      } else {
+        fail("Unexpected DN: " + dnInfo.getHostName());
+      }
     }
   }
 }

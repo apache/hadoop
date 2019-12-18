@@ -15,22 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocolPB;
+package org.apache.hadoop.yarn.server.nodemanager.health;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
-import org.apache.hadoop.hdfs.server.federation.resolver.RouterGenericManager;
-import org.apache.hadoop.hdfs.server.federation.router.NameserviceManager;
-import org.apache.hadoop.hdfs.server.federation.router.RouterStateManager;
-import org.apache.hadoop.ipc.GenericRefreshProtocol;
+import org.junit.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Protocol used by routeradmin to communicate with statestore.
+ * Tests for the {@link ExceptionReporter} class.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Stable
-public interface RouterAdminProtocol extends MountTableManager,
-    RouterStateManager, NameserviceManager, GenericRefreshProtocol,
-    RouterGenericManager {
+public class TestExceptionReporter {
+  @Test
+  public void testUnhealthy() {
+    ExceptionReporter reporter = new ExceptionReporter();
+    assertThat(reporter.isHealthy()).isTrue();
+    assertThat(reporter.getLastHealthReportTime()).isZero();
+
+    String message = "test";
+    Exception exception = new Exception(message);
+    reporter.reportException(exception);
+    assertThat(reporter.isHealthy()).isFalse();
+    assertThat(reporter.getHealthReport()).isEqualTo(message);
+    assertThat(reporter.getLastHealthReportTime()).isNotEqualTo(0);
+  }
 }

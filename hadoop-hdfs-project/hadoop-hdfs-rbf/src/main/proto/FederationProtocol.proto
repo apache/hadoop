@@ -242,6 +242,13 @@ message RefreshMountTableEntriesResponseProto {
   optional bool result = 1;
 }
 
+message RefreshSuperUserGroupsConfigurationRequestProto {
+}
+
+message RefreshSuperUserGroupsConfigurationResponseProto {
+  optional bool status = 1;
+}
+
 /////////////////////////////////////////////////
 // Route State
 /////////////////////////////////////////////////
