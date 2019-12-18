@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -176,43 +177,14 @@ public class TestSwapBlockList {
 
     fsn.swapBlockList(sourceFile, dstFile);
     assertBlockListEquality(dstBlockLocationsBeforeSwap,
-        srcInodeFile.getBlocks());
+        srcInodeFile.getBlocks(), srcInodeFile.getId());
     assertBlockListEquality(srcBlockLocationsBeforeSwap,
-        dstInodeFile.getBlocks());
+        dstInodeFile.getBlocks(), dstInodeFile.getId());
 
     // Assert Block Layout
-    Assert.assertEquals(HeaderFormat.getBlockLayoutPolicy(srcHeader),
+    assertEquals(HeaderFormat.getBlockLayoutPolicy(srcHeader),
         HeaderFormat.getBlockLayoutPolicy(dstInodeFile.getHeaderLong()));
-    Assert.assertEquals(HeaderFormat.getBlockLayoutPolicy(dstHeader),
-        HeaderFormat.getBlockLayoutPolicy(srcInodeFile.getHeaderLong()));
-  }
-
-  @Test
-  public void testSwapBlockListOpOneWay() throws Exception {
-    String sourceFile = "/TestSwapBlockList/dir1/file1";
-    String dstFile = "/TestSwapBlockList/dir1/dir11/file3";
-
-    INodeFile srcInodeFile =
-        (INodeFile) fsdir.resolvePath(fsdir.getPermissionChecker(),
-            sourceFile, FSDirectory.DirOp.WRITE).getLastINode();
-    INodeFile dstInodeFile =
-        (INodeFile) fsdir.resolvePath(fsdir.getPermissionChecker(),
-            dstFile, FSDirectory.DirOp.WRITE).getLastINode();
-
-    BlockInfo[] srcBlockLocationsBeforeSwap = srcInodeFile.getBlocks();
-    long srcHeader = srcInodeFile.getHeaderLong();
-
-    fsn.swapBlockList(sourceFile, dstFile,
-        Options.SwapBlockList.ONE_WAY_BLOCK_SWAP);
-    assertBlockListEquality(srcBlockLocationsBeforeSwap,
-        dstInodeFile.getBlocks());
-    assertBlockListEquality(srcBlockLocationsBeforeSwap,
-        srcInodeFile.getBlocks());
-
-    // Assert Block Layout
-    Assert.assertEquals(HeaderFormat.getBlockLayoutPolicy(srcHeader),
-        HeaderFormat.getBlockLayoutPolicy(dstInodeFile.getHeaderLong()));
-    Assert.assertEquals(HeaderFormat.getBlockLayoutPolicy(srcHeader),
+    assertEquals(HeaderFormat.getBlockLayoutPolicy(dstHeader),
         HeaderFormat.getBlockLayoutPolicy(srcInodeFile.getHeaderLong()));
   }
 
@@ -240,22 +212,24 @@ public class TestSwapBlockList {
     testSwapBlockListOp();
 
     assertBlockListEquality(dstBlockLocationsBeforeSwap,
-        dstInodeFile.getBlocks());
+        dstInodeFile.getBlocks(), dstInodeFile.getId());
     assertBlockListEquality(srcBlockLocationsBeforeSwap,
-        srcInodeFile.getBlocks());
+        srcInodeFile.getBlocks(), srcInodeFile.getId());
 
     // Assert Block Layout
-    Assert.assertEquals(HeaderFormat.getBlockLayoutPolicy(srcHeader),
+    assertEquals(HeaderFormat.getBlockLayoutPolicy(srcHeader),
         HeaderFormat.getBlockLayoutPolicy(srcInodeFile.getHeaderLong()));
-    Assert.assertEquals(HeaderFormat.getBlockLayoutPolicy(dstHeader),
+    assertEquals(HeaderFormat.getBlockLayoutPolicy(dstHeader),
         HeaderFormat.getBlockLayoutPolicy(dstInodeFile.getHeaderLong()));
   }
 
   private void assertBlockListEquality(BlockInfo[] expected,
-                                       BlockInfo[] actual) {
-    Assert.assertEquals(expected.length, actual.length);
+                                       BlockInfo[] actual,
+                                       long expectedId) {
+    assertEquals(expected.length, actual.length);
     for (int i = 0; i < expected.length; i++) {
-      Assert.assertEquals(expected[i].getBlockId(), actual[i].getBlockId());
+      assertEquals(expected[i].getBlockId(), actual[i].getBlockId());
+      assertEquals(expectedId, actual[i].getBlockCollectionId());
     }
   }
 }
