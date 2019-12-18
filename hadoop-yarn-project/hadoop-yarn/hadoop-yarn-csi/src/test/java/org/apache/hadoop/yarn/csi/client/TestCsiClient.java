@@ -65,6 +65,7 @@ public class TestCsiClient {
 
   @Test
   public void testIdentityService() throws IOException {
+    // test
     try {
       driver.start();
       CsiClient client = new CsiClientImpl(domainSocket);
