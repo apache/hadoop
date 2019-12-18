@@ -4487,4 +4487,10 @@
     <name>yarn.workflow-id.tag-prefix</name>
     <value>workflowid:</value>
   </property>
+
+  <property>
+    <description>Whether or not to allow application submissions via REST. Default is true.</description>
+    <name>yarn.webapp.enable-rest-app-submissions</name>
+    <value>true</value>
+  </property>
 </configuration>
