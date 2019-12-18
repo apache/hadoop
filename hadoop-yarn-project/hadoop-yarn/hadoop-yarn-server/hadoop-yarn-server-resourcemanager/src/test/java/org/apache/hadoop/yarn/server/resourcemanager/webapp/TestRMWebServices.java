@@ -35,6 +35,7 @@ import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -61,6 +62,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.AdHocLogDumper;
@@ -747,5 +749,23 @@ public class TestRMWebServices extends JerseyTestBase {
     when(principal.getName()).thenReturn(username);
     when(mockHsr.getUserPrincipal()).thenReturn(principal);
     return mockHsr;
+  }
+
+  @Test
+  public void testDisableRestAppSubmission() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.ENABLE_REST_APP_SUBMISSIONS, false);
+    RMWebServices webSvc = new RMWebServices(mock(ResourceManager.class), conf,
+        mock(HttpServletResponse.class));
+    HttpServletRequest request = mock(HttpServletRequest.class);
+
+    Response response = webSvc.createNewApplication(request);
+    assertEquals(Status.FORBIDDEN.getStatusCode(), response.getStatus());
+    assertEquals("App submission via REST is disabled.", response.getEntity());
+
+    response = webSvc.submitApplication(
+        mock(ApplicationSubmissionContextInfo.class), request);
+    assertEquals(Status.FORBIDDEN.getStatusCode(), response.getStatus());
+    assertEquals("App submission via REST is disabled.", response.getEntity());
   }
 }

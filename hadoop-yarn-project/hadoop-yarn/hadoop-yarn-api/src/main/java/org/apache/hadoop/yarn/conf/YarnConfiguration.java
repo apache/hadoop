@@ -3367,6 +3367,10 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "display.per-user-apps";
   public static final boolean DEFAULT_DISPLAY_APPS_FOR_LOGGED_IN_USER = false;
 
+  public static final String ENABLE_REST_APP_SUBMISSIONS =
+      "yarn.webapp.enable-rest-app-submissions";
+  public static final boolean DEFAULT_ENABLE_REST_APP_SUBMISSIONS = true;
+
   // RM and NM CSRF props
   public static final String REST_CSRF = "webapp.rest-csrf.";
   public static final String RM_CSRF_PREFIX = RM_PREFIX + REST_CSRF;

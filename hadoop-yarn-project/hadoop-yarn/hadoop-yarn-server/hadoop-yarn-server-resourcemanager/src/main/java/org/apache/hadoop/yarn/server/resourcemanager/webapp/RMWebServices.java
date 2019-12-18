@@ -230,6 +230,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @VisibleForTesting
   boolean isCentralizedNodeLabelConfiguration = true;
   private boolean displayPerUserApps = false;
+  private boolean enableRestAppSubmissions = true;
 
   public final static String DELEGATION_TOKEN_HEADER =
       "Hadoop-YARN-RM-Delegation-Token";
@@ -245,6 +246,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     this.displayPerUserApps  = conf.getBoolean(
         YarnConfiguration.DISPLAY_APPS_FOR_LOGGED_IN_USER,
         YarnConfiguration.DEFAULT_DISPLAY_APPS_FOR_LOGGED_IN_USER);
+    this.enableRestAppSubmissions = conf.getBoolean(
+        YarnConfiguration.ENABLE_REST_APP_SUBMISSIONS,
+        YarnConfiguration.DEFAULT_ENABLE_REST_APP_SUBMISSIONS);
   }
 
   RMWebServices(ResourceManager rm, Configuration conf,
@@ -1535,6 +1539,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public Response createNewApplication(@Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
+    if (!enableRestAppSubmissions) {
+      String msg = "App submission via REST is disabled.";
+      return Response.status(Status.FORBIDDEN).entity(msg).build();
+    }
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
     initForWritableEndpoints(callerUGI, false);
 
@@ -1554,6 +1562,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public Response submitApplication(ApplicationSubmissionContextInfo newApp,
       @Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
+    if (!enableRestAppSubmissions) {
+      String msg = "App submission via REST is disabled.";
+      return Response.status(Status.FORBIDDEN).entity(msg).build();
+    }
 
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
     initForWritableEndpoints(callerUGI, false);
