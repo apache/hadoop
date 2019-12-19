@@ -37,15 +37,14 @@ import java.io.IOException;
 public class TestCsiClient {
 
   private static File testRoot = null;
+  private static File socketFile = null;
   private static String domainSocket = null;
   private static FakeCsiDriver driver = null;
 
   @BeforeClass
   public static void setUp() throws IOException {
-    testRoot = GenericTestUtils.getTestDir("csi-test");
-    File socketPath = new File(testRoot, "csi.sock");
-    FileUtils.forceMkdirParent(socketPath);
-    domainSocket = "unix://" + socketPath.getAbsolutePath();
+    socketFile = new File("/tmp", "yarn-csi-test.sock");
+    domainSocket = "unix://" + socketFile.getAbsolutePath();
     driver = new FakeCsiDriver(domainSocket);
   }
 
