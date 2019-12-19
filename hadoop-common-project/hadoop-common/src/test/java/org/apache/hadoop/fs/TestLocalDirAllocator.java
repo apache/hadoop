@@ -533,7 +533,7 @@ public class TestLocalDirAllocator {
   }
 
   /**
-   * Test to check the LocalDirAllocation for the invalid path HADOOP-8437
+   * Test to check the LocalDirAllocation for the less space HADOOP-16769
    *
    * @throws Exception
    */
