@@ -32,7 +32,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -117,6 +119,7 @@ class BPServiceActor implements Runnable {
   private DatanodeRegistration bpRegistration;
   final LinkedList<BPServiceActorAction> bpThreadQueue 
       = new LinkedList<BPServiceActorAction>();
+  private final CommandProcessingThread commandProcessingThread;
 
   BPServiceActor(String serviceId, String nnId, InetSocketAddress nnAddr,
       InetSocketAddress lifelineNnAddr, BPOfferService bpos) {
@@ -144,6 +147,8 @@ class BPServiceActor implements Runnable {
     if (nnId != null) {
       this.nnId = nnId;
     }
+    commandProcessingThread = new CommandProcessingThread(this);
+    commandProcessingThread.start();
   }
 
   public DatanodeRegistration getBpRegistration() {
@@ -696,8 +701,7 @@ class BPServiceActor implements Runnable {
             }
 
             long startProcessCommands = monotonicNow();
-            if (!processCommand(resp.getCommands()))
-              continue;
+            commandProcessingThread.enqueue(resp.getCommands());
             long endProcessCommands = monotonicNow();
             if (endProcessCommands - startProcessCommands > 2000) {
               LOG.info("Took " + (endProcessCommands - startProcessCommands)
@@ -722,11 +726,11 @@ class BPServiceActor implements Runnable {
           cmds = blockReport(fullBlockReportLeaseId);
           fullBlockReportLeaseId = 0;
         }
-        processCommand(cmds == null ? null : cmds.toArray(new DatanodeCommand[cmds.size()]));
+        commandProcessingThread.enqueue(cmds);
 
         if (!dn.areCacheReportsDisabledForTests()) {
           DatanodeCommand cmd = cacheReport();
-          processCommand(new DatanodeCommand[]{ cmd });
+          commandProcessingThread.enqueue(cmd);
         }
 
         if (sendHeartbeat) {
@@ -899,37 +903,6 @@ class BPServiceActor implements Runnable {
   private boolean shouldRun() {
     return shouldServiceRun && dn.shouldRun();
   }
-
-  /**
-   * Process an array of datanode commands
-   * 
-   * @param cmds an array of datanode commands
-   * @return true if further processing may be required or false otherwise. 
-   */
-  boolean processCommand(DatanodeCommand[] cmds) {
-    if (cmds != null) {
-      for (DatanodeCommand cmd : cmds) {
-        try {
-          if (bpos.processCommandFromActor(cmd, this) == false) {
-            return false;
-          }
-        } catch (RemoteException re) {
-          String reClass = re.getClassName();
-          if (UnregisteredNodeException.class.getName().equals(reClass) ||
-              DisallowedDatanodeException.class.getName().equals(reClass) ||
-              IncorrectVersionException.class.getName().equals(reClass)) {
-            LOG.warn(this + " is shutting down", re);
-            shouldServiceRun = false;
-            return false;
-          }
-        } catch (IOException ioe) {
-          LOG.warn("Error processing datanode Command", ioe);
-        }
-      }
-    }
-    return true;
-  }
-
 
   /**
    * Report a bad block from another DN in this cluster.
@@ -1302,6 +1275,104 @@ class BPServiceActor implements Runnable {
     @VisibleForTesting
     public long monotonicNow() {
       return Time.monotonicNow();
+    }
+  }
+
+  /**
+   * CommandProcessingThread that process commands asynchronously.
+   */
+  class CommandProcessingThread extends Thread {
+    private final BPServiceActor actor;
+    private final BlockingQueue<Runnable> queue;
+
+    CommandProcessingThread(BPServiceActor actor) {
+      super("Command processor");
+      this.actor = actor;
+      this.queue = new LinkedBlockingQueue<>();
+      setDaemon(true);
+    }
+
+    @Override
+    public void run() {
+      try {
+        processQueue();
+      } catch (Throwable t) {
+        LOG.error("{} encountered fatal exception and exit.", getName(), t);
+      }
+    }
+
+    /**
+     * Process commands in queue one by one, and wait until queue not empty.
+     */
+    private void processQueue() {
+      while (shouldRun()) {
+        try {
+          Runnable action = queue.take();
+          action.run();
+          dn.getMetrics().incrActorCmdQueueLength(-1);
+          dn.getMetrics().incrNumProcessedCommands();
+        } catch (InterruptedException e) {
+          LOG.error("{} encountered interrupt and exit.", getName());
+          // ignore unless thread was specifically interrupted.
+          if (Thread.interrupted()) {
+            break;
+          }
+        }
+      }
+      dn.getMetrics().incrActorCmdQueueLength(-1 * queue.size());
+      queue.clear();
+    }
+
+    /**
+     * Process an array of datanode commands.
+     *
+     * @param cmds an array of datanode commands
+     * @return true if further processing may be required or false otherwise.
+     */
+    private boolean processCommand(DatanodeCommand[] cmds) {
+      if (cmds != null) {
+        for (DatanodeCommand cmd : cmds) {
+          try {
+            if (!bpos.processCommandFromActor(cmd, actor)) {
+              return false;
+            }
+          } catch (RemoteException re) {
+            String reClass = re.getClassName();
+            if (UnregisteredNodeException.class.getName().equals(reClass) ||
+                DisallowedDatanodeException.class.getName().equals(reClass) ||
+                IncorrectVersionException.class.getName().equals(reClass)) {
+              LOG.warn("{} is shutting down", this, re);
+              shouldServiceRun = false;
+              return false;
+            }
+          } catch (IOException ioe) {
+            LOG.warn("Error processing datanode Command", ioe);
+          }
+        }
+      }
+      return true;
+    }
+
+    void enqueue(DatanodeCommand cmd) throws InterruptedException {
+      if (cmd == null) {
+        return;
+      }
+      queue.put(() -> processCommand(new DatanodeCommand[]{cmd}));
+      dn.getMetrics().incrActorCmdQueueLength(1);
+    }
+
+    void enqueue(List<DatanodeCommand> cmds) throws InterruptedException {
+      if (cmds == null) {
+        return;
+      }
+      queue.put(() -> processCommand(
+          cmds.toArray(new DatanodeCommand[cmds.size()])));
+      dn.getMetrics().incrActorCmdQueueLength(1);
+    }
+
+    void enqueue(DatanodeCommand[] cmds) throws InterruptedException {
+      queue.put(() -> processCommand(cmds));
+      dn.getMetrics().incrActorCmdQueueLength(1);
     }
   }
 }
