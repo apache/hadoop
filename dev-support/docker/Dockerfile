@@ -174,16 +174,19 @@ RUN pip2 install pylint==1.9.2
 RUN pip2 install python-dateutil==2.7.3
 
 ###
-# Install node.js for web UI framework (4.2.6 ships with Xenial)
+# Install node.js 8.17.0 for web UI framework (4.2.6 ships with Xenial)
 ###
-# hadolint ignore=DL3008, DL3016
+RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
+RUN apt-get install -y --no-install-recommends nodejs=8.17.0 \
+    && npm install -g bower@1.8.8
+
+###
+## Install Yarn 1.12.1 for web UI framework
+####
+RUN curl -s -S https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
+    && echo 'deb https://dl.yarnpkg.com/debian/ stable main' > /etc/apt/sources.list.d/yarn.list
 RUN apt-get -q update \
-    && apt-get install -y --no-install-recommends nodejs npm \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && ln -s /usr/bin/nodejs /usr/bin/node \
-    && npm install npm@latest -g \
-    && npm install -g jshint
+    && apt-get install -y --no-install-recommends yarn=1.12.1
 
 ###
 # Install hadolint
