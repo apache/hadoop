@@ -127,8 +127,9 @@ public class TestStateStoreDriverBase {
           generateRandomString(), generateRandomString(),
           generateRandomString(), generateRandomString(),
           generateRandomString(), generateRandomString(),
-          generateRandomString(), generateRandomString(),
-          generateRandomEnum(FederationNamenodeServiceState.class), false);
+          generateRandomString(), "http", generateRandomString(),
+          generateRandomEnum(FederationNamenodeServiceState.class),
+          false);
     } else if (recordClass == MountTable.class) {
       String src = "/" + generateRandomString();
       Map<String, String> destMap = Collections.singletonMap(
@@ -184,7 +185,10 @@ public class TestStateStoreDriverBase {
     long now = stateStore.getDriver().getTime();
     assertTrue(
         committed.getDateCreated() <= now && committed.getDateCreated() > 0);
-    assertTrue(committed.getDateModified() >= committed.getDateCreated());
+    // since expired record doesn't update the modification time, let's skip it
+    if (!committed.isExpired()) {
+      assertTrue(committed.getDateModified() >= committed.getDateCreated());
+    }
 
     return ret;
   }

@@ -76,10 +76,10 @@ public class GraphiteSink implements MetricsSink, Closeable {
 
         for (MetricsTag tag : record.tags()) {
             if (tag.value() != null) {
-                metricsPathPrefix.append(".");
-                metricsPathPrefix.append(tag.name());
-                metricsPathPrefix.append("=");
-                metricsPathPrefix.append(tag.value());
+                metricsPathPrefix.append(".")
+                    .append(tag.name())
+                    .append("=")
+                    .append(tag.value());
             }
         }
 

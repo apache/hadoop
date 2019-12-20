@@ -52,7 +52,7 @@ public final class MetaRecoveryContext  {
    * Display a prompt to the user and get his or her choice.
    *  
    * @param prompt      The prompt to display
-   * @param default     First choice (will be taken if autoChooseDefault is
+   * @param firstChoice First choice (will be taken if autoChooseDefault is
    *                    true)
    * @param choices     Other choies
    *

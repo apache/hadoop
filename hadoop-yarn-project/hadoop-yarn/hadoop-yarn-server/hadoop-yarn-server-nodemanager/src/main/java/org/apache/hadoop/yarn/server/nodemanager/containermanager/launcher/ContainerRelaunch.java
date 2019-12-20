@@ -32,7 +32,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.security.AMSecretKeys;
 import org.slf4j.Logger;
@@ -88,7 +87,14 @@ public class ContainerRelaunch extends ContainerLaunch {
       Path nmPrivateTruststorePath = (container.getCredentials().getSecretKey(
           AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE) == null) ? null :
           getNmPrivateTruststorePath(appIdStr, containerIdStr);
-      pidFilePath = getPidFilePath(appIdStr, containerIdStr);
+      try {
+        // try to locate existing pid file.
+        pidFilePath = getPidFilePath(appIdStr, containerIdStr);
+      } catch (IOException e) {
+        // reset pid file path if it did not exist.
+        String pidFileSubpath = getPidFileSubpath(appIdStr, containerIdStr);
+        pidFilePath = dirsHandler.getLocalPathForWrite(pidFileSubpath);
+      }
 
       LOG.info("Relaunch container with "
           + "workDir = " + containerWorkDir.toString()
@@ -178,7 +184,7 @@ public class ContainerRelaunch extends ContainerLaunch {
        String containerIdStr) throws IOException {
     return dirsHandler.getLocalPathForRead(
         getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
-            + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
+            + String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT,
             containerIdStr));
   }
 

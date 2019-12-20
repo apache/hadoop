@@ -25,7 +25,11 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NavigableSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -35,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.timelineservice.ContainerEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.client.api.impl.TimelineV2ClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -45,7 +50,12 @@ import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerPauseEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResumeEvent;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
+import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.After;
@@ -67,6 +77,8 @@ public class TestNMTimelinePublisher {
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
     conf.setLong(YarnConfiguration.ATS_APP_COLLECTOR_LINGER_PERIOD_IN_MS,
         3000L);
+    conf.setBoolean(YarnConfiguration.NM_PUBLISH_CONTAINER_EVENTS_ENABLED,
+        true);
     timelineClient = new DummyTimelineClient(null);
     Context context = createMockContext();
     dispatcher = new DrainDispatcher();
@@ -91,6 +103,19 @@ public class TestNMTimelinePublisher {
   private Context createMockContext() {
     Context context = mock(Context.class);
     when(context.getNodeId()).thenReturn(NodeId.newInstance("localhost", 0));
+
+    ConcurrentMap<ContainerId, Container> containers =
+        new ConcurrentHashMap<>();
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 1);
+    Container container = mock(Container.class);
+    when(container.getContainerStartTime())
+        .thenReturn(System.currentTimeMillis());
+    containers.putIfAbsent(cId, container);
+    when(context.getContainers()).thenReturn(containers);
+
     return context;
   }
 
@@ -138,6 +163,123 @@ public class TestNMTimelinePublisher {
         entity.getInfo().get(ContainerMetricsConstants.DIAGNOSTICS_INFO));
     Assert.assertEquals(exitStatus,
         entity.getInfo().get(ContainerMetricsConstants.EXIT_STATUS_INFO));
+    Assert.assertEquals(TimelineServiceHelper.invertLong(
+        cId.getContainerId()), entity.getIdPrefix());
+  }
+
+  @Test
+  public void testPublishContainerPausedEvent() {
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 1);
+
+    ContainerEvent containerEvent =
+        new ContainerPauseEvent(cId, "test pause");
+
+    publisher.createTimelineClient(appId);
+    publisher.publishContainerEvent(containerEvent);
+    publisher.stopTimelineClient(appId);
+    dispatcher.await();
+
+    ContainerEntity cEntity = new ContainerEntity();
+    cEntity.setId(cId.toString());
+    TimelineEntity[] lastPublishedEntities =
+        timelineClient.getLastPublishedEntities();
+
+    Assert.assertNotNull(lastPublishedEntities);
+    Assert.assertEquals(1, lastPublishedEntities.length);
+    TimelineEntity entity = lastPublishedEntities[0];
+    Assert.assertEquals(cEntity, entity);
+
+    NavigableSet<TimelineEvent> events = entity.getEvents();
+    Assert.assertEquals(1, events.size());
+    Assert.assertEquals(ContainerMetricsConstants.PAUSED_EVENT_TYPE,
+        events.iterator().next().getId());
+
+    Map<String, Object> info = entity.getInfo();
+    Assert.assertTrue(
+        info.containsKey(ContainerMetricsConstants.DIAGNOSTICS_INFO));
+    Assert.assertEquals("test pause",
+        info.get(ContainerMetricsConstants.DIAGNOSTICS_INFO));
+  }
+
+  @Test
+  public void testPublishContainerResumedEvent() {
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 1);
+
+    ContainerEvent containerEvent =
+        new ContainerResumeEvent(cId, "test resume");
+
+    publisher.createTimelineClient(appId);
+    publisher.publishContainerEvent(containerEvent);
+    publisher.stopTimelineClient(appId);
+    dispatcher.await();
+
+    ContainerEntity cEntity = new ContainerEntity();
+    cEntity.setId(cId.toString());
+    TimelineEntity[] lastPublishedEntities =
+        timelineClient.getLastPublishedEntities();
+
+    Assert.assertNotNull(lastPublishedEntities);
+    Assert.assertEquals(1, lastPublishedEntities.length);
+    TimelineEntity entity = lastPublishedEntities[0];
+    Assert.assertEquals(cEntity, entity);
+
+    NavigableSet<TimelineEvent> events = entity.getEvents();
+    Assert.assertEquals(1, events.size());
+    Assert.assertEquals(ContainerMetricsConstants.RESUMED_EVENT_TYPE,
+        events.iterator().next().getId());
+
+    Map<String, Object> info = entity.getInfo();
+    Assert.assertTrue(
+        info.containsKey(ContainerMetricsConstants.DIAGNOSTICS_INFO));
+    Assert.assertEquals("test resume",
+        info.get(ContainerMetricsConstants.DIAGNOSTICS_INFO));
+  }
+
+  @Test
+  public void testPublishContainerKilledEvent() {
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 1);
+
+    ContainerEvent containerEvent =
+        new ContainerKillEvent(cId, 1, "test kill");
+
+    publisher.createTimelineClient(appId);
+    publisher.publishContainerEvent(containerEvent);
+    publisher.stopTimelineClient(appId);
+    dispatcher.await();
+
+    ContainerEntity cEntity = new ContainerEntity();
+    cEntity.setId(cId.toString());
+    TimelineEntity[] lastPublishedEntities =
+        timelineClient.getLastPublishedEntities();
+
+    Assert.assertNotNull(lastPublishedEntities);
+    Assert.assertEquals(1, lastPublishedEntities.length);
+    TimelineEntity entity = lastPublishedEntities[0];
+    Assert.assertEquals(cEntity, entity);
+
+    NavigableSet<TimelineEvent> events = entity.getEvents();
+    Assert.assertEquals(1, events.size());
+    Assert.assertEquals(ContainerMetricsConstants.KILLED_EVENT_TYPE,
+        events.iterator().next().getId());
+
+    Map<String, Object> info = entity.getInfo();
+    Assert.assertTrue(
+        info.containsKey(ContainerMetricsConstants.DIAGNOSTICS_INFO));
+    Assert.assertEquals("test kill",
+        info.get(ContainerMetricsConstants.DIAGNOSTICS_INFO));
+    Assert.assertTrue(
+        info.containsKey(ContainerMetricsConstants.EXIT_STATUS_INFO));
+    Assert.assertEquals(1,
+        info.get(ContainerMetricsConstants.EXIT_STATUS_INFO));
   }
 
   @Test public void testContainerResourceUsage() {
@@ -146,29 +288,31 @@ public class TestNMTimelinePublisher {
     Container aContainer = mock(Container.class);
     when(aContainer.getContainerId()).thenReturn(ContainerId
         .newContainerId(ApplicationAttemptId.newInstance(appId, 1), 0L));
+    long idPrefix = TimelineServiceHelper.invertLong(
+        aContainer.getContainerId().getContainerId());
     publisher.reportContainerResourceUsage(aContainer, 1024L, 8F);
-    verifyPublishedResourceUsageMetrics(timelineClient, 1024L, 8);
+    verifyPublishedResourceUsageMetrics(timelineClient, 1024L, 8, idPrefix);
     timelineClient.reset();
 
     publisher.reportContainerResourceUsage(aContainer, 1024L, 0.8F);
-    verifyPublishedResourceUsageMetrics(timelineClient, 1024L, 1);
+    verifyPublishedResourceUsageMetrics(timelineClient, 1024L, 1, idPrefix);
     timelineClient.reset();
 
     publisher.reportContainerResourceUsage(aContainer, 1024L, 0.49F);
-    verifyPublishedResourceUsageMetrics(timelineClient, 1024L, 0);
+    verifyPublishedResourceUsageMetrics(timelineClient, 1024L, 0, idPrefix);
     timelineClient.reset();
 
     publisher.reportContainerResourceUsage(aContainer, 1024L,
         (float) ResourceCalculatorProcessTree.UNAVAILABLE);
     verifyPublishedResourceUsageMetrics(timelineClient, 1024L,
-        ResourceCalculatorProcessTree.UNAVAILABLE);
+        ResourceCalculatorProcessTree.UNAVAILABLE, idPrefix);
   }
 
-  private void verifyPublishedResourceUsageMetrics(
-      DummyTimelineClient timelineClient, long memoryUsage, int cpuUsage) {
+  private void verifyPublishedResourceUsageMetrics(DummyTimelineClient
+      dummyTimelineClient, long memoryUsage, int cpuUsage, long idPrefix) {
     TimelineEntity[] entities = null;
     for (int i = 0; i < 10; i++) {
-      entities = timelineClient.getLastPublishedEntities();
+      entities = dummyTimelineClient.getLastPublishedEntities();
       if (entities != null) {
         break;
       }
@@ -186,6 +330,7 @@ public class TestNMTimelinePublisher {
     assertNotNull("entities are expected to be published", entities);
     assertEquals("Expected number of metrics notpublished",
         numberOfResourceMetrics, entities[0].getMetrics().size());
+    assertEquals(idPrefix, entities[0].getIdPrefix());
     Iterator<TimelineMetric> metrics = entities[0].getMetrics().iterator();
     while (metrics.hasNext()) {
       TimelineMetric metric = metrics.next();

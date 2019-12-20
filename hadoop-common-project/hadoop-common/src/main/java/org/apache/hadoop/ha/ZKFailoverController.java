@@ -157,7 +157,10 @@ public abstract class ZKFailoverController {
     return localTarget;
   }
 
-  HAServiceState getServiceState() { return serviceState; }
+  @VisibleForTesting
+  public HAServiceState getServiceState() {
+    return serviceState;
+  }
 
   public int run(final String[] args) throws Exception {
     if (!localTarget.isAutoFailoverEnabled()) {
@@ -442,14 +445,16 @@ public abstract class ZKFailoverController {
    * </ul>
    * 
    * @param timeoutMillis number of millis to wait
+   * @param onlyAfterNanoTime accept attempt records only after a given
+   * timestamp. Use this parameter to ignore the old attempt records from a
+   * previous fail-over attempt.
    * @return the published record, or null if the timeout elapses or the
    * service becomes unhealthy 
    * @throws InterruptedException if the thread is interrupted.
    */
-  private ActiveAttemptRecord waitForActiveAttempt(int timeoutMillis)
-      throws InterruptedException {
-    long st = System.nanoTime();
-    long waitUntil = st + TimeUnit.NANOSECONDS.convert(
+  private ActiveAttemptRecord waitForActiveAttempt(int timeoutMillis,
+      long onlyAfterNanoTime) throws InterruptedException {
+    long waitUntil = onlyAfterNanoTime + TimeUnit.NANOSECONDS.convert(
         timeoutMillis, TimeUnit.MILLISECONDS);
     
     do {
@@ -466,7 +471,7 @@ public abstract class ZKFailoverController {
 
       synchronized (activeAttemptRecordLock) {
         if ((lastActiveAttemptRecord != null &&
-            lastActiveAttemptRecord.nanoTime >= st)) {
+            lastActiveAttemptRecord.nanoTime >= onlyAfterNanoTime)) {
           return lastActiveAttemptRecord;
         }
         // Only wait 1sec so that we periodically recheck the health state
@@ -660,6 +665,7 @@ public abstract class ZKFailoverController {
     List<ZKFCProtocol> otherZkfcs = new ArrayList<ZKFCProtocol>(otherNodes.size());
 
     // Phase 3: ask the other nodes to yield from the election.
+    long st = System.nanoTime();
     HAServiceTarget activeNode = null;
     for (HAServiceTarget remote : otherNodes) {
       // same location, same node - may not always be == equality
@@ -678,7 +684,7 @@ public abstract class ZKFailoverController {
 
     // Phase 4: wait for the normal election to make the local node
     // active.
-    ActiveAttemptRecord attempt = waitForActiveAttempt(timeout + 60000);
+    ActiveAttemptRecord attempt = waitForActiveAttempt(timeout + 60000, st);
     
     if (attempt == null) {
       // We didn't even make an attempt to become active.
@@ -728,9 +734,9 @@ public abstract class ZKFailoverController {
   }
 
   /**
-   * Ensure that the local node is in a healthy state, and thus
-   * eligible for graceful failover.
-   * @throws ServiceFailedException if the node is unhealthy
+   * If the local node is an observer or is unhealthy it
+   * is not eligible for graceful failover.
+   * @throws ServiceFailedException if the node is an observer or unhealthy
    */
   private synchronized void checkEligibleForFailover()
       throws ServiceFailedException {
@@ -738,6 +744,11 @@ public abstract class ZKFailoverController {
     if (this.getLastHealthState() != State.SERVICE_HEALTHY) {
       throw new ServiceFailedException(
           localTarget + " is not currently healthy. " +
+          "Cannot be failover target");
+    }
+    if (serviceState == HAServiceState.OBSERVER) {
+      throw new ServiceFailedException(
+          localTarget + " is in observer state. " +
           "Cannot be failover target");
     }
   }
@@ -791,7 +802,9 @@ public abstract class ZKFailoverController {
     
         switch (lastHealthState) {
         case SERVICE_HEALTHY:
-          elector.joinElection(targetToData(localTarget));
+          if(serviceState != HAServiceState.OBSERVER) {
+            elector.joinElection(targetToData(localTarget));
+          }
           if (quitElectionOnBadState) {
             quitElectionOnBadState = false;
           }
@@ -856,6 +869,11 @@ public abstract class ZKFailoverController {
           }
           return;
         }
+        if (changedState == HAServiceState.OBSERVER) {
+          elector.quitElection(true);
+          serviceState = HAServiceState.OBSERVER;
+          return;
+        }
         if (changedState == serviceState) {
           serviceStateMismatchCount = 0;
           return;
@@ -896,7 +914,7 @@ public abstract class ZKFailoverController {
   }
   
   @VisibleForTesting
-  ActiveStandbyElector getElectorForTests() {
+  public ActiveStandbyElector getElectorForTests() {
     return elector;
   }
   

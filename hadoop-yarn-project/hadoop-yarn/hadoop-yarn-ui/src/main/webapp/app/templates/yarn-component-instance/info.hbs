@@ -58,8 +58,20 @@
             <td>{{check-availability model.container.ipAddr}}</td>
           </tr>
           <tr>
+            <td>Exposed Ports</td>
+            <td>{{check-availability model.container.exposedPorts}}</td>
+          </tr>
+          <tr>
             <td>Exit Status Code</td>
             <td>{{check-availability model.container.exitStatusCode}}</td>
+          </tr>
+          <tr>
+            <td>Logs</td>
+            <td><a href="{{model.container.containerLogURL}}&service={{service}}">Link</a></td>
+          </tr>
+          <tr>
+            <td>Terminal</td>
+            <td><a href="{{model.container.termLink}}&user.name={{model.userInfo.requestedUser}}" target="_blank">Link</a></td>
           </tr>
         </tbody>
       </table>

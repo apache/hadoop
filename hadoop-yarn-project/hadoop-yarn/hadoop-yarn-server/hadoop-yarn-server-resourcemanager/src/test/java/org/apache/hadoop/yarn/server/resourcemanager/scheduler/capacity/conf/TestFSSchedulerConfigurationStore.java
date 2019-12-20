@@ -28,6 +28,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.junit.After;
@@ -36,6 +38,8 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
+
 
 /**
  * Tests {@link FSSchedulerConfigurationStore}.
@@ -133,6 +137,75 @@ public class TestFSSchedulerConfigurationStore {
     storeConf = configurationStore.retrieve();
 
     compareConfig(conf, storeConf);
+  }
+
+  @Test
+  public void testFileSystemClose() throws Exception {
+    MiniDFSCluster hdfsCluster = null;
+    FileSystem fs = null;
+    Path path = new Path("/tmp/confstore");
+    try {
+      HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+      hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
+          .numDataNodes(1).build();
+
+      fs = hdfsCluster.getFileSystem();
+      if (!fs.exists(path)) {
+        fs.mkdirs(path);
+      }
+
+      FSSchedulerConfigurationStore configStore =
+          new FSSchedulerConfigurationStore();
+      hdfsConfig.set(YarnConfiguration.SCHEDULER_CONFIGURATION_FS_PATH,
+          path.toString());
+      configStore.initialize(hdfsConfig, hdfsConfig, null);
+
+      // Close the FileSystem object and validate
+      fs.close();
+
+      try {
+        Map<String, String> updates = new HashMap<>();
+        updates.put("testkey", "testvalue");
+        LogMutation logMutation = new LogMutation(updates, "test");
+        configStore.logMutation(logMutation);
+        configStore.confirmMutation(true);
+      } catch (IOException e) {
+        if (e.getMessage().contains("Filesystem closed")) {
+          fail("FSSchedulerConfigurationStore failed to handle " +
+              "FileSystem close");
+        } else {
+          fail("Should not get any exceptions");
+        }
+      }
+    } finally {
+      fs = hdfsCluster.getFileSystem();
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      if (hdfsCluster != null) {
+        hdfsCluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testFormatConfiguration() throws Exception {
+    Configuration schedulerConf = new Configuration();
+    schedulerConf.set("a", "a");
+    writeConf(schedulerConf);
+    configurationStore.initialize(conf, conf, null);
+    Configuration storedConfig = configurationStore.retrieve();
+    assertEquals("a", storedConfig.get("a"));
+    configurationStore.format();
+    boolean exceptionCaught = false;
+    try {
+      storedConfig = configurationStore.retrieve();
+    } catch (IOException e) {
+      if (e.getMessage().contains("no capacity scheduler file in")) {
+        exceptionCaught = true;
+      }
+    }
+    assertTrue(exceptionCaught);
   }
 
   @Test

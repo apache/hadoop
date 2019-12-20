@@ -162,9 +162,9 @@ public class ViewFs extends AbstractFileSystem {
 
   static AccessControlException readOnlyMountTable(final String operation,
       final String p) {
-    return new AccessControlException( 
-        "InternalDir of ViewFileSystem is readonly; operation=" + operation + 
-        "Path=" + p);
+    return new AccessControlException(
+        "InternalDir of ViewFileSystem is readonly, operation " + operation +
+            " not permitted on path " + p + ".");
   }
   static AccessControlException readOnlyMountTable(final String operation,
       final Path p) {
@@ -752,6 +752,13 @@ public class ViewFs extends AbstractFileSystem {
   }
 
   @Override
+  public void satisfyStoragePolicy(final Path path) throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(path), true);
+    res.targetFileSystem.satisfyStoragePolicy(res.remainingPath);
+  }
+
+  @Override
   public void setStoragePolicy(final Path path, final String policyName)
       throws IOException {
     InodeTree.ResolveResult<AbstractFileSystem> res =
@@ -1152,6 +1159,11 @@ public class ViewFs extends AbstractFileSystem {
         throws IOException {
       checkPathIsSlash(path);
       throw readOnlyMountTable("deleteSnapshot", path);
+    }
+
+    @Override
+    public void satisfyStoragePolicy(final Path path) throws IOException {
+      throw readOnlyMountTable("satisfyStoragePolicy", path);
     }
 
     @Override

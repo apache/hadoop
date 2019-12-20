@@ -31,9 +31,7 @@ import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.event.Level;
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.After;
 import org.junit.Before;
@@ -58,8 +56,7 @@ public class TestLeaderElectorService {
   TestingCluster zkCluster;
   @Before
   public void setUp() throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.INFO);
+    GenericTestUtils.setRootLogLevel(Level.INFO);
     conf = new Configuration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.setBoolean(YarnConfiguration.CURATOR_LEADER_ELECTOR, true);
@@ -129,7 +126,14 @@ public class TestLeaderElectorService {
     rm2 = startRM("rm2", HAServiceState.STANDBY);
 
     // submit an app which will trigger state-store failure.
-    rm1.submitApp(200, "app1", "user1", null, "default", false);
+    MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+        .withAppName("app1")
+        .withUser("user1")
+        .withAcls(null)
+        .withQueue("default")
+        .withWaitForAppAcceptedState(false)
+        .build());
     waitFor(rm1, HAServiceState.STANDBY);
 
     // rm2 should become active;
@@ -172,8 +176,7 @@ public class TestLeaderElectorService {
         service.getCuratorClient().getZookeeperClient();
     // this will expire current curator client session. curator will re-establish
     // the session. RM will first relinquish leadership and re-acquire leadership
-    KillSession
-        .kill(client.getZooKeeper(), client.getCurrentConnectionString());
+    KillSession.kill(client.getZooKeeper());
 
     waitFor(rm1, HAServiceState.ACTIVE);
   }

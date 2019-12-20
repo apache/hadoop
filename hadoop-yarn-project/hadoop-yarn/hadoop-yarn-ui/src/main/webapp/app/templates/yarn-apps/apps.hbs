@@ -20,7 +20,9 @@
   <h4 align="center">Loading...</h4>
 {{else}}
   {{#if model.apps}}
+    <div class="col-md-12">
     {{em-table columns=columns rows=model.apps definition=tableDefinition}}
+    </div>
   {{else}}
     <h4 align="center">Could not find any applications from this cluster</h4>
   {{/if}}

@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /*
  * It records an activity operation in allocation,
@@ -29,22 +30,37 @@ import org.apache.commons.logging.LogFactory;
 public class AllocationActivity {
   private String childName = null;
   private String parentName = null;
-  private String appPriority = null;
-  private String requestPriority = null;
+  private Integer appPriority = null;
+  private Integer requestPriority = null;
   private ActivityState state;
   private String diagnostic = null;
+  private NodeId nodeId;
+  private Long allocationRequestId;
+  private ActivityLevel level;
 
-  private static final Log LOG = LogFactory.getLog(AllocationActivity.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AllocationActivity.class);
 
   public AllocationActivity(String parentName, String queueName,
-      String priority, ActivityState state, String diagnostic, String type) {
+      Integer priority, ActivityState state, String diagnostic,
+      ActivityLevel level, NodeId nodeId, Long allocationRequestId) {
     this.childName = queueName;
     this.parentName = parentName;
-    if (type != null) {
-      if (type.equals("app")) {
+    if (level != null) {
+      this.level = level;
+      switch (level) {
+      case APP:
         this.appPriority = priority;
-      } else if (type.equals("container")) {
+        break;
+      case REQUEST:
         this.requestPriority = priority;
+        this.allocationRequestId = allocationRequestId;
+        break;
+      case NODE:
+        this.nodeId = nodeId;
+        break;
+      default:
+        break;
       }
     }
     this.state = state;
@@ -52,16 +68,11 @@ public class AllocationActivity {
   }
 
   public ActivityNode createTreeNode() {
-    if (appPriority != null) {
-      return new ActivityNode(this.childName, this.parentName, this.appPriority,
-          this.state, this.diagnostic, "app");
-    } else if (requestPriority != null) {
-      return new ActivityNode(this.childName, this.parentName,
-          this.requestPriority, this.state, this.diagnostic, "container");
-    } else {
-      return new ActivityNode(this.childName, this.parentName, null, this.state,
-          this.diagnostic, null);
-    }
+    return new ActivityNode(this.childName, this.parentName,
+        this.level == ActivityLevel.APP ?
+            this.appPriority : this.requestPriority,
+        this.state, this.diagnostic, this.level,
+        this.nodeId, this.allocationRequestId);
   }
 
   public String getName() {

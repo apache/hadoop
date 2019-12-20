@@ -105,11 +105,9 @@ public class AMHeartbeatRequestHandler extends Thread {
         if (request == null) {
           throw new YarnException("Null allocateRequest from requestInfo");
         }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Sending Heartbeat to RM. AskList:"
-              + ((request.getAskList() == null) ? " empty"
-                  : request.getAskList().size()));
-        }
+        LOG.debug("Sending Heartbeat to RM. AskList:{}",
+            ((request.getAskList() == null) ? " empty" :
+            request.getAskList().size()));
 
         request.setResponseId(lastResponseId);
         AllocateResponse response = rmProxyRelayer.allocate(request);
@@ -125,20 +123,16 @@ public class AMHeartbeatRequestHandler extends Thread {
               userUgi, conf);
         }
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Received Heartbeat reply from RM. Allocated Containers:"
-              + ((response.getAllocatedContainers() == null) ? " empty"
-                  : response.getAllocatedContainers().size()));
-        }
+        LOG.debug("Received Heartbeat reply from RM. Allocated Containers:{}",
+            ((response.getAllocatedContainers() == null) ? " empty"
+            : response.getAllocatedContainers().size()));
 
         if (requestInfo.getCallback() == null) {
           throw new YarnException("Null callback from requestInfo");
         }
         requestInfo.getCallback().callback(response);
       } catch (InterruptedException ex) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Interrupted while waiting for queue", ex);
-        }
+        LOG.debug("Interrupted while waiting for queue", ex);
       } catch (Throwable ex) {
         LOG.warn(
             "Error occurred while processing heart beat for " + applicationId,

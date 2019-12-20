@@ -25,6 +25,7 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
  */
 public enum FederationNamenodeServiceState {
   ACTIVE, // HAServiceState.ACTIVE or operational.
+  OBSERVER, // HAServiceState.OBSERVER.
   STANDBY, // HAServiceState.STANDBY.
   UNAVAILABLE, // When the namenode cannot be reached.
   EXPIRED, // When the last update is too old.
@@ -34,6 +35,8 @@ public enum FederationNamenodeServiceState {
     switch(state) {
     case ACTIVE:
       return FederationNamenodeServiceState.ACTIVE;
+    case OBSERVER:
+      return FederationNamenodeServiceState.OBSERVER;
     case STANDBY:
       return FederationNamenodeServiceState.STANDBY;
     case INITIALIZING:

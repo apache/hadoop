@@ -25,7 +25,8 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -174,7 +175,7 @@ public class TestTokenAspect {
     Token<TokenIdentifier> token = new Token<TokenIdentifier>(new byte[0],
         new byte[0], DummyFs.TOKEN_KIND, new Text("127.0.0.1:1234"));
 
-    doReturn(token).when(fs).getDelegationToken(anyString());
+    doReturn(token).when(fs).getDelegationToken(any());
     doReturn(token).when(fs).getRenewToken();
 
     fs.emulateSecurityEnabled = true;
@@ -197,7 +198,7 @@ public class TestTokenAspect {
     Token<TokenIdentifier> token = new Token<TokenIdentifier>(new byte[0],
         new byte[0], DummyFs.TOKEN_KIND, new Text("127.0.0.1:1234"));
 
-    doReturn(token).when(fs).getDelegationToken(anyString());
+    doReturn(token).when(fs).getDelegationToken(any());
     doReturn(token).when(fs).getRenewToken();
 
     fs.initialize(new URI("dummyfs://127.0.0.1:1234"), conf);
@@ -304,7 +305,7 @@ public class TestTokenAspect {
 
     // now that token is invalid, should get a new one
     tokenAspect.ensureTokenInitialized();
-    verify(fs, times(2)).getDelegationToken(anyString());
+    verify(fs, times(2)).getDelegationToken(any());
     verify(fs).setDelegationToken(token2);
     assertNotSame(action, getActionFromTokenAspect(tokenAspect));
 

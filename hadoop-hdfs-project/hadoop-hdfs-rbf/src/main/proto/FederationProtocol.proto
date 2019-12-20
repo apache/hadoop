@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+syntax = "proto2";
 option java_package = "org.apache.hadoop.hdfs.federation.protocol.proto";
 option java_outer_classname = "HdfsServerFederationProtos";
 option java_generic_services = true;
@@ -45,6 +45,10 @@ message NamenodeMembershipStatsRecordProto {
   optional uint32 numOfDecommissioningDatanodes = 22;
   optional uint32 numOfDecomActiveDatanodes = 23;
   optional uint32 numOfDecomDeadDatanodes = 24;
+  optional uint32 numOfStaleDatanodes = 25;
+  optional uint32 numOfInMaintenanceLiveDataNodes = 26;
+  optional uint32 numOfInMaintenanceDeadDataNodes = 27;
+  optional uint32 numOfEnteringMaintenanceDataNodes = 28;
 }
 
 message NamenodeMembershipRecordProto {
@@ -64,6 +68,7 @@ message NamenodeMembershipRecordProto {
   optional bool isSafeMode = 14;
 
   optional NamenodeMembershipStatsRecordProto stats = 15;
+  optional string webScheme = 16;
 }
 
 message FederationNamespaceInfoProto {
@@ -139,6 +144,8 @@ message MountTableRecordProto {
   optional int32 mode = 12;
 
   optional QuotaUsageProto quota = 13;
+
+  optional bool faultTolerant = 14 [default = false];
 }
 
 message AddMountTableEntryRequestProto {
@@ -174,6 +181,14 @@ message GetMountTableEntriesResponseProto {
   optional uint64 timestamp = 2;
 }
 
+message GetDestinationRequestProto {
+  optional string srcPath = 1;
+}
+
+message  GetDestinationResponseProto {
+  repeated string destinations = 1;
+}
+
 
 /////////////////////////////////////////////////
 // Routers
@@ -193,6 +208,7 @@ message RouterRecordProto {
   optional string version = 6;
   optional string compileInfo = 7;
   optional uint64 dateStarted = 8;
+  optional string adminAddress = 9;
 }
 
 message GetRouterRegistrationRequestProto {
@@ -216,6 +232,20 @@ message RouterHeartbeatRequestProto {
 }
 
 message RouterHeartbeatResponseProto {
+  optional bool status = 1;
+}
+
+message RefreshMountTableEntriesRequestProto {
+}
+
+message RefreshMountTableEntriesResponseProto {
+  optional bool result = 1;
+}
+
+message RefreshSuperUserGroupsConfigurationRequestProto {
+}
+
+message RefreshSuperUserGroupsConfigurationResponseProto {
   optional bool status = 1;
 }
 

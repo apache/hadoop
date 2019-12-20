@@ -66,14 +66,6 @@
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
-      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-submarine/installation</directory>
-      <outputDirectory>/share/hadoop/yarn/submarine-installer</outputDirectory>
-      <includes>
-        <include>**/*</include>
-      </includes>
-      <fileMode>0755</fileMode>
-    </fileSet>
-    <fileSet>
       <directory>hadoop-yarn/conf</directory>
       <outputDirectory>etc/hadoop</outputDirectory>
       <includes>
@@ -228,6 +220,14 @@
       <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-timelineservice-hbase/hadoop-yarn-server-timelineservice-hbase-common/target/lib</directory>
       <outputDirectory>share/hadoop/${hadoop.component}/timelineservice/lib</outputDirectory>
     </fileSet>
+    <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-csi/target/lib</directory>
+      <outputDirectory>share/hadoop/${hadoop.component}/csi/lib</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-timelineservice-documentstore/target/lib</directory>
+      <outputDirectory>share/hadoop/${hadoop.component}/timelineservice/lib</outputDirectory>
+    </fileSet>
   </fileSets>
   <moduleSets>
     <moduleSet>
@@ -235,6 +235,7 @@
         <include>org.apache.hadoop:hadoop-yarn-server-timelineservice</include>
         <include>org.apache.hadoop:hadoop-yarn-server-timelineservice-hbase-client</include>
         <include>org.apache.hadoop:hadoop-yarn-server-timelineservice-hbase-common</include>
+        <include>org.apache.hadoop:hadoop-yarn-server-timelineservice-documentstore</include>
       </includes>
       <binaries>
         <outputDirectory>share/hadoop/${hadoop.component}/timelineservice</outputDirectory>
@@ -266,9 +267,20 @@
       </binaries>
     </moduleSet>
     <moduleSet>
+      <includes>
+        <include>org.apache.hadoop:hadoop-yarn-csi</include>
+      </includes>
+      <binaries>
+        <outputDirectory>share/hadoop/${hadoop.component}/csi</outputDirectory>
+        <includeDependencies>false</includeDependencies>
+        <unpack>false</unpack>
+      </binaries>
+    </moduleSet>
+    <moduleSet>
       <excludes>
         <exclude>org.apache.hadoop:hadoop-yarn-server-timelineservice*</exclude>
         <exclude>org.apache.hadoop:hadoop-yarn-ui</exclude>
+        <exclude>org.apache.hadoop:hadoop-yarn-csi</exclude>
       </excludes>
       <binaries>
         <outputDirectory>share/hadoop/${hadoop.component}</outputDirectory>

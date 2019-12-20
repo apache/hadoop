@@ -296,6 +296,18 @@ The order in which you set these configurations is unimportant, but the values y
           <value>hdfs://mycluster</value>
         </property>
 
+*   **dfs.ha.nn.not-become-active-in-safemode** - if prevent safe mode namenodes to become active
+
+    Whether allow namenode to become active when it is in safemode, when it is
+    set to true, namenode in safemode will report SERVICE_UNHEALTHY to ZKFC if
+    auto failover is on, or will throw exception to fail the transition to
+    active if auto failover is off. For example:
+
+        <property>
+          <name>dfs.ha.nn.not-become-active-in-safemode</name>
+          <value>true</value>
+        </property>
+
 ### Deployment details
 
 After all of the necessary configuration options have been set, one must initially synchronize the two HA NameNodes' on-disk metadata.

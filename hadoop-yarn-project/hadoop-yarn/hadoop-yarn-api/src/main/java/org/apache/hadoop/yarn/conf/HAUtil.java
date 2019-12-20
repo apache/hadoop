@@ -129,8 +129,8 @@ public class HAUtil {
       for (String prefix : YarnConfiguration.getServiceAddressConfKeys(conf)) {
         checkAndSetRMRPCAddress(prefix, id, conf);
       }
-      setValue.append(id);
-      setValue.append(",");
+      setValue.append(id)
+          .append(",");
     }
     conf.set(YarnConfiguration.RM_HA_IDS,
       setValue.substring(0, setValue.length() - 1));

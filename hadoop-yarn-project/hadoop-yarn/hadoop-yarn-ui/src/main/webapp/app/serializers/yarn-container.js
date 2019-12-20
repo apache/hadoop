@@ -37,7 +37,8 @@ export default DS.JSONAPISerializer.extend({
           containerExitStatus: payload.containerExitStatus + '',
           containerState: payload.containerState,
           nodeId : payload.nodeId,
-          nodeHttpAddress: payload.nodeHttpAddress
+          nodeHttpAddress: payload.nodeHttpAddress,
+          exposedPorts: payload.exposedPorts
         }
       };
 

@@ -31,6 +31,7 @@ public enum AbfsRestOperationType {
     RenamePath,
     GetAcl,
     GetPathProperties,
+    GetPathStatus,
     SetAcl,
     SetOwner,
     SetPathProperties,
@@ -38,5 +39,6 @@ public enum AbfsRestOperationType {
     Append,
     Flush,
     ReadFile,
-    DeletePath
+    DeletePath,
+    CheckAccess
 }

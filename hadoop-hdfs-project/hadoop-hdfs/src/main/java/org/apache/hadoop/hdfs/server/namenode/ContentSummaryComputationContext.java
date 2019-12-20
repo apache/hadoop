@@ -188,7 +188,7 @@ public class ContentSummaryComputationContext {
           String ecPolicyName = WritableUtils.readString(din);
           return dir.getFSNamesystem()
               .getErasureCodingPolicyManager()
-              .getEnabledPolicyByName(ecPolicyName)
+              .getErasureCodingPolicyByName(ecPolicyName)
               .getName();
         }
       } else if (inode.getParent() != null) {

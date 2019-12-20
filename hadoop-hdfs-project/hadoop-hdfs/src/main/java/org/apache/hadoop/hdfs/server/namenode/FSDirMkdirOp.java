@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.fs.permission.FsCreateModes;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
@@ -187,10 +188,19 @@ class FSDirMkdirOp {
   private static PermissionStatus addImplicitUwx(PermissionStatus parentPerm,
       PermissionStatus perm) {
     FsPermission p = parentPerm.getPermission();
-    FsPermission ancestorPerm = new FsPermission(
-        p.getUserAction().or(FsAction.WRITE_EXECUTE),
-        p.getGroupAction(),
-        p.getOtherAction());
+    FsPermission ancestorPerm;
+    if (p.getUnmasked() == null) {
+      ancestorPerm = new FsPermission(
+          p.getUserAction().or(FsAction.WRITE_EXECUTE),
+          p.getGroupAction(),
+          p.getOtherAction());
+    } else {
+      ancestorPerm = FsCreateModes.create(
+          new FsPermission(
+            p.getUserAction().or(FsAction.WRITE_EXECUTE),
+            p.getGroupAction(),
+            p.getOtherAction()), p.getUnmasked());
+    }
     return new PermissionStatus(perm.getUserName(), perm.getGroupName(),
         ancestorPerm);
   }

@@ -37,8 +37,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import com.google.common.base.Strings;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
@@ -67,8 +67,8 @@ import com.google.common.base.Strings;
  * Manager holding the attributes to Labels.
  */
 public class NodeAttributesManagerImpl extends NodeAttributesManager {
-  protected static final Log LOG =
-      LogFactory.getLog(NodeAttributesManagerImpl.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(NodeAttributesManagerImpl.class);
   /**
    * If a user doesn't specify value for a label, then empty string is
    * considered as default.
@@ -158,9 +158,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
       AttributeMappingOperationType op,
       Map<NodeAttributeKey, RMNodeAttribute> newAttributesToBeAdded,
       String attributePrefix) {
+    writeLock.lock();
     try {
-      writeLock.lock();
-
       // shows node->attributes Mapped as part of this operation.
       StringBuilder logMsg = new StringBuilder(op.name());
       logMsg.append(" attributes on nodes:");
@@ -194,16 +193,13 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
         default:
           break;
         }
-        logMsg.append(" NM = ");
-        logMsg.append(entry.getKey());
-        logMsg.append(", attributes=[ ");
-        logMsg.append(StringUtils.join(entry.getValue().keySet(), ","));
-        logMsg.append("] ,");
+        logMsg.append(" NM = ")
+            .append(entry.getKey())
+            .append(", attributes=[ ")
+            .append(StringUtils.join(entry.getValue().keySet(), ","))
+            .append("] ,");
       }
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(logMsg);
-      }
+      LOG.debug("{}", logMsg);
 
       if (null != dispatcher && NodeAttribute.PREFIX_CENTRALIZED
           .equals(attributePrefix)) {
@@ -221,8 +217,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
 
       // Notify RM
       if (rmContext != null && rmContext.getDispatcher() != null) {
-        LOG.info("Updated NodeAttribute event to RM:" + newNodeToAttributesMap
-            .values());
+        LOG.info("Updated NodeAttribute event to RM:"
+            + newNodeToAttributesMap);
         rmContext.getDispatcher().getEventHandler().handle(
             new NodeAttributesUpdateSchedulerEvent(newNodeToAttributesMap));
       }
@@ -304,9 +300,11 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
       for (NodeAttribute attribute : nodeToAttrMappingEntry.getValue()) {
         NodeAttributeKey attributeKey = attribute.getAttributeKey();
         String attributeName = attributeKey.getAttributeName().trim();
-        NodeLabelUtil.checkAndThrowLabelName(attributeName);
+        NodeLabelUtil.checkAndThrowAttributeName(attributeName);
         NodeLabelUtil
             .checkAndThrowAttributePrefix(attributeKey.getAttributePrefix());
+        NodeLabelUtil
+            .checkAndThrowAttributeValue(attribute.getAttributeValue());
 
         // ensure trimmed values are set back
         attributeKey.setAttributeName(attributeName);
@@ -404,8 +402,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   public Map<NodeAttributeKey,
       Map<String, AttributeValue>> getAttributesToNodes(
       Set<NodeAttributeKey> attributes) {
+    readLock.lock();
     try {
-      readLock.lock();
       boolean fetchAllAttributes = (attributes == null || attributes.isEmpty());
       Map<NodeAttributeKey, Map<String, AttributeValue>> attributesToNodes =
           new HashMap<>();
@@ -424,8 +422,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   }
 
   public Resource getResourceByAttribute(NodeAttribute attribute) {
+    readLock.lock();
     try {
-      readLock.lock();
       return clusterAttributes.containsKey(attribute.getAttributeKey())
           ? clusterAttributes.get(attribute.getAttributeKey()).getResource()
           : Resource.newInstance(0, 0);
@@ -437,8 +435,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   @Override
   public Map<NodeAttribute, AttributeValue> getAttributesForNode(
       String hostName) {
+    readLock.lock();
     try {
-      readLock.lock();
       return nodeCollections.containsKey(hostName)
           ? nodeCollections.get(hostName).getAttributes()
           : new HashMap<>();
@@ -449,8 +447,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
 
   @Override
   public List<NodeToAttributes> getNodeToAttributes(Set<String> prefix) {
+    readLock.lock();
     try {
-      readLock.lock();
       List<NodeToAttributes> nodeToAttributes = new ArrayList<>();
       nodeCollections.forEach((k, v) -> {
         List<NodeAttribute> attrs;
@@ -477,8 +475,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   @Override
   public Map<String, Set<NodeAttribute>> getNodesToAttributes(
       Set<String> hostNames) {
+    readLock.lock();
     try {
-      readLock.lock();
       boolean fetchAllNodes = (hostNames == null || hostNames.isEmpty());
       Map<String, Set<NodeAttribute>> nodeToAttrs = new HashMap<>();
       if (fetchAllNodes) {
@@ -499,8 +497,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   }
 
   public void activateNode(NodeId nodeId, Resource resource) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       String hostName = nodeId.getHost();
       Host host = nodeCollections.get(hostName);
       if (host == null) {
@@ -517,8 +515,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   }
 
   public void deactivateNode(NodeId nodeId) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       Host host = nodeCollections.get(nodeId.getHost());
       for (NodeAttribute attribute : host.getAttributes().keySet()) {
         clusterAttributes.get(attribute.getAttributeKey())
@@ -745,8 +743,7 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
 
     // Notify RM
     if (rmContext != null && rmContext.getDispatcher() != null) {
-      LOG.info("Updated NodeAttribute event to RM:" + newNodeToAttributesMap
-          .values());
+      LOG.info("Updated NodeAttribute event to RM:" + newNodeToAttributesMap);
       rmContext.getDispatcher().getEventHandler().handle(
           new NodeAttributesUpdateSchedulerEvent(newNodeToAttributesMap));
     }

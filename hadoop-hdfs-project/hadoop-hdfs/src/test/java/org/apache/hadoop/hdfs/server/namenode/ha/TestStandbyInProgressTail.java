@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Iterator;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -30,9 +33,11 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
+import org.apache.hadoop.hdfs.qjournal.server.JournalTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -43,6 +48,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 /**
@@ -64,6 +70,8 @@ public class TestStandbyInProgressTail {
     // Set period of tail edits to a large value (20 mins) for test purposes
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 20 * 60);
     conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
+    conf.setInt(DFSConfigKeys.DFS_QJOURNAL_SELECT_INPUT_STREAMS_TIMEOUT_KEY,
+        500);
     HAUtil.setAllowStandbyReads(conf, true);
     qjmhaCluster = new MiniQJMHACluster.Builder(conf).build();
     cluster = qjmhaCluster.getDfsCluster();
@@ -179,12 +187,7 @@ public class TestStandbyInProgressTail {
     cluster.getNameNode(0).getRpcServer().mkdirs("/test",
             FsPermission.createImmutable((short) 0755), true);
 
-    nn1.getNamesystem().getEditLogTailer().doTailEdits();
-
-    // After waiting for 5 seconds, StandbyNameNode should finish tailing
-    // in-progress logs
-    assertNotNull(getFileInfo(cluster.getNameNode(1),
-            "/test", true, false, false));
+    waitForFileInfo(nn1, "/test");
 
     // Restarting the standby should not finalize any edits files
     // in the shared directory when it starts up!
@@ -227,10 +230,9 @@ public class TestStandbyInProgressTail {
 
     cluster.getNameNode(0).getRpcServer().mkdirs("/test",
             FsPermission.createImmutable((short) 0755), true);
-    nn1.getNamesystem().getEditLogTailer().doTailEdits();
 
     // StandbyNameNode should tail the in-progress edit
-    assertNotNull(getFileInfo(nn1, "/test", true, false, false));
+    waitForFileInfo(nn1, "/test");
 
     // Create a new edit and finalized it
     cluster.getNameNode(0).getRpcServer().mkdirs("/test2",
@@ -238,17 +240,14 @@ public class TestStandbyInProgressTail {
     nn0.getRpcServer().rollEditLog();
 
     // StandbyNameNode shouldn't tail the edit since we do not call the method
-    assertNull(getFileInfo(nn1, "/test2", true, false, false));
+    waitForFileInfo(nn1, "/test2");
 
     // Create a new in-progress edit and let SBNN do the tail
     cluster.getNameNode(0).getRpcServer().mkdirs("/test3",
             FsPermission.createImmutable((short) 0755), true);
-    nn1.getNamesystem().getEditLogTailer().doTailEdits();
 
     // StandbyNameNode should tail the finalized edit and the new in-progress
-    assertNotNull(getFileInfo(nn1, "/test", true, false, false));
-    assertNotNull(getFileInfo(nn1, "/test2", true, false, false));
-    assertNotNull(getFileInfo(nn1, "/test3", true, false, false));
+    waitForFileInfo(nn1, "/test", "/test2", "/test3");
   }
 
   @Test
@@ -275,12 +274,8 @@ public class TestStandbyInProgressTail {
     assertNull(getFileInfo(nn1, "/test2", true, false, false));
     assertNull(getFileInfo(nn1, "/test3", true, false, false));
 
-    nn1.getNamesystem().getEditLogTailer().doTailEdits();
-
-    // StandbyNameNode shoudl tail the finalized edit and the new in-progress
-    assertNotNull(getFileInfo(nn1, "/test", true, false, false));
-    assertNotNull(getFileInfo(nn1, "/test2", true, false, false));
-    assertNotNull(getFileInfo(nn1, "/test3", true, false, false));
+    // StandbyNameNode should tail the finalized edit and the new in-progress
+    waitForFileInfo(nn1, "/test", "/test2", "/test3");
   }
 
   @Test
@@ -295,19 +290,14 @@ public class TestStandbyInProgressTail {
             FsPermission.createImmutable((short) 0755), true);
     cluster.getNameNode(0).getRpcServer().mkdirs("/test2",
             FsPermission.createImmutable((short) 0755), true);
-    nn1.getNamesystem().getEditLogTailer().doTailEdits();
+    waitForFileInfo(nn1, "/test", "/test2");
     nn0.getRpcServer().rollEditLog();
-    assertNotNull(getFileInfo(nn1, "/test", true, false, false));
-    assertNotNull(getFileInfo(nn1, "/test2", true, false, false));
 
     cluster.getNameNode(0).getRpcServer().mkdirs("/test3",
             FsPermission.createImmutable((short) 0755), true);
-    nn1.getNamesystem().getEditLogTailer().doTailEdits();
 
-    // StandbyNameNode shoudl tail the finalized edit and the new in-progress
-    assertNotNull(getFileInfo(nn1, "/test", true, false, false));
-    assertNotNull(getFileInfo(nn1, "/test2", true, false, false));
-    assertNotNull(getFileInfo(nn1, "/test3", true, false, false));
+    // StandbyNameNode should tail the finalized edit and the new in-progress
+    waitForFileInfo(nn1, "/test", "/test2", "/test3");
   }
 
   @Test
@@ -325,8 +315,85 @@ public class TestStandbyInProgressTail {
         FsPermission.createImmutable((short) 0755), true);
     cluster.getNameNode(0).getRpcServer().rollEdits();
 
-    cluster.getNameNode(1).getNamesystem().getEditLogTailer().doTailEdits();
-    assertNotNull(getFileInfo(nn1, "/test", true, false, false));
+    waitForFileInfo(nn1, "/test");
+  }
+
+  @Test
+  public void testEditsServedViaCache() throws Exception {
+    cluster.transitionToActive(0);
+    cluster.waitActive(0);
+
+    mkdirs(nn0, "/test", "/test2");
+    nn0.getRpcServer().rollEditLog();
+    for (int idx = 0; idx < qjmhaCluster.getJournalCluster().getNumNodes();
+        idx++) {
+      File[] startingEditFile = qjmhaCluster.getJournalCluster()
+          .getCurrentDir(idx, DFSUtil.getNamenodeNameServiceId(conf))
+          .listFiles(new FilenameFilter() {
+            @Override
+            public boolean accept(File dir, String name) {
+              return name.matches("edits_0+1-[0-9]+");
+            }
+          });
+      assertNotNull(startingEditFile);
+      assertEquals(1, startingEditFile.length);
+      // Delete this edit file to ensure that edits can't be served via the
+      // streaming mechanism - RPC/cache-based only
+      startingEditFile[0].delete();
+    }
+    // Ensure edits were not tailed before the edit files were deleted;
+    // quick spot check of a single dir
+    assertNull(getFileInfo(nn1, "/tmp0", false, false, false));
+
+    waitForFileInfo(nn1, "/test", "/test2");
+  }
+
+  @Test
+  public void testCorruptJournalCache() throws Exception {
+    cluster.transitionToActive(0);
+    cluster.waitActive(0);
+
+    // Shut down one JN so there is only a quorum remaining to make it easier
+    // to manage the remaining two
+    qjmhaCluster.getJournalCluster().getJournalNode(0).stopAndJoin(0);
+
+    mkdirs(nn0, "/test", "/test2");
+    JournalTestUtil.corruptJournaledEditsCache(1,
+        qjmhaCluster.getJournalCluster().getJournalNode(1)
+            .getJournal(DFSUtil.getNamenodeNameServiceId(conf)));
+
+    nn0.getRpcServer().rollEditLog();
+
+    waitForFileInfo(nn1, "/test", "/test2");
+
+    mkdirs(nn0, "/test3", "/test4");
+    JournalTestUtil.corruptJournaledEditsCache(3,
+        qjmhaCluster.getJournalCluster().getJournalNode(2)
+            .getJournal(DFSUtil.getNamenodeNameServiceId(conf)));
+
+    waitForFileInfo(nn1, "/test3", "/test4");
+  }
+
+  @Test
+  public void testTailWithoutCache() throws Exception {
+    qjmhaCluster.shutdown();
+    // Effectively disable the cache by setting its size too small to be used
+    conf.setInt(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY, 1);
+    qjmhaCluster = new MiniQJMHACluster.Builder(conf).build();
+    cluster = qjmhaCluster.getDfsCluster();
+    cluster.transitionToActive(0);
+    cluster.waitActive(0);
+    nn0 = cluster.getNameNode(0);
+    nn1 = cluster.getNameNode(1);
+
+    mkdirs(nn0, "/test", "/test2");
+    nn0.getRpcServer().rollEditLog();
+
+    mkdirs(nn0, "/test3", "/test4");
+
+    // Skip the last directory; the JournalNodes' idea of the committed
+    // txn ID may not have been updated to include it yet
+    waitForFileInfo(nn1, "/test", "/test2", "/test3");
   }
 
   /**
@@ -356,4 +423,43 @@ public class TestStandbyInProgressTail {
       GenericTestUtils.assertGlobEquals(editDir, "edits_.*", files);
     }
   }
+
+  /**
+   * Create the given directories on the provided NameNode.
+   */
+  private static void mkdirs(NameNode nameNode, String... dirNames)
+      throws Exception {
+    for (String dirName : dirNames) {
+      nameNode.getRpcServer().mkdirs(dirName,
+          FsPermission.createImmutable((short) 0755), true);
+    }
+  }
+
+  /**
+   * Wait up to 1 second until the given NameNode is aware of the existing of
+   * all of the provided fileNames.
+   */
+  private static void waitForFileInfo(NameNode standbyNN, String... fileNames)
+      throws Exception {
+    List<String> remainingFiles = Lists.newArrayList(fileNames);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          standbyNN.getNamesystem().getEditLogTailer().doTailEdits();
+          for (Iterator<String> it = remainingFiles.iterator(); it.hasNext();) {
+            if (getFileInfo(standbyNN, it.next(), true, false, false) == null) {
+              return false;
+            } else {
+              it.remove();
+            }
+          }
+          return true;
+        } catch (IOException|InterruptedException e) {
+          throw new AssertionError("Exception while waiting: " + e);
+        }
+      }
+    }, 10, 1000);
+  }
+
 }

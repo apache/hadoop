@@ -105,7 +105,8 @@ public class TestJettyHelper implements MethodRule {
       conn.setHost(host);
       conn.setPort(port);
       if (ssl) {
-        SslContextFactory sslContextFactory = new SslContextFactory();
+        SslContextFactory.Server sslContextFactory =
+            new SslContextFactory.Server();
         sslContextFactory.setNeedClientAuth(false);
         sslContextFactory.setKeyStorePath(keyStore);
         sslContextFactory.setKeyStoreType(keyStoreType);

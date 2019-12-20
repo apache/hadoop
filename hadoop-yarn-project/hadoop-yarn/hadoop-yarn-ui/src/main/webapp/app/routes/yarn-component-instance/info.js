@@ -39,6 +39,11 @@ export default AbstractRoute.extend({
     });
   },
 
+  afterModel(model) {
+    const appContrl = this.controllerFor('application');
+    model.userInfo = appContrl.get('userInfo');
+  },
+
   unloadAll() {
     this.store.unloadAll('yarn-component-instance');
   }

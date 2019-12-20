@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMWithCustomAMLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.ParameterizedSchedulerTestBase;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -79,7 +80,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -216,7 +217,7 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
     rm.start();
 
     // Submit an app
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
 
     // Set up a node.
     MockNM nm1 = rm.registerNode("localhost:1234", 3072);
@@ -446,7 +447,7 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
     rm.start();
 
     // Submit an app
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
 
     // Set up a node.
     MockNM nm1 = rm.registerNode("localhost:1234", 3072);

@@ -234,7 +234,7 @@ public class TestProtectedDirectories {
   }
 
   @Test
-  public void testAll() throws Throwable {
+  public void testDelete() throws Throwable {
     for (TestMatrixEntry testMatrixEntry : createTestMatrix()) {
       Configuration conf = new HdfsConfiguration();
       MiniDFSCluster cluster = setupTestCase(
@@ -257,6 +257,34 @@ public class TestProtectedDirectories {
                 "Either all paths should be deleted or none",
                 countAfter, is(countBefore));
           }
+        }
+      } finally {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /*
+   * Verify that protected directories could not be renamed.
+   */
+  @Test
+  public void testRename() throws Throwable {
+    for (TestMatrixEntry testMatrixEntry : createTestMatrix()) {
+      Configuration conf = new HdfsConfiguration();
+      MiniDFSCluster cluster = setupTestCase(
+          conf, testMatrixEntry.getProtectedPaths(),
+          testMatrixEntry.getUnprotectedPaths());
+
+      try {
+        LOG.info("Running {}", testMatrixEntry);
+        FileSystem fs = cluster.getFileSystem();
+        for (Path srcPath : testMatrixEntry.getAllPathsToBeDeleted()) {
+          assertThat(
+              testMatrixEntry + ": Testing whether "
+                  + srcPath + " can be renamed",
+              renamePath(fs, srcPath,
+                  new Path(srcPath.toString() + "_renamed")),
+              is(testMatrixEntry.canPathBeRenamed(srcPath)));
         }
       } finally {
         cluster.shutdown();
@@ -356,6 +384,26 @@ public class TestProtectedDirectories {
     }
   }
 
+  /**
+   * Return true if the path was successfully renamed. False if it
+   * failed with AccessControlException. Any other exceptions are
+   * propagated to the caller.
+   *
+   * @param fs
+   * @param srcPath
+   * @param dstPath
+   * @return
+   */
+  private boolean renamePath(FileSystem fs, Path srcPath, Path dstPath)
+      throws IOException {
+    try {
+      fs.rename(srcPath, dstPath);
+      return true;
+    } catch (AccessControlException ace) {
+      return false;
+    }
+  }
+
   private static class TestMatrixEntry {
     // true if the path can be deleted.
     final Map<Path, Boolean> protectedPaths = Maps.newHashMap();
@@ -395,6 +443,10 @@ public class TestProtectedDirectories {
           protectedPaths.get(path) : unProtectedPaths.get(path);
     }
 
+    public boolean canPathBeRenamed(Path path) {
+      return protectedPaths.containsKey(path) ?
+          protectedPaths.get(path) : unProtectedPaths.get(path);
+    }
 
     public TestMatrixEntry addProtectedDir(String dir, boolean canBeDeleted) {
       protectedPaths.put(new Path(dir), canBeDeleted);

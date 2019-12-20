@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -1616,7 +1617,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
         for(ContainerStatus cStatus :allocResponse
             .getCompletedContainersStatuses()) {
           if(releases.contains(cStatus.getContainerId())) {
-            assertEquals(cStatus.getState(), ContainerState.COMPLETE);
+            assertThat(cStatus.getState()).isEqualTo(ContainerState.COMPLETE);
             assertEquals(-100, cStatus.getExitStatus());
             releases.remove(cStatus.getContainerId());
           }

@@ -84,6 +84,7 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
   private boolean overWrite = false;
   private boolean append = false;
   private boolean verboseLog = false;
+  private boolean directWrite = false;
   private EnumSet<FileAttribute> preserve = EnumSet.noneOf(FileAttribute.class);
 
   private FileSystem targetFS = null;
@@ -111,6 +112,8 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
         DistCpOptionSwitch.VERBOSE_LOG.getConfigLabel(), false);
     preserve = DistCpUtils.unpackAttributes(conf.get(DistCpOptionSwitch.
         PRESERVE_STATUS.getConfigLabel()));
+    directWrite = conf.getBoolean(
+        DistCpOptionSwitch.DIRECT_WRITE.getConfigLabel(), false);
 
     targetWorkPath = new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
     Path targetFinalPath = new Path(conf.get(
@@ -136,7 +139,6 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
   public void map(Text relPath, CopyListingFileStatus sourceFileStatus,
           Context context) throws IOException, InterruptedException {
     Path sourcePath = sourceFileStatus.getPath();
-
     if (LOG.isDebugEnabled())
       LOG.debug("DistCpMapper::map(): Received " + sourcePath + ", " + relPath);
 
@@ -253,7 +255,8 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
     long bytesCopied;
     try {
       bytesCopied = (Long) new RetriableFileCopyCommand(skipCrc, description,
-          action).execute(sourceFileStatus, target, context, fileAttributes);
+          action, directWrite).execute(sourceFileStatus, target, context,
+              fileAttributes);
     } catch (Exception e) {
       context.setStatus("Copy Failure: " + sourceFileStatus.getPath());
       throw new IOException("File copy failed: " + sourceFileStatus.getPath() +
@@ -350,7 +353,7 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
     if (sameLength && sameBlockSize) {
       return skipCrc ||
           DistCpUtils.checksumsAreEqual(sourceFS, source.getPath(), null,
-              targetFS, target.getPath());
+              targetFS, target.getPath(), source.getLen());
     } else {
       return false;
     }

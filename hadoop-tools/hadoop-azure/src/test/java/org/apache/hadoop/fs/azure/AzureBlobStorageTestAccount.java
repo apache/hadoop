@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
+import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsSink;
@@ -529,6 +530,8 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
 
   static CloudStorageAccount createTestAccount(Configuration conf)
       throws URISyntaxException, KeyProviderException {
+    AzureTestUtils.assumeNamespaceDisabled(conf);
+
     String testAccountName = verifyWasbAccountNameInConfig(conf);
     if (testAccountName == null) {
       LOG.warn("Skipping live Azure test because of missing test account");
@@ -594,7 +597,10 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
       }
       // Remove the account key from the configuration to make sure we don't
       // cheat and use that.
-      conf.set(ACCOUNT_KEY_PROPERTY_NAME + accountName, "");
+      // but only if not in secure mode, which requires that login
+      if (!conf.getBoolean(AzureNativeFileSystemStore.KEY_USE_SECURE_MODE, false)) {
+        conf.set(ACCOUNT_KEY_PROPERTY_NAME + accountName, "");
+      }
       // Set the SAS key.
       conf.set(SAS_PROPERTY_NAME + containerName + "." + accountName, sas);
     }

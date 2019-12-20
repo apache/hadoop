@@ -18,11 +18,16 @@
 
 package org.apache.hadoop.fs.s3a.scale;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
+import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 
+import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -54,6 +59,12 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
   static final long ACCESS_TIME = System.currentTimeMillis();
 
   static final Path BUCKET_ROOT = new Path("s3a://fake-bucket/");
+  private ITtlTimeProvider ttlTimeProvider;
+
+  @Before
+  public void initialize() {
+    ttlTimeProvider = new S3Guard.TtlTimeProvider(new Configuration());
+  }
 
   /**
    * Subclasses should override this to provide the MetadataStore they which
@@ -62,6 +73,10 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
    * @throws IOException
    */
   public abstract MetadataStore createMetadataStore() throws IOException;
+
+  protected ITtlTimeProvider getTtlTimeProvider() {
+    return ttlTimeProvider;
+  }
 
   @Test
   public void test_010_Put() throws Throwable {
@@ -129,13 +144,15 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
             toDelete = movedPaths;
             toCreate = origMetas;
           }
-          ms.move(toDelete, toCreate);
+          ms.move(toDelete, toCreate, null);
         }
         moveTimer.end();
         printTiming(LOG, "move", moveTimer, operations);
       } finally {
         // Cleanup
         clearMetadataStore(ms, count);
+        ms.move(origPaths, null, null);
+        ms.move(movedPaths, null, null);
       }
     }
   }
@@ -170,7 +187,8 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
           status.getOwner());
     } else {
       return new S3AFileStatus(status.getLen(), status.getModificationTime(),
-          status.getPath(), status.getBlockSize(), status.getOwner());
+          status.getPath(), status.getBlockSize(), status.getOwner(),
+          status.getETag(), status.getVersionId());
     }
   }
 
@@ -180,9 +198,13 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
     long count = 0;
     NanoTimer putTimer = new NanoTimer();
     describe("Inserting into MetadataStore");
-    for (PathMetadata p : paths) {
-      ms.put(p);
-      count++;
+    try (BulkOperationState operationState =
+            ms.initiateBulkWrite(BulkOperationState.OperationType.Put,
+                BUCKET_ROOT)) {
+      for (PathMetadata p : paths) {
+        ms.put(p, operationState);
+        count++;
+      }
     }
     putTimer.end();
     printTiming(LOG, "put", putTimer, count);
@@ -193,7 +215,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
       throws IOException {
     describe("Recursive deletion");
     NanoTimer deleteTimer = new NanoTimer();
-    ms.deleteSubtree(BUCKET_ROOT);
+    ms.deleteSubtree(BUCKET_ROOT, null);
     deleteTimer.end();
     printTiming(LOG, "delete", deleteTimer, count);
   }
@@ -207,7 +229,8 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
   }
 
   protected static S3AFileStatus makeFileStatus(Path path) throws IOException {
-    return new S3AFileStatus(SIZE, ACCESS_TIME, path, BLOCK_SIZE, OWNER);
+    return new S3AFileStatus(SIZE, ACCESS_TIME, path, BLOCK_SIZE, OWNER,
+        null, null);
   }
 
   protected static S3AFileStatus makeDirStatus(Path p) throws IOException {

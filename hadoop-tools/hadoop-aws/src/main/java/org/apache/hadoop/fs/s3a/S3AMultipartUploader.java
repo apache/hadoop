@@ -25,7 +25,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
@@ -68,10 +70,8 @@ public class S3AMultipartUploader extends MultipartUploader {
   public static final String HEADER = "S3A-part01";
 
   public S3AMultipartUploader(FileSystem fs, Configuration conf) {
-    if (!(fs instanceof S3AFileSystem)) {
-      throw new IllegalArgumentException(
-          "S3A MultipartUploads must use S3AFileSystem");
-    }
+    Preconditions.checkArgument(fs instanceof S3AFileSystem,
+        "Wrong filesystem: expected S3A but got %s", fs);
     s3a = (S3AFileSystem) fs;
   }
 
@@ -88,6 +88,8 @@ public class S3AMultipartUploader extends MultipartUploader {
   public PartHandle putPart(Path filePath, InputStream inputStream,
       int partNumber, UploadHandle uploadId, long lengthInBytes)
       throws IOException {
+    checkPutArguments(filePath, inputStream, partNumber, uploadId,
+        lengthInBytes);
     byte[] uploadIdBytes = uploadId.toByteArray();
     checkUploadId(uploadIdBytes);
     String key = s3a.pathToKey(filePath);
@@ -105,14 +107,16 @@ public class S3AMultipartUploader extends MultipartUploader {
 
   @Override
   public PathHandle complete(Path filePath,
-      List<Pair<Integer, PartHandle>> handles, UploadHandle uploadId)
+      Map<Integer, PartHandle> handleMap,
+      UploadHandle uploadId)
       throws IOException {
     byte[] uploadIdBytes = uploadId.toByteArray();
     checkUploadId(uploadIdBytes);
-    if (handles.isEmpty()) {
-      throw new IOException("Empty upload");
-    }
 
+    checkPartHandles(handleMap);
+    List<Map.Entry<Integer, PartHandle>> handles =
+        new ArrayList<>(handleMap.entrySet());
+    handles.sort(Comparator.comparingInt(Map.Entry::getKey));
     final WriteOperationHelper writeHelper = s3a.getWriteOperationHelper();
     String key = s3a.pathToKey(filePath);
 
@@ -121,11 +125,11 @@ public class S3AMultipartUploader extends MultipartUploader {
     ArrayList<PartETag> eTags = new ArrayList<>();
     eTags.ensureCapacity(handles.size());
     long totalLength = 0;
-    for (Pair<Integer, PartHandle> handle : handles) {
-      byte[] payload = handle.getRight().toByteArray();
+    for (Map.Entry<Integer, PartHandle> handle : handles) {
+      byte[] payload = handle.getValue().toByteArray();
       Pair<Long, String> result = parsePartHandlePayload(payload);
       totalLength += result.getLeft();
-      eTags.add(new PartETag(handle.getLeft(), result.getRight()));
+      eTags.add(new PartETag(handle.getKey(), result.getRight()));
     }
     AtomicInteger errorCount = new AtomicInteger(0);
     CompleteMultipartUploadResult result = writeHelper.completeMPUwithRetries(
@@ -172,7 +176,7 @@ public class S3AMultipartUploader extends MultipartUploader {
       throws IOException {
     Preconditions.checkArgument(StringUtils.isNotEmpty(eTag),
         "Empty etag");
-    Preconditions.checkArgument(len > 0,
+    Preconditions.checkArgument(len >= 0,
         "Invalid length");
 
     ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -190,6 +194,7 @@ public class S3AMultipartUploader extends MultipartUploader {
    * @return the length and etag
    * @throws IOException error reading the payload
    */
+  @VisibleForTesting
   static Pair<Long, String> parsePartHandlePayload(byte[] data)
       throws IOException {
 
@@ -201,7 +206,7 @@ public class S3AMultipartUploader extends MultipartUploader {
       }
       final long len = input.readLong();
       final String etag = input.readUTF();
-      if (len <= 0) {
+      if (len < 0) {
         throw new IOException("Negative length");
       }
       return Pair.of(len, etag);

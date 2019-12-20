@@ -81,6 +81,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -657,7 +658,7 @@ public class TestOpportunisticContainerAllocationE2E {
         for (ContainerStatus cStatus : allocResponse
             .getCompletedContainersStatuses()) {
           if (releases.contains(cStatus.getContainerId())) {
-            assertEquals(cStatus.getState(), ContainerState.COMPLETE);
+            assertThat(cStatus.getState()).isEqualTo(ContainerState.COMPLETE);
             assertEquals(-100, cStatus.getExitStatus());
             releases.remove(cStatus.getContainerId());
           }

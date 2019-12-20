@@ -293,7 +293,7 @@ public class PBHelperClient {
   }
 
   public static HdfsProtos.ChecksumTypeProto convert(DataChecksum.Type type) {
-    return HdfsProtos.ChecksumTypeProto.valueOf(type.id);
+    return HdfsProtos.ChecksumTypeProto.forNumber(type.id);
   }
 
   public static HdfsProtos.BlockChecksumTypeProto convert(
@@ -349,11 +349,12 @@ public class PBHelperClient {
   }
 
   public static TokenProto convert(Token<?> tok) {
-    return TokenProto.newBuilder().
+    TokenProto.Builder builder = TokenProto.newBuilder().
         setIdentifier(getByteString(tok.getIdentifier())).
         setPassword(getByteString(tok.getPassword())).
         setKindBytes(getFixedByteString(tok.getKind())).
-        setServiceBytes(getFixedByteString(tok.getService())).build();
+        setServiceBytes(getFixedByteString(tok.getService()));
+    return builder.build();
   }
 
   public static ShortCircuitShmIdProto convert(ShmId shmId) {
@@ -774,6 +775,11 @@ public class PBHelperClient {
     for (String storageId : blockTokenSecret.getStorageIds()) {
       builder.addStorageIds(storageId);
     }
+
+    byte[] handshake = blockTokenSecret.getHandshakeMsg();
+    if (handshake != null && handshake.length > 0) {
+      builder.setHandshakeSecret(getByteString(handshake));
+    }
     return builder.build();
   }
 
@@ -826,9 +832,11 @@ public class PBHelperClient {
 
   public static Token<BlockTokenIdentifier> convert(
       TokenProto blockToken) {
-    return new Token<>(blockToken.getIdentifier()
+    Token<BlockTokenIdentifier> token =
+        new Token<>(blockToken.getIdentifier()
         .toByteArray(), blockToken.getPassword().toByteArray(), new Text(
         blockToken.getKind()), new Text(blockToken.getService()));
+    return token;
   }
 
   // DatanodeId
@@ -1107,7 +1115,7 @@ public class PBHelperClient {
   }
 
   public static FsActionProto convert(FsAction v) {
-    return FsActionProto.valueOf(v != null ? v.ordinal() : 0);
+    return FsActionProto.forNumber(v != null ? v.ordinal() : 0);
   }
 
   public static XAttrProto convertXAttrProto(XAttr a) {
@@ -1149,7 +1157,7 @@ public class PBHelperClient {
   }
 
   static XAttrNamespaceProto convert(XAttr.NameSpace v) {
-    return XAttrNamespaceProto.valueOf(v.ordinal());
+    return XAttrNamespaceProto.forNumber(v.ordinal());
   }
 
   static XAttr.NameSpace convert(XAttrNamespaceProto v) {
@@ -1241,7 +1249,7 @@ public class PBHelperClient {
   }
 
   static AclEntryScopeProto convert(AclEntryScope v) {
-    return AclEntryScopeProto.valueOf(v.ordinal());
+    return AclEntryScopeProto.forNumber(v.ordinal());
   }
 
   private static AclEntryScope convert(AclEntryScopeProto v) {
@@ -1249,7 +1257,7 @@ public class PBHelperClient {
   }
 
   static AclEntryTypeProto convert(AclEntryType e) {
-    return AclEntryTypeProto.valueOf(e.ordinal());
+    return AclEntryTypeProto.forNumber(e.ordinal());
   }
 
   private static AclEntryType convert(AclEntryTypeProto v) {
@@ -2255,7 +2263,7 @@ public class PBHelperClient {
 
   public static FsServerDefaultsProto convert(FsServerDefaults fs) {
     if (fs == null) return null;
-    return FsServerDefaultsProto.newBuilder().
+    FsServerDefaultsProto.Builder builder = FsServerDefaultsProto.newBuilder().
         setBlockSize(fs.getBlockSize()).
         setBytesPerChecksum(fs.getBytesPerChecksum()).
         setWritePacketSize(fs.getWritePacketSize())
@@ -2264,9 +2272,11 @@ public class PBHelperClient {
         .setEncryptDataTransfer(fs.getEncryptDataTransfer())
         .setTrashInterval(fs.getTrashInterval())
         .setChecksumType(convert(fs.getChecksumType()))
-        .setKeyProviderUri(fs.getKeyProviderUri())
-        .setPolicyId(fs.getDefaultStoragePolicyId())
-        .build();
+        .setPolicyId(fs.getDefaultStoragePolicyId());
+    if (fs.getKeyProviderUri() != null) {
+      builder.setKeyProviderUri(fs.getKeyProviderUri());
+    }
+    return builder.build();
   }
 
   public static EnumSetWritable<CreateFlag> convertCreateFlag(int flag) {
@@ -3210,7 +3220,7 @@ public class PBHelperClient {
 
   public static HdfsProtos.ErasureCodingPolicyState convertECState(
       ErasureCodingPolicyState state) {
-    return HdfsProtos.ErasureCodingPolicyState.valueOf(state.getValue());
+    return HdfsProtos.ErasureCodingPolicyState.forNumber(state.getValue());
   }
 
   /**
@@ -3346,7 +3356,7 @@ public class PBHelperClient {
       EnumSet<AddBlockFlag> flags) {
     List<AddBlockFlagProto> ret = new ArrayList<>();
     for (AddBlockFlag flag : flags) {
-      AddBlockFlagProto abfp = AddBlockFlagProto.valueOf(flag.getMode());
+      AddBlockFlagProto abfp = AddBlockFlagProto.forNumber(flag.getMode());
       if (abfp != null) {
         ret.add(abfp);
       }
@@ -3399,7 +3409,8 @@ public class PBHelperClient {
       EnumSet<OpenFilesType> types) {
     List<OpenFilesTypeProto> typeProtos = new ArrayList<>();
     for (OpenFilesType type : types) {
-      OpenFilesTypeProto typeProto = OpenFilesTypeProto.valueOf(type.getMode());
+      OpenFilesTypeProto typeProto = OpenFilesTypeProto
+          .forNumber(type.getMode());
       if (typeProto != null) {
         typeProtos.add(typeProto);
       }

@@ -84,7 +84,7 @@ public class DistCp extends Configured implements Tool {
     if (context.shouldUseSnapshotDiff()) {
       // When "-diff" or "-rdiff" is passed, do sync() first, then
       // create copyListing based on snapshot diff.
-      DistCpSync distCpSync = new DistCpSync(context, getConf());
+      DistCpSync distCpSync = new DistCpSync(context, job.getConfiguration());
       if (distCpSync.sync()) {
         createInputFileListingWithDiff(job, distCpSync);
       } else {
@@ -414,6 +414,15 @@ public class DistCp extends Configured implements Tool {
       LOG.debug("Meta folder location: " + metaFolderPath);
     configuration.set(DistCpConstants.CONF_LABEL_META_FOLDER, metaFolderPath.toString());    
     return metaFolderPath;
+  }
+
+  /**
+   * Returns the context.
+   *
+   * @return the context
+   */
+  protected DistCpContext getContext() {
+    return context;
   }
 
   /**

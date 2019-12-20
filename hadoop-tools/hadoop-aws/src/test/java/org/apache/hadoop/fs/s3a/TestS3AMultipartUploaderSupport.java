@@ -60,7 +60,7 @@ public class TestS3AMultipartUploaderSupport extends HadoopTestBase {
   @Test
   public void testNoLen() throws Throwable {
     intercept(IllegalArgumentException.class,
-        () -> buildPartHandlePayload("tag", 0));
+        () -> buildPartHandlePayload("tag", -1));
   }
 
   @Test

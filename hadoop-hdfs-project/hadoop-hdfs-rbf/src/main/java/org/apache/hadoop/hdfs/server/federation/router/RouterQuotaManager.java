@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.isParentEntry;
+import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import java.util.HashSet;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -62,6 +63,21 @@ public class RouterQuotaManager {
   }
 
   /**
+   * Is the path a mount entry.
+   *
+   * @param path the path.
+   * @return {@code true} if path is a mount entry; {@code false} otherwise.
+   */
+  boolean isMountEntry(String path) {
+    readLock.lock();
+    try {
+      return this.cache.containsKey(path);
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  /**
    * Get the nearest ancestor's quota usage, and meanwhile its quota was set.
    * @param path The path being written.
    * @return RouterQuotaUsage Quota usage.
@@ -88,7 +104,7 @@ public class RouterQuotaManager {
   }
 
   /**
-   * Get children paths (can including itself) under specified federation path.
+   * Get children paths (can include itself) under specified federation path.
    * @param parentPath Federated path.
    * @return Set of children paths.
    */
@@ -114,6 +130,32 @@ public class RouterQuotaManager {
   }
 
   /**
+   * Get parent paths (including itself) and quotas of the specified federation
+   * path. Only parents containing quota are returned.
+   * @param childPath Federated path.
+   * @return TreeMap of parent paths and quotas.
+   */
+  TreeMap<String, RouterQuotaUsage> getParentsContainingQuota(
+      String childPath) {
+    TreeMap<String, RouterQuotaUsage> res = new TreeMap<>();
+    readLock.lock();
+    try {
+      Entry<String, RouterQuotaUsage> entry = this.cache.floorEntry(childPath);
+      while (entry != null) {
+        String mountPath = entry.getKey();
+        RouterQuotaUsage quota = entry.getValue();
+        if (isQuotaSet(quota) && isParentEntry(childPath, mountPath)) {
+          res.put(mountPath, quota);
+        }
+        entry = this.cache.lowerEntry(mountPath);
+      }
+      return res;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  /**
    * Put new entity into cache.
    * @param path Mount table path.
    * @param quotaUsage Corresponding cache value.
@@ -122,6 +164,27 @@ public class RouterQuotaManager {
     writeLock.lock();
     try {
       this.cache.put(path, quotaUsage);
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  /**
+   * Update quota in cache. The usage will be preserved.
+   * @param path Mount table path.
+   * @param quota Corresponding quota value.
+   */
+  public void updateQuota(String path, RouterQuotaUsage quota) {
+    writeLock.lock();
+    try {
+      RouterQuotaUsage.Builder builder = new RouterQuotaUsage.Builder()
+          .quota(quota.getQuota()).spaceQuota(quota.getSpaceQuota());
+      RouterQuotaUsage current = this.cache.get(path);
+      if (current != null) {
+        builder.fileAndDirectoryCount(current.getFileAndDirectoryCount())
+            .spaceConsumed(current.getSpaceConsumed());
+      }
+      this.cache.put(path, builder.build());
     } finally {
       writeLock.unlock();
     }

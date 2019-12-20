@@ -32,6 +32,7 @@ export default DS.Model.extend({
   logsLink: DS.attr('string'),
   state: DS.attr('string'),
   appAttemptId: DS.attr('string'),
+  exposedPorts: DS.attr('string'),
 
   appId: Ember.computed("id",function () {
     var id = this.get("id");

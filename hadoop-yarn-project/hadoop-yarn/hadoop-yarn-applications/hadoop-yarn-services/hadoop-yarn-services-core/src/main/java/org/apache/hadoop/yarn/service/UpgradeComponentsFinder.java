@@ -68,12 +68,6 @@ public interface UpgradeComponentsFinder {
             "not supported by upgrade");
       }
 
-      if (!Objects.equals(currentDef.getQuicklinks(),
-          targetDef.getQuicklinks())) {
-        throw new UnsupportedOperationException("changes to quick links " +
-            "not supported by upgrade");
-      }
-
       if (!Objects.equals(currentDef.getLaunchTime(),
           targetDef.getLaunchTime())) {
         throw new UnsupportedOperationException("changes to launch time " +

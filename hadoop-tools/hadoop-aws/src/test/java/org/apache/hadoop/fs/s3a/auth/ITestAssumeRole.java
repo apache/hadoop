@@ -23,13 +23,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,14 +45,13 @@ import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
-import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
+import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
@@ -61,6 +60,9 @@ import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.forbidden;
+import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
@@ -75,6 +77,9 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
       LoggerFactory.getLogger(ITestAssumeRole.class);
 
   private static final Path ROOT = new Path("/");
+
+  private static final Statement STATEMENT_ALL_BUCKET_READ_ACCESS
+      = statement(true, S3_ALL_BUCKETS, S3_BUCKET_READ_OPERATIONS);
 
   /**
    * test URI, built in setup.
@@ -101,7 +106,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
   @Override
   public void teardown() throws Exception {
-    S3AUtils.closeAll(LOG, roleFS);
+    cleanupWithLogger(LOG, roleFS);
     super.teardown();
   }
 
@@ -135,6 +140,34 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   public void testCreateCredentialProvider() throws IOException {
     describe("Create the credential provider");
 
+    Configuration conf = createValidRoleConf();
+    try (AssumedRoleCredentialProvider provider
+             = new AssumedRoleCredentialProvider(uri, conf)) {
+      LOG.info("Provider is {}", provider);
+      AWSCredentials credentials = provider.getCredentials();
+      assertNotNull("Null credentials from " + provider, credentials);
+    }
+  }
+
+  @Test
+  public void testCreateCredentialProviderNoURI() throws IOException {
+    describe("Create the credential provider");
+
+    Configuration conf = createValidRoleConf();
+    try (AssumedRoleCredentialProvider provider
+             = new AssumedRoleCredentialProvider(null, conf)) {
+      LOG.info("Provider is {}", provider);
+      AWSCredentials credentials = provider.getCredentials();
+      assertNotNull("Null credentials from " + provider, credentials);
+    }
+  }
+
+  /**
+   * Create a valid role configuration.
+   * @return a configuration set to use to the role ARN.
+   * @throws JsonProcessingException problems working with JSON policies.
+   */
+  protected Configuration createValidRoleConf() throws JsonProcessingException {
     String roleARN = getAssumedRoleARN();
 
     Configuration conf = new Configuration(getContract().getConf());
@@ -143,12 +176,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_SESSION_NAME, "valid");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "45m");
     bindRolePolicy(conf, RESTRICTED_POLICY);
-    try (AssumedRoleCredentialProvider provider
-             = new AssumedRoleCredentialProvider(uri, conf)) {
-      LOG.info("Provider is {}", provider);
-      AWSCredentials credentials = provider.getCredentials();
-      assertNotNull("Null credentials from " + provider, credentials);
-    }
+    return conf;
   }
 
   @Test
@@ -205,11 +233,12 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     describe("Assert that you can't use assumed roles to auth assumed roles");
 
     Configuration conf = createAssumedRoleConfig();
+    unsetHadoopCredentialProviders(conf);
     conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
         AssumedRoleCredentialProvider.NAME);
     expectFileSystemCreateFailure(conf,
         IOException.class,
-        AssumedRoleCredentialProvider.E_FORBIDDEN_PROVIDER);
+        E_FORBIDDEN_AWS_PROVIDER);
   }
 
   @Test
@@ -217,6 +246,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     describe("Try to authenticate with a keypair with spaces");
 
     Configuration conf = createAssumedRoleConfig();
+    unsetHadoopCredentialProviders(conf);
     conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
         SimpleAWSCredentialsProvider.NAME);
     conf.set(ACCESS_KEY, "not valid");
@@ -232,6 +262,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     describe("Try to authenticate with an invalid keypair");
 
     Configuration conf = createAssumedRoleConfig();
+    unsetHadoopCredentialProviders(conf);
     conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
         SimpleAWSCredentialsProvider.NAME);
     conf.set(ACCESS_KEY, "notvalid");
@@ -461,7 +492,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
     bindRolePolicyStatements(conf,
         STATEMENT_S3GUARD_CLIENT,
-        statement(true, S3_ALL_BUCKETS, S3_ROOT_READ_OPERATIONS),
+        STATEMENT_ALL_BUCKET_READ_ACCESS,
         STATEMENT_ALLOW_SSE_KMS_RW,
         new Statement(Effects.Allow)
           .addActions(S3_ALL_OPERATIONS)
@@ -493,78 +524,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     return path(getMethodName());
   }
 
-  @Test
-  public void testRestrictedRename() throws Throwable {
-    describe("rename with parent paths not writeable");
-    executeRestrictedRename(createAssumedRoleConfig());
-  }
-
-  @Test
-  public void testRestrictedSingleDeleteRename() throws Throwable {
-    describe("rename with parent paths not writeable"
-        + " and multi-object delete disabled");
-    Configuration conf = createAssumedRoleConfig();
-    conf.setBoolean(ENABLE_MULTI_DELETE, false);
-    executeRestrictedRename(conf);
-  }
-
-  /**
-   * Execute a sequence of rename operations with access locked down.
-   * @param conf FS configuration
-   */
-  public void executeRestrictedRename(final Configuration conf)
-      throws IOException {
-    Path basePath = methodPath();
-    Path restrictedDir = new Path(basePath, "renameSrc");
-    Path destPath = new Path(basePath, "renameDest");
-    Path child = new Path(restrictedDir, "child");
-    // the full FS
-    S3AFileSystem fs = getFileSystem();
-    fs.delete(basePath, true);
-
-    bindRolePolicyStatements(conf,
-        STATEMENT_S3GUARD_CLIENT,
-        STATEMENT_ALLOW_SSE_KMS_RW,
-        statement(true, S3_ALL_BUCKETS, S3_ROOT_READ_OPERATIONS),
-        new Statement(Effects.Allow)
-          .addActions(S3_PATH_RW_OPERATIONS)
-          .addResources(directory(restrictedDir))
-          .addResources(directory(destPath))
-    );
-    roleFS = (S3AFileSystem) restrictedDir.getFileSystem(conf);
-
-    roleFS.getFileStatus(ROOT);
-    roleFS.mkdirs(restrictedDir);
-    // you can create an adjacent child
-    touch(roleFS, child);
-
-    roleFS.delete(destPath, true);
-    // as dest doesn't exist, this will map child -> dest
-    assertRenameOutcome(roleFS, child, destPath, true);
-
-    assertIsFile(destPath);
-    assertIsDirectory(restrictedDir);
-    Path renamedDestPath = new Path(restrictedDir, destPath.getName());
-    assertRenameOutcome(roleFS, destPath, restrictedDir, true);
-    assertIsFile(renamedDestPath);
-    roleFS.delete(restrictedDir, true);
-    roleFS.delete(destPath, true);
-  }
-
-  @Test
-  public void testRestrictedRenameReadOnlyData() throws Throwable {
-    describe("rename with source read only, multidelete");
-    executeRenameReadOnlyData(createAssumedRoleConfig());
-  }
-
-  @Test
-  public void testRestrictedRenameReadOnlySingleDelete() throws Throwable {
-    describe("rename with source read only single delete");
-    Configuration conf = createAssumedRoleConfig();
-    conf.setBoolean(ENABLE_MULTI_DELETE, false);
-    executeRenameReadOnlyData(conf);
-  }
-
   /**
    * Without simulation of STS failures, and with STS overload likely to
    * be very rare, there'll be no implicit test coverage of
@@ -582,102 +541,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
       provider.operationRetried("retry", new IOException("failure"), 0, true);
       provider.operationRetried("retry", new IOException("failure"), 1, true);
     }
-  }
-
-  /**
-   * Execute a sequence of rename operations where the source
-   * data is read only to the client calling rename().
-   * This will cause the inner delete() operations to fail, whose outcomes
-   * are explored.
-   * Multiple files are created (in parallel) for some renames, so exploring
-   * the outcome on bulk delete calls, including verifying that a
-   * MultiObjectDeleteException is translated to an AccessDeniedException.
-   * <ol>
-   *   <li>The exception raised is AccessDeniedException,
-   *   from single and multi DELETE calls.</li>
-   *   <li>It happens after the COPY. Not ideal, but, well, we can't pretend
-   *   it's a filesystem forever.</li>
-   * </ol>
-   * @param conf FS configuration
-   */
-  public void executeRenameReadOnlyData(final Configuration conf)
-      throws Exception {
-    assume("Does not work with S3Guard", !getFileSystem().hasMetadataStore());
-    Path basePath = methodPath();
-    Path destDir = new Path(basePath, "renameDest");
-    Path readOnlyDir = new Path(basePath, "readonlyDir");
-    Path readOnlyFile = new Path(readOnlyDir, "readonlyChild");
-
-    // the full FS
-    S3AFileSystem fs = getFileSystem();
-    fs.delete(basePath, true);
-
-    // this file is readable by the roleFS, but cannot be deleted
-    touch(fs, readOnlyFile);
-
-    bindRolePolicyStatements(conf,
-        STATEMENT_S3GUARD_CLIENT,
-        statement(true, S3_ALL_BUCKETS, S3_ROOT_READ_OPERATIONS),
-          new Statement(Effects.Allow)
-            .addActions(S3_PATH_RW_OPERATIONS)
-            .addResources(directory(destDir))
-    );
-    roleFS = (S3AFileSystem) destDir.getFileSystem(conf);
-
-    roleFS.delete(destDir, true);
-    roleFS.mkdirs(destDir);
-    // rename will fail in the delete phase
-    forbidden(readOnlyFile.toString(),
-        () -> roleFS.rename(readOnlyFile, destDir));
-
-    // and the source file is still there
-    assertIsFile(readOnlyFile);
-
-    // but so is the copied version, because there's no attempt
-    // at rollback, or preflight checking on the delete permissions
-    Path renamedFile = new Path(destDir, readOnlyFile.getName());
-
-    assertIsFile(renamedFile);
-
-    ContractTestUtils.assertDeleted(roleFS, renamedFile, true);
-    assertFileCount("Empty Dest Dir", roleFS,
-        destDir, 0);
-    // create a set of files
-    // this is done in parallel as it is 10x faster on a long-haul test run.
-    int range = 10;
-    touchFiles(fs, readOnlyDir, range);
-    // don't forget about that original file!
-    final long createdFiles = range + 1;
-    // are they all there?
-    assertFileCount("files ready to rename", roleFS,
-        readOnlyDir, createdFiles);
-
-    // try to rename the directory
-    LOG.info("Renaming readonly files {} to {}", readOnlyDir, destDir);
-    AccessDeniedException ex = forbidden("",
-        () -> roleFS.rename(readOnlyDir, destDir));
-    LOG.info("Result of renaming read-only files is AccessDeniedException", ex);
-    assertFileCount("files copied to the destination", roleFS,
-        destDir, createdFiles);
-    assertFileCount("files in the source directory", roleFS,
-        readOnlyDir, createdFiles);
-
-    // and finally (so as to avoid the delay of POSTing some more objects,
-    // delete that r/o source
-    forbidden("", () -> roleFS.delete(readOnlyDir, true));
-  }
-
-  /**
-   * Parallel-touch a set of files in the destination directory.
-   * @param fs filesystem
-   * @param destDir destination
-   * @param range range 1..range inclusive of files to create.
-   */
-  public void touchFiles(final S3AFileSystem fs,
-      final Path destDir,
-      final int range) {
-    IntStream.rangeClosed(1, range).parallel().forEach(
-        (i) -> eval(() -> touch(fs, new Path(destDir, "file-" + i))));
   }
 
   @Test
@@ -698,7 +561,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     bindRolePolicyStatements(conf,
         STATEMENT_S3GUARD_CLIENT,
         STATEMENT_ALLOW_SSE_KMS_RW,
-        statement(true, S3_ALL_BUCKETS, S3_ROOT_READ_OPERATIONS),
+        STATEMENT_ALL_BUCKET_READ_ACCESS,
         new Statement(Effects.Allow)
             .addActions(S3_PATH_RW_OPERATIONS)
             .addResources(directory(writeableDir))
@@ -748,12 +611,16 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
       // all those commits must fail
       List<SinglePendingCommit> commits = pendingCommits.getLeft().getCommits();
       assertEquals(range, commits.size());
-      commits.parallelStream().forEach(
-          (c) -> {
-            CommitOperations.MaybeIOE maybeIOE = operations.commit(c, "origin");
-            Path path = c.destinationPath();
-            assertCommitAccessDenied(path, maybeIOE);
-          });
+      try(CommitOperations.CommitContext commitContext
+              = operations.initiateCommitOperation(uploadDest)) {
+        commits.parallelStream().forEach(
+            (c) -> {
+              CommitOperations.MaybeIOE maybeIOE =
+                  commitContext.commit(c, "origin");
+              Path path = c.destinationPath();
+              assertCommitAccessDenied(path, maybeIOE);
+            });
+      }
 
       // fail of all list and abort of .pending files.
       LOG.info("abortAllSinglePendingCommits({})", readOnlyDir);
@@ -809,24 +676,25 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   @Test
   public void testPartialDelete() throws Throwable {
     describe("delete with part of the child tree read only; multidelete");
-    executePartialDelete(createAssumedRoleConfig());
+    executePartialDelete(createAssumedRoleConfig(), false);
   }
 
   @Test
   public void testPartialDeleteSingleDelete() throws Throwable {
     describe("delete with part of the child tree read only");
-    Configuration conf = createAssumedRoleConfig();
-    conf.setBoolean(ENABLE_MULTI_DELETE, false);
-    executePartialDelete(conf);
+    executePartialDelete(createAssumedRoleConfig(), true);
   }
 
   /**
    * Have a directory with full R/W permissions, but then remove
    * write access underneath, and try to delete it.
    * @param conf FS configuration
+   * @param singleDelete flag to indicate this is a single delete operation
    */
-  public void executePartialDelete(final Configuration conf)
+  public void executePartialDelete(final Configuration conf,
+      final boolean singleDelete)
       throws Exception {
+    conf.setBoolean(ENABLE_MULTI_DELETE, !singleDelete);
     Path destDir = methodPath();
     Path readOnlyDir = new Path(destDir, "readonlyDir");
 
@@ -858,24 +726,58 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   /**
-   * Assert that the number of files in a destination matches that expected.
-   * @param text text to use in the message
-   * @param fs filesystem
-   * @param path path to list (recursively)
-   * @param expected expected count
-   * @throws IOException IO problem
+   * Block access to bucket locations and verify that {@code getBucketLocation}
+   * fails -but that the bucket-info command recovers from this.
    */
-  private static void assertFileCount(String text, FileSystem fs,
-      Path path, long expected)
-      throws IOException {
-    List<String> files = new ArrayList<>();
-    applyLocatedFiles(fs.listFiles(path, true),
-        (status) -> files.add(status.getPath().toString()));
-    long actual = files.size();
-    if (actual != expected) {
-      String ls = files.stream().collect(Collectors.joining("\n"));
-      fail(text + ": expected " + expected + " files in " + path
-          + " but got " + actual + "\n" + ls);
-    }
+  @Test
+  public void testBucketLocationForbidden() throws Throwable {
+
+    describe("Restrict role to read only");
+    Configuration conf = createAssumedRoleConfig();
+
+    // S3Guard is turned off so that it isn't trying to work out
+    // where any table is.
+    removeBaseAndBucketOverrides(getTestBucketName(conf), conf,
+        S3_METADATA_STORE_IMPL);
+
+    bindRolePolicyStatements(conf,
+        STATEMENT_S3GUARD_CLIENT,
+        STATEMENT_ALLOW_SSE_KMS_RW,
+        statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
+        statement(false, S3_ALL_BUCKETS, S3_GET_BUCKET_LOCATION));
+    Path path = methodPath();
+    roleFS = (S3AFileSystem) path.getFileSystem(conf);
+    forbidden("",
+        () -> roleFS.getBucketLocation());
+    S3GuardTool.BucketInfo infocmd = new S3GuardTool.BucketInfo(conf);
+    URI fsUri = getFileSystem().getUri();
+    String info = exec(infocmd, S3GuardTool.BucketInfo.NAME,
+        fsUri.toString());
+    Assertions.assertThat(info)
+        .contains(S3GuardTool.BucketInfo.LOCATION_UNKNOWN);
+  }
+  /**
+   * Turn off access to dynamo DB Tags and see how DDB table init copes.
+   * There's no testing of the codepath other than checking the logs
+   * - this test does make sure that no regression stops the tag permission
+   * failures from halting the client
+   */
+  @Test
+  public void testRestrictDDBTagAccess() throws Throwable {
+
+    describe("extra policies in assumed roles need;"
+        + " all required policies stated");
+    Configuration conf = createAssumedRoleConfig();
+
+    bindRolePolicyStatements(conf,
+        STATEMENT_S3GUARD_CLIENT,
+        STATEMENT_ALLOW_SSE_KMS_RW,
+        STATEMENT_ALL_S3,
+        new Statement(Effects.Deny)
+            .addActions(S3_PATH_RW_OPERATIONS)
+            .addResources(ALL_DDB_TABLES));
+    Path path = path("testRestrictDDBTagAccess");
+
+    roleFS = (S3AFileSystem) path.getFileSystem(conf);
   }
 }

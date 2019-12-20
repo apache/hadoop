@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.util.DurationInfo;
 
 /**
  * Class to provide lambda expression invocation of AWS operations.
@@ -105,7 +106,7 @@ public class Invoker {
   @Retries.OnceTranslated
   public static <T> T once(String action, String path, Operation<T> operation)
       throws IOException {
-    try {
+    try (DurationInfo ignored = new DurationInfo(LOG, false, "%s", action)) {
       return operation.execute();
     } catch (AmazonClientException e) {
       throw S3AUtils.translateException(action, path, e);
@@ -198,6 +199,33 @@ public class Invoker {
   }
 
   /**
+   * Execute a void operation with retry processing when doRetry=true, else
+   * just once.
+   * @param doRetry true if retries should be performed
+   * @param action action to execute (used in error messages)
+   * @param path path of work (used in error messages)
+   * @param idempotent does the operation have semantics
+   * which mean that it can be retried even if was already executed?
+   * @param retrying callback on retries
+   * @param operation operation to execute
+   * @throws IOException any IOE raised, or translated exception
+   */
+  @Retries.RetryTranslated
+  public void maybeRetry(boolean doRetry,
+      String action,
+      String path,
+      boolean idempotent,
+      Retried retrying,
+      VoidOperation operation)
+      throws IOException {
+    maybeRetry(doRetry, action, path, idempotent, retrying,
+        () -> {
+          operation.execute();
+          return null;
+        });
+  }
+
+  /**
    * Execute a void operation with  the default retry callback invoked.
    * @param action action to execute (used in error messages)
    * @param path path of work (used in error messages)
@@ -213,6 +241,28 @@ public class Invoker {
       VoidOperation operation)
       throws IOException {
     retry(action, path, idempotent, retryCallback, operation);
+  }
+
+  /**
+   * Execute a void operation with the default retry callback invoked when
+   * doRetry=true, else just once.
+   * @param doRetry true if retries should be performed
+   * @param action action to execute (used in error messages)
+   * @param path path of work (used in error messages)
+   * @param idempotent does the operation have semantics
+   * which mean that it can be retried even if was already executed?
+   * @param operation operation to execute
+   * @throws IOException any IOE raised, or translated exception
+   */
+  @Retries.RetryTranslated
+  public void maybeRetry(
+      boolean doRetry,
+      String action,
+      String path,
+      boolean idempotent,
+      VoidOperation operation)
+      throws IOException {
+    maybeRetry(doRetry, action, path, idempotent, retryCallback, operation);
   }
 
   /**
@@ -263,6 +313,41 @@ public class Invoker {
         idempotent,
         retrying,
         () -> once(action, path, operation));
+  }
+
+  /**
+   * Execute a function with retry processing when doRetry=true, else just once.
+   * Uses {@link #once(String, String, Operation)} as the inner
+   * invocation mechanism before retry logic is performed.
+   * @param <T> type of return value
+   * @param doRetry true if retries should be performed
+   * @param action action to execute (used in error messages)
+   * @param path path of work (used in error messages)
+   * @param idempotent does the operation have semantics
+   * which mean that it can be retried even if was already executed?
+   * @param retrying callback on retries
+   * @param operation operation to execute
+   * @return the result of the call
+   * @throws IOException any IOE raised, or translated exception
+   */
+  @Retries.RetryTranslated
+  public <T> T maybeRetry(
+      boolean doRetry,
+      String action,
+      @Nullable String path,
+      boolean idempotent,
+      Retried retrying,
+      Operation<T> operation)
+      throws IOException {
+    if (doRetry) {
+      return retryUntranslated(
+          toDescription(action, path),
+          idempotent,
+          retrying,
+          () -> once(action, path, operation));
+    } else {
+      return once(action, path, operation);
+    }
   }
 
   /**
@@ -476,7 +561,7 @@ public class Invoker {
   };
 
   /**
-   * Log summary at info, full stack at debug.
+   * Log retries at debug.
    */
   public static final Retried LOG_EVENT = new Retried() {
     @Override

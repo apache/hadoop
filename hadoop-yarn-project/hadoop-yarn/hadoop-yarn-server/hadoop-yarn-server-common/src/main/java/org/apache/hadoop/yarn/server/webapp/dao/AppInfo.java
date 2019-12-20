@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.util.StringHelper;
 
 @Public
 @Evolving
@@ -53,7 +54,7 @@ public class AppInfo {
   protected String originalTrackingUrl;
   protected String trackingUrl;
   protected FinalApplicationStatus finalAppStatus;
-  protected long submittedTime;
+  private long submittedTime;
   protected long startedTime;
   private long launchTime;
   protected long finishedTime;
@@ -67,6 +68,8 @@ public class AppInfo {
   protected boolean unmanagedApplication;
   private String appNodeLabelExpression;
   private String amNodeLabelExpression;
+  private String aggregateResourceAllocation;
+  private String aggregatePreemptedResourceAllocation;
 
   public AppInfo() {
     // JAXB needs this
@@ -87,7 +90,7 @@ public class AppInfo {
     diagnosticsInfo = app.getDiagnostics();
     trackingUrl = app.getTrackingUrl();
     originalTrackingUrl = app.getOriginalTrackingUrl();
-    submittedTime = app.getStartTime();
+    submittedTime = app.getSubmitTime();
     startedTime = app.getStartTime();
     launchTime = app.getLaunchTime();
     finishedTime = app.getFinishTime();
@@ -110,6 +113,11 @@ public class AppInfo {
         reservedMemoryMB = app.getApplicationResourceUsageReport()
             .getReservedResources().getMemorySize();
       }
+      aggregateResourceAllocation = StringHelper.getResourceSecondsString(
+        app.getApplicationResourceUsageReport().getResourceSecondsMap());
+      aggregatePreemptedResourceAllocation = StringHelper
+        .getResourceSecondsString(app.getApplicationResourceUsageReport()
+          .getPreemptedResourceSecondsMap());
     }
     progress = app.getProgress() * 100; // in percent
     if (app.getApplicationTags() != null && !app.getApplicationTags().isEmpty()) {
@@ -234,5 +242,13 @@ public class AppInfo {
 
   public String getAmNodeLabelExpression() {
     return amNodeLabelExpression;
+  }
+
+  public String getAggregateResourceAllocation() {
+    return aggregateResourceAllocation;
+  }
+
+  public String getAggregatePreemptedResourceAllocation() {
+    return aggregatePreemptedResourceAllocation;
   }
 }

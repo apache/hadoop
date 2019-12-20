@@ -47,11 +47,12 @@ public class AHSErrorsAndWarningsPage extends AHSView {
 
   private String tablesInit() {
     StringBuilder b = tableInit().append(", aoColumnDefs: [");
-    b.append("{'sType': 'string', 'aTargets': [ 0 ]}");
-    b.append(", {'sType': 'string', 'bSearchable': true, 'aTargets': [ 1 ]}");
-    b.append(", {'sType': 'numeric', 'bSearchable': false, 'aTargets': [ 2 ]}");
-    b.append(", {'sType': 'date', 'aTargets': [ 3 ] }]");
-    b.append(", aaSorting: [[3, 'desc']]}");
+    b.append("{'sType': 'string', 'aTargets': [ 0 ]}")
+        .append(", {'sType': 'string', 'bSearchable': true, 'aTargets': [ 1 ]}")
+        .append(
+            ", {'sType': 'numeric', 'bSearchable': false, 'aTargets': [ 2 ]}")
+        .append(", {'sType': 'date', 'aTargets': [ 3 ] }]")
+        .append(", aaSorting: [[3, 'desc']]}");
     return b.toString();
   }
 }

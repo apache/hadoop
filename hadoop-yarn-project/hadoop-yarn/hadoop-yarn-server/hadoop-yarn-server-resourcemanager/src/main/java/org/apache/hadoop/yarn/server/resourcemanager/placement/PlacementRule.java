@@ -20,35 +20,62 @@ package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerContext;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 
+/**
+ * Abstract base for all Placement Rules.
+ */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public abstract class PlacementRule {
 
+  /**
+   * Set the config based on the passed in argument. This construct is used to
+   * not pollute this abstract class with implementation specific references.
+   */
+  public void setConfig(Object initArg) {
+    // Default is a noop
+  }
+
+  /**
+   * Return the name of the rule.
+   * @return The name of the rule, the fully qualified class name.
+   */
   public String getName() {
     return this.getClass().getName();
   }
 
-  public abstract boolean initialize(
-      CapacitySchedulerContext schedulerContext) throws IOException;
+  /**
+   * Initialize the rule with the scheduler.
+   * @param scheduler the scheduler using the rule
+   * @return <code>true</code> or <code>false</code> The outcome of the
+   * initialisation, rule dependent response which might not be persisted in
+   * the rule.
+   * @throws IOException for any errors
+   */
+  public abstract boolean initialize(ResourceScheduler scheduler)
+      throws IOException;
 
   /**
-   * Get queue for a given application
+   * Return the scheduler queue name the application should be placed in
+   * wrapped in an {@link ApplicationPlacementContext} object.
+   *
+   * A non <code>null</code> return value places the application in a queue,
+   * a <code>null</code> value means the queue is not yet determined. The
+   * next {@link PlacementRule} in the list maintained in the
+   * {@link PlacementManager} will be executed.
+   *
+   * @param asc The context of the application created on submission
+   * @param user The name of the user submitting the application
    * 
-   * @param asc application submission context
-   * @param user userName
+   * @throws YarnException for any error while executing the rule
    * 
-   * @throws YarnException
-   *           if any error happens
-   * 
-   * @return <p>
-   *         non-null value means it is determined
-   *         </p>
-   *         <p>
-   *         null value means it is undetermined, so next {@link PlacementRule}
-   *         in the {@link PlacementManager} will take care
-   *         </p>
+   * @return The queue name wrapped in {@link ApplicationPlacementContext} or
+   * <code>null</code> if no queue was resolved
    */
   public abstract ApplicationPlacementContext getPlacementForApp(
       ApplicationSubmissionContext asc, String user) throws YarnException;

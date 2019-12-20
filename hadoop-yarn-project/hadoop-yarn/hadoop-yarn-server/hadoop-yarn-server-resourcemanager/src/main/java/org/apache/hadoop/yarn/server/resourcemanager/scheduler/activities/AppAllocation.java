@@ -18,25 +18,29 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
-/*
+/**
  * It contains allocation information for one application within a period of
  * time.
  * Each application allocation may have several allocation attempts.
  */
 public class AppAllocation {
-  private Priority priority = null;
+  private Priority priority;
   private NodeId nodeId;
-  private ContainerId containerId = null;
-  private ActivityState appState = null;
-  private String diagnostic = null;
-  private String queueName = null;
+  private ContainerId containerId;
+  private ActivityState activityState;
+  private String diagnostic;
+  private String queueName;
   private List<ActivityNode> allocationAttempts;
   private long timestamp;
 
@@ -47,43 +51,41 @@ public class AppAllocation {
     this.queueName = queueName;
   }
 
-  public void updateAppContainerStateAndTime(ContainerId containerId,
+  public void updateAppContainerStateAndTime(ContainerId cId,
       ActivityState appState, long ts, String diagnostic) {
     this.timestamp = ts;
-    this.containerId = containerId;
-    this.appState = appState;
+    this.containerId = cId;
+    this.activityState = appState;
     this.diagnostic = diagnostic;
   }
 
-  public void addAppAllocationActivity(String containerId, String priority,
-      ActivityState state, String diagnostic, String type) {
-    ActivityNode container = new ActivityNode(containerId, null, priority,
-        state, diagnostic, type);
+  public void addAppAllocationActivity(String cId, Integer reqPriority,
+      ActivityState state, String diagnose, ActivityLevel level, NodeId nId,
+      Long allocationRequestId) {
+    ActivityNode container = new ActivityNode(cId, null, reqPriority,
+        state, diagnose, level, nId, allocationRequestId);
     this.allocationAttempts.add(container);
     if (state == ActivityState.REJECTED) {
-      this.appState = ActivityState.SKIPPED;
+      this.activityState = ActivityState.SKIPPED;
     } else {
-      this.appState = state;
+      this.activityState = state;
     }
   }
 
   public String getNodeId() {
-    return nodeId.toString();
+    return nodeId == null ? null : nodeId.toString();
   }
 
   public String getQueueName() {
     return queueName;
   }
 
-  public ActivityState getAppState() {
-    return appState;
+  public ActivityState getActivityState() {
+    return activityState;
   }
 
-  public String getPriority() {
-    if (priority == null) {
-      return null;
-    }
-    return priority.toString();
+  public Priority getPriority() {
+    return priority;
   }
 
   public String getContainerId() {
@@ -103,5 +105,28 @@ public class AppAllocation {
 
   public List<ActivityNode> getAllocationAttempts() {
     return allocationAttempts;
+  }
+
+  public AppAllocation filterAllocationAttempts(Set<Integer> requestPriorities,
+      Set<Long> allocationRequestIds) {
+    AppAllocation appAllocation =
+        new AppAllocation(this.priority, this.nodeId, this.queueName);
+    appAllocation.activityState = this.activityState;
+    appAllocation.containerId = this.containerId;
+    appAllocation.timestamp = this.timestamp;
+    appAllocation.diagnostic = this.diagnostic;
+    Predicate<ActivityNode> predicate = (e) ->
+        (CollectionUtils.isEmpty(requestPriorities) || requestPriorities
+            .contains(e.getRequestPriority())) && (
+            CollectionUtils.isEmpty(allocationRequestIds)
+                || allocationRequestIds.contains(e.getAllocationRequestId()));
+    appAllocation.allocationAttempts =
+        this.allocationAttempts.stream().filter(predicate)
+            .collect(Collectors.toList());
+    return appAllocation;
+  }
+
+  public void setAllocationAttempts(List<ActivityNode> allocationAttempts) {
+    this.allocationAttempts = allocationAttempts;
   }
 }

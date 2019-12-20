@@ -192,7 +192,7 @@ public enum DistCpOptionSwitch {
       new Option("sizelimit", true, "(Deprecated!) Limit number of files " +
               "copied to <= n bytes")),
 
-  BLOCKS_PER_CHUNK("",
+  BLOCKS_PER_CHUNK(DistCpConstants.CONF_LABEL_BLOCKS_PER_CHUNK,
       new Option("blocksperchunk", true, "If set to a positive value, files"
           + "with more blocks than this value will be split into chunks of "
           + "<blocksperchunk> blocks to be transferred in parallel, and "
@@ -223,7 +223,19 @@ public enum DistCpOptionSwitch {
    */
   FILTERS(DistCpConstants.CONF_LABEL_FILTERS_FILE,
       new Option("filters", true, "The path to a file containing a list of"
-          + " strings for paths to be excluded from the copy."));
+          + " strings for paths to be excluded from the copy.")),
+
+  /**
+   * Write directly to the final location, avoiding the creation and rename
+   * of temporary files.
+   * This is typically useful in cases where the target filesystem
+   * implementation does not support atomic rename operations, such as with
+   * the S3AFileSystem which translates file renames to potentially very
+   * expensive copy-then-delete operations.
+   */
+  DIRECT_WRITE(DistCpConstants.CONF_LABEL_DIRECT_WRITE,
+      new Option("direct", false, "Write files directly to the"
+          + " target location, avoiding temporary file rename."));
 
 
   public static final String PRESERVE_STATUS_DEFAULT = "-prbugpct";

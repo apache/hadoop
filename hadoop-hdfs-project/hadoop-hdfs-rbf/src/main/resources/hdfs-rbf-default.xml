@@ -19,8 +19,8 @@
 -->
 
 <!-- Do not modify this file directly.  Instead, copy entries that you -->
-<!-- wish to modify from this file into hdfs-site.xml and change them -->
-<!-- there.  If hdfs-site.xml does not already exist, create it.      -->
+<!-- wish to modify from this file into hdfs-rbf-site.xml and change them -->
+<!-- there.  If hdfs-rbf-site.xml does not already exist, create it.      -->
 
 <configuration>
   <property>
@@ -118,6 +118,14 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.connection.min-active-ratio</name>
+    <value>0.5f</value>
+    <description>
+      Minimum active ratio of connections from the router to namenodes.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.connection.clean.ms</name>
     <value>10000</value>
     <description>
@@ -140,6 +148,23 @@
     <value>true</value>
     <description>
       If the metrics in the router are enabled.
+    </description>
+  </property>
+
+
+  <property>
+    <name>dfs.federation.router.dn-report.time-out</name>
+    <value>1000</value>
+    <description>
+      Time out, in milliseconds for getDatanodeReport.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.dn-report.cache-expire</name>
+    <value>10s</value>
+    <description>
+      Expiration time in seconds for datanodereport.
     </description>
   </property>
 
@@ -250,7 +275,8 @@
     <name>dfs.federation.router.file.resolver.client.class</name>
     <value>org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver</value>
     <description>
-      Class to resolve files to subclusters.
+      Class to resolve files to subclusters. To enable multiple subclusters for a mount point,
+      set to org.apache.hadoop.hdfs.server.federation.resolver.MultipleDestinationMountTableResolver.
     </description>
   </property>
 
@@ -320,6 +346,16 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.store.membership.expiration.deletion</name>
+    <value>-1</value>
+    <description>
+      Deletion time in milliseconds for a membership record. If an expired
+      membership record exists beyond this time, it will be deleted. If this
+      value is negative, the deletion is disabled.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.heartbeat.enable</name>
     <value>true</value>
     <description>
@@ -346,12 +382,32 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.namenode.heartbeat.enable</name>
+    <value></value>
+    <description>
+      If true, get namenode heartbeats and send into the State Store.
+      If not explicitly specified takes the same value as for
+       dfs.federation.router.heartbeat.enable.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.store.router.expiration</name>
     <value>5m</value>
     <description>
       Expiration time in milliseconds for a router state record. This setting
       supports multiple time unit suffixes as described in
       dfs.federation.router.quota-cache.update.interval.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.router.expiration.deletion</name>
+    <value>-1</value>
+    <description>
+      Deletion time in milliseconds for a router state record. If an expired
+      router state record exists beyond this time, it will be deleted. If this
+      value is negative, the deletion is disabled.
     </description>
   </property>
 
@@ -422,7 +478,9 @@
     <name>dfs.federation.router.quota.enable</name>
     <value>false</value>
     <description>
-      Set to true to enable quota system in Router.
+      Set to true to enable quota system in Router. When it's enabled, setting
+      or clearing sub-cluster's quota directly is not recommended since Router
+      Admin server will override sub-cluster's quota with global quota.
     </description>
   </property>
 
@@ -462,6 +520,136 @@
     <description>
       Set to true to reject client requests when we run out of RPC client
       threads.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.client.allow-partial-listing</name>
+    <value>true</value>
+    <description>
+      If the Router can return a partial list of files in a multi-destination mount point when one of the subclusters is unavailable.
+      True may return a partial list of files if a subcluster is down.
+      False will fail the request if one is unavailable.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.client.mount-status.time-out</name>
+    <value>1s</value>
+    <description>
+      Set a timeout for the Router when listing folders containing mount
+      points. In this process, the Router checks the mount table and then it
+      checks permissions in the subcluster. After the time out, we return the
+      default values.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.connect.max.retries.on.timeouts</name>
+    <value>0</value>
+    <description>
+      Maximum number of retries for the IPC Client when connecting to the
+      subclusters. By default, it doesn't let the IPC retry and the Router
+      handles it.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.connect.timeout</name>
+    <value>2s</value>
+    <description>
+      Time out for the IPC client connecting to the subclusters. This should be
+      short as the Router has knowledge of the state of the Routers.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.keytab.file</name>
+    <value></value>
+    <description>
+      The keytab file used by router to login as its
+      service principal. The principal name is configured with
+      dfs.federation.router.kerberos.principal.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.kerberos.principal</name>
+    <value></value>
+    <description>
+      The Router service principal. This is typically set to
+      router/_HOST@REALM.TLD. Each Router will substitute _HOST with its
+      own fully qualified hostname at startup. The _HOST placeholder
+      allows using the same configuration setting on both Router
+      in an HA setup.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.kerberos.principal.hostname</name>
+    <value></value>
+    <description>
+      Optional.  The hostname for the Router containing this
+      configuration file.  Will be different for each machine.
+      Defaults to current hostname.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.kerberos.internal.spnego.principal</name>
+    <value>${dfs.web.authentication.kerberos.principal}</value>
+    <description>
+      The server principal used by the Router for web UI SPNEGO
+      authentication when Kerberos security is enabled. This is
+      typically set to HTTP/_HOST@REALM.TLD The SPNEGO server principal
+      begins with the prefix HTTP/ by convention.
+
+      If the value is '*', the web server will attempt to login with
+      every principal specified in the keytab file
+      dfs.web.authentication.kerberos.keytab.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.mount-table.cache.update</name>
+    <value>false</value>
+    <description>Set true to enable MountTableRefreshService. This service
+      updates mount table cache immediately after adding, modifying or
+      deleting the mount table entries. If this service is not enabled
+      mount table cache are refreshed periodically by
+      StateStoreCacheUpdateService
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.mount-table.cache.update.timeout</name>
+    <value>1m</value>
+    <description>This property defines how long to wait for all the
+      admin servers to finish their mount table cache update. This setting
+      supports multiple time unit suffixes as described in
+      dfs.federation.router.safemode.extension.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.mount-table.cache.update.client.max.time
+    </name>
+    <value>5m</value>
+    <description>Remote router mount table cache is updated through
+      RouterClient(RPC call). To improve performance, RouterClient
+      connections are cached but it should not be kept in cache forever.
+      This property defines the max time a connection can be cached. This
+      setting supports multiple time unit suffixes as described in
+      dfs.federation.router.safemode.extension.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.secret.manager.class</name>
+    <value>org.apache.hadoop.hdfs.server.federation.router.security.token.ZKDelegationTokenSecretManagerImpl</value>
+    <description>
+      Class to implement state store to delegation tokens.
+      Default implementation uses zookeeper as the backend to store delegation tokens.
     </description>
   </property>
 

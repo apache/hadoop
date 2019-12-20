@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.webproxy;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -92,7 +93,7 @@ public class TestWebAppProxyServlet {
   @BeforeClass
   public static void start() throws Exception {
     server = new Server(0);
-    ((QueuedThreadPool)server.getThreadPool()).setMaxThreads(10);
+    ((QueuedThreadPool)server.getThreadPool()).setMaxThreads(20);
     ServletContextHandler context = new ServletContextHandler();
     context.setContextPath("/foo");
     server.setHandler(context);
@@ -334,7 +335,7 @@ public class TestWebAppProxyServlet {
           "Access-Control-Request-Headers", "Authorization");
       proxyConn.addRequestProperty(UNKNOWN_HEADER, "unknown");
       // Verify if four headers mentioned above have been added
-      assertEquals(proxyConn.getRequestProperties().size(), 4);
+      assertThat(proxyConn.getRequestProperties()).hasSize(4);
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
       // Verify if number of headers received by end server is 9.

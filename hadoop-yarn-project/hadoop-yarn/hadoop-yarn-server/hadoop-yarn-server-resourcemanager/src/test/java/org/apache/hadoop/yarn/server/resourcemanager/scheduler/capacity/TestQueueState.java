@@ -18,13 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -34,6 +33,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -110,8 +111,8 @@ public class TestQueueState {
       Assert.fail("Should throw an Exception.");
     } catch (Exception ex) {
       Assert.assertTrue(ex.getCause().getMessage().contains(
-          "The parent queue:q1 state is STOPPED, "
-          + "child queue:q2 state cannot be RUNNING."));
+          "The parent queue:q1 cannot be STOPPED as the child" +
+          " queue:q2 is in RUNNING state."));
     }
   }
 
@@ -227,7 +228,15 @@ public class TestQueueState {
     MockNM nm = rm.registerNode("h1:1234", 204800);
 
     // submit an app, AM is running on nm1
-    RMApp app = rm.submitApp(1024, "appname", "appuser", null, Q2);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+            .withAppName("appname")
+            .withUser("appuser")
+            .withAcls(null)
+            .withQueue(Q2)
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     MockRM.launchAM(app, rm, nm);
     rm.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
     // update queue state to STOPPED

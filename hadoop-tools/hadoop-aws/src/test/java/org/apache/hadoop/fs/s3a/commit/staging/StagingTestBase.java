@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.commit.staging;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
@@ -55,6 +56,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
@@ -79,7 +81,7 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.test.HadoopTestBase;
 
-import static org.mockito.Matchers.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -97,9 +99,16 @@ public class StagingTestBase {
 
   public static final String BUCKET = MockS3AFileSystem.BUCKET;
   public static final String OUTPUT_PREFIX = "output/path";
-  public static final Path OUTPUT_PATH =
+  /** The raw bucket URI Path before any canonicalization. */
+  public static final Path RAW_BUCKET_PATH =
+      new Path("s3a://" + BUCKET + "/");
+  /** The raw bucket URI Path before any canonicalization. */
+  public static final URI RAW_BUCKET_URI =
+      RAW_BUCKET_PATH.toUri();
+  public static Path outputPath =
       new Path("s3a://" + BUCKET + "/" + OUTPUT_PREFIX);
-  public static final URI OUTPUT_PATH_URI = OUTPUT_PATH.toUri();
+  public static URI outputPathUri = outputPath.toUri();
+  public static Path root;
 
   protected StagingTestBase() {
   }
@@ -119,8 +128,11 @@ public class StagingTestBase {
       throws IOException {
     S3AFileSystem mockFs = mockS3AFileSystemRobustly();
     MockS3AFileSystem wrapperFS = new MockS3AFileSystem(mockFs, outcome);
-    URI uri = OUTPUT_PATH_URI;
+    URI uri = RAW_BUCKET_URI;
     wrapperFS.initialize(uri, conf);
+    root = wrapperFS.makeQualified(new Path("/"));
+    outputPath = new Path(root, OUTPUT_PREFIX);
+    outputPathUri = outputPath.toUri();
     FileSystemTestHelper.addFileSystemForTesting(uri, conf, wrapperFS);
     return mockFs;
   }
@@ -142,7 +154,7 @@ public class StagingTestBase {
    */
   public static MockS3AFileSystem lookupWrapperFS(Configuration conf)
       throws IOException {
-    return (MockS3AFileSystem) FileSystem.get(OUTPUT_PATH_URI, conf);
+    return (MockS3AFileSystem) FileSystem.get(outputPathUri, conf);
   }
 
   public static void verifyCompletion(FileSystem mockS3) throws IOException {
@@ -157,13 +169,13 @@ public class StagingTestBase {
 
   public static void verifyDeleted(FileSystem mockS3, String child)
       throws IOException {
-    verifyDeleted(mockS3, new Path(OUTPUT_PATH, child));
+    verifyDeleted(mockS3, new Path(outputPath, child));
   }
 
   public static void verifyCleanupTempFiles(FileSystem mockS3)
       throws IOException {
     verifyDeleted(mockS3,
-        new Path(OUTPUT_PATH, CommitConstants.TEMPORARY));
+        new Path(outputPath, CommitConstants.TEMPORARY));
   }
 
   protected static void assertConflictResolution(
@@ -177,7 +189,7 @@ public class StagingTestBase {
   public static void pathsExist(FileSystem mockS3, String... children)
       throws IOException {
     for (String child : children) {
-      pathExists(mockS3, new Path(OUTPUT_PATH, child));
+      pathExists(mockS3, new Path(outputPath, child));
     }
   }
 
@@ -186,15 +198,40 @@ public class StagingTestBase {
     when(mockS3.exists(path)).thenReturn(true);
   }
 
+  public static void pathIsDirectory(FileSystem mockS3, Path path)
+      throws IOException {
+    hasFileStatus(mockS3, path,
+        new FileStatus(0, true, 0, 0, 0, path));
+  }
+
+  public static void pathIsFile(FileSystem mockS3, Path path)
+      throws IOException {
+    pathExists(mockS3, path);
+    hasFileStatus(mockS3, path,
+        new FileStatus(0, false, 0, 0, 0, path));
+  }
+
   public static void pathDoesNotExist(FileSystem mockS3, Path path)
       throws IOException {
     when(mockS3.exists(path)).thenReturn(false);
+    when(mockS3.getFileStatus(path)).thenThrow(
+        new FileNotFoundException("mock fnfe of " + path));
+  }
+
+  public static void hasFileStatus(FileSystem mockS3,
+      Path path, FileStatus status) throws IOException {
+    when(mockS3.getFileStatus(path)).thenReturn(status);
+  }
+
+  public static void mkdirsHasOutcome(FileSystem mockS3,
+      Path path, boolean outcome) throws IOException {
+    when(mockS3.mkdirs(path)).thenReturn(outcome);
   }
 
   public static void canDelete(FileSystem mockS3, String... children)
       throws IOException {
     for (String child : children) {
-      canDelete(mockS3, new Path(OUTPUT_PATH, child));
+      canDelete(mockS3, new Path(outputPath, child));
     }
   }
 
@@ -206,12 +243,23 @@ public class StagingTestBase {
 
   public static void verifyExistenceChecked(FileSystem mockS3, String child)
       throws IOException {
-    verifyExistenceChecked(mockS3, new Path(OUTPUT_PATH, child));
+    verifyExistenceChecked(mockS3, new Path(outputPath, child));
   }
 
   public static void verifyExistenceChecked(FileSystem mockS3, Path path)
       throws IOException {
-    verify(mockS3).exists(path);
+    verify(mockS3).getFileStatus(path);
+  }
+
+  /**
+   * Verify that mkdirs was invoked once.
+   * @param mockS3 mock
+   * @param path path to check
+   * @throws IOException from the mkdirs signature.
+   */
+  public static void verifyMkdirsInvoked(FileSystem mockS3, Path path)
+      throws IOException {
+    verify(mockS3).mkdirs(path);
   }
 
   /**
@@ -278,12 +326,7 @@ public class StagingTestBase {
 
     @Before
     public void setupJob() throws Exception {
-      this.jobConf = new JobConf();
-      jobConf.set(InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID,
-          UUID.randomUUID().toString());
-      jobConf.setBoolean(
-          CommitConstants.CREATE_SUCCESSFUL_JOB_OUTPUT_DIR_MARKER,
-          false);
+      this.jobConf = createJobConf();
 
       this.job = new JobContextImpl(jobConf, JOB_ID);
       this.results = new StagingTestBase.ClientResults();
@@ -294,6 +337,16 @@ public class StagingTestBase {
       this.wrapperFS = lookupWrapperFS(jobConf);
       // and bind the FS
       wrapperFS.setAmazonS3Client(mockClient);
+    }
+
+    protected JobConf createJobConf() {
+      JobConf conf = new JobConf();
+      conf.set(InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID,
+          UUID.randomUUID().toString());
+      conf.setBoolean(
+          CommitConstants.CREATE_SUCCESSFUL_JOB_OUTPUT_DIR_MARKER,
+          false);
+      return conf;
     }
 
     public S3AFileSystem getMockS3A() {
@@ -419,6 +472,11 @@ public class StagingTestBase {
       return deletes;
     }
 
+    public List<String> getDeletePaths() {
+      return deletes.stream().map(DeleteObjectRequest::getKey).collect(
+          Collectors.toList());
+    }
+
     public void resetDeletes() {
       deletes.clear();
     }
@@ -434,6 +492,14 @@ public class StagingTestBase {
 
     public void resetRequests() {
       requests.clear();
+    }
+
+    public void addUpload(String id, String key) {
+      activeUploads.put(id, key);
+    }
+
+    public void addUploads(Map<String, String> uploadMap) {
+      activeUploads.putAll(uploadMap);
     }
 
     @Override
@@ -606,8 +672,9 @@ public class StagingTestBase {
             }
             CompleteMultipartUploadRequest req = getArgumentAt(invocation,
                 0, CompleteMultipartUploadRequest.class);
+            String uploadId = req.getUploadId();
+            removeUpload(results, uploadId);
             results.commits.add(req);
-            results.activeUploads.remove(req.getUploadId());
 
             return newResult(req);
           }
@@ -627,14 +694,7 @@ public class StagingTestBase {
         AbortMultipartUploadRequest req = getArgumentAt(invocation,
             0, AbortMultipartUploadRequest.class);
         String id = req.getUploadId();
-        String p = results.activeUploads.remove(id);
-        if (p == null) {
-          // upload doesn't exist
-          AmazonS3Exception ex = new AmazonS3Exception(
-              "not found " + id);
-          ex.setStatusCode(404);
-          throw ex;
-        }
+        removeUpload(results, id);
         results.aborts.add(req);
         return null;
       }
@@ -685,6 +745,24 @@ public class StagingTestBase {
         });
 
     return mockClient;
+  }
+
+  /**
+   * Remove an upload from the upload map.
+   * @param results result set
+   * @param uploadId The upload ID to remove
+   * @throws AmazonS3Exception with error code 404 if the id is unknown.
+   */
+  protected static void removeUpload(final ClientResults results,
+      final String uploadId) {
+    String removed = results.activeUploads.remove(uploadId);
+    if (removed == null) {
+      // upload doesn't exist
+      AmazonS3Exception ex = new AmazonS3Exception(
+          "not found " + uploadId);
+      ex.setStatusCode(404);
+      throw ex;
+    }
   }
 
   private static CompleteMultipartUploadResult newResult(

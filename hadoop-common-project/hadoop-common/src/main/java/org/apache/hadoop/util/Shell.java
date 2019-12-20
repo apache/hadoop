@@ -147,9 +147,9 @@ public abstract class Shell {
    */
   static String bashQuote(String arg) {
     StringBuilder buffer = new StringBuilder(arg.length() + 2);
-    buffer.append('\'');
-    buffer.append(arg.replace("'", "'\\''"));
-    buffer.append('\'');
+    buffer.append('\'')
+        .append(arg.replace("'", "'\\''"))
+        .append('\'');
     return buffer.toString();
   }
 
@@ -964,8 +964,8 @@ public abstract class Shell {
         try {
           String line = errReader.readLine();
           while((line != null) && !isInterrupted()) {
-            errMsg.append(line);
-            errMsg.append(System.getProperty("line.separator"));
+            errMsg.append(line)
+                .append(System.getProperty("line.separator"));
             line = errReader.readLine();
           }
         } catch(IOException ioe) {
@@ -1109,8 +1109,8 @@ public abstract class Shell {
       final StringBuilder sb =
           new StringBuilder("ExitCodeException ");
       sb.append("exitCode=").append(exitCode)
-        .append(": ");
-      sb.append(super.getMessage());
+          .append(": ")
+          .append(super.getMessage());
       return sb.toString();
     }
   }

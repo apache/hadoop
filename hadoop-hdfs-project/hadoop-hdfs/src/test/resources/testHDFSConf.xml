@@ -16108,10 +16108,6 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*- RAM_DISK( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
           <expected-output>^( |\t)*- DISK( )*</expected-output>
         </comparator>
         <comparator>
@@ -16121,6 +16117,10 @@
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*- ARCHIVE( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*- PROVIDED( )*</expected-output>
         </comparator>
       </comparators>
     </test>

@@ -25,6 +25,8 @@ import java.util.List;
 import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -40,6 +42,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -421,6 +425,24 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(responseGet);
     Assert.assertEquals(NUM_SUBCLUSTER, responseGet.getNodes().size());
     // The remove duplicate operations is tested in TestRouterWebServiceUtil
+  }
+
+  /**
+   * This test validates the correctness of updateNodeResource().
+   */
+  @Test
+  public void testUpdateNodeResource() {
+    List<NodeInfo> nodes = interceptor.getNodes(null).getNodes();
+    Assert.assertFalse(nodes.isEmpty());
+    final String nodeId = nodes.get(0).getNodeId();
+    ResourceOptionInfo resourceOption = new ResourceOptionInfo(
+        ResourceOption.newInstance(
+            Resource.newInstance(2048, 3), 1000));
+    ResourceInfo resource = interceptor.updateNodeResource(
+        null, nodeId, resourceOption);
+    Assert.assertNotNull(resource);
+    Assert.assertEquals(2048, resource.getMemorySize());
+    Assert.assertEquals(3, resource.getvCores());
   }
 
   /**

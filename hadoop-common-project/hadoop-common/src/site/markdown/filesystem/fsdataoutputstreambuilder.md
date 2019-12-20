@@ -114,10 +114,12 @@ MUST verify that implementation-agnostic parameters (i.e., "syncable") or
 implementation-specific parameters (i.e., "foofs:cache")
 are supported. `FileSystem` will satisfy optional parameters (via `opt(key, ...)`)
 on best effort. If the mandatory parameters (via `must(key, ...)`) can not be satisfied
-in the `FileSystem`, `IllegalArgumentException` should be thrown in `build()`.
+in the `FileSystem`, `IllegalArgumentException` must be thrown in `build()`.
 
 The behavior of resolving the conflicts between the parameters set by
-builder methods (i.e., `bufferSize()`) and `opt()`/`must()` is undefined.
+builder methods (i.e., `bufferSize()`) and `opt()`/`must()` is as follows:
+
+> The last option specified defines the value and its optional/mandatory state.
 
 ## HDFS-specific parameters.
 

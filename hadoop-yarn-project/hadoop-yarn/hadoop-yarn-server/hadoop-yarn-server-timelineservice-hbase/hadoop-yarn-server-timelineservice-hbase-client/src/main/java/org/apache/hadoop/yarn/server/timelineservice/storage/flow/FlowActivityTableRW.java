@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
 public class FlowActivityTableRW extends BaseTableRW<FlowActivityTable> {
   /** flow activity table prefix. */
   private static final String PREFIX =
-      YarnConfiguration.TIMELINE_SERVICE_PREFIX + ".flowactivity";
+      YarnConfiguration.TIMELINE_SERVICE_PREFIX + "flowactivity";
 
   /** config param name that specifies the flowactivity table name. */
   public static final String TABLE_NAME_CONF_NAME = PREFIX + ".table.name";

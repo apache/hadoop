@@ -16,7 +16,7 @@
 -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
@@ -118,7 +118,48 @@
                         <exclude>bower_components/**/*</exclude>
                         <exclude>tmp/**/*</exclude>
                         <exclude>dist/**/*</exclude>
+                        <exclude>terminal/**/*</exclude>
                       </excludes>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+              <execution>
+                <id>copy-terminal</id>
+                <!-- here the phase you need -->
+                <phase>compile</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${webappDir}/dist</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>${basedir}/src/main/webapp</directory>
+                      <filtering>true</filtering>
+                      <includes>
+                        <include>terminal/**/*</include>
+                      </includes>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+              <execution>
+                <id>copy-xterm</id>
+                <!-- here the phase you need -->
+                <phase>compile</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${webappDir}/dist/terminal/xterm</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>${basedir}/target/webapp/node_modules/xterm</directory>
+                      <filtering>true</filtering>
+                      <includes>
+                        <include>dist/**/*</include>
+                      </includes>
                     </resource>
                   </resources>
                 </configuration>
@@ -144,8 +185,8 @@
                   <goal>install-node-and-yarn</goal>
                 </goals>
                 <configuration>
-                  <nodeVersion>v5.12.0</nodeVersion>
-                  <yarnVersion>v0.21.3</yarnVersion>
+                  <nodeVersion>v8.17.0</nodeVersion>
+                  <yarnVersion>v1.21.1</yarnVersion>
                 </configuration>
               </execution>
               <execution>

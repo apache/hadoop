@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
@@ -27,6 +28,7 @@ import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -45,7 +47,6 @@ import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.TestContainerLogsUtils;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
-import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
@@ -55,6 +56,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.AssignedGpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer.NMWebApp;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformation;
@@ -74,7 +76,6 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -93,13 +94,14 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -110,12 +112,14 @@ import static org.mockito.Mockito.when;
  */
 public class TestNMWebServices extends JerseyTestBase {
 
+  private static final long NM_RESOURCE_VALUE = 1000L;
   private static NodeManager.NMContext nmContext;
   private static ResourceView resourceView;
   private static ApplicationACLsManager aclsManager;
   private static LocalDirsHandlerService dirsHandler;
   private static WebApp nmWebApp;
   private static final String LOGSERVICEWSADDR = "test:1234";
+  private static final String LOG_MESSAGE = "log message\n";
 
   private static final File testRootDir = new File("target",
       TestNMWebServices.class.getSimpleName());
@@ -137,8 +141,8 @@ public class TestNMWebServices extends JerseyTestBase {
       conf.set(YarnConfiguration.YARN_LOG_SERVER_WEBSERVICE_URL,
           LOGSERVICEWSADDR);
       dirsHandler = new LocalDirsHandlerService();
-      NodeHealthCheckerService healthChecker = new NodeHealthCheckerService(
-          NodeManager.getNodeHealthScriptRunner(conf), dirsHandler);
+      NodeHealthCheckerService healthChecker =
+          new NodeHealthCheckerService(dirsHandler);
       healthChecker.init(conf);
       aclsManager = new ApplicationACLsManager(conf);
       nmContext = new NodeManager.NMContext(null, null, dirsHandler,
@@ -188,6 +192,89 @@ public class TestNMWebServices extends JerseyTestBase {
     GuiceServletConfig.setInjector(
         Guice.createInjector(new WebServletModule()));
   }
+
+  private void setupMockPluginsWithNmResourceInfo() throws YarnException {
+    ResourcePlugin mockPlugin1 = mock(ResourcePlugin.class);
+    NMResourceInfo nmResourceInfo1 = new NMResourceInfo() {
+      private long a = NM_RESOURCE_VALUE;
+
+      public long getA() {
+        return a;
+      }
+    };
+    when(mockPlugin1.getNMResourceInfo()).thenReturn(nmResourceInfo1);
+
+    ResourcePluginManager pluginManager = createResourceManagerWithPlugins(
+        ImmutableMap.<String, ResourcePlugin>builder()
+            .put("resource-1", mockPlugin1)
+            .put("yarn.io/resource-1", mockPlugin1)
+            .put("resource-2", mock(ResourcePlugin.class))
+            .build()
+    );
+
+    nmContext.setResourcePluginManager(pluginManager);
+  }
+
+  private void setupMockPluginsWithGpuResourceInfo() throws YarnException {
+    GpuDeviceInformation gpuDeviceInformation = new GpuDeviceInformation();
+    gpuDeviceInformation.setDriverVersion("1.2.3");
+    gpuDeviceInformation.setGpus(Arrays.asList(new PerGpuDeviceInformation()));
+
+    ResourcePlugin mockPlugin1 = mock(ResourcePlugin.class);
+    List<GpuDevice> totalGpuDevices = Arrays.asList(
+        new GpuDevice(1, 1), new GpuDevice(2, 2), new GpuDevice(3, 3));
+    List<AssignedGpuDevice> assignedGpuDevices = Arrays.asList(
+        new AssignedGpuDevice(2, 2, createContainerId(1)),
+        new AssignedGpuDevice(3, 3, createContainerId(2)));
+    NMResourceInfo nmResourceInfo1 = new NMGpuResourceInfo(gpuDeviceInformation,
+        totalGpuDevices,
+        assignedGpuDevices);
+    when(mockPlugin1.getNMResourceInfo()).thenReturn(nmResourceInfo1);
+
+    ResourcePluginManager pluginManager = createResourceManagerWithPlugins(
+        ImmutableMap.<String, ResourcePlugin>builder()
+            .put("resource-1", mockPlugin1)
+            .put("yarn.io/resource-1", mockPlugin1)
+            .put("resource-2", mock(ResourcePlugin.class))
+            .build()
+    );
+
+    nmContext.setResourcePluginManager(pluginManager);
+  }
+
+  private ResourcePluginManager createResourceManagerWithPlugins(
+      Map<String, ResourcePlugin> plugins) {
+    ResourcePluginManager pluginManager = mock(ResourcePluginManager.class);
+    when(pluginManager.getNameToPlugins()).thenReturn(plugins);
+    return pluginManager;
+  }
+
+  private void assertNMResourceInfoResponse(ClientResponse response, long value)
+      throws JSONException {
+    assertEquals("MediaType of the response is not the expected!",
+        MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("Unexpected value in the json response!", (int) value,
+        json.get("a"));
+  }
+
+  private void assertEmptyNMResourceInfo(ClientResponse response) {
+    assertEquals("MediaType of the response is not the expected!",
+        MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("Unexpected value in the json response!",
+        0, json.length());
+  }
+
+  private ClientResponse getNMResourceResponse(WebResource resource,
+      String resourceName) {
+    return resource.path("ws").path("v1").path("node").path("resources")
+        .path(resourceName).accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+  }
+
 
   @Before
   @Override
@@ -356,20 +443,26 @@ public class TestNMWebServices extends JerseyTestBase {
 
   @Test (timeout = 5000)
   public void testContainerLogsWithNewAPI() throws Exception {
-    final ContainerId containerId = BuilderUtils.newContainerId(0, 0, 0, 0);
-    WebResource r = resource();
-    r = r.path("ws").path("v1").path("node").path("containers")
-        .path(containerId.toString()).path("logs");
-    testContainerLogs(r, containerId);
+    ContainerId containerId0 = BuilderUtils.newContainerId(0, 0, 0, 0);
+    WebResource r0 = resource();
+    r0 = r0.path("ws").path("v1").path("node").path("containers")
+        .path(containerId0.toString()).path("logs");
+    testContainerLogs(r0, containerId0, LOG_MESSAGE);
+
+    ContainerId containerId1 = BuilderUtils.newContainerId(0, 0, 0, 1);
+    WebResource r1 = resource();
+    r1 = r1.path("ws").path("v1").path("node").path("containers")
+            .path(containerId1.toString()).path("logs");
+    testContainerLogs(r1, containerId1, "");
   }
 
   @Test (timeout = 5000)
   public void testContainerLogsWithOldAPI() throws Exception {
-    final ContainerId containerId = BuilderUtils.newContainerId(1, 1, 0, 1);
+    final ContainerId containerId2 = BuilderUtils.newContainerId(1, 1, 0, 2);
     WebResource r = resource();
     r = r.path("ws").path("v1").path("node").path("containerlogs")
-        .path(containerId.toString());
-    testContainerLogs(r, containerId);
+        .path(containerId2.toString());
+    testContainerLogs(r, containerId2, LOG_MESSAGE);
   }
 
   @Test (timeout = 10000)
@@ -431,120 +524,81 @@ public class TestNMWebServices extends JerseyTestBase {
   }
 
   @Test
-  public void testGetNMResourceInfo()
-      throws YarnException, InterruptedException, JSONException {
-    ResourcePluginManager rpm = mock(ResourcePluginManager.class);
-    Map<String, ResourcePlugin> namesToPlugins = new HashMap<>();
-    ResourcePlugin mockPlugin1 = mock(ResourcePlugin.class);
-    NMResourceInfo nmResourceInfo1 = new NMResourceInfo() {
-      public long a = 1000L;
-    };
-    when(mockPlugin1.getNMResourceInfo()).thenReturn(nmResourceInfo1);
-    namesToPlugins.put("resource-1", mockPlugin1);
-    namesToPlugins.put("yarn.io/resource-1", mockPlugin1);
-    ResourcePlugin mockPlugin2 = mock(ResourcePlugin.class);
-    namesToPlugins.put("resource-2", mockPlugin2);
-    when(rpm.getNameToPlugins()).thenReturn(namesToPlugins);
-
-    nmContext.setResourcePluginManager(rpm);
+  public void testGetNMResourceInfoSuccessful()
+      throws YarnException, JSONException {
+    setupMockPluginsWithNmResourceInfo();
 
     WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("node").path(
-        "resources").path("resource-2").accept(MediaType.APPLICATION_JSON).get(
-        ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
+    ClientResponse response = getNMResourceResponse(r, "resource-1");
+    assertNMResourceInfoResponse(response, NM_RESOURCE_VALUE);
+  }
 
-    // Access resource-2 should fail (empty NMResourceInfo returned).
-    JSONObject json = response.getEntity(JSONObject.class);
-    Assert.assertEquals(0, json.length());
+  @Test
+  public void testGetNMResourceInfoEncodedIsSuccessful()
+      throws YarnException, JSONException {
+    setupMockPluginsWithNmResourceInfo();
 
-    // Access resource-3 should fail (unknown plugin)
-    response = r.path("ws").path("v1").path("node").path(
-        "resources").path("resource-3").accept(MediaType.APPLICATION_JSON).get(
-        ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    json = response.getEntity(JSONObject.class);
-    Assert.assertEquals(0, json.length());
+    //test encoded yarn.io/resource-1 path
+    WebResource r = resource();
+    ClientResponse response = getNMResourceResponse(r, "yarn.io%2Fresource-1");
+    assertNMResourceInfoResponse(response, NM_RESOURCE_VALUE);
+  }
 
-    // Access resource-1 should success
-    response = r.path("ws").path("v1").path("node").path(
-        "resources").path("resource-1").accept(MediaType.APPLICATION_JSON).get(
-        ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    json = response.getEntity(JSONObject.class);
-    Assert.assertEquals(1000, json.get("a"));
+  @Test
+  public void testGetNMResourceInfoFailBecauseOfEmptyResourceInfo()
+      throws YarnException {
+    setupMockPluginsWithNmResourceInfo();
 
-    // Access resource-1 should success (encoded yarn.io/Fresource-1).
-    response = r.path("ws").path("v1").path("node").path("resources").path(
-        "yarn.io%2Fresource-1").accept(MediaType.APPLICATION_JSON).get(
-        ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    json = response.getEntity(JSONObject.class);
-    Assert.assertEquals(1000, json.get("a"));
+    WebResource r = resource();
+    ClientResponse response = getNMResourceResponse(r, "resource-2");
+    assertEmptyNMResourceInfo(response);
+  }
+
+  @Test
+  public void testGetNMResourceInfoWhenPluginIsUnknown()
+      throws YarnException {
+    setupMockPluginsWithNmResourceInfo();
+
+    WebResource r = resource();
+    ClientResponse response = getNMResourceResponse(r, "resource-3");
+    assertEmptyNMResourceInfo(response);
   }
 
   private ContainerId createContainerId(int id) {
     ApplicationId appId = ApplicationId.newInstance(0, 0);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId containerId = ContainerId.newContainerId(appAttemptId, id);
-    return containerId;
+    return ContainerId.newContainerId(appAttemptId, id);
   }
 
   @Test
   public void testGetYarnGpuResourceInfo()
-      throws YarnException, InterruptedException, JSONException {
-    ResourcePluginManager rpm = mock(ResourcePluginManager.class);
-    Map<String, ResourcePlugin> namesToPlugins = new HashMap<>();
-    ResourcePlugin mockPlugin1 = mock(ResourcePlugin.class);
-    GpuDeviceInformation gpuDeviceInformation = new GpuDeviceInformation();
-    gpuDeviceInformation.setDriverVersion("1.2.3");
-    gpuDeviceInformation.setGpus(Arrays.asList(new PerGpuDeviceInformation()));
-    NMResourceInfo nmResourceInfo1 = new NMGpuResourceInfo(gpuDeviceInformation,
-        Arrays.asList(new GpuDevice(1, 1), new GpuDevice(2, 2),
-            new GpuDevice(3, 3)), Arrays
-        .asList(new AssignedGpuDevice(2, 2, createContainerId(1)),
-            new AssignedGpuDevice(3, 3, createContainerId(2))));
-    when(mockPlugin1.getNMResourceInfo()).thenReturn(nmResourceInfo1);
-    namesToPlugins.put("resource-1", mockPlugin1);
-    namesToPlugins.put("yarn.io/resource-1", mockPlugin1);
-    ResourcePlugin mockPlugin2 = mock(ResourcePlugin.class);
-    namesToPlugins.put("resource-2", mockPlugin2);
-    when(rpm.getNameToPlugins()).thenReturn(namesToPlugins);
-
-    nmContext.setResourcePluginManager(rpm);
+      throws YarnException, JSONException {
+    setupMockPluginsWithGpuResourceInfo();
 
     WebResource r = resource();
-    ClientResponse response;
-    JSONObject json;
-
-    // Access resource-1 should success
-    response = r.path("ws").path("v1").path("node").path(
-        "resources").path("resource-1").accept(MediaType.APPLICATION_JSON).get(
-        ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    ClientResponse response = getNMResourceResponse(r, "resource-1");
+    assertEquals("MediaType of the response is not the expected!",
+        MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
-    json = response.getEntity(JSONObject.class);
-    Assert.assertEquals("1.2.3",
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("Unexpected driverVersion in the json response!",
+        "1.2.3",
         json.getJSONObject("gpuDeviceInformation").get("driverVersion"));
-    Assert.assertEquals(3, json.getJSONArray("totalGpuDevices").length());
-    Assert.assertEquals(2, json.getJSONArray("assignedGpuDevices").length());
-    Assert.assertEquals(2, json.getJSONArray("assignedGpuDevices").length());
+    assertEquals("Unexpected totalGpuDevices in the json response!",
+        3, json.getJSONArray("totalGpuDevices").length());
+    assertEquals("Unexpected assignedGpuDevices in the json response!",
+        2, json.getJSONArray("assignedGpuDevices").length());
   }
 
-  private void testContainerLogs(WebResource r, ContainerId containerId)
-      throws Exception {
+  private void testContainerLogs(WebResource r, ContainerId containerId,
+      String logMessage) throws Exception {
     final String containerIdStr = containerId.toString();
     final ApplicationAttemptId appAttemptId = containerId
         .getApplicationAttemptId();
     final ApplicationId appId = appAttemptId.getApplicationId();
     final String appIdStr = appId.toString();
     final String filename = "logfile1";
-    final String logMessage = "log message\n";
     nmContext.getApplications().put(appId, new ApplicationImpl(null, "user",
         appId, null, nmContext));
     
@@ -560,6 +614,9 @@ public class TestNMWebServices extends JerseyTestBase {
     
     File logFile = new File(path.toUri().getPath());
     logFile.deleteOnExit();
+    if (logFile.getParentFile().exists()) {
+      FileUtils.deleteDirectory(logFile.getParentFile());
+    }
     assertTrue("Failed to create log dir", logFile.getParentFile().mkdirs());
     PrintWriter pw = new PrintWriter(logFile);
     pw.print(logMessage);
@@ -581,8 +638,10 @@ public class TestNMWebServices extends JerseyTestBase {
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     responseLogMessage = getLogContext(responseText);
-    assertEquals(5, responseLogMessage.getBytes().length);
-    assertEquals(new String(logMessage.getBytes(), 0, 5), responseLogMessage);
+    int truncatedLength = Math.min(5, logMessage.getBytes().length);
+    assertEquals(truncatedLength, responseLogMessage.getBytes().length);
+    assertEquals(new String(logMessage.getBytes(), 0, truncatedLength),
+        responseLogMessage);
     assertTrue(fullTextSize >= responseLogMessage.getBytes().length);
 
     // specify the bytes which is larger than the actual file size,
@@ -602,9 +661,10 @@ public class TestNMWebServices extends JerseyTestBase {
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     responseLogMessage = getLogContext(responseText);
-    assertEquals(5, responseLogMessage.getBytes().length);
+    assertEquals(truncatedLength, responseLogMessage.getBytes().length);
     assertEquals(new String(logMessage.getBytes(),
-        logMessage.getBytes().length - 5, 5), responseLogMessage);
+        logMessage.getBytes().length - truncatedLength, truncatedLength),
+        responseLogMessage);
     assertTrue(fullTextSize >= responseLogMessage.getBytes().length);
 
     response = r.path(filename)
@@ -658,7 +718,7 @@ public class TestNMWebServices extends JerseyTestBase {
     List<ContainerLogFileInfo> logMeta = responseList.get(0)
         .getContainerLogsInfo();
     assertTrue(logMeta.size() == 1);
-    assertEquals(logMeta.get(0).getFileName(), filename);
+    assertThat(logMeta.get(0).getFileName()).isEqualTo(filename);
 
     // now create an aggregated log in Remote File system
     File tempLogDir = new File("target",
@@ -678,19 +738,19 @@ public class TestNMWebServices extends JerseyTestBase {
       assertEquals(200, response.getStatus());
       responseList = response.getEntity(new GenericType<
           List<ContainerLogsInfo>>(){});
-      assertEquals(responseList.size(), 2);
+      assertThat(responseList).hasSize(2);
       for (ContainerLogsInfo logInfo : responseList) {
         if(logInfo.getLogType().equals(
             ContainerLogAggregationType.AGGREGATED.toString())) {
           List<ContainerLogFileInfo> meta = logInfo.getContainerLogsInfo();
           assertTrue(meta.size() == 1);
-          assertEquals(meta.get(0).getFileName(), aggregatedLogFile);
+          assertThat(meta.get(0).getFileName()).isEqualTo(aggregatedLogFile);
         } else {
           assertEquals(logInfo.getLogType(),
               ContainerLogAggregationType.LOCAL.toString());
           List<ContainerLogFileInfo> meta = logInfo.getContainerLogsInfo();
           assertTrue(meta.size() == 1);
-          assertEquals(meta.get(0).getFileName(), filename);
+          assertThat(meta.get(0).getFileName()).isEqualTo(filename);
         }
       }
 
@@ -713,7 +773,7 @@ public class TestNMWebServices extends JerseyTestBase {
     }
     // After container is completed, it is removed from nmContext
     nmContext.getContainers().remove(containerId);
-    Assert.assertNull(nmContext.getContainers().get(containerId));
+    assertNull(nmContext.getContainers().get(containerId));
     response =
         r.path(filename).accept(MediaType.TEXT_PLAIN)
             .get(ClientResponse.class);

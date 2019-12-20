@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -120,9 +121,20 @@ public class AbfsRestOperation {
    * HTTP operations.
    */
   void execute() throws AzureBlobFileSystemException {
+    // see if we have latency reports from the previous requests
+    String latencyHeader = this.client.getAbfsPerfTracker().getClientLatency();
+    if (latencyHeader != null && !latencyHeader.isEmpty()) {
+      AbfsHttpHeader httpHeader =
+              new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_ABFS_CLIENT_LATENCY, latencyHeader);
+      requestHeaders.add(httpHeader);
+    }
+
     int retryCount = 0;
+    LOG.debug("First execution of REST operation - {}", operationType);
     while (!executeHttpOperation(retryCount++)) {
       try {
+        LOG.debug("Retrying REST operation {}. RetryCount = {}",
+            operationType, retryCount);
         Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
@@ -148,15 +160,19 @@ public class AbfsRestOperation {
 
       // sign the HTTP request
       if (client.getAccessToken() == null) {
+        LOG.debug("Signing request with shared key");
         // sign the HTTP request
         client.getSharedKeyCredentials().signRequest(
                 httpOperation.getConnection(),
                 hasRequestBody ? bufferLength : 0);
       } else {
+        LOG.debug("Authenticating request with OAuth2 access token");
         httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
                 client.getAccessToken());
       }
-
+      // dump the headers
+      AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
+          httpOperation.getConnection().getRequestProperties());
       AbfsClientThrottlingIntercept.sendingRequest(operationType);
 
       if (hasRequestBody) {
@@ -166,6 +182,10 @@ public class AbfsRestOperation {
 
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
     } catch (IOException ex) {
+      if (ex instanceof UnknownHostException) {
+        LOG.warn(String.format("Unknown host name: %s. Retrying to resolve the host name...", httpOperation.getUrl().getHost()));
+      }
+
       if (LOG.isDebugEnabled()) {
         if (httpOperation != null) {
           LOG.debug("HttpRequestFailure: " + httpOperation.toString(), ex);
@@ -173,6 +193,7 @@ public class AbfsRestOperation {
           LOG.debug("HttpRequestFailure: " + method + "," + url, ex);
         }
       }
+
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex);
       }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -565,7 +566,7 @@ public class TestLineRecordReader {
         reader = new LineRecordReader(conf, split, recordDelimiterBytes);
         // Get first record: "abcd|efgh" always possible
         assertTrue("Expected record got nothing", reader.next(key, value));
-        assertTrue("abcd|efgh".equals(value.toString()));
+        assertThat(value.toString()).isEqualTo("abcd|efgh");
         assertEquals("Wrong position after record read", 9, value.getLength());
         // Position should be 12 right after "|+|"
         int recordPos = 12;
@@ -574,7 +575,7 @@ public class TestLineRecordReader {
         // get the next record: "ij|kl" if the split/buffer allows it
         if (reader.next(key, value)) {
           // check the record info: "ij|kl"
-          assertTrue("ij|kl".equals(value.toString()));
+          assertThat(value.toString()).isEqualTo("ij|kl");
           // Position should be 20 right after "|+|"
           recordPos = 20;
           assertEquals("Wrong position after record read", recordPos,
@@ -583,7 +584,7 @@ public class TestLineRecordReader {
         // get the third record: "mno|pqr" if the split/buffer allows it
         if (reader.next(key, value)) {
           // check the record info: "mno|pqr"
-          assertTrue("mno|pqr".equals(value.toString()));
+          assertThat(value.toString()).isEqualTo("mno|pqr");
           // Position should be 27 at the end of the string now
           recordPos = inputData.length();
           assertEquals("Wrong position after record read", recordPos,

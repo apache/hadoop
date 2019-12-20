@@ -19,11 +19,12 @@
 package org.apache.hadoop.mapreduce.v2.app.rm;
 
 import static org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestCreator.createRequest;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyFloat;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyFloat;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
@@ -129,6 +130,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
@@ -188,7 +190,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
@@ -276,7 +278,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
@@ -357,7 +359,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
@@ -421,7 +423,7 @@ public class TestRMContainerAllocator {
     conf.setFloat(MRJobConfig.COMPLETED_MAPS_FOR_REDUCE_SLOWSTART, 0.0f);
     final MyResourceManager rm = new MyResourceManager(conf);
     rm.start();
-    final RMApp app = rm.submitApp(1024);
+    final RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     final String host = "host1";
@@ -477,7 +479,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
@@ -529,7 +531,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
@@ -593,7 +595,7 @@ public class TestRMContainerAllocator {
     rm.getMyFifoScheduler().forceResourceLimit(Resource.newInstance(8192, 8));
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
@@ -647,7 +649,7 @@ public class TestRMContainerAllocator {
     conf.setFloat(MRJobConfig.COMPLETED_MAPS_FOR_REDUCE_SLOWSTART, 0.0f);
     final MyResourceManager2 rm = new MyResourceManager2(conf);
     rm.start();
-    final RMApp app = rm.submitApp(2048);
+    final RMApp app = MockRMAppSubmitter.submitWithMemory(2048, rm);
     rm.drainEvents();
     final String host = "host1";
     final MockNM nm = rm.registerNode(String.format("%s:1234", host), 4096);
@@ -686,7 +688,7 @@ public class TestRMContainerAllocator {
       rm.drainEvents();
     }
     // only 1 allocated container should be assigned
-    Assert.assertEquals(assignedContainer, 1);
+    assertThat(assignedContainer).isEqualTo(1);
   }
 
   @Test
@@ -878,7 +880,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
@@ -1010,7 +1012,7 @@ public class TestRMContainerAllocator {
         .getDispatcher();
 
     // Submit the application
-    RMApp rmApp = rm.submitApp(1024);
+    RMApp rmApp = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 21504);
@@ -1162,7 +1164,7 @@ public class TestRMContainerAllocator {
         .getDispatcher();
 
     // Submit the application
-    RMApp rmApp = rm.submitApp(1024);
+    RMApp rmApp = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 11264);
@@ -1255,7 +1257,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
     MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
     amNodeManager.nodeHeartbeat(true);
@@ -1350,7 +1352,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
@@ -1459,7 +1461,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM[] nodeManagers = new MockNM[10];
@@ -1648,7 +1650,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
@@ -2161,6 +2163,20 @@ public class TestRMContainerAllocator {
   }
 
   @Test
+  public void testIfApplicationPriorityIsNotSet() {
+    Job mockJob = mock(Job.class);
+    RMCommunicator communicator = mock(RMCommunicator.class);
+    ClientService service = mock(ClientService.class);
+    AppContext context = mock(AppContext.class);
+    AMPreemptionPolicy policy = mock(AMPreemptionPolicy.class);
+    when(communicator.getJob()).thenReturn(mockJob);
+    RMContainerAllocator allocator = new RMContainerAllocator(service, context,
+        policy);
+    AllocateResponse response = Records.newRecord(AllocateResponse.class);
+    allocator.handleJobPriorityChange(response);
+  }
+
+  @Test
   public void testReduceScheduling() throws Exception {
     int totalMaps = 10;
     int succeededMaps = 1;
@@ -2307,7 +2323,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     // Make a node to register so as to launch the AM.
@@ -2416,6 +2432,8 @@ public class TestRMContainerAllocator {
     ApplicationId applicationId = ApplicationId.newInstance(1, 1);
     ApplicationAttemptId applicationAttemptId =
         ApplicationAttemptId.newInstance(applicationId, 1);
+
+    // ABORTED
     ContainerId containerId =
         ContainerId.newContainerId(applicationAttemptId, 1);
     ContainerStatus status = ContainerStatus.newInstance(
@@ -2434,6 +2452,7 @@ public class TestRMContainerAllocator {
         abortedStatus, attemptId);
     Assert.assertEquals(TaskAttemptEventType.TA_KILL, abortedEvent.getType());
 
+    // PREEMPTED
     ContainerId containerId2 =
         ContainerId.newContainerId(applicationAttemptId, 2);
     ContainerStatus status2 = ContainerStatus.newInstance(containerId2,
@@ -2450,6 +2469,25 @@ public class TestRMContainerAllocator {
     TaskAttemptEvent abortedEvent2 = allocator.createContainerFinishedEvent(
         preemptedStatus, attemptId);
     Assert.assertEquals(TaskAttemptEventType.TA_KILL, abortedEvent2.getType());
+
+    // KILLED_BY_CONTAINER_SCHEDULER
+    ContainerId containerId3 =
+        ContainerId.newContainerId(applicationAttemptId, 3);
+    ContainerStatus status3 = ContainerStatus.newInstance(containerId3,
+        ContainerState.RUNNING, "", 0);
+
+    ContainerStatus killedByContainerSchedulerStatus =
+        ContainerStatus.newInstance(containerId3, ContainerState.RUNNING, "",
+            ContainerExitStatus.KILLED_BY_CONTAINER_SCHEDULER);
+
+    TaskAttemptEvent event3 = allocator.createContainerFinishedEvent(status3,
+        attemptId);
+    Assert.assertEquals(TaskAttemptEventType.TA_CONTAINER_COMPLETED,
+        event3.getType());
+
+    TaskAttemptEvent abortedEvent3 = allocator.createContainerFinishedEvent(
+        killedByContainerSchedulerStatus, attemptId);
+    Assert.assertEquals(TaskAttemptEventType.TA_KILL, abortedEvent3.getType());
   }
 
   @Test
@@ -2459,7 +2497,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp rmApp = rm.submitApp(1024);
+    RMApp rmApp = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 11264);
@@ -2527,7 +2565,7 @@ public class TestRMContainerAllocator {
     rm1.start();
 
     // Submit the application
-    RMApp app = rm1.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     rm1.drainEvents();
 
     MockNM nm1 = new MockNM("h1:1234", 15120, rm1.getResourceTrackerService());
@@ -2780,7 +2818,7 @@ public class TestRMContainerAllocator {
     MyResourceManager rm1 = new MyResourceManager(conf);
     rm1.start();
 
-    RMApp app = rm1.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     rm1.drainEvents();
 
     MockNM nm1 = new MockNM("h1:1234", 15120, rm1.getResourceTrackerService());
@@ -2832,7 +2870,7 @@ public class TestRMContainerAllocator {
         rm.getRMContext().getAMRMTokenSecretManager();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
@@ -3104,7 +3142,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
@@ -3138,7 +3176,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 1260);
@@ -3309,7 +3347,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 1260);
@@ -3443,7 +3481,7 @@ public class TestRMContainerAllocator {
     rm.start();
 
     // Submit the application
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     rm.drainEvents();
 
     MockNM amNodeManager = rm.registerNode("amNM:1234", 1260);
@@ -3628,7 +3666,7 @@ public class TestRMContainerAllocator {
           : RMContainerAllocator.PRIORITY_MAP;
       Container container = Container.newInstance(containerId,
           NodeId.newInstance(nodeName, 1234), nodeName + ":5678",
-        Resource.newInstance(1024, 1), priority, null);
+          Resource.newInstance(1024, 1), priority, null);
       containersToAllocate.add(container);
       return containerId;
     }

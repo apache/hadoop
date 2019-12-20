@@ -414,13 +414,11 @@ public class TestZStandardCompressorDecompressor {
     outBuf.clear();
     while (!decompressor.finished()) {
       decompressor.decompress(inBuf, outBuf);
-      if (outBuf.remaining() == 0) {
-        outBuf.flip();
-        while (outBuf.remaining() > 0) {
-          assertEquals(expected.get(), outBuf.get());
-        }
-        outBuf.clear();
+      outBuf.flip();
+      while (outBuf.remaining() > 0) {
+        assertEquals(expected.get(), outBuf.get());
       }
+      outBuf.clear();
     }
     outBuf.flip();
     while (outBuf.remaining() > 0) {

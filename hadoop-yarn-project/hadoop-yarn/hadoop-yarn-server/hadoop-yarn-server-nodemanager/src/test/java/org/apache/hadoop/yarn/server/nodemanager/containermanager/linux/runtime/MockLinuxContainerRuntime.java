@@ -17,10 +17,13 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 
 import java.util.Map;
 
@@ -57,5 +60,16 @@ public class MockLinuxContainerRuntime implements LinuxContainerRuntime {
   @Override
   public String[] getIpAndHost(Container container) {
     return new String[0];
+  }
+
+  @Override
+  public String getExposedPorts(Container container) {
+    return "";
+  }
+
+  @Override
+  public IOStreamPair execContainer(ContainerExecContext ctx)
+      throws ContainerExecutionException {
+    return null;
   }
 }

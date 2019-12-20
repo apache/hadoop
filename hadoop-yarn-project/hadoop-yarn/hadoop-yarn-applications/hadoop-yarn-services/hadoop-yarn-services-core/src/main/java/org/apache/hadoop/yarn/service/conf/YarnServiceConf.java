@@ -60,6 +60,8 @@ public class YarnServiceConf {
   public static final String ROLLING_LOG_INCLUSION_PATTERN = "yarn.service.rolling-log.include-pattern";
   public static final String ROLLING_LOG_EXCLUSION_PATTERN = "yarn.service.rolling-log.exclude-pattern";
 
+  public static final String YARN_SERVICE_CLASSPATH = "yarn.service.classpath";
+
   public static final String YARN_SERVICES_SYSTEM_SERVICE_DIRECTORY =
       YARN_SERVICE_PREFIX + "system-service.dir";
 

@@ -20,10 +20,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.TestGroupsCaching;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -38,6 +38,8 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels
     .NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -63,8 +65,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
     .AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
     .SchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
-    .SimpleGroupsMapping;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
@@ -101,7 +101,7 @@ import static org.junit.Assert.fail;
 
 public class TestCapacitySchedulerAutoCreatedQueueBase {
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestCapacitySchedulerAutoCreatedQueueBase.class);
   public static final int GB = 1024;
   public static final ContainerUpdates NULL_UPDATE_REQUESTS =
@@ -112,15 +112,24 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   public static final String C = CapacitySchedulerConfiguration.ROOT + ".c";
   public static final String D = CapacitySchedulerConfiguration.ROOT + ".d";
   public static final String E = CapacitySchedulerConfiguration.ROOT + ".e";
+  public static final String ASUBGROUP1 =
+      CapacitySchedulerConfiguration.ROOT + ".esubgroup1";
+  public static final String AGROUP =
+      CapacitySchedulerConfiguration.ROOT + ".fgroup";
   public static final String A1 = A + ".a1";
   public static final String A2 = A + ".a2";
   public static final String B1 = B + ".b1";
   public static final String B2 = B + ".b2";
   public static final String B3 = B + ".b3";
+  public static final String ASUBGROUP1_A = ASUBGROUP1 + ".e";
+  public static final String AGROUP_A = AGROUP + ".f";
   public static final float A_CAPACITY = 20f;
-  public static final float B_CAPACITY = 40f;
+  public static final float B_CAPACITY = 20f;
   public static final float C_CAPACITY = 20f;
   public static final float D_CAPACITY = 20f;
+  public static final float ASUBGROUP1_CAPACITY = 10f;
+  public static final float AGROUP_CAPACITY = 10f;
+
   public static final float A1_CAPACITY = 30;
   public static final float A2_CAPACITY = 70;
   public static final float B1_CAPACITY = 60f;
@@ -189,7 +198,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
   @Before
   public void setUp() throws Exception {
-    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
     setupQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
@@ -328,12 +337,15 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     // Define top-level queues
     // Set childQueue for root
     conf.setQueues(ROOT,
-        new String[] { "a", "b", "c", "d" });
+        new String[] {"a", "b", "c", "d", "esubgroup1", "asubgroup2",
+            "fgroup"});
 
     conf.setCapacity(A, A_CAPACITY);
     conf.setCapacity(B, B_CAPACITY);
     conf.setCapacity(C, C_CAPACITY);
     conf.setCapacity(D, D_CAPACITY);
+    conf.setCapacity(ASUBGROUP1, ASUBGROUP1_CAPACITY);
+    conf.setCapacity(AGROUP, AGROUP_CAPACITY);
 
     // Define 2nd-level queues
     conf.setQueues(A, new String[] { "a1", "a2" });
@@ -349,6 +361,13 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     conf.setUserLimitFactor(B2, 100.0f);
     conf.setCapacity(B3, B3_CAPACITY);
     conf.setUserLimitFactor(B3, 100.0f);
+
+    conf.setQueues(ASUBGROUP1, new String[] {"e"});
+    conf.setCapacity(ASUBGROUP1_A, 100f);
+    conf.setUserLimitFactor(ASUBGROUP1_A, 100.0f);
+    conf.setQueues(AGROUP, new String[] {"f"});
+    conf.setCapacity(AGROUP_A, 100f);
+    conf.setUserLimitFactor(AGROUP_A, 100.0f);
 
     conf.setUserLimitFactor(C, 1.0f);
     conf.setAutoCreateChildQueueEnabled(C, true);
@@ -468,8 +487,15 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     CapacityScheduler capacityScheduler =
         (CapacityScheduler) rm.getResourceScheduler();
     // submit an app
-    RMApp rmApp = rm.submitApp(GB, "test-auto-queue-activation", user, null,
-        leafQueueName);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-auto-queue-activation")
+            .withUser(user)
+            .withAcls(null)
+            .withQueue(leafQueueName)
+            .withUnmanagedAM(false)
+            .build();
+    RMApp rmApp = MockRMAppSubmitter.submit(rm, data);
 
     // check preconditions
     List<ApplicationAttemptId> appsInParentQueue =
@@ -494,8 +520,22 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     return queueMappings;
   }
 
+  protected CapacitySchedulerConfiguration setupSchedulerConfiguration() {
+    Configuration schedConf = new Configuration();
+    schedConf.setInt(YarnConfiguration.RESOURCE_TYPES
+        + ".vcores.minimum-allocation", 1);
+    schedConf.setInt(YarnConfiguration.RESOURCE_TYPES
+        + ".vcores.maximum-allocation", 8);
+    schedConf.setInt(YarnConfiguration.RESOURCE_TYPES
+        + ".memory-mb.minimum-allocation", 1024);
+    schedConf.setInt(YarnConfiguration.RESOURCE_TYPES
+        + ".memory-mb.maximum-allocation", 16384);
+
+    return new CapacitySchedulerConfiguration(schedConf);
+  }
+
   protected MockRM setupSchedulerInstance() throws Exception {
-    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
     setupQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
@@ -549,9 +589,15 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
   protected RMApp submitApp(String user, String queue, String nodeLabel)
       throws Exception {
-    RMApp app = mockRM.submitApp(GB,
-        "test-auto-queue-creation" + RandomUtils.nextInt(0, 100), user, null,
-        queue, nodeLabel);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, mockRM)
+            .withAppName("test-auto-queue-creation" + RandomUtils.nextInt(0, 100))
+            .withUser(user)
+            .withAcls(null)
+            .withQueue(queue)
+            .withAmLabel(nodeLabel)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(mockRM, data);
     Assert.assertEquals(app.getAmNodeLabelExpression(), nodeLabel);
     // check preconditions
     List<ApplicationAttemptId> appsInC = cs.getAppsInQueue(PARENT_QUEUE);
@@ -577,6 +623,14 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     assertEquals(maxApps, autoCreatedLeafQueue.getMaxApplications());
     assertEquals(maxAppsPerUser,
         autoCreatedLeafQueue.getMaxApplicationsPerUser());
+  }
+
+  protected void validateContainerLimits(
+      AutoCreatedLeafQueue autoCreatedLeafQueue) {
+    assertEquals(8,
+        autoCreatedLeafQueue.getMaximumAllocation().getVirtualCores());
+    assertEquals(16384,
+        autoCreatedLeafQueue.getMaximumAllocation().getMemorySize());
   }
 
   protected void validateInitialQueueEntitlement(CSQueue parentQueue, String

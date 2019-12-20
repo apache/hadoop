@@ -25,6 +25,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.LinkedList;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 
@@ -155,7 +156,7 @@ class Ls extends FsCommand {
    * Should display only paths of files and directories.
    * @return true display paths only, false display all fields
    */
-  @InterfaceAudience.Private
+  @VisibleForTesting
   boolean isPathOnly() {
     return this.pathOnly;
   }
@@ -164,7 +165,7 @@ class Ls extends FsCommand {
    * Should the contents of the directory be shown or just the directory?
    * @return true if directory contents, false if just directory
    */
-  @InterfaceAudience.Private
+  @VisibleForTesting
   boolean isDirRecurse() {
     return this.dirRecurse;
   }
@@ -173,12 +174,12 @@ class Ls extends FsCommand {
    * Should file sizes be returned in human readable format rather than bytes?
    * @return true is human readable, false if bytes
    */
-  @InterfaceAudience.Private
+  @VisibleForTesting
   boolean isHumanReadable() {
     return this.humanReadable;
   }
 
-  @InterfaceAudience.Private
+  @VisibleForTesting
   private boolean isHideNonPrintable() {
     return hideNonPrintable;
   }
@@ -187,7 +188,7 @@ class Ls extends FsCommand {
    * Should directory contents be displayed in reverse order
    * @return true reverse order, false default order
    */
-  @InterfaceAudience.Private
+  @VisibleForTesting
   boolean isOrderReverse() {
     return this.orderReverse;
   }
@@ -196,7 +197,7 @@ class Ls extends FsCommand {
    * Should directory contents be displayed in mtime order.
    * @return true mtime order, false default order
    */
-  @InterfaceAudience.Private
+  @VisibleForTesting
   boolean isOrderTime() {
     return this.orderTime;
   }
@@ -205,7 +206,7 @@ class Ls extends FsCommand {
    * Should directory contents be displayed in size order.
    * @return true size order, false default order
    */
-  @InterfaceAudience.Private
+  @VisibleForTesting
   boolean isOrderSize() {
     return this.orderSize;
   }
@@ -214,13 +215,28 @@ class Ls extends FsCommand {
    * Should access time be used rather than modification time.
    * @return true use access time, false use modification time
    */
-  @InterfaceAudience.Private
+  @VisibleForTesting
   boolean isUseAtime() {
     return this.useAtime;
   }
 
+  /**
+   * Should EC policies be displayed.
+   * @return true display EC policies, false doesn't display EC policies
+   */
+  @VisibleForTesting
+  boolean isDisplayECPolicy() {
+    return this.displayECPolicy;
+  }
+
   @Override
   protected void processPathArgument(PathData item) throws IOException {
+    if (isDisplayECPolicy() && item.fs.getContentSummary(item.path)
+        .getErasureCodingPolicy() == null) {
+      throw new UnsupportedOperationException("FileSystem "
+          + item.fs.getUri() + " does not support Erasure Coding");
+    }
+
     // implicitly recurse once for cmdline directories
     if (dirRecurse && item.stat.isDirectory()) {
       recursePath(item);
@@ -318,21 +334,21 @@ class Ls extends FsCommand {
     }
 
     StringBuilder fmt = new StringBuilder();
-    fmt.append("%s%s"); // permission string
-    fmt.append("%"  + maxRepl  + "s ");
+    fmt.append("%s%s") // permission string
+        .append("%"  + maxRepl  + "s ")
+        .append((maxOwner > 0) ? "%-" + maxOwner + "s " : "%s")
+        .append((maxGroup > 0) ? "%-" + maxGroup + "s " : "%s");
     // Do not use '%-0s' as a formatting conversion, since it will throw a
     // a MissingFormatWidthException if it is used in String.format().
     // http://docs.oracle.com/javase/1.5.0/docs/api/java/util/Formatter.html#intFlags
     if(displayECPolicy){
-      int maxEC=0;
+      int maxEC = 0;
       for (PathData item : items) {
           ContentSummary contentSummary = item.fs.getContentSummary(item.path);
-          maxEC=maxLength(maxEC,contentSummary.getErasureCodingPolicy().length());
+        maxEC = maxLength(maxEC, contentSummary.getErasureCodingPolicy());
       }
-      fmt.append(" %"+maxEC+"s ");
+      fmt.append((maxEC > 0) ? "%-" + maxEC + "s " : "%s");
     }
-    fmt.append((maxOwner > 0) ? "%-" + maxOwner + "s " : "%s");
-    fmt.append((maxGroup > 0) ? "%-" + maxGroup + "s " : "%s");
     fmt.append("%"  + maxLen   + "s ");
     fmt.append("%s %s"); // mod time & path
     lineFormat = fmt.toString();

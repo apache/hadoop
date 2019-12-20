@@ -106,12 +106,12 @@ public class FlowRunRowKey {
   @Override
   public String toString() {
     StringBuilder flowKeyStr = new StringBuilder();
-    flowKeyStr.append("{clusterId=" + clusterId);
-    flowKeyStr.append(" userId=" + userId);
-    flowKeyStr.append(" flowName=" + flowName);
-    flowKeyStr.append(" flowRunId=");
-    flowKeyStr.append(flowRunId);
-    flowKeyStr.append("}");
+    flowKeyStr.append("{clusterId=" + clusterId)
+        .append(" userId=" + userId)
+        .append(" flowName=" + flowName)
+        .append(" flowRunId=")
+        .append(flowRunId)
+        .append("}");
     return flowKeyStr.toString();
   }
 

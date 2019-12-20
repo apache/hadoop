@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import java.net.HttpURLConnection;
@@ -407,12 +409,17 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertEquals("test app", app.get("name"));
     assertEquals(round == 0 ? "test diagnostics info" : "",
         app.get("diagnosticsInfo"));
+    assertEquals(Integer.MAX_VALUE + 1L, app.get("submittedTime"));
     assertEquals("test queue", app.get("queue"));
     assertEquals("user1", app.get("user"));
     assertEquals("test app type", app.get("type"));
     assertEquals(FinalApplicationStatus.UNDEFINED.toString(),
       app.get("finalAppStatus"));
     assertEquals(YarnApplicationState.FINISHED.toString(), app.get("appState"));
+    assertNotNull("Aggregate resource allocation is null",
+        app.get("aggregateResourceAllocation"));
+    assertNotNull("Aggregate Preempted Resource Allocation is null",
+        app.get("aggregatePreemptedResourceAllocation"));
   }
 
   @Test
@@ -675,7 +682,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .accept(MediaType.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
-    assertEquals(responseText.getBytes().length, fullTextSize);
+    assertThat(responseText.getBytes()).hasSize(fullTextSize);
 
     r = resource();
     response = r.path("ws").path("v1")
@@ -686,7 +693,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .accept(MediaType.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
-    assertEquals(responseText.getBytes().length, fullTextSize);
+    assertThat(responseText.getBytes()).hasSize(fullTextSize);
   }
 
   @Test(timeout = 10000)
@@ -877,8 +884,8 @@ public class TestAHSWebServices extends JerseyTestBase {
         List<ContainerLogFileInfo> logMeta = logInfo
             .getContainerLogsInfo();
         assertTrue(logMeta.size() == 1);
-        assertEquals(logMeta.get(0).getFileName(), fileName);
-        assertEquals(logMeta.get(0).getFileSize(), String.valueOf(
+        assertThat(logMeta.get(0).getFileName()).isEqualTo(fileName);
+        assertThat(logMeta.get(0).getFileSize()).isEqualTo(String.valueOf(
             content.length()));
       } else {
         assertEquals(logInfo.getLogType(),
@@ -905,11 +912,11 @@ public class TestAHSWebServices extends JerseyTestBase {
         List<ContainerLogFileInfo> logMeta = logInfo
             .getContainerLogsInfo();
         assertTrue(logMeta.size() == 1);
-        assertEquals(logMeta.get(0).getFileName(), fileName);
-        assertEquals(logMeta.get(0).getFileSize(), String.valueOf(
+        assertThat(logMeta.get(0).getFileName()).isEqualTo(fileName);
+        assertThat(logMeta.get(0).getFileSize()).isEqualTo(String.valueOf(
             content.length()));
       } else {
-        assertEquals(logInfo.getLogType(),
+        assertThat(logInfo.getLogType()).isEqualTo(
             ContainerLogAggregationType.LOCAL.toString());
       }
     }
@@ -943,8 +950,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     List<ContainerLogFileInfo> logMeta = responseText.get(0)
         .getContainerLogsInfo();
     assertTrue(logMeta.size() == 1);
-    assertEquals(logMeta.get(0).getFileName(), fileName);
-    assertEquals(logMeta.get(0).getFileSize(),
+    assertThat(logMeta.get(0).getFileName()).isEqualTo(fileName);
+    assertThat(logMeta.get(0).getFileSize()).isEqualTo(
         String.valueOf(content.length()));
   }
 

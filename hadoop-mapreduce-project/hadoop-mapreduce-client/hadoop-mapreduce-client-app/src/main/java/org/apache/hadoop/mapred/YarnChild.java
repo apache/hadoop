@@ -26,10 +26,12 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.ScheduledExecutorService;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.ClusterStorageCapacityExceededException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.CallerContext;
@@ -60,6 +62,8 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * The main() for MapReduce task processes.
@@ -205,8 +209,7 @@ class YarnChild {
       // Report back any failures, for diagnostic purposes
       if (taskid != null) {
         if (!ShutdownHookManager.get().isShutdownInProgress()) {
-          umbilical.fatalError(taskid,
-              StringUtils.stringifyException(exception), false);
+          reportError(exception, task, umbilical);
         }
       }
     } catch (Throwable throwable) {
@@ -226,6 +229,27 @@ class YarnChild {
       DefaultMetricsSystem.shutdown();
       TaskLog.syncLogsShutdown(logSyncer);
     }
+  }
+
+  @VisibleForTesting
+  static void reportError(Exception exception, Task task,
+      TaskUmbilicalProtocol umbilical) throws IOException {
+    boolean fastFailJob = false;
+    boolean hasClusterStorageCapacityExceededException =
+        ExceptionUtils.indexOfType(exception,
+            ClusterStorageCapacityExceededException.class) != -1;
+    if (hasClusterStorageCapacityExceededException) {
+      boolean killJobWhenExceedClusterStorageCapacity = task.getConf()
+          .getBoolean(MRJobConfig.JOB_DFS_STORAGE_CAPACITY_KILL_LIMIT_EXCEED,
+              MRJobConfig.DEFAULT_JOB_DFS_STORAGE_CAPACITY_KILL_LIMIT_EXCEED);
+      if (killJobWhenExceedClusterStorageCapacity) {
+        LOG.error(
+            "Fast fail the job because the cluster storage capacity was exceeded.");
+        fastFailJob = true;
+      }
+    }
+    umbilical.fatalError(taskid, StringUtils.stringifyException(exception),
+        fastFailJob);
   }
 
   /**

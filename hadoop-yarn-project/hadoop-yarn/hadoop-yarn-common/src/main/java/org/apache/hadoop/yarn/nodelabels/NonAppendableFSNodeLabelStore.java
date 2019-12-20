@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.nodelabels;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -39,8 +39,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * Store implementation for Non Appendable File Store.
  */
 public class NonAppendableFSNodeLabelStore extends FileSystemNodeLabelsStore {
-  protected static final Log
-      LOG = LogFactory.getLog(NonAppendableFSNodeLabelStore.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(NonAppendableFSNodeLabelStore.class);
 
   @Override
   public void close() throws IOException {
@@ -61,9 +61,7 @@ public class NonAppendableFSNodeLabelStore extends FileSystemNodeLabelsStore {
         fs.delete(oldMirrorPath, false);
       } catch (IOException e) {
         // do nothing
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Exception while removing old mirror", e);
-        }
+        LOG.debug("Exception while removing old mirror", e);
       }
       
       // rename new to old
@@ -93,10 +91,10 @@ public class NonAppendableFSNodeLabelStore extends FileSystemNodeLabelsStore {
 
   private void writeNewMirror() throws IOException {
     ReentrantReadWriteLock.ReadLock readLock = manager.readLock;
+    // Acquire readlock to make sure we get cluster node labels and
+    // node-to-labels mapping atomically.
+    readLock.lock();
     try {
-      // Acquire readlock to make sure we get cluster node labels and
-      // node-to-labels mapping atomically.
-      readLock.lock();
       // Write mirror to mirror.new.tmp file
       Path newTmpPath = new Path(fsWorkingPath, MIRROR_FILENAME + ".new.tmp");
       try (FSDataOutputStream os = fs.create(newTmpPath, true)) {

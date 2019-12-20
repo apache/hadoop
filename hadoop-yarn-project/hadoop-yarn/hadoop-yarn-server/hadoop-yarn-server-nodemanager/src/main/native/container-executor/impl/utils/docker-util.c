@@ -28,9 +28,11 @@
 #include "docker-util.h"
 #include "string-utils.h"
 #include "util.h"
+#include "container-executor.h"
 #include <grp.h>
 #include <pwd.h>
 #include <errno.h>
+#include "mount-utils.h"
 
 int entry_point = 0;
 
@@ -39,11 +41,11 @@ static int read_and_verify_command_file(const char *command_file, const char *do
   int ret = 0;
   ret = read_config(command_file, command_config);
   if (ret != 0) {
-    return INVALID_COMMAND_FILE;
+    return INVALID_DOCKER_COMMAND_FILE;
   }
   char *command = get_configuration_value("docker-command", DOCKER_COMMAND_FILE_SECTION, command_config);
   if (command == NULL || (strcmp(command, docker_command) != 0)) {
-    ret = INCORRECT_COMMAND;
+    ret = INCORRECT_DOCKER_COMMAND;
   }
   free(command);
   return ret;
@@ -113,15 +115,36 @@ int check_trusted_image(const struct configuration *command_config, const struct
   int found = 0;
   int i = 0;
   int ret = 0;
+  int no_registry_prefix_in_image_name = 0;
   char *image_name = get_configuration_value("image", DOCKER_COMMAND_FILE_SECTION, command_config);
-  char **privileged_registry = get_configuration_values_delimiter("docker.trusted.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+  char *privileged = NULL;
+  char **privileged_registry = NULL;
+  privileged = get_configuration_value("privileged", DOCKER_COMMAND_FILE_SECTION, command_config);
+  if (privileged != NULL && strcasecmp(privileged, "true") == 0 ) {
+    privileged_registry = get_configuration_values_delimiter("docker.privileged-containers.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+  }
+  if (privileged_registry == NULL) {
+    privileged_registry = get_configuration_values_delimiter("docker.trusted.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+  }
   char *registry_ptr = NULL;
   if (image_name == NULL) {
     ret = INVALID_DOCKER_IMAGE_NAME;
     goto free_and_exit;
   }
+  if (strchr(image_name, '/') == NULL) {
+    no_registry_prefix_in_image_name = 1;
+  }
   if (privileged_registry != NULL) {
     for (i = 0; privileged_registry[i] != NULL; i++) {
+      // "library" means we trust public top
+      if (strncmp(privileged_registry[i], "library", strlen("library")) == 0) {
+        if (no_registry_prefix_in_image_name) {
+          // if image doesn't exists, docker pull will automatically happen
+          found = 1;
+          fprintf(LOGFILE, "image: %s is a trusted top-level image.\n", image_name);
+          break;
+        }
+      }
       int len = strlen(privileged_registry[i]);
       if (privileged_registry[i][len - 1] != '/') {
         registry_ptr = (char *) alloc_and_clear_memory(len + 2, sizeof(char));
@@ -145,14 +168,10 @@ int check_trusted_image(const struct configuration *command_config, const struct
   }
 
 free_and_exit:
+  free(privileged);
   free(image_name);
   free_values(privileged_registry);
   return ret;
-}
-
-static int is_regex(const char *str) {
-  // regex should begin with prefix "regex:"
-  return (strncmp(str, "regex:", 6) == 0);
 }
 
 static int is_valid_tmpfs_mount(const char *mount) {
@@ -161,15 +180,11 @@ static int is_valid_tmpfs_mount(const char *mount) {
   return execute_regex_match(regex_str, mount) == 0;
 }
 
-static int is_volume_name(const char *volume_name) {
-  const char *regex_str = "^[a-zA-Z0-9]([a-zA-Z0-9_.-]*)$";
+static int is_valid_ports_mapping(const char *ports_mapping) {
+  const char *regex_str = "^:[0-9]+|^[0-9]+:[0-9]+|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.)"
+                          "{3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]):[0-9]+:[0-9]+$";
   // execute_regex_match return 0 is matched success
-  return execute_regex_match(regex_str, volume_name) == 0;
-}
-
-static int is_volume_name_matched_by_regex(const char* requested, const char* pattern) {
-  // execute_regex_match return 0 is matched success
-  return is_volume_name(requested) && (execute_regex_match(pattern + sizeof("regex:"), requested) == 0);
+  return execute_regex_match(regex_str, ports_mapping) == 0;
 }
 
 static int add_param_to_command_if_allowed(const struct configuration *command_config,
@@ -289,62 +304,7 @@ static int validate_container_name(const char *container_name) {
     }
   }
   fprintf(ERRORFILE, "Specified container_id=%s is invalid\n", container_name);
-  fflush(ERRORFILE);
   return INVALID_DOCKER_CONTAINER_NAME;
-}
-
-const char *get_docker_error_message(const int error_code) {
-
-  switch (error_code) {
-    case INVALID_COMMAND_FILE:
-      return "Invalid command file passed";
-    case INCORRECT_COMMAND:
-      return "Incorrect command";
-    case BUFFER_TOO_SMALL:
-      return "Command buffer too small";
-    case INVALID_DOCKER_CONTAINER_NAME:
-      return "Invalid docker container name";
-    case INVALID_DOCKER_IMAGE_NAME:
-      return "Invalid docker image name";
-    case INVALID_DOCKER_USER_NAME:
-      return "Invalid docker user name";
-    case INVALID_DOCKER_INSPECT_FORMAT:
-      return "Invalid docker inspect format";
-    case UNKNOWN_DOCKER_COMMAND:
-      return "Unknown docker command";
-    case INVALID_DOCKER_NETWORK:
-      return "Invalid docker network";
-    case INVALID_DOCKER_CAPABILITY:
-      return "Invalid docker capability";
-    case PRIVILEGED_CONTAINERS_DISABLED:
-      return "Privileged containers are disabled";
-    case INVALID_DOCKER_MOUNT:
-      return "Invalid docker mount";
-    case INVALID_DOCKER_RO_MOUNT:
-      return "Invalid docker read-only mount";
-    case INVALID_DOCKER_RW_MOUNT:
-      return "Invalid docker read-write mount";
-    case MOUNT_ACCESS_ERROR:
-      return "Mount access error";
-    case INVALID_DOCKER_DEVICE:
-      return "Invalid docker device";
-    case INVALID_DOCKER_VOLUME_DRIVER:
-      return "Invalid docker volume-driver";
-    case INVALID_DOCKER_VOLUME_NAME:
-      return "Invalid docker volume name";
-    case INVALID_DOCKER_VOLUME_COMMAND:
-      return "Invalid docker volume command";
-    case PID_HOST_DISABLED:
-      return "Host pid namespace is disabled";
-    case INVALID_PID_NAMESPACE:
-      return "Invalid pid namespace";
-    case INVALID_DOCKER_IMAGE_TRUST:
-      return "Docker image is not trusted";
-    case INVALID_DOCKER_TMPFS_MOUNT:
-      return "Invalid docker tmpfs mount";
-    default:
-      return "Unknown error";
-  }
 }
 
 int get_max_retries(const struct configuration *conf) {
@@ -389,14 +349,8 @@ int get_docker_command(const char *command_file, const struct configuration *con
   ret = read_config(command_file, &command_config);
   if (ret != 0) {
     free_configuration(&command_config);
-    return INVALID_COMMAND_FILE;
+    return INVALID_DOCKER_COMMAND_FILE;
   }
-
-  char *value = get_configuration_value("use-entry-point", DOCKER_COMMAND_FILE_SECTION, &command_config);
-  if (value != NULL && strcasecmp(value, "true") == 0) {
-    entry_point = 1;
-  }
-  free(value);
 
   char *docker = get_docker_binary(conf);
   ret = add_to_args(args, docker);
@@ -434,6 +388,8 @@ int get_docker_command(const char *command_file, const struct configuration *con
     ret = get_docker_start_command(command_file, conf, args);
   } else if (strcmp(DOCKER_EXEC_COMMAND, command) == 0) {
     ret = get_docker_exec_command(command_file, conf, args);
+  } else if (strcmp(DOCKER_IMAGES_COMMAND, command) == 0) {
+      ret = get_docker_images_command(command_file, conf, args);
   } else {
     ret = UNKNOWN_DOCKER_COMMAND;
   }
@@ -559,9 +515,10 @@ cleanup:
 }
 
 int get_docker_inspect_command(const char *command_file, const struct configuration *conf, args *args) {
-  const char *valid_format_strings[] = { "{{.State.Status}}",
+  const char *valid_format_strings[] = {"{{.State.Status}}",
                                 "{{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}}",
-                                 "{{.State.Status}},{{.Config.StopSignal}}"};
+                                "{{json .NetworkSettings.Ports}}",
+                                "{{.State.Status}},{{.Config.StopSignal}}"};
   int ret = 0, i = 0, valid_format = 0;
   char *format = NULL, *container_name = NULL, *tmp_buffer = NULL;
   struct configuration command_config = {0, NULL};
@@ -581,7 +538,8 @@ int get_docker_inspect_command(const char *command_file, const struct configurat
     ret = INVALID_DOCKER_INSPECT_FORMAT;
     goto free_and_exit;
   }
-  for (i = 0; i < 3; ++i) {
+
+  for (i = 0; i < 4; ++i) {
     if (strcmp(format, valid_format_strings[i]) == 0) {
       valid_format = 1;
       break;
@@ -691,11 +649,19 @@ int get_docker_rm_command(const char *command_file, const struct configuration *
   }
 
   ret = add_to_args(args, DOCKER_RM_COMMAND);
-  if (ret == 0) {
-    ret = add_to_args(args, container_name);
-    if (ret != 0) {
-      ret = BUFFER_TOO_SMALL;
-    }
+  if (ret != 0) {
+    ret = BUFFER_TOO_SMALL;
+    goto free_and_exit;
+  }
+  ret = add_to_args(args, "-f");
+  if (ret != 0) {
+    ret = BUFFER_TOO_SMALL;
+    goto free_and_exit;
+  }
+  ret = add_to_args(args, container_name);
+  if (ret != 0) {
+    ret = BUFFER_TOO_SMALL;
+    goto free_and_exit;
   }
 free_and_exit:
   free(container_name);
@@ -864,7 +830,7 @@ int get_docker_exec_command(const char *command_file, const struct configuration
       }
     }
   } else {
-    ret = INVALID_COMMAND_FILE;
+    ret = INVALID_DOCKER_COMMAND_FILE;
   }
 free_and_exit:
   free(container_name);
@@ -936,6 +902,93 @@ static int set_network(const struct configuration *command_config,
   return ret;
 }
 
+static int set_runtime(const struct configuration *command_config,
+                       const struct configuration *conf, args *args) {
+  int ret = 0;
+  ret = add_param_to_command_if_allowed(command_config, conf, "runtime",
+                                        "docker.allowed.runtimes", "--runtime=",
+                                        0, 0, args);
+  if (ret != 0) {
+    fprintf(ERRORFILE, "Could not find requested runtime in allowed runtimes\n");
+    ret = INVALID_DOCKER_RUNTIME;
+  }
+  return ret;
+}
+
+int is_service_mode_enabled(const struct configuration *command_config,
+                            const struct configuration *executor_cfg, args *args) {
+    int ret = 0;
+    struct section *section = get_configuration_section(CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, executor_cfg);
+    char *value = get_configuration_value("service-mode", DOCKER_COMMAND_FILE_SECTION, command_config);
+    if (value != NULL && strcasecmp(value, "true") == 0) {
+      if (is_feature_enabled(DOCKER_SERVICE_MODE_ENABLED_KEY, ret, section)) {
+        ret = 1;
+      } else {
+        ret = DOCKER_SERVICE_MODE_DISABLED;
+      }
+     }
+    free(value);
+    return ret;
+}
+
+static int add_ports_mapping_to_command(const struct configuration *command_config, args *args) {
+  int i = 0, ret = 0;
+  char *network_type = (char*) malloc(128);
+  char *docker_network_command = NULL;
+  char *docker_binary = get_docker_binary(command_config);
+  char *network_name = get_configuration_value("net", DOCKER_COMMAND_FILE_SECTION, command_config);
+  char **ports_mapping_values = get_configuration_values_delimiter("ports-mapping", DOCKER_COMMAND_FILE_SECTION, command_config, ",");
+  if (network_name != NULL) {
+    docker_network_command = make_string("%s network inspect %s --format='{{.Driver}}'", docker_binary, network_name);
+    FILE* docker_network = popen(docker_network_command, "r");
+    ret = fscanf(docker_network, "%s", network_type);
+    if (pclose (docker_network) != 0 || ret <= 0) {
+      fprintf (ERRORFILE, "Could not inspect docker network to get type %s.\n", docker_network_command);
+      goto cleanup;
+    }
+    // other network type exit successfully without ports mapping
+    if (strcasecmp(network_type, "bridge") != 0) {
+      ret = 0;
+      goto cleanup;
+    }
+    // add -P when not configure ports mapping
+    if (ports_mapping_values == NULL) {
+      ret = add_to_args(args, "-P");
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+      }
+    }
+  }
+  // add -p when configure ports mapping
+  if (ports_mapping_values != NULL) {
+    for (i = 0; ports_mapping_values[i] != NULL; i++) {
+      if (!is_valid_ports_mapping(ports_mapping_values[i])) {
+         fprintf (ERRORFILE, "Invalid port mappings:  %s.\n", ports_mapping_values[i]);
+         ret = INVALID_DOCKER_PORTS_MAPPING;
+         break;
+      }
+      ret = add_to_args(args, "-p");
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+        break;
+      }
+      ret = add_to_args(args, ports_mapping_values[i]);
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+        break;
+      }
+    }
+  }
+
+cleanup:
+  free(network_type);
+  free(docker_binary);
+  free(network_name);
+  free(docker_network_command);
+  free_values(ports_mapping_values);
+  return ret;
+}
+
 static int set_pid_namespace(const struct configuration *command_config,
                    const struct configuration *conf, args *args) {
   char *value = get_configuration_value("pid", DOCKER_COMMAND_FILE_SECTION,
@@ -955,17 +1008,17 @@ static int set_pid_namespace(const struct configuration *command_config,
           }
         } else {
           fprintf(ERRORFILE, "Host pid namespace is disabled\n");
-          ret = PID_HOST_DISABLED;
+          ret = DOCKER_PID_HOST_DISABLED;
           goto free_and_exit;
         }
       } else {
         fprintf(ERRORFILE, "Host pid namespace is disabled\n");
-        ret = PID_HOST_DISABLED;
+        ret = DOCKER_PID_HOST_DISABLED;
         goto free_and_exit;
       }
     } else {
       fprintf(ERRORFILE, "Invalid pid namespace\n");
-      ret = INVALID_PID_NAMESPACE;
+      ret = INVALID_DOCKER_PID_NAMESPACE;
     }
   }
 
@@ -1033,164 +1086,6 @@ static int set_env(const struct configuration *command_config, struct args *args
   return ret;
 }
 
-/**
- * Helper function to help normalize mounts for checking if mounts are
- * permitted. The function does the following -
- * 1. Find the canonical path for mount using realpath
- * 2. If the path is a directory, add a '/' at the end (if not present)
- * 3. Return a copy of the canonicalised path(to be freed by the caller)
- * @param mount path to be canonicalised
- * @param isRegexAllowed whether regex matching is allowed for normalize mount
- * @return pointer to canonicalised path, NULL on error
- */
-static char* normalize_mount(const char* mount, int isRegexAllowed) {
-  int ret = 0;
-  struct stat buff;
-  char *ret_ptr = NULL, *real_mount = NULL;
-  if (mount == NULL) {
-    return NULL;
-  }
-  real_mount = realpath(mount, NULL);
-  if (real_mount == NULL) {
-    // If mount is a valid named volume, just return it and let docker decide
-    if (is_volume_name(mount)) {
-      return strdup(mount);
-    }
-    // we only allow permitted mount to be REGEX, for permitted mount, we check
-    // if it's a valid REGEX return; for user mount, we need to strictly check
-    if (isRegexAllowed) {
-      if (is_regex(mount)) {
-        return strdup(mount);
-      }
-    }
-    fprintf(ERRORFILE, "Could not determine real path of mount '%s'\n", mount);
-    return NULL;
-  }
-  ret = stat(real_mount, &buff);
-  if (ret == 0) {
-    if (S_ISDIR(buff.st_mode)) {
-      size_t len = strlen(real_mount);
-      if (len <= 0) {
-        free(real_mount);
-        return NULL;
-      }
-      if (real_mount[len - 1] != '/') {
-        ret_ptr = (char *) alloc_and_clear_memory(len + 2, sizeof(char));
-        strncpy(ret_ptr, real_mount, len);
-        ret_ptr[len] = '/';
-        ret_ptr[len + 1] = '\0';
-      } else {
-        ret_ptr = strdup(real_mount);
-      }
-    } else {
-      ret_ptr = strdup(real_mount);
-    }
-  } else {
-    fprintf(ERRORFILE, "Could not stat path '%s'\n", real_mount);
-    ret_ptr = NULL;
-  }
-  free(real_mount);
-  return ret_ptr;
-}
-
-static int normalize_mounts(char **mounts, int isRegexAllowed) {
-  int i = 0;
-  char *tmp = NULL;
-  if (mounts == NULL) {
-    return 0;
-  }
-  for (i = 0; mounts[i] != NULL; ++i) {
-    tmp = normalize_mount(mounts[i], isRegexAllowed);
-    if (tmp == NULL) {
-      return -1;
-    }
-    free(mounts[i]);
-    mounts[i] = tmp;
-  }
-  return 0;
-}
-
-static int check_mount_permitted(const char **permitted_mounts, const char *requested) {
-  int i = 0, ret = 0;
-  size_t permitted_mount_len = 0;
-  if (permitted_mounts == NULL) {
-    return 0;
-  }
-  char *normalized_path = normalize_mount(requested, 0);
-  if (normalized_path == NULL) {
-    return -1;
-  }
-  for (i = 0; permitted_mounts[i] != NULL; ++i) {
-    if (strcmp(normalized_path, permitted_mounts[i]) == 0) {
-      ret = 1;
-      break;
-    }
-    // if (permitted_mounts[i] is a REGEX): use REGEX to compare; return
-    if (is_regex(permitted_mounts[i]) &&
-    is_volume_name_matched_by_regex(normalized_path, permitted_mounts[i])) {
-      ret = 1;
-      break;
-    }
-
-    // directory check
-    permitted_mount_len = strlen(permitted_mounts[i]);
-    struct stat path_stat;
-    stat(permitted_mounts[i], &path_stat);
-    if(S_ISDIR(path_stat.st_mode)) {
-      if (strncmp(normalized_path, permitted_mounts[i], permitted_mount_len) == 0) {
-        ret = 1;
-        break;
-      }
-    }
-  }
-  free(normalized_path);
-  return ret;
-}
-
-static char* get_mount_source(const char *mount) {
-  const char *tmp = strchr(mount, ':');
-  if (tmp == NULL) {
-    fprintf(ERRORFILE, "Invalid docker mount '%s'\n", mount);
-    return NULL;
-  }
-  size_t len = tmp - mount;
-  return strndup(mount, len);
-}
-
-static char* get_mount_type(const char *mount) {
-  const char *tmp = strrchr(mount, ':');
-  if (tmp == NULL) {
-    fprintf(ERRORFILE, "Invalid docker mount '%s'\n", mount);
-    return NULL;
-  }
-  if (strlen(tmp) < 2) {
-    fprintf(ERRORFILE, "Invalid docker mount '%s'\n", mount);
-    return NULL;
-  }
-  char *mount_type = strdup(&tmp[1]);
-  if (strncmp("ro", mount_type, 2) != 0 &&
-      strncmp("rw", mount_type, 2) != 0) {
-    fprintf(ERRORFILE, "Invalid docker mount type '%s'\n", mount_type);
-    free(mount_type);
-    return NULL;
-  }
-  if (strlen(mount_type) > 2) {
-    if (strlen(mount_type) < 8 ||
-        (strcmp("shared", mount_type + 3) != 0 &&
-        strcmp("rshared", mount_type + 3) != 0 &&
-        strcmp("slave", mount_type + 3) != 0 &&
-        strcmp("rslave", mount_type + 3) != 0 &&
-        strcmp("private", mount_type + 3) != 0 &&
-        strcmp("rprivate", mount_type + 3) != 0)) {
-      fprintf(ERRORFILE, "Invalid docker mount type '%s'\n", mount_type);
-      free(mount_type);
-      return NULL;
-    }
-    mount_type[2] = ',';
-  }
-  return mount_type;
-}
-
 static int add_tmpfs_mounts(const struct configuration *command_config, args *args) {
   char **values = get_configuration_values_delimiter("tmpfs", DOCKER_COMMAND_FILE_SECTION, command_config, ",");
   int i = 0, ret = 0;
@@ -1220,122 +1115,7 @@ free_and_exit:
   return ret;
 }
 
-static int add_mounts(const struct configuration *command_config, const struct configuration *conf, args *args) {
-  const char *tmp_path_buffer[2] = {NULL, NULL};
-  char *mount_src = NULL;
-  char *mount_type = NULL;
-  char **permitted_ro_mounts = get_configuration_values_delimiter("docker.allowed.ro-mounts",
-                                                                  CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
-  char **permitted_rw_mounts = get_configuration_values_delimiter("docker.allowed.rw-mounts",
-                                                                  CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
-  char **values = get_configuration_values_delimiter("mounts", DOCKER_COMMAND_FILE_SECTION, command_config, ",");
-  char *config_path = get_config_path("");
-  const char *container_executor_cfg_path = normalize_mount(config_path, 0);
-  free(config_path);
-  int i = 0, permitted_rw = 0, permitted_ro = 0, ret = 0;
-  if (values == NULL) {
-    goto free_and_exit;
-  }
-  // Disable mount volumes if image is not trusted.
-  if (check_trusted_image(command_config, conf) != 0) {
-    fprintf(ERRORFILE, "Disable mount volume for untrusted image\n");
-    // YARN will implicitly bind node manager local directory to
-    // docker image.  This can create file system security holes,
-    // if docker container has binary to escalate privileges.
-    // For untrusted image, we drop mounting without reporting
-    // INVALID_DOCKER_MOUNT messages to allow running untrusted
-    // image in a sandbox.
-    ret = 0;
-    goto free_and_exit;
-  }
-  ret = normalize_mounts(permitted_ro_mounts, 1);
-  ret |= normalize_mounts(permitted_rw_mounts, 1);
-  if (ret != 0) {
-    fprintf(ERRORFILE, "Unable to find permitted docker mounts on disk\n");
-    ret = MOUNT_ACCESS_ERROR;
-    goto free_and_exit;
-  }
-  for (i = 0; values[i] != NULL; i++) {
-    mount_src = get_mount_source(values[i]);
-    if (mount_src == NULL) {
-      fprintf(ERRORFILE, "Invalid docker mount '%s'\n", values[i]);
-      ret = INVALID_DOCKER_MOUNT;
-      goto free_and_exit;
-    }
-    mount_type = get_mount_type(values[i]);
-    if (mount_type == NULL) {
-      fprintf(ERRORFILE, "Invalid docker mount '%s'\n", values[i]);
-      ret = INVALID_DOCKER_MOUNT;
-      goto free_and_exit;
-    }
-    permitted_rw = check_mount_permitted((const char **) permitted_rw_mounts, mount_src);
-    permitted_ro = check_mount_permitted((const char **) permitted_ro_mounts, mount_src);
-    if (permitted_ro == -1 || permitted_rw == -1) {
-      fprintf(ERRORFILE, "Invalid docker mount '%s', realpath=%s\n", values[i], mount_src);
-      ret = INVALID_DOCKER_MOUNT;
-      goto free_and_exit;
-    }
-    if (strncmp("rw", mount_type, 2) == 0) {
-      // rw mount
-      if (permitted_rw == 0) {
-        fprintf(ERRORFILE, "Configuration does not allow docker mount '%s', realpath=%s\n", values[i], mount_src);
-        ret = INVALID_DOCKER_RW_MOUNT;
-        goto free_and_exit;
-      } else {
-        // determine if the user can modify the container-executor.cfg file
-        tmp_path_buffer[0] = normalize_mount(mount_src, 0);
-        // just re-use the function, flip the args to check if the container-executor path is in the requested
-        // mount point
-        ret = check_mount_permitted(tmp_path_buffer, container_executor_cfg_path);
-        free((void *) tmp_path_buffer[0]);
-        if (ret == 1) {
-          fprintf(ERRORFILE, "Attempting to mount a parent directory '%s' of container-executor.cfg as read-write\n",
-                  values[i]);
-          ret = INVALID_DOCKER_RW_MOUNT;
-          goto free_and_exit;
-        }
-      }
-    } else {
-      // ro mount
-      if (permitted_ro == 0 && permitted_rw == 0) {
-        fprintf(ERRORFILE, "Configuration does not allow docker mount '%s', realpath=%s\n", values[i], mount_src);
-        ret = INVALID_DOCKER_RO_MOUNT;
-        goto free_and_exit;
-      }
-    }
 
-    if (strlen(mount_type) > 2) {
-      // overwrite separator between read mode and propagation option with ','
-      int mount_type_index = strlen(values[i]) - strlen(mount_type);
-      values[i][mount_type_index + 2] = ',';
-    }
-
-    ret = add_to_args(args, "-v");
-    if (ret != 0) {
-      ret = BUFFER_TOO_SMALL;
-      goto free_and_exit;
-    }
-
-    ret = add_to_args(args, values[i]);
-    if (ret != 0) {
-      ret = BUFFER_TOO_SMALL;
-      goto free_and_exit;
-    }
-    free(mount_src);
-    free(mount_type);
-    mount_src = NULL;
-    mount_type = NULL;
-  }
-
-free_and_exit:
-  free(mount_src);
-  free(mount_type);
-  free_values(permitted_ro_mounts);
-  free_values(permitted_rw_mounts);
-  free_values(values);
-  free((void *) container_executor_cfg_path);
-  return ret;
-}
 
 static int check_privileges(const char *user) {
   int ngroups = 0;
@@ -1352,14 +1132,22 @@ static int check_privileges(const char *user) {
     exit(INITIALIZE_USER_FAILED);
   }
 
+#ifdef __linux__
   int rc = getgrouplist(user, pw->pw_gid, groups, &ngroups);
+#else
+  int rc = getgrouplist(user, pw->pw_gid, (int *)groups, &ngroups);
+#endif
   if (rc < 0) {
     groups = (gid_t *) alloc_and_clear_memory(ngroups, sizeof(gid_t));
     if (groups == NULL) {
       fprintf(ERRORFILE, "Failed to allocate buffer for group lookup for user %s.\n", user);
       exit(OUT_OF_MEMORY);
     }
+#ifdef __linux__
     if (getgrouplist(user, pw->pw_gid, groups, &ngroups) == -1) {
+#else
+    if (getgrouplist(user, pw->pw_gid, (int *)groups, &ngroups) == -1) {
+#endif
       fprintf(ERRORFILE, "Fail to lookup groups for user %s.\n", user);
       ret = 2;
     }
@@ -1428,10 +1216,16 @@ static int set_privileged(const struct configuration *command_config, const stru
     if (privileged_container_enabled != NULL) {
       if (strcmp(privileged_container_enabled, "1") == 0 ||
           strcasecmp(privileged_container_enabled, "True") == 0) {
+        // Disable set privileged if entry point mode is disabled
+        if (get_use_entry_point_flag() != 1) {
+          fprintf(ERRORFILE, "Privileged containers are disabled for non-entry-point mode\n");
+          ret = PRIVILEGED_DOCKER_CONTAINERS_DISABLED;
+          goto free_and_exit;
+        }
         // Disable set privileged if image is not trusted.
         if (check_trusted_image(command_config, conf) != 0) {
           fprintf(ERRORFILE, "Privileged containers are disabled from untrusted source\n");
-          ret = PRIVILEGED_CONTAINERS_DISABLED;
+          ret = PRIVILEGED_DOCKER_CONTAINERS_DISABLED;
           goto free_and_exit;
         }
         allowed = check_privileges(user);
@@ -1442,17 +1236,17 @@ static int set_privileged(const struct configuration *command_config, const stru
           }
         } else {
           fprintf(ERRORFILE, "Privileged containers are disabled for user: %s\n", user);
-          ret = PRIVILEGED_CONTAINERS_DISABLED;
+          ret = PRIVILEGED_DOCKER_CONTAINERS_DISABLED;
           goto free_and_exit;
         }
       } else {
         fprintf(ERRORFILE, "Privileged containers are disabled\n");
-        ret = PRIVILEGED_CONTAINERS_DISABLED;
+        ret = PRIVILEGED_DOCKER_CONTAINERS_DISABLED;
         goto free_and_exit;
       }
     } else {
       fprintf(ERRORFILE, "Privileged containers are disabled\n");
-      ret = PRIVILEGED_CONTAINERS_DISABLED;
+      ret = PRIVILEGED_DOCKER_CONTAINERS_DISABLED;
       goto free_and_exit;
     }
   }
@@ -1464,6 +1258,287 @@ free_and_exit:
   return ret;
 }
 
+
+
+static char* get_docker_mount_source(const char *mount) {
+    const char *tmp = strchr(mount, ':');
+    if (tmp == NULL) {
+        fprintf(ERRORFILE, "Invalid docker mount '%s'\n", mount);
+        return NULL;
+    }
+    size_t len = tmp - mount;
+    return strndup(mount, len);
+}
+
+static char* get_docker_mount_dest(const char *mount) {
+    size_t len;
+    const char *start = strchr(mount, ':') + 1;
+    if (start == NULL) {
+        fprintf(ERRORFILE, "Invalid docker mount '%s'\n", mount);
+        return NULL;
+    }
+
+    const char *end = strchr(start, ':');
+    if (end == NULL) {
+        len = strlen(mount) - (start - mount);
+    } else {
+        len = end - start;
+    }
+    return strndup(start, len);
+}
+
+static mount_options* get_docker_mount_options(const char *mount_string) {
+    char **opts = NULL;
+    mount_options *options = NULL;
+    unsigned int num_opts = 0;
+    char *option = NULL;
+    int len = 0;
+
+    //+1 because we don't care about the ':'
+    const char *option_string = strrchr(mount_string, ':') + 1;
+    if (option_string == NULL) {
+        fprintf(ERRORFILE, "Invalid docker mount '%s'\n", mount_string);
+        return NULL;
+    }
+
+    options = (mount_options *) calloc(1, sizeof(*options));
+    if (options == NULL) {
+        fprintf(ERRORFILE, "Unable to allocate %ld bytes\n", sizeof(*options));
+        return NULL;
+    }
+
+    len = strlen(option_string);
+
+    if (len == 2) {
+        opts = (char **) calloc(1, sizeof(*opts));
+        if (opts == NULL) {
+            fprintf(ERRORFILE, "Unable to allocate %ld bytes\n", sizeof(*opts));
+            free(options);
+            return NULL;
+        }
+        num_opts = 1;
+    } else if (len < 8) {
+        fprintf(ERRORFILE, "Invalid docker mount. Too many options. '%s'\n", mount_string);
+        free(options);
+        return NULL;
+    } else {
+        opts = (char **) calloc(2, sizeof(*opts));
+        if (opts == NULL) {
+          fprintf(ERRORFILE, "Unable to allocate %ld bytes\n", 2 * sizeof(*opts));
+          free(options);
+          return NULL;
+        }
+        num_opts = 2;
+    }
+
+    options->opts = opts;
+    options->num_opts = num_opts;
+
+    char *option_string_token = strdup(option_string);
+    option = strtok(option_string_token, "+");
+    for (unsigned int i = 0; i < options->num_opts; i++) {
+        if (option == NULL) {
+            fprintf(ERRORFILE, "Invalid docker mount options '%s'\n", mount_string);
+            free(option_string_token);
+            free_mount_options(options);
+            return NULL;
+        }
+
+        if (strcmp("rw", option) == 0) {
+            options->rw = 1;
+        } else if (strcmp("ro", option) == 0) {
+            options->rw = 0;
+        } else if (strcmp("shared", option) != 0 &&
+          (strcmp("rshared", option) != 0) &&
+          (strcmp("slave", option) != 0) &&
+          (strcmp("rslave", option) != 0) &&
+          (strcmp("private", option) != 0) &&
+          (strcmp("rprivate", option) != 0)) {
+            fprintf(ERRORFILE, "Invalid docker mount options '%s'\n", mount_string);
+            free(option_string_token);
+            free_mount_options(options);
+            return NULL;
+        }
+        options->opts[i] = strdup(option);
+        option = strtok(NULL, "+");
+    }
+
+    free(option_string_token);
+    return options;
+}
+
+static char* get_docker_mount_options_string(mount_options *options) {
+    char *options_string = NULL;
+    int len = 0;
+    int idx = 0;
+    unsigned int i;
+
+    for (i = 0; i < options->num_opts; i++) {
+        len += strlen(options->opts[i]);
+    }
+    len += i; // i-1 commas plus 1 for NUL termination
+
+    options_string = (char *) calloc(len, sizeof(*options_string));
+    if (options_string == NULL) {
+      fputs("Unable to allocate memory\n", ERRORFILE);
+      return NULL;
+    }
+
+    idx += sprintf(options_string, "%s", options->opts[0]);
+    for (i = 1; i < options->num_opts; i++) {
+        idx += sprintf(options_string + idx, ",%s", options->opts[i]);
+    }
+
+  return options_string;
+}
+
+static int add_mounts_to_docker_args(mount *mounts, unsigned int num_mounts, args *args) {
+    int ret = 0, len;
+    unsigned int i;
+    char *mount_string = NULL;
+    char *options_string = NULL;
+
+    if (mounts == NULL) {
+        return ret;
+    }
+
+    for (i = 0; i < num_mounts; i++) {
+        ret = add_to_args(args, "-v");
+        if (ret != 0) {
+            ret = BUFFER_TOO_SMALL;
+            return ret;
+        }
+        options_string = get_docker_mount_options_string(mounts[i].options);
+
+        //magic number '+3': +1 for both ':', and +1 for NULL termination
+        len = strlen(mounts[i].src) + strlen(mounts[i].dest) + strlen(options_string) + 3;
+        mount_string = (char *) calloc(len, sizeof(*mount_string));
+
+        snprintf(mount_string, len, "%s:%s:%s", mounts[i].src, mounts[i].dest, options_string);
+
+        ret = add_to_args(args, mount_string);
+        if (ret != 0) {
+            ret = BUFFER_TOO_SMALL;
+            goto free_and_exit;
+        }
+        free(mount_string);
+        free(options_string);
+    }
+    return ret;
+
+free_and_exit:
+    free(mount_string);
+    free(options_string);
+    return ret;
+}
+
+static int get_docker_mounts(mount *mounts, char **mounts_string, unsigned int num_mounts) {
+    unsigned int i;
+    int ret = 0;
+    char *src, *dest;
+    mount_options *options = NULL;
+
+    if (mounts_string == NULL) {
+        fprintf(ERRORFILE, "Unable to normalize container-executor.cfg path\n");
+        ret = MOUNT_ACCESS_ERROR;
+        goto free_and_exit;
+    }
+
+    for (i = 0; i < num_mounts; i++) {
+        src = get_docker_mount_source(mounts_string[i]);
+        if (src == NULL) {
+            fprintf(ERRORFILE, "Invalid mount '%s'\n", mounts_string[i]);
+            ret = INVALID_MOUNT;
+            goto free_and_exit;
+        }
+        mounts[i].src = src;
+
+        dest = get_docker_mount_dest(mounts_string[i]);
+        if (dest == NULL) {
+            fprintf(ERRORFILE, "Invalid mount '%s'\n", mounts_string[i]);
+            ret = INVALID_MOUNT;
+            goto free_and_exit;
+        }
+        mounts[i].dest = dest;
+
+        options = get_docker_mount_options(mounts_string[i]);
+        if (options == NULL) {
+            fprintf(ERRORFILE, "Invalid mount '%s'\n", mounts_string[i]);
+            ret = INVALID_MOUNT;
+            goto free_and_exit;
+        }
+        mounts[i].options = options;
+    }
+
+free_and_exit:
+    return ret;
+}
+
+static int add_docker_mounts(const struct configuration *command_config, const struct configuration *conf, args *args) {
+    mount *mounts = NULL;
+    unsigned int num_mounts = 0;
+    int ret;
+    char **permitted_ro_mounts = NULL;
+    char **permitted_rw_mounts = NULL;
+    char **mounts_string = NULL;
+    permitted_ro_mounts = get_configuration_values_delimiter("docker.allowed.ro-mounts",
+                                                             CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+    permitted_rw_mounts = get_configuration_values_delimiter("docker.allowed.rw-mounts",
+                                                             CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+    mounts_string = get_configuration_values_delimiter("mounts", DOCKER_COMMAND_FILE_SECTION, command_config, ",");
+
+    if (mounts_string == NULL) {
+        ret = 0;
+        goto free_and_exit;
+    }
+
+    while (mounts_string[num_mounts] != NULL) {
+        num_mounts++;
+    }
+
+    // Disable mount volumes if image is not trusted.
+    if (check_trusted_image(command_config, conf) != 0) {
+        fprintf(ERRORFILE, "Disable mount volume for untrusted image\n");
+        // YARN will implicitly bind node manager local directory to
+        // docker image.  This can create file system security holes,
+        // if docker container has binary to escalate privileges.
+        // For untrusted image, we drop mounting without reporting
+        // INVALID_MOUNT messages to allow running untrusted
+        // image in a sandbox.
+        ret = 0;
+        goto free_and_exit;
+    }
+
+    mounts = (mount *) calloc(num_mounts, sizeof(*mounts));
+    if (mounts == NULL) {
+        fprintf(ERRORFILE, "Unable to allocate %ld bytes\n", num_mounts * sizeof(*mounts));
+        ret = OUT_OF_MEMORY;
+        goto free_and_exit;
+    }
+
+    ret = get_docker_mounts(mounts, mounts_string, num_mounts);
+    if (ret != 0) {
+        goto free_and_exit;
+    }
+
+    ret = validate_mounts(permitted_ro_mounts, permitted_rw_mounts, mounts, num_mounts);
+    if (ret != 0) {
+        goto free_and_exit;
+    }
+
+    ret = add_mounts_to_docker_args(mounts, num_mounts, args);
+    if (ret != 0) {
+        goto free_and_exit;
+    }
+
+free_and_exit:
+    free_values(permitted_ro_mounts);
+    free_values(permitted_rw_mounts);
+    free_values(mounts_string);
+    free_mounts(mounts, num_mounts);
+    return ret;
+}
+
 int get_docker_run_command(const char *command_file, const struct configuration *conf, args *args) {
   int ret = 0, i = 0;
   char *container_name = NULL, *user = NULL, *image = NULL;
@@ -1471,21 +1546,38 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   char **launch_command = NULL;
   char *privileged = NULL;
   char *no_new_privileges_enabled = NULL;
+  char *use_entry_point = NULL;
+  int service_mode_enabled = 0;
   struct configuration command_config = {0, NULL};
   ret = read_and_verify_command_file(command_file, DOCKER_RUN_COMMAND, &command_config);
   if (ret != 0) {
     goto free_and_exit;
   }
 
+  service_mode_enabled = is_service_mode_enabled(&command_config, conf, args);
+  if (service_mode_enabled == DOCKER_SERVICE_MODE_DISABLED) {
+    ret = DOCKER_SERVICE_MODE_DISABLED;
+    goto free_and_exit;
+  }
+
+  use_entry_point = get_configuration_value("use-entry-point", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (use_entry_point != NULL && strcasecmp(use_entry_point, "true") == 0) {
+    entry_point = 1;
+  }
+  free(use_entry_point);
+
   container_name = get_configuration_value("name", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (container_name == NULL || validate_container_name(container_name) != 0) {
     ret = INVALID_DOCKER_CONTAINER_NAME;
     goto free_and_exit;
   }
-  user = get_configuration_value("user", DOCKER_COMMAND_FILE_SECTION, &command_config);
-  if (user == NULL) {
-    ret = INVALID_DOCKER_USER_NAME;
-    goto free_and_exit;
+
+  if (!service_mode_enabled) {
+    user = get_configuration_value("user", DOCKER_COMMAND_FILE_SECTION, &command_config);
+    if (user == NULL) {
+      ret = INVALID_DOCKER_USER_NAME;
+      goto free_and_exit;
+    }
   }
   image = get_configuration_value("image", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (image == NULL || validate_docker_image_name(image) != 0) {
@@ -1510,12 +1602,14 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   privileged = get_configuration_value("privileged", DOCKER_COMMAND_FILE_SECTION, &command_config);
 
   if (privileged == NULL || strcmp(privileged, "false") == 0) {
-    char *user_buffer = make_string("--user=%s", user);
-    ret = add_to_args(args, user_buffer);
-    free(user_buffer);
-    if (ret != 0) {
-      ret = BUFFER_TOO_SMALL;
-      goto free_and_exit;
+    if (!service_mode_enabled) {
+      char *user_buffer = make_string("--user=%s", user);
+      ret = add_to_args(args, user_buffer);
+      free(user_buffer);
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+        goto free_and_exit;
+      }
     }
     no_new_privileges_enabled =
         get_configuration_value("docker.no-new-privileges.enabled",
@@ -1550,12 +1644,17 @@ int get_docker_run_command(const char *command_file, const struct configuration 
     goto free_and_exit;
   }
 
+  ret = add_ports_mapping_to_command(&command_config, args);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
   ret = set_pid_namespace(&command_config, conf, args);
   if (ret != 0) {
     goto free_and_exit;
   }
 
-  ret = add_mounts(&command_config, conf, args);
+  ret = add_docker_mounts(&command_config, conf, args);
   if (ret != 0) {
     goto free_and_exit;
   }
@@ -1580,14 +1679,21 @@ int get_docker_run_command(const char *command_file, const struct configuration 
     goto free_and_exit;
   }
 
+  ret = set_runtime(&command_config, conf, args);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
   ret = set_hostname(&command_config, args);
   if (ret != 0) {
     goto free_and_exit;
   }
 
-  ret = set_group_add(&command_config, args);
-  if (ret != 0) {
-    goto free_and_exit;
+  if (!service_mode_enabled) {
+    ret = set_group_add(&command_config, args);
+    if (ret != 0) {
+      goto free_and_exit;
+    }
   }
 
   ret = set_devices(&command_config, conf, args);
@@ -1627,5 +1733,41 @@ free_and_exit:
   free(container_name);
   free_values(launch_command);
   free_configuration(&command_config);
+  return ret;
+}
+
+int get_docker_images_command(const char *command_file, const struct configuration *conf, args *args) {
+  int ret = 0;
+  char *image_name = NULL;
+
+  struct configuration command_config = {0, NULL};
+  ret = read_and_verify_command_file(command_file, DOCKER_IMAGES_COMMAND, &command_config);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = add_to_args(args, DOCKER_IMAGES_COMMAND);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  image_name = get_configuration_value("image", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (image_name) {
+    if (validate_docker_image_name(image_name) != 0) {
+      ret = INVALID_DOCKER_IMAGE_NAME;
+       goto free_and_exit;
+    }
+    ret = add_to_args(args, image_name);
+    if (ret != 0) {
+      goto free_and_exit;
+    }
+  }
+
+  ret = add_to_args(args, "--format={{json .}}");
+  ret = add_to_args(args, "--filter=dangling=false");
+
+  free_and_exit:
+    free(image_name);
+    free_configuration(&command_config);
   return ret;
 }

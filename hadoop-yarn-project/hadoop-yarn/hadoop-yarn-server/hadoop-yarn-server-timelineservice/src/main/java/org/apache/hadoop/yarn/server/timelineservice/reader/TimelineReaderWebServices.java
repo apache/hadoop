@@ -48,6 +48,7 @@ import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
@@ -219,6 +220,38 @@ public class TimelineReaderWebServices {
   }
 
   /**
+   * Health check REST end point.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   *
+   * @return A {@link Response} object with HTTP status 200 OK if the service
+   *         is running.
+   *         Otherwise, a {@link Response} object with HTTP status 500 is
+   *         returned.
+   */
+  @GET
+  @Path("/health")
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
+  public Response health(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res
+  ) {
+    Response response;
+    TimelineHealth timelineHealth = this.getTimelineReaderManager().getHealthStatus();
+    if (timelineHealth.getHealthStatus()
+        .equals(TimelineHealth.TimelineHealthStatus.RUNNING)) {
+      response = Response.ok(timelineHealth).build();
+    } else {
+       LOG.info("Timeline services health check: timeline reader reported " +
+           "connection failure");
+       response = Response.serverError().entity(timelineHealth).build();
+    }
+
+    return response;
+  }
+
+  /**
    * Return a single entity for a given entity type and UID which is a delimited
    * string containing clusterid, userid, flow name, flowrun id and app id.
    *
@@ -350,7 +383,8 @@ public class TimelineReaderWebServices {
       succeeded = true;
     } catch (Exception e) {
       handleException(e, url, startTime,
-          "createdTime start/end or limit or flowrunid");
+          "Either limit or createdtime start/end or metricslimit or metricstime"
+              + " start/end or fromid");
     } finally {
       long latency = Time.monotonicNow() - startTime;
       METRICS.addGetEntitiesLatency(latency, succeeded);
@@ -631,7 +665,8 @@ public class TimelineReaderWebServices {
       succeeded = true;
     } catch (Exception e) {
       handleException(e, url, startTime,
-          "createdTime start/end or limit or flowrunid");
+          "Either flowrunid or limit or createdtime start/end or metricslimit"
+              + " or metricstime start/end or fromid");
     } finally {
       long latency = Time.monotonicNow() - startTime;
       METRICS.addGetEntitiesLatency(latency, succeeded);
@@ -725,7 +760,8 @@ public class TimelineReaderWebServices {
       checkAccessForGenericEntity(entity, callerUGI);
       succeeded = true;
     } catch (Exception e) {
-      handleException(e, url, startTime, "flowrunid");
+      handleException(e, url, startTime, "Either metricslimit or metricstime"
+          + " start/end");
     } finally {
       long latency = Time.monotonicNow() - startTime;
       METRICS.addGetEntitiesLatency(latency, succeeded);
@@ -919,7 +955,8 @@ public class TimelineReaderWebServices {
       checkAccessForGenericEntity(entity, callerUGI);
       succeeded = true;
     } catch (Exception e) {
-      handleException(e, url, startTime, "flowrunid");
+      handleException(e, url, startTime, "Either flowrunid or metricslimit or"
+          + " metricstime start/end");
     } finally {
       long latency = Time.monotonicNow() - startTime;
       METRICS.addGetEntitiesLatency(latency, succeeded);
@@ -1606,7 +1643,8 @@ public class TimelineReaderWebServices {
       checkAccessForAppEntity(entity, callerUGI);
       succeeded = true;
     } catch (Exception e) {
-      handleException(e, url, startTime, "flowrunid");
+      handleException(e, url, startTime, "Either metricslimit or metricstime"
+          + " start/end");
     } finally {
       long latency = Time.monotonicNow() - startTime;
       METRICS.addGetEntitiesLatency(latency, succeeded);
@@ -1781,7 +1819,8 @@ public class TimelineReaderWebServices {
       checkAccessForAppEntity(entity, callerUGI);
       succeeded = true;
     } catch (Exception e) {
-      handleException(e, url, startTime, "flowrunid");
+      handleException(e, url, startTime, "Either flowrunid or metricslimit or"
+          + " metricstime start/end");
     } finally {
       long latency = Time.monotonicNow() - startTime;
       METRICS.addGetEntitiesLatency(latency, succeeded);
@@ -1927,7 +1966,8 @@ public class TimelineReaderWebServices {
       succeeded = true;
     } catch (Exception e) {
       handleException(e, url, startTime,
-          "createdTime start/end or limit or flowrunid");
+          "Either limit or createdtime start/end or metricslimit or"
+              + " metricstime start/end");
     } finally {
       long latency = Time.monotonicNow() - startTime;
       METRICS.addGetEntitiesLatency(latency, succeeded);
@@ -3318,10 +3358,11 @@ public class TimelineReaderWebServices {
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
     Set<String> results = null;
     try {
-      results = timelineReaderManager.getEntityTypes(
-          TimelineReaderWebServicesUtils.createTimelineReaderContext(
-          clusterId, userId, flowName, flowRunId, appId,
-              null, null, null));
+      TimelineReaderContext context = TimelineReaderWebServicesUtils.
+          createTimelineReaderContext(clusterId, userId, flowName, flowRunId,
+          appId, null, null, null);
+      results = timelineReaderManager.getEntityTypes(context);
+      checkAccess(getTimelineReaderManager(), callerUGI, context.getUserId());
       succeeded = true;
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
@@ -3418,7 +3459,8 @@ public class TimelineReaderWebServices {
       succeeded = true;
     } catch (Exception e) {
       handleException(e, url, startTime,
-          "createdTime start/end or limit");
+          "Either limit or createdtime start/end or metricslimit or metricstime"
+              + " start/end or fromid");
     } finally {
       long latency = Time.monotonicNow() - startTime;
       METRICS.addGetEntitiesLatency(latency, succeeded);
@@ -3489,7 +3531,8 @@ public class TimelineReaderWebServices {
       checkAccessForSubAppEntities(entities,callerUGI);
       succeeded = true;
     } catch (Exception e) {
-      handleException(e, url, startTime, "");
+      handleException(e, url, startTime, "Either metricslimit or metricstime"
+          + " start/end");
     } finally {
       long latency = Time.monotonicNow() - startTime;
       METRICS.addGetEntitiesLatency(latency, succeeded);
@@ -3585,10 +3628,8 @@ public class TimelineReaderWebServices {
       String entityUser) {
     String authUser = TimelineReaderWebServicesUtils.getUserName(ugi);
     String requestedUser = TimelineReaderWebServicesUtils.parseStr(entityUser);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          "Authenticated User: " + authUser + " Requested User:" + entityUser);
-    }
+    LOG.debug(
+          "Authenticated User: {} Requested User:{}", authUser, entityUser);
     return (readerManager.checkAccess(ugi) || authUser.equals(requestedUser));
   }
 

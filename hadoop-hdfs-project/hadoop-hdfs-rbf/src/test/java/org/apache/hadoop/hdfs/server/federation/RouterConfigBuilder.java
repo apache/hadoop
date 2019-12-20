@@ -38,6 +38,7 @@ public class RouterConfigBuilder {
   private boolean enableMetrics = false;
   private boolean enableQuota = false;
   private boolean enableSafemode = false;
+  private boolean enableCacheRefresh;
 
   public RouterConfigBuilder(Configuration configuration) {
     this.conf = configuration;
@@ -104,6 +105,11 @@ public class RouterConfigBuilder {
     return this;
   }
 
+  public RouterConfigBuilder refreshCache(boolean enable) {
+    this.enableCacheRefresh = enable;
+    return this;
+  }
+
   public RouterConfigBuilder rpc() {
     return this.rpc(true);
   }
@@ -140,14 +146,31 @@ public class RouterConfigBuilder {
     return this.safemode(true);
   }
 
+  public RouterConfigBuilder refreshCache() {
+    return this.refreshCache(true);
+  }
+
   public Configuration build() {
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_STORE_ENABLE,
         this.enableStateStore);
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_RPC_ENABLE, this.enableRpcServer);
+    if (this.enableRpcServer) {
+      conf.set(RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY, "0.0.0.0");
+    }
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_ADMIN_ENABLE,
         this.enableAdminServer);
+    if (this.enableAdminServer) {
+      conf.set(RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(RBFConfigKeys.DFS_ROUTER_ADMIN_BIND_HOST_KEY, "0.0.0.0");
+    }
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_HTTP_ENABLE,
         this.enableHttpServer);
+    if (this.enableHttpServer) {
+      conf.set(RBFConfigKeys.DFS_ROUTER_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(RBFConfigKeys.DFS_ROUTER_HTTPS_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(RBFConfigKeys.DFS_ROUTER_HTTP_BIND_HOST_KEY, "0.0.0.0");
+    }
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE,
         this.enableHeartbeat);
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_MONITOR_LOCAL_NAMENODE,
@@ -158,6 +181,8 @@ public class RouterConfigBuilder {
         this.enableQuota);
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_SAFEMODE_ENABLE,
         this.enableSafemode);
+    conf.setBoolean(RBFConfigKeys.MOUNT_TABLE_CACHE_UPDATE,
+        this.enableCacheRefresh);
     return conf;
   }
 }

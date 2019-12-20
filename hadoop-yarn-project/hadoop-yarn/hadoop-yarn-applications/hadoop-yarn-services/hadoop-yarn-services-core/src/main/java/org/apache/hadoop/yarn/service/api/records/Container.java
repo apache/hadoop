@@ -21,6 +21,8 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import javax.xml.bind.annotation.XmlElement;
@@ -52,6 +54,8 @@ public class Container extends BaseResource {
   private Resource resource = null;
   private Artifact artifact = null;
   private Boolean privilegedContainer = null;
+  private Map<String, List<Map<String, String>>> exposedPorts = null;
+  private List<LocalizationStatus> localizationStatuses = null;
 
   /**
    * Unique container id of a running service, e.g.
@@ -244,6 +248,46 @@ public class Container extends BaseResource {
     this.privilegedContainer = privilegedContainer;
   }
 
+  @ApiModelProperty(example = "null",
+      value = "Ports exposed for this container.")
+  @JsonProperty("exposed_ports")
+  public Map<String, List<Map<String, String>>> getExposedPorts() {
+    return exposedPorts;
+  }
+
+  public void setExposedPorts(Map<String, List<Map<String, String>>> ports) {
+    this.exposedPorts = ports;
+  }
+
+  /**
+   * Localization statuses.
+   */
+  @ApiModelProperty(example = "null", value =
+      "Localization statuses of a container.")
+  @JsonProperty("localization_statuses")
+  public List<LocalizationStatus> getLocalizationStatuses() {
+    return localizationStatuses;
+  }
+
+  /**
+   * Sets the localization statuses.
+   * @param statuses localization statuses.
+   */
+  @XmlElement(name = "localization_statuses")
+  public void setLocalizationStatuses(List<LocalizationStatus> statuses) {
+    this.localizationStatuses = statuses;
+  }
+
+  /**
+   * Sets the localization statuses and returns the container.
+   * @param statuses
+   * @return
+   */
+  public Container localizationStatuses(List<LocalizationStatus> statuses) {
+    this.localizationStatuses = statuses;
+    return this;
+  }
+
   @Override
   public boolean equals(java.lang.Object o) {
     if (this == o) {
@@ -266,21 +310,25 @@ public class Container extends BaseResource {
     StringBuilder sb = new StringBuilder();
     sb.append("class Container {\n");
 
-    sb.append("    id: ").append(toIndentedString(id)).append("\n");
-    sb.append("    launchTime: ").append(toIndentedString(launchTime))
-        .append("\n");
-    sb.append("    ip: ").append(toIndentedString(ip)).append("\n");
-    sb.append("    hostname: ").append(toIndentedString(hostname)).append("\n");
-    sb.append("    bareHost: ").append(toIndentedString(bareHost)).append("\n");
-    sb.append("    state: ").append(toIndentedString(state)).append("\n");
-    sb.append("    componentInstanceName: ").append(toIndentedString(
-        componentInstanceName))
-        .append("\n");
-    sb.append("    resource: ").append(toIndentedString(resource)).append("\n");
-    sb.append("    artifact: ").append(toIndentedString(artifact)).append("\n");
-    sb.append("    privilegedContainer: ")
-        .append(toIndentedString(privilegedContainer)).append("\n");
-    sb.append("}");
+    sb.append("    id: ").append(toIndentedString(id)).append("\n")
+        .append("    launchTime: ").append(toIndentedString(launchTime))
+        .append("\n")
+        .append("    ip: ").append(toIndentedString(ip)).append("\n")
+        .append("    hostname: ").append(toIndentedString(hostname))
+        .append("\n")
+        .append("    bareHost: ").append(toIndentedString(bareHost))
+        .append("\n")
+        .append("    state: ").append(toIndentedString(state)).append("\n")
+        .append("    componentInstanceName: ").append(toIndentedString(
+            componentInstanceName))
+        .append("\n")
+        .append("    resource: ").append(toIndentedString(resource))
+        .append("\n")
+        .append("    artifact: ").append(toIndentedString(artifact))
+        .append("\n")
+        .append("    privilegedContainer: ")
+        .append(toIndentedString(privilegedContainer)).append("\n")
+        .append("}");
     return sb.toString();
   }
 

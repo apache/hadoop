@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -81,17 +81,17 @@ import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.yarn.event.Event;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class ProportionalCapacityPreemptionPolicyMockFramework {
-  static final Log LOG =
-      LogFactory.getLog(TestProportionalCapacityPreemptionPolicyForNodePartitions.class);
+  static final Logger LOG = LoggerFactory.getLogger(
+      TestProportionalCapacityPreemptionPolicyForNodePartitions.class);
   final String ROOT = CapacitySchedulerConfiguration.ROOT;
 
   Map<String, CSQueue> nameToCSQueues = null;
@@ -949,7 +949,7 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
   }
 
   static class IsPreemptionRequestForQueueAndNode
-      extends ArgumentMatcher<ContainerPreemptEvent> {
+      implements ArgumentMatcher<ContainerPreemptEvent> {
     private final ApplicationAttemptId appAttId;
     private final String queueName;
     private final NodeId nodeId;
@@ -961,9 +961,7 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
       this.nodeId = nodeId;
     }
     @Override
-    public boolean matches(Object o) {
-      ContainerPreemptEvent cpe = (ContainerPreemptEvent)o;
-
+    public boolean matches(ContainerPreemptEvent cpe) {
       return appAttId.equals(cpe.getAppId())
           && queueName.equals(cpe.getContainer().getQueueName())
           && nodeId.equals(cpe.getContainer().getAllocatedNode());

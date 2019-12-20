@@ -47,12 +47,15 @@ import org.apache.commons.lang3.SerializationUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.HarFs;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -69,7 +72,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
@@ -135,36 +137,6 @@ public class LogAggregationIndexedFileController
 
   @Override
   public void initInternal(Configuration conf) {
-    // Currently, we need the underlying File System to support append
-    // operation. Will remove this check after we finish
-    // LogAggregationIndexedFileController for non-append mode.
-    boolean append = conf.getBoolean(LOG_AGGREGATION_FS_SUPPORT_APPEND, true);
-    if (!append) {
-      throw new YarnRuntimeException("The configuration:"
-          + LOG_AGGREGATION_FS_SUPPORT_APPEND + " is set as False. We can only"
-          + " use LogAggregationIndexedFileController when the FileSystem "
-          + "support append operations.");
-    }
-    String remoteDirStr = String.format(
-        YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT,
-        this.fileControllerName);
-    String remoteDir = conf.get(remoteDirStr);
-    if (remoteDir == null || remoteDir.isEmpty()) {
-      remoteDir = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-          YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR);
-    }
-    this.remoteRootLogDir = new Path(remoteDir);
-    String suffix = String.format(
-        YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT,
-        this.fileControllerName);
-    this.remoteRootLogDirSuffix = conf.get(suffix);
-    if (this.remoteRootLogDirSuffix == null
-        || this.remoteRootLogDirSuffix.isEmpty()) {
-      this.remoteRootLogDirSuffix = conf.get(
-          YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
-          YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX)
-          + "-ifile";
-    }
     String compressName = conf.get(
         YarnConfiguration.NM_LOG_AGG_COMPRESSION_TYPE,
         YarnConfiguration.DEFAULT_NM_LOG_AGG_COMPRESSION_TYPE);
@@ -819,6 +791,13 @@ public class LogAggregationIndexedFileController
         this.remoteRootLogDir, this.remoteRootLogDirSuffix);
   }
 
+  @Override
+  public Path getOlderRemoteAppLogDir(ApplicationId appId, String user)
+      throws IOException {
+    return LogAggregationUtils.getOlderRemoteAppLogDir(conf, appId, user,
+        this.remoteRootLogDir, this.remoteRootLogDirSuffix);
+  }
+
   @Private
   public IndexedLogsMeta loadIndexedLogsMeta(Path remoteLogPath, long end,
       ApplicationId appId) throws IOException {
@@ -850,10 +829,10 @@ public class LogAggregationIndexedFileController
       }
       if (uuidReadLen != UUID_LENGTH || !Arrays.equals(this.uuid, uuidRead)) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("the length of loaded UUID:" + uuidReadLen);
-          LOG.debug("the loaded UUID:" + new String(uuidRead,
+          LOG.debug("the length of loaded UUID:{}", uuidReadLen);
+          LOG.debug("the loaded UUID:{}", new String(uuidRead,
               Charset.forName("UTF-8")));
-          LOG.debug("the expected UUID:" + new String(this.uuid,
+          LOG.debug("the expected UUID:{}", new String(this.uuid,
               Charset.forName("UTF-8")));
         }
         throw new IOException("The UUID from "
@@ -1152,8 +1131,23 @@ public class LogAggregationIndexedFileController
   @Private
   @VisibleForTesting
   public long getRollOverLogMaxSize(Configuration conf) {
-    return 1024L * 1024 * 1024 * conf.getInt(
-        LOG_ROLL_OVER_MAX_FILE_SIZE_GB, 10);
+    boolean supportAppend = false;
+    try {
+      FileSystem fs = FileSystem.get(remoteRootLogDir.toUri(), conf);
+      if (fs instanceof LocalFileSystem || fs.hasPathCapability(
+          remoteRootLogDir, CommonPathCapabilities.FS_APPEND)) {
+        supportAppend = true;
+      }
+    } catch (Exception ioe) {
+      LOG.warn("Unable to determine if the filesystem supports " +
+          "append operation", ioe);
+    }
+    if (supportAppend) {
+      return 1024L * 1024 * 1024 * conf.getInt(
+          LOG_ROLL_OVER_MAX_FILE_SIZE_GB, 10);
+    } else {
+      return 0L;
+    }
   }
 
   private abstract class FSAction<T> {

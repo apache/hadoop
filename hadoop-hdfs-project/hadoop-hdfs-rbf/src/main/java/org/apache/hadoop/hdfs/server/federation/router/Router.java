@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_KERBEROS_PRINCIPAL_HOSTNAME_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_KERBEROS_PRINCIPAL_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_KEYTAB_FILE_KEY;
+
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.newActiveNamenodeResolver;
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.newFileSubclusterResolver;
 
@@ -33,14 +37,19 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
-import org.apache.hadoop.hdfs.server.federation.metrics.FederationMetrics;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.common.TokenVerifier;
+import org.apache.hadoop.hdfs.server.federation.metrics.RBFMetrics;
 import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
+import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
 import org.apache.hadoop.hdfs.server.federation.store.RouterStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.Time;
@@ -70,7 +79,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class Router extends CompositeService {
+public class Router extends CompositeService implements
+    TokenVerifier<DelegationTokenIdentifier> {
 
   private static final Logger LOG = LoggerFactory.getLogger(Router.class);
 
@@ -145,6 +155,11 @@ public class Router extends CompositeService {
     this.conf = configuration;
     updateRouterState(RouterServiceState.INITIALIZING);
 
+    // Enable the security for the Router
+    UserGroupInformation.setConfiguration(conf);
+    SecurityUtil.login(conf, DFS_ROUTER_KEYTAB_FILE_KEY,
+        DFS_ROUTER_KERBEROS_PRINCIPAL_KEY, getHostName(conf));
+
     if (conf.getBoolean(
         RBFConfigKeys.DFS_ROUTER_STORE_ENABLE,
         RBFConfigKeys.DFS_ROUTER_STORE_ENABLE_DEFAULT)) {
@@ -191,21 +206,26 @@ public class Router extends CompositeService {
       addService(this.httpServer);
     }
 
-    if (conf.getBoolean(
+    boolean isRouterHeartbeatEnabled = conf.getBoolean(
         RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE,
-        RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE_DEFAULT)) {
+        RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE_DEFAULT);
+    boolean isNamenodeHeartbeatEnable = conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_ENABLE,
+        isRouterHeartbeatEnabled);
+    if (isNamenodeHeartbeatEnable) {
 
       // Create status updater for each monitored Namenode
       this.namenodeHeartbeatServices = createNamenodeHeartbeatServices();
-      for (NamenodeHeartbeatService hearbeatService :
+      for (NamenodeHeartbeatService heartbeatService :
           this.namenodeHeartbeatServices) {
-        addService(hearbeatService);
+        addService(heartbeatService);
       }
 
       if (this.namenodeHeartbeatServices.isEmpty()) {
         LOG.error("Heartbeat is enabled but there are no namenodes to monitor");
       }
-
+    }
+    if (isRouterHeartbeatEnabled) {
       // Periodically update the router state
       this.routerHeartbeatService = new RouterHeartbeatService(this);
       addService(this.routerHeartbeatService);
@@ -243,7 +263,72 @@ public class Router extends CompositeService {
       addService(this.safemodeService);
     }
 
+    /*
+     * Refresh mount table cache immediately after adding, modifying or deleting
+     * the mount table entries. If this service is not enabled mount table cache
+     * are refreshed periodically by StateStoreCacheUpdateService
+     */
+    if (conf.getBoolean(RBFConfigKeys.MOUNT_TABLE_CACHE_UPDATE,
+        RBFConfigKeys.MOUNT_TABLE_CACHE_UPDATE_DEFAULT)) {
+      // There is no use of starting refresh service if state store and admin
+      // servers are not enabled
+      String disabledDependentServices = getDisabledDependentServices();
+      /*
+       * disabledDependentServices null means all dependent services are
+       * enabled.
+       */
+      if (disabledDependentServices == null) {
+
+        MountTableRefresherService refreshService =
+            new MountTableRefresherService(this);
+        addService(refreshService);
+        LOG.info("Service {} is enabled.",
+            MountTableRefresherService.class.getSimpleName());
+      } else {
+        LOG.warn(
+            "Service {} not enabled: dependent service(s) {} not enabled.",
+            MountTableRefresherService.class.getSimpleName(),
+            disabledDependentServices);
+      }
+    }
+
     super.serviceInit(conf);
+
+    // Set quota manager in mount store to update quota usage in mount table.
+    if (stateStore != null) {
+      MountTableStore mountstore =
+          this.stateStore.getRegisteredRecordStore(MountTableStore.class);
+      mountstore.setQuotaManager(this.quotaManager);
+    }
+  }
+
+  private String getDisabledDependentServices() {
+    if (this.stateStore == null && this.adminServer == null) {
+      return StateStoreService.class.getSimpleName() + ","
+          + RouterAdminServer.class.getSimpleName();
+    } else if (this.stateStore == null) {
+      return StateStoreService.class.getSimpleName();
+    } else if (this.adminServer == null) {
+      return RouterAdminServer.class.getSimpleName();
+    }
+    return null;
+  }
+
+  /**
+   * Returns the hostname for this Router. If the hostname is not
+   * explicitly configured in the given config, then it is determined.
+   *
+   * @param config configuration
+   * @return the hostname (NB: may not be a FQDN)
+   * @throws UnknownHostException if the hostname cannot be determined
+   */
+  private static String getHostName(Configuration config)
+      throws UnknownHostException {
+    String name = config.get(DFS_ROUTER_KERBEROS_PRINCIPAL_HOSTNAME_KEY);
+    if (name == null) {
+      name = InetAddress.getLocalHost().getHostName();
+    }
+    return name;
   }
 
   @Override
@@ -401,6 +486,12 @@ public class Router extends CompositeService {
     return null;
   }
 
+  @Override
+  public void verifyToken(DelegationTokenIdentifier tokenId, byte[] password)
+      throws IOException {
+    getRpcServer().getRouterSecurityManager().verifyToken(tokenId, password);
+  }
+
   /////////////////////////////////////////////////////////
   // Namenode heartbeat monitors
   /////////////////////////////////////////////////////////
@@ -418,9 +509,9 @@ public class Router extends CompositeService {
     if (conf.getBoolean(
         RBFConfigKeys.DFS_ROUTER_MONITOR_LOCAL_NAMENODE,
         RBFConfigKeys.DFS_ROUTER_MONITOR_LOCAL_NAMENODE_DEFAULT)) {
-      // Create a local heartbet service
+      // Create a local heartbeat service
       NamenodeHeartbeatService localHeartbeatService =
-          createLocalNamenodeHearbeatService();
+          createLocalNamenodeHeartbeatService();
       if (localHeartbeatService != null) {
         String nnDesc = localHeartbeatService.getNamenodeDesc();
         ret.put(nnDesc, localHeartbeatService);
@@ -428,27 +519,25 @@ public class Router extends CompositeService {
     }
 
     // Create heartbeat services for a list specified by the admin
-    String namenodes = this.conf.get(
+    Collection<String> namenodes = this.conf.getTrimmedStringCollection(
         RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE);
-    if (namenodes != null) {
-      for (String namenode : namenodes.split(",")) {
-        String[] namenodeSplit = namenode.split("\\.");
-        String nsId = null;
-        String nnId = null;
-        if (namenodeSplit.length == 2) {
-          nsId = namenodeSplit[0];
-          nnId = namenodeSplit[1];
-        } else if (namenodeSplit.length == 1) {
-          nsId = namenode;
-        } else {
-          LOG.error("Wrong Namenode to monitor: {}", namenode);
-        }
-        if (nsId != null) {
-          NamenodeHeartbeatService heartbeatService =
-              createNamenodeHearbeatService(nsId, nnId);
-          if (heartbeatService != null) {
-            ret.put(heartbeatService.getNamenodeDesc(), heartbeatService);
-          }
+    for (String namenode : namenodes) {
+      String[] namenodeSplit = namenode.split("\\.");
+      String nsId = null;
+      String nnId = null;
+      if (namenodeSplit.length == 2) {
+        nsId = namenodeSplit[0];
+        nnId = namenodeSplit[1];
+      } else if (namenodeSplit.length == 1) {
+        nsId = namenode;
+      } else {
+        LOG.error("Wrong Namenode to monitor: {}", namenode);
+      }
+      if (nsId != null) {
+        NamenodeHeartbeatService heartbeatService =
+            createNamenodeHeartbeatService(nsId, nnId);
+        if (heartbeatService != null) {
+          ret.put(heartbeatService.getNamenodeDesc(), heartbeatService);
         }
       }
     }
@@ -461,7 +550,7 @@ public class Router extends CompositeService {
    *
    * @return Updater of the status for the local Namenode.
    */
-  protected NamenodeHeartbeatService createLocalNamenodeHearbeatService() {
+  protected NamenodeHeartbeatService createLocalNamenodeHeartbeatService() {
     // Detect NN running in this machine
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
     String nnId = null;
@@ -472,7 +561,7 @@ public class Router extends CompositeService {
       }
     }
 
-    return createNamenodeHearbeatService(nsId, nnId);
+    return createNamenodeHeartbeatService(nsId, nnId);
   }
 
   /**
@@ -482,7 +571,7 @@ public class Router extends CompositeService {
    * @param nnId Identifier of the namenode (HA) to monitor.
    * @return Updater of the status for the specified Namenode.
    */
-  protected NamenodeHeartbeatService createNamenodeHearbeatService(
+  protected NamenodeHeartbeatService createNamenodeHeartbeatService(
       String nsId, String nnId) {
 
     LOG.info("Creating heartbeat service for Namenode {} in {}", nnId, nsId);
@@ -516,6 +605,13 @@ public class Router extends CompositeService {
     return this.state;
   }
 
+  /**
+   * Compare router state.
+   */
+  public boolean isRouterState(RouterServiceState routerState) {
+    return routerState.equals(this.state);
+  }
+
   /////////////////////////////////////////////////////////
   // Submodule getters
   /////////////////////////////////////////////////////////
@@ -546,9 +642,9 @@ public class Router extends CompositeService {
    *
    * @return Federation metrics.
    */
-  public FederationMetrics getMetrics() {
+  public RBFMetrics getMetrics() {
     if (this.metrics != null) {
-      return this.metrics.getFederationMetrics();
+      return this.metrics.getRBFMetrics();
     }
     return null;
   }
@@ -558,11 +654,11 @@ public class Router extends CompositeService {
    *
    * @return Namenode metrics.
    */
-  public NamenodeBeanMetrics getNamenodeMetrics() {
-    if (this.metrics != null) {
-      return this.metrics.getNamenodeMetrics();
+  public NamenodeBeanMetrics getNamenodeMetrics() throws IOException {
+    if (this.metrics == null) {
+      throw new IOException("Namenode metrics is not initialized");
     }
-    return null;
+    return this.metrics.getNamenodeMetrics();
   }
 
   /**
@@ -663,14 +759,32 @@ public class Router extends CompositeService {
    * Get the list of namenode heartbeat service.
    */
   @VisibleForTesting
-  Collection<NamenodeHeartbeatService> getNamenodeHearbeatServices() {
+  Collection<NamenodeHeartbeatService> getNamenodeHeartbeatServices() {
     return this.namenodeHeartbeatServices;
   }
 
   /**
-   * Get the Router safe mode service
+   * Get this router heartbeat service.
+   */
+  @VisibleForTesting
+  RouterHeartbeatService getRouterHeartbeatService() {
+    return this.routerHeartbeatService;
+  }
+
+  /**
+   * Get the Router safe mode service.
    */
   RouterSafemodeService getSafemodeService() {
     return this.safemodeService;
   }
+
+  /**
+   * Get router admin server.
+   *
+   * @return Null if admin is not enabled.
+   */
+  public RouterAdminServer getAdminServer() {
+    return adminServer;
+  }
+
 }

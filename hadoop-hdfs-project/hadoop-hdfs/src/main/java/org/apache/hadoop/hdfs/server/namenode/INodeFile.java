@@ -744,6 +744,9 @@ public class INodeFile extends INodeWithAdditionalFields
       sf.cleanFile(reclaimContext, this, snapshot, priorSnapshotId,
           getStoragePolicyID());
       updateRemovedUnderConstructionFiles(reclaimContext);
+      if (sf.getDiffs().isEmpty()) {
+        this.removeFeature(sf);
+      }
     } else {
       if (snapshot == CURRENT_STATE_ID) {
         if (priorSnapshotId == NO_SNAPSHOT_ID) {
@@ -1045,6 +1048,18 @@ public class INodeFile extends INodeWithAdditionalFields
     // only compare the first block
     out.print(", blocks=");
     out.print(blocks.length == 0 ? null: blocks[0]);
+    out.println();
+
+    final FileWithSnapshotFeature snapshotFeature =
+        getFileWithSnapshotFeature();
+    if (snapshotFeature != null) {
+      if (prefix.length() >= 2) {
+        prefix.setLength(prefix.length() - 2);
+        prefix.append("  ");
+      }
+      out.print(prefix);
+      out.print(snapshotFeature);
+    }
     out.println();
   }
 

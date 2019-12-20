@@ -23,7 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 
@@ -58,7 +58,6 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 public class TestBlockListAsLongs {
@@ -222,9 +221,8 @@ public class TestBlockListAsLongs {
         request.set((BlockReportRequestProto) args[1]);
         return BlockReportResponseProto.newBuilder().build();
       }
-    }).when(mockProxy).blockReport(any(RpcController.class),
-                                   any(BlockReportRequestProto.class));
-    
+    }).when(mockProxy).blockReport(any(), any(BlockReportRequestProto.class));
+
     @SuppressWarnings("resource")
     DatanodeProtocolClientSideTranslatorPB nn =
         new DatanodeProtocolClientSideTranslatorPB(mockProxy);

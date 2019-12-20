@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 
@@ -36,7 +36,8 @@ public class NumaNodeResource {
   private long usedMemory;
   private int usedCpus;
 
-  private static final Log LOG = LogFactory.getLog(NumaNodeResource.class);
+  private static final Logger LOG = LoggerFactory.
+      getLogger(NumaNodeResource.class);
 
   private Map<ContainerId, Long> containerVsMemUsage =
       new ConcurrentHashMap<>();

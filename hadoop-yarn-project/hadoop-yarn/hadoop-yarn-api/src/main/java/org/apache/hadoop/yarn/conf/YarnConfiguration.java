@@ -23,7 +23,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -100,6 +102,7 @@ public class YarnConfiguration extends Configuration {
     addDeprecatedKeys();
     Configuration.addDefaultResource(YARN_DEFAULT_CONFIGURATION_FILE);
     Configuration.addDefaultResource(YARN_SITE_CONFIGURATION_FILE);
+    Configuration.addDefaultResource(RESOURCE_TYPES_CONFIGURATION_FILE);
   }
 
   private static void addDeprecatedKeys() {
@@ -401,6 +404,17 @@ public class YarnConfiguration extends Configuration {
   public static final boolean
       DEFAULT_OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED = false;
 
+  /**
+   * Maximum number of opportunistic containers to be allocated in
+   * AM heartbeat.
+   */
+  @Unstable
+  public static final String
+      OPP_CONTAINER_MAX_ALLOCATIONS_PER_AM_HEARTBEAT =
+      RM_PREFIX + "opportunistic.max.container-allocation.per.am.heartbeat";
+  public static final int
+      DEFAULT_OPP_CONTAINER_MAX_ALLOCATIONS_PER_AM_HEARTBEAT = -1;
+
   /** Number of nodes to be used by the Opportunistic Container allocator for
    * dispatching containers during container allocation. */
   @Unstable
@@ -531,6 +545,24 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_NODES_INCLUDE_FILE_PATH = 
     RM_PREFIX + "nodes.include-path";
   public static final String DEFAULT_RM_NODES_INCLUDE_FILE_PATH = "";
+
+  /** Enable submission pre-processor.*/
+  public static final String RM_SUBMISSION_PREPROCESSOR_ENABLED =
+      RM_PREFIX + "submission-preprocessor.enabled";
+  public static final boolean DEFAULT_RM_SUBMISSION_PREPROCESSOR_ENABLED =
+      false;
+
+  /** Path to file with hosts for the submission processor to handle.*/
+  public static final String RM_SUBMISSION_PREPROCESSOR_FILE_PATH =
+      RM_PREFIX + "submission-preprocessor.file-path";
+  public static final String DEFAULT_RM_SUBMISSION_PREPROCESSOR_FILE_PATH =
+      "";
+
+  /** Submission processor refresh interval.*/
+  public static final String RM_SUBMISSION_PREPROCESSOR_REFRESH_INTERVAL_MS =
+      RM_PREFIX + "submission-preprocessor.file-refresh-interval-ms";
+  public static final int
+      DEFAULT_RM_SUBMISSION_PREPROCESSOR_REFRESH_INTERVAL_MS = 0;
   
   /** Path to file with nodes to exclude.*/
   public static final String RM_NODES_EXCLUDE_FILE_PATH = 
@@ -1225,6 +1257,16 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_COLLECTOR_SERVICE_ADDRESS =
       "0.0.0.0:" + DEFAULT_NM_COLLECTOR_SERVICE_PORT;
 
+  /**
+   * The setting that controls whether yarn container events are published to
+   * the timeline service or not by NM. This configuration setting is for ATS
+   * V2
+   */
+  public static final String NM_PUBLISH_CONTAINER_EVENTS_ENABLED = NM_PREFIX
+      + "emit-container-events";
+  public static final boolean DEFAULT_NM_PUBLISH_CONTAINER_EVENTS_ENABLED =
+      true;
+
   /** Interval in between cache cleanups.*/
   public static final String NM_LOCALIZER_CACHE_CLEANUP_INTERVAL_MS =
     NM_PREFIX + "localizer.cache.cleanup.interval-ms";
@@ -1348,6 +1390,11 @@ public class YarnConfiguration extends Configuration {
   public static final String LOG_AGGREGATION_RETAIN_SECONDS = YARN_PREFIX
       + "log-aggregation.retain-seconds";
   public static final long DEFAULT_LOG_AGGREGATION_RETAIN_SECONDS = -1;
+
+  public static final String LOG_AGGREGATION_DEBUG_FILESIZE = YARN_PREFIX
+      + "log-aggregation.debug.filesize";
+  public static final long DEFAULT_LOG_AGGREGATION_DEBUG_FILESIZE
+      = 100 * 1024 * 1024;
   
   /**
    * How long to wait between aggregated log retention checks. If set to
@@ -1390,6 +1437,14 @@ public class YarnConfiguration extends Configuration {
       DEFAULT_NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS = -1;
 
   /**
+   * The allowed hard minimum limit for {@link
+   * YarnConfiguration#NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS}.
+   */
+  public static final String MIN_LOG_ROLLING_INTERVAL_SECONDS = NM_PREFIX
+      + "log-aggregation.roll-monitoring-interval-seconds.min";
+  public static final long MIN_LOG_ROLLING_INTERVAL_SECONDS_DEFAULT = 3600;
+
+  /**
    * Define how many aggregated log files per application per NM we can have
    * in remote file system.
    */
@@ -1412,12 +1467,25 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_REMOTE_APP_LOG_DIR = "/tmp/logs";
 
   /**
-   * The remote log dir will be created at
-   * NM_REMOTE_APP_LOG_DIR/${user}/NM_REMOTE_APP_LOG_DIR_SUFFIX/${appId}
+   * The remote log dir will be created at below location.
+   * NM_REMOTE_APP_LOG_DIR/${user}/bucket_{NM_REMOTE_APP_LOG_DIR_SUFFIX}
+   * /${bucketDir}/${appId}
    */
   public static final String NM_REMOTE_APP_LOG_DIR_SUFFIX = 
     NM_PREFIX + "remote-app-log-dir-suffix";
   public static final String DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX="logs";
+
+  /** Specifies whether Older Application Log Directory is included. */
+  public static final String NM_REMOTE_APP_LOG_DIR_INCLUDE_OLDER =
+      NM_PREFIX + "remote-app-log-dir-include-older";
+  public static final boolean DEFAULT_NM_REMOTE_APP_LOG_DIR_INCLUDE_OLDER =
+      true;
+
+  /**
+   * Specifies the group of the aggregated log directory.
+   */
+  public static final String NM_REMOTE_APP_LOG_DIR_GROUPNAME =
+      NM_PREFIX + "remote-app-log-dir.groupname";
 
   public static final String YARN_LOG_SERVER_URL =
     YARN_PREFIX + "log.server.url";
@@ -1441,7 +1509,7 @@ public class YarnConfiguration extends Configuration {
       + "pmem-check-enabled";
   public static final boolean DEFAULT_NM_PMEM_CHECK_ENABLED = true;
 
-  /** Specifies whether physical memory check is enabled. */
+  /** Specifies whether virtual memory check is enabled. */
   public static final String NM_VMEM_CHECK_ENABLED = NM_PREFIX
       + "vmem-check-enabled";
   public static final boolean DEFAULT_NM_VMEM_CHECK_ENABLED = true;
@@ -1605,6 +1673,42 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_RESOURCE_PLUGINS =
       NM_PREFIX + "resource-plugins";
 
+
+  /**
+   * Specifies whether the initialization of the Node Manager should continue
+   * if a certain device (GPU, FPGA, etc) was not found in the system. If set
+   * to "true", then an exception will be thrown if a device is missing or
+   * an error occurred during discovery.
+   */
+  @Private
+  public static final String NM_RESOURCE_PLUGINS_FAIL_FAST =
+      NM_RESOURCE_PLUGINS + ".fail-fast";
+
+  @Private
+  public static final boolean DEFAULT_NM_RESOURCE_PLUGINS_FAIL_FAST = true;
+
+  /**
+   * This setting controls if pluggable device plugin framework is enabled.
+   * */
+  @Private
+  public static final String NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED =
+      NM_PREFIX + "pluggable-device-framework.enabled";
+
+  /**
+   * The pluggable device plugin framework is disabled by default
+   * */
+  @Private
+  public static final boolean DEFAULT_NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED =
+      false;
+
+  /**
+   * This setting contains vendor plugin class names for
+   * device plugin framework to load. Split by comma
+   * */
+  @Private
+  public static final String NM_PLUGGABLE_DEVICE_FRAMEWORK_DEVICE_CLASSES =
+      NM_PREFIX + "pluggable-device-framework.device-classes";
+
   /**
    * Prefix for gpu configurations. Work in progress: This configuration
    * parameter may be changed/removed in the future.
@@ -1626,9 +1730,6 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_GPU_PATH_TO_EXEC =
       NM_GPU_RESOURCE_PREFIX + "path-to-discovery-executables";
 
-  @Private
-  public static final String DEFAULT_NM_GPU_PATH_TO_EXEC = "";
-
   /**
    * Settings to control which implementation of docker plugin for GPU will be
    * used.
@@ -1643,11 +1744,14 @@ public class YarnConfiguration extends Configuration {
   public static final String NVIDIA_DOCKER_V1 = "nvidia-docker-v1";
 
   @Private
+  public static final String NVIDIA_DOCKER_V2 = "nvidia-docker-v2";
+
+  @Private
   public static final String DEFAULT_NM_GPU_DOCKER_PLUGIN_IMPL =
       NVIDIA_DOCKER_V1;
 
   /**
-   * This setting controls end point of nvidia-docker-v1 plugin
+   * This setting controls end point of nvidia-docker-v1 plugin.
    */
   @Private
   public static final String NVIDIA_DOCKER_PLUGIN_V1_ENDPOINT =
@@ -1681,6 +1785,15 @@ public class YarnConfiguration extends Configuration {
   @Private
   public static final String DEFAULT_NM_FPGA_VENDOR_PLUGIN =
       "org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.IntelFpgaOpenclPlugin";
+
+  @Private
+  public static final String NM_FPGA_DEVICE_DISCOVERY_SCRIPT =
+      NM_FPGA_RESOURCE_PREFIX + "device-discovery-script";
+
+  @Private
+  public static final String NM_FPGA_AVAILABLE_DEVICES =
+      NM_FPGA_RESOURCE_PREFIX + "available-devices";
+
 
   public static final String NM_NETWORK_TAG_PREFIX = NM_PREFIX
       + "network-tagging";
@@ -1746,6 +1859,14 @@ public class YarnConfiguration extends Configuration {
       "container-monitor.procfs-tree.smaps-based-rss.enabled";
   public static final boolean DEFAULT_PROCFS_USE_SMAPS_BASED_RSS_ENABLED =
       false;
+  private static final String APPLICATION_TAG_BASED_PLACEMENT_PREFIX =
+      RM_PREFIX + "application-tag-based-placement";
+  public static final String APPLICATION_TAG_BASED_PLACEMENT_ENABLED =
+          APPLICATION_TAG_BASED_PLACEMENT_PREFIX + ".enable";
+  public static final boolean DEFAULT_APPLICATION_TAG_BASED_PLACEMENT_ENABLED =
+          false;
+  public static final String APPLICATION_TAG_BASED_PLACEMENT_USER_WHITELIST =
+          APPLICATION_TAG_BASED_PLACEMENT_PREFIX + ".username.whitelist";
 
   /** Enable/disable container metrics. */
   @Private
@@ -1830,28 +1951,52 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_MIN_PER_DISK_FREE_SPACE_MB =
       NM_DISK_HEALTH_CHECK_PREFIX + "min-free-space-per-disk-mb";
   /**
+   * The minimum space that must be available on an offline
+   * disk for it to be marked as online.  The value should not be less
+   * than NM_MIN_PER_DISK_FREE_SPACE_MB.  If its value is less than
+   * NM_MIN_PER_DISK_FREE_SPACE_MB or is not set, it will be set to the
+   * same value as NM_MIN_PER_DISK_FREE_SPACE_MB.
+   * This applies to nm-local-dirs and nm-log-dirs.
+   */
+  public static final String NM_WM_HIGH_PER_DISK_FREE_SPACE_MB =
+      NM_DISK_HEALTH_CHECK_PREFIX +
+          "min-free-space-per-disk-watermark-high-mb";
+  /**
    * By default, all of the disk can be used before it is marked as offline.
    */
   public static final long DEFAULT_NM_MIN_PER_DISK_FREE_SPACE_MB = 0;
 
+  /** The health checker scripts. */
+  public static final String NM_HEALTH_CHECK_SCRIPTS =
+      NM_PREFIX + "health-checker.scripts";
+  public static final String[] DEFAULT_NM_HEALTH_CHECK_SCRIPTS = {"script"};
+
   /** Frequency of running node health script.*/
   public static final String NM_HEALTH_CHECK_INTERVAL_MS = 
-    NM_PREFIX + "health-checker.interval-ms";
+      NM_PREFIX + "health-checker.interval-ms";
   public static final long DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
+  /** Health check time out period for all scripts.*/
+  public static final String NM_HEALTH_CHECK_TIMEOUT_MS =
+      NM_PREFIX + "health-checker.timeout-ms";
+  public static final long DEFAULT_NM_HEALTH_CHECK_TIMEOUT_MS =
+      2 * DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS;
+
   /** Health check script time out period.*/  
-  public static final String NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS = 
-    NM_PREFIX + "health-checker.script.timeout-ms";
-  public static final long DEFAULT_NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS = 
-    2 * DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS;
+  public static final String NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS_TEMPLATE =
+      NM_PREFIX + "health-checker.%s.timeout-ms";
   
   /** The health check script to run.*/
-  public static final String NM_HEALTH_CHECK_SCRIPT_PATH = 
-    NM_PREFIX + "health-checker.script.path";
+  public static final String NM_HEALTH_CHECK_SCRIPT_PATH_TEMPLATE =
+      NM_PREFIX + "health-checker.%s.path";
   
   /** The arguments to pass to the health check script.*/
-  public static final String NM_HEALTH_CHECK_SCRIPT_OPTS = 
-    NM_PREFIX + "health-checker.script.opts";
+  public static final String NM_HEALTH_CHECK_SCRIPT_OPTS_TEMPLATE =
+      NM_PREFIX + "health-checker.%s.opts";
+
+  /** Frequency of running node health script. */
+  public static final String NM_HEALTH_CHECK_SCRIPT_INTERVAL_MS_TEMPLATE =
+      NM_PREFIX + "health-checker.%s.interval-ms";
 
   /** The JVM options used on forking ContainerLocalizer process
       by container executor. */
@@ -1877,6 +2022,7 @@ public class YarnConfiguration extends Configuration {
    *   <li>default</li>
    *   <li>docker</li>
    *   <li>javasandbox</li>
+   *   <li>runc</li>
    * </ul>
    */
   public static final String LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES =
@@ -1893,12 +2039,210 @@ public class YarnConfiguration extends Configuration {
   public static final String LINUX_CONTAINER_RUNTIME_TYPE =
       LINUX_CONTAINER_RUNTIME_PREFIX + "type";
 
+  public static final String RUNC_CONTAINER_RUNTIME_PREFIX =
+      LINUX_CONTAINER_RUNTIME_PREFIX + "runc.";
+
+  /**
+   * The runc image tag to manifest plugin class that should be used.
+   */
+  public static final String NM_RUNC_IMAGE_TAG_TO_MANIFEST_PLUGIN =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "image-tag-to-manifest-plugin";
+
+   /** Default runc image tag to manifest plugin class. */
+  public static final String DEFAULT_NM_RUNC_IMAGE_TAG_TO_MANIFEST_PLUGIN =
+      "org.apache.hadoop.yarn.server.nodemanager.containermanager" +
+      ".linux.runtime.runc.ImageTagToManifestPlugin";
+
+  /**
+   * The runc manifest to resources plugin class that should be used.
+   */
+  public static final String NM_RUNC_MANIFEST_TO_RESOURCES_PLUGIN =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "manifest-to-resources-plugin";
+
+  /** Default runc manifest to resources plugin plugin class. */
+  public static final String DEFAULT_NM_RUNC_MANIFEST_TO_RESOURCES_PLUGIN =
+      "org.apache.hadoop.yarn.server.nodemanager.containermanager" +
+      ".linux.runtime.runc.HdfsManifestToResourcesPlugin";
+
+  /**
+   * The HDFS location under which the oci image manifests, layers,
+   * and configs directories exist.
+   */
+  public static final String NM_RUNC_IMAGE_TOPLEVEL_DIR =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "image-toplevel-dir";
+
+  /**
+   * Default HDFS location under which the oci image manifests, layers,
+   * and configs directories exist.
+   */
+  public static final String DEFAULT_NM_RUNC_IMAGE_TOPLEVEL_DIR =
+      "/runc-root";
+
+  /**
+   * Target count of layer mounts that we should keep on disk at one time.
+   */
+  public static final String NM_RUNC_LAYER_MOUNTS_TO_KEEP =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "layer-mounts-to-keep";
+
+  public static final int DEFAULT_NM_RUNC_LAYER_MOUNTS_TO_KEEP = 100;
+
+  /**
+   * The interval in seconds between executions of reaping layer mounts.
+   */
+  public static final String NM_REAP_RUNC_LAYER_MOUNTS_INTERVAL =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "layer-mounts-interval-secs";
+
+  public static final int DEFAULT_NM_REAP_RUNC_LAYER_MOUNTS_INTERVAL = 600;
+
+  /** Default runc image to be used. */
+  public static final String NM_RUNC_IMAGE_NAME =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "image-name";
+
+  /** Allow privileged containers. Use with extreme care. */
+  public static final String NM_RUNC_ALLOW_PRIVILEGED_CONTAINERS =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "privileged-containers.allowed";
+
+  /** Privileged containers are disabled by default. */
+  public static final boolean DEFAULT_NM_RUNC_ALLOW_PRIVILEGED_CONTAINERS =
+      false;
+
+  /** The set of networks allowed when launching containers using the
+   * RuncContainerRuntime.
+   */
+  public static final String NM_RUNC_ALLOWED_CONTAINER_NETWORKS =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "allowed-container-networks";
+
+  /** The default set of networks allowed when launching containers using the
+   * RuncContainerRuntime.
+   */
+  public static final String[] DEFAULT_NM_RUNC_ALLOWED_CONTAINER_NETWORKS =
+      {"host", "none", "bridge"};
+
+  /** The set of runtimes allowed when launching containers using the
+   * RuncContainerRuntime.
+   */
+  public static final String NM_RUNC_ALLOWED_CONTAINER_RUNTIMES =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "allowed-container-runtimes";
+
+  /** The default set of runtimes allowed when launching containers using the
+   * RuncContainerRuntime.
+   */
+  public static final String[] DEFAULT_NM_RUNC_ALLOWED_CONTAINER_RUNTIMES =
+      {"runc"};
+
+  /** ACL list for users allowed to run privileged containers. */
+  public static final String NM_RUNC_PRIVILEGED_CONTAINERS_ACL =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "privileged-containers.acl";
+
+  /** Default list for users allowed to run privileged containers is empty. */
+  public static final String DEFAULT_NM_RUNC_PRIVILEGED_CONTAINERS_ACL = "";
+
+  /** Allow host pid namespace for containers. Use with care. */
+  public static final String NM_RUNC_ALLOW_HOST_PID_NAMESPACE =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "host-pid-namespace.allowed";
+
+  /** Host pid namespace for containers is disabled by default. */
+  public static final boolean DEFAULT_NM_RUNC_ALLOW_HOST_PID_NAMESPACE =
+      false;
+
+  /** The default list of read-only mounts to be bind-mounted into all
+   *  runC containers that use RuncContainerRuntime.
+   */
+  public static final String NM_RUNC_DEFAULT_RO_MOUNTS =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "default-ro-mounts";
+
+  /** The default list of read-write mounts to be bind-mounted into all
+   *  runC containers that use RuncContainerRuntime.
+   */
+  public static final String NM_RUNC_DEFAULT_RW_MOUNTS =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "default-rw-mounts";
+
+  /** Path to the seccomp profile to use with Runc containers. */
+  public static final String NM_RUNC_SECCOMP_PROFILE =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "seccomp-profile";
+
+  /** Prefix for image tag to manifest hash plugin used with the
+   * RuncContainerRuntime.
+   */
+  private static final String IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "image-tag-to-manifest-plugin.";
+
+  /**
+   * The HDFS location where the runC image tag to hash file exists.
+   */
+  public static final String NM_HDFS_RUNC_IMAGE_TAG_TO_HASH_FILE =
+      IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX + "hdfs-hash-file";
+
+  /**
+   * The local file system location where the runC image tag to hash file exists.
+   */
+  public static final String NM_LOCAL_RUNC_IMAGE_TAG_TO_HASH_FILE =
+      IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX + "local-hash-file";
+
+  /**
+   * The interval in seconds between refreshing the hdfs image tag to
+   * hash cache.
+   */
+  public static final String NM_RUNC_CACHE_REFRESH_INTERVAL =
+      IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX + "cache-refresh-interval-secs";
+
+  /**
+   * The default interval in seconds between refreshing the hdfs image tag to
+   * hash cache.
+   */
+  public static final int DEFAULT_NM_RUNC_CACHE_REFRESH_INTERVAL = 60;
+
+  /**
+   * The number of manifests to cache in the image tag to hash cache.
+   */
+  public static final String NM_RUNC_NUM_MANIFESTS_TO_CACHE =
+      IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX + "num-manifests-to-cache";
+
+  /**
+   * The default number of manifests to cache in the image tag to hash cache.
+   */
+  public static final int DEFAULT_NUM_MANIFESTS_TO_CACHE = 10;
+
+  /** Prefix for hdfs manifest hash to local resources plugin used with the
+   * RuncContainerRuntime.
+   */
+  private static final String HDFS_MANIFEST_TO_RESOURCES_PLUGIN_PREFIX =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "hdfs-manifest-to-resources-plugin.";
+
+  /**
+   * The timeout value in seconds for the values in the stat cache.
+   */
+  public static final String NM_RUNC_STAT_CACHE_TIMEOUT =
+      HDFS_MANIFEST_TO_RESOURCES_PLUGIN_PREFIX
+          + "stat-cache-timeout-interval-secs";
+
+  /**
+   * The default timeout value in seconds for the values in the stat cache.
+   */
+  public static final int DEFAULT_NM_RUNC_STAT_CACHE_TIMEOUT = 60 * 60;
+
+  /**
+   * The size of the stat cache which stores stats of the layers and config.
+   */
+  public static final String NM_RUNC_STAT_CACHE_SIZE =
+      HDFS_MANIFEST_TO_RESOURCES_PLUGIN_PREFIX + "stat-cache-size";
+
+  /**
+   * The default size of the stat cache which stores stats of the
+   * layers and config.
+   */
+  public static final int DEFAULT_RUNC_STAT_CACHE_SIZE = 500;
+
   public static final String DOCKER_CONTAINER_RUNTIME_PREFIX =
       LINUX_CONTAINER_RUNTIME_PREFIX + "docker.";
 
   /** Default docker image to be used. */
   public static final String NM_DOCKER_IMAGE_NAME =
       DOCKER_CONTAINER_RUNTIME_PREFIX + "image-name";
+
+  /** Default option to decide whether to pull the latest image or not. **/
+  public static final String NM_DOCKER_IMAGE_UPDATE =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "image-update";
 
   /** Capabilities allowed (and added by default) for docker containers. **/
   public static final String NM_DOCKER_CONTAINER_CAPABILITIES =
@@ -1983,6 +2327,16 @@ public class YarnConfiguration extends Configuration {
    * . */
   public static final String DEFAULT_NM_DOCKER_DEFAULT_CONTAINER_NETWORK =
       "host";
+
+  /** The set of runtimes allowed when launching containers using the
+   * DockerContainerRuntime. */
+  public static final String NM_DOCKER_ALLOWED_CONTAINER_RUNTIMES =
+          DOCKER_CONTAINER_RUNTIME_PREFIX + "allowed-container-runtimes";
+
+  /** The set of runtimes allowed when launching containers using the
+   * DockerContainerRuntime. */
+  public static final String[] DEFAULT_NM_DOCKER_ALLOWED_CONTAINER_RUNTIMES =
+      {"runc"};
 
   /** Allow host pid namespace for containers. Use with care. */
   public static final String NM_DOCKER_ALLOW_HOST_PID_NAMESPACE =
@@ -2200,7 +2554,36 @@ public class YarnConfiguration extends Configuration {
   
   public static final String NM_AUX_SERVICES = 
       NM_PREFIX + "aux-services";
-  
+
+  /**
+   * Boolean indicating whether loading aux services from a manifest is
+   * enabled. If enabled, aux services may be dynamically modified through
+   * reloading the manifest via filesystem changes or a REST API. When
+   * enabled, aux services configuration properties unrelated to the manifest
+   * will be ignored.
+   */
+  public static final String NM_AUX_SERVICES_MANIFEST_ENABLED =
+      NM_AUX_SERVICES + ".manifest.enabled";
+
+  public static final boolean DEFAULT_NM_AUX_SERVICES_MANIFEST_ENABLED =
+      false;
+
+  /**
+   * File containing auxiliary service specifications.
+   */
+  public static final String NM_AUX_SERVICES_MANIFEST =
+      NM_AUX_SERVICES + ".manifest";
+
+  /**
+   * Interval at which manifest file will be reloaded when modifications are
+   * found (0 or less means that the file will not be checked for modifications
+   * and reloaded).
+   */
+  public static final String NM_AUX_SERVICES_MANIFEST_RELOAD_MS =
+      NM_AUX_SERVICES + ".manifest.reload-ms";
+
+  public static final long DEFAULT_NM_AUX_SERVICES_MANIFEST_RELOAD_MS = 0;
+
   public static final String NM_AUX_SERVICE_FMT =
       NM_PREFIX + "aux-services.%s.class";
 
@@ -2272,13 +2655,17 @@ public class YarnConfiguration extends Configuration {
   
   /** Keytab for Proxy.*/
   public static final String PROXY_KEYTAB = PROXY_PREFIX + "keytab";
-  
+
   /** The address for the web proxy.*/
   public static final String PROXY_ADDRESS =
     PROXY_PREFIX + "address";
   public static final int DEFAULT_PROXY_PORT = 9099;
   public static final String DEFAULT_PROXY_ADDRESS =
     "0.0.0.0:" + DEFAULT_PROXY_PORT;
+
+  /** Binding address for the web proxy. */
+  public static final String PROXY_BIND_HOST =
+      PROXY_PREFIX + "bind-host";
   
   /**
    * YARN Service Level Authorization
@@ -2348,6 +2735,20 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "dispatcher.drain-events.timeout";
 
   public static final long DEFAULT_DISPATCHER_DRAIN_EVENTS_TIMEOUT = 300000;
+
+  /**
+   * The threshold used to trigger the logging of event types and counts
+   *  in RM's main event dispatcher. Default value is 5000,
+   *  which means RM will print events info when the queue size cumulatively
+   *  reaches 5000 every time. Such info can be used to reveal what
+   *  kind of events that RM is stuck at processing mostly,
+   *  it can help to narrow down certain performance issues.
+   */
+  public static final String
+          YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD =
+          YARN_PREFIX + "dispatcher.print-events-info.threshold";
+  public static final int
+          DEFAULT_YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD = 5000;
 
   /**
    * CLASSPATH for YARN applications. A comma-separated list of CLASSPATH
@@ -2660,6 +3061,13 @@ public class YarnConfiguration extends Configuration {
       "org.apache.hadoop.yarn.server.timelineservice.storage" +
           ".HBaseTimelineReaderImpl";
 
+  public static final String TIMELINE_SERVICE_SCHEMA_CREATOR_CLASS =
+      TIMELINE_SERVICE_PREFIX + "schema-creator.class";
+
+  public static final String DEFAULT_TIMELINE_SERVICE_SCHEMA_CREATOR_CLASS =
+      "org.apache.hadoop.yarn.server.timelineservice.storage" +
+          ".HBaseTimelineSchemaCreator";
+
   /**
    * default schema prefix for hbase tables.
    */
@@ -2681,6 +3089,15 @@ public class YarnConfiguration extends Configuration {
   public static final int
       DEFAULT_TIMELINE_SERVICE_WRITER_FLUSH_INTERVAL_SECONDS = 60;
 
+  /** The setting that controls the capacity of the queue for async writes
+   * to timeline collector.
+   */
+  public static final String TIMELINE_SERVICE_WRITER_ASYNC_QUEUE_CAPACITY =
+      TIMELINE_SERVICE_PREFIX + "writer.async.queue.capacity";
+
+  public static final int
+      DEFAULT_TIMELINE_SERVICE_WRITER_ASYNC_QUEUE_CAPACITY = 100;
+
   /**
    * The name for setting that controls how long the final value of
    * a metric of a completed app is retained before merging
@@ -2701,6 +3118,19 @@ public class YarnConfiguration extends Configuration {
   /** default hdfs location for flowrun coprocessor jar. */
   public static final String DEFAULT_HDFS_LOCATION_FLOW_RUN_COPROCESSOR_JAR =
       "/hbase/coprocessor/hadoop-yarn-server-timelineservice.jar";
+
+  /**
+   * This setting controls the max size of the flow name getting generated
+   * in ATSv2 after removing UUID if present.
+   * */
+  public static final String FLOW_NAME_MAX_SIZE =
+      TIMELINE_SERVICE_PREFIX + "flowname.max-size";
+
+  /**
+   * Default setting for flow name size has no size restriction
+   * after removing UUID if present.
+   */
+  public static final int FLOW_NAME_DEFAULT_MAX_SIZE = 0;
 
     /**
    * The name for setting that points to an optional HBase configuration
@@ -3406,6 +3836,35 @@ public class YarnConfiguration extends Configuration {
       false;
 
   ////////////////////////////////
+  // CSI Volume configs
+  ////////////////////////////////
+  /**
+   * TERMS:
+   * csi-driver: a 3rd party CSI driver which implements the CSI protocol.
+   *   It is provided by the storage system.
+   * csi-driver-adaptor: this is an internal RPC service working
+   *   as a bridge between YARN and a csi-driver.
+   */
+  public static final String NM_CSI_ADAPTOR_PREFIX =
+      NM_PREFIX + "csi-driver-adaptor.";
+  public static final String NM_CSI_DRIVER_PREFIX =
+      NM_PREFIX + "csi-driver.";
+  public static final String NM_CSI_DRIVER_ENDPOINT_SUFFIX =
+      ".endpoint";
+  public static final String NM_CSI_ADAPTOR_ADDRESS_SUFFIX =
+      ".address";
+  public static final String NM_CSI_ADAPTOR_CLASS =
+      ".class";
+  /**
+   * One or more socket addresses for csi-adaptor.
+   * Multiple addresses are delimited by ",".
+   */
+  public static final String NM_CSI_ADAPTOR_ADDRESSES =
+      NM_CSI_ADAPTOR_PREFIX + "addresses";
+  public static final String NM_CSI_DRIVER_NAMES =
+      NM_CSI_DRIVER_PREFIX + "names";
+
+  ////////////////////////////////
   // Other Configs
   ////////////////////////////////
 
@@ -3559,6 +4018,26 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NODELABEL_CONFIGURATION_TYPE =
       CENTRALIZED_NODELABEL_CONFIGURATION_TYPE;
 
+  public static final String EXCLUSIVE_ENFORCED_PARTITIONS_SUFFIX
+      = "exclusive-enforced-partitions";
+
+  public static final String EXCLUSIVE_ENFORCED_PARTITIONS = NODE_LABELS_PREFIX
+      + EXCLUSIVE_ENFORCED_PARTITIONS_SUFFIX;
+
+  @Private
+  public static Set<String> getExclusiveEnforcedPartitions(
+      Configuration conf) {
+    Set<String> exclusiveEnforcedPartitions = new HashSet<>();
+    String[] configuredPartitions = conf.getStrings(
+        EXCLUSIVE_ENFORCED_PARTITIONS);
+    if (configuredPartitions != null) {
+      for (String partition : configuredPartitions) {
+        exclusiveEnforcedPartitions.add(partition);
+      }
+    }
+    return exclusiveEnforcedPartitions;
+  }
+
   public static final String MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY =
       YARN_PREFIX + "cluster.max-application-priority";
 
@@ -3621,6 +4100,12 @@ public class YarnConfiguration extends Configuration {
       NM_NODE_LABELS_PREFIX + "resync-interval-ms";
 
   public static final long DEFAULT_NM_NODE_LABELS_RESYNC_INTERVAL =
+      2 * 60 * 1000;
+
+  public static final String NM_NODE_ATTRIBUTES_RESYNC_INTERVAL =
+      NM_NODE_ATTRIBUTES_PREFIX + "resync-interval-ms";
+
+  public static final long DEFAULT_NM_NODE_ATTRIBUTES_RESYNC_INTERVAL =
       2 * 60 * 1000;
 
   // If -1 is configured then no timer task should be created
@@ -3730,6 +4215,14 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_DISPLAY_APPS_FOR_LOGGED_IN_USER =
       false;
 
+  public static final String FILTER_INVALID_XML_CHARS =
+      "yarn.webapp.filter-invalid-xml-chars";
+  public static final boolean DEFAULT_FILTER_INVALID_XML_CHARS = false;
+
+  public static final String ENABLE_REST_APP_SUBMISSIONS =
+      "yarn.webapp.enable-rest-app-submissions";
+  public static final boolean DEFAULT_ENABLE_REST_APP_SUBMISSIONS = true;
+
   // RM and NM CSRF props
   public static final String REST_CSRF = "webapp.rest-csrf.";
   public static final String RM_CSRF_PREFIX = RM_PREFIX + REST_CSRF;
@@ -3802,6 +4295,10 @@ public class YarnConfiguration extends Configuration {
       TIMELINE_SERVICE_COLLECTOR_PREFIX + "bind-host";
 
   @Private
+  public static final String TIMELINE_SERVICE_COLLECTOR_BIND_PORT_RANGES =
+      TIMELINE_SERVICE_COLLECTOR_PREFIX + "bind-port-ranges";
+
+  @Private
   public static final String TIMELINE_SERVICE_COLLECTOR_WEBAPP_ADDRESS =
       TIMELINE_SERVICE_COLLECTOR_PREFIX + "webapp.address";
   public static final String DEFAULT_TIMELINE_SERVICE_COLLECTOR_WEBAPP_ADDRESS =
@@ -3829,6 +4326,54 @@ public class YarnConfiguration extends Configuration {
       + "numa-awareness.numactl.cmd";
   public static final String DEFAULT_NM_NUMA_AWARENESS_NUMACTL_CMD =
       "/usr/bin/numactl";
+
+  /**
+   * Settings for activities manager.
+   */
+  public static final String RM_ACTIVITIES_MANAGER_PREFIX =
+      RM_PREFIX + "activities-manager.";
+  public static final String RM_ACTIVITIES_MANAGER_SCHEDULER_ACTIVITIES_PREFIX =
+      RM_ACTIVITIES_MANAGER_PREFIX + "scheduler-activities.";
+  public static final String RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_PREFIX =
+      RM_ACTIVITIES_MANAGER_PREFIX + "app-activities.";
+
+  /** The cleanup interval for activities in milliseconds. **/
+  public static final String RM_ACTIVITIES_MANAGER_CLEANUP_INTERVAL_MS =
+      RM_ACTIVITIES_MANAGER_PREFIX + "cleanup-interval-ms";
+  public static final long DEFAULT_RM_ACTIVITIES_MANAGER_CLEANUP_INTERVAL_MS =
+      5000L;
+
+  /** Time to live for scheduler activities in milliseconds. **/
+  public static final String RM_ACTIVITIES_MANAGER_SCHEDULER_ACTIVITIES_TTL_MS =
+      RM_ACTIVITIES_MANAGER_SCHEDULER_ACTIVITIES_PREFIX + "ttl-ms";
+  public static final long
+      DEFAULT_RM_ACTIVITIES_MANAGER_SCHEDULER_ACTIVITIES_TTL_MS = 600000L;
+
+  /** Time to live for app activities in milliseconds. **/
+  public static final String RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_TTL_MS =
+      RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_PREFIX + "ttl-ms";
+  public static final long DEFAULT_RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_TTL_MS =
+      600000L;
+
+  /** Max queue length for app activities. **/
+  public static final String
+      RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_MAX_QUEUE_LENGTH =
+      RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_PREFIX + "max-queue-length";
+  public static final int
+      DEFAULT_RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_MAX_QUEUE_LENGTH = 100;
+
+  /**
+   * Containers launcher implementation to use.
+   */
+  public static final String NM_CONTAINERS_LAUNCHER_CLASS =
+      NM_PREFIX + "containers-launcher.class";
+
+  // Configuration for the prefix of the tag which contains workflow ID,
+  // followed by the prefix.
+  public static final String YARN_WORKFLOW_ID_TAG_PREFIX =
+      YARN_PREFIX + "workflow-id.tag-prefix";
+  public static final String DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX =
+      "workflowid:";
 
   public YarnConfiguration() {
     super();

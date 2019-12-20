@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.io.BufferedReader;
@@ -124,7 +126,6 @@ import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
-import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -167,7 +168,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     File shellFile = null;
     File tempFile = null;
     String badSymlink = Shell.WINDOWS ? "foo@zz_#!-+bar.cmd" :
-      "foo@zz%_#*&!-+= bar()";
+      "-foo@zz%_#*&!-+= bar()";
     File symLinkFile = null;
 
     try {
@@ -212,7 +213,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       = new Shell.ShellCommandExecutor(new String[]{tempFile.getAbsolutePath()}, tmpDir);
 
       shexc.execute();
-      assertEquals(shexc.getExitCode(), 0);
+      assertThat(shexc.getExitCode()).isEqualTo(0);
       //Capture output from prelaunch.out
 
       List<String> output = Files.readAllLines(Paths.get(localLogDir.getAbsolutePath(), ContainerLaunch.CONTAINER_PRE_LAUNCH_STDOUT),
@@ -476,10 +477,15 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     for (String envVar : env.keySet()) {
       Assert.assertTrue(shellContent.contains(envVar + "="));
     }
+    // The whitelist vars should not have been added to env
+    // They should only be in the launch script
     for (String wlVar : whitelistVars) {
+      Assert.assertFalse(env.containsKey(wlVar));
       Assert.assertTrue(shellContent.contains(wlVar + "="));
     }
+    // Non-whitelist nm vars should be in neither env nor in launch script
     for (String nwlVar : nonWhiteListEnv) {
+      Assert.assertFalse(env.containsKey(nwlVar));
       Assert.assertFalse(shellContent.contains(nwlVar + "="));
     }
     // Explicitly Set NM vars should be before user vars
@@ -1480,7 +1486,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
               "X", Shell.WINDOWS_MAX_SHELL_LENGTH -callCmd.length() + 1)));
       fail("longCommand was expected to throw");
     } catch(IOException e) {
-      assertThat(e.getMessage(), CoreMatchers.containsString(expectedMessage));
+      assertThat(e).hasMessageContaining(expectedMessage);
     }
 
     // Composite tests, from parts: less, exact and +
@@ -1502,7 +1508,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           org.apache.commons.lang3.StringUtils.repeat("X", 2048 - callCmd.length())));
       fail("long commands was expected to throw");
     } catch(IOException e) {
-      assertThat(e.getMessage(), CoreMatchers.containsString(expectedMessage));
+      assertThat(e).hasMessageContaining(expectedMessage);
     }
   }
   
@@ -1525,7 +1531,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           "A", Shell.WINDOWS_MAX_SHELL_LENGTH - ("@set somekey=").length()) + 1);
       fail("long env was expected to throw");
     } catch(IOException e) {
-      assertThat(e.getMessage(), CoreMatchers.containsString(expectedMessage));
+      assertThat(e).hasMessageContaining(expectedMessage);
     }
   }
     
@@ -1550,8 +1556,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           "X", (Shell.WINDOWS_MAX_SHELL_LENGTH - mkDirCmd.length())/2 +1)));
       fail("long mkdir was expected to throw");
     } catch(IOException e) {
-      assertThat(e.getMessage(), CoreMatchers.containsString(expectedMessage));
-    }    
+      assertThat(e).hasMessageContaining(expectedMessage);
+    }
   }
 
   @Test (timeout = 10000)
@@ -1581,7 +1587,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
               "Y", (Shell.WINDOWS_MAX_SHELL_LENGTH - linkCmd.length())/2) + 1));
       fail("long link was expected to throw");
     } catch(IOException e) {
-      assertThat(e.getMessage(), CoreMatchers.containsString(expectedMessage));
+      assertThat(e).hasMessageContaining(expectedMessage);
     }
   }
 
@@ -1742,7 +1748,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           new String[] { tempFile.getAbsolutePath() }, tmpDir);
 
         shexc.execute();
-        assertEquals(shexc.getExitCode(), 0);
+        assertThat(shexc.getExitCode()).isEqualTo(0);
         File directorInfo =
           new File(localLogDir, ContainerExecutor.DIRECTORY_CONTENTS);
         File scriptCopy = new File(localLogDir, tempFile.getName());
@@ -2533,7 +2539,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     Assert.assertEquals(new Path(nmPrivate, ContainerLaunch.CONTAINER_SCRIPT),
         csc.getNmPrivateContainerScriptPath());
     Assert.assertEquals(new Path(nmPrivate,
-        String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
+        String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT,
             id.toString())), csc.getNmPrivateTokensPath());
     Assert.assertEquals("script",
         readStringFromPath(csc.getNmPrivateContainerScriptPath()));

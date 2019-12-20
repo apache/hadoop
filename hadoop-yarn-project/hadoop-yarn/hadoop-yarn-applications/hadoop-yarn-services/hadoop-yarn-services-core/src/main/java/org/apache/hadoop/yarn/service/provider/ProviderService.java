@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.service.provider;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.Service;
@@ -28,16 +29,53 @@ import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 public interface ProviderService {
 
   /**
    * Set up the entire container launch context
    */
-  void buildContainerLaunchContext(AbstractLauncher containerLauncher,
+  ResolvedLaunchParams buildContainerLaunchContext(
+      AbstractLauncher containerLauncher,
       Service service, ComponentInstance instance,
       SliderFileSystem sliderFileSystem, Configuration yarnConf,
       Container container,
       ContainerLaunchService.ComponentLaunchContext componentLaunchContext)
       throws IOException, SliderException;
+
+  /**
+   * This holds any information that is resolved during building the launch
+   * context for a container.
+   * <p>
+   * Right now it contains a mapping of resource keys to destination files
+   * for resources that need to be localized.
+   */
+  class ResolvedLaunchParams {
+    private Map<String, String> resolvedRsrcPaths = new HashMap<>();
+
+    void addResolvedRsrcPath(String resourceKey, String destFile) {
+      Preconditions.checkNotNull(destFile, "dest file cannot be null");
+      Preconditions.checkNotNull(resourceKey,
+          "local resource cannot be null");
+      resolvedRsrcPaths.put(resourceKey, destFile);
+    }
+
+    public Map<String, String> getResolvedRsrcPaths() {
+      return this.resolvedRsrcPaths;
+    }
+
+    public boolean didLaunchFail() {
+      return false;
+    }
+  }
+
+  ResolvedLaunchParams FAILED_LAUNCH_PARAMS = new ResolvedLaunchParams() {
+    @Override
+    public boolean didLaunchFail() {
+      return true;
+    }
+  };
+
 }

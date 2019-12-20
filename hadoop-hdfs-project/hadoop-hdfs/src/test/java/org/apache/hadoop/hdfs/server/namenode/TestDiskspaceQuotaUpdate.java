@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -46,8 +48,6 @@ import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.AfterClass;
@@ -470,11 +470,7 @@ public class TestDiskspaceQuotaUpdate {
         invocation.callRealMethod();
         return null;
       }
-      }).when(nnSpy).blockReceivedAndDeleted(
-        Mockito.<DatanodeRegistration>anyObject(),
-        Mockito.anyString(),
-        Mockito.<StorageReceivedDeletedBlocks[]>anyObject()
-      );
+      }).when(nnSpy).blockReceivedAndDeleted(any(), anyString(), any());
 
     getDFS().mkdirs(dir);
     getDFS().setQuota(dir, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);

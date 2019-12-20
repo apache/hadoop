@@ -23,7 +23,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -1516,6 +1516,29 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     for (int i = 0; i < targets.length; i++) {
       assertTrue("Target should be a part of Expected Targets",
           expectedTargets.contains(targets[i].getDatanodeDescriptor()));
+    }
+  }
+
+  @Test
+  public void testChooseFromFavoredNodesWhenPreferLocalSetToFalse() {
+    ((BlockPlacementPolicyDefault) replicator).setPreferLocalNode(false);
+    try {
+      DatanodeStorageInfo[] targets;
+      List<DatanodeDescriptor> expectedTargets = new ArrayList<>();
+      expectedTargets.add(dataNodes[0]);
+      expectedTargets.add(dataNodes[2]);
+      List<DatanodeDescriptor> favouredNodes = new ArrayList<>();
+      favouredNodes.add(dataNodes[0]);
+      favouredNodes.add(dataNodes[2]);
+      targets = chooseTarget(2, dataNodes[3], null,
+          favouredNodes);
+      assertEquals(targets.length, 2);
+      for (int i = 0; i < targets.length; i++) {
+        assertTrue("Target should be a part of Expected Targets",
+            expectedTargets.contains(targets[i].getDatanodeDescriptor()));
+      }
+    } finally {
+      ((BlockPlacementPolicyDefault) replicator).setPreferLocalNode(true);
     }
   }
 

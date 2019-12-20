@@ -18,15 +18,16 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.google.protobuf.ByteString;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.file.Files;
 import java.security.PrivilegedExceptionAction;
 
 import org.slf4j.Logger;
@@ -119,6 +120,23 @@ public class EditLogFileInputStream extends EditLogInputStream {
     return new EditLogFileInputStream(new URLLog(connectionFactory, url),
         startTxId, endTxId, inProgress);
   }
+
+  /**
+   * Create an EditLogInputStream from a {@link ByteString}, i.e. an in-memory
+   * collection of bytes.
+   *
+   * @param bytes The byte string to read from
+   * @param startTxId the expected starting transaction ID
+   * @param endTxId the expected ending transaction ID
+   * @param inProgress whether the log is in-progress
+   * @return An edit stream to read from
+   */
+  public static EditLogInputStream fromByteString(ByteString bytes,
+      long startTxId, long endTxId, boolean inProgress) {
+    return new EditLogFileInputStream(new ByteStringLog(bytes,
+        String.format("ByteStringEditLog[%d, %d]", startTxId, endTxId)),
+        startTxId, endTxId, inProgress);
+  }
   
   private EditLogFileInputStream(LogSource log,
       long firstTxId, long lastTxId,
@@ -144,6 +162,16 @@ public class EditLogFileInputStream extends EditLogInputStream {
         logVersion = readLogVersion(dataIn, verifyLayoutVersion);
       } catch (EOFException eofe) {
         throw new LogHeaderCorruptException("No header found in log");
+      }
+      if (logVersion == -1) {
+        // The edits in progress file is pre-allocated with 1MB of "-1" bytes
+        // when it is created, then the header is written. If the header is
+        // -1, it indicates the an exception occurred pre-allocating the file
+        // and the header was never written. Therefore this is effectively a
+        // corrupt and empty log.
+        throw new LogHeaderCorruptException("No header present in log (value " +
+            "is -1), probably due to disk space issues when it was created. " +
+            "The log has no transactions and will be sidelined.");
       }
       // We assume future layout will also support ADD_LAYOUT_FLAGS
       if (NameNodeLayoutVersion.supports(
@@ -376,6 +404,32 @@ public class EditLogFileInputStream extends EditLogInputStream {
     public long length();
     public String getName();
   }
+
+  private static class ByteStringLog implements LogSource {
+    private final ByteString bytes;
+    private final String name;
+
+    public ByteStringLog(ByteString bytes, String name) {
+      this.bytes = bytes;
+      this.name = name;
+    }
+
+    @Override
+    public InputStream getInputStream() {
+      return bytes.newInput();
+    }
+
+    @Override
+    public long length() {
+      return bytes.size();
+    }
+
+    @Override
+    public String getName() {
+      return name;
+    }
+
+  }
   
   private static class FileLog implements LogSource {
     private final File file;
@@ -386,7 +440,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
 
     @Override
     public InputStream getInputStream() throws IOException {
-      return new FileInputStream(file);
+      return Files.newInputStream(file.toPath());
     }
 
     @Override

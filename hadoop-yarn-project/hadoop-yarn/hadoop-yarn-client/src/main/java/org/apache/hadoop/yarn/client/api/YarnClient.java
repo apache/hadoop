@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
+import org.apache.hadoop.yarn.api.records.ShellContainerCommand;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -957,5 +958,19 @@ public abstract class YarnClient extends AbstractService {
   @Unstable
   public abstract Map<String, Set<NodeAttribute>> getNodeToAttributes(
       Set<String> hostNames) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to get a shell to a container.
+   * </p>
+   *
+   * @param containerId Container ID
+   * @param command Shell type
+   * @throws IOException if connection fails.
+   */
+  @Public
+  @Unstable
+  public abstract void shellToContainer(ContainerId containerId,
+      ShellContainerCommand command) throws IOException;
 
 }

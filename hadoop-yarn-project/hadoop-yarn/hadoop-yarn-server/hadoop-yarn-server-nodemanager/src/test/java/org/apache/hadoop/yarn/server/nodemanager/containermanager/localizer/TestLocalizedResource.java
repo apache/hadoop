@@ -18,8 +18,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -192,7 +192,8 @@ public class TestLocalizedResource {
   }
 
 
-  static class LocalizerEventMatcher extends ArgumentMatcher<LocalizerEvent> {
+  static class LocalizerEventMatcher implements
+      ArgumentMatcher<LocalizerEvent> {
     Credentials creds;
     LocalResourceVisibility vis;
     private final ContainerId idRef;
@@ -206,9 +207,11 @@ public class TestLocalizedResource {
       this.idRef = idRef;
     }
     @Override
-    public boolean matches(Object o) {
-      if (!(o instanceof LocalizerResourceRequestEvent)) return false;
-      LocalizerResourceRequestEvent evt = (LocalizerResourceRequestEvent) o;
+    public boolean matches(LocalizerEvent le) {
+      if (!(le instanceof LocalizerResourceRequestEvent)) {
+        return false;
+      }
+      LocalizerResourceRequestEvent evt = (LocalizerResourceRequestEvent) le;
       return idRef == evt.getContext().getContainerId()
           && type == evt.getType()
           && vis == evt.getVisibility()
@@ -216,7 +219,8 @@ public class TestLocalizedResource {
     }
   }
 
-  static class ContainerEventMatcher extends ArgumentMatcher<ContainerEvent> {
+  static class ContainerEventMatcher implements
+      ArgumentMatcher<ContainerEvent> {
     private final ContainerId idRef;
     private final ContainerEventType type;
     public ContainerEventMatcher(ContainerId idRef, ContainerEventType type) {
@@ -224,9 +228,7 @@ public class TestLocalizedResource {
       this.type = type;
     }
     @Override
-    public boolean matches(Object o) {
-      if (!(o instanceof ContainerEvent)) return false;
-      ContainerEvent evt = (ContainerEvent) o;
+    public boolean matches(ContainerEvent evt) {
       return idRef == evt.getContainerID() && type == evt.getType();
     }
   }

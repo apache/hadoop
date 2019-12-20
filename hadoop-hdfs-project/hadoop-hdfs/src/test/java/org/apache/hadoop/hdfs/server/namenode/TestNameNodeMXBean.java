@@ -222,6 +222,11 @@ public class TestNameNodeMXBean {
           "CorruptFiles"));
       assertEquals("Bad value for CorruptFiles", fsn.getCorruptFiles(),
           corruptFiles);
+      // get attribute CorruptFilesCount
+      int corruptFilesCount = (int) (mbs.getAttribute(mxbeanName,
+          "CorruptFilesCount"));
+      assertEquals("Bad value for CorruptFilesCount",
+          fsn.getCorruptFilesCount(), corruptFilesCount);
       // get attribute NameDirStatuses
       String nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
           "NameDirStatuses"));
@@ -666,6 +671,7 @@ public class TestNameNodeMXBean {
   public void testNNDirectorySize() throws Exception{
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, 0);
     MiniDFSCluster cluster = null;
     for (int i = 0; i < 5; i++) {
       try{
@@ -695,8 +701,6 @@ public class TestNameNodeMXBean {
 
       FSNamesystem nn0 = cluster.getNamesystem(0);
       FSNamesystem nn1 = cluster.getNamesystem(1);
-      checkNNDirSize(cluster.getNameDirs(0), nn0.getNameDirSize());
-      checkNNDirSize(cluster.getNameDirs(1), nn1.getNameDirSize());
       cluster.transitionToActive(0);
       fs = cluster.getFileSystem(0);
       DFSTestUtil.createFile(fs, new Path("/file"), 0, (short) 1, 0L);
@@ -1008,6 +1012,7 @@ public class TestNameNodeMXBean {
         expectedTotalReplicatedBlocks, totalReplicaBlocks.longValue());
     assertEquals("Unexpected total ec block groups!",
         expectedTotalECBlockGroups, totalECBlockGroups.longValue());
+    verifyEcClusterSetupVerifyResult(mbs);
   }
 
   private String getEnabledEcPoliciesMetric() throws Exception {
@@ -1016,5 +1021,23 @@ public class TestNameNodeMXBean {
         "Hadoop:service=NameNode,name=ECBlockGroupsState");
     return (String) (mbs.getAttribute(mxbeanName,
         "EnabledEcPolicies"));
+  }
+
+  private void verifyEcClusterSetupVerifyResult(MBeanServer mbs)
+      throws Exception{
+    ObjectName namenodeMXBeanName = new ObjectName(
+        "Hadoop:service=NameNode,name=NameNodeInfo");
+    String result = (String) mbs.getAttribute(namenodeMXBeanName,
+        "VerifyECWithTopologyResult");
+    ObjectMapper mapper = new ObjectMapper();
+    Map<String, String> resultMap = mapper.readValue(result, Map.class);
+    Boolean isSupported = Boolean.parseBoolean(resultMap.get("isSupported"));
+    String resultMessage = resultMap.get("resultMessage");
+
+    assertFalse("Test cluster does not support all enabled " +
+        "erasure coding policies.", isSupported);
+    assertTrue(resultMessage.contains("3 racks are required for " +
+        "the erasure coding policies: RS-6-3-1024k. " +
+        "The number of racks is only 1."));
   }
 }

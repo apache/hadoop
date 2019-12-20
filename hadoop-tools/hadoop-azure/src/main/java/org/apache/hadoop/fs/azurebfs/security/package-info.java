@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate("authorization-subsystems")
 @InterfaceStability.Unstable
 package org.apache.hadoop.fs.azurebfs.security;
 import org.apache.hadoop.classification.InterfaceAudience;

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.service;
 
+import com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -35,16 +36,22 @@ import org.apache.hadoop.yarn.service.component.ComponentEventType;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType;
+import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
 import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
+import org.apache.hadoop.yarn.service.exceptions.SliderException;
+import org.apache.hadoop.yarn.service.provider.ProviderService;
+import org.apache.hadoop.yarn.service.provider.ProviderUtils;
 import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Future;
 
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Mockito.doNothing;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -75,7 +82,7 @@ public class MockRunningServiceContext extends ServiceContext {
         NMClientAsync nmClientAsync = super.createNMClient();
         NMClient nmClient = mock(NMClient.class);
         try {
-          when(nmClient.getContainerStatus(anyObject(), anyObject()))
+          when(nmClient.getContainerStatus(any(), any()))
               .thenAnswer(
                   (Answer<ContainerStatus>) invocation -> ContainerStatus
                       .newInstance((ContainerId) invocation.getArguments()[0],
@@ -112,10 +119,36 @@ public class MockRunningServiceContext extends ServiceContext {
 
 
     this.scheduler.init(fsWatcher.getConf());
+    when(mockLaunchService.launchCompInstance(any(), any(),
+        any(), any())).thenAnswer(
+        (Answer<Future<ProviderService.ResolvedLaunchParams>>)
+            this::launchAndReinitHelper);
 
-    doNothing().when(mockLaunchService).
-        reInitCompInstance(anyObject(), anyObject(), anyObject(), anyObject());
+    when(mockLaunchService.reInitCompInstance(any(), any(),
+        any(), any())).thenAnswer((
+        Answer<Future<ProviderService.ResolvedLaunchParams>>)
+        this::launchAndReinitHelper);
     stabilizeComponents(this);
+  }
+
+  private Future<ProviderService.ResolvedLaunchParams> launchAndReinitHelper(
+      InvocationOnMock invocation) throws IOException, SliderException {
+    AbstractLauncher launcher = new AbstractLauncher(
+        scheduler.getContext());
+    ComponentInstance instance = (ComponentInstance)
+        invocation.getArguments()[1];
+    Container container = (Container) invocation.getArguments()[2];
+    ContainerLaunchService.ComponentLaunchContext clc =
+        (ContainerLaunchService.ComponentLaunchContext)
+            invocation.getArguments()[3];
+
+    ProviderService.ResolvedLaunchParams resolvedParams =
+        new ProviderService.ResolvedLaunchParams();
+    ProviderUtils.createConfigFileAndAddLocalResource(launcher, fs, clc,
+        new HashMap<>(), instance, scheduler.getContext(), resolvedParams);
+    ProviderUtils.handleStaticFilesForLocalization(launcher, fs, clc,
+        resolvedParams);
+    return Futures.immediateFuture(resolvedParams);
   }
 
   private void stabilizeComponents(ServiceContext context) {

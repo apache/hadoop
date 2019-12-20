@@ -1,0 +1,20 @@
+{
+  "id": "yarn_cluster!1533859200000!test_user!DistributedShell",
+  "type": "YARN_FLOW_ACTIVITY",
+  "flowActivities": [
+    {
+      "flowName": "DistributedShell",
+      "flowVersion": "1",
+      "flowRunId": 1533871039026
+    },
+    {
+      "flowName": "DistributedShell",
+      "flowVersion": "1",
+      "flowRunId": 1533871599510
+    }
+  ],
+  "dayTimestamp": 1533859200000,
+  "user": "test_user",
+  "flowName": "DistributedShell",
+  "createdTime": 1533859200000000
+}

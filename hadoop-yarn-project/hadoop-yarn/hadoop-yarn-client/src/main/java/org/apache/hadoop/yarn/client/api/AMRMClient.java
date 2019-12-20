@@ -427,12 +427,13 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
 
     public String toString() {
       StringBuilder sb = new StringBuilder();
-      sb.append("Capability[").append(capability).append("]");
-      sb.append("Priority[").append(priority).append("]");
-      sb.append("AllocationRequestId[").append(allocationRequestId).append("]");
-      sb.append("ExecutionTypeRequest[").append(executionTypeRequest)
-          .append("]");
-      sb.append("Resource Profile[").append(resourceProfile).append("]");
+      sb.append("Capability[").append(capability).append("]")
+          .append("Priority[").append(priority).append("]")
+          .append("AllocationRequestId[").append(allocationRequestId)
+          .append("]")
+          .append("ExecutionTypeRequest[").append(executionTypeRequest)
+          .append("]")
+          .append("Resource Profile[").append(resourceProfile).append("]");
       return sb.toString();
     }
 
@@ -856,10 +857,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
 
     int loggingCounter = logInterval;
     do {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Check the condition for main loop.");
-      }
-
+      LOG.debug("Check the condition for main loop.");
       boolean result = check.get();
       if (result) {
         LOG.info("Exits the main loop.");

@@ -78,8 +78,18 @@ public class TestCapacitySchedulerMetrics {
     Assert.assertEquals(0, csMetrics.getNumOfAllocates());
     Assert.assertEquals(0, csMetrics.getNumOfCommitSuccess());
 
-    RMApp rmApp = rm.submitApp(1024, "app", "user", null, false,
-        "default", 1, null, null, false);
+    RMApp rmApp = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withUnmanagedAM(false)
+            .withQueue("default")
+            .withMaxAppAttempts(1)
+            .withCredentials(null)
+            .withAppType(null)
+            .withWaitForAppAcceptedState(false)
+            .build());
     MockAM am = MockRM.launchAMWhenAsyncSchedulingEnabled(rmApp, rm);
     am.registerAppAttempt();
     am.allocate("*", 1024, 1, new ArrayList<>());
@@ -87,18 +97,18 @@ public class TestCapacitySchedulerMetrics {
     nm1.nodeHeartbeat(true);
     nm2.nodeHeartbeat(true);
 
-    // Verify HB metrics updated
     try {
+      // Verify HB metrics updated
       GenericTestUtils.waitFor(()
           -> csMetrics.getNumOfNodeUpdate() == 4, 100, 3000);
+      // For async mode, the number of alloc might be bigger than 1
+      Assert.assertTrue(csMetrics.getNumOfAllocates() > 0);
+      // But there will be only 2 successful commit (1 AM + 1 task)
+      GenericTestUtils.waitFor(()
+          -> csMetrics.getNumOfCommitSuccess() == 2, 100, 3000);
     } catch(TimeoutException e) {
       Assert.fail("CS metrics not updated on node-update events.");
     }
-
-    // For async mode, the number of alloc might be bigger than 1
-    Assert.assertTrue(csMetrics.getNumOfAllocates() > 0);
-    // But there will be only 2 successful commit (1 AM + 1 task)
-    Assert.assertEquals(2, csMetrics.getNumOfCommitSuccess());
   }
 
   @After

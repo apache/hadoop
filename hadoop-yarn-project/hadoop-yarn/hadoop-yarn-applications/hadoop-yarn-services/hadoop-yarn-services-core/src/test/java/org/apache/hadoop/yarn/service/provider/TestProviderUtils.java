@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.service.api.records.Configuration;
 import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
 import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -37,7 +38,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -62,103 +63,123 @@ public class TestProviderUtils {
     List<ConfigFile> configFileList = new ArrayList<>();
     when(conf.getFiles()).thenReturn(configFileList);
     when(compLaunchCtx.getConfiguration()).thenReturn(conf);
-    when(sfs.createAmResource(any(Path.class), any(LocalResourceType.class)))
-        .thenAnswer(invocationOnMock -> new LocalResource() {
-          @Override
-          public URL getResource() {
-            return URL.fromPath(((Path) invocationOnMock.getArguments()[0]));
-          }
+    when(sfs.createAmResource(any(Path.class), any(LocalResourceType.class),
+        any(LocalResourceVisibility.class))).thenAnswer(
+          invocationOnMock -> new LocalResource() {
+            @Override
+            public URL getResource() {
+              return URL.fromPath(((Path) invocationOnMock.getArguments()[0]));
+            }
 
-          @Override
-          public void setResource(URL resource) {
+            @Override
+            public void setResource(URL resource) {
 
-          }
+            }
 
-          @Override
-          public long getSize() {
-            return 0;
-          }
+            @Override
+            public long getSize() {
+              return 0;
+            }
 
-          @Override
-          public void setSize(long size) {
+            @Override
+            public void setSize(long size) {
 
-          }
+            }
 
-          @Override
-          public long getTimestamp() {
-            return 0;
-          }
+            @Override
+            public long getTimestamp() {
+              return 0;
+            }
 
-          @Override
-          public void setTimestamp(long timestamp) {
+            @Override
+            public void setTimestamp(long timestamp) {
 
-          }
+            }
 
-          @Override
-          public LocalResourceType getType() {
-            return (LocalResourceType) invocationOnMock.getArguments()[1];
-          }
+            @Override
+            public LocalResourceType getType() {
+              return (LocalResourceType) invocationOnMock.getArguments()[1];
+            }
 
-          @Override
-          public void setType(LocalResourceType type) {
+            @Override
+            public void setType(LocalResourceType type) {
 
-          }
+            }
 
-          @Override
-          public LocalResourceVisibility getVisibility() {
-            return null;
-          }
+            @Override
+            public LocalResourceVisibility getVisibility() {
+              return LocalResourceVisibility.APPLICATION;
+            }
 
-          @Override
-          public void setVisibility(LocalResourceVisibility visibility) {
+            @Override
+            public void setVisibility(LocalResourceVisibility visibility) {
 
-          }
+            }
 
-          @Override
-          public String getPattern() {
-            return null;
-          }
+            @Override
+            public String getPattern() {
+              return null;
+            }
 
-          @Override
-          public void setPattern(String pattern) {
+            @Override
+            public void setPattern(String pattern) {
 
-          }
+            }
 
-          @Override
-          public boolean getShouldBeUploadedToSharedCache() {
-            return false;
-          }
+            @Override
+            public boolean getShouldBeUploadedToSharedCache() {
+              return false;
+            }
 
-          @Override
-          public void setShouldBeUploadedToSharedCache(
-              boolean shouldBeUploadedToSharedCache) {
+            @Override
+            public void setShouldBeUploadedToSharedCache(
+                boolean shouldBeUploadedToSharedCache) {
 
-          }
-        });
+            }
+          });
 
     // Initialize list of files.
     //archive
     configFileList.add(new ConfigFile().srcFile("hdfs://default/sourceFile1")
-        .destFile("destFile1").type(ConfigFile.TypeEnum.ARCHIVE));
+        .destFile("destFile1").type(ConfigFile.TypeEnum.ARCHIVE)
+        .visibility(LocalResourceVisibility.APPLICATION));
 
     //static file
     configFileList.add(new ConfigFile().srcFile("hdfs://default/sourceFile2")
-        .destFile("folder/destFile_2").type(ConfigFile.TypeEnum.STATIC));
+        .destFile("folder/destFile_2").type(ConfigFile.TypeEnum.STATIC)
+        .visibility(LocalResourceVisibility.APPLICATION));
 
     //This will be ignored since type is JSON
     configFileList.add(new ConfigFile().srcFile("hdfs://default/sourceFile3")
-        .destFile("destFile3").type(ConfigFile.TypeEnum.JSON));
+        .destFile("destFile3").type(ConfigFile.TypeEnum.JSON)
+        .visibility(LocalResourceVisibility.APPLICATION));
     //No destination file specified
     configFileList.add(new ConfigFile().srcFile("hdfs://default/sourceFile4")
-        .type(ConfigFile.TypeEnum.STATIC));
+        .type(ConfigFile.TypeEnum.STATIC)
+        .visibility(LocalResourceVisibility.APPLICATION));
 
+    ProviderService.ResolvedLaunchParams resolved =
+        new ProviderService.ResolvedLaunchParams();
     ProviderUtils.handleStaticFilesForLocalization(launcher, sfs,
-        compLaunchCtx);
+        compLaunchCtx, resolved);
     Mockito.verify(launcher).addLocalResource(Mockito.eq("destFile1"),
         any(LocalResource.class));
     Mockito.verify(launcher).addLocalResource(
         Mockito.eq("destFile_2"), any(LocalResource.class));
     Mockito.verify(launcher).addLocalResource(
         Mockito.eq("sourceFile4"), any(LocalResource.class));
+
+    Assert.assertEquals(3, resolved.getResolvedRsrcPaths().size());
+    Assert.assertEquals(resolved.getResolvedRsrcPaths().get("destFile1"),
+        "destFile1");
+  }
+
+  @Test
+  public void testReplaceSpacesWithDelimiter() {
+    String command = "ls  -l \" space\"";
+    String expected = "ls,-l, space";
+    String actual = ProviderUtils.replaceSpacesWithDelimiter(command, ",");
+    Assert.assertEquals("replaceSpaceWithDelimiter produces unexpected result.",
+        expected, actual);
   }
 }

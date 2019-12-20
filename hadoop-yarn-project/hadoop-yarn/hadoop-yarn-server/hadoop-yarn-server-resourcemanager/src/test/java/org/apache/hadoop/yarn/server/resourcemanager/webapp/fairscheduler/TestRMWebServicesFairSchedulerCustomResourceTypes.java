@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueueManager
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.*;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
@@ -162,7 +163,7 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
 
   @Test
   public void testClusterSchedulerWithElevenCustomResourceTypesXml() {
-    CustomResourceTypesConfigurationProvider.setNumberOfResourceTypes(11);
+    CustomResourceTypesConfigurationProvider.setResourceTypes(11, "k");
     createInjectorForWebServletModule();
 
     FairScheduler scheduler = (FairScheduler) rm.getResourceScheduler();
@@ -186,7 +187,7 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
 
   @Test
   public void testClusterSchedulerElevenWithCustomResourceTypesJson() {
-    CustomResourceTypesConfigurationProvider.setNumberOfResourceTypes(11);
+    CustomResourceTypesConfigurationProvider.setResourceTypes(11, "k");
     createInjectorForWebServletModule();
 
     FairScheduler scheduler = (FairScheduler) rm.getResourceScheduler();

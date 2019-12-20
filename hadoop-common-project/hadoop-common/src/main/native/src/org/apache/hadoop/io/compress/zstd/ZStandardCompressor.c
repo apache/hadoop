@@ -78,7 +78,7 @@ static __dlsym_ZSTD_isError dlsym_ZSTD_isError;
 static __dlsym_ZSTD_getErrorName dlsym_ZSTD_getErrorName;
 #endif
 
-// Load the libztsd.so from disk
+// Load the libzstd.so from disk
 JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardCompressor_initIDs (JNIEnv *env, jclass clazz) {
 #ifdef UNIX
     // Load libzstd.so
@@ -195,10 +195,13 @@ JNIEXPORT jint Java_org_apache_hadoop_io_compress_zstd_ZStandardCompressor_defla
     ZSTD_inBuffer input = { uncompressed_bytes, uncompressed_direct_buf_len, uncompressed_direct_buf_off };
     ZSTD_outBuffer output = { compressed_bytes, compressed_direct_buf_len, 0 };
 
-    size_t size = dlsym_ZSTD_compressStream(stream, &output, &input);
-    if (dlsym_ZSTD_isError(size)) {
-        THROW(env, "java/lang/InternalError", dlsym_ZSTD_getErrorName(size));
-        return (jint) 0;
+    size_t size;
+    if (uncompressed_direct_buf_len != 0) {
+        size = dlsym_ZSTD_compressStream(stream, &output, &input);
+        if (dlsym_ZSTD_isError(size)) {
+            THROW(env, "java/lang/InternalError", dlsym_ZSTD_getErrorName(size));
+            return (jint) 0;
+        }
     }
     if (finish && input.pos == input.size) {
         // end the stream, flush and  write the frame epilogue

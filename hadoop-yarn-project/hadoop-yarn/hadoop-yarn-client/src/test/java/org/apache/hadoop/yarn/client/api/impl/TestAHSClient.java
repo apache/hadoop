@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
-import static org.mockito.Matchers.any;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -84,7 +85,7 @@ public class TestAHSClient {
     Assert.assertEquals(reports, expectedReports);
 
     reports = client.getApplications();
-    Assert.assertEquals(reports.size(), 4);
+    assertThat(reports).hasSize(4);
     client.stop();
   }
 
@@ -102,6 +103,8 @@ public class TestAHSClient {
     Assert.assertEquals(report, expectedReports.get(0));
     Assert.assertEquals(report.getApplicationId().toString(), expectedReports
       .get(0).getApplicationId().toString());
+    Assert.assertEquals(report.getSubmitTime(), expectedReports.get(0)
+      .getSubmitTime());
     client.stop();
   }
 
@@ -332,7 +335,7 @@ public class TestAHSClient {
           ApplicationReport.newInstance(applicationId,
             ApplicationAttemptId.newInstance(applicationId, 1), "user",
             "queue", "appname", "host", 124, null,
-            YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0, 0,
+            YarnApplicationState.RUNNING, "diagnostics", "url", 1, 2, 3, 4,
             FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN",
             null);
       List<ApplicationReport> applicationReports =

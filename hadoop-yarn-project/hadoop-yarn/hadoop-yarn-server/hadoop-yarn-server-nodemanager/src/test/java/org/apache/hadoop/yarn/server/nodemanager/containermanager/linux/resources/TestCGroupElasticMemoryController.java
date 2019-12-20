@@ -18,8 +18,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -31,7 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -43,8 +43,8 @@ import static org.mockito.Mockito.when;
  * Test for elastic non-strict memory controller based on cgroups.
  */
 public class TestCGroupElasticMemoryController {
-  protected static final Log LOG = LogFactory
-      .getLog(TestCGroupElasticMemoryController.class);
+  protected static final Logger LOG = LoggerFactory
+      .getLogger(TestCGroupElasticMemoryController.class);
   private YarnConfiguration conf = new YarnConfiguration();
   private File script = new File("target/" +
       TestCGroupElasticMemoryController.class.getName());

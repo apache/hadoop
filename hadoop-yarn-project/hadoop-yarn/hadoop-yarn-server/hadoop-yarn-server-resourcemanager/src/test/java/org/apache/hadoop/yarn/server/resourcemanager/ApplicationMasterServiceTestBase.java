@@ -17,8 +17,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.DrainDispatcher;
+import org.apache.hadoop.yarn.event.Event;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
@@ -69,8 +73,8 @@ import static org.junit.Assert.fail;
  * Some implementors are for testing CS and FS.
  */
 public abstract class ApplicationMasterServiceTestBase {
-  private static final Log LOG = LogFactory
-      .getLog(ApplicationMasterServiceTestBase.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(ApplicationMasterServiceTestBase.class);
 
   static final int GB = 1024;
 
@@ -131,7 +135,7 @@ public abstract class ApplicationMasterServiceTestBase {
     MockNM nm1 = rm.registerNode(DEFAULT_HOST + ":" + DEFAULT_PORT, 6 * GB);
 
     // Submit an application
-    RMApp app1 = rm.submitApp(2048);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
 
     // kick the scheduling
     nm1.nodeHeartbeat(true);
@@ -172,7 +176,7 @@ public abstract class ApplicationMasterServiceTestBase {
       MockNM nm1 = rm.registerNode(DEFAULT_HOST + ":" + DEFAULT_PORT, 6 * GB);
 
       // Submit an application
-      RMApp app1 = rm.submitApp(2048);
+      RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
 
       // kick off the scheduling
       nm1.nodeHeartbeat(true);
@@ -206,7 +210,7 @@ public abstract class ApplicationMasterServiceTestBase {
       MockNM nm1 = rm.registerNode(DEFAULT_HOST + ":" + DEFAULT_PORT, 6 * GB);
 
       // Submit an application
-      RMApp app1 = rm.submitApp(1024);
+      RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm);
 
       // kick the scheduling
       nm1.nodeHeartbeat(true);
@@ -227,7 +231,7 @@ public abstract class ApplicationMasterServiceTestBase {
 
       Assert.assertTrue(alloc1Response.getAllocatedContainers().size() > 0);
 
-      RMApp app2 = rm.submitApp(1024);
+      RMApp app2 = MockRMAppSubmitter.submitWithMemory(1024, rm);
 
       nm1.nodeHeartbeat(true);
       RMAppAttempt attempt2 = app2.getCurrentAppAttempt();
@@ -261,7 +265,7 @@ public abstract class ApplicationMasterServiceTestBase {
     MockNM nm1 = rm.registerNode(DEFAULT_HOST + ":" + DEFAULT_PORT, 6 * GB);
 
     // Submit an application
-    RMApp app1 = rm.submitApp(2048);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
 
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -326,7 +330,7 @@ public abstract class ApplicationMasterServiceTestBase {
       // Register node1
       MockNM nm1 = rm.registerNode(DEFAULT_HOST + ":" + DEFAULT_PORT, 6 * GB);
       // Submit an application
-      RMApp app1 = rm.submitApp(2048);
+      RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
       MockAM am1 = MockRM.launchAM(app1, rm, nm1);
       FinishApplicationMasterRequest req =
           FinishApplicationMasterRequest.newInstance(
@@ -351,6 +355,57 @@ public abstract class ApplicationMasterServiceTestBase {
               RMAppAttemptState.FINISHING);
     } finally {
       rm.stop();
+    }
+  }
+
+  @Test(timeout = 1200000)
+  public void testRepeatedFinishApplicationMaster() throws Exception {
+
+    CountingDispatcher dispatcher = new CountingDispatcher();
+    MockRM rm = new MockRM(conf) {
+      @Override
+      protected Dispatcher createDispatcher() {
+        return dispatcher;
+      }
+    };
+
+    try {
+      rm.start();
+      // Register node1
+      MockNM nm1 = rm.registerNode(DEFAULT_HOST + ":" + DEFAULT_PORT, 6 * GB);
+      // Submit an application
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(2048, rm).build());
+      MockAM am1 = MockRM.launchAM(app1, rm, nm1);
+      am1.registerAppAttempt();
+      FinishApplicationMasterRequest req = FinishApplicationMasterRequest
+          .newInstance(FinalApplicationStatus.FAILED, "", "");
+      for (int i = 0; i < 10; i++) {
+        am1.unregisterAppAttempt(req, false);
+      }
+      rm.drainEvents();
+      Assert.assertEquals("Expecting only one event", 1,
+          dispatcher.getEventCount());
+    } finally {
+      rm.stop();
+    }
+  }
+
+  static class CountingDispatcher extends DrainDispatcher {
+    private int eventreceived = 0;
+
+    @SuppressWarnings("rawtypes")
+    @Override
+    protected void dispatch(Event event) {
+      if (event.getType() == RMAppAttemptEventType.UNREGISTERED) {
+        eventreceived++;
+      } else {
+        super.dispatch(event);
+      }
+    }
+
+    public int getEventCount() {
+      return eventreceived;
     }
   }
 
@@ -395,7 +450,7 @@ public abstract class ApplicationMasterServiceTestBase {
       MockRM rm = new MockRM(entry.getKey());
       rm.start();
       MockNM nm1 = rm.registerNode(DEFAULT_HOST + ":" + DEFAULT_PORT, 6 * GB);
-      RMApp app1 = rm.submitApp(2048);
+      RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
       //Wait to make sure the attempt has the right state
       //TODO explore a better way than sleeping for a while (YARN-4929)
       Thread.sleep(1000);
@@ -419,7 +474,7 @@ public abstract class ApplicationMasterServiceTestBase {
     MockNM nm1 = rm.registerNode(DEFAULT_HOST + ":" + DEFAULT_PORT, 6 * GB);
 
     // Submit an application
-    RMApp app1 = rm.submitApp(2048);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
 
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -450,7 +505,7 @@ public abstract class ApplicationMasterServiceTestBase {
     // Register node1
     MockNM nm1 = rm.registerNode(DEFAULT_HOST + ":" + DEFAULT_PORT, 6 * GB);
 
-    RMApp app1 = rm.submitApp(2048);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
 
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -464,6 +519,10 @@ public abstract class ApplicationMasterServiceTestBase {
     allocateRequest.setTrackingUrl(newTrackingUrl);
 
     am1.allocate(allocateRequest);
+
+    // wait until RMAppAttemptEventType.STATUS_UPDATE is handled
+    rm.drainEvents();
+
     Assert.assertEquals(newTrackingUrl, rm.getRMContext().getRMApps().get(
         app1.getApplicationId()).getOriginalTrackingUrl());
 
@@ -496,7 +555,15 @@ public abstract class ApplicationMasterServiceTestBase {
         .createResource(DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
             DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES, null));
 
-    RMApp app1 = rm.submitApp(GB, "app", "user", null, getDefaultQueueName());
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue(getDefaultQueueName())
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
     // Now request resource, memory > allowed
@@ -553,7 +620,15 @@ public abstract class ApplicationMasterServiceTestBase {
             DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
             ImmutableMap.of(CUSTOM_RES, 4)));
 
-    RMApp app1 = rm.submitApp(GB, "app", "user", null, getDefaultQueueName());
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue(getDefaultQueueName())
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
     Assert.assertEquals(Resource.newInstance(GB, 1),

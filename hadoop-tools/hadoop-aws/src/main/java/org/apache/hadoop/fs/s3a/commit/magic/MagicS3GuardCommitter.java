@@ -35,12 +35,12 @@ import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR;
-import org.apache.hadoop.fs.s3a.commit.DurationInfo;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
@@ -109,11 +109,11 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    * @return a list of pending commits.
    * @throws IOException Any IO failure
    */
-  protected List<SinglePendingCommit> listPendingUploadsToCommit(
+  protected ActiveCommit listPendingUploadsToCommit(
       JobContext context)
       throws IOException {
     FileSystem fs = getDestFS();
-    return loadPendingsetFiles(context, false, fs,
+    return ActiveCommit.fromStatusList(fs,
         listAndFilter(fs, getJobAttemptPath(context), false,
             CommitOperations.PENDINGSET_FILTER));
   }
@@ -123,8 +123,11 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    */
   public void cleanupStagingDirs() {
     Path path = magicSubdir(getOutputPath());
-    Invoker.ignoreIOExceptions(LOG, "cleanup magic directory", path.toString(),
-        () -> deleteWithWarning(getDestFS(), path, true));
+    try(DurationInfo ignored = new DurationInfo(LOG, true,
+        "Deleting magic directory %s", path)) {
+      Invoker.ignoreIOExceptions(LOG, "cleanup magic directory", path.toString(),
+          () -> deleteWithWarning(getDestFS(), path, true));
+    }
   }
 
   @Override
@@ -171,6 +174,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     } finally {
       // delete the task attempt so there's no possibility of a second attempt
       deleteTaskAttemptPathQuietly(context);
+      destroyThreadPool();
     }
     getCommitOperations().taskCompleted(true);
   }
@@ -178,7 +182,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   /**
    * Inner routine for committing a task.
    * The list of pending commits is loaded and then saved to the job attempt
-   * dir.
+   * dir in a single pendingset file.
    * Failure to load any file or save the final file triggers an abort of
    * all known pending commits.
    * @param context context
@@ -247,6 +251,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
       deleteQuietly(
           attemptPath.getFileSystem(context.getConfiguration()),
           attemptPath, true);
+      destroyThreadPool();
     }
   }
 

@@ -22,9 +22,9 @@ import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -38,7 +38,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -83,45 +82,6 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 public class TestDefaultContainerExecutor {
-
-  /*
-  // XXX FileContext cannot be mocked to do this
-  static FSDataInputStream getRandomStream(Random r, int len)
-      throws IOException {
-    byte[] bytes = new byte[len];
-    r.nextBytes(bytes);
-    DataInputBuffer buf = new DataInputBuffer();
-    buf.reset(bytes, 0, bytes.length);
-    return new FSDataInputStream(new FakeFSDataInputStream(buf));
-  }
-
-  class PathEndsWith extends ArgumentMatcher<Path> {
-    final String suffix;
-    PathEndsWith(String suffix) {
-      this.suffix = suffix;
-    }
-    @Override
-    public boolean matches(Object o) {
-      return
-      suffix.equals(((Path)o).getName());
-    }
-  }
-
-  DataOutputBuffer mockStream(
-      AbstractFileSystem spylfs, Path p, Random r, int len) 
-      throws IOException {
-    DataOutputBuffer dob = new DataOutputBuffer();
-    doReturn(getRandomStream(r, len)).when(spylfs).open(p);
-    doReturn(new FileStatus(len, false, -1, -1L, -1L, p)).when(
-        spylfs).getFileStatus(argThat(new PathEndsWith(p.getName())));
-    doReturn(new FSDataOutputStream(dob)).when(spylfs).createInternal(
-        argThat(new PathEndsWith(p.getName())),
-        eq(EnumSet.of(OVERWRITE)),
-        Matchers.<FsPermission>anyObject(), anyInt(), anyShort(), anyLong(),
-        Matchers.<Progressable>anyObject(), anyInt(), anyBoolean());
-    return dob;
-  }
-  */
 
   private static Path BASE_TMP_PATH = new Path("target",
       TestDefaultContainerExecutor.class.getSimpleName());
@@ -569,14 +529,15 @@ public class TestDefaultContainerExecutor {
         spy(new DefaultContainerExecutor(mockLfs) {
           @Override
           public ContainerLocalizer createContainerLocalizer(String user,
-              String appId, String locId, List<String> localDirs,
-              FileContext localizerFc) throws IOException {
+              String appId, String locId, String tokenFileName,
+              List<String> localDirs, FileContext localizerFc)
+              throws IOException {
 
             // Spy on the localizer and make it return valid heart-beat
             // responses even though there is no real NodeManager.
             ContainerLocalizer localizer =
-                super.createContainerLocalizer(user, appId, locId, localDirs,
-                  localizerFc);
+                super.createContainerLocalizer(user, appId, locId,
+                    tokenFileName, localDirs, localizerFc);
             ContainerLocalizer spyLocalizer = spy(localizer);
             LocalizationProtocol nmProxy = mock(LocalizationProtocol.class);
             try {
@@ -586,7 +547,7 @@ public class TestDefaultContainerExecutor {
             } catch (YarnException e) {
               throw new IOException(e);
             }
-            when(spyLocalizer.getProxy(any(InetSocketAddress.class)))
+            when(spyLocalizer.getProxy(any()))
               .thenReturn(nmProxy);
 
             return spyLocalizer;

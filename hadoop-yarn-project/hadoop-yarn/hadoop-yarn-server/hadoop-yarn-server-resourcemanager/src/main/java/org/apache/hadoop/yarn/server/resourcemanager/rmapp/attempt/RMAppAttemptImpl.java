@@ -36,8 +36,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import javax.crypto.SecretKey;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -127,7 +127,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private static final String DIAGNOSTIC_LIMIT_CONFIG_ERROR_MESSAGE =
       "The value of %s should be a positive integer: %s";
 
-  private static final Log LOG = LogFactory.getLog(RMAppAttemptImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RMAppAttemptImpl.class);
 
   private static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
@@ -176,6 +177,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private long finishTime = 0;
   private long launchAMStartTime = 0;
   private long launchAMEndTime = 0;
+  private long scheduledTime = 0;
+  private long containerAllocatedTime = 0;
 
   // Set to null initially. Will eventually get set
   // if an RMAppAttemptUnregistrationEvent occurs
@@ -437,9 +440,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           RMAppAttemptState.FAILED,
           EnumSet.of(
               RMAppAttemptEventType.LAUNCHED,
+              RMAppAttemptEventType.LAUNCH_FAILED,
               RMAppAttemptEventType.EXPIRE,
               RMAppAttemptEventType.KILL,
               RMAppAttemptEventType.FAIL,
+              RMAppAttemptEventType.REGISTERED,
               RMAppAttemptEventType.UNREGISTERED,
               RMAppAttemptEventType.STATUS_UPDATE,
               RMAppAttemptEventType.CONTAINER_ALLOCATED))
@@ -538,10 +543,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
     final int diagnosticsLimitKC = getDiagnosticsLimitKCOrThrow(conf);
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(YarnConfiguration.APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC + " : " +
-              diagnosticsLimitKC);
-    }
+    LOG.debug("{} : {}", YarnConfiguration.APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC,
+        diagnosticsLimitKC);
 
     this.diagnostics = new BoundedAppender(diagnosticsLimitKC * 1024);
     this.rmApp = rmApp;
@@ -905,8 +908,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
     try {
       ApplicationAttemptId appAttemptID = event.getApplicationAttemptId();
-      LOG.debug("Processing event for " + appAttemptID + " of type "
-          + event.getType());
+      LOG.debug("Processing event for {} of type {}",
+          appAttemptID, event.getType());
       final RMAppAttemptState oldState = getAppAttemptState();
       try {
         /* keep the master in sync with the state machine */
@@ -1101,18 +1104,15 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         int numNodes =
             RMServerUtils.getApplicableNodeCountForAM(appAttempt.rmContext,
                 appAttempt.conf, appAttempt.amReqs);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Setting node count for blacklist to " + numNodes);
-        }
+        LOG.debug("Setting node count for blacklist to {}", numNodes);
         appAttempt.getAMBlacklistManager().refreshNodeHostCount(numNodes);
 
         ResourceBlacklistRequest amBlacklist =
             appAttempt.getAMBlacklistManager().getBlacklistUpdates();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Using blacklist for AM: additions(" +
-              amBlacklist.getBlacklistAdditions() + ") and removals(" +
-              amBlacklist.getBlacklistRemovals() + ")");
-        }
+
+        LOG.debug("Using blacklist for AM: additions({}) and removals({})",
+            amBlacklist.getBlacklistAdditions(),
+            amBlacklist.getBlacklistRemovals());
 
         QueueInfo queueInfo = null;
         for (ResourceRequest amReq : appAttempt.amReqs) {
@@ -1145,10 +1145,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
             String labelExp = RMNodeLabelsManager.NO_LABEL;
             if (queueInfo != null) {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Setting default node label expression : " + queueInfo
-                    .getDefaultNodeLabelExpression());
-              }
+              LOG.debug("Setting default node label expression : {}",
+                  queueInfo.getDefaultNodeLabelExpression());
               labelExp = queueInfo.getDefaultNodeLabelExpression();
             }
 
@@ -1168,6 +1166,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             && amContainerAllocation.getContainers() != null) {
           assert (amContainerAllocation.getContainers().size() == 0);
         }
+        appAttempt.scheduledTime = System.currentTimeMillis();
         return RMAppAttemptState.SCHEDULED;
       } else {
         // save state and then go to LAUNCHED state
@@ -1203,10 +1202,16 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       }
 
       // Set the masterContainer
-      appAttempt.setMasterContainer(amContainerAllocation.getContainers()
-          .get(0));
+      Container amContainer = amContainerAllocation.getContainers().get(0);
       RMContainerImpl rmMasterContainer = (RMContainerImpl)appAttempt.scheduler
-          .getRMContainer(appAttempt.getMasterContainer().getId());
+          .getRMContainer(amContainer.getId());
+      //while one NM is removed, the scheduler will clean the container,the
+      //following CONTAINER_FINISHED event will handle the cleaned container.
+      //so just return RMAppAttemptState.SCHEDULED
+      if (rmMasterContainer == null) {
+        return RMAppAttemptState.SCHEDULED;
+      }
+      appAttempt.setMasterContainer(amContainer);
       rmMasterContainer.setAMContainer(true);
       // The node set in NMTokenSecrentManager is used for marking whether the
       // NMToken has been issued for this node to the AM.
@@ -1218,6 +1223,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         .clearNodeSetForAttempt(appAttempt.applicationAttemptId);
       appAttempt.getSubmissionContext().setResource(
         appAttempt.getMasterContainer().getResource());
+      appAttempt.containerAllocatedTime = System.currentTimeMillis();
+      long allocationDelay =
+          appAttempt.containerAllocatedTime - appAttempt.scheduledTime;
+      ClusterMetrics.getMetrics().addAMContainerAllocationDelay(
+          allocationDelay);
       appAttempt.storeAttempt();
       return RMAppAttemptState.ALLOCATED_SAVING;
     }
@@ -1500,7 +1510,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               && !appAttempt.submissionContext.getUnmanagedAM()) {
             int numberOfFailure = ((RMAppImpl)appAttempt.rmApp)
                 .getNumFailedAppAttempts();
-            if (numberOfFailure < appAttempt.rmApp.getMaxAppAttempts()) {
+            if (appAttempt.rmApp.getMaxAppAttempts() > 1
+                && numberOfFailure < appAttempt.rmApp.getMaxAppAttempts()) {
               keepContainersAcrossAppAttempts = true;
             }
           }
@@ -1578,8 +1589,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         && this.getFinishTime() < (end - attemptFailuresValidityInterval)) {
         return false;
     }
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       int exitStatus = getAMContainerExitStatus();
       return !(exitStatus == ContainerExitStatus.PREEMPTED
           || exitStatus == ContainerExitStatus.ABORTED
@@ -2265,8 +2276,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   @Override
   public long getFinishTime() {
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       return this.finishTime;
     } finally {
       this.readLock.unlock();
@@ -2274,8 +2285,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   private void setFinishTime(long finishTime) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       this.finishTime = finishTime;
     } finally {
       this.writeLock.unlock();

@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
+import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.Diff;
@@ -523,8 +524,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * 2. For a {@link WithName} node, since the node must be in a snapshot, we 
    * only count the quota usage for those nodes that still existed at the 
    * creation time of the snapshot associated with the {@link WithName} node.
-   * We do not count in the size of the diff list.  
-   * <pre>
+   * We do not count in the size of the diff list.
+   * </pre>
    *
    * @param bsps Block storage policy suite to calculate intended storage type usage
    * @param blockStoragePolicyId block storage policy id of the current INode
@@ -588,6 +589,18 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return DFSUtil.bytes2String(path);
   }
 
+  public boolean isDeleted() {
+    INode pInode = this;
+    while (pInode != null && !pInode.isRoot()) {
+      pInode = pInode.getParent();
+    }
+    if (pInode == null) {
+      return true;
+    } else {
+      return !pInode.isRoot();
+    }
+  }
+
   public byte[][] getPathComponents() {
     int n = 0;
     for (INode inode = this; inode != null; inode = inode.getParent()) {
@@ -644,6 +657,18 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    */
   public INodeReference getParentReference() {
     return parent == null || !parent.isReference()? null: (INodeReference)parent;
+  }
+
+  /**
+   * @return true if this is a reference and the reference count is 1;
+   *         otherwise, return false.
+   */
+  public boolean isLastReference() {
+    final INodeReference ref = getParentReference();
+    if (!(ref instanceof WithCount)) {
+      return false;
+    }
+    return ((WithCount)ref).getReferenceCount() == 1;
   }
 
   /** Set parent directory */

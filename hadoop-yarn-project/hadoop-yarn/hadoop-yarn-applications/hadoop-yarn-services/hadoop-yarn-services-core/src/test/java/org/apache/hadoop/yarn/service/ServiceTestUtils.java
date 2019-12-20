@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.service;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -50,7 +51,6 @@ import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
-import org.codehaus.jackson.map.PropertyNamingStrategy;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.slf4j.Logger;
@@ -62,6 +62,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
@@ -74,7 +75,10 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_VMEM_CHECK_ENABLE
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_SERVICE_ENABLED;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.AM_RESOURCE_MEM;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
-import static org.mockito.Matchers.anyObject;
+
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConstants
+    .CONTAINER_STATE_REPORT_AS_SERVICE_STATE;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -94,7 +98,7 @@ public class ServiceTestUtils {
 
   public static final JsonSerDeser<Service> JSON_SER_DESER =
       new JsonSerDeser<>(Service.class,
-          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+          PropertyNamingStrategy.SNAKE_CASE);
 
   // Example service definition
   // 2 components, each of which has 2 containers.
@@ -121,6 +125,23 @@ public class ServiceTestUtils {
             Component.RestartPolicyEnum.ON_FAILURE, null));
     exampleApp.addComponent(
         createComponent("terminating-comp3", 2, "sleep 1000",
+            Component.RestartPolicyEnum.ON_FAILURE, null));
+
+    return exampleApp;
+  }
+
+  public static Service createTerminatingDominantComponentJobExample(
+      String serviceName) {
+    Service exampleApp = new Service();
+    exampleApp.setName(serviceName);
+    exampleApp.setVersion("v1");
+    Component serviceStateComponent = createComponent("terminating-comp1", 2,
+        "sleep 1000", Component.RestartPolicyEnum.NEVER, null);
+    serviceStateComponent.getConfiguration().setProperty(
+        CONTAINER_STATE_REPORT_AS_SERVICE_STATE, "true");
+    exampleApp.addComponent(serviceStateComponent);
+    exampleApp.addComponent(
+        createComponent("terminating-comp2", 2, "sleep 60000",
             Component.RestartPolicyEnum.ON_FAILURE, null));
 
     return exampleApp;
@@ -165,10 +186,10 @@ public class ServiceTestUtils {
     FileSystem mockFs = mock(FileSystem.class);
     JsonSerDeser<Service> jsonSerDeser = mock(JsonSerDeser.class);
     when(sfs.getFileSystem()).thenReturn(mockFs);
-    when(sfs.buildClusterDirPath(anyObject())).thenReturn(
+    when(sfs.buildClusterDirPath(any())).thenReturn(
         new Path("cluster_dir_path"));
     if (ext != null) {
-      when(jsonSerDeser.load(anyObject(), anyObject())).thenReturn(ext);
+      when(jsonSerDeser.load(any(), any())).thenReturn(ext);
     }
     ServiceApiUtil.setJsonSerDeser(jsonSerDeser);
     return sfs;
@@ -195,6 +216,10 @@ public class ServiceTestUtils {
     LOG.info("Starting up YARN cluster");
     if (conf == null) {
       setConf(new YarnConfiguration());
+      conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, false);
+      conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_USE_RPC, false);
+      conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS,
+          YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     }
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
     // reduce the teardown waiting time
@@ -246,7 +271,7 @@ public class ServiceTestUtils {
 
     if (yarnCluster == null) {
       yarnCluster =
-          new MiniYARNCluster(TestYarnNativeServices.class.getSimpleName(), 1,
+          new MiniYARNCluster(this.getClass().getSimpleName(), 1,
               numNodeManager, 1, 1);
       yarnCluster.init(conf);
       yarnCluster.start();
@@ -383,10 +408,12 @@ public class ServiceTestUtils {
           description.getClassName(), description.getMethodName());
       conf.set(YARN_SERVICE_BASE_PATH, serviceBasePath.toString());
       try {
+        Files.createDirectories(serviceBasePath);
         fs = new SliderFileSystem(conf);
         fs.setAppDir(new Path(serviceBasePath.toString()));
       } catch (IOException e) {
-        Throwables.propagate(e);
+        Throwables.throwIfUnchecked(e);
+        throw new RuntimeException(e);
       }
     }
 
@@ -511,6 +538,12 @@ public class ServiceTestUtils {
   protected void waitForServiceToBeStarted(ServiceClient client,
       Service exampleApp) throws TimeoutException, InterruptedException {
     waitForServiceToBeInState(client, exampleApp, ServiceState.STARTED);
+  }
+
+  protected void waitForServiceToBeExpressUpgrading(ServiceClient client,
+      Service exampleApp) throws TimeoutException, InterruptedException {
+    waitForServiceToBeInState(client, exampleApp,
+        ServiceState.EXPRESS_UPGRADING);
   }
 
   protected void waitForServiceToBeInState(ServiceClient client,

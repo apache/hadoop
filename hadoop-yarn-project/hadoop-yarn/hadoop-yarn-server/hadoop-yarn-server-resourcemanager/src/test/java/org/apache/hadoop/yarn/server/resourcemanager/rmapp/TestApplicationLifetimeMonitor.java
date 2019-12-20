@@ -32,6 +32,7 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -48,6 +49,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart;
 import org.apache.hadoop.yarn.server.resourcemanager.TestWorkPreservingRMRestart;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
@@ -59,9 +62,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.util.Times;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.event.Level;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -106,8 +107,7 @@ public class TestApplicationLifetimeMonitor {
     // Always run for CS, since other scheduler do not support this.
     conf.setClass(YarnConfiguration.RM_SCHEDULER,
         scheduler, ResourceScheduler.class);
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     UserGroupInformation.setConfiguration(conf);
     conf.setLong(YarnConfiguration.RM_APPLICATION_MONITOR_INTERVAL_MS,
         3000L);
@@ -127,18 +127,34 @@ public class TestApplicationLifetimeMonitor {
       Map<ApplicationTimeoutType, Long> timeouts =
           new HashMap<ApplicationTimeoutType, Long>();
       timeouts.put(ApplicationTimeoutType.LIFETIME, 10L);
-      RMApp app1 = rm.submitApp(1024, appPriority, timeouts);
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppPriority(appPriority)
+              .withApplicationTimeouts(timeouts)
+              .build());
 
       // 20L seconds
       timeouts.put(ApplicationTimeoutType.LIFETIME, 20L);
-      RMApp app2 = rm.submitApp(1024, appPriority, timeouts);
+      RMApp app2 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppPriority(appPriority)
+              .withApplicationTimeouts(timeouts)
+              .build());
 
       // user not set lifetime, so queue max lifetime will be considered.
-      RMApp app3 = rm.submitApp(1024, appPriority, Collections.emptyMap());
+      RMApp app3 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppPriority(appPriority)
+              .withApplicationTimeouts(Collections.emptyMap())
+              .build());
 
       // asc lifetime exceeds queue max lifetime
       timeouts.put(ApplicationTimeoutType.LIFETIME, 40L);
-      RMApp app4 = rm.submitApp(1024, appPriority, timeouts);
+      RMApp app4 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppPriority(appPriority)
+              .withApplicationTimeouts(timeouts)
+              .build());
 
       nm1.nodeHeartbeat(true);
       // Send launch Event
@@ -206,13 +222,12 @@ public class TestApplicationLifetimeMonitor {
         // app4 submitted exceeding queue max lifetime,
         // so killed after queue max lifetime.
         rm.waitForState(app4.getApplicationId(), RMAppState.KILLED);
-        long totalTimeRun =
-            (app4.getFinishTime() - app4.getSubmitTime()) / 1000;
+        long totalTimeRun = app4.getFinishTime() - app4.getSubmitTime();
         Assert.assertTrue("Application killed before lifetime value",
-            totalTimeRun > maxLifetime);
+            totalTimeRun > (maxLifetime * 1000));
         Assert.assertTrue(
             "Application killed before lifetime value " + totalTimeRun,
-            totalTimeRun < maxLifetime + 10L);
+            totalTimeRun < ((maxLifetime + 10L) * 1000));
       }
     } finally {
       stopRM(rm);
@@ -238,7 +253,11 @@ public class TestApplicationLifetimeMonitor {
     Map<ApplicationTimeoutType, Long> timeouts =
         new HashMap<ApplicationTimeoutType, Long>();
     timeouts.put(ApplicationTimeoutType.LIFETIME, appLifetime);
-    RMApp app1 = rm1.submitApp(200, Priority.newInstance(0), timeouts);
+    RMApp app1 = MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+            .withAppPriority(Priority.newInstance(0))
+            .withApplicationTimeouts(timeouts)
+            .build());
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // Re-start RM
@@ -322,7 +341,11 @@ public class TestApplicationLifetimeMonitor {
       Map<ApplicationTimeoutType, Long> timeouts =
           new HashMap<ApplicationTimeoutType, Long>();
       timeouts.put(ApplicationTimeoutType.LIFETIME, appLifetime);
-      RMApp app1 = rm1.submitApp(200, Priority.newInstance(0), timeouts);
+      RMApp app1 = MockRMAppSubmitter.submit(rm1,
+          MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+              .withAppPriority(Priority.newInstance(0))
+              .withApplicationTimeouts(timeouts)
+              .build());
 
       Map<ApplicationTimeoutType, String> updateTimeout =
           new HashMap<ApplicationTimeoutType, String>();

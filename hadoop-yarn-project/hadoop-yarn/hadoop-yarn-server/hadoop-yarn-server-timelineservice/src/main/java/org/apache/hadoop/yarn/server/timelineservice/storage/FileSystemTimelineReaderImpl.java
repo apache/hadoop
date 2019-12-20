@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
@@ -431,6 +432,10 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     String flowRunPathStr = getFlowRunPath(context.getUserId(),
         context.getClusterId(), context.getFlowName(), context.getFlowRunId(),
         context.getAppId());
+    if (context.getUserId() == null) {
+      context.setUserId(new Path(flowRunPathStr).getParent().getParent().
+          getName());
+    }
     Path clusterIdPath = new Path(entitiesPath, context.getClusterId());
     Path flowRunPath = new Path(clusterIdPath, flowRunPathStr);
     Path appIdPath = new Path(flowRunPath, context.getAppId());
@@ -441,5 +446,19 @@ public class FileSystemTimelineReaderImpl extends AbstractService
       }
     }
     return result;
+  }
+
+  @Override
+  public TimelineHealth getHealthStatus() {
+    try {
+      fs.exists(rootPath);
+    } catch (IOException e) {
+      return new TimelineHealth(
+          TimelineHealth.TimelineHealthStatus.READER_CONNECTION_FAILURE,
+          e.getMessage()
+          );
+    }
+    return new TimelineHealth(TimelineHealth.TimelineHealthStatus.RUNNING,
+        "");
   }
 }

@@ -28,12 +28,17 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.Logger;
+import org.apache.log4j.spi.LoggingEvent;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -203,6 +208,7 @@ public class TestSystemMetricsPublisherForV2 {
     RMApp app = createAppAndRegister(appId);
 
     metricsPublisher.appCreated(app, app.getStartTime());
+    metricsPublisher.appLaunched(app, app.getLaunchTime());
     metricsPublisher.appACLsUpdated(app, "user1,user2", 4L);
     metricsPublisher.appFinished(app, RMAppState.FINISHED, app.getFinishTime());
     dispatcher.await();
@@ -221,7 +227,7 @@ public class TestSystemMetricsPublisherForV2 {
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
     verifyEntity(
-        appFile, 3, ApplicationMetricsConstants.CREATED_EVENT_TYPE, 8, 0);
+        appFile, 4, ApplicationMetricsConstants.CREATED_EVENT_TYPE, 8, 0);
   }
 
   @Test(timeout = 10000)
@@ -288,7 +294,50 @@ public class TestSystemMetricsPublisherForV2 {
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
     verifyEntity(appFile, 2,
-        ContainerMetricsConstants.CREATED_IN_RM_EVENT_TYPE, 0, 0);
+        ContainerMetricsConstants.CREATED_IN_RM_EVENT_TYPE, 0,
+        TimelineServiceHelper.invertLong(containerId.getContainerId()));
+  }
+
+  @Test(timeout = 10000)
+  public void testPutEntityWhenNoCollector() throws Exception {
+    // Validating the logs as DrainDispatcher won't throw exception
+    class TestAppender extends AppenderSkeleton {
+      private final List<LoggingEvent> log = new ArrayList<>();
+
+      @Override
+      public boolean requiresLayout() {
+        return false;
+      }
+
+      @Override
+      protected void append(final LoggingEvent loggingEvent) {
+        log.add(loggingEvent);
+      }
+
+      @Override
+      public void close() {
+      }
+
+      public List<LoggingEvent> getLog() {
+        return new ArrayList<>(log);
+      }
+    }
+
+    TestAppender appender = new TestAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
+
+    try {
+      RMApp app = createRMApp(ApplicationId.newInstance(0, 1));
+      metricsPublisher.appCreated(app, app.getStartTime());
+      dispatcher.await();
+      for (LoggingEvent event : appender.getLog()) {
+        assertFalse("Dispatcher Crashed",
+            event.getRenderedMessage().contains("Error in dispatcher thread"));
+      }
+    } finally {
+      logger.removeAppender(appender);
+    }
   }
 
   private RMApp createAppAndRegister(ApplicationId appId) {
@@ -356,6 +405,7 @@ public class TestSystemMetricsPublisherForV2 {
     when(app.getQueue()).thenReturn("test queue");
     when(app.getSubmitTime()).thenReturn(Integer.MAX_VALUE + 1L);
     when(app.getStartTime()).thenReturn(Integer.MAX_VALUE + 2L);
+    when(app.getLaunchTime()).thenReturn(Integer.MAX_VALUE + 2L);
     when(app.getFinishTime()).thenReturn(Integer.MAX_VALUE + 3L);
     when(app.getDiagnostics()).thenReturn(
         new StringBuilder("test diagnostics info"));

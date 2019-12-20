@@ -64,6 +64,7 @@ public class NodeInfo {
   protected ResourceInfo usedResource;
   protected ResourceInfo availableResource;
   protected NodeAttributesInfo nodeAttributesInfo;
+  private ResourceInfo totalResource;
 
   public NodeInfo() {
   } // JAXB needs this
@@ -92,6 +93,7 @@ public class NodeInfo {
     this.lastHealthUpdate = ni.getLastHealthReportTime();
     this.healthReport = String.valueOf(ni.getHealthReport());
     this.version = ni.getNodeManagerVersion();
+    this.totalResource = new ResourceInfo(ni.getTotalCapability());
 
     // Status of opportunistic containers.
     this.numRunningOpportContainers = 0;
@@ -242,4 +244,11 @@ public class NodeInfo {
     this.lastHealthUpdate = lastHealthUpdate;
   }
 
+  public void setTotalResource(ResourceInfo total) {
+    this.totalResource = total;
+  }
+
+  public ResourceInfo getTotalResource() {
+    return this.totalResource;
+  }
 }

@@ -326,7 +326,11 @@ public final class PBImageXmlWriter {
             summary.getCodec(), new BufferedInputStream(new LimitInputStream(
                 fin, s.getLength())));
 
-        switch (SectionName.fromString(s.getName())) {
+        SectionName sectionName = SectionName.fromString(s.getName());
+        if (sectionName == null) {
+          throw new IOException("Unrecognized section " + s.getName());
+        }
+        switch (sectionName) {
         case NS_INFO:
           dumpNameSection(is);
           break;
@@ -429,7 +433,7 @@ public final class PBImageXmlWriter {
       int ns = (XATTR_NAMESPACE_MASK & (encodedName >> XATTR_NAMESPACE_OFFSET)) |
           ((XATTR_NAMESPACE_EXT_MASK & (encodedName >> XATTR_NAMESPACE_EXT_OFFSET)) << 2);
       o(INODE_SECTION_NS, XAttrProtos.XAttrProto.
-          XAttrNamespaceProto.valueOf(ns).toString());
+          XAttrNamespaceProto.forNumber(ns).toString());
       o(SECTION_NAME, SerialNumberManager.XATTR.getString(
           XATTR_NAME_MASK & (encodedName >> XATTR_NAME_OFFSET),
           stringTable));

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
-import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
@@ -88,13 +88,6 @@ public abstract class NodeHeartbeatResponse {
 
   public abstract void setDiagnosticsMessage(String diagnosticsMessage);
 
-  // Credentials (i.e. hdfs tokens) needed by NodeManagers for application
-  // localizations and logAggreations.
-  public abstract Map<ApplicationId, ByteBuffer> getSystemCredentialsForApps();
-
-  public abstract void setSystemCredentialsForApps(
-      Map<ApplicationId, ByteBuffer> systemCredentials);
-  
   public abstract boolean getAreNodeLabelsAcceptedByRM();
 
   public abstract void setAreNodeLabelsAcceptedByRM(
@@ -118,4 +111,21 @@ public abstract class NodeHeartbeatResponse {
 
   public abstract void addAllContainersToDecrease(
       Collection<Container> containersToDecrease);
+
+  public abstract boolean getAreNodeAttributesAcceptedByRM();
+
+  public abstract void setAreNodeAttributesAcceptedByRM(
+      boolean areNodeAttributesAcceptedByRM);
+
+  public abstract void setTokenSequenceNo(long tokenSequenceNo);
+
+  public abstract long getTokenSequenceNo();
+
+  // Credentials (i.e. hdfs tokens) needed by NodeManagers for application
+  // localizations and logAggregations.
+  public abstract void setSystemCredentialsForApps(
+      Collection<SystemCredentialsForAppsProto> systemCredentials);
+
+  public abstract Collection<SystemCredentialsForAppsProto>
+      getSystemCredentialsForApps();
 }

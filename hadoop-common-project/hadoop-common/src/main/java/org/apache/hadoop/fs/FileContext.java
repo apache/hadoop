@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nonnull;
 
@@ -44,6 +45,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Options.CreateOpts;
+import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
+import org.apache.hadoop.fs.impl.FsLinkResolution;
+import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -56,7 +60,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RpcClientException;
 import org.apache.hadoop.ipc.RpcServerException;
 import org.apache.hadoop.ipc.UnexpectedServerException;
-import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -66,6 +69,8 @@ import com.google.common.base.Preconditions;
 import org.apache.htrace.core.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
  * The FileContext class provides an interface for users of the Hadoop
@@ -170,7 +175,7 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class FileContext {
+public class FileContext implements PathCapabilities {
   
   public static final Logger LOG = LoggerFactory.getLogger(FileContext.class);
   /**
@@ -714,7 +719,7 @@ public class FileContext {
     }
 
     @Override
-    protected FCDataOutputStreamBuilder getThisBuilder() {
+    public FCDataOutputStreamBuilder getThisBuilder() {
       return this;
     }
 
@@ -2781,6 +2786,24 @@ public class FileContext {
   }
 
   /**
+   * Set the source path to satisfy storage policy.
+   * @param path The source path referring to either a directory or a file.
+   * @throws IOException
+   */
+  public void satisfyStoragePolicy(final Path path)
+      throws IOException {
+    final Path absF = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        fs.satisfyStoragePolicy(path);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
    * Set the storage policy for a given file or directory.
    *
    * @param path file or directory path.
@@ -2851,4 +2874,85 @@ public class FileContext {
   Tracer getTracer() {
     return tracer;
   }
+
+  /**
+   * Open a file for reading through a builder API.
+   * Ultimately calls {@link #open(Path, int)} unless a subclass
+   * executes the open command differently.
+   *
+   * The semantics of this call are therefore the same as that of
+   * {@link #open(Path, int)} with one special point: it is in
+   * {@code FSDataInputStreamBuilder.build()} in which the open operation
+   * takes place -it is there where all preconditions to the operation
+   * are checked.
+   * @param path file path
+   * @return a FSDataInputStreamBuilder object to build the input stream
+   * @throws IOException if some early checks cause IO failures.
+   * @throws UnsupportedOperationException if support is checked early.
+   */
+  @InterfaceStability.Unstable
+  public FutureDataInputStreamBuilder openFile(Path path)
+      throws IOException, UnsupportedOperationException {
+
+    return new FSDataInputStreamBuilder(path);
+  }
+
+  /**
+   * Builder returned for {@link #openFile(Path)}.
+   */
+  private class FSDataInputStreamBuilder
+      extends FutureDataInputStreamBuilderImpl {
+
+    /**
+     * Path Constructor.
+     * @param path path to open.
+     */
+    protected FSDataInputStreamBuilder(
+        @Nonnull final Path path) throws IOException {
+      super(FileContext.this, path);
+    }
+
+    /**
+     * Perform the open operation.
+     *
+     * @return a future to the input stream.
+     * @throws IOException early failure to open
+     * @throws UnsupportedOperationException if the specific operation
+     * is not supported.
+     * @throws IllegalArgumentException if the parameters are not valid.
+     */
+    @Override
+    public CompletableFuture<FSDataInputStream> build() throws IOException {
+      final Path absF = fixRelativePart(getPath());
+      return new FSLinkResolver<CompletableFuture<FSDataInputStream>>() {
+        @Override
+        public CompletableFuture<FSDataInputStream> next(
+            final AbstractFileSystem fs,
+            final Path p)
+            throws IOException {
+          return fs.openFileWithOptions(p,
+              getMandatoryKeys(),
+              getOptions(),
+              getBufferSize());
+        }
+      }.resolve(FileContext.this, absF);
+    }
+  }
+
+  /**
+   * Return the path capabilities of the bonded {@code AbstractFileSystem}.
+   * @param path path to query the capability of.
+   * @param capability string to query the stream support for.
+   * @return true iff the capability is supported under that FS.
+   * @throws IOException path resolution or other IO failure
+   * @throws IllegalArgumentException invalid arguments
+   */
+  public boolean hasPathCapability(Path path, String capability)
+      throws IOException {
+    validatePathCapabilityArgs(path, capability);
+    return FsLinkResolution.resolve(this,
+        fixRelativePart(path),
+        (fs, p) -> fs.hasPathCapability(p, capability));
+  }
+
 }

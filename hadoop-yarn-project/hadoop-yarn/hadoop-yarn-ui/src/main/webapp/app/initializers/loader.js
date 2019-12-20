@@ -84,9 +84,60 @@ function getSecurityURL(rmhost) {
   return url;
 }
 
+function getClusterIdFromYARN(rmhost, application) {
+  var httpUrl = window.location.protocol + '//' +
+    (ENV.hosts.localBaseAddress? ENV.hosts.localBaseAddress + '/' : '') + rmhost;
+
+  httpUrl += '/conf?name=yarn.resourcemanager.cluster-id';
+  Ember.Logger.log("Get cluster-id URL is: " + httpUrl);
+
+  var clusterId = "";
+  $.ajax({
+    type: 'GET',
+    dataType: 'json',
+    async: false,
+    context: this,
+    url: httpUrl,
+    success: function(data) {
+      clusterId = data.property.value;
+      Ember.Logger.log("Cluster Id from RM: " + clusterId);
+      application.advanceReadiness();
+    },
+    error: function() {
+      application.advanceReadiness();
+    }
+  });
+  return clusterId;
+}
+
+function getNodeManagerPort(rmhost, application) {
+  var httpUrl = window.location.protocol + "//" +
+    (ENV.hosts.localBaseAddress ? ENV.hosts.localBaseAddress + '/' : '') + rmhost
+    + "/conf?name=yarn.nodemanager.webapp.address";
+
+  var port = "8042";
+  $.ajax({
+    type: 'GET',
+    dataType: 'json',
+    async: false,
+    context: this,
+    url: httpUrl,
+    success: function(data) {
+      port = data.property.value.split(":")[1];
+      application.advanceReadiness();
+    },
+    error: function() {
+      port = "8042";
+      application.advanceReadiness();
+    }
+  });
+  return port;
+}
+
 function updateConfigs(application) {
   var hostname = window.location.hostname;
-  var rmhost = hostname + (window.location.port ? ':' + window.location.port: '') + skipTrailingSlash(window.location.pathname);
+  var rmhost = hostname + (window.location.port ? ':' + window.location.port: '') +
+    skipTrailingSlash(window.location.pathname);
 
   window.ENV = window.ENV || {};
   window.ENV.hosts = window.ENV.hosts || {};
@@ -103,6 +154,14 @@ function updateConfigs(application) {
   var protocolSchemeFromRM = getYarnHttpProtocolScheme(rmhost, application);
   Ember.Logger.log("Is protocol scheme https? " + (protocolSchemeFromRM == "HTTPS_ONLY"));
   var isHttpsSchemeEnabled = (protocolSchemeFromRM == "HTTPS_ONLY");
+
+  var clusterIdFromYARN = getClusterIdFromYARN(rmhost, application);
+  ENV.clusterId = clusterIdFromYARN;
+
+  var nodeManagerPort = getNodeManagerPort(rmhost, application);
+  Ember.Logger.log("NodeMananger port: " + nodeManagerPort);
+  ENV.nodeManagerPort = nodeManagerPort;
+
   if(!ENV.hosts.timelineWebAddress) {
     var timelinehost = "";
     $.ajax({
@@ -207,6 +266,7 @@ export default {
 };
 
 const skipTrailingSlash = function(path) {
+  path = path.replace('index.html', '');
   path = path.replace('ui2/', '');
   path = path.replace(/\/$/, '');
   console.log('base url:' + path)

@@ -28,6 +28,8 @@ import org.apache.hadoop.io.IOUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
+import org.apache.hadoop.log.LogThrottlingHelper;
+import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 
 /**
  * A merged input stream that handles failover between different edit logs.
@@ -42,6 +44,11 @@ class RedundantEditLogInputStream extends EditLogInputStream {
   private int curIdx;
   private long prevTxId;
   private final EditLogInputStream[] streams;
+
+  /** Limit logging about fast forwarding the stream to every 5 seconds max. */
+  private static final long FAST_FORWARD_LOGGING_INTERVAL_MS = 5000;
+  private final LogThrottlingHelper fastForwardLoggingHelper =
+      new LogThrottlingHelper(FAST_FORWARD_LOGGING_INTERVAL_MS);
 
   /**
    * States that the RedundantEditLogInputStream can be in.
@@ -133,8 +140,8 @@ class RedundantEditLogInputStream extends EditLogInputStream {
     StringBuilder bld = new StringBuilder();
     String prefix = "";
     for (EditLogInputStream elis : streams) {
-      bld.append(prefix);
-      bld.append(elis.getName());
+      bld.append(prefix)
+          .append(elis.getName());
       prefix = ", ";
     }
     return bld.toString();
@@ -174,8 +181,12 @@ class RedundantEditLogInputStream extends EditLogInputStream {
       case SKIP_UNTIL:
        try {
           if (prevTxId != HdfsServerConstants.INVALID_TXID) {
-            LOG.info("Fast-forwarding stream '" + streams[curIdx].getName() +
-                "' to transaction ID " + (prevTxId + 1));
+            LogAction logAction = fastForwardLoggingHelper.record();
+            if (logAction.shouldLog()) {
+              LOG.info("Fast-forwarding stream '" + streams[curIdx].getName() +
+                  "' to transaction ID " + (prevTxId + 1) +
+                  LogThrottlingHelper.getLogSupressionMessage(logAction));
+            }
             streams[curIdx].skipUntil(prevTxId + 1);
           }
         } catch (IOException e) {

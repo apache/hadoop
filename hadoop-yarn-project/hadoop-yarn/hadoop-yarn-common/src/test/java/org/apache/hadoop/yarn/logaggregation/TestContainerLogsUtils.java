@@ -35,7 +35,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
@@ -87,8 +86,14 @@ public final class TestContainerLogsUtils {
     createContainerLogInLocalDir(appLogsDir, containerId, fs, fileName,
         content);
     // upload container logs to remote log dir
-    Path path = new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR),
-        user + "/logs/" + appId.toString());
+
+    LogAggregationFileControllerFactory factory =
+        new LogAggregationFileControllerFactory(conf);
+    LogAggregationFileController fileController =
+        factory.getFileControllerForWrite();
+
+    Path path = fileController.getRemoteAppLogDir(appId, user);
+
     if (fs.exists(path) && deleteRemoteLogDir) {
       fs.delete(path, true);
     }

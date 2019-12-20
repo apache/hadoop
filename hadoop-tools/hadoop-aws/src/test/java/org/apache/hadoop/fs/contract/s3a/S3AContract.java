@@ -28,12 +28,35 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
  */
 public class S3AContract extends AbstractBondedFSContract {
 
+  /**
+   * Test resource with the contract bindings used in the standard
+   * contract tests: {@value}.
+   */
   public static final String CONTRACT_XML = "contract/s3a.xml";
 
+  /**
+   * Instantiate, adding the s3a.xml contract file.
+   * This may force a reload of the entire configuration, so interferes with
+   * any code which has removed bucket overrides.
+   * @param conf configuration.
+   */
   public S3AContract(Configuration conf) {
+    this(conf, true);
+  }
+
+  /**
+   * Instantiate, optionally adding the s3a.xml contract file.
+   * This may force a reload of the entire configuration, so interferes with
+   * any code which has removed bucket overrides.
+   * @param conf configuration.
+   * @param addContractResource should the s3a.xml file be added?
+   */
+  public S3AContract(Configuration conf, boolean addContractResource) {
     super(conf);
     //insert the base features
-    addConfResource(CONTRACT_XML);
+    if (addContractResource) {
+      addConfResource(CONTRACT_XML);
+    }
   }
 
   @Override

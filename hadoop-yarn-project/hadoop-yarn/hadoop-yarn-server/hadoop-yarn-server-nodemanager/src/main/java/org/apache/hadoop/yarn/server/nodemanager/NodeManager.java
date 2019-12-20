@@ -33,7 +33,7 @@ import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
-import org.apache.hadoop.util.NodeHealthScriptRunner;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.ShutdownHookManager;
@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.collectormanager.NMCollectorService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServices;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -76,6 +77,7 @@ import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecret
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer;
+import org.apache.hadoop.yarn.server.scheduler.DistributedOpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.state.MultiStateTransitionListener;
@@ -199,11 +201,8 @@ public class NodeManager extends CompositeService
                 + e.getMessage(), e);
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Distributed Node Attributes is enabled"
-          + " with provider class as : "
-          + attributesProvider.getClass().toString());
-    }
+    LOG.debug("Distributed Node Attributes is enabled with provider class"
+        + " as : {}", attributesProvider.getClass());
     return attributesProvider;
   }
 
@@ -237,10 +236,8 @@ public class NodeManager extends CompositeService
             "Failed to create NodeLabelsProvider : " + e.getMessage(), e);
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Distributed Node Labels is enabled"
-          + " with provider class as : " + provider.getClass().toString());
-    }
+    LOG.debug("Distributed Node Labels is enabled"
+        + " with provider class as : {}", provider.getClass());
     return provider;
   }
 
@@ -350,27 +347,6 @@ public class NodeManager extends CompositeService
     }
   }
 
-  public static NodeHealthScriptRunner getNodeHealthScriptRunner(Configuration conf) {
-    String nodeHealthScript = 
-        conf.get(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_PATH);
-    if(!NodeHealthScriptRunner.shouldRun(nodeHealthScript)) {
-      LOG.info("Node Manager health check script is not available "
-          + "or doesn't have execute permission, so not "
-          + "starting the node health script runner.");
-      return null;
-    }
-    long nmCheckintervalTime = conf.getLong(
-        YarnConfiguration.NM_HEALTH_CHECK_INTERVAL_MS,
-        YarnConfiguration.DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS);
-    long scriptTimeout = conf.getLong(
-        YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS,
-        YarnConfiguration.DEFAULT_NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS);
-    String[] scriptArgs = conf.getStrings(
-        YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_OPTS, new String[] {});
-    return new NodeHealthScriptRunner(nodeHealthScript,
-        nmCheckintervalTime, scriptTimeout, scriptArgs);
-  }
-
   @VisibleForTesting
   protected ResourcePluginManager createResourcePluginManager() {
     return new ResourcePluginManager();
@@ -385,6 +361,7 @@ public class NodeManager extends CompositeService
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+    UserGroupInformation.setConfiguration(conf);
     rmWorkPreservingRestartEnabled = conf.getBoolean(YarnConfiguration
             .RM_WORK_PRESERVING_RECOVERY_ENABLED,
         YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED);
@@ -426,18 +403,15 @@ public class NodeManager extends CompositeService
       exec.init(context);
     } catch (IOException e) {
       throw new YarnRuntimeException("Failed to initialize container executor", e);
-    }    
+    }
     DeletionService del = createDeletionService(exec);
     addService(del);
 
     // NodeManager level dispatcher
     this.dispatcher = createNMDispatcher();
 
-    nodeHealthChecker =
-        new NodeHealthCheckerService(
-            getNodeHealthScriptRunner(conf), dirsHandler);
+    this.nodeHealthChecker = new NodeHealthCheckerService(dirsHandler);
     addService(nodeHealthChecker);
-
 
     ((NMContext)context).setContainerExecutor(exec);
     ((NMContext)context).setDeletionService(del);
@@ -477,10 +451,14 @@ public class NodeManager extends CompositeService
         .getContainersMonitor(), this.aclsManager, dirsHandler);
     addService(webServer);
     ((NMContext) context).setWebServer(webServer);
-
+    int maxAllocationsPerAMHeartbeat = conf.getInt(
+        YarnConfiguration.OPP_CONTAINER_MAX_ALLOCATIONS_PER_AM_HEARTBEAT,
+        YarnConfiguration.
+            DEFAULT_OPP_CONTAINER_MAX_ALLOCATIONS_PER_AM_HEARTBEAT);
     ((NMContext) context).setQueueableContainerAllocator(
-        new OpportunisticContainerAllocator(
-            context.getContainerTokenSecretManager()));
+        new DistributedOpportunisticContainerAllocator(
+            context.getContainerTokenSecretManager(),
+            maxAllocationsPerAMHeartbeat));
 
     dispatcher.register(ContainerManagerEventType.class, containerManager);
     dispatcher.register(NodeManagerEventType.class, this);
@@ -512,6 +490,7 @@ public class NodeManager extends CompositeService
 
     registerMXBean();
 
+    context.getContainerExecutor().start();
     super.serviceInit(conf);
     // TODO add local dirs to del
   }
@@ -525,10 +504,14 @@ public class NodeManager extends CompositeService
       super.serviceStop();
       DefaultMetricsSystem.shutdown();
 
-      // Cleanup ResourcePluginManager
-      ResourcePluginManager rpm = context.getResourcePluginManager();
-      if (rpm != null) {
-        rpm.cleanup();
+      if (null != context) {
+        context.getContainerExecutor().stop();
+
+        // Cleanup ResourcePluginManager
+        ResourcePluginManager rpm = context.getResourcePluginManager();
+        if (rpm != null) {
+          rpm.cleanup();
+        }
       }
     } finally {
       // YARN-3641: NM's services stop get failed shouldn't block the
@@ -616,14 +599,10 @@ public class NodeManager extends CompositeService
           && !ApplicationState.FINISHED.equals(app.getApplicationState())) {
         registeringCollectors.putIfAbsent(entry.getKey(), entry.getValue());
         AppCollectorData data = entry.getValue();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(entry.getKey() + " : " + data.getCollectorAddr() + "@<"
-              + data.getRMIdentifier() + ", " + data.getVersion() + ">");
-        }
+        LOG.debug("{} : {}@<{}, {}>", entry.getKey(), data.getCollectorAddr(),
+            data.getRMIdentifier(), data.getVersion());
       } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Remove collector data for done app " + entry.getKey());
-        }
+        LOG.debug("Remove collector data for done app {}", entry.getKey());
       }
     }
     knownCollectors.clear();
@@ -683,6 +662,8 @@ public class NodeManager extends CompositeService
     private ResourcePluginManager resourcePluginManager;
 
     private NMLogAggregationStatusTracker nmLogAggregationStatusTracker;
+
+    private AuxServices auxServices;
 
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
@@ -933,6 +914,16 @@ public class NodeManager extends CompositeService
     @Override
     public NMLogAggregationStatusTracker getNMLogAggregationStatusTracker() {
       return nmLogAggregationStatusTracker;
+    }
+
+    @Override
+    public void setAuxServices(AuxServices auxServices) {
+      this.auxServices = auxServices;
+    }
+
+    @Override
+    public AuxServices getAuxServices() {
+      return this.auxServices;
     }
   }
 

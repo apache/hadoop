@@ -98,7 +98,7 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     }
 
     this.normalizedGuarantee = new double[ResourceUtils
-        .getNumberOfKnownResourceTypes()];
+        .getNumberOfCountableResourceTypes()];
     this.children = new ArrayList<>();
     this.apps = new ArrayList<>();
     this.untouchableExtra = Resource.newInstance(0, 0);

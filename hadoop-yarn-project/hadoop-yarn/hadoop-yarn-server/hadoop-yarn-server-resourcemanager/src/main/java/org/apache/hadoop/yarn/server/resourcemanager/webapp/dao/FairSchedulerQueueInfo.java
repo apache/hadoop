@@ -27,8 +27,6 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlSeeAlso;
 import javax.xml.bind.annotation.XmlTransient;
-
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
@@ -83,12 +81,8 @@ public class FairSchedulerQueueInfo {
     
     clusterResources = new ResourceInfo(scheduler.getClusterResource());
     
-    amUsedResources = new ResourceInfo(Resource.newInstance(
-        queue.getMetrics().getAMResourceUsageMB(),
-        queue.getMetrics().getAMResourceUsageVCores()));
-    amMaxResources = new ResourceInfo(Resource.newInstance(
-        queue.getMetrics().getMaxAMShareMB(),
-        queue.getMetrics().getMaxAMShareVCores()));
+    amUsedResources = new ResourceInfo(queue.getMetrics().getAMResourceUsage());
+    amMaxResources = new ResourceInfo(queue.getMetrics().getMaxAMShare());
     usedResources = new ResourceInfo(queue.getResourceUsage());
     demandResources = new ResourceInfo(queue.getDemand());
     fractionMemUsed = (float)usedResources.getMemorySize() /

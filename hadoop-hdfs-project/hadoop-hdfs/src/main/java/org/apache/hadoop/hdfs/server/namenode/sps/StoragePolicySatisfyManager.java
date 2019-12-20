@@ -39,7 +39,7 @@ import com.google.common.annotations.VisibleForTesting;
  * configured by the administrator.
  *
  * <p>
- * If the configured mode is {@link StoragePolicySatisfierMode.EXTERNAL}, then
+ * If the configured mode is {@link StoragePolicySatisfierMode#EXTERNAL}, then
  * it won't do anything, just maintains the sps invoked path ids. Administrator
  * requires to start external sps service explicitly, to fetch the sps invoked
  * path ids from namenode, then do necessary computations and block movement in
@@ -48,7 +48,7 @@ import com.google.common.annotations.VisibleForTesting;
  * external sps service functionality.
  *
  * <p>
- * If the configured mode is {@link StoragePolicySatisfierMode.NONE}, then it
+ * If the configured mode is {@link StoragePolicySatisfierMode#NONE}, then it
  * will disable the sps feature completely by clearing all queued up sps path's
  * hint.
  *
@@ -88,12 +88,12 @@ public class StoragePolicySatisfyManager {
    * This function will do following logic based on the configured sps mode:
    *
    * <p>
-   * If the configured mode is {@link StoragePolicySatisfierMode.EXTERNAL}, then
+   * If the configured mode is {@link StoragePolicySatisfierMode#EXTERNAL}, then
    * it won't do anything. Administrator requires to start external sps service
    * explicitly.
    *
    * <p>
-   * If the configured mode is {@link StoragePolicySatisfierMode.NONE}, then the
+   * If the configured mode is {@link StoragePolicySatisfierMode#NONE}, then the
    * service is disabled and won't do any action.
    */
   public void start() {
@@ -121,12 +121,12 @@ public class StoragePolicySatisfyManager {
    * This function will do following logic based on the configured sps mode:
    *
    * <p>
-   * If the configured mode is {@link StoragePolicySatisfierMode.EXTERNAL}, then
+   * If the configured mode is {@link StoragePolicySatisfierMode#EXTERNAL}, then
    * it won't do anything. Administrator requires to stop external sps service
    * explicitly, if needed.
    *
    * <p>
-   * If the configured mode is {@link StoragePolicySatisfierMode.NONE}, then the
+   * If the configured mode is {@link StoragePolicySatisfierMode#NONE}, then the
    * service is disabled and won't do any action.
    */
   public void stop() {
@@ -225,6 +225,7 @@ public class StoragePolicySatisfyManager {
 
   /**
    * Verify that satisfier queue limit exceeds allowed outstanding limit.
+   * @throws IOException
    */
   public void verifyOutstandingPathQLimit() throws IOException {
     long size = pathsToBeTraveresed.size();
@@ -269,6 +270,7 @@ public class StoragePolicySatisfyManager {
 
   /**
    * Adds the sps path to SPSPathIds list.
+   * @param id
    */
   public void addPathId(long id) {
     synchronized (pathsToBeTraveresed) {

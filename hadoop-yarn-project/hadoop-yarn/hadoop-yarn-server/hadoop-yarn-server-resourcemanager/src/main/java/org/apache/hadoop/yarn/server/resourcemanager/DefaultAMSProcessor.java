@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceContext;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceUtils;
@@ -76,6 +76,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerNodeReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -103,7 +104,8 @@ import static org.apache.hadoop.yarn.exceptions
  */
 final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
-  private static final Log LOG = LogFactory.getLog(DefaultAMSProcessor.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DefaultAMSProcessor.class);
 
   private final static List<Container> EMPTY_CONTAINER_LIST =
       new ArrayList<Container>();
@@ -115,12 +117,21 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
   private RMContext rmContext;
   private ResourceProfilesManager resourceProfilesManager;
+  private boolean timelineServiceV2Enabled;
+  private boolean nodelabelsEnabled;
+  private Set<String> exclusiveEnforcedPartitions;
 
   @Override
   public void init(ApplicationMasterServiceContext amsContext,
       ApplicationMasterServiceProcessor nextProcessor) {
     this.rmContext = (RMContext)amsContext;
     this.resourceProfilesManager = rmContext.getResourceProfilesManager();
+    this.timelineServiceV2Enabled = YarnConfiguration.
+        timelineServiceV2Enabled(rmContext.getYarnConfiguration());
+    this.nodelabelsEnabled = YarnConfiguration
+        .areNodeLabelsEnabled(rmContext.getYarnConfiguration());
+    this.exclusiveEnforcedPartitions = YarnConfiguration
+        .getExclusiveEnforcedPartitions(rmContext.getYarnConfiguration());
   }
 
   @Override
@@ -229,6 +240,10 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
           && ResourceRequest.ANY.equals(req.getResourceName())) {
         req.setNodeLabelExpression(asc.getNodeLabelExpression());
       }
+      if (ResourceRequest.ANY.equals(req.getResourceName())) {
+        SchedulerUtils.enforcePartitionExclusivity(req,
+            exclusiveEnforcedPartitions, asc.getNodeLabelExpression());
+      }
     }
 
     Resource maximumCapacity =
@@ -238,7 +253,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     try {
       RMServerUtils.normalizeAndValidateRequests(ask,
           maximumCapacity, app.getQueue(),
-          getScheduler(), getRmContext());
+          getScheduler(), getRmContext(), nodelabelsEnabled);
     } catch (InvalidResourceRequestException e) {
       RMAppAttempt rmAppAttempt = app.getRMAppAttempt(appAttemptId);
       handleInvalidResourceException(e, rmAppAttempt);
@@ -326,8 +341,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     response.setNumClusterNodes(getScheduler().getNumClusterNodes());
 
     // add collector address for this application
-    if (YarnConfiguration.timelineServiceV2Enabled(
-        getRmContext().getYarnConfiguration())) {
+    if (timelineServiceV2Enabled) {
       CollectorInfo collectorInfo = app.getCollectorInfo();
       if (collectorInfo != null) {
         response.setCollectorInfo(collectorInfo);
@@ -343,6 +357,9 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
     response.setContainersFromPreviousAttempts(
         allocation.getPreviousAttemptContainers());
+
+    response.setRejectedSchedulingRequests(allocation.getRejectedRequest());
+
   }
 
   private void handleInvalidResourceException(InvalidResourceRequestException e,

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.service.utils;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ArrayListMultimap;
@@ -31,6 +32,7 @@ import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.service.api.records.ComponentContainers;
 import org.apache.hadoop.yarn.service.api.records.ComponentState;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
@@ -50,13 +52,11 @@ import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
 import org.apache.hadoop.yarn.service.monitor.probe.MonitorUtils;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
 import org.apache.hadoop.yarn.service.provider.ProviderFactory;
-import org.codehaus.jackson.map.PropertyNamingStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -64,6 +64,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.ERROR_COMP_DOES_NOT_NEED_UPGRADE;
 import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.ERROR_COMP_INSTANCE_DOES_NOT_NEED_UPGRADE;
@@ -73,23 +75,26 @@ public class ServiceApiUtil {
       LoggerFactory.getLogger(ServiceApiUtil.class);
   public static JsonSerDeser<Service> jsonSerDeser =
       new JsonSerDeser<>(Service.class,
-          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+          PropertyNamingStrategy.SNAKE_CASE);
 
   public static final JsonSerDeser<Container[]> CONTAINER_JSON_SERDE =
       new JsonSerDeser<>(Container[].class,
-          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+          PropertyNamingStrategy.SNAKE_CASE);
+
+  public static final JsonSerDeser<ComponentContainers[]>
+      COMP_CONTAINERS_JSON_SERDE = new JsonSerDeser<>(
+          ComponentContainers[].class,
+          PropertyNamingStrategy.SNAKE_CASE);
 
   public static final JsonSerDeser<Component[]> COMP_JSON_SERDE =
       new JsonSerDeser<>(Component[].class,
-          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+          PropertyNamingStrategy.SNAKE_CASE);
 
   private static final PatternValidator namePattern
       = new PatternValidator("[a-z][a-z0-9-]*");
 
   private static final PatternValidator userNamePattern
       = new PatternValidator("[a-z][a-z0-9-.]*");
-
-
 
   @VisibleForTesting
   public static void setJsonSerDeser(JsonSerDeser jsd) {
@@ -243,6 +248,16 @@ public class ServiceApiUtil {
     }
   }
 
+  public static void validateJvmOpts(String jvmOpts)
+      throws IllegalArgumentException {
+    Pattern pattern = Pattern.compile("[!~#?@*&%${}()<>\\[\\]|\"\\/,`;]");
+    Matcher matcher = pattern.matcher(jvmOpts);
+    if (matcher.find()) {
+      throw new IllegalArgumentException(
+          RestApiErrorMessages.ERROR_JVM_OPTS);
+    }
+  }
+
   public static void validateKerberosPrincipal(
       KerberosPrincipal kerberosPrincipal) throws IOException {
     if (!StringUtils.isEmpty(kerberosPrincipal.getPrincipalName())) {
@@ -250,21 +265,6 @@ public class ServiceApiUtil {
         throw new IllegalArgumentException(String.format(
             RestApiErrorMessages.ERROR_KERBEROS_PRINCIPAL_NAME_FORMAT,
             kerberosPrincipal.getPrincipalName()));
-      }
-    }
-    if (!StringUtils.isEmpty(kerberosPrincipal.getKeytab())) {
-      try {
-        // validate URI format
-        URI keytabURI = new URI(kerberosPrincipal.getKeytab());
-        if (keytabURI.getScheme() == null) {
-          throw new IllegalArgumentException(String.format(
-              RestApiErrorMessages.ERROR_KEYTAB_URI_SCHEME_INVALID,
-              kerberosPrincipal.getKeytab()));
-        }
-      } catch (URISyntaxException e) {
-        throw new IllegalArgumentException(
-            String.format(RestApiErrorMessages.ERROR_KEYTAB_URI_INVALID,
-                e.getLocalizedMessage()));
       }
     }
   }
@@ -564,6 +564,13 @@ public class ServiceApiUtil {
     return appJson;
   }
 
+  public static Path writeAppDefinition(SliderFileSystem fs, Service service)
+      throws IOException {
+    Path appJson = getServiceJsonPath(fs, service.getName());
+    jsonSerDeser.save(fs.getFileSystem(), appJson, service, true);
+    return appJson;
+  }
+
   public static List<Container> getLiveContainers(Service service,
       List<String> componentInstances)
       throws YarnException {
@@ -673,9 +680,53 @@ public class ServiceApiUtil {
     return containerNeedUpgrade;
   }
 
-  private static String parseComponentName(String componentInstanceName)
+  public static String getHostnameSuffix(String serviceName, org.apache
+      .hadoop.conf.Configuration conf) {
+    String domain = conf.get(RegistryConstants.KEY_DNS_DOMAIN);
+    String hostnameSuffix;
+    if (domain == null || domain.isEmpty()) {
+      hostnameSuffix = MessageFormat
+          .format(".{0}.{1}", serviceName, RegistryUtils.currentUser());
+    } else {
+      hostnameSuffix = MessageFormat
+          .format(".{0}.{1}.{2}", serviceName,
+              RegistryUtils.currentUser(), domain);
+    }
+    return hostnameSuffix;
+  }
+
+  public static String parseAndValidateComponentInstanceName(String
+      instanceOrHostname, String serviceName, org.apache.hadoop.conf
+      .Configuration conf) throws IllegalArgumentException {
+    int idx = instanceOrHostname.indexOf('.');
+    String hostnameSuffix = getHostnameSuffix(serviceName, conf);
+    if (idx != -1) {
+      if (!instanceOrHostname.endsWith(hostnameSuffix)) {
+        throw new IllegalArgumentException("Specified hostname " +
+            instanceOrHostname + " does not have the expected format " +
+            "componentInstanceName" +
+            hostnameSuffix);
+      }
+      instanceOrHostname = instanceOrHostname.substring(0, instanceOrHostname
+          .length() - hostnameSuffix.length());
+    }
+    idx = instanceOrHostname.indexOf('.');
+    if (idx != -1) {
+      throw new IllegalArgumentException("Specified hostname " +
+          instanceOrHostname + " does not have the expected format " +
+          "componentInstanceName" +
+          hostnameSuffix);
+    }
+    return instanceOrHostname;
+  }
+
+  public static String parseComponentName(String componentInstanceName)
       throws YarnException {
-    int idx = componentInstanceName.lastIndexOf('-');
+    int idx = componentInstanceName.indexOf('.');
+    if (idx != -1) {
+      componentInstanceName = componentInstanceName.substring(0, idx);
+    }
+    idx = componentInstanceName.lastIndexOf('-');
     if (idx == -1) {
       throw new YarnException("Invalid component instance (" +
           componentInstanceName + ") name.");

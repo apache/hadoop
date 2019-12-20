@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -29,6 +30,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -59,7 +61,6 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.util.Holder;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.IOUtils;
-import org.mockito.Matchers;
 import org.mockito.Mockito;
 
 import com.google.common.base.Joiner;
@@ -200,7 +201,7 @@ public abstract class FSImageTestUtil {
     List<StorageDirectory> sds = Lists.newArrayList(sd);
     Mockito.doReturn(sds).when(storage).dirIterable(NameNodeDirType.EDITS);
     Mockito.doReturn(sd).when(storage)
-      .getStorageDirectory(Matchers.<URI>anyObject());
+      .getStorageDirectory(any());
 
     FSEditLog editLog = new FSEditLog(new Configuration(), 
                          storage,
@@ -208,7 +209,23 @@ public abstract class FSImageTestUtil {
     editLog.initJournalsForWrite();
     return editLog;
   }
-  
+
+  public static INodeFile createEmptyInodeFile(long id, String name,
+      PermissionStatus permissions, long mtime, long atime, short replication,
+      long preferredBlockSize) {
+    return new INodeFile(id, name.getBytes(StandardCharsets.UTF_8),
+        permissions, mtime, atime, null, replication, preferredBlockSize);
+  }
+
+  public static FSEditLog createEditLogWithJournalManager(Configuration conf,
+      NNStorage storage, URI editsUri, final JournalManager manager) {
+    return new FSEditLog(conf, storage, ImmutableList.of(editsUri)) {
+      @Override
+      protected JournalManager createJournal(URI uri) {
+        return manager;
+      }
+    };
+  }
 
   /**
    * Create an aborted in-progress log in the given directory, containing
@@ -605,5 +622,28 @@ public abstract class FSImageTestUtil {
     StorageDirectory sDir = getFSImage(node).getStorage().
         getStorageDirectory(storageUri);
     return NNStorage.readTransactionIdFile(sDir);
+  }
+
+  /**
+   * Returns the summary section from the latest fsimage stored on the cluster.
+   * This is effectively the image index which contains the offset of each
+   * section and subsection.
+   * @param cluster The cluster to load the image from
+   * @return The FileSummary section of the fsimage
+   * @throws IOException
+   */
+  public static FsImageProto.FileSummary getLatestImageSummary(
+      MiniDFSCluster cluster) throws IOException {
+    RandomAccessFile raFile = null;
+    try {
+      File image = FSImageTestUtil.findLatestImageFile(FSImageTestUtil
+          .getFSImage(cluster.getNameNode()).getStorage().getStorageDir(0));
+      raFile = new RandomAccessFile(image, "r");
+      return FSImageUtil.loadSummary(raFile);
+    } finally {
+      if (raFile != null) {
+        raFile.close();
+      }
+    }
   }
 }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
+import com.google.gson.Gson;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -34,6 +35,9 @@ import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 
 import com.google.protobuf.TextFormat;
+
+import java.util.List;
+import java.util.Map;
 
 public class ContainerReportPBImpl extends ContainerReport {
 
@@ -208,6 +212,24 @@ public class ContainerReportPBImpl extends ContainerReport {
   }
 
   @Override
+  public String getExposedPorts() {
+    ContainerReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getExposedPorts();
+  }
+
+  @Override
+  public void setExposedPorts(Map<String, List<Map<String, String>>> ports) {
+    maybeInitBuilder();
+    if (ports == null) {
+      builder.clearExposedPorts();
+      return;
+    }
+    Gson gson = new Gson();
+    String strPorts = gson.toJson(ports);
+    builder.setExposedPorts(strPorts);
+  }
+
+  @Override
   public void setFinishTime(long finishTime) {
     maybeInitBuilder();
     builder.setFinishTime(finishTime);
@@ -239,7 +261,6 @@ public class ContainerReportPBImpl extends ContainerReport {
   }
 
   public ContainerReportProto getProto() {
-
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;

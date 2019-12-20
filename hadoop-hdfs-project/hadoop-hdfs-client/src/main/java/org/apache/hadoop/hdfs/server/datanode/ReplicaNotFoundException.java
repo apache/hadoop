@@ -40,13 +40,19 @@ public class ReplicaNotFoundException extends IOException {
       "Replica does not exist ";
   public final static String UNEXPECTED_GS_REPLICA =
       "Cannot append to a replica with unexpected generation stamp ";
+  public final static String POSSIBLE_ROOT_CAUSE_MSG =
+      ". The block may have been removed recently by the balancer " +
+      "or by intentionally reducing the replication factor. " +
+      "This condition is usually harmless. To be certain, please check the " +
+      "preceding datanode log messages for signs of a more serious issue.";
+
 
   public ReplicaNotFoundException() {
     super();
   }
 
   public ReplicaNotFoundException(ExtendedBlock b) {
-    super("Replica not found for " + b);
+    super("Replica not found for " + b + POSSIBLE_ROOT_CAUSE_MSG);
   }
 
   public ReplicaNotFoundException(String msg) {

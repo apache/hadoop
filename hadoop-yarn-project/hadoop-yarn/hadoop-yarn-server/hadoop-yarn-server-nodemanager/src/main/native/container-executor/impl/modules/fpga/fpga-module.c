@@ -141,7 +141,7 @@ void reload_fpga_configuration() {
 /*
  * Format of FPGA request commandline:
  *
- * c-e fpga --excluded_fpgas 0,1,3 --container_id container_x_y
+ * c-e --module-fpga --excluded_fpgas 0,1,3 --container_id container_x_y
  */
 int handle_fpga_request(update_cgroups_parameters_function func,
     const char* module_name, int module_argc, char** module_argv) {
@@ -213,7 +213,8 @@ int handle_fpga_request(update_cgroups_parameters_function func,
 
   if (!minor_devices) {
      // Minor devices is null, skip following call.
-     fprintf(ERRORFILE, "is not specified, skip cgroups call.\n");
+     fprintf(ERRORFILE,
+     "--excluded-fpgas is not specified, skip cgroups call.\n");
      goto cleanup;
   }
 

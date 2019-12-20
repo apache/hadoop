@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
@@ -37,8 +37,8 @@ import org.apache.hadoop.yarn.api.records.Priority;
  */
 public class AppPriorityACLConfigurationParser {
 
-  private static final Log LOG = LogFactory
-      .getLog(AppPriorityACLConfigurationParser.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(AppPriorityACLConfigurationParser.class);
 
   public enum AppPriorityACLKeyType {
     USER(1), GROUP(2), MAX_PRIORITY(3), DEFAULT_PRIORITY(4);

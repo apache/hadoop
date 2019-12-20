@@ -268,7 +268,7 @@ public abstract class AbstractContractRenameTest extends
    * @param dst the destination root to move
    * @param nestedPath the nested path to move
    */
-  private void validateAncestorsMoved(Path src, Path dst, String nestedPath)
+  protected void validateAncestorsMoved(Path src, Path dst, String nestedPath)
       throws IOException {
     assertIsDirectory(dst);
     assertPathDoesNotExist("src path should not exist", path(src + nestedPath));

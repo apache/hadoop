@@ -71,7 +71,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
@@ -82,6 +81,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.hdfs.tools.DFSck;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -368,6 +368,25 @@ public class DFSTestUtil {
     createFiles(fs, topdir, (short)3);
   }
 
+  public static String readResoucePlainFile(
+      String fileName) throws IOException {
+    File file = new File(System.getProperty(
+        "test.cache.data", "build/test/cache"), fileName);
+    StringBuilder s = new StringBuilder();
+    try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        line = line.trim();
+        if (line.length() <= 0 || line.startsWith("#")) {
+          continue;
+        }
+        s.append(line);
+        s.append("\n");
+      }
+    }
+    return s.toString();
+  }
+
   public static byte[] readFileAsBytes(FileSystem fs, Path fileName) throws IOException {
     try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
       IOUtils.copyBytes(fs.open(fileName), os, 1024);
@@ -537,17 +556,24 @@ public class DFSTestUtil {
     }
   }
 
+  public static void waitForReplication(MiniDFSCluster cluster, ExtendedBlock b,
+      int racks, int replicas, int neededReplicas)
+      throws TimeoutException, InterruptedException {
+    waitForReplication(cluster, b, racks, replicas, neededReplicas, 0);
+  }
+
   /*
    * Wait up to 20s for the given block to be replicated across
    * the requested number of racks, with the requested number of
    * replicas, and the requested number of replicas still needed.
    */
   public static void waitForReplication(MiniDFSCluster cluster, ExtendedBlock b,
-      int racks, int replicas, int neededReplicas)
+      int racks, int replicas, int neededReplicas, int neededDomains)
       throws TimeoutException, InterruptedException {
     int curRacks = 0;
     int curReplicas = 0;
     int curNeededReplicas = 0;
+    int curDomains = 0;
     int count = 0;
     final int ATTEMPTS = 20;
 
@@ -558,17 +584,21 @@ public class DFSTestUtil {
       curRacks = r[0];
       curReplicas = r[1];
       curNeededReplicas = r[2];
+      curDomains = r[3];
       count++;
     } while ((curRacks != racks ||
               curReplicas != replicas ||
-              curNeededReplicas != neededReplicas) && count < ATTEMPTS);
+        curNeededReplicas != neededReplicas ||
+        (neededDomains != 0 && curDomains != neededDomains))
+        && count < ATTEMPTS);
 
     if (count == ATTEMPTS) {
       throw new TimeoutException("Timed out waiting for replication."
           + " Needed replicas = "+neededReplicas
           + " Cur needed replicas = "+curNeededReplicas
           + " Replicas = "+replicas+" Cur replicas = "+curReplicas
-          + " Racks = "+racks+" Cur racks = "+curRacks);
+          + " Racks = "+racks+" Cur racks = "+curRacks
+          + " Domains = "+neededDomains+" Cur domains = "+curDomains);
     }
   }
 
@@ -2021,18 +2051,17 @@ public class DFSTestUtil {
    * Get the RefreshUserMappingsProtocol RPC proxy for the NN associated with
    * this DFSClient object
    *
-   * @param nameNodeUri the URI of the NN to get a proxy for.
+   * @param nnAddr the address of the NN to get a proxy for.
    *
    * @return the RefreshUserMappingsProtocol RPC proxy associated with this
    * DFSClient object
    */
   @VisibleForTesting
   public static RefreshUserMappingsProtocol getRefreshUserMappingsProtocolProxy(
-      Configuration conf, URI nameNodeUri) throws IOException {
-    final AtomicBoolean nnFallbackToSimpleAuth = new AtomicBoolean(false);
-    return NameNodeProxies.createProxy(conf,
-        nameNodeUri, RefreshUserMappingsProtocol.class,
-        nnFallbackToSimpleAuth).getProxy();
+      Configuration conf, InetSocketAddress nnAddr) throws IOException {
+    return NameNodeProxies.createNonHAProxy(
+        conf, nnAddr, RefreshUserMappingsProtocol.class,
+        UserGroupInformation.getCurrentUser(), false).getProxy();
   }
 
   /**
@@ -2138,7 +2167,7 @@ public class DFSTestUtil {
         .create(file.toString(), new FsPermission((short)0755),
         dfs.getClient().getClientName(),
         new EnumSetWritable<>(EnumSet.of(CreateFlag.CREATE)),
-        false, (short)1, 128*1024*1024L, null, null);
+            false, (short) 1, 128 * 1024 * 1024L, null, null, null);
 
     FSNamesystem ns = cluster.getNamesystem();
     FSDirectory fsdir = ns.getFSDirectory();
@@ -2363,13 +2392,32 @@ public class DFSTestUtil {
     }
   }
 
+  /**
+   * Create open files under root path.
+   * @param fs the filesystem.
+   * @param filePrefix the prefix of the files.
+   * @param numFilesToCreate the number of files to create.
+   */
   public static Map<Path, FSDataOutputStream> createOpenFiles(FileSystem fs,
       String filePrefix, int numFilesToCreate) throws IOException {
+    return createOpenFiles(fs, new Path("/"), filePrefix, numFilesToCreate);
+  }
+
+  /**
+   * Create open files.
+   * @param fs the filesystem.
+   * @param baseDir the base path of the files.
+   * @param filePrefix the prefix of the files.
+   * @param numFilesToCreate the number of files to create.
+   */
+  public static Map<Path, FSDataOutputStream> createOpenFiles(FileSystem fs,
+      Path baseDir, String filePrefix, int numFilesToCreate)
+      throws IOException {
     final Map<Path, FSDataOutputStream> filesCreated = new HashMap<>();
     final byte[] buffer = new byte[(int) (1024 * 1.75)];
     final Random rand = new Random(0xFEED0BACL);
     for (int i = 0; i < numFilesToCreate; i++) {
-      Path file = new Path("/" + filePrefix + "-" + i);
+      Path file = new Path(baseDir, filePrefix + "-" + i);
       FSDataOutputStream stm = fs.create(file, true, 1024, (short) 1, 1024);
       rand.nextBytes(buffer);
       stm.write(buffer);
@@ -2395,6 +2443,41 @@ public class DFSTestUtil {
       }
     }
     return closedFiles;
+  }
+
+  /**
+   * Setup cluster with desired number of DN, racks, and specified number of
+   * rack that only has 1 DN. Other racks will be evenly setup with the number
+   * of DNs.
+   *
+   * @param conf the conf object to start the cluster.
+   * @param numDatanodes number of total Datanodes.
+   * @param numRacks number of total racks
+   * @param numSingleDnRacks number of racks that only has 1 DN
+   * @throws Exception
+   */
+  public static MiniDFSCluster setupCluster(final Configuration conf,
+                                            final int numDatanodes,
+                                            final int numRacks,
+                                            final int numSingleDnRacks)
+      throws Exception {
+    assert numDatanodes > numRacks;
+    assert numRacks > numSingleDnRacks;
+    assert numSingleDnRacks >= 0;
+    final String[] racks = new String[numDatanodes];
+    for (int i = 0; i < numSingleDnRacks; i++) {
+      racks[i] = "/rack" + i;
+    }
+    for (int i = numSingleDnRacks; i < numDatanodes; i++) {
+      racks[i] =
+          "/rack" + (numSingleDnRacks + (i % (numRacks - numSingleDnRacks)));
+    }
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(numDatanodes)
+        .racks(racks)
+        .build();
+    cluster.waitActive();
+    return cluster;
   }
 
   /**
@@ -2531,4 +2614,24 @@ public class DFSTestUtil {
     }
   }
 
+  /**
+   * Run the fsck command using the specified params.
+   *
+   * @param conf HDFS configuration to use
+   * @param expectedErrCode The error code expected to be returned by
+   *                         the fsck command
+   * @param checkErrorCode Should the error code be checked
+   * @param path actual arguments to the fsck command
+   **/
+  public static String runFsck(Configuration conf, int expectedErrCode,
+                        boolean checkErrorCode, String... path)
+          throws Exception {
+    ByteArrayOutputStream bStream = new ByteArrayOutputStream();
+    PrintStream out = new PrintStream(bStream, true);
+    int errCode = ToolRunner.run(new DFSck(conf, out), path);
+    if (checkErrorCode) {
+      assertEquals(expectedErrCode, errCode);
+    }
+    return bStream.toString();
+  }
 }

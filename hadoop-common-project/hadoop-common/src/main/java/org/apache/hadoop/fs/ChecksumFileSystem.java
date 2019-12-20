@@ -24,16 +24,26 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
+import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /****************************************************************
  * Abstract Checksumed FileSystem.
@@ -365,6 +375,12 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
         + "by ChecksumFileSystem");
   }
 
+  @Override
+  public void concat(final Path f, final Path[] psrcs) throws IOException {
+    throw new UnsupportedOperationException("Concat is not supported "
+        + "by ChecksumFileSystem");
+  }
+
   /**
    * Calculated the length of the checksum file in bytes.
    * @param size the length of the data file in bytes
@@ -481,6 +497,32 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     return create(f, permission, overwrite, false, bufferSize, replication,
+        blockSize, progress);
+  }
+
+  @Override
+  public FSDataOutputStream create(final Path f,
+      final FsPermission permission,
+      final EnumSet<CreateFlag> flags,
+      final int bufferSize,
+      final short replication,
+      final long blockSize,
+      final Progressable progress,
+      final Options.ChecksumOpt checksumOpt) throws IOException {
+    return create(f, permission, flags.contains(CreateFlag.OVERWRITE),
+        bufferSize, replication, blockSize, progress);
+  }
+
+  @Override
+  public FSDataOutputStream createNonRecursive(final Path f,
+      final FsPermission permission,
+      final EnumSet<CreateFlag> flags,
+      final int bufferSize,
+      final short replication,
+      final long blockSize,
+      final Progressable progress) throws IOException {
+    return create(f, permission, flags.contains(CreateFlag.OVERWRITE),
+        false, bufferSize, replication,
         blockSize, progress);
   }
 
@@ -780,4 +822,76 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
                                        long inPos, FSDataInputStream sums, long sumsPos) {
     return false;
   }
+
+  /**
+   * This is overridden to ensure that this class's
+   * {@link #openFileWithOptions}() method is called, and so ultimately
+   * its {@link #open(Path, int)}.
+   *
+   * {@inheritDoc}
+   */
+  @Override
+  public FutureDataInputStreamBuilder openFile(final Path path)
+      throws IOException, UnsupportedOperationException {
+    return ((FutureDataInputStreamBuilderImpl)
+        createDataInputStreamBuilder(this, path)).getThisBuilder();
+  }
+
+  /**
+   * Open the file as a blocking call to {@link #open(Path, int)}.
+   *
+   * {@inheritDoc}
+   */
+  @Override
+  protected CompletableFuture<FSDataInputStream> openFileWithOptions(
+      final Path path,
+      final Set<String> mandatoryKeys,
+      final Configuration options,
+      final int bufferSize) throws IOException {
+    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(mandatoryKeys,
+        Collections.emptySet(),
+        "for " + path);
+    return LambdaUtils.eval(
+        new CompletableFuture<>(), () -> open(path, bufferSize));
+  }
+
+  /**
+   * This is overridden to ensure that this class's create() method is
+   * ultimately called.
+   *
+   * {@inheritDoc}
+   */
+  public FSDataOutputStreamBuilder createFile(Path path) {
+    return createDataOutputStreamBuilder(this, path)
+        .create().overwrite(true);
+  }
+
+  /**
+   * This is overridden to ensure that this class's create() method is
+   * ultimately called.
+   *
+   * {@inheritDoc}
+   */
+  public FSDataOutputStreamBuilder appendFile(Path path) {
+    return createDataOutputStreamBuilder(this, path).append();
+  }
+
+  /**
+   * Disable those operations which the checksummed FS blocks.
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    // query the superclass, which triggers argument validation.
+    final Path p = makeQualified(path);
+    switch (validatePathCapabilityArgs(p, capability)) {
+    case CommonPathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_CONCAT:
+      return false;
+    default:
+      return super.hasPathCapability(p, capability);
+    }
+  }
+
 }

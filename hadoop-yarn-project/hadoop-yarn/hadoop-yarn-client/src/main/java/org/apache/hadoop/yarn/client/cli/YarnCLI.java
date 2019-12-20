@@ -43,13 +43,16 @@ public abstract class YarnCLI extends Configured implements Tool {
 
   public YarnCLI() {
     super(new YarnConfiguration());
-    client = createYarnClient();
-    client.init(getConf());
-    client.start();
   }
 
   protected YarnClient createYarnClient() {
     return YarnClient.createYarnClient();
+  }
+
+  protected void createAndStartYarnClient() {
+    client = createYarnClient();
+    client.init(getConf());
+    client.start();
   }
 
   public void setSysOutPrintStream(PrintStream sysout) {
@@ -69,6 +72,10 @@ public abstract class YarnCLI extends Configured implements Tool {
   }
 
   public void stop() {
-    this.client.stop();
+    // this.client may be null when it is called before
+    // invoking `createAndStartYarnClient`
+    if (this.client != null) {
+      this.client.stop();
+    }
   }
 }

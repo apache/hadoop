@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
 
-import static org.mockito.Matchers.any;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -139,8 +140,8 @@ public class TestFileSystemNodeAttributeStore {
         toAddAttributes);
     Map<NodeAttribute, AttributeValue> attrs =
         mgr.getAttributesForNode("host0");
-    Assert.assertEquals(attrs.size(), 1);
-    Assert.assertEquals(attrs.keySet().toArray()[0], docker);
+    assertThat(attrs).hasSize(1);
+    assertThat(attrs.keySet().toArray()[0]).isEqualTo(docker);
     mgr.stop();
 
     // Start new attribute manager with same path
@@ -154,8 +155,8 @@ public class TestFileSystemNodeAttributeStore {
     Assert.assertEquals("host1 size", 1,
         mgr.getAttributesForNode("host1").size());
     attrs = mgr.getAttributesForNode("host0");
-    Assert.assertEquals(attrs.size(), 1);
-    Assert.assertEquals(attrs.keySet().toArray()[0], docker);
+    assertThat(attrs).hasSize(1);
+    assertThat(attrs.keySet().toArray()[0]).isEqualTo(docker);
     //------host0----
     // current       - docker
     // replace       - gpu
@@ -181,8 +182,8 @@ public class TestFileSystemNodeAttributeStore {
     Assert.assertEquals("host1 size", 2,
         mgr.getAttributesForNode("host1").size());
     attrs = mgr.getAttributesForNode("host0");
-    Assert.assertEquals(attrs.size(), 1);
-    Assert.assertEquals(attrs.keySet().toArray()[0], gpu);
+    assertThat(attrs).hasSize(1);
+    assertThat(attrs.keySet().toArray()[0]).isEqualTo(gpu);
     attrs = mgr.getAttributesForNode("host1");
     Assert.assertTrue(attrs.keySet().contains(docker));
     Assert.assertTrue(attrs.keySet().contains(gpu));

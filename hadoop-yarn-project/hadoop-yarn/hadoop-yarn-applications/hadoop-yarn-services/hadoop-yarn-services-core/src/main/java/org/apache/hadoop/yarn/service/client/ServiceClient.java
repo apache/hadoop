@@ -20,10 +20,14 @@ package org.apache.hadoop.yarn.service.client;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
+import org.apache.curator.shaded.com.google.common.io.Files;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -53,11 +57,13 @@ import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.client.cli.ApplicationCLI;
 import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CancelUpgradeRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.ComponentCountProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.DecommissionCompInstancesRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesResponseProto;
@@ -69,9 +75,12 @@ import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceResponseProto;
 import org.apache.hadoop.yarn.service.ClientAMProtocol;
 import org.apache.hadoop.yarn.service.ServiceMaster;
+import org.apache.hadoop.yarn.service.api.records.ComponentContainers;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.ConfigFile;
+import org.apache.hadoop.yarn.service.api.records.ConfigFile.TypeEnum;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.conf.SliderExitCodes;
@@ -96,12 +105,18 @@ import org.apache.hadoop.yarn.util.Times;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -149,6 +164,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     if (registryClient != null) {
       registryClient.stop();
     }
+    fs.getFileSystem().close();
     super.serviceStop();
   }
 
@@ -389,6 +405,61 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
   }
 
   @Override
+  public int actionDecommissionInstances(String appName,
+      List<String> componentInstances) throws IOException, YarnException {
+    checkAppExistOnHdfs(appName);
+    Service persistedService = ServiceApiUtil.loadService(fs, appName);
+    if (StringUtils.isEmpty(persistedService.getId())) {
+      throw new YarnException(
+          persistedService.getName() + " appId is null, may be not submitted " +
+              "to YARN yet");
+    }
+    cachedAppInfo.put(persistedService.getName(), new AppInfo(
+        ApplicationId.fromString(persistedService.getId()), persistedService
+        .getKerberosPrincipal().getPrincipalName()));
+
+    for (String instance : componentInstances) {
+      String componentName = ServiceApiUtil.parseComponentName(
+          ServiceApiUtil.parseAndValidateComponentInstanceName(instance,
+              appName, getConfig()));
+      Component component = persistedService.getComponent(componentName);
+      if (component == null) {
+        throw new IllegalArgumentException(instance + " does not exist !");
+      }
+      if (!component.getDecommissionedInstances().contains(instance)) {
+        component.addDecommissionedInstance(instance);
+        component.setNumberOfContainers(Math.max(0, component
+            .getNumberOfContainers() - 1));
+      }
+    }
+    ServiceApiUtil.writeAppDefinition(fs, persistedService);
+
+    ApplicationReport appReport =
+        yarnClient.getApplicationReport(ApplicationId.fromString(
+            persistedService.getId()));
+    if (appReport.getYarnApplicationState() != RUNNING) {
+      String message =
+          persistedService.getName() + " is at " + appReport
+              .getYarnApplicationState() + " state, decommission can only be " +
+              "invoked when service is running";
+      LOG.error(message);
+      throw new YarnException(message);
+    }
+
+    if (StringUtils.isEmpty(appReport.getHost())) {
+      throw new YarnException(persistedService.getName() + " AM hostname is " +
+          "empty");
+    }
+    ClientAMProtocol proxy =
+        createAMProxy(persistedService.getName(), appReport);
+    DecommissionCompInstancesRequestProto.Builder requestBuilder =
+        DecommissionCompInstancesRequestProto.newBuilder();
+    requestBuilder.addAllCompInstances(componentInstances);
+    proxy.decommissionCompInstances(requestBuilder.build());
+    return EXIT_SUCCESS;
+  }
+
+  @Override
   public int actionCleanUp(String appName, String userName) throws
       IOException, YarnException {
     if (cleanUpRegistry(appName, userName)) {
@@ -407,14 +478,15 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     return result.getCompInstances();
   }
 
-  public Container[] getContainers(String appName, List<String> components,
+  public ComponentContainers[] getContainers(String appName,
+      List<String> components,
       String version, List<ContainerState> containerStates)
       throws IOException, YarnException {
     GetCompInstancesResponseProto result = filterContainers(appName, components,
         version, containerStates != null ? containerStates.stream()
             .map(Enum::toString).collect(Collectors.toList()) : null);
 
-    return ServiceApiUtil.CONTAINER_JSON_SERDE.fromJson(
+    return ServiceApiUtil.COMP_CONTAINERS_JSON_SERDE.fromJson(
         result.getCompInstances());
   }
 
@@ -591,9 +663,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       throw new YarnException("Components " + componentCounts.keySet()
           + " do not exist in app definition.");
     }
-    jsonSerDeser
-        .save(fs.getFileSystem(), ServiceApiUtil.getServiceJsonPath(fs, serviceName),
-            persistedService, true);
+    ServiceApiUtil.writeAppDefinition(fs, persistedService);
 
     ApplicationId appId = getAppId(serviceName);
     if (appId == null) {
@@ -747,6 +817,21 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
           + appDir);
       ret = EXIT_NOT_FOUND;
     }
+
+    // Delete Public Resource Dir
+    Path publicResourceDir = new Path(fs.getBasePath(), serviceName);
+    if (fileSystem.exists(publicResourceDir)) {
+      if (fileSystem.delete(publicResourceDir, true)) {
+        LOG.info("Successfully deleted public resource dir for "
+            + serviceName + ": " + publicResourceDir);
+      } else {
+        String message = "Failed to delete public resource dir for service "
+            + serviceName + " at:  " + publicResourceDir;
+        LOG.info(message);
+        throw new YarnException(message);
+      }
+    }
+
     try {
       deleteZKNode(serviceName);
       // don't set destroySucceed to false if no ZK node exists because not
@@ -927,6 +1012,8 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     addJarResource(serviceName, localResources);
     // add keytab if in secure env
     addKeytabResourceIfSecure(fs, localResources, app);
+    // add yarn sysfs to localResources
+    addYarnSysFs(appRootDir, localResources, app);
     if (LOG.isDebugEnabled()) {
       printLocalResources(localResources);
     }
@@ -936,8 +1023,8 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     String cmdStr = buildCommandLine(app, conf, appRootDir, hasAMLog4j);
     submissionContext.setResource(Resource.newInstance(YarnServiceConf
         .getLong(YarnServiceConf.AM_RESOURCE_MEM,
-            YarnServiceConf.DEFAULT_KEY_AM_RESOURCE_MEM, app.getConfiguration(),
-            conf), 1));
+            YarnServiceConf.DEFAULT_KEY_AM_RESOURCE_MEM,
+            app.getConfiguration(), conf), 1));
     String queue = app.getQueue();
     if (StringUtils.isEmpty(queue)) {
       queue = conf.get(YARN_QUEUE, DEFAULT_YARN_QUEUE);
@@ -959,6 +1046,128 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     submissionContext.setAMContainerSpec(amLaunchContext);
     yarnClient.submitApplication(submissionContext);
     return submissionContext.getApplicationId();
+  }
+
+  /**
+   * Compress (tar) the input files to the output file.
+   *
+   * @param files The files to compress
+   * @param output The resulting output file (should end in .tar.gz)
+   * @param bundleRoot
+   * @throws IOException
+   */
+  public static File compressFiles(Collection<File> files, File output,
+      String bundleRoot) throws IOException {
+    try (FileOutputStream fos = new FileOutputStream(output);
+        TarArchiveOutputStream taos = new TarArchiveOutputStream(
+            new BufferedOutputStream(fos))) {
+      taos.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
+      for (File f : files) {
+        addFilesToCompression(taos, f, "sysfs", bundleRoot);
+      }
+    }
+    return output;
+  }
+
+  /**
+   * Compile file list for compression and going recursive for
+   * nested directories.
+   *
+   * @param taos The archive
+   * @param file The file to add to the archive
+   * @param dir The directory that should serve as
+   *            the parent directory in the archive
+   * @throws IOException
+   */
+  private static void addFilesToCompression(TarArchiveOutputStream taos,
+      File file, String dir, String bundleRoot) throws IOException {
+    if (!file.isHidden()) {
+      // Create an entry for the file
+      if (!dir.equals(".")) {
+        if (File.separator.equals("\\")) {
+          dir = dir.replaceAll("\\\\", "/");
+        }
+      }
+      taos.putArchiveEntry(
+          new TarArchiveEntry(file, dir + "/" + file.getName()));
+      if (file.isFile()) {
+        // Add the file to the archive
+        try (FileInputStream input = new FileInputStream(file)) {
+          IOUtils.copy(input, taos);
+          taos.closeArchiveEntry();
+        }
+      } else if (file.isDirectory()) {
+        // close the archive entry
+        if (!dir.equals(".")) {
+          taos.closeArchiveEntry();
+        }
+        // go through all the files in the directory and using recursion, add
+        // them to the archive
+        File[] allFiles = file.listFiles();
+        if (allFiles != null) {
+          for (File childFile : allFiles) {
+            addFilesToCompression(taos, childFile,
+                file.getPath().substring(bundleRoot.length()), bundleRoot);
+          }
+        }
+      }
+    }
+  }
+
+  private void addYarnSysFs(Path path,
+      Map<String, LocalResource> localResources, Service app)
+          throws IOException {
+    List<Component> componentsWithYarnSysFS = new ArrayList<Component>();
+    for(Component c : app.getComponents()) {
+      boolean enabled = Boolean.parseBoolean(c.getConfiguration()
+          .getEnv(ApplicationConstants.Environment
+              .YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE.name()));
+      if (enabled) {
+        componentsWithYarnSysFS.add(c);
+      }
+    }
+    if(componentsWithYarnSysFS.size() == 0) {
+      return;
+    }
+    String buffer = ServiceApiUtil.jsonSerDeser.toJson(app);
+    File tmpDir = Files.createTempDir();
+    if (tmpDir.exists()) {
+      String serviceJsonPath = tmpDir.getAbsolutePath() + "/app.json";
+      File localFile = new File(serviceJsonPath);
+      if (localFile.createNewFile()) {
+        try (Writer writer = new OutputStreamWriter(
+            new FileOutputStream(localFile), StandardCharsets.UTF_8)) {
+          writer.write(buffer);
+        }
+      } else {
+        throw new IOException("Fail to write app.json to temp directory");
+      }
+      File destinationFile = new File(tmpDir.getAbsolutePath() + "/sysfs.tar");
+      if (!destinationFile.createNewFile()) {
+        throw new IOException("Fail to localize sysfs.tar.");
+      }
+      List<File> files = new ArrayList<File>();
+      files.add(localFile);
+      compressFiles(files, destinationFile, "sysfs");
+      LocalResource localResource =
+          fs.submitFile(destinationFile, path, ".", "sysfs.tar");
+      Path serviceJson = new Path(path, "sysfs.tar");
+      for (Component c  : componentsWithYarnSysFS) {
+        ConfigFile e = new ConfigFile();
+        e.type(TypeEnum.ARCHIVE);
+        e.srcFile(serviceJson.toString());
+        e.destFile("/hadoop/yarn");
+        if (!c.getConfiguration().getFiles().contains(e)) {
+          c.getConfiguration().getFiles().add(e);
+        }
+      }
+      localResources.put("sysfs", localResource);
+      if (!tmpDir.delete()) {
+        LOG.warn("Failed to delete temp file: " + tmpDir.getAbsolutePath());
+      }
+    } else {
+      throw new IOException("Fail to localize sysfs resource.");
+    }
   }
 
   private void setLogAggregationContext(Service app, Configuration conf,
@@ -996,7 +1205,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
           .append(entry.getValue().getResource().getFile())
           .append(System.lineSeparator());
     }
-    LOG.debug(builder.toString());
+    LOG.debug("{}", builder);
   }
 
   private String buildCommandLine(Service app, Configuration conf,
@@ -1008,6 +1217,9 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     if (!jvmOpts.contains("-Xmx")) {
       jvmOpts += DEFAULT_AM_JVM_XMX;
     }
+
+    // validate possible command injection.
+    ServiceApiUtil.validateJvmOpts(jvmOpts);
 
     CLI.setJVMOpts(jvmOpts);
     if (hasSliderAMLog4j) {
@@ -1041,11 +1253,15 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     return cmdStr;
   }
 
-  private Map<String, String> addAMEnv() throws IOException {
+  @VisibleForTesting
+  protected Map<String, String> addAMEnv() throws IOException {
     Map<String, String> env = new HashMap<>();
-    ClasspathConstructor classpath =
-        buildClasspath(YarnServiceConstants.SUBMITTED_CONF_DIR, "lib", fs, getConfig()
-            .getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false));
+    ClasspathConstructor classpath = buildClasspath(
+        YarnServiceConstants.SUBMITTED_CONF_DIR,
+        "lib",
+        fs,
+        getConfig().get(YarnServiceConf.YARN_SERVICE_CLASSPATH, ""),
+        getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false));
     env.put("CLASSPATH", classpath.buildClasspath());
     env.put("LANG", "en_US.UTF-8");
     env.put("LC_ALL", "en_US.UTF-8");
@@ -1056,7 +1272,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     }
     if (!UserGroupInformation.isSecurityEnabled()) {
       String userName = UserGroupInformation.getCurrentUser().getUserName();
-      LOG.debug("Run as user " + userName);
+      LOG.debug("Run as user {}", userName);
       // HADOOP_USER_NAME env is used by UserGroupInformation when log in
       // This env makes AM run as this user
       env.put("HADOOP_USER_NAME", userName);
@@ -1114,7 +1330,8 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
             new Path(remoteConfPath, YarnServiceConstants.YARN_SERVICE_LOG4J_FILENAME);
         copy(conf, localFilePath, remoteFilePath);
         LocalResource localResource =
-            fs.createAmResource(remoteConfPath, LocalResourceType.FILE);
+            fs.createAmResource(remoteConfPath, LocalResourceType.FILE,
+            LocalResourceVisibility.APPLICATION);
         localResources.put(localFilePath.getName(), localResource);
         hasAMLog4j = true;
       } else {
@@ -1150,7 +1367,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       LOG.info("Persisted service " + service.getName() + " at " + appJson);
       return appId;
     } else {
-      LOG.info("Finalize service {} upgrade");
+      LOG.info("Finalize service {} upgrade", serviceName);
       ApplicationId appId = getAppId(serviceName);
       ApplicationReport appReport = yarnClient.getApplicationReport(appId);
       if (StringUtils.isEmpty(appReport.getHost())) {
@@ -1212,7 +1429,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       if (LOG.isDebugEnabled()) {
         if (tokens != null && tokens.length != 0) {
           for (Token<?> token : tokens) {
-            LOG.debug("Got DT: " + token);
+            LOG.debug("Got DT: {}", token);
           }
         }
       }
@@ -1254,31 +1471,21 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       throw new YarnException(e);
     }
 
-    if (keytabURI.getScheme() != null) {
-      switch (keytabURI.getScheme()) {
-      case "hdfs":
-        Path keytabOnhdfs = new Path(keytabURI);
-        if (!fileSystem.getFileSystem().exists(keytabOnhdfs)) {
-          LOG.warn(service.getName() + "'s keytab (principalName = "
-              + principalName + ") doesn't exist at: " + keytabOnhdfs);
-          return;
-        }
-        LocalResource keytabRes = fileSystem.createAmResource(keytabOnhdfs,
-            LocalResourceType.FILE);
-        localResource.put(String.format(YarnServiceConstants.KEYTAB_LOCATION,
-            service.getName()), keytabRes);
-        LOG.info("Adding " + service.getName() + "'s keytab for "
-            + "localization, uri = " + keytabOnhdfs);
-        break;
-      case "file":
-        LOG.info("Using a keytab from localhost: " + keytabURI);
-        break;
-      default:
-        LOG.warn("Unsupported keytab URI scheme " + keytabURI);
-        break;
-      }
+    if ("file".equals(keytabURI.getScheme())) {
+      LOG.info("Using a keytab from localhost: " + keytabURI);
     } else {
-      LOG.warn("Unsupported keytab URI scheme " + keytabURI);
+      Path keytabOnhdfs = new Path(keytabURI);
+      if (!fileSystem.getFileSystem().exists(keytabOnhdfs)) {
+        LOG.warn(service.getName() + "'s keytab (principalName = "
+            + principalName + ") doesn't exist at: " + keytabOnhdfs);
+        return;
+      }
+      LocalResource keytabRes = fileSystem.createAmResource(keytabOnhdfs,
+          LocalResourceType.FILE, LocalResourceVisibility.PRIVATE);
+      localResource.put(String.format(YarnServiceConstants.KEYTAB_LOCATION,
+          service.getName()), keytabRes);
+      LOG.info("Adding " + service.getName() + "'s keytab for "
+          + "localization, uri = " + keytabOnhdfs);
     }
   }
 
@@ -1370,7 +1577,18 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       LOG.info("Service {} does not have an application ID", serviceName);
       return appSpec;
     }
-    ApplicationReport appReport = yarnClient.getApplicationReport(currentAppId);
+    appSpec.setId(currentAppId.toString());
+    ApplicationReport appReport = null;
+    try {
+      appReport = yarnClient.getApplicationReport(currentAppId);
+    } catch (ApplicationNotFoundException e) {
+      LOG.info("application ID {} doesn't exist", currentAppId);
+      return appSpec;
+    }
+    if (appReport == null) {
+      LOG.warn("application ID {} is reported as null", currentAppId);
+      return appSpec;
+    }
     appSpec.setState(convertState(appReport.getYarnApplicationState()));
     ApplicationTimeout lifetime =
         appReport.getApplicationTimeouts().get(ApplicationTimeoutType.LIFETIME);
@@ -1563,4 +1781,5 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       this.principalName = principalName;
     }
   }
+
 }

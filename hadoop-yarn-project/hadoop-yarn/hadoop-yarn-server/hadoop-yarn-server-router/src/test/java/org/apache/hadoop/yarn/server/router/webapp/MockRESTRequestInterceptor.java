@@ -55,6 +55,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -114,6 +116,12 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
     return new NodeInfo();
   }
 
+  @Override
+  public ResourceInfo updateNodeResource(HttpServletRequest hsr, String nodeId,
+      ResourceOptionInfo resourceOption) throws AuthorizationException {
+    return new ResourceInfo();
+  }
+
   @SuppressWarnings("checkstyle:parameternumber")
   @Override
   public AppsInfo getApps(HttpServletRequest hsr, String stateQuery,
@@ -125,13 +133,16 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
   }
 
   @Override
-  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId) {
+  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
+      String groupBy) {
     return new ActivitiesInfo();
   }
 
   @Override
   public AppActivitiesInfo getAppActivities(HttpServletRequest hsr,
-      String appId, String time) {
+      String appId, String time, Set<String> requestPriorities,
+      Set<String> allocationRequestIds, String groupBy, String limit,
+      Set<String> actions, boolean summarize) {
     return new AppActivitiesInfo();
   }
 
@@ -350,4 +361,9 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
     return new ContainerInfo();
   }
 
+  @Override
+  public Response signalToContainer(String containerId, String command,
+      HttpServletRequest req) {
+    return Response.status(Status.OK).build();
+  }
 }

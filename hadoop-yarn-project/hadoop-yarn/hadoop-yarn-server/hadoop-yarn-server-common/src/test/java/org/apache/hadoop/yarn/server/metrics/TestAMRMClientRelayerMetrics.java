@@ -141,17 +141,11 @@ public class TestAMRMClientRelayerMetrics {
 
     this.homeRelayer = new AMRMClientRelayer(this.mockAMS,
         ApplicationId.newInstance(0, 0), this.homeID);
-    this.homeRelayer.init(conf);
-    this.homeRelayer.start();
-
     this.homeRelayer.registerApplicationMaster(
         RegisterApplicationMasterRequest.newInstance("", 0, ""));
 
     this.uamRelayer = new AMRMClientRelayer(this.mockAMS,
         ApplicationId.newInstance(0, 0), this.uamID);
-    this.uamRelayer.init(conf);
-    this.uamRelayer.start();
-
     this.uamRelayer.registerApplicationMaster(
         RegisterApplicationMasterRequest.newInstance("", 0, ""));
 
@@ -305,10 +299,12 @@ public class TestAMRMClientRelayerMetrics {
     List<UpdatedContainer> updated = new ArrayList<>();
     updated.add(UpdatedContainer
         .newInstance(ContainerUpdateType.PROMOTE_EXECUTION_TYPE, Container
-            .newInstance(createContainerId(2), null, null, null, null, null)));
+            .newInstance(createContainerId(2), null, null, null,
+                null, null)));
     updated.add(UpdatedContainer
         .newInstance(ContainerUpdateType.PROMOTE_EXECUTION_TYPE, Container
-            .newInstance(createContainerId(5), null, null, null, null, null)));
+            .newInstance(createContainerId(5), null, null, null,
+                null, null)));
     this.mockAMS.response.setUpdatedContainers(updated);
 
     this.homeRelayer.allocate(getAllocateRequest());

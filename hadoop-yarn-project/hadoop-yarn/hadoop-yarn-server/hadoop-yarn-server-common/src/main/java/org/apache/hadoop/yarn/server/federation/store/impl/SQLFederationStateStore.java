@@ -436,10 +436,8 @@ public class SQLFederationStateStore implements FederationStateStore {
             "SubCluster " + subClusterId.toString() + " does not exist";
         FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Got the information about the specified SubCluster "
-            + subClusterInfo.toString());
-      }
+      LOG.debug("Got the information about the specified SubCluster {}",
+          subClusterInfo);
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
       FederationStateStoreUtils.logAndThrowRetriableException(LOG,
@@ -700,10 +698,8 @@ public class SQLFederationStateStore implements FederationStateStore {
         FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Got the information about the specified application  "
-            + request.getApplicationId() + ". The AM is running in " + homeRM);
-      }
+      LOG.debug("Got the information about the specified application {}."
+          + " The AM is running in {}", request.getApplicationId(), homeRM);
 
       FederationStateStoreClientMetrics
           .succeededStateStoreCall(stopTime - startTime);
@@ -852,10 +848,8 @@ public class SQLFederationStateStore implements FederationStateStore {
         subClusterPolicyConfiguration =
             SubClusterPolicyConfiguration.newInstance(request.getQueue(),
                 cstmt.getString(2), ByteBuffer.wrap(cstmt.getBytes(3)));
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Selected from StateStore the policy for the queue: "
-              + subClusterPolicyConfiguration.toString());
-        }
+        LOG.debug("Selected from StateStore the policy for the queue: {}",
+            subClusterPolicyConfiguration);
       } else {
         LOG.warn("Policy for queue: {} does not exist.", request.getQueue());
         return null;

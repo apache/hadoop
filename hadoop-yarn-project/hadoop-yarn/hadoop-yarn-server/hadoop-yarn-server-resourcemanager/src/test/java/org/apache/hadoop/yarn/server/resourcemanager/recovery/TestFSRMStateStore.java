@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -26,8 +27,8 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -54,7 +55,8 @@ import org.junit.Test;
 
 public class TestFSRMStateStore extends RMStateStoreTestBase {
 
-  public static final Log LOG = LogFactory.getLog(TestFSRMStateStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestFSRMStateStore.class);
 
   private TestFSRMStateStoreTester fsTester;
 
@@ -124,8 +126,8 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
           YarnConfiguration.YARN_INTERMEDIATE_DATA_ENCRYPTION, true);
       }
       this.store = new TestFileSystemRMStore(conf);
-      Assert.assertEquals(store.getNumRetries(), 8);
-      Assert.assertEquals(store.getRetryInterval(), 900L);
+      assertThat(store.getNumRetries()).isEqualTo(8);
+      assertThat(store.getRetryInterval()).isEqualTo(900L);
       Assert.assertTrue(store.fs.getConf() == store.fsConf);
       FileSystem previousFs = store.fs;
       store.startInternal();

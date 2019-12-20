@@ -354,6 +354,14 @@ public class TestProvidedImpl {
   }
 
   @Test
+  public void testReserved() throws Exception {
+    for (FsVolumeSpi vol : providedVolumes) {
+      // the reserved space for provided volumes should be 0.
+      assertEquals(0, ((FsVolumeImpl) vol).getReserved());
+    }
+  }
+
+  @Test
   public void testProvidedVolumeImpl() throws IOException {
 
     assertEquals(NUM_LOCAL_INIT_VOLUMES + NUM_PROVIDED_INIT_VOLUMES,

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -38,6 +39,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
@@ -49,6 +52,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
@@ -58,6 +62,7 @@ import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -170,6 +175,39 @@ public class TestRMAdminService {
       fail("Using localConfigurationProvider. Should not get any exception.");
     }
   }
+
+
+  @Test
+  public void testFileSystemCloseWithFileSystemBasedConfigurationProvider()
+      throws Exception {
+    MiniDFSCluster hdfsCluster = null;
+    try {
+      HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+      hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
+          .numDataNodes(1).build();
+      FileSystem fs1 = hdfsCluster.getFileSystem();
+      ConfigurationProvider configurationProvider = new
+          FileSystemBasedConfigurationProvider();
+      configurationProvider.init(hdfsConfig);
+      fs1.close();
+      try {
+        configurationProvider.getConfigurationInputStream(hdfsConfig,
+            "yarn-site.xml");
+      } catch (IOException e) {
+        if (e.getMessage().contains("Filesystem closed")) {
+          fail("FileSystemBasedConfigurationProvider failed to handle " +
+              "FileSystem close");
+        } else {
+          fail("Should not get any exceptions");
+        }
+      }
+    } finally {
+      if (hdfsCluster != null) {
+        hdfsCluster.shutdown();
+      }
+    }
+  }
+
 
   @Test
   public void testAdminRefreshQueuesWithFileSystemBasedConfigurationProvider()
@@ -608,7 +646,7 @@ public class TestRMAdminService {
         Assert.assertEquals(accessList.getAclString(),
             aclString);
       } else {
-        Assert.assertEquals(accessList.getAclString(), "*");
+        assertThat(accessList.getAclString()).isEqualTo("*");
       }
     }
   }
@@ -1585,6 +1623,16 @@ public class TestRMAdminService {
     Mockito.verify(spiedAttributesManager, Mockito.times(1))
         .addNodeAttributes(Mockito.anyMap());
 
+    // add attributes for later removals
+    request =
+        NodesToAttributesMappingRequest
+            .newInstance(AttributeMappingOperationType.ADD,
+                ImmutableList.of(NodeToAttributes.newInstance("host4",
+                    ImmutableList.of(NodeAttribute.newInstance(
+                        NodeAttribute.PREFIX_CENTRALIZED, "x",
+                        NodeAttributeType.STRING, "dfasdf")))),
+                true);
+    rm.adminService.mapAttributesToNodes(request);
     request =
         NodesToAttributesMappingRequest
             .newInstance(AttributeMappingOperationType.REMOVE,
@@ -1600,6 +1648,24 @@ public class TestRMAdminService {
     }
     Mockito.verify(spiedAttributesManager, Mockito.times(1))
         .removeNodeAttributes(Mockito.anyMap());
+
+    // Assert node to attributes mappings are empty.
+    Assert.assertTrue("Attributes of host4 should be empty",
+        rm.getRMContext().getNodeAttributesManager()
+            .getAttributesForNode("host4").isEmpty());
+    // remove non existing attributes.
+    request = NodesToAttributesMappingRequest
+        .newInstance(AttributeMappingOperationType.REMOVE, ImmutableList
+            .of(NodeToAttributes.newInstance("host4", ImmutableList
+                .of(NodeAttribute
+                    .newInstance(NodeAttribute.PREFIX_CENTRALIZED, "x",
+                        NodeAttributeType.STRING, "dfasdf")))), true);
+    try {
+      rm.adminService.mapAttributesToNodes(request);
+      fail("Should have failed for non exists attribute");
+    } catch (Exception ex) {
+      assertTrue("Exception expected if attributes does not exist", true);
+    }
 
     request =
         NodesToAttributesMappingRequest

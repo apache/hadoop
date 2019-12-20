@@ -41,8 +41,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.Applicatio
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.Before;
@@ -54,7 +54,8 @@ import static org.mockito.Mockito.when;
 
 public class TestZKRMStateStorePerf extends RMStateStoreTestBase
     implements Tool {
-  public static final Log LOG = LogFactory.getLog(TestZKRMStateStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestZKRMStateStore.class);
 
   final String version = "0.1";
 

@@ -153,13 +153,18 @@ mvn -T 1C clean verify
 ```
 
 It's also possible to execute multiple test suites in parallel by passing the
-`parallel-tests` property on the command line.  The tests spend most of their
+`parallel-tests=wasb|abfs|both` property on the command line.  The tests spend most of their
 time blocked on network I/O, so running in parallel tends to
 complete full test runs faster.
 
 ```bash
-mvn -T 1C -Dparallel-tests clean verify
+mvn -T 1C -Dparallel-tests=both clean verify
+mvn -T 1C -Dparallel-tests=wasb clean verify
+mvn -T 1C -Dparallel-tests=abfs clean verify
 ```
+`-Dparallel-tests=wasb` runs the WASB related integration tests from azure directory<br/>
+`-Dparallel-tests=abfs` runs the ABFS related integration tests from azurebfs directory<br/>
+`-Dparallel-tests=both` runs all the integration tests from both azure and azurebfs directory<br/>
 
 Some tests must run with exclusive access to the storage container, so even with the
 `parallel-tests` property, several test suites will run in serial in a separate
@@ -733,6 +738,61 @@ hierarchical namespace enabled, and set the following configuration settings:
      <description>AAD client id.</description>
    </property>
   -->
+
+  <!--
+    <property>
+        <name>fs.azure.identity.transformer.enable.short.name</name>
+        <value>true/false</value>
+        <description>
+          User principal names (UPNs) have the format “{alias}@{domain}”.
+          If true, only {alias} is included when a UPN would otherwise appear in the output
+          of APIs like getFileStatus, getOwner, getAclStatus, etc, default is false.
+        </description>
+    </property>
+
+    <property>
+        <name>fs.azure.identity.transformer.domain.name</name>
+        <value>domain name of the user's upn</value>
+        <description>
+          If the domain name is specified and “fs.azure.identity.transformer.enable.short.name”
+          is true, then the {alias} part of a UPN can be specified as input to APIs like setOwner,
+          setAcl, modifyAclEntries, or removeAclEntries, and it will be transformed to a UPN by appending @ and the domain specified by
+          this configuration property.
+        </description>
+    </property>
+
+    <property>
+        <name>fs.azure.identity.transformer.service.principal.id</name>
+        <value>service principal object id</value>
+        <description>
+          An Azure Active Directory object ID (oid) used as the replacement for names contained
+          in the list specified by “fs.azure.identity.transformer.service.principal.substitution.list”.
+          Notice that instead of setting oid, you can also set $superuser here.
+        </description>
+    </property>
+
+    <property>
+        <name>fs.azure.identity.transformer.skip.superuser.replacement</name>
+        <value>true/false</value>
+        <description>
+          If false, “$superuser” is replaced with the current user when it appears as the owner
+          or owning group of a file or directory. The default is false.
+        </description>
+    </property>
+
+    <property>
+        <name>fs.azure.identity.transformer.service.principal.substitution.list</name>
+        <value>mapred,hdfs,yarn,hive,tez</value>
+        <description>
+           A comma separated list of names to be replaced with the service principal ID specified by
+           “fs.azure.identity.transformer.service.principal.id”.  This substitution occurs
+           when setOwner, setAcl, modifyAclEntries, or removeAclEntries are invoked with identities
+           contained in the substitution list. Notice that when in non-secure cluster, asterisk symbol *
+           can be used to match all user/group.
+        </description>
+    </property>
+   -->
+
 ```
 
 If running tests against an endpoint that uses the URL format

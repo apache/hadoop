@@ -18,35 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import javax.xml.parsers.ParserConfigurationException;
-
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -73,8 +46,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions
-        .SchedulerInvalidResoureRequestException;
+import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
@@ -83,9 +55,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.NodeManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.DefaultPlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -101,8 +78,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
-
-
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
@@ -115,7 +90,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerEx
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueuePlacementRule.Default;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueuePlacementPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueuePlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileWriter;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.UserSettings;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -127,9 +111,30 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.xml.sax.SAXException;
 
-import com.google.common.collect.Sets;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @SuppressWarnings("unchecked")
 public class TestFairScheduler extends FairSchedulerTestBase {
@@ -343,27 +348,18 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     int tooHighQueueAllocation = RM_SCHEDULER_MAXIMUM_ALLOCATION_MB_VALUE +1;
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("  <queue name=\"queueA\">");
-    out.println(
-        "   <maxContainerAllocation>512 mb 1 vcores</maxContainerAllocation>");
-    out.println("  </queue>");
-    out.println("  <queue name=\"queueB\">");
-    out.println("  </queue>");
-    out.println("  <queue name=\"queueC\">");
-    out.println(
-        "   <maxContainerAllocation>2048 mb 3 vcores</maxContainerAllocation>");
-    out.println("    <queue name=\"queueD\">");
-    out.println("    </queue>");
-    out.println("  </queue>");
-    out.println("  <queue name=\"queueE\">");
-    out.println("    <maxContainerAllocation>" + tooHighQueueAllocation
-        + " mb 1 vcores</maxContainerAllocation>");
-    out.println("  </queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .maxContainerAllocation("512 mb 1 vcores").build())
+        .addQueue(new AllocationFileQueue.Builder("queueB").build())
+        .addQueue(new AllocationFileQueue.Builder("queueC")
+            .maxContainerAllocation("2048 mb 3 vcores")
+            .subQueue(new AllocationFileQueue.Builder("queueD").build())
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queueE")
+            .maxContainerAllocation(tooHighQueueAllocation + " mb 1 vcores")
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
 
@@ -399,17 +395,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     int queueMaxAllocation = 4096;
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println(" <queue name=\"queueA\">");
-    out.println("  <maxContainerAllocation>" + queueMaxAllocation
-        + " mb 1 vcores" + "</maxContainerAllocation>");
-    out.println(" </queue>");
-    out.println(" <queue name=\"queueB\">");
-    out.println(" </queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .maxContainerAllocation(queueMaxAllocation + " mb 1 vcores")
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queueB").build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -431,8 +422,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   private void allocateAppAttempt(String queueName, int id, int memorySize) {
     ApplicationAttemptId id11 = createAppAttemptId(id, id);
     createMockRMApp(id11);
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext(queueName);
+
     scheduler.addApplication(id11.getApplicationId(), queueName, "user1",
-        false);
+        false, placementCtx);
     scheduler.addApplicationAttempt(id11, false, false);
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
     ResourceRequest request1 =
@@ -454,19 +448,17 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // set queueA and queueB maxResources,
     // the sum of queueA and queueB maxResources is more than
     // Integer.MAX_VALUE.
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queueA\">");
-    out.println("<maxResources>1073741824 mb 1000 vcores</maxResources>");
-    out.println("<weight>.25</weight>");
-    out.println("</queue>");
-    out.println("<queue name=\"queueB\">");
-    out.println("<maxResources>1073741824 mb 1000 vcores</maxResources>");
-    out.println("<weight>.75</weight>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .maxResources("1073741824 mb 1000 vcores")
+            .weight(.25f)
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queueB")
+            .maxResources("1073741824 mb 1000 vcores")
+            .weight(.75f)
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -508,18 +500,16 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   public void testFairShareWithLowMaxResources() throws IOException {
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
 
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("  <queue name=\"queueA\">");
-    out.println("    <maxResources>1024 mb 1 vcores</maxResources>");
-    out.println("    <weight>0.75</weight>");
-    out.println("  </queue>");
-    out.println("  <queue name=\"queueB\">");
-    out.println("    <maxResources>3072 mb 3 vcores</maxResources>");
-    out.println("    <weight>0.25</weight>");
-    out.println("  </queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .maxResources("1024 mb 1 vcores")
+            .weight(.75f)
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queueB")
+            .maxResources("3072 mb 3 vcores")
+            .weight(.25f)
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     scheduler.init(conf);
@@ -578,15 +568,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
    */
   @Test
   public void testChildMaxResources() throws IOException {
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("  <queue name=\"queueA\" type=\"parent\">");
-    out.println("    <maxChildResources>2048mb,2vcores</maxChildResources>");
-    out.println("  </queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .parent(true)
+            .maxChildResources("2048mb,2vcores")
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     scheduler.init(conf);
@@ -610,14 +597,14 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     NodeUpdateSchedulerEvent nodeEvent = new NodeUpdateSchedulerEvent(node1);
 
+    // Send 4 node heartbeats, this should be enough to allocate 4 containers
+    // As we have 2 queues with capacity: 2GB,2cores, we could only have
+    // 4 containers at most
     scheduler.handle(nodeEvent);
     scheduler.handle(nodeEvent);
     scheduler.handle(nodeEvent);
     scheduler.handle(nodeEvent);
-    scheduler.handle(nodeEvent);
-    scheduler.handle(nodeEvent);
-    scheduler.handle(nodeEvent);
-    scheduler.handle(nodeEvent);
+    drainEventsOnRM();
 
     // Apps should be running with 2 containers
     assertEquals("App 1 is not running with the correct number of containers",
@@ -625,22 +612,33 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals("App 2 is not running with the correct number of containers",
         2, scheduler.getSchedulerApp(attId2).getLiveContainers().size());
 
-    out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("  <queue name=\"queueA\" type=\"parent\">");
-    out.println("    <maxChildResources>3072mb,3vcores</maxChildResources>");
-    out.println("  </queue>");
-    out.println("</allocations>");
-    out.close();
+    //ensure that a 5th node heartbeat does not allocate more containers
+    scheduler.handle(nodeEvent);
+    drainEventsOnRM();
+
+    // Apps should be running with 2 containers
+    assertEquals("App 1 is not running with the correct number of containers",
+        2, scheduler.getSchedulerApp(attId1).getLiveContainers().size());
+    assertEquals("App 2 is not running with the correct number of containers",
+        2, scheduler.getSchedulerApp(attId2).getLiveContainers().size());
+
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .parent(true)
+            .maxChildResources("3072mb,3vcores")
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.reinitialize(conf, resourceManager.getRMContext());
-
     scheduler.update();
+
+    // Send 2 node heartbeats, this should be enough to allocate 2
+    // more containers.
+    // As we have 2 queues with capacity: 3GB,3cores, we could only have
+    // 6 containers at most
     scheduler.handle(nodeEvent);
     scheduler.handle(nodeEvent);
-    scheduler.handle(nodeEvent);
-    scheduler.handle(nodeEvent);
+    drainEventsOnRM();
 
     // Apps should be running with 3 containers now
     assertEquals("App 1 is not running with the correct number of containers",
@@ -648,19 +646,23 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals("App 2 is not running with the correct number of containers",
         3, scheduler.getSchedulerApp(attId2).getLiveContainers().size());
 
-    out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("  <queue name=\"queueA\" type=\"parent\">");
-    out.println("    <maxChildResources>1024mb,1vcores</maxChildResources>");
-    out.println("  </queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .parent(true)
+            .maxChildResources("1024mb,1vcores")
+            .build())
+        .writeToFile(ALLOC_FILE);
+
+    //ensure that a 7th node heartbeat does not allocate more containers
+    scheduler.handle(nodeEvent);
+    drainEventsOnRM();
+    assertEquals(6, scheduler.getRootQueueMetrics().getAllocatedContainers());
 
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     scheduler.update();
     scheduler.handle(nodeEvent);
+    drainEventsOnRM();
 
     // Apps still should be running with 3 containers because we don't preempt
     assertEquals("App 1 is not running with the correct number of containers",
@@ -669,21 +671,23 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         3, scheduler.getSchedulerApp(attId2).getLiveContainers().size());
   }
 
+  private void drainEventsOnRM() {
+    if (resourceManager instanceof MockRM) {
+      ((MockRM) resourceManager).drainEvents();
+    }
+  }
+
   @Test
   public void testFairShareWithZeroWeight() throws IOException {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     // set queueA and queueB weight zero.
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queueA\">");
-    out.println("<weight>0.0</weight>");
-    out.println("</queue>");
-    out.println("<queue name=\"queueB\">");
-    out.println("<weight>0.0</weight>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .weight(0.0f).build())
+        .addQueue(new AllocationFileQueue.Builder("queueB")
+            .weight(0.0f).build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -721,26 +725,23 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   @Test
   public void testComputeMaxAMResource() throws IOException {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queueFSZeroWithMax\">");
-    out.println("<weight>0</weight>");
-    out.println("<maxAMShare>0.5</maxAMShare>");
-    out.println("<maxResources>4096 mb 4 vcores</maxResources>");
-    out.println("</queue>");
-    out.println("<queue name=\"queueFSZeroWithAVL\">");
-    out.println("<weight>0.0</weight>");
-    out.println("<maxAMShare>0.5</maxAMShare>");
-    out.println("</queue>");
-    out.println("<queue name=\"queueFSNonZero\">");
-    out.println("<weight>1</weight>");
-    out.println("<maxAMShare>0.5</maxAMShare>");
-    out.println("</queue>");
-    out.println("<defaultQueueSchedulingPolicy>drf" +
-        "</defaultQueueSchedulingPolicy>");
-    out.println("</allocations>");
-    out.close();
+
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueFSZeroWithMax")
+            .weight(0)
+            .maxAMShare(0.5)
+            .maxResources("4096 mb 4 vcores")
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queueFSZeroWithAVL")
+            .weight(0.0f)
+            .maxAMShare(0.5)
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queueFSNonZero")
+            .weight(1)
+            .maxAMShare(0.5)
+            .build())
+        .drfDefaultQueueSchedulingPolicy()
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -855,19 +856,16 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     // set queueA and queueB weight zero.
     // set queueA and queueB minResources 1.
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queueA\">");
-    out.println("<minResources>1 mb 1 vcores</minResources>");
-    out.println("<weight>0.0</weight>");
-    out.println("</queue>");
-    out.println("<queue name=\"queueB\">");
-    out.println("<minResources>1 mb 1 vcores</minResources>");
-    out.println("<weight>0.0</weight>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .weight(0)
+            .minResources("1 mb 1 vcores")
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queueB")
+            .minResources("1 mb 1 vcores")
+            .weight(0.0f)
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -905,19 +903,16 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     // set queueA and queueB weight 0.5.
     // set queueA and queueB minResources 1024.
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queueA\">");
-    out.println("<minResources>1024 mb 1 vcores</minResources>");
-    out.println("<weight>0.5</weight>");
-    out.println("</queue>");
-    out.println("<queue name=\"queueB\">");
-    out.println("<minResources>1024 mb 1 vcores</minResources>");
-    out.println("<weight>0.5</weight>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .weight(0.5f)
+            .minResources("1024 mb 1 vcores")
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queueB")
+            .weight(0.5f)
+            .minResources("1024 mb 1 vcores")
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -953,17 +948,14 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   public void testQueueInfo() throws IOException {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queueA\">");
-    out.println("<weight>.25</weight>");
-    out.println("</queue>");
-    out.println("<queue name=\"queueB\">");
-    out.println("<weight>.75</weight>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .weight(0.25f)
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queueB")
+            .weight(0.75f)
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -1384,8 +1376,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
             createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
     createMockRMApp(attemptId);
 
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext("queue1");
     scheduler.addApplication(attemptId.getApplicationId(), "queue1", "user1",
-            false);
+            false, placementCtx);
     scheduler.addApplicationAttempt(attemptId, false, false);
     List<ResourceRequest> asks = new ArrayList<ResourceRequest>();
     asks.add(createResourceRequest(2048, node2.getRackName(), 1, 1, false));
@@ -1477,19 +1471,15 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   public void testContainerReservationAttemptExceedingQueueMax()
       throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\">");
-    out.println("<queue name=\"queue1\">");
-    out.println("<maxResources>2048mb,5vcores</maxResources>");
-    out.println("</queue>");
-    out.println("<queue name=\"queue2\">");
-    out.println("<maxResources>2048mb,10vcores</maxResources>");
-    out.println("</queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(new AllocationFileQueue.Builder("queue1")
+            .maxResources("2048mb,5vcores").build())
+            .subQueue(new AllocationFileQueue.Builder("queue2")
+                .maxResources("2048mb,10vcores").build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -1539,22 +1529,20 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   public void testRequestAMResourceInZeroFairShareQueue() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queue1\">");
-    out.println("<weight>0.0</weight>");
-    out.println("<maxResources>4096mb,10vcores</maxResources>");
-    out.println("<maxAMShare>0.5</maxAMShare>");
-    out.println("</queue>");
-    out.println("<queue name=\"queue2\">");
-    out.println("<weight>2.0</weight>");
-    out.println("</queue>");
-    out.println("<queue name=\"queue3\">");
-    out.println("<weight>0.000001</weight>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queue1")
+            .weight(0)
+            .maxAMShare(0.5)
+            .maxResources("4096mb,10vcores")
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queue2")
+            .weight(2.0f)
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queue3")
+            .weight(0.000001f)
+            .build())
+        .drfDefaultQueueSchedulingPolicy()
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -1612,19 +1600,15 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     @Test (timeout = 500000)
   public void testContainerReservationNotExceedingQueueMax() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\">");
-    out.println("<queue name=\"queue1\">");
-    out.println("<maxResources>3072mb,10vcores</maxResources>");
-    out.println("</queue>");
-    out.println("<queue name=\"queue2\">");
-    out.println("<maxResources>2048mb,10vcores</maxResources>");
-    out.println("</queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(new AllocationFileQueue.Builder("queue1")
+                .maxResources("3072mb,10vcores").build())
+            .subQueue(new AllocationFileQueue.Builder("queue2")
+                .maxResources("2048mb,10vcores").build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -1673,19 +1657,14 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         getCurrentReservation().getMemorySize());
 
     // Now reduce max Resources of queue1 down to 2048
-    out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\">");
-    out.println("<queue name=\"queue1\">");
-    out.println("<maxResources>2048mb,10vcores</maxResources>");
-    out.println("</queue>");
-    out.println("<queue name=\"queue2\">");
-    out.println("<maxResources>2048mb,10vcores</maxResources>");
-    out.println("</queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(new AllocationFileQueue.Builder("queue1")
+                .maxResources("2048mb,10vcores").build())
+            .subQueue(new AllocationFileQueue.Builder("queue2")
+                .maxResources("2048mb,10vcores").build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
@@ -1706,13 +1685,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   public void testReservationThresholdGatesReservations() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<defaultQueueSchedulingPolicy>drf" +
-        "</defaultQueueSchedulingPolicy>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .drfDefaultQueueSchedulingPolicy()
+        .writeToFile(ALLOC_FILE);
 
     // Set threshold to 2 * 1024 ==> 2048 MB & 2 * 1 ==> 2 vcores (test will
     // use vcores)
@@ -1794,10 +1769,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // only default queue
     assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
 
-    // submit app with empty queue
+    // Submit app with empty queue
+    // Submit fails before we reach the placement check.
     ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
     AppAddedSchedulerEvent appAddedEvent =
-        new AppAddedSchedulerEvent(appAttemptId.getApplicationId(), "", "user1");
+        new AppAddedSchedulerEvent(appAttemptId.getApplicationId(), "",
+            "user1");
     scheduler.handle(appAddedEvent);
 
     // submission rejected
@@ -1815,20 +1792,24 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // only default queue
     assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
 
-    // submit app with queue name (.A)
+    // Submit app with queue name (.A)
+    // Submit fails before we reach the placement check.
     ApplicationAttemptId appAttemptId1 = createAppAttemptId(1, 1);
     AppAddedSchedulerEvent appAddedEvent1 =
-        new AppAddedSchedulerEvent(appAttemptId1.getApplicationId(), ".A", "user1");
+        new AppAddedSchedulerEvent(appAttemptId1.getApplicationId(), ".A",
+            "user1");
     scheduler.handle(appAddedEvent1);
     // submission rejected
     assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
     assertNull(scheduler.getSchedulerApp(appAttemptId1));
     assertEquals(0, resourceManager.getRMContext().getRMApps().size());
 
-    // submit app with queue name (A.)
+    // Submit app with queue name (A.)
+    // Submit fails before we reach the placement check.
     ApplicationAttemptId appAttemptId2 = createAppAttemptId(2, 1);
     AppAddedSchedulerEvent appAddedEvent2 =
-        new AppAddedSchedulerEvent(appAttemptId2.getApplicationId(), "A.", "user1");
+        new AppAddedSchedulerEvent(appAttemptId2.getApplicationId(), "A.",
+            "user1");
     scheduler.handle(appAddedEvent2);
     // submission rejected
     assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
@@ -1836,9 +1817,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals(0, resourceManager.getRMContext().getRMApps().size());
 
     // submit app with queue name (A.B)
+    // Submit does not fail we must have a placement context.
     ApplicationAttemptId appAttemptId3 = createAppAttemptId(3, 1);
     AppAddedSchedulerEvent appAddedEvent3 =
-        new AppAddedSchedulerEvent(appAttemptId3.getApplicationId(), "A.B", "user1");
+        new AppAddedSchedulerEvent(appAttemptId3.getApplicationId(), "A.B",
+            "user1", new ApplicationPlacementContext("A.B"));
     scheduler.handle(appAddedEvent3);
     // submission accepted
     assertEquals(2, scheduler.getQueueManager().getLeafQueues().size());
@@ -1847,137 +1830,16 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testAssignToQueue() throws Exception {
-    conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-
-    RMApp rmApp1 = new MockRMApp(0, 0, RMAppState.NEW);
-    RMApp rmApp2 = new MockRMApp(1, 1, RMAppState.NEW);
-    
-    FSLeafQueue queue1 = scheduler.assignToQueue(rmApp1, "default", "asterix");
-    FSLeafQueue queue2 = scheduler.assignToQueue(rmApp2, "notdefault", "obelix");
-    
-    // assert FSLeafQueue's name is the correct name is the one set in the RMApp
-    assertEquals(rmApp1.getQueue(), queue1.getName());
-    assertEquals("root.asterix", rmApp1.getQueue());
-    assertEquals(rmApp2.getQueue(), queue2.getName());
-    assertEquals("root.notdefault", rmApp2.getQueue());
-  }
-
-  @Test
-  public void testAssignToBadDefaultQueue() throws Exception {
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queuePlacementPolicy>");
-    out.println("<rule name=\"specified\" create=\"false\" />");
-    out.println("<rule name=\"default\" create=\"false\" />");
-    out.println("</queuePlacementPolicy>");
-    out.println("</allocations>");
-    out.close();
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-
-    RMApp rmApp1 = new MockRMApp(0, 0, RMAppState.NEW);
-
-    try {
-      FSLeafQueue queue1 = scheduler.assignToQueue(rmApp1, "default",
-          "asterix");
-    } catch (IllegalStateException ise) {
-      fail("Bad queue placement policy terminal rule should not throw " +
-          "exception ");
-    }
-  }
-
-  @Test
-  public void testAssignToNonLeafQueueReturnsNull() throws Exception {
-    conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-
-    scheduler.getQueueManager().getLeafQueue("root.child1.granchild", true);
-    scheduler.getQueueManager().getLeafQueue("root.child2", true);
-
-    RMApp rmApp1 = new MockRMApp(0, 0, RMAppState.NEW);
-    RMApp rmApp2 = new MockRMApp(1, 1, RMAppState.NEW);
-
-    // Trying to assign to non leaf queue would return null
-    assertNull(scheduler.assignToQueue(rmApp1, "root.child1", "tintin"));
-    assertNotNull(scheduler.assignToQueue(rmApp2, "root.child2", "snowy"));
-  }
-  
-  @Test
-  public void testQueuePlacementWithPolicy() throws Exception {
-    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
-        SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-
-    ApplicationAttemptId appId;
-
-    List<QueuePlacementRule> rules = new ArrayList<QueuePlacementRule>();
-    rules.add(new QueuePlacementRule.Specified().initialize(true, null));
-    rules.add(new QueuePlacementRule.User().initialize(false, null));
-    rules.add(new QueuePlacementRule.PrimaryGroup().initialize(false, null));
-    rules.add(new QueuePlacementRule.SecondaryGroupExistingQueue().initialize(false, null));
-    rules.add(new QueuePlacementRule.Default().initialize(true, null));
-    Set<String> queues = Sets.newHashSet("root.user1", "root.user3group",
-        "root.user4subgroup1", "root.user4subgroup2" , "root.user5subgroup2");
-    Map<FSQueueType, Set<String>> configuredQueues = new HashMap<FSQueueType, Set<String>>();
-    configuredQueues.put(FSQueueType.LEAF, queues);
-    configuredQueues.put(FSQueueType.PARENT, new HashSet<String>());
-    scheduler.getAllocationConfiguration().placementPolicy =
-        new QueuePlacementPolicy(rules, configuredQueues, conf);
-    appId = createSchedulingRequest(1024, "somequeue", "user1");
-    assertEquals("root.somequeue", scheduler.getSchedulerApp(appId).getQueueName());
-    appId = createSchedulingRequest(1024, "default", "user1");
-    assertEquals("root.user1", scheduler.getSchedulerApp(appId).getQueueName());
-    appId = createSchedulingRequest(1024, "default", "user3");
-    assertEquals("root.user3group", scheduler.getSchedulerApp(appId).getQueueName());
-    appId = createSchedulingRequest(1024, "default", "user4");
-    assertEquals("root.user4subgroup1", scheduler.getSchedulerApp(appId).getQueueName());
-    appId = createSchedulingRequest(1024, "default", "user5");
-    assertEquals("root.user5subgroup2", scheduler.getSchedulerApp(appId).getQueueName());
-    appId = createSchedulingRequest(1024, "default", "otheruser");
-    assertEquals("root.default", scheduler.getSchedulerApp(appId).getQueueName());
-    
-    // test without specified as first rule
-    rules = new ArrayList<QueuePlacementRule>();
-    rules.add(new QueuePlacementRule.User().initialize(false, null));
-    rules.add(new QueuePlacementRule.Specified().initialize(true, null));
-    rules.add(new QueuePlacementRule.Default().initialize(true, null));
-    scheduler.getAllocationConfiguration().placementPolicy =
-        new QueuePlacementPolicy(rules, configuredQueues, conf);
-    appId = createSchedulingRequest(1024, "somequeue", "user1");
-    assertEquals("root.user1", scheduler.getSchedulerApp(appId).getQueueName());
-    appId = createSchedulingRequest(1024, "somequeue", "otheruser");
-    assertEquals("root.somequeue", scheduler.getSchedulerApp(appId).getQueueName());
-    appId = createSchedulingRequest(1024, "default", "otheruser");
-    assertEquals("root.default", scheduler.getSchedulerApp(appId).getQueueName());
-  }
-
-  @Test
   public void testFairShareWithMinAlloc() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queueA\">");
-    out.println("<minResources>1024mb,0vcores</minResources>");
-    out.println("</queue>");
-    out.println("<queue name=\"queueB\">");
-    out.println("<minResources>2048mb,0vcores</minResources>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .minResources("1024mb,0vcores").build())
+        .addQueue(new AllocationFileQueue.Builder("queueB")
+            .minResources("2048mb,0vcores")
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -2007,58 +1869,26 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       }
     }
   }
-  
-  @Test
-  public void testNestedUserQueue() throws IOException {
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
-        SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"user1group\" type=\"parent\">");
-    out.println("<minResources>1024mb,0vcores</minResources>");
-    out.println("</queue>");
-    out.println("<queuePlacementPolicy>");
-    out.println("<rule name=\"specified\" create=\"false\" />");
-    out.println("<rule name=\"nestedUserQueue\">");
-    out.println("     <rule name=\"primaryGroup\" create=\"false\" />");
-    out.println("</rule>");
-    out.println("<rule name=\"default\" />");
-    out.println("</queuePlacementPolicy>");
-    out.println("</allocations>");
-    out.close();
-
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-    RMApp rmApp1 = new MockRMApp(0, 0, RMAppState.NEW);
-
-    FSLeafQueue user1Leaf = scheduler.assignToQueue(rmApp1, "root.default",
-        "user1");
-
-    assertEquals("root.user1group.user1", user1Leaf.getName());
-  }
 
   @Test
   public void testFairShareAndWeightsInNestedUserQueueRule() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"parentq\" type=\"parent\">");
-    out.println("<minResources>1024mb,0vcores</minResources>");
-    out.println("</queue>");
-    out.println("<queuePlacementPolicy>");
-    out.println("<rule name=\"nestedUserQueue\">");
-    out.println("     <rule name=\"specified\" create=\"false\" />");
-    out.println("</rule>");
-    out.println("<rule name=\"default\" />");
-    out.println("</queuePlacementPolicy>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("parentq")
+            .parent(true)
+            .minResources("1024mb,0vcores")
+            .build())
+        .queuePlacementPolicy(new AllocationFileQueuePlacementPolicy()
+            .addRule(new AllocationFileQueuePlacementRule(
+                AllocationFileQueuePlacementRule.RuleName.NESTED)
+                .addNestedRule(
+                    new AllocationFileQueuePlacementRule(
+                        AllocationFileQueuePlacementRule.RuleName.SPECIFIED)
+                        .create(false)))
+            .addRule(new AllocationFileQueuePlacementRule(
+                AllocationFileQueuePlacementRule.RuleName.DEFAULT)))
+        .writeToFile(ALLOC_FILE);
 
     RMApp rmApp1 = new MockRMApp(0, 0, RMAppState.NEW);
     RMApp rmApp2 = new MockRMApp(1, 1, RMAppState.NEW);
@@ -2105,21 +1935,16 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   public void testSteadyFairShareWithReloadAndNodeAddRemove() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<defaultQueueSchedulingPolicy>fair</defaultQueueSchedulingPolicy>");
-    out.println("<queue name=\"root\">");
-    out.println("  <schedulingPolicy>drf</schedulingPolicy>");
-    out.println("  <queue name=\"child1\">");
-    out.println("    <weight>1</weight>");
-    out.println("  </queue>");
-    out.println("  <queue name=\"child2\">");
-    out.println("    <weight>1</weight>");
-    out.println("  </queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .fairDefaultQueueSchedulingPolicy()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .schedulingPolicy("drf")
+            .subQueue(new AllocationFileQueue.Builder("child1")
+                .weight(1).build())
+            .subQueue(new AllocationFileQueue.Builder("child2")
+                .weight(1).build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -2147,24 +1972,19 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         .getSteadyFairShare().getMemorySize());
 
     // Reload the allocation configuration file
-    out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<defaultQueueSchedulingPolicy>fair</defaultQueueSchedulingPolicy>");
-    out.println("<queue name=\"root\">");
-    out.println("  <schedulingPolicy>drf</schedulingPolicy>");
-    out.println("  <queue name=\"child1\">");
-    out.println("    <weight>1</weight>");
-    out.println("  </queue>");
-    out.println("  <queue name=\"child2\">");
-    out.println("    <weight>2</weight>");
-    out.println("  </queue>");
-    out.println("  <queue name=\"child3\">");
-    out.println("    <weight>2</weight>");
-    out.println("  </queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .fairDefaultQueueSchedulingPolicy()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .schedulingPolicy("drf")
+            .subQueue(new AllocationFileQueue.Builder("child1")
+                .weight(1).build())
+            .subQueue(new AllocationFileQueue.Builder("child2")
+                .weight(2).build())
+            .subQueue(new AllocationFileQueue.Builder("child3")
+                .weight(2).build())
+            .build())
+        .writeToFile(ALLOC_FILE);
+
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     // The steady fair shares for all queues should be updated
@@ -2208,7 +2028,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Submit one application
     ApplicationAttemptId appAttemptId1 = createAppAttemptId(1, 1);
-    createApplicationWithAMResource(appAttemptId1, "default", "user1", null);
+    createApplicationWithAMResource(appAttemptId1, "user1", "user1", null);
     assertEquals(3072, scheduler.getQueueManager()
         .getLeafQueue("default", false).getSteadyFairShare().getMemorySize());
     assertEquals(3072, scheduler.getQueueManager()
@@ -2229,8 +2049,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // First ask, queue1 requests 1 large (minReqSize * 2).
     ApplicationAttemptId id11 = createAppAttemptId(1, 1);
     createMockRMApp(id11);
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext("root.queue1");
     scheduler.addApplication(id11.getApplicationId(),
-        "root.queue1", "user1", false);
+        "root.queue1", "user1", false, placementCtx);
     scheduler.addApplicationAttempt(id11, false, false);
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
     ResourceRequest request1 = createResourceRequest(minReqSize * 2,
@@ -2242,8 +2064,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Second ask, queue2 requests 1 large.
     ApplicationAttemptId id21 = createAppAttemptId(2, 1);
     createMockRMApp(id21);
+    placementCtx = new ApplicationPlacementContext("root.queue2");
     scheduler.addApplication(id21.getApplicationId(),
-        "root.queue2", "user1", false);
+        "root.queue2", "user1", false, placementCtx);
     scheduler.addApplicationAttempt(id21, false, false);
     List<ResourceRequest> ask2 = new ArrayList<ResourceRequest>();
     ResourceRequest request2 = createResourceRequest(2 * minReqSize,
@@ -2259,7 +2082,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ApplicationAttemptId id22 = createAppAttemptId(2, 2);
     createMockRMApp(id22);
     scheduler.addApplication(id22.getApplicationId(),
-        "root.queue2", "user1", false);
+        "root.queue2", "user1", false, placementCtx);
     scheduler.addApplicationAttempt(id22, false, false);
     List<ResourceRequest> ask3 = new ArrayList<ResourceRequest>();
     ResourceRequest request4 = createResourceRequest(minReqSize,
@@ -2281,27 +2104,19 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testHierarchicalQueueAllocationFileParsing() throws IOException, SAXException,
-      AllocationConfigurationException, ParserConfigurationException {
+  public void testHierarchicalQueueAllocationFileParsing() throws IOException {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queueA\">");
-    out.println("<minResources>2048mb,0vcores</minResources>");
-    out.println("</queue>");
-    out.println("<queue name=\"queueB\">");
-    out.println("<minResources>2048mb,0vcores</minResources>");
-    out.println("<queue name=\"queueC\">");
-    out.println("<minResources>2048mb,0vcores</minResources>");
-    out.println("</queue>");
-    out.println("<queue name=\"queueD\">");
-    out.println("<minResources>2048mb,0vcores</minResources>");
-    out.println("</queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .minResources("2048mb,0vcores").build())
+        .addQueue(new AllocationFileQueue.Builder("queueB")
+            .minResources("2048mb,0vcores")
+            .subQueue(new AllocationFileQueue.Builder("queueC")
+                .minResources("2048mb,0vcores").build())
+            .subQueue(new AllocationFileQueue.Builder("queueD")
+                .minResources("2048mb,0vcores").build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -2322,27 +2137,22 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   public void testConfigureRootQueue() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<defaultQueueSchedulingPolicy>fair</defaultQueueSchedulingPolicy>");
-    out.println("<queue name=\"root\">");
-    out.println("  <schedulingPolicy>drf</schedulingPolicy>");
-    out.println("  <queue name=\"child1\">");
-    out.println("    <minResources>1024mb,1vcores</minResources>");
-    out.println("  </queue>");
-    out.println("  <queue name=\"child2\">");
-    out.println("    <minResources>1024mb,4vcores</minResources>");
-    out.println("  </queue>");
-    out.println("  <fairSharePreemptionTimeout>100</fairSharePreemptionTimeout>");
-    out.println("  <minSharePreemptionTimeout>120</minSharePreemptionTimeout>");
-    out.println("  <fairSharePreemptionThreshold>.5</fairSharePreemptionThreshold>");
-    out.println("</queue>");
-    out.println("<defaultFairSharePreemptionTimeout>300</defaultFairSharePreemptionTimeout>");
-    out.println("<defaultMinSharePreemptionTimeout>200</defaultMinSharePreemptionTimeout>");
-    out.println("<defaultFairSharePreemptionThreshold>.6</defaultFairSharePreemptionThreshold>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .fairDefaultQueueSchedulingPolicy()
+        .defaultFairSharePreemptionTimeout(300)
+        .defaultMinSharePreemptionTimeout(200)
+        .defaultFairSharePreemptionThreshold(.6)
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .schedulingPolicy("drf")
+            .fairSharePreemptionTimeout(100)
+            .fairSharePreemptionThreshold(.5)
+            .minSharePreemptionTimeout(120)
+            .subQueue(new AllocationFileQueue.Builder("child1")
+                .minResources("1024mb,1vcores").build())
+            .subQueue(new AllocationFileQueue.Builder("child2")
+                .minResources("1024mb,4vcores").build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -2397,14 +2207,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Set max running apps
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<user name=\"user1\">");
-    out.println("<maxRunningApps>1</maxRunningApps>");
-    out.println("</user>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .userSettings(new UserSettings.Builder("user1")
+            .maxRunningApps(1).build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -2449,65 +2255,57 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
   @Test (timeout = 5000)
   public void testIncreaseQueueMaxRunningAppsOnTheFly() throws Exception {
-  String allocBefore = "<?xml version=\"1.0\"?>" +
-        "<allocations>" +
-        "<queue name=\"root\">" +
-        "<queue name=\"queue1\">" +
-        "<maxRunningApps>1</maxRunningApps>" +
-        "</queue>" +
-        "</queue>" +
-        "</allocations>";
+    AllocationFileWriter allocBefore = AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(
+                new AllocationFileQueue.Builder("queue1")
+                    .maxRunningApps(1)
+                    .build())
+            .build());
 
-    String allocAfter = "<?xml version=\"1.0\"?>" +
-        "<allocations>" +
-        "<queue name=\"root\">" +
-        "<queue name=\"queue1\">" +
-        "<maxRunningApps>3</maxRunningApps>" +
-        "</queue>" +
-        "</queue>" +
-        "</allocations>";
+    AllocationFileWriter allocAfter = AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(
+                new AllocationFileQueue.Builder("queue1")
+                    .maxRunningApps(3)
+                    .build())
+            .build());
 
     testIncreaseQueueSettingOnTheFlyInternal(allocBefore, allocAfter);
   }
 
   @Test (timeout = 5000)
   public void testIncreaseUserMaxRunningAppsOnTheFly() throws Exception {
-    String allocBefore = "<?xml version=\"1.0\"?>"+
-        "<allocations>"+
-        "<queue name=\"root\">"+
-        "<queue name=\"queue1\">"+
-        "<maxRunningApps>10</maxRunningApps>"+
-        "</queue>"+
-        "</queue>"+
-        "<user name=\"user1\">"+
-        "<maxRunningApps>1</maxRunningApps>"+
-        "</user>"+
-        "</allocations>";
+    AllocationFileWriter allocBefore = AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(
+                new AllocationFileQueue.Builder("queue1")
+                    .maxRunningApps(10)
+                    .build())
+            .build())
+        .userSettings(new UserSettings.Builder("user1")
+            .maxRunningApps(1).build());
 
-    String allocAfter = "<?xml version=\"1.0\"?>"+
-        "<allocations>"+
-        "<queue name=\"root\">"+
-        "<queue name=\"queue1\">"+
-        "<maxRunningApps>10</maxRunningApps>"+
-        "</queue>"+
-        "</queue>"+
-        "<user name=\"user1\">"+
-        "<maxRunningApps>3</maxRunningApps>"+
-        "</user>"+
-        "</allocations>";
+    AllocationFileWriter allocAfter = AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(
+                new AllocationFileQueue.Builder("queue1")
+                    .maxRunningApps(10)
+                    .build())
+            .build())
+        .userSettings(new UserSettings.Builder("user1")
+            .maxRunningApps(3).build());
 
     testIncreaseQueueSettingOnTheFlyInternal(allocBefore, allocAfter);
   }
 
-  private void testIncreaseQueueSettingOnTheFlyInternal(String allocBefore,
-      String allocAfter) throws Exception {
+  private void testIncreaseQueueSettingOnTheFlyInternal(
+      AllocationFileWriter allocBefore,
+      AllocationFileWriter allocAfter) throws Exception {
     // Set max running apps
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println(allocBefore);
-    out.close();
-
+    allocBefore.writeToFile(ALLOC_FILE);
     scheduler.init(conf);
     scheduler.start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
@@ -2555,9 +2353,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // App 4 should not be running
     assertEquals(0, scheduler.getSchedulerApp(attId4).getLiveContainers().size());
 
-    out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println(allocAfter);
-    out.close();
+    allocAfter.writeToFile(ALLOC_FILE);
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     scheduler.update();
@@ -2592,64 +2388,56 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
   @Test (timeout = 5000)
   public void testDecreaseQueueMaxRunningAppsOnTheFly() throws Exception {
-  String allocBefore = "<?xml version=\"1.0\"?>" +
-        "<allocations>" +
-        "<queue name=\"root\">" +
-        "<queue name=\"queue1\">" +
-        "<maxRunningApps>3</maxRunningApps>" +
-        "</queue>" +
-        "</queue>" +
-        "</allocations>";
+    AllocationFileWriter allocBefore = AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(
+                new AllocationFileQueue.Builder("queue1")
+                    .maxRunningApps(3)
+                    .build())
+            .build());
 
-    String allocAfter = "<?xml version=\"1.0\"?>" +
-        "<allocations>" +
-        "<queue name=\"root\">" +
-        "<queue name=\"queue1\">" +
-        "<maxRunningApps>1</maxRunningApps>" +
-        "</queue>" +
-        "</queue>" +
-        "</allocations>";
+    AllocationFileWriter allocAfter = AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(
+                new AllocationFileQueue.Builder("queue1")
+                    .maxRunningApps(1)
+                    .build())
+            .build());
 
     testDecreaseQueueSettingOnTheFlyInternal(allocBefore, allocAfter);
   }
 
   @Test (timeout = 5000)
   public void testDecreaseUserMaxRunningAppsOnTheFly() throws Exception {
-    String allocBefore = "<?xml version=\"1.0\"?>"+
-        "<allocations>"+
-        "<queue name=\"root\">"+
-        "<queue name=\"queue1\">"+
-        "<maxRunningApps>10</maxRunningApps>"+
-        "</queue>"+
-        "</queue>"+
-        "<user name=\"user1\">"+
-        "<maxRunningApps>3</maxRunningApps>"+
-        "</user>"+
-        "</allocations>";
+    AllocationFileWriter allocBefore = AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(
+                new AllocationFileQueue.Builder("queue1")
+                    .maxRunningApps(10)
+                    .build())
+            .build())
+        .userSettings(new UserSettings.Builder("user1")
+            .maxRunningApps(3).build());
 
-    String allocAfter = "<?xml version=\"1.0\"?>"+
-        "<allocations>"+
-        "<queue name=\"root\">"+
-        "<queue name=\"queue1\">"+
-        "<maxRunningApps>10</maxRunningApps>"+
-        "</queue>"+
-        "</queue>"+
-        "<user name=\"user1\">"+
-        "<maxRunningApps>1</maxRunningApps>"+
-        "</user>"+
-        "</allocations>";
+    AllocationFileWriter allocAfter = AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(
+                new AllocationFileQueue.Builder("queue1")
+                    .maxRunningApps(10)
+                    .build())
+            .build())
+        .userSettings(new UserSettings.Builder("user1")
+            .maxRunningApps(1).build());
 
     testDecreaseQueueSettingOnTheFlyInternal(allocBefore, allocAfter);
   }
 
-  private void testDecreaseQueueSettingOnTheFlyInternal(String allocBefore,
-      String allocAfter) throws Exception {
+  private void testDecreaseQueueSettingOnTheFlyInternal(
+      AllocationFileWriter allocBefore,
+      AllocationFileWriter allocAfter) throws Exception {
     // Set max running apps
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println(allocBefore);
-    out.close();
+    allocBefore.writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -2698,9 +2486,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // App 4 should not be running
     assertEquals(0, scheduler.getSchedulerApp(attId4).getLiveContainers().size());
 
-    out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println(allocAfter);
-    out.close();
+    allocAfter.writeToFile(ALLOC_FILE);
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     scheduler.update();
@@ -2813,19 +2599,16 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Set acl's
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\">");
-    out.println("  <aclSubmitApps> </aclSubmitApps>");
-    out.println("  <aclAdministerApps> </aclAdministerApps>");
-    out.println("  <queue name=\"queue1\">");
-    out.println("    <aclSubmitApps>norealuserhasthisname</aclSubmitApps>");
-    out.println("    <aclAdministerApps>norealuserhasthisname</aclAdministerApps>");
-    out.println("  </queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .aclSubmitApps(" ")
+            .aclAdministerApps(" ")
+            .subQueue(new AllocationFileQueue.Builder("queue1")
+                .aclSubmitApps("norealuserhasthisname")
+                .aclAdministerApps("norealuserhasthisname")
+                .build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -2866,8 +2649,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
     createMockRMApp(attemptId);
 
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext("queue1");
     scheduler.addApplication(attemptId.getApplicationId(), "queue1", "user1",
-        false);
+        false, placementCtx);
     scheduler.addApplicationAttempt(attemptId, false, false);
     
     // 1 request with 2 nodes on the same rack. another request with 1 node on
@@ -2880,7 +2665,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     asks.add(createResourceRequest(1024, node3.getRackName(), 1, 1, true));
     asks.add(createResourceRequest(1024, ResourceRequest.ANY, 1, 2, true));
 
-    scheduler.allocate(attemptId, asks, null, new ArrayList<ContainerId>(), null,
+    scheduler.allocate(attemptId, asks, null, new ArrayList<>(), null,
         null, NULL_UPDATE_REQUESTS);
     
     // node 1 checks in
@@ -3150,19 +2935,17 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   public void testNotAllowSubmitApplication() throws Exception {
     // Set acl's
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\">");
-    out.println("  <aclSubmitApps> </aclSubmitApps>");
-    out.println("  <aclAdministerApps> </aclAdministerApps>");
-    out.println("  <queue name=\"queue1\">");
-    out.println("    <aclSubmitApps>userallow</aclSubmitApps>");
-    out.println("    <aclAdministerApps>userallow</aclAdministerApps>");
-    out.println("  </queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .aclSubmitApps(" ")
+            .aclAdministerApps(" ")
+            .subQueue(new AllocationFileQueue.Builder("queue1")
+                .aclSubmitApps("userallow")
+                .aclAdministerApps("userallow")
+                .build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -3182,10 +2965,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     submissionContext.setApplicationId(applicationId);
     submissionContext.setAMContainerSpec(clc);
     RMApp application =
-        new RMAppImpl(applicationId, resourceManager.getRMContext(), conf, name, user, 
-          queue, submissionContext, scheduler, masterService,
+        new RMAppImpl(applicationId, resourceManager.getRMContext(), conf,
+            name, user, queue, submissionContext, scheduler, masterService,
           System.currentTimeMillis(), "YARN", null, null);
-    resourceManager.getRMContext().getRMApps().putIfAbsent(applicationId, application);
+    resourceManager.getRMContext().getRMApps().
+        putIfAbsent(applicationId, application);
     application.handle(new RMAppEvent(applicationId, RMAppEventType.START));
 
     final int MAX_TRIES=20;
@@ -3202,16 +2986,22 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     ApplicationAttemptId attId =
         ApplicationAttemptId.newInstance(applicationId, this.ATTEMPT_ID++);
-    scheduler.addApplication(attId.getApplicationId(), queue, user, false);
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext(queue);
+    scheduler.addApplication(attId.getApplicationId(), queue, user, false,
+        placementCtx);
 
     numTries = 0;
     while (application.getFinishTime() == 0 && numTries < MAX_TRIES) {
       try {
         Thread.sleep(100);
-      } catch (InterruptedException ex) {ex.printStackTrace();}
+      } catch (InterruptedException ex) {
+        ex.printStackTrace();
+      }
       numTries++;
     }
-    assertEquals(FinalApplicationStatus.FAILED, application.getFinalApplicationStatus());
+    assertEquals(FinalApplicationStatus.FAILED,
+        application.getFinalApplicationStatus());
   }
 
   @Test
@@ -3697,17 +3487,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   public void testUserAndQueueMaxRunningApps() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queue1\">");
-    out.println("<maxRunningApps>2</maxRunningApps>");
-    out.println("</queue>");
-    out.println("<user name=\"user1\">");
-    out.println("<maxRunningApps>1</maxRunningApps>");
-    out.println("</user>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queue1")
+            .maxRunningApps(2).build())
+        .userSettings(new UserSettings.Builder("user1")
+            .maxRunningApps(1).build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -3750,14 +3535,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Set up a fair scheduler
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queue1\">");
-    out.println("<maxAMShare>0.2</maxAMShare>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queue1")
+            .maxAMShare(0.2).build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -3800,14 +3581,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   public void testQueueMaxAMShare() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queue1\">");
-    out.println("<maxAMShare>0.2</maxAMShare>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queue1")
+            .maxAMShare(0.2).build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -3825,7 +3602,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals("Queue queue1's fair share should be 0", 0, queue1
         .getFairShare().getMemorySize());
 
-    createSchedulingRequest(1 * 1024, "root.default", "user1");
+    createSchedulingRequest(1 * 1024, "default", "user1");
     scheduler.update();
     scheduler.handle(updateEvent);
 
@@ -4030,25 +3807,18 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES, 6);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queue1\">");
-    out.println("</queue>");
-    out.println("<queue name=\"queue2\">");
-    out.println("<maxAMShare>0.4</maxAMShare>");
-    out.println("</queue>");
-    out.println("<queue name=\"queue3\">");
-    out.println("<maxResources>10240 mb 4 vcores</maxResources>");
-    out.println("</queue>");
-    out.println("<queue name=\"queue4\">");
-    out.println("</queue>");
-    out.println("<queue name=\"queue5\">");
-    out.println("</queue>");
-    out.println(
-        "<defaultQueueSchedulingPolicy>fair</defaultQueueSchedulingPolicy>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .fairDefaultQueueSchedulingPolicy()
+        .addQueue(new AllocationFileQueue.Builder("queue1").build())
+        .addQueue(new AllocationFileQueue.Builder("queue2")
+            .maxAMShare(0.4f)
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queue3")
+            .maxResources("10240 mb 4 vcores")
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queue4").build())
+        .addQueue(new AllocationFileQueue.Builder("queue5").build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -4191,14 +3961,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   public void testQueueMaxAMShareWithContainerReservation() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     conf.setFloat(FairSchedulerConfiguration.RESERVABLE_NODES, 1f);
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queue1\">");
-    out.println("<maxAMShare>0.5</maxAMShare>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queue1")
+            .maxAMShare(0.5).build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -4457,19 +4223,16 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ControlledClock clock = new ControlledClock();
     scheduler.setClock(clock);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queue1\">");
-    out.println("  <maxRunningApps>3</maxRunningApps>");
-    out.println("  <queue name=\"sub1\"></queue>");
-    out.println("  <queue name=\"sub2\"></queue>");
-    out.println("  <queue name=\"sub3\">");
-    out.println("    <maxRunningApps>1</maxRunningApps>");
-    out.println("  </queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queue1")
+            .maxRunningApps(3)
+            .subQueue(new AllocationFileQueue.Builder("sub1").build())
+            .subQueue(new AllocationFileQueue.Builder("sub2").build())
+            .subQueue(new AllocationFileQueue.Builder("sub3")
+                .maxRunningApps(1)
+                .build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
@@ -4539,8 +4302,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ApplicationAttemptId id11 = createAppAttemptId(1, 1);
     createMockRMApp(id11);
 
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext("root.queue1");
     scheduler.addApplication(id11.getApplicationId(), "root.queue1", "user1",
-        false);
+        false, placementCtx);
     scheduler.addApplicationAttempt(id11, false, false);
 
     List<ResourceRequest> ask1 = new ArrayList<>();
@@ -4553,12 +4318,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     String hostName = "127.0.0.1";
     RMNode node1 = MockNodes.newNodeInfo(1,
-      Resources.createResource(8 * 1024, 8), 1, hostName);
+        Resources.createResource(8 * 1024, 8), 1, hostName);
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
-    FSSchedulerNode node = (FSSchedulerNode)scheduler.getSchedulerNode(
-      node1.getNodeID());
+    FSSchedulerNode node = scheduler.getSchedulerNode(node1.getNodeID());
 
     NodeRemovedSchedulerEvent removeNode1 =
         new NodeRemovedSchedulerEvent(node1);
@@ -4582,22 +4346,19 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     conf.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS, false);
 
     // Create an alloc file with no queue placement policy
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .writeToFile(ALLOC_FILE);
 
     scheduler.init(conf);
     scheduler.start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
-    List<QueuePlacementRule> rules =
-        scheduler.allocConf.placementPolicy.getRules();
+    List<PlacementRule> rules = scheduler.getRMContext()
+        .getQueuePlacementManager().getPlacementRules();
 
-    for (QueuePlacementRule rule : rules) {
-      if (rule instanceof Default) {
-        Default defaultRule = (Default) rule;
+    for (PlacementRule rule : rules) {
+      if (rule instanceof DefaultPlacementRule) {
+        DefaultPlacementRule defaultRule = (DefaultPlacementRule) rule;
         assertNotNull(defaultRule.defaultQueueName);
       }
     }
@@ -4667,7 +4428,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ApplicationAttemptId appAttId2 =
         createSchedulingRequest(1024, 1, "queue1.subqueue2", "user1");
     ApplicationAttemptId appAttId3 =
-        createSchedulingRequest(1024, 1, "default", "user1");
+        createSchedulingRequest(1024, 1, "user1", "user1");
     
     List<ApplicationAttemptId> apps =
         scheduler.getAppsInQueue("queue1.subqueue1");
@@ -4727,17 +4488,17 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSQueue queue2 = queueMgr.getLeafQueue("parent2.queue2", true);
     FSQueue queue1 = queueMgr.getLeafQueue("parent1.queue1", true);
 
-    Assert.assertEquals(parent2.getResourceUsage().getMemorySize(), 0);
-    Assert.assertEquals(queue2.getResourceUsage().getMemorySize(), 0);
-    Assert.assertEquals(parent1.getResourceUsage().getMemorySize(), 1 * GB);
-    Assert.assertEquals(queue1.getResourceUsage().getMemorySize(), 1 * GB);
+    assertThat(parent2.getResourceUsage().getMemorySize()).isEqualTo(0);
+    assertThat(queue2.getResourceUsage().getMemorySize()).isEqualTo(0);
+    assertThat(parent1.getResourceUsage().getMemorySize()).isEqualTo(1 * GB);
+    assertThat(queue1.getResourceUsage().getMemorySize()).isEqualTo(1 * GB);
 
     scheduler.moveApplication(appAttId.getApplicationId(), "parent2.queue2");
 
-    Assert.assertEquals(parent2.getResourceUsage().getMemorySize(), 1 * GB);
-    Assert.assertEquals(queue2.getResourceUsage().getMemorySize(), 1 * GB);
-    Assert.assertEquals(parent1.getResourceUsage().getMemorySize(), 0);
-    Assert.assertEquals(queue1.getResourceUsage().getMemorySize(), 0);
+    assertThat(parent2.getResourceUsage().getMemorySize()).isEqualTo(1 * GB);
+    assertThat(queue2.getResourceUsage().getMemorySize()).isEqualTo(1 * GB);
+    assertThat(parent1.getResourceUsage().getMemorySize()).isEqualTo(0);
+    assertThat(queue1.getResourceUsage().getMemorySize()).isEqualTo(0);
   }
     
   @Test (expected = YarnException.class)
@@ -4869,11 +4630,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     ApplicationAttemptId attemptId = createAppAttemptId(1, 1);
-    // The placement rule will add the app to the user based queue but the
+    // The placement rule should add it to the user based queue but the
     // passed in queue must exist.
+    ApplicationPlacementContext apc =
+        new ApplicationPlacementContext(testUser);
     AppAddedSchedulerEvent appAddedEvent =
         new AppAddedSchedulerEvent(attemptId.getApplicationId(), testUser,
-            testUser);
+            testUser, apc);
     scheduler.handle(appAddedEvent);
     AppAttemptAddedSchedulerEvent attemptAddedEvent =
         new AppAttemptAddedSchedulerEvent(createAppAttemptId(1, 1), false);
@@ -4917,9 +4680,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     ApplicationAttemptId attemptId = createAppAttemptId(1, 1);
+    ApplicationPlacementContext apc =
+        new ApplicationPlacementContext(testUser);
     AppAddedSchedulerEvent appAddedEvent =
         new AppAddedSchedulerEvent(attemptId.getApplicationId(), testUser,
-            testUser);
+            testUser, apc);
     scheduler.handle(appAddedEvent);
     AppAttemptAddedSchedulerEvent attemptAddedEvent =
         new AppAttemptAddedSchedulerEvent(createAppAttemptId(1, 1), false);
@@ -4971,8 +4736,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // submit app with queue name "A"
     ApplicationAttemptId appAttemptId1 = createAppAttemptId(1, 1);
+    ApplicationPlacementContext apc =
+        new ApplicationPlacementContext("A");
     AppAddedSchedulerEvent appAddedEvent1 = new AppAddedSchedulerEvent(
-        appAttemptId1.getApplicationId(), "A", "user1");
+        appAttemptId1.getApplicationId(), "A", "user1", apc);
     scheduler.handle(appAddedEvent1);
     // submission accepted
     assertEquals(2, scheduler.getQueueManager().getLeafQueues().size());
@@ -4989,9 +4756,15 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // submit app with queue name "A "
     ApplicationAttemptId appAttemptId2 = createAppAttemptId(2, 1);
+    apc = new ApplicationPlacementContext("A ");
     AppAddedSchedulerEvent appAddedEvent2 = new AppAddedSchedulerEvent(
-        appAttemptId2.getApplicationId(), "A ", "user1");
-    scheduler.handle(appAddedEvent2);
+        appAttemptId2.getApplicationId(), "A ", "user1", apc);
+    try {
+      scheduler.handle(appAddedEvent2);
+      Assert.fail("Submit should have failed with InvalidQueueNameException");
+    } catch (InvalidQueueNameException iqne) {
+      // expected ignore: rules should have filtered this out
+    }
     // submission rejected
     assertEquals(2, scheduler.getQueueManager().getLeafQueues().size());
     assertNull(scheduler.getSchedulerApplications().get(appAttemptId2.
@@ -5000,8 +4773,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // submit app with queue name "B.C"
     ApplicationAttemptId appAttemptId3 = createAppAttemptId(3, 1);
+    apc = new ApplicationPlacementContext("B.C");
     AppAddedSchedulerEvent appAddedEvent3 = new AppAddedSchedulerEvent(
-        appAttemptId3.getApplicationId(), "B.C", "user1");
+        appAttemptId3.getApplicationId(), "B.C", "user1", apc);
     scheduler.handle(appAddedEvent3);
     // submission accepted
     assertEquals(3, scheduler.getQueueManager().getLeafQueues().size());
@@ -5018,9 +4792,14 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // submit app with queue name "A\u00a0" (non-breaking space)
     ApplicationAttemptId appAttemptId4 = createAppAttemptId(4, 1);
+    apc = new ApplicationPlacementContext("A\u00a0");
     AppAddedSchedulerEvent appAddedEvent4 = new AppAddedSchedulerEvent(
-        appAttemptId4.getApplicationId(), "A\u00a0", "user1");
-    scheduler.handle(appAddedEvent4);
+        appAttemptId4.getApplicationId(), "A\u00a0", "user1", apc);
+    try {
+      scheduler.handle(appAddedEvent4);
+    } catch (InvalidQueueNameException iqne) {
+      // expected ignore: rules should have filtered this out
+    }
     // submission rejected
     assertEquals(3, scheduler.getQueueManager().getLeafQueues().size());
     assertNull(scheduler.getSchedulerApplications().get(appAttemptId4.
@@ -5029,16 +4808,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testEmptyQueueNameInConfigFile() throws IOException {
+  public void testEmptyQueueNameInConfigFile() {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     // set empty queue name
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"\">");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("").build())
+        .writeToFile(ALLOC_FILE);
+
     try {
       scheduler.init(conf);
       Assert.fail("scheduler init should fail because" +
@@ -5056,17 +4832,17 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.init(conf);
     scheduler.start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
-    ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
-    createApplicationWithAMResource(appAttemptId, "default", "  user1", null);
+    ApplicationAttemptId attId1 = createAppAttemptId(1, 1);
+    createApplicationWithAMResource(attId1, "root.user1", "  user1", null);
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
         .getNumRunnableApps());
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("default", true)
         .getNumRunnableApps());
     assertEquals("root.user1", resourceManager.getRMContext().getRMApps()
-        .get(appAttemptId.getApplicationId()).getQueue());
+        .get(attId1.getApplicationId()).getQueue());
 
     ApplicationAttemptId attId2 = createAppAttemptId(2, 1);
-    createApplicationWithAMResource(attId2, "default", "user1  ", null);
+    createApplicationWithAMResource(attId2, "root.user1", "user1  ", null);
     assertEquals(2, scheduler.getQueueManager().getLeafQueue("user1", true)
         .getNumRunnableApps());
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("default", true)
@@ -5075,7 +4851,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         .get(attId2.getApplicationId()).getQueue());
 
     ApplicationAttemptId attId3 = createAppAttemptId(3, 1);
-    createApplicationWithAMResource(attId3, "default", "user1", null);
+    createApplicationWithAMResource(attId3, "root.user1", "user1", null);
     assertEquals(3, scheduler.getQueueManager().getLeafQueue("user1", true)
         .getNumRunnableApps());
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("default", true)
@@ -5156,20 +4932,20 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     Resource usedResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getAllocatedResource();
-    Assert.assertEquals(usedResource.getMemorySize(), 0);
-    Assert.assertEquals(usedResource.getVirtualCores(), 0);
+    assertThat(usedResource.getMemorySize()).isEqualTo(0);
+    assertThat(usedResource.getVirtualCores()).isEqualTo(0);
     // Check total resource of scheduler node is also changed to 0 GB 0 core
     Resource totalResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getTotalResource();
-    Assert.assertEquals(totalResource.getMemorySize(), 0 * GB);
-    Assert.assertEquals(totalResource.getVirtualCores(), 0);
+    assertThat(totalResource.getMemorySize()).isEqualTo(0 * GB);
+    assertThat(totalResource.getVirtualCores()).isEqualTo(0);
     // Check the available resource is 0/0
     Resource availableResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getUnallocatedResource();
-    Assert.assertEquals(availableResource.getMemorySize(), 0);
-    Assert.assertEquals(availableResource.getVirtualCores(), 0);
+    assertThat(availableResource.getMemorySize()).isEqualTo(0);
+    assertThat(availableResource.getVirtualCores()).isEqualTo(0);
   }
 
   private NodeManager registerNode(String hostName, int containerManagerPort,
@@ -5181,9 +4957,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // after YARN-5375, scheduler event is processed in rm main dispatcher,
     // wait it processed, or may lead dead lock
-    if (resourceManager instanceof MockRM) {
-      ((MockRM) resourceManager).drainEvents();
-    }
+    drainEventsOnRM();
 
     NodeAddedSchedulerEvent nodeAddEvent1 =
         new NodeAddedSchedulerEvent(resourceManager.getRMContext().getRMNodes()
@@ -5247,8 +5021,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // container will be allocated at node2
     scheduler.handle(new NodeUpdateSchedulerEvent(node2));
-    assertEquals(scheduler.getSchedulerApp(app2).
-        getLiveContainers().size(), 1);
+    assertThat(scheduler.getSchedulerApp(app2).getLiveContainers()).hasSize(1);
 
     long maxId = 0;
     for (RMContainer container :
@@ -5276,6 +5049,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         new HAServiceProtocol.StateChangeRequestInfo(
             HAServiceProtocol.RequestSource.REQUEST_BY_USER);
 
+    //ensure ALLOC_FILE contains an 'empty' config
+    AllocationFileWriter.create().writeToFile(ALLOC_FILE);
     // 1. start a standby RM, file 'ALLOC_FILE' is empty, so there is no queues
     MockRM rm1 = new MockRM(conf, null);
     rm1.init(conf);
@@ -5283,14 +5058,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     rm1.getAdminService().transitionToStandby(requestInfo);
 
     // 2. add a new queue "test_queue"
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"test_queue\">");
-    out.println("  <maxRunningApps>3</maxRunningApps>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("test_queue")
+            .maxRunningApps(3).build())
+        .writeToFile(ALLOC_FILE);
 
     conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
     // 3. start a active RM
@@ -5305,7 +5076,15 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     rm2.getAdminService().transitionToActive(requestInfo);
 
     // 4. submit a app to the new added queue "test_queue"
-    RMApp app = rm2.submitApp(200, "test_app", "user", null, "test_queue");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm2)
+            .withAppName("test_app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("test_queue")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm2, data);
     RMAppAttempt attempt0 = app.getCurrentAppAttempt();
     nm.nodeHeartbeat(true);
     MockAM am0 = rm2.sendAMLaunched(attempt0.getAppAttemptId());
@@ -5426,16 +5205,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   public void testDumpState() throws IOException {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"parent\">");
-    out.println("  <queue name=\"child1\">");
-    out.println("    <weight>1</weight>");
-    out.println("  </queue>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("parent")
+            .subQueue(new AllocationFileQueue.Builder("child1")
+                .weight(1).build())
+            .build())
+        .writeToFile(ALLOC_FILE);
 
     ControlledClock clock = new ControlledClock();
     scheduler.setClock(clock);
@@ -5509,8 +5284,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Create application attempt
     ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
     createMockRMApp(appAttemptId);
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext("root.queue1");
     scheduler.addApplication(appAttemptId.getApplicationId(), "root.queue1",
-        "user1", false);
+        "user1", false, placementCtx);
     scheduler.addApplicationAttempt(appAttemptId, false, false);
 
     // Create container request that goes to a specific node.
@@ -5595,7 +5372,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     ResourceRequest amReqs = ResourceRequest.newBuilder()
         .capability(Resource.newInstance(5 * GB, 3)).build();
-    createApplicationWithAMResource(appAttemptId1, "queueA", "user1",
+    createApplicationWithAMResource(appAttemptId1, "root.queueA", "user1",
         Resource.newInstance(GB, 1), Lists.newArrayList(amReqs));
     scheduler.update();
 
@@ -5614,29 +5391,25 @@ public class TestFairScheduler extends FairSchedulerTestBase {
             + "maximum queue resources: .+"));
   }
 
-  private void generateAllocationFileWithZeroResource(String resource)
-      throws IOException {
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queueA\">");
-
+  private void generateAllocationFileWithZeroResource(String resource) {
     String resources = "";
     if (resource.equals(ResourceInformation.MEMORY_URI)) {
       resources = "0 mb,2vcores";
     } else if (resource.equals(ResourceInformation.VCORES_URI)) {
       resources = "10000 mb,0vcores";
     }
-    out.println("<minResources>" + resources + "</minResources>");
-    out.println("<maxResources>" + resources + "</maxResources>");
-    out.println("<weight>2.0</weight>");
-    out.println("</queue>");
-    out.println("<queue name=\"queueB\">");
-    out.println("<minResources>1 mb 1 vcores</minResources>");
-    out.println("<weight>0.0</weight>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .minResources(resources)
+            .maxResources(resources)
+            .weight(2.0f)
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queueB")
+            .minResources("1 mb 1 vcores")
+            .weight(0.0f)
+            .build())
+        .writeToFile(ALLOC_FILE);
   }
 
   @Test

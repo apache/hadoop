@@ -68,20 +68,30 @@ function yetus_abs
   return 1
 }
 
+function version_ge()
+{
+  test "$(echo "$@" | tr " " "\n" | sort -rV | head -n 1)" == "$1";
+}
 
 WANTED="$1"
 shift
 ARGV=("$@")
 
-HADOOP_YETUS_VERSION=${HADOOP_YETUS_VERSION:-0.8.0}
+HADOOP_YETUS_VERSION=${HADOOP_YETUS_VERSION:-0.10.0}
 BIN=$(yetus_abs "${BASH_SOURCE-$0}")
 BINDIR=$(dirname "${BIN}")
+
+## HADOOP_YETUS_VERSION >= 0.9.0 the tarball named with apache-yetus prefix
+if version_ge "${HADOOP_YETUS_VERSION}" "0.9.0"; then
+  YETUS_PREFIX=apache-yetus
+else
+  YETUS_PREFIX=yetus
+fi
 
 ###
 ###  if YETUS_HOME is set, then try to use it
 ###
-if [[ -n "${YETUS_HOME}"
-   && -x "${YETUS_HOME}/bin/${WANTED}" ]]; then
+if [[ -n "${YETUS_HOME}" && -x "${YETUS_HOME}/bin/${WANTED}" ]]; then
   exec "${YETUS_HOME}/bin/${WANTED}" "${ARGV[@]}"
 fi
 
@@ -105,8 +115,8 @@ HADOOP_PATCHPROCESS=${mytmpdir}
 ##
 ## if we've already DL'd it, then short cut
 ##
-if [[ -x "${HADOOP_PATCHPROCESS}/yetus-${HADOOP_YETUS_VERSION}/bin/${WANTED}" ]]; then
-  exec "${HADOOP_PATCHPROCESS}/yetus-${HADOOP_YETUS_VERSION}/bin/${WANTED}" "${ARGV[@]}"
+if [[ -x "${HADOOP_PATCHPROCESS}/${YETUS_PREFIX}-${HADOOP_YETUS_VERSION}/bin/${WANTED}" ]]; then
+  exec "${HADOOP_PATCHPROCESS}/${YETUS_PREFIX}-${HADOOP_YETUS_VERSION}/bin/${WANTED}" "${ARGV[@]}"
 fi
 
 ##
@@ -114,7 +124,7 @@ fi
 ##
 
 BASEURL="https://archive.apache.org/dist/yetus/${HADOOP_YETUS_VERSION}/"
-TARBALL="yetus-${HADOOP_YETUS_VERSION}-bin.tar"
+TARBALL="${YETUS_PREFIX}-${HADOOP_YETUS_VERSION}-bin.tar"
 
 GPGBIN=$(command -v gpg)
 CURLBIN=$(command -v curl)
@@ -166,9 +176,9 @@ if ! (gunzip -c "${TARBALL}.gz" | tar xpf -); then
   exit 1
 fi
 
-if [[ -x "${HADOOP_PATCHPROCESS}/yetus-${HADOOP_YETUS_VERSION}/bin/${WANTED}" ]]; then
+if [[ -x "${HADOOP_PATCHPROCESS}/${YETUS_PREFIX}-${HADOOP_YETUS_VERSION}/bin/${WANTED}" ]]; then
   popd >/dev/null
-  exec "${HADOOP_PATCHPROCESS}/yetus-${HADOOP_YETUS_VERSION}/bin/${WANTED}" "${ARGV[@]}"
+  exec "${HADOOP_PATCHPROCESS}/${YETUS_PREFIX}-${HADOOP_YETUS_VERSION}/bin/${WANTED}" "${ARGV[@]}"
 fi
 
 ##

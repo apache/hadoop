@@ -22,42 +22,6 @@
     width: 60%;
 }
 
-.federationhealth-namenode-icon:before {
-    font-size: 10pt;
-    padding-right: 1pt;
-    font-family: 'Glyphicons Halflings';
-    font-style: normal;
-    font-weight: normal;
-    line-height: 1;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-.federationhealth-namenode-active:before {
-    color: #5fa341;
-    content: "\e013";
-}
-
-.federationhealth-namenode-unavailable:before {
-    color: #c7254e;
-    content: "\e101";
-}
-
-.federationhealth-namenode-standby:before {
-    color: #2e6da6;
-    content: "\e017";
-}
-
-.federationhealth-namenode-safemode:before {
-    color: #bc5f04;
-    content: "\e090";
-}
-
-.federationhealth-namenode-disabled:before {
-    color: #eea236;
-    content: "\e136";
-}
-
 .federationhealth-namenode-legend {
     list-style-type: none;
     text-align: right;
@@ -120,7 +84,7 @@
     padding-right: 5pt;
 }
 
-.mount-table-icon:before {
+.federationhealth-mounttable-icon:before {
     font-size: 10pt;
     padding-right: 1pt;
     font-family: 'Glyphicons Halflings';
@@ -131,13 +95,32 @@
     -moz-osx-font-smoothing: grayscale;
 }
 
-.mount-table-read-only-true:before {
-    color: #c7254e;
+.federationhealth-mounttable-readonly:before {
+    color: #000000;
     content: "\e033";
 }
 
-.mount-table-read-only-false:before {
-    color: #5fa341;
-    content: "\e013";
+.federationhealth-mounttable-readwrite:before {
+    color: #000000;
+    content: "\e065";
 }
 
+.federationhealth-mounttable-legend {
+    list-style-type: none;
+    text-align: right;
+}
+
+.federationhealth-mounttable-legend li {
+    display: inline;
+    padding: 10pt;
+    padding-left: 10pt;
+}
+
+.federationhealth-mounttable-legend li:before {
+    padding-right: 5pt;
+}
+
+.mount-table-fault-tolerant-true:before {
+    color: #5fa341;
+    content: "\e033";
+}

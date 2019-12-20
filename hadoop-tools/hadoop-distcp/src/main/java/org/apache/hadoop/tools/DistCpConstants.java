@@ -85,7 +85,8 @@ public final class DistCpConstants {
       "distcp.dynamic.min.records_per_chunk";
   public static final String CONF_LABEL_SPLIT_RATIO =
       "distcp.dynamic.split.ratio";
-  
+  public static final String CONF_LABEL_DIRECT_WRITE = "distcp.direct.write";
+
   /* Total bytes to be copied. Updated by copylisting. Unfiltered count */
   public static final String CONF_LABEL_TOTAL_BYTES_TO_BE_COPIED = "mapred.total.bytes.expected";
 
@@ -122,6 +123,10 @@ public final class DistCpConstants {
   /* DistCp Copy Buffer Size */
   public static final String CONF_LABEL_COPY_BUFFER_SIZE =
       "distcp.copy.buffer.size";
+
+  /** DistCp Blocks Per Chunk: {@value}. */
+  public static final String CONF_LABEL_BLOCKS_PER_CHUNK =
+      "distcp.blocks.per.chunk";
 
   /**
    * Constants for DistCp return code to shell / consumer of ToolRunner's run
@@ -166,4 +171,10 @@ public final class DistCpConstants {
 
   /** Filename of sorted target listing. */
   public static final String TARGET_SORTED_FILE = "target_sorted.seq";
+
+  public static final String LENGTH_MISMATCH_ERROR_MSG =
+          "Mismatch in length of source:";
+
+  public static final String CHECKSUM_MISMATCH_ERROR_MSG =
+          "Checksum mismatch between ";
 }

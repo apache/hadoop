@@ -25,7 +25,6 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
@@ -56,6 +55,9 @@ import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -79,6 +81,7 @@ import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -272,11 +275,19 @@ public class NamenodeWebHdfsMethods {
       for (String host : StringUtils
           .getTrimmedStringCollection(excludeDatanodes)) {
         int idx = host.indexOf(":");
-        if (idx != -1) {          
-          excludes.add(bm.getDatanodeManager().getDatanodeByXferAddr(
-              host.substring(0, idx), Integer.parseInt(host.substring(idx + 1))));
+        Node excludeNode = null;
+        if (idx != -1) {
+          excludeNode = bm.getDatanodeManager().getDatanodeByXferAddr(
+             host.substring(0, idx), Integer.parseInt(host.substring(idx + 1)));
         } else {
-          excludes.add(bm.getDatanodeManager().getDatanodeByHost(host));
+          excludeNode = bm.getDatanodeManager().getDatanodeByHost(host);
+        }
+
+        if (excludeNode != null) {
+          excludes.add(excludeNode);
+        } else {
+          LOG.debug("DataNode {} was requested to be excluded, "
+                + "but it was not found.", host);
         }
       }
     }
@@ -337,11 +348,30 @@ public class NamenodeWebHdfsMethods {
     throw new IOException("No active nodes contain this block");
   }
 
-  private Token<? extends TokenIdentifier> generateDelegationToken(
-      final NameNode namenode, final UserGroupInformation ugi,
+  public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
+      throws IOException {
+    ClientProtocol cp = getRpcClientProtocol();
+    return cp.renewDelegationToken(token);
+  }
+
+  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
+          throws IOException {
+    ClientProtocol cp = getRpcClientProtocol();
+    cp.cancelDelegationToken(token);
+  }
+
+  public Credentials createCredentials(final UserGroupInformation ugi,
       final String renewer) throws IOException {
+    final NameNode namenode = (NameNode)context.getAttribute("name.node");
     final Credentials c = DelegationTokenSecretManager.createCredentials(
         namenode, ugi, renewer != null? renewer: ugi.getShortUserName());
+    return c;
+  }
+
+  public Token<? extends TokenIdentifier> generateDelegationToken(
+      final UserGroupInformation ugi,
+      final String renewer) throws IOException {
+    Credentials c = createCredentials(ugi, renewer);
     if (c == null) {
       return null;
     }
@@ -384,7 +414,7 @@ public class NamenodeWebHdfsMethods {
     } else {
       //generate a token
       final Token<? extends TokenIdentifier> t = generateDelegationToken(
-          namenode, ugi, null);
+          ugi, null);
       delegationQuery = "&" + new DelegationParam(t.encodeToUrlString());
     }
 
@@ -479,14 +509,26 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
           final NoRedirectParam noredirect,
       @QueryParam(StoragePolicyParam.NAME) @DefaultValue(StoragePolicyParam
-          .DEFAULT) final StoragePolicyParam policyName
-      ) throws IOException, InterruptedException {
+          .DEFAULT) final StoragePolicyParam policyName,
+      @QueryParam(ECPolicyParam.NAME) @DefaultValue(ECPolicyParam
+              .DEFAULT) final ECPolicyParam ecpolicy,
+      @QueryParam(NameSpaceQuotaParam.NAME)
+      @DefaultValue(NameSpaceQuotaParam.DEFAULT)
+      final NameSpaceQuotaParam namespaceQuota,
+      @QueryParam(StorageSpaceQuotaParam.NAME)
+      @DefaultValue(StorageSpaceQuotaParam.DEFAULT)
+      final StorageSpaceQuotaParam storagespaceQuota,
+      @QueryParam(StorageTypeParam.NAME)
+      @DefaultValue(StorageTypeParam.DEFAULT)
+      final StorageTypeParam storageType
+  ) throws IOException, InterruptedException {
     return put(ugi, delegation, username, doAsUser, ROOT, op, destination,
         owner, group, permission, unmaskedPermission, overwrite, bufferSize,
         replication, blockSize, modificationTime, accessTime, renameOptions,
         createParent, delegationTokenArgument, aclPermission, xattrName,
         xattrValue, xattrSetFlag, snapshotName, oldSnapshotName,
-        excludeDatanodes, createFlagParam, noredirect, policyName);
+        excludeDatanodes, createFlagParam, noredirect, policyName, ecpolicy,
+        namespaceQuota, storagespaceQuota, storageType);
   }
 
   /** Validate all required params. */
@@ -566,15 +608,25 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
           final NoRedirectParam noredirect,
       @QueryParam(StoragePolicyParam.NAME) @DefaultValue(StoragePolicyParam
-          .DEFAULT) final StoragePolicyParam policyName
+          .DEFAULT) final StoragePolicyParam policyName,
+      @QueryParam(ECPolicyParam.NAME) @DefaultValue(ECPolicyParam.DEFAULT)
+          final ECPolicyParam ecpolicy,
+      @QueryParam(NameSpaceQuotaParam.NAME)
+      @DefaultValue(NameSpaceQuotaParam.DEFAULT)
+          final NameSpaceQuotaParam namespaceQuota,
+      @QueryParam(StorageSpaceQuotaParam.NAME)
+      @DefaultValue(StorageSpaceQuotaParam.DEFAULT)
+          final StorageSpaceQuotaParam storagespaceQuota,
+      @QueryParam(StorageTypeParam.NAME) @DefaultValue(StorageTypeParam.DEFAULT)
+          final StorageTypeParam storageType
       ) throws IOException, InterruptedException {
-
     init(ugi, delegation, username, doAsUser, path, op, destination, owner,
         group, permission, unmaskedPermission, overwrite, bufferSize,
         replication, blockSize, modificationTime, accessTime, renameOptions,
         delegationTokenArgument, aclPermission, xattrName, xattrValue,
         xattrSetFlag, snapshotName, oldSnapshotName, excludeDatanodes,
-        createFlagParam, noredirect, policyName);
+        createFlagParam, noredirect, policyName, ecpolicy,
+        namespaceQuota, storagespaceQuota, storageType);
 
     return doAs(ugi, new PrivilegedExceptionAction<Response>() {
       @Override
@@ -586,7 +638,8 @@ public class NamenodeWebHdfsMethods {
               renameOptions, createParent, delegationTokenArgument,
               aclPermission, xattrName, xattrValue, xattrSetFlag,
               snapshotName, oldSnapshotName, excludeDatanodes,
-              createFlagParam, noredirect, policyName);
+              createFlagParam, noredirect, policyName, ecpolicy,
+              namespaceQuota, storagespaceQuota, storageType);
       }
     });
   }
@@ -621,7 +674,11 @@ public class NamenodeWebHdfsMethods {
       final ExcludeDatanodesParam exclDatanodes,
       final CreateFlagParam createFlagParam,
       final NoRedirectParam noredirectParam,
-      final StoragePolicyParam policyName
+      final StoragePolicyParam policyName,
+      final ECPolicyParam ecpolicy,
+      final NameSpaceQuotaParam namespaceQuota,
+      final StorageSpaceQuotaParam storagespaceQuota,
+      final StorageTypeParam storageType
       ) throws IOException, URISyntaxException {
     final Configuration conf = (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
     final ClientProtocol cp = getRpcClientProtocol();
@@ -705,7 +762,7 @@ public class NamenodeWebHdfsMethods {
       validateOpParams(op, delegationTokenArgument);
       final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
       token.decodeFromUrlString(delegationTokenArgument.getValue());
-      final long expiryTime = cp.renewDelegationToken(token);
+      final long expiryTime = renewDelegationToken(token);
       final String js = JsonUtil.toJsonString("long", expiryTime);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
@@ -714,7 +771,7 @@ public class NamenodeWebHdfsMethods {
       validateOpParams(op, delegationTokenArgument);
       final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
       token.decodeFromUrlString(delegationTokenArgument.getValue());
-      cp.cancelDelegationToken(token);
+      cancelDelegationToken(token);
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case MODIFYACLENTRIES: {
@@ -782,6 +839,33 @@ public class NamenodeWebHdfsMethods {
       cp.setStoragePolicy(fullpath, policyName.getValue());
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
+    case SATISFYSTORAGEPOLICY:
+      cp.satisfyStoragePolicy(fullpath);
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+
+    case ENABLEECPOLICY:
+      validateOpParams(op, ecpolicy);
+      cp.enableErasureCodingPolicy(ecpolicy.getValue());
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    case DISABLEECPOLICY:
+      validateOpParams(op, ecpolicy);
+      cp.disableErasureCodingPolicy(ecpolicy.getValue());
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    case SETECPOLICY:
+      validateOpParams(op, ecpolicy);
+      cp.setErasureCodingPolicy(fullpath, ecpolicy.getValue());
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    case SETQUOTA:
+      validateOpParams(op, namespaceQuota, storagespaceQuota);
+      cp.setQuota(fullpath, namespaceQuota.getValue(),
+          storagespaceQuota.getValue(), null);
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    case SETQUOTABYSTORAGETYPE:
+      validateOpParams(op, storagespaceQuota, storageType);
+      cp.setQuota(fullpath, HdfsConstants.QUOTA_DONT_SET,
+          storagespaceQuota.getValue(),
+          StorageType.parseStorageType(storageType.getValue()));
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
@@ -909,6 +993,9 @@ public class NamenodeWebHdfsMethods {
       cp.unsetStoragePolicy(fullpath);
       return Response.ok().build();
     }
+    case UNSETECPOLICY:
+      cp.unsetErasureCodingPolicy(fullpath);
+      return Response.ok().build();
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
@@ -1017,9 +1104,7 @@ public class NamenodeWebHdfsMethods {
     return doAs(ugi, new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException, URISyntaxException {
-        String absolutePath = path.getAbsolutePath() == null ? null :
-            URLDecoder.decode(path.getAbsolutePath(), "UTF-8");
-        return get(ugi, delegation, username, doAsUser, absolutePath,
+        return get(ugi, delegation, username, doAsUser, path.getAbsolutePath(),
             op, offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
             excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
             tokenKind, tokenService, noredirect, startAfter);
@@ -1119,6 +1204,12 @@ public class NamenodeWebHdfsMethods {
       final String js = JsonUtil.toJsonString(contentsummary);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
+    case GETQUOTAUSAGE:
+    {
+      final QuotaUsage quotaUsage = cp.getQuotaUsage(fullpath);
+      final String js = JsonUtil.toJsonString(quotaUsage);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
     case GETFILECHECKSUM:
     {
       final NameNode namenode = (NameNode)context.getAttribute("name.node");
@@ -1138,9 +1229,8 @@ public class NamenodeWebHdfsMethods {
         throw new IllegalArgumentException(delegation.getName()
             + " parameter is not null.");
       }
-      final NameNode namenode = (NameNode)context.getAttribute("name.node");
       final Token<? extends TokenIdentifier> token = generateDelegationToken(
-          namenode, ugi, renewer.getValue());
+          ugi, renewer.getValue());
 
       final String setServiceName = tokenService.getValue();
       final String setKind = tokenKind.getValue();
@@ -1154,9 +1244,8 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETHOMEDIRECTORY: {
-      final String js = JsonUtil.toJsonString("Path",
-          FileSystem.get(conf != null ? conf : new Configuration())
-              .getHomeDirectory().toUri().getPath());
+      String userHome = DFSUtilClient.getHomeDirectory(conf, ugi).toString();
+      final String js = JsonUtil.toJsonString("Path", userHome);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETACLSTATUS: {
@@ -1218,6 +1307,11 @@ public class NamenodeWebHdfsMethods {
     case GETSTORAGEPOLICY: {
       BlockStoragePolicy storagePolicy = cp.getStoragePolicy(fullpath);
       final String js = JsonUtil.toJsonString(storagePolicy);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETECPOLICY: {
+      ErasureCodingPolicy ecpolicy = cp.getErasureCodingPolicy(fullpath);
+      final String js = JsonUtil.toJsonString(ecpolicy);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETSERVERDEFAULTS: {

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.nodelabels.store;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -40,7 +40,8 @@ import java.io.IOException;
  */
 public abstract class AbstractFSNodeStore<M> {
 
-  protected static final Log LOG = LogFactory.getLog(AbstractFSNodeStore.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(AbstractFSNodeStore.class);
 
   private StoreType storeType;
   private FSDataOutputStream editlogOs;

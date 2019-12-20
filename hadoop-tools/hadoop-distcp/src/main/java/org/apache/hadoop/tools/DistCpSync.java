@@ -57,10 +57,13 @@ class DistCpSync {
   //
   private EnumMap<SnapshotDiffReport.DiffType, List<DiffInfo>> diffMap;
   private DiffInfo[] renameDiffs;
+  private CopyFilter copyFilter;
 
   DistCpSync(DistCpContext context, Configuration conf) {
     this.context = context;
     this.conf = conf;
+    this.copyFilter = CopyFilter.getCopyFilter(conf);
+    this.copyFilter.initialize();
   }
 
   private boolean isRdiff() {
@@ -213,18 +216,32 @@ class DistCpSync {
         }
         SnapshotDiffReport.DiffType dt = entry.getType();
         List<DiffInfo> list = diffMap.get(dt);
+        final Path source =
+                new Path(DFSUtilClient.bytes2String(entry.getSourcePath()));
+        final Path relativeSource = new Path(Path.SEPARATOR + source);
         if (dt == SnapshotDiffReport.DiffType.MODIFY ||
             dt == SnapshotDiffReport.DiffType.CREATE ||
             dt == SnapshotDiffReport.DiffType.DELETE) {
-          final Path source =
-              new Path(DFSUtilClient.bytes2String(entry.getSourcePath()));
-          list.add(new DiffInfo(source, null, dt));
+          if (copyFilter.shouldCopy(relativeSource)) {
+            list.add(new DiffInfo(source, null, dt));
+          }
         } else if (dt == SnapshotDiffReport.DiffType.RENAME) {
-          final Path source =
-              new Path(DFSUtilClient.bytes2String(entry.getSourcePath()));
           final Path target =
-              new Path(DFSUtilClient.bytes2String(entry.getTargetPath()));
-          list.add(new DiffInfo(source, target, dt));
+                  new Path(DFSUtilClient.bytes2String(entry.getTargetPath()));
+          final Path relativeTarget = new Path(Path.SEPARATOR + target);
+          if (copyFilter.shouldCopy(relativeSource)) {
+            if (copyFilter.shouldCopy(relativeTarget)) {
+              list.add(new DiffInfo(source, target, dt));
+            } else {
+              list = diffMap.get(SnapshotDiffReport.DiffType.DELETE);
+              list.add(new DiffInfo(source, target,
+                      SnapshotDiffReport.DiffType.DELETE));
+            }
+          } else if (copyFilter.shouldCopy(relativeTarget)) {
+            list = diffMap.get(SnapshotDiffReport.DiffType.CREATE);
+            list.add(new DiffInfo(target, null,
+                    SnapshotDiffReport.DiffType.CREATE));
+          }
         }
       }
       return true;

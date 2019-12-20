@@ -30,6 +30,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -54,6 +55,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   private static final FsAction ALL = FsAction.ALL;
   private static final FsAction NONE = FsAction.NONE;
   private static final FsAction READ = FsAction.READ;
+  private static final FsAction EXECUTE = FsAction.EXECUTE;
   private static final FsAction READ_EXECUTE = FsAction.READ_EXECUTE;
   private static final FsAction READ_WRITE = FsAction.READ_WRITE;
 
@@ -65,10 +67,16 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   private static final short RWX_RX = 0750;
   private static final short RWX_RX_RX = 0755;
   private static final short RW_R = 0640;
+  private static final short RW_X = 0610;
   private static final short RW_RW = 0660;
   private static final short RW_RWX = 0670;
   private static final short RW_R_R = 0644;
   private static final short STICKY_RWX_RWX = 01770;
+
+  private static final String FOO = UUID.randomUUID().toString();
+  private static final String BAR = UUID.randomUUID().toString();
+  private static final String TEST_OWNER = UUID.randomUUID().toString();
+  private static final String TEST_GROUP = UUID.randomUUID().toString();
 
   private static Path testRoot = new Path("/test");
   private Path path;
@@ -86,24 +94,24 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
 
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE),
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
 
     aclSpec = Lists.newArrayList(
-        aclEntry(ACCESS, USER, "foo", READ_EXECUTE),
-        aclEntry(DEFAULT, USER, "foo", READ_EXECUTE));
+        aclEntry(ACCESS, USER, FOO, READ_EXECUTE),
+        aclEntry(DEFAULT, USER, FOO, READ_EXECUTE));
     fs.modifyAclEntries(path, aclSpec);
 
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", READ_EXECUTE),
+        aclEntry(ACCESS, USER, FOO, READ_EXECUTE),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, USER, ALL),
-        aclEntry(DEFAULT, USER, "foo", READ_EXECUTE),
+        aclEntry(DEFAULT, USER, FOO, READ_EXECUTE),
         aclEntry(DEFAULT, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, MASK, READ_EXECUTE),
         aclEntry(DEFAULT, OTHER, NONE) }, returned);
@@ -119,17 +127,17 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.setPermission(path, FsPermission.createImmutable((short) RW_R));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE));
     fs.setAcl(path, aclSpec);
     aclSpec = Lists.newArrayList(
-        aclEntry(ACCESS, USER, "foo", READ_EXECUTE));
+        aclEntry(ACCESS, USER, FOO, READ_EXECUTE));
     fs.modifyAclEntries(path, aclSpec);
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", READ_EXECUTE),
+        aclEntry(ACCESS, USER, FOO, READ_EXECUTE),
         aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
     assertPermission(fs, (short) RWX_RX);
   }
@@ -141,16 +149,16 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     path = new Path(testRoot, UUID.randomUUID().toString());
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     aclSpec = Lists.newArrayList(
-        aclEntry(DEFAULT, USER, "foo", READ_EXECUTE));
+        aclEntry(DEFAULT, USER, FOO, READ_EXECUTE));
     fs.modifyAclEntries(path, aclSpec);
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
         aclEntry(DEFAULT, USER, ALL),
-        aclEntry(DEFAULT, USER, "foo", READ_EXECUTE),
+        aclEntry(DEFAULT, USER, FOO, READ_EXECUTE),
         aclEntry(DEFAULT, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, MASK, READ_EXECUTE),
         aclEntry(DEFAULT, OTHER, NONE) }, returned);
@@ -165,12 +173,12 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.create(path).close();
     fs.setPermission(path, FsPermission.createImmutable((short) RW_R));
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(ACCESS, USER, "foo", READ_WRITE));
+        aclEntry(ACCESS, USER, FOO, READ_WRITE));
     fs.modifyAclEntries(path, aclSpec);
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", READ_WRITE),
+        aclEntry(ACCESS, USER, FOO, READ_WRITE),
         aclEntry(ACCESS, GROUP, READ) }, returned);
     assertPermission(fs, (short) RW_RW);
   }
@@ -203,13 +211,13 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.create(path).close();
     fs.setPermission(path, FsPermission.createImmutable((short) RW_R));
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, MASK, NONE));
     fs.modifyAclEntries(path, aclSpec);
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ) }, returned);
     assertPermission(fs, (short) RW);
   }
@@ -222,22 +230,22 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) 01750));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE),
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     aclSpec = Lists.newArrayList(
-        aclEntry(ACCESS, USER, "foo", READ_EXECUTE),
-        aclEntry(DEFAULT, USER, "foo", READ_EXECUTE));
+        aclEntry(ACCESS, USER, FOO, READ_EXECUTE),
+        aclEntry(DEFAULT, USER, FOO, READ_EXECUTE));
     fs.modifyAclEntries(path, aclSpec);
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", READ_EXECUTE),
+        aclEntry(ACCESS, USER, FOO, READ_EXECUTE),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, USER, ALL),
-        aclEntry(DEFAULT, USER, "foo", READ_EXECUTE),
+        aclEntry(DEFAULT, USER, FOO, READ_EXECUTE),
         aclEntry(DEFAULT, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, MASK, READ_EXECUTE),
         aclEntry(DEFAULT, OTHER, NONE) }, returned);
@@ -252,7 +260,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     // Path has not been created.
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE));
     fs.modifyAclEntries(path, aclSpec);
@@ -266,8 +274,69 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.create(path).close();
     fs.setPermission(path, FsPermission.createImmutable((short) RW_R));
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.modifyAclEntries(path, aclSpec);
+  }
+
+  @Test
+  public void testModifyAclEntriesWithDefaultMask() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeTrue(fs.getIsNamespaceEnabled());
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+        aclEntry(DEFAULT, MASK, EXECUTE));
+    fs.setAcl(path, aclSpec);
+
+    List<AclEntry> modifyAclSpec = Lists.newArrayList(
+        aclEntry(DEFAULT, USER, READ_WRITE));
+    fs.modifyAclEntries(path, modifyAclSpec);
+
+    AclStatus s = fs.getAclStatus(path);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[] {
+        aclEntry(DEFAULT, USER, READ_WRITE),
+        aclEntry(DEFAULT, GROUP, READ_EXECUTE),
+        aclEntry(DEFAULT, MASK, EXECUTE),
+        aclEntry(DEFAULT, OTHER, NONE)}, returned);
+    assertPermission(fs, (short) RWX_RX);
+  }
+
+  @Test
+  public void testModifyAclEntriesWithAccessMask() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeTrue(fs.getIsNamespaceEnabled());
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+        aclEntry(ACCESS, MASK, EXECUTE));
+    fs.setAcl(path, aclSpec);
+
+    List<AclEntry> modifyAclSpec = Lists.newArrayList(
+        aclEntry(ACCESS, USER, READ_WRITE));
+    fs.modifyAclEntries(path, modifyAclSpec);
+
+    AclStatus s = fs.getAclStatus(path);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[] {
+        aclEntry(ACCESS, GROUP, READ_EXECUTE)}, returned);
+    assertPermission(fs, (short) RW_X);
+  }
+
+  @Test(expected=PathIOException.class)
+  public void testModifyAclEntriesWithDuplicateEntries() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeTrue(fs.getIsNamespaceEnabled());
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+        aclEntry(ACCESS, MASK, EXECUTE));
+    fs.setAcl(path, aclSpec);
+
+    List<AclEntry> modifyAclSpec = Lists.newArrayList(
+        aclEntry(ACCESS, USER, READ_WRITE),
+        aclEntry(ACCESS, USER, READ_WRITE));
+    fs.modifyAclEntries(path, modifyAclSpec);
   }
 
   @Test
@@ -278,14 +347,14 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE),
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     aclSpec = Lists.newArrayList(
-        aclEntry(ACCESS, USER, "foo"),
-        aclEntry(DEFAULT, USER, "foo"));
+        aclEntry(ACCESS, USER, FOO),
+        aclEntry(DEFAULT, USER, FOO));
     fs.removeAclEntries(path, aclSpec);
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
@@ -307,18 +376,18 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.setPermission(path, FsPermission.createImmutable((short) RW_R));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
-        aclEntry(ACCESS, USER, "bar", READ_WRITE),
+        aclEntry(ACCESS, USER, FOO, ALL),
+        aclEntry(ACCESS, USER, BAR, READ_WRITE),
         aclEntry(ACCESS, GROUP, READ_WRITE),
         aclEntry(ACCESS, OTHER, NONE));
     fs.setAcl(path, aclSpec);
     aclSpec = Lists.newArrayList(
-        aclEntry(ACCESS, USER, "foo"));
+        aclEntry(ACCESS, USER, FOO));
     fs.removeAclEntries(path, aclSpec);
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "bar", READ_WRITE),
+        aclEntry(ACCESS, USER, BAR, READ_WRITE),
         aclEntry(ACCESS, GROUP, READ_WRITE) }, returned);
     assertPermission(fs, (short) RWX_RW);
   }
@@ -333,17 +402,17 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
         aclEntry(ACCESS, USER, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE),
-        aclEntry(DEFAULT, USER, "foo", ALL),
-        aclEntry(DEFAULT, USER, "bar", READ_EXECUTE));
+        aclEntry(DEFAULT, USER, FOO, ALL),
+        aclEntry(DEFAULT, USER, BAR, READ_EXECUTE));
     fs.setAcl(path, aclSpec);
     aclSpec = Lists.newArrayList(
-        aclEntry(DEFAULT, USER, "foo"));
+        aclEntry(DEFAULT, USER, FOO));
     fs.removeAclEntries(path, aclSpec);
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
         aclEntry(DEFAULT, USER, ALL),
-        aclEntry(DEFAULT, USER, "bar", READ_EXECUTE),
+        aclEntry(DEFAULT, USER, BAR, READ_EXECUTE),
         aclEntry(DEFAULT, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, MASK, READ_EXECUTE),
         aclEntry(DEFAULT, OTHER, NONE) }, returned);
@@ -359,12 +428,12 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.setPermission(path, FsPermission.createImmutable((short) RWX_RW));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_WRITE),
         aclEntry(ACCESS, OTHER, NONE));
     fs.setAcl(path, aclSpec);
     aclSpec = Lists.newArrayList(
-        aclEntry(ACCESS, USER, "foo"),
+        aclEntry(ACCESS, USER, FOO),
         aclEntry(ACCESS, MASK));
     fs.removeAclEntries(path, aclSpec);
     AclStatus s = fs.getAclStatus(path);
@@ -381,15 +450,15 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE),
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     aclSpec = Lists.newArrayList(
-        aclEntry(ACCESS, USER, "foo"),
+        aclEntry(ACCESS, USER, FOO),
         aclEntry(ACCESS, MASK),
-        aclEntry(DEFAULT, USER, "foo"),
+        aclEntry(DEFAULT, USER, FOO),
         aclEntry(DEFAULT, MASK));
     fs.removeAclEntries(path, aclSpec);
     AclStatus s = fs.getAclStatus(path);
@@ -409,14 +478,14 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) 01750));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE),
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     aclSpec = Lists.newArrayList(
-        aclEntry(ACCESS, USER, "foo"),
-        aclEntry(DEFAULT, USER, "foo"));
+        aclEntry(ACCESS, USER, FOO),
+        aclEntry(DEFAULT, USER, FOO));
     fs.removeAclEntries(path, aclSpec);
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
@@ -436,8 +505,52 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     path = new Path(testRoot, UUID.randomUUID().toString());
     // Path has not been created.
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(ACCESS, USER, "foo"));
+        aclEntry(ACCESS, USER, FOO));
     fs.removeAclEntries(path, aclSpec);
+  }
+
+  @Test(expected=PathIOException.class)
+  public void testRemoveAclEntriesAccessMask() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeTrue(fs.getIsNamespaceEnabled());
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+        aclEntry(ACCESS, MASK, EXECUTE),
+        aclEntry(ACCESS, USER, FOO, ALL));
+    fs.setAcl(path, aclSpec);
+
+    fs.removeAclEntries(path, Lists.newArrayList(aclEntry(ACCESS, MASK, NONE)));
+  }
+
+  @Test(expected=PathIOException.class)
+  public void testRemoveAclEntriesDefaultMask() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeTrue(fs.getIsNamespaceEnabled());
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+        aclEntry(DEFAULT, MASK, EXECUTE),
+        aclEntry(DEFAULT, USER, FOO, ALL));
+    fs.setAcl(path, aclSpec);
+
+    fs.removeAclEntries(path, Lists.newArrayList(aclEntry(DEFAULT, MASK, NONE)));
+  }
+
+  @Test(expected=PathIOException.class)
+  public void testRemoveAclEntriesWithDuplicateEntries() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeTrue(fs.getIsNamespaceEnabled());
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+        aclEntry(DEFAULT, MASK, EXECUTE));
+    fs.setAcl(path, aclSpec);
+
+    List<AclEntry> removeAclSpec = Lists.newArrayList(
+        aclEntry(DEFAULT, USER, READ_WRITE),
+        aclEntry(DEFAULT, USER, READ_WRITE));
+    fs.removeAclEntries(path, removeAclSpec);
   }
 
   @Test
@@ -448,16 +561,16 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE),
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     fs.removeDefaultAcl(path);
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
     assertPermission(fs, (short) RWX_RWX);
   }
@@ -471,7 +584,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.setPermission(path, FsPermission.createImmutable((short) RW_R));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE));
     fs.setAcl(path, aclSpec);
@@ -479,7 +592,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
     assertPermission(fs, (short) RWX_RWX);
   }
@@ -491,7 +604,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     path = new Path(testRoot, UUID.randomUUID().toString());
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     fs.removeDefaultAcl(path);
     AclStatus s = fs.getAclStatus(path);
@@ -521,16 +634,16 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) 01750));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE),
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     fs.removeDefaultAcl(path);
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
     assertPermission(fs, (short) STICKY_RWX_RWX);
   }
@@ -552,10 +665,10 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE),
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
 
     fs.setAcl(path, aclSpec);
     fs.removeAcl(path);
@@ -588,10 +701,10 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) 01750));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE),
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     fs.removeAcl(path);
     AclStatus s = fs.getAclStatus(path);
@@ -610,7 +723,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
         aclEntry(ACCESS, USER, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE),
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     fs.removeAcl(path);
     AclStatus s = fs.getAclStatus(path);
@@ -636,18 +749,18 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE),
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, USER, ALL),
-        aclEntry(DEFAULT, USER, "foo", ALL),
+        aclEntry(DEFAULT, USER, FOO, ALL),
         aclEntry(DEFAULT, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, MASK, ALL),
         aclEntry(DEFAULT, OTHER, NONE) }, returned);
@@ -663,14 +776,14 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.setPermission(path, FsPermission.createImmutable((short) RW_R));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, READ_WRITE),
-        aclEntry(ACCESS, USER, "foo", READ),
+        aclEntry(ACCESS, USER, FOO, READ),
         aclEntry(ACCESS, GROUP, READ),
         aclEntry(ACCESS, OTHER, NONE));
     fs.setAcl(path, aclSpec);
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", READ),
+        aclEntry(ACCESS, USER, FOO, READ),
         aclEntry(ACCESS, GROUP, READ) }, returned);
     assertPermission(fs, (short) RW_R);
   }
@@ -682,13 +795,13 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     path = new Path(testRoot, UUID.randomUUID().toString());
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
         aclEntry(DEFAULT, USER, ALL),
-        aclEntry(DEFAULT, USER, "foo", ALL),
+        aclEntry(DEFAULT, USER, FOO, ALL),
         aclEntry(DEFAULT, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, MASK, ALL),
         aclEntry(DEFAULT, OTHER, NONE) }, returned);
@@ -704,7 +817,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.setPermission(path, FsPermission.createImmutable((short) RW_R_R));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, READ_WRITE),
-        aclEntry(ACCESS, USER, "foo", READ),
+        aclEntry(ACCESS, USER, FOO, READ),
         aclEntry(ACCESS, GROUP, READ),
         aclEntry(ACCESS, OTHER, NONE));
     fs.setAcl(path, aclSpec);
@@ -748,7 +861,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.setPermission(path, FsPermission.createImmutable((short) RW_R));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, READ_WRITE),
-        aclEntry(ACCESS, USER, "foo", READ),
+        aclEntry(ACCESS, USER, FOO, READ),
         aclEntry(ACCESS, GROUP, READ),
         aclEntry(ACCESS, MASK, ALL),
         aclEntry(ACCESS, OTHER, NONE));
@@ -756,7 +869,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", READ),
+        aclEntry(ACCESS, USER, FOO, READ),
         aclEntry(ACCESS, GROUP, READ) }, returned);
     assertPermission(fs, (short) RW_RWX);
   }
@@ -769,18 +882,18 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) 01750));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE),
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, USER, ALL),
-        aclEntry(DEFAULT, USER, "foo", ALL),
+        aclEntry(DEFAULT, USER, FOO, ALL),
         aclEntry(DEFAULT, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, MASK, ALL),
         aclEntry(DEFAULT, OTHER, NONE) }, returned);
@@ -795,7 +908,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     // Path has not been created.
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, READ_WRITE),
-        aclEntry(ACCESS, USER, "foo", READ),
+        aclEntry(ACCESS, USER, FOO, READ),
         aclEntry(ACCESS, GROUP, READ),
         aclEntry(ACCESS, OTHER, NONE));
     fs.setAcl(path, aclSpec);
@@ -809,7 +922,43 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.create(path).close();
     fs.setPermission(path, FsPermission.createImmutable((short) RW_R));
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
+    fs.setAcl(path, aclSpec);
+  }
+
+  @Test
+  public void testSetAclDoesNotChangeDefaultMask() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeTrue(fs.getIsNamespaceEnabled());
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+        aclEntry(DEFAULT, MASK, EXECUTE));
+    fs.setAcl(path, aclSpec);
+    // only change access acl, and default mask should not change.
+    List<AclEntry> aclSpec2 = Lists.newArrayList(
+        aclEntry(ACCESS, OTHER, READ_EXECUTE));
+    fs.setAcl(path, aclSpec2);
+    // get acl status and check result.
+    AclStatus s = fs.getAclStatus(path);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[] {
+        aclEntry(DEFAULT, USER, ALL),
+        aclEntry(DEFAULT, GROUP, READ_EXECUTE),
+        aclEntry(DEFAULT, MASK, EXECUTE),
+        aclEntry(DEFAULT, OTHER, NONE) }, returned);
+    assertPermission(fs, (short) RWX_RX_RX);
+  }
+
+  @Test(expected=PathIOException.class)
+  public void testSetAclWithDuplicateEntries() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeTrue(fs.getIsNamespaceEnabled());
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+        aclEntry(ACCESS, MASK, EXECUTE),
+        aclEntry(ACCESS, MASK, EXECUTE));
     fs.setAcl(path, aclSpec);
   }
 
@@ -821,19 +970,19 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, ALL),
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE),
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     fs.setPermission(path, FsPermission.createImmutable((short) RWX));
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, USER, ALL),
-        aclEntry(DEFAULT, USER, "foo", ALL),
+        aclEntry(DEFAULT, USER, FOO, ALL),
         aclEntry(DEFAULT, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, MASK, ALL),
         aclEntry(DEFAULT, OTHER, NONE) }, returned);
@@ -849,7 +998,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.setPermission(path, FsPermission.createImmutable((short) RW_R));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, READ_WRITE),
-        aclEntry(ACCESS, USER, "foo", READ),
+        aclEntry(ACCESS, USER, FOO, READ),
         aclEntry(ACCESS, GROUP, READ),
         aclEntry(ACCESS, OTHER, NONE));
     fs.setAcl(path, aclSpec);
@@ -857,7 +1006,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", READ),
+        aclEntry(ACCESS, USER, FOO, READ),
         aclEntry(ACCESS, GROUP, READ) }, returned);
     assertPermission(fs, (short) RW);
   }
@@ -872,14 +1021,14 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
         aclEntry(ACCESS, USER, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(ACCESS, OTHER, NONE),
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     fs.setPermission(path, FsPermission.createImmutable((short) RWX));
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
         aclEntry(DEFAULT, USER, ALL),
-        aclEntry(DEFAULT, USER, "foo", ALL),
+        aclEntry(DEFAULT, USER, FOO, ALL),
         aclEntry(DEFAULT, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, MASK, ALL),
         aclEntry(DEFAULT, OTHER, NONE) }, returned);
@@ -893,14 +1042,14 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     path = new Path(testRoot, UUID.randomUUID().toString());
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     Path filePath = new Path(path, "file1");
     fs.create(filePath).close();
     AclStatus s = fs.getAclStatus(filePath);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
     assertPermission(fs, filePath, (short) RW_R);
   }
@@ -913,7 +1062,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     path = new Path(testRoot, UUID.randomUUID().toString());
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(ACCESS, USER, "foo", ALL));
+        aclEntry(ACCESS, USER, FOO, ALL));
     fs.modifyAclEntries(path, aclSpec);
     Path filePath = new Path(path, "file1");
     fs.create(filePath).close();
@@ -924,7 +1073,6 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  @Ignore // wait investigation in service
   public void testDefaultMinimalAclNewFile() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -950,7 +1098,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     path = new Path(testRoot, UUID.randomUUID().toString());
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
 
     Path dirPath = new Path(path, "dir1");
@@ -959,10 +1107,10 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     AclStatus s = fs.getAclStatus(dirPath);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, USER, ALL),
-        aclEntry(DEFAULT, USER, "foo", ALL),
+        aclEntry(DEFAULT, USER, FOO, ALL),
         aclEntry(DEFAULT, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, MASK, ALL),
         aclEntry(DEFAULT, OTHER, NONE) }, returned);
@@ -970,14 +1118,13 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  @Ignore // wait umask fix to be deployed
   public void testOnlyAccessAclNewDir() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
     path = new Path(testRoot, UUID.randomUUID().toString());
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(ACCESS, USER, "foo", ALL));
+        aclEntry(ACCESS, USER, FOO, ALL));
     fs.modifyAclEntries(path, aclSpec);
     Path dirPath = new Path(path, "dir1");
     fs.mkdirs(dirPath);
@@ -988,7 +1135,6 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  @Ignore // wait investigation in service
   public void testDefaultMinimalAclNewDir() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -1017,7 +1163,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     path = new Path(testRoot, UUID.randomUUID().toString());
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     Path filePath = new Path(path, "file1");
     int bufferSize =  4 * 1024 * 1024;
@@ -1027,7 +1173,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     AclStatus s = fs.getAclStatus(filePath);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
     assertPermission(fs, filePath, (short) RWX_R);
   }
@@ -1039,17 +1185,17 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     path = new Path(testRoot, UUID.randomUUID().toString());
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(path, aclSpec);
     Path dirPath = new Path(path, "dir1");
     fs.mkdirs(dirPath, new FsPermission((short) RWX_R));
     AclStatus s = fs.getAclStatus(dirPath);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
-        aclEntry(ACCESS, USER, "foo", ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
         aclEntry(ACCESS, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, USER, ALL),
-        aclEntry(DEFAULT, USER, "foo", ALL),
+        aclEntry(DEFAULT, USER, FOO, ALL),
         aclEntry(DEFAULT, GROUP, READ_EXECUTE),
         aclEntry(DEFAULT, MASK, ALL),
         aclEntry(DEFAULT, OTHER, READ_EXECUTE) }, returned);
@@ -1064,7 +1210,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     Path dirPath = new Path(path, "dir");
     FileSystem.mkdirs(fs, dirPath, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(dirPath, aclSpec);
     Path filePath = new Path(path, "file1");
     fs.create(filePath).close();
@@ -1086,7 +1232,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     Path dirPath = new Path(path, "dir");
     FileSystem.mkdirs(fs, dirPath, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
-        aclEntry(DEFAULT, USER, "foo", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL));
     fs.setAcl(dirPath, aclSpec);
     Path subdirPath = new Path(path, "subdir");
     FileSystem.mkdirs(fs, subdirPath, FsPermission.createImmutable((short) RWX_RX));
@@ -1107,17 +1253,17 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     Path rootPath = new Path("/");
 
     List<AclEntry> aclSpec1 = Lists.newArrayList(
-        aclEntry(DEFAULT, GROUP, "foo", ALL),
-        aclEntry(ACCESS, GROUP, "bar", ALL));
+        aclEntry(DEFAULT, GROUP, FOO, ALL),
+        aclEntry(ACCESS, GROUP, BAR, ALL));
     fs.setAcl(rootPath, aclSpec1);
     fs.getAclStatus(rootPath);
 
-    fs.setOwner(rootPath, "", "testgroup");
+    fs.setOwner(rootPath, TEST_OWNER, TEST_GROUP);
     fs.setPermission(rootPath, new FsPermission("777"));
 
     List<AclEntry> aclSpec2 = Lists.newArrayList(
-        aclEntry(DEFAULT, USER, "foo", ALL),
-        aclEntry(ACCESS, USER, "bar", ALL));
+        aclEntry(DEFAULT, USER, FOO, ALL),
+        aclEntry(ACCESS, USER, BAR, ALL));
     fs.modifyAclEntries(rootPath, aclSpec2);
     fs.removeAclEntries(rootPath, aclSpec2);
     fs.removeDefaultAcl(rootPath);
@@ -1134,7 +1280,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     assertTrue(fs.exists(filePath));
 
     FileStatus oldFileStatus = fs.getFileStatus(filePath);
-    fs.setOwner(filePath, "Alice", "testGroup");
+    fs.setOwner(filePath, TEST_OWNER, TEST_GROUP);
     FileStatus newFileStatus = fs.getFileStatus(filePath);
 
     assertEquals(oldFileStatus.getOwner(), newFileStatus.getOwner());
@@ -1168,8 +1314,8 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.create(filePath);
     try {
       List<AclEntry> aclSpec = Lists.newArrayList(
-              aclEntry(DEFAULT, GROUP, "foo", ALL),
-              aclEntry(ACCESS, GROUP, "bar", ALL));
+              aclEntry(DEFAULT, GROUP, FOO, ALL),
+              aclEntry(ACCESS, GROUP, BAR, ALL));
       fs.modifyAclEntries(filePath, aclSpec);
       assertFalse("UnsupportedOperationException is expected", false);
     } catch (UnsupportedOperationException ex) {
@@ -1185,8 +1331,8 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.create(filePath);
     try {
       List<AclEntry> aclSpec = Lists.newArrayList(
-              aclEntry(DEFAULT, GROUP, "foo", ALL),
-              aclEntry(ACCESS, GROUP, "bar", ALL));
+              aclEntry(DEFAULT, GROUP, FOO, ALL),
+              aclEntry(ACCESS, GROUP, BAR, ALL));
       fs.removeAclEntries(filePath, aclSpec);
       assertFalse("UnsupportedOperationException is expected", false);
     } catch (UnsupportedOperationException ex) {
@@ -1230,8 +1376,8 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.create(filePath);
     try {
       List<AclEntry> aclSpec = Lists.newArrayList(
-              aclEntry(DEFAULT, GROUP, "foo", ALL),
-              aclEntry(ACCESS, GROUP, "bar", ALL));
+              aclEntry(DEFAULT, GROUP, FOO, ALL),
+              aclEntry(ACCESS, GROUP, BAR, ALL));
       fs.setAcl(filePath, aclSpec);
       assertFalse("UnsupportedOperationException is expected", false);
     } catch (UnsupportedOperationException ex) {

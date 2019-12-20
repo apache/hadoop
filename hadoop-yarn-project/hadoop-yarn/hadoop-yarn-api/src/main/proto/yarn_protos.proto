@@ -22,6 +22,7 @@
  * for what changes are allowed for a *stable* .proto interface.
  */
 
+syntax = "proto2";
 option java_package = "org.apache.hadoop.yarn.proto";
 option java_outer_classname = "YarnProtos";
 option java_generic_services = true;
@@ -155,6 +156,7 @@ message ContainerProto {
   optional int64 allocation_request_id = 8 [default = -1];
   optional int32 version = 9 [default = 0];
   repeated string allocation_tags = 10;
+  optional string exposed_ports = 11;
 }
 
 message ContainerReportProto {
@@ -170,6 +172,7 @@ message ContainerReportProto {
   optional ContainerStateProto container_state = 10;
   optional string node_http_address = 11;
   optional ExecutionTypeProto executionType = 12 [default = GUARANTEED];
+  optional string exposed_ports = 13;
 }
 
 enum YarnApplicationStateProto {
@@ -284,6 +287,7 @@ message ApplicationReportProto {
   optional string amNodeLabelExpression = 25;
   repeated AppTimeoutsMapProto appTimeouts = 26;
   optional int64 launchTime = 27;
+  optional int64 submitTime = 28;
 }
 
 message AppTimeoutsMapProto {

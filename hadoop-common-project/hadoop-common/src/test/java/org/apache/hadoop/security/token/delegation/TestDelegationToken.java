@@ -50,6 +50,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.*;
 
 public class TestDelegationToken {
@@ -260,6 +261,29 @@ public class TestDelegationToken {
   }
 
   @Test
+  public void testDelegationTokenCount() throws Exception {
+    final TestDelegationTokenSecretManager dtSecretManager =
+        new TestDelegationTokenSecretManager(24*60*60*1000,
+            3*1000, 1*1000, 3600000);
+    try {
+      dtSecretManager.startThreads();
+      assertThat(dtSecretManager.getCurrentTokensSize()).isZero();
+      final Token<TestDelegationTokenIdentifier> token1 =
+          generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker");
+      assertThat(dtSecretManager.getCurrentTokensSize()).isOne();
+      final Token<TestDelegationTokenIdentifier> token2 =
+          generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker");
+      assertThat(dtSecretManager.getCurrentTokensSize()).isEqualTo(2);
+      dtSecretManager.cancelToken(token1, "JobTracker");
+      assertThat(dtSecretManager.getCurrentTokensSize()).isOne();
+      dtSecretManager.cancelToken(token2, "JobTracker");
+      assertThat(dtSecretManager.getCurrentTokensSize()).isZero();
+    } finally {
+      dtSecretManager.stopThreads();
+    }
+  }
+
+  @Test
   public void testDelegationTokenSecretManager() throws Exception {
     final TestDelegationTokenSecretManager dtSecretManager = 
       new TestDelegationTokenSecretManager(24*60*60*1000,
@@ -363,7 +387,7 @@ public class TestDelegationToken {
 
       //after rolling, the length of the keys list must increase
       int currNumKeys = dtSecretManager.getAllKeys().length;
-      Assert.assertEquals((currNumKeys - prevNumKeys) >= 1, true);
+      assertThat(currNumKeys - prevNumKeys).isGreaterThanOrEqualTo(1);
       
       //after rolling, the token that was generated earlier must
       //still be valid (retrievePassword will fail if the token

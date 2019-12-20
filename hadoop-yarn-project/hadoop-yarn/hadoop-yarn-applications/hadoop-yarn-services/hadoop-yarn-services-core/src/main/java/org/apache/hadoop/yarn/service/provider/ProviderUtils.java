@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.service.ServiceContext;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.api.records.ConfigFormat;
@@ -47,9 +48,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.COMPONENT_ID;
@@ -149,6 +153,20 @@ public class ProviderUtils implements YarnServiceConstants {
     return content;
   }
 
+  public static String replaceSpacesWithDelimiter(String content,
+      String delimiter) {
+    List<String> parts = new ArrayList<String>();
+    Matcher m = Pattern.compile("([^\"]\\S*|\".+?\")\\s*").matcher(content);
+    while (m.find()) {
+      String part = m.group(1);
+      if(part.startsWith("\"") && part.endsWith("\"")) {
+        part = part.replaceAll("^\"|\"$", "");
+      }
+      parts.add(part);
+    }
+    return String.join(delimiter, parts);
+  }
+
   // configs will be substituted by corresponding env in tokenMap
   public static void substituteMapWithTokens(Map<String, String> configs,
       Map<String, String> tokenMap) {
@@ -174,13 +192,27 @@ public class ProviderUtils implements YarnServiceConstants {
     return compInstanceDir;
   }
 
+  public static Path initCompPublicResourceDir(SliderFileSystem fs,
+      ContainerLaunchService.ComponentLaunchContext compLaunchContext,
+      ComponentInstance instance) {
+    Path compDir = fs.getComponentPublicResourceDir(
+        compLaunchContext.getServiceVersion(), compLaunchContext.getName());
+    Path compPublicResourceDir = new Path(compDir,
+        instance.getCompInstanceName());
+    return compPublicResourceDir;
+  }
+
+
   // 1. Create all config files for a component on hdfs for localization
   // 2. Add the config file to localResource
   public static synchronized void createConfigFileAndAddLocalResource(
       AbstractLauncher launcher, SliderFileSystem fs,
       ContainerLaunchService.ComponentLaunchContext compLaunchContext,
       Map<String, String> tokensForSubstitution, ComponentInstance instance,
-      ServiceContext context) throws IOException {
+      ServiceContext context, ProviderService.ResolvedLaunchParams
+      resolvedParams)
+      throws IOException {
+
     Path compInstanceDir = initCompInstanceDir(fs, compLaunchContext, instance);
     if (!fs.getFileSystem().exists(compInstanceDir)) {
       log.info("{} version {} : Creating dir on hdfs: {}",
@@ -192,11 +224,22 @@ public class ProviderUtils implements YarnServiceConstants {
       log.info("Component instance conf dir already exists: " + compInstanceDir);
     }
 
-    if (log.isDebugEnabled()) {
-      log.debug("Tokens substitution for component instance: " + instance
-          .getCompInstanceName() + System.lineSeparator()
-          + tokensForSubstitution);
+    Path compPublicResourceDir = initCompPublicResourceDir(fs,
+        compLaunchContext, instance);
+    if (!fs.getFileSystem().exists(compPublicResourceDir)) {
+      log.info("{} version {} : Creating Public Resource dir on hdfs: {}",
+          instance.getCompInstanceId(), compLaunchContext.getServiceVersion(),
+          compPublicResourceDir);
+      fs.getFileSystem().mkdirs(compPublicResourceDir,
+          new FsPermission(FsAction.ALL, FsAction.READ_EXECUTE,
+          FsAction.EXECUTE));
+    } else {
+      log.info("Component instance public resource dir already exists: "
+          + compPublicResourceDir);
     }
+
+    log.debug("Tokens substitution for component instance: {}{}{}" + instance
+        .getCompInstanceName(), System.lineSeparator(), tokensForSubstitution);
 
     for (ConfigFile originalFile : compLaunchContext.getConfiguration()
         .getFiles()) {
@@ -219,7 +262,14 @@ public class ProviderUtils implements YarnServiceConstants {
        * substitution and merges in new configs, and writes a new file to
        * compInstanceDir/fileName.
        */
-      Path remoteFile = new Path(compInstanceDir, fileName);
+      Path remoteFile = null;
+      LocalResourceVisibility visibility = configFile.getVisibility();
+      if (visibility != null &&
+          visibility.equals(LocalResourceVisibility.PUBLIC)) {
+        remoteFile = new Path(compPublicResourceDir, fileName);
+      } else {
+        remoteFile = new Path(compInstanceDir, fileName);
+      }
 
       if (!fs.getFileSystem().exists(remoteFile)) {
         log.info("Saving config file on hdfs for component " + instance
@@ -251,16 +301,19 @@ public class ProviderUtils implements YarnServiceConstants {
 
       // Add resource for localization
       LocalResource configResource =
-          fs.createAmResource(remoteFile, LocalResourceType.FILE);
+          fs.createAmResource(remoteFile, LocalResourceType.FILE,
+          configFile.getVisibility());
       Path destFile = new Path(configFile.getDestFile());
       String symlink = APP_CONF_DIR + "/" + fileName;
-      addLocalResource(launcher, symlink, configResource, destFile);
+      addLocalResource(launcher, symlink, configResource, destFile,
+          resolvedParams);
     }
   }
 
   public static synchronized void handleStaticFilesForLocalization(
       AbstractLauncher launcher, SliderFileSystem fs, ContainerLaunchService
-      .ComponentLaunchContext componentLaunchCtx)
+      .ComponentLaunchContext componentLaunchCtx,
+      ProviderService.ResolvedLaunchParams resolvedParams)
       throws IOException {
     for (ConfigFile staticFile :
         componentLaunchCtx.getConfiguration().getFiles()) {
@@ -292,19 +345,21 @@ public class ProviderUtils implements YarnServiceConstants {
       LocalResource localResource = fs.createAmResource(sourceFile,
           (staticFile.getType() == ConfigFile.TypeEnum.ARCHIVE ?
               LocalResourceType.ARCHIVE :
-              LocalResourceType.FILE));
+              LocalResourceType.FILE), staticFile.getVisibility());
+
       Path destFile = new Path(sourceFile.getName());
       if (staticFile.getDestFile() != null && !staticFile.getDestFile()
           .isEmpty()) {
         destFile = new Path(staticFile.getDestFile());
       }
-
-      addLocalResource(launcher, destFile.getName(), localResource, destFile);
+      addLocalResource(launcher, destFile.getName(), localResource, destFile,
+          resolvedParams);
     }
   }
 
   private static void addLocalResource(AbstractLauncher launcher,
-      String symlink, LocalResource localResource, Path destFile) {
+      String symlink, LocalResource localResource, Path destFile,
+      ProviderService.ResolvedLaunchParams resolvedParams) {
     if (destFile.isAbsolute()) {
       launcher.addLocalResource(symlink, localResource, destFile.toString());
       log.info("Added file for localization: "+ symlink +" -> " +
@@ -315,6 +370,7 @@ public class ProviderUtils implements YarnServiceConstants {
       log.info("Added file for localization: " + symlink+ " -> " +
           localResource.getResource().getFile());
     }
+    resolvedParams.addResolvedRsrcPath(symlink, destFile.toString());
   }
 
   // Static file is files uploaded by users before launch the service. Which

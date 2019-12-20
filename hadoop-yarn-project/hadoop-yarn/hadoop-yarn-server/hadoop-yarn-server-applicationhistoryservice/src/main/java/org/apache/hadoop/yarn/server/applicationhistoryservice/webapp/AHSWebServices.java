@@ -275,9 +275,7 @@ public class AHSWebServices extends WebServices {
         try {
           nodeHttpAddress = getNMWebAddressFromRM(conf, nmId);
         } catch (Exception ex) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(ex.getMessage());
-          }
+          LOG.debug("{}", ex);
         }
       }
       if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()) {
@@ -420,9 +418,7 @@ public class AHSWebServices extends WebServices {
         try {
           nodeHttpAddress = getNMWebAddressFromRM(conf, nmId);
         } catch (Exception ex) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(ex.getMessage());
-          }
+          LOG.debug("{}", ex);
         }
       }
       if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()) {

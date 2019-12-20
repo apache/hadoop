@@ -155,7 +155,9 @@ public class FSEditLog implements LogsPurgeable {
   
   //initialize
   private JournalSet journalSet = null;
-  private EditLogOutputStream editLogStream = null;
+
+  @VisibleForTesting
+  EditLogOutputStream editLogStream = null;
 
   // a monotonically increasing counter that represents transactionIds.
   // All of the threads which update/increment txid are synchronized,
@@ -563,7 +565,8 @@ public class FSEditLog implements LogsPurgeable {
   /**
    * @return the first transaction ID in the current log segment
    */
-  synchronized long getCurSegmentTxId() {
+  @VisibleForTesting
+  public synchronized long getCurSegmentTxId() {
     Preconditions.checkState(isSegmentOpen(),
         "Bad state: %s", state);
     return curSegmentTxId;
@@ -762,16 +765,16 @@ public class FSEditLog implements LogsPurgeable {
     }
     lastPrintTime = now;
     StringBuilder buf = new StringBuilder();
-    buf.append("Number of transactions: ");
-    buf.append(numTransactions);
-    buf.append(" Total time for transactions(ms): ");
-    buf.append(totalTimeTransactions);
-    buf.append(" Number of transactions batched in Syncs: ");
-    buf.append(numTransactionsBatchedInSync.get());
-    buf.append(" Number of syncs: ");
-    buf.append(editLogStream.getNumSync());
-    buf.append(" SyncTimes(ms): ");
-    buf.append(journalSet.getSyncTimes());
+    buf.append("Number of transactions: ")
+        .append(numTransactions)
+        .append(" Total time for transactions(ms): ")
+        .append(totalTimeTransactions)
+        .append(" Number of transactions batched in Syncs: ")
+        .append(numTransactionsBatchedInSync.get())
+        .append(" Number of syncs: ")
+        .append(editLogStream.getNumSync())
+        .append(" SyncTimes(ms): ")
+        .append(journalSet.getSyncTimes());
     LOG.info(buf.toString());
   }
 
@@ -1113,10 +1116,19 @@ public class FSEditLog implements LogsPurgeable {
       .setNewHolder(newHolder);
     logEdit(op);
   }
-  
-  void logCreateSnapshot(String snapRoot, String snapName, boolean toLogRpcIds) {
+
+  /**
+   * Log that a snapshot is created.
+   * @param snapRoot Root of the snapshot.
+   * @param snapName Name of the snapshot.
+   * @param toLogRpcIds If it is logging RPC ids.
+   * @param mtime The snapshot creation time set by Time.now().
+   */
+  void logCreateSnapshot(String snapRoot, String snapName, boolean toLogRpcIds,
+      long mtime) {
     CreateSnapshotOp op = CreateSnapshotOp.getInstance(cache.get())
-        .setSnapshotRoot(snapRoot).setSnapshotName(snapName);
+        .setSnapshotRoot(snapRoot).setSnapshotName(snapName)
+        .setSnapshotMTime(mtime);
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
@@ -1128,11 +1140,19 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
   
+  /**
+   * Log that a snapshot is renamed.
+   * @param path Root of the snapshot.
+   * @param snapOldName Old name of the snapshot.
+   * @param snapNewName New name the snapshot will be renamed to.
+   * @param toLogRpcIds If it is logging RPC ids.
+   * @param mtime The snapshot modification time set by Time.now().
+   */
   void logRenameSnapshot(String path, String snapOldName, String snapNewName,
-      boolean toLogRpcIds) {
+      boolean toLogRpcIds, long mtime) {
     RenameSnapshotOp op = RenameSnapshotOp.getInstance(cache.get())
         .setSnapshotRoot(path).setSnapshotOldName(snapOldName)
-        .setSnapshotNewName(snapNewName);
+        .setSnapshotNewName(snapNewName).setSnapshotMTime(mtime);
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
@@ -1382,10 +1402,15 @@ public class FSEditLog implements LogsPurgeable {
     try {
       editLogStream = journalSet.startLogSegment(segmentTxId, layoutVersion);
     } catch (IOException ex) {
-      throw new IOException("Unable to start log segment " +
-          segmentTxId + ": too few journals successfully started.", ex);
+      final String msg = "Unable to start log segment " + segmentTxId
+          + ": too few journals successfully started.";
+      LOG.error(msg, ex);
+      synchronized (journalSetLock) {
+        IOUtils.cleanupWithLogger(LOG, journalSet);
+      }
+      terminate(1, msg);
     }
-    
+
     curSegmentTxId = segmentTxId;
     state = State.IN_SEGMENT;
   }
@@ -1799,7 +1824,8 @@ public class FSEditLog implements LogsPurgeable {
    * @return The constructed journal manager
    * @throws IllegalArgumentException if no class is configured for uri
    */
-  private JournalManager createJournal(URI uri) {
+  @VisibleForTesting
+  JournalManager createJournal(URI uri) {
     Class<? extends JournalManager> clazz
       = getJournalClass(conf, uri.getScheme());
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
@@ -27,6 +28,7 @@ import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.List;
@@ -35,6 +37,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 import net.jcip.annotations.NotThreadSafe;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -427,5 +430,74 @@ public class TestDataNodeMetrics {
         return lb.getLocations().length == expected;
       }
     }, 1000, 6000);
+  }
+
+  @Test
+  public void testNNRpcMetricsWithNonHA() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    // setting heartbeat interval to 1 hour to prevent bpServiceActor sends
+    // heartbeat periodically to NN during running test case, and bpServiceActor
+    // only sends heartbeat once after startup
+    conf.setTimeDuration(DFS_HEARTBEAT_INTERVAL_KEY, 1, TimeUnit.HOURS);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    cluster.waitActive();
+    DataNode dn = cluster.getDataNodes().get(0);
+    MetricsRecordBuilder rb = getMetrics(dn.getMetrics().name());
+    assertCounter("HeartbeatsNumOps", 1L, rb);
+  }
+
+  @Test
+  public void testNNRpcMetricsWithHA() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    // setting heartbeat interval to 1 hour to prevent bpServiceActor sends
+    // heartbeat periodically to NN during running test case, and bpServiceActor
+    // only sends heartbeat once after startup
+    conf.setTimeDuration(DFS_HEARTBEAT_INTERVAL_KEY, 1, TimeUnit.HOURS);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).nnTopology(
+        MiniDFSNNTopology.simpleHATopology()).build();
+    cluster.waitActive();
+    DataNode dn = cluster.getDataNodes().get(0);
+    cluster.transitionToActive(0);
+    MetricsRecordBuilder rb = getMetrics(dn.getMetrics().name());
+    assertCounter("HeartbeatsForminidfs-ns-nn1NumOps", 1L, rb);
+    assertCounter("HeartbeatsForminidfs-ns-nn2NumOps", 1L, rb);
+    assertCounter("HeartbeatsNumOps", 2L, rb);
+  }
+
+  @Test
+  public void testNNRpcMetricsWithFederation() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    // setting heartbeat interval to 1 hour to prevent bpServiceActor sends
+    // heartbeat periodically to NN during running test case, and bpServiceActor
+    // only sends heartbeat once after startup
+    conf.setTimeDuration(DFS_HEARTBEAT_INTERVAL_KEY, 1, TimeUnit.HOURS);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).nnTopology(
+        MiniDFSNNTopology.simpleFederatedTopology("ns1,ns2")).build();
+    cluster.waitActive();
+    DataNode dn = cluster.getDataNodes().get(0);
+    MetricsRecordBuilder rb = getMetrics(dn.getMetrics().name());
+    assertCounter("HeartbeatsForns1NumOps", 1L, rb);
+    assertCounter("HeartbeatsForns2NumOps", 1L, rb);
+    assertCounter("HeartbeatsNumOps", 2L, rb);
+  }
+
+  @Test
+  public void testNNRpcMetricsWithFederationAndHA() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    // setting heartbeat interval to 1 hour to prevent bpServiceActor sends
+    // heartbeat periodically to NN during running test case, and bpServiceActor
+    // only sends heartbeat once after startup
+    conf.setTimeDuration(DFS_HEARTBEAT_INTERVAL_KEY, 1, TimeUnit.HOURS);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).nnTopology(
+        MiniDFSNNTopology.simpleHAFederatedTopology(2)).build();
+    cluster.waitActive();
+    DataNode dn = cluster.getDataNodes().get(0);
+    MetricsRecordBuilder rb = getMetrics(dn.getMetrics().name());
+
+    assertCounter("HeartbeatsForns0-nn0NumOps", 1L, rb);
+    assertCounter("HeartbeatsForns0-nn1NumOps", 1L, rb);
+    assertCounter("HeartbeatsForns1-nn0NumOps", 1L, rb);
+    assertCounter("HeartbeatsForns1-nn1NumOps", 1L, rb);
+    assertCounter("HeartbeatsNumOps", 4L, rb);
   }
 }

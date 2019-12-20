@@ -86,6 +86,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class BlockReaderFactory implements ShortCircuitReplicaCreator {
   static final Logger LOG = LoggerFactory.getLogger(BlockReaderFactory.class);
+  private static final int SMALL_BUFFER_SIZE = 512;
 
   public static class FailureInjector {
     public void injectRequestFileDescriptorsFailure() throws IOException {
@@ -582,7 +583,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
           Slot slot) throws IOException {
     ShortCircuitCache cache = clientContext.getShortCircuitCache();
     final DataOutputStream out =
-        new DataOutputStream(new BufferedOutputStream(peer.getOutputStream()));
+        new DataOutputStream(new BufferedOutputStream(peer.getOutputStream(), SMALL_BUFFER_SIZE));
     SlotId slotId = slot == null ? null : slot.getSlotId();
     new Sender(out).requestShortCircuitFds(block, token, slotId, 1,
         failureInjector.getSupportsReceiptVerification());
@@ -854,7 +855,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
         fileName, block, token, startOffset, length,
         verifyChecksum, clientName, peer, datanode,
         clientContext.getPeerCache(), cachingStrategy,
-        networkDistance);
+        networkDistance, configuration);
   }
 
   @Override

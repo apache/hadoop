@@ -46,6 +46,8 @@ public interface FederationRPCMBean {
 
   long getProxyOpRetries();
 
+  long getProxyOpNoNamenodes();
+
   long getRouterFailureStateStoreOps();
 
   long getRouterFailureReadOnlyOps();
@@ -91,4 +93,10 @@ public interface FederationRPCMBean {
    * @return JSON string representation.
    */
   String getRpcClientConnections();
+
+  /**
+   * Get the JSON representation of the async caller thread pool.
+   * @return JSON string representation of the async caller thread pool.
+   */
+  String getAsyncCallerPool();
 }

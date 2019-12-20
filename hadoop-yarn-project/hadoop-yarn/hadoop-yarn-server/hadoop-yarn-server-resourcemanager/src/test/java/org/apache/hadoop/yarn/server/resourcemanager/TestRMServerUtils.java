@@ -18,21 +18,26 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.api.records.ContainerUpdateType.INCREASE_RESOURCE;
 import static org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils.RESOURCE_OUTSIDE_ALLOWED_RANGE;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -43,11 +48,14 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestRMServerUtils {
 
@@ -118,6 +126,37 @@ public class TestRMServerUtils {
     Assert.assertEquals(capabilityOk.getMemorySize(),
         increaseRequest.getCapability().getMemorySize());
     Assert.assertEquals(containerIdOk, increaseRequest.getContainerId());
+  }
+
+  @Test
+  public void testQueryRMNodes() throws Exception {
+    RMContext rmContext = mock(RMContext.class);
+    NodeId node1 = NodeId.newInstance("node1", 1234);
+    RMNode rmNode1 = mock(RMNode.class);
+    ConcurrentMap<NodeId, RMNode> inactiveList =
+        new ConcurrentHashMap<NodeId, RMNode>();
+    when(rmNode1.getState()).thenReturn(NodeState.SHUTDOWN);
+    inactiveList.put(node1, rmNode1);
+    when(rmContext.getInactiveRMNodes()).thenReturn(inactiveList);
+    List<RMNode> result = RMServerUtils.queryRMNodes(rmContext,
+        EnumSet.of(NodeState.SHUTDOWN));
+    Assert.assertTrue(result.size() != 0);
+    assertThat(result.get(0)).isEqualTo(rmNode1);
+    when(rmNode1.getState()).thenReturn(NodeState.DECOMMISSIONED);
+    result = RMServerUtils.queryRMNodes(rmContext,
+        EnumSet.of(NodeState.DECOMMISSIONED));
+    Assert.assertTrue(result.size() != 0);
+    assertThat(result.get(0)).isEqualTo(rmNode1);
+    when(rmNode1.getState()).thenReturn(NodeState.LOST);
+    result = RMServerUtils.queryRMNodes(rmContext,
+        EnumSet.of(NodeState.LOST));
+    Assert.assertTrue(result.size() != 0);
+    assertThat(result.get(0)).isEqualTo(rmNode1);
+    when(rmNode1.getState()).thenReturn(NodeState.REBOOTED);
+    result = RMServerUtils.queryRMNodes(rmContext,
+        EnumSet.of(NodeState.REBOOTED));
+    Assert.assertTrue(result.size() != 0);
+    assertThat(result.get(0)).isEqualTo(rmNode1);
   }
 
   @Test

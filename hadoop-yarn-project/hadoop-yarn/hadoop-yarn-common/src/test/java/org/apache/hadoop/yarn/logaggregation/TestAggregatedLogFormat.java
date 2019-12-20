@@ -38,8 +38,8 @@ import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.Assert;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileStatus;
@@ -67,15 +67,14 @@ public class TestAggregatedLogFormat {
 
   private static final File testWorkDir = new File("target",
       "TestAggregatedLogFormat");
-  private static final Configuration conf = new Configuration();
   private static final FileSystem fs;
   private static final char filler = 'x';
-  private static final Log LOG = LogFactory
-      .getLog(TestAggregatedLogFormat.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestAggregatedLogFormat.class);
 
   static {
     try {
-      fs = FileSystem.get(conf);
+      fs = FileSystem.get(new Configuration());
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -280,6 +279,45 @@ public class TestAggregatedLogFormat {
     Assert.assertTrue("Log content incorrect", s.contains(expectedContent));
     
     Assert.assertEquals(expectedLength, s.length());
+  }
+
+  @Test
+  public void testZeroLengthLog() throws IOException {
+    Configuration conf = new Configuration();
+    File workDir = new File(testWorkDir, "testZeroLength");
+    Path remoteAppLogFile = new Path(workDir.getAbsolutePath(),
+        "aggregatedLogFile");
+    Path srcFileRoot = new Path(workDir.getAbsolutePath(), "srcFiles");
+    ContainerId testContainerId = TestContainerId.newContainerId(1, 1, 1, 1);
+    Path t = new Path(srcFileRoot, testContainerId.getApplicationAttemptId()
+        .getApplicationId().toString());
+    Path srcFilePath = new Path(t, testContainerId.toString());
+
+    // Create zero byte file
+    writeSrcFile(srcFilePath, "stdout", 0);
+
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    try (LogWriter logWriter = new LogWriter()) {
+      logWriter.initialize(conf, remoteAppLogFile, ugi);
+
+      LogKey logKey = new LogKey(testContainerId);
+      LogValue logValue =
+          new LogValue(Collections.singletonList(srcFileRoot.toString()),
+              testContainerId, ugi.getShortUserName());
+
+      logWriter.append(logKey, logValue);
+    }
+
+    LogReader logReader = new LogReader(conf, remoteAppLogFile);
+    LogKey rLogKey = new LogKey();
+    DataInputStream dis = logReader.next(rLogKey);
+    Writer writer = new StringWriter();
+    LogReader.readAcontainerLogs(dis, writer);
+
+    Assert.assertEquals("LogType:stdout\n" +
+        "LogLength:0\n" +
+        "Log Contents:\n\n" +
+        "End of LogType:stdout\n\n", writer.toString());
   }
 
   @Test(timeout=10000)

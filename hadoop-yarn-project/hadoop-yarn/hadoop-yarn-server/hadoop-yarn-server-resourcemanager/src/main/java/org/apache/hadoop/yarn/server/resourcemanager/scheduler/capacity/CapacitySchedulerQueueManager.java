@@ -28,8 +28,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -63,7 +63,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     CSQueue, CapacitySchedulerConfiguration>{
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       CapacitySchedulerQueueManager.class);
 
   static final Comparator<CSQueue> NON_PARTITIONED_QUEUE_COMPARATOR =
@@ -177,7 +177,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         csContext.getRMContext().getHAServiceState()
             != HAServiceProtocol.HAServiceState.STANDBY) {
       // Ensure queue hierarchy in the new XML file is proper.
-      validateQueueHierarchy(queues, newQueues);
+      validateQueueHierarchy(queues, newQueues, newConf);
     }
 
     // Add new queues and delete OldQeueus only after validation.
@@ -309,7 +309,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
    * @param newQueues new queues
    */
   private void validateQueueHierarchy(Map<String, CSQueue> queues,
-      Map<String, CSQueue> newQueues) throws IOException {
+      Map<String, CSQueue> newQueues, CapacitySchedulerConfiguration newConf)
+      throws IOException {
     // check that all static queues are included in the newQueues list
     for (Map.Entry<String, CSQueue> e : queues.entrySet()) {
       if (!(AbstractAutoCreatedLeafQueue.class.isAssignableFrom(e.getValue()
@@ -319,13 +320,24 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         CSQueue newQueue = newQueues.get(queueName);
         if (null == newQueue) {
           // old queue doesn't exist in the new XML
-          if (oldQueue.getState() == QueueState.STOPPED) {
+          String configPrefix = newConf.getQueuePrefix(
+              oldQueue.getQueuePath());
+          QueueState newQueueState = null;
+          try {
+            newQueueState = QueueState.valueOf(
+                newConf.get(configPrefix + "state"));
+          } catch (Exception ex) {
+            LOG.warn("Not a valid queue state for queue "
+                + oldQueue.getQueuePath());
+          }
+          if (oldQueue.getState() == QueueState.STOPPED ||
+              newQueueState == QueueState.STOPPED) {
             LOG.info("Deleting Queue " + queueName + ", as it is not"
                 + " present in the modified capacity configuration xml");
           } else{
-            throw new IOException(oldQueue.getQueuePath() + " is deleted from"
-                + " the new capacity scheduler configuration, but the"
-                + " queue is not yet in stopped state. " + "Current State : "
+            throw new IOException(oldQueue.getQueuePath() + " cannot be"
+                + " deleted from the capacity scheduler configuration, as the"
+                + " queue is not yet in stopped state. Current State : "
                 + oldQueue.getState());
           }
         } else if (!oldQueue.getQueuePath().equals(newQueue.getQueuePath())) {

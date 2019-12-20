@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -38,8 +39,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getCSVTestPath;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
 import static org.junit.Assert.*;
 
 /**
@@ -50,11 +53,11 @@ public class ITestS3AAWSCredentialsProvider {
       LoggerFactory.getLogger(ITestS3AAWSCredentialsProvider.class);
 
   @Rule
-  public Timeout testTimeout = new Timeout(1 * 60 * 1000);
+  public Timeout testTimeout = new Timeout(60_1000, TimeUnit.MILLISECONDS);
 
   @Test
   public void testBadConfiguration() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = createConf();
     conf.set(AWS_CREDENTIALS_PROVIDER, "no.such.class");
     try {
       createFailingFS(conf);
@@ -92,7 +95,7 @@ public class ITestS3AAWSCredentialsProvider {
 
   @Test
   public void testBadCredentialsConstructor() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConf();
     conf.set(AWS_CREDENTIALS_PROVIDER,
         BadCredentialsProviderConstructor.class.getName());
     try {
@@ -100,6 +103,14 @@ public class ITestS3AAWSCredentialsProvider {
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains(CONSTRUCTOR_EXCEPTION, e);
     }
+  }
+
+  protected Configuration createConf() {
+    Configuration conf = new Configuration();
+    removeBaseAndBucketOverrides(conf,
+        DELEGATION_TOKEN_BINDING,
+        AWS_CREDENTIALS_PROVIDER);
+    return conf;
   }
 
   /**
@@ -150,8 +161,7 @@ public class ITestS3AAWSCredentialsProvider {
     Configuration conf = new Configuration();
     conf.set(AWS_CREDENTIALS_PROVIDER,
         AnonymousAWSCredentialsProvider.class.getName());
-    Path testFile = new Path(
-        conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE));
+    Path testFile = getCSVTestPath(conf);
     FileSystem fs = FileSystem.newInstance(testFile.toUri(), conf);
     assertNotNull(fs);
     assertTrue(fs instanceof S3AFileSystem);

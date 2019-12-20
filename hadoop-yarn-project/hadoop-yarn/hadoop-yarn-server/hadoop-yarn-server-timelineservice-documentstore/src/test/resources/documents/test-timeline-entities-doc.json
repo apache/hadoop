@@ -1,0 +1,185 @@
+[
+  {
+    "context": {
+      "clusterId": "yarn_cluster",
+      "userId": "test_user",
+      "flowName": "DistributedShell",
+      "flowRunId": 1533985547564,
+      "appId": "application_1533985489663_0001"
+    },
+    "flowVersion": "1",
+    "subApplicationUser": "test_user",
+    "metrics": {},
+    "events": {
+      "YARN_RM_CONTAINER_REQUESTED_TYPE": [
+        {
+          "valid": true,
+          "id": "YARN_RM_CONTAINER_REQUESTED_TYPE",
+          "timestamp": 1533985547824,
+          "info": {
+            "YARN_RM_CONTAINER_ALLOCATION_REQUEST_ID": 0
+          }
+        }
+      ],
+      "YARN_APPLICATION_ATTEMPT_FINISHED": [
+        {
+          "valid": true,
+          "id": "YARN_APPLICATION_ATTEMPT_FINISHED",
+          "timestamp": 1533985561254,
+          "info": {}
+        }
+      ],
+      "YARN_APPLICATION_ATTEMPT_REGISTERED": [
+        {
+          "valid": true,
+          "id": "YARN_APPLICATION_ATTEMPT_REGISTERED",
+          "timestamp": 1533985554927,
+          "info": {}
+        }
+      ]
+    },
+    "id": "yarn_cluster!test_user!DistributedShell!1533985547564!application_1533985489663_0001!YARN_APPLICATION_ATTEMPT!appattempt_1533985489663_0001_000001",
+    "type": "YARN_APPLICATION_ATTEMPT",
+    "configs": {},
+    "info": {
+      "SYSTEM_INFO_PARENT_ENTITY": {
+        "type": "YARN_APPLICATION",
+        "id": "application_1533985489663_0001"
+      },
+      "YARN_APPLICATION_ATTEMPT_HOST": "test_user/10.171.19.25",
+      "YARN_APPLICATION_ATTEMPT_MASTER_CONTAINER": "container_1533985489663_0001_01_000001",
+      "YARN_APPLICATION_ATTEMPT_ORIGINAL_TRACKING_URL": "N/A",
+      "YARN_APPLICATION_ATTEMPT_RPC_PORT": -1,
+      "YARN_APPLICATION_ATTEMPT_TRACKING_URL": "http://test_user:8088/proxy/application_1533985489663_0001/",
+      "YARN_APPLICATION_ATTEMPT_DIAGNOSTICS_INFO": "",
+      "YARN_APPLICATION_ATTEMPT_STATE": "FINISHED",
+      "YARN_APPLICATION_ATTEMPT_FINAL_STATUS": "SUCCEEDED"
+    },
+    "createdTime": 1533985554927,
+    "relatesToEntities": {},
+    "isRelatedToEntities": {}
+  },
+  {
+    "context": {
+      "clusterId": "yarn_cluster",
+      "userId": "test_user",
+      "flowName": "DistributedShell",
+      "flowRunId": 1533985547564,
+      "appId": "application_1533985489663_0001"
+    },
+    "flowVersion": "1",
+    "subApplicationUser": "test_user",
+    "metrics": {
+      "MEMORY": [
+        {
+          "valid": true,
+          "singleDataTimestamp": 1533985556335,
+          "singleDataValue": 150298624,
+          "id": "MEMORY",
+          "type": "SINGLE_VALUE",
+          "realtimeAggregationOp": "SUM",
+          "values": {
+            "1533985556335": 150298624
+          },
+          "valuesJAXB": {
+            "1533985556335": 150298624
+          }
+        }
+      ]
+    },
+    "events": {
+      "YARN_RM_CONTAINER_CREATED": [
+        {
+          "valid": true,
+          "id": "YARN_RM_CONTAINER_CREATED",
+          "timestamp": 1533985548047,
+          "info": {
+            "YARN_RM_CONTAINER_ALLOCATION_REQUEST_ID": 0
+          }
+        }
+      ],
+      "YARN_CONTAINER_CREATED": [
+        {
+          "valid": true,
+          "id": "YARN_CONTAINER_CREATED",
+          "timestamp": 1533985549474,
+          "info": {
+            "YARN_NM_EVENT_SOURCE": "CONTAINER_EVENT",
+            "YARN_CONTAINER_STATE": "NEW",
+            "YARN_APPLICATION_STATE": "RUNNING"
+          }
+        }
+      ],
+      "YARN_CONTAINER_FINISHED": [
+        {
+          "valid": true,
+          "id": "YARN_CONTAINER_FINISHED",
+          "timestamp": 1533985560616,
+          "info": {
+            "YARN_NM_EVENT_SOURCE": "CONTAINER_EVENT"
+          }
+        }
+      ]
+    },
+    "id": "yarn_cluster!test_user!DistributedShell!1533985547564!application_1533985489663_0001!YARN_CONTAINER!container_1533985489663_0001_01_000001",
+    "type": "YARN_CONTAINER",
+    "configs": {},
+    "info": {
+      "YARN_CONTAINER_ALLOCATED_PORT": 13076,
+      "YARN_CONTAINER_ALLOCATED_MEMORY": 1024,
+      "YARN_CONTAINER_ALLOCATED_PRIORITY": "0",
+      "YARN_CONTAINER_ALLOCATED_HOST": "test_user",
+      "YARN_CONTAINER_ALLOCATED_HOST_HTTP_ADDRESS": "test_user:8042",
+      "YARN_CONTAINER_ALLOCATED_VCORE": 1,
+      "SYSTEM_INFO_PARENT_ENTITY": {
+        "type": "YARN_APPLICATION_ATTEMPT",
+        "id": "appattempt_1533985489663_0001_000001"
+      },
+      "YARN_CONTAINER_STATE": "COMPLETE",
+      "YARN_CONTAINER_EXIT_STATUS": 0,
+      "YARN_CONTAINER_DIAGNOSTICS_INFO": "",
+      "YARN_CONTAINER_FINISHED_TIME": 1533985560616
+    },
+    "createdTime": 1533985549474,
+    "relatesToEntities": {},
+    "isRelatedToEntities": {}
+  },
+  {
+    "context": {
+      "clusterId": "yarn_cluster",
+      "userId": "test_user",
+      "flowName": "DistributedShell",
+      "flowRunId": 1533985547564,
+      "appId": "application_1533985489663_0001"
+    },
+    "flowVersion": "1",
+    "subApplicationUser": "test_user",
+    "metrics": {},
+    "events": {
+      "CONTAINER_LAUNCHED": [
+        {
+          "valid": true,
+          "id": "CONTAINER_LAUNCHED",
+          "timestamp": 1533985557747,
+          "info": {
+            "YARN_NM_EVENT_SOURCE": "CONTAINER_EVENT",
+            "YARN_CONTAINER_STATE": "LOCALIZED",
+            "YARN_APPLICATION_STATE": "RUNNING"
+          }
+        }
+      ]
+    },
+    "id": "yarn_cluster!test_user!DistributedShell!1533985547564!application_1533985489663_0001!YARN_CONTAINER!container_1533985489663_0001_01_000002",
+    "type": "YARN_CONTAINER",
+    "configs": {},
+    "info": {
+      "SYSTEM_INFO_PARENT_ENTITY": {
+        "type": "YARN_APPLICATION_ATTEMPT",
+        "id": "appattempt_1533985489663_0001_000001"
+      }
+    },
+    "createdTime": 0,
+    "relatesToEntities": {},
+    "isRelatedToEntities": {}
+  }
+]

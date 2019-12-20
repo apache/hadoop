@@ -24,7 +24,6 @@ import java.util.Hashtable;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
-import com.google.common.base.Preconditions;
 import org.junit.After;
 import org.junit.Before;
 import org.slf4j.Logger;
@@ -34,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
@@ -210,9 +210,9 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @throws IOException failure during create/init.
    */
   public AzureBlobFileSystem createFileSystem() throws IOException {
-    Preconditions.checkState(abfs == null,
-        "existing ABFS instance exists: %s", abfs);
-    abfs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
+    if (abfs == null) {
+      abfs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
+    }
     return abfs;
   }
 
@@ -260,6 +260,10 @@ public abstract class AbstractAbfsIntegrationTest extends
 
   public AuthType getAuthType() {
     return this.authType;
+  }
+
+  public String getAbfsScheme() {
+    return this.abfsScheme;
   }
 
   protected boolean isIPAddress() {
@@ -338,4 +342,13 @@ public abstract class AbstractAbfsIntegrationTest extends
         new Path(getTestPath(), filepath));
   }
 
+  /**
+   * Get any Delegation Token manager created by the filesystem.
+   * @return the DT manager or null.
+   * @throws IOException failure
+   */
+  protected AbfsDelegationTokenManager getDelegationTokenManager()
+      throws IOException {
+    return getFileSystem().getDelegationTokenManager();
+  }
 }

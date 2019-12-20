@@ -165,7 +165,7 @@ export default Ember.Controller.extend({
 
   getSortedVizDataInDesc: function(data) {
     return data.sort(function(d1, d2) {
-      return d2.value - d1.value;
+      return d2.createdTs - d1.createdTs;
     });
   },
 

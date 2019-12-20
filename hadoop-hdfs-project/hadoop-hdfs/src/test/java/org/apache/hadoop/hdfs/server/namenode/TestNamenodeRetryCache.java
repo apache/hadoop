@@ -232,19 +232,19 @@ public class TestNamenodeRetryCache {
     newCall();
     HdfsFileStatus status = nnRpc.create(src, perm, "holder",
         new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true,
-        (short) 1, BlockSize, null, null);
+        (short) 1, BlockSize, null, null, null);
     Assert.assertEquals(status, nnRpc.create(src, perm, "holder",
         new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true,
-        (short) 1, BlockSize, null, null));
+        (short) 1, BlockSize, null, null, null));
     Assert.assertEquals(status, nnRpc.create(src, perm, "holder",
         new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true,
-        (short) 1, BlockSize, null, null));
+        (short) 1, BlockSize, null, null, null));
     // A non-retried call fails
     newCall();
     try {
       nnRpc.create(src, perm, "holder",
           new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)),
-          true, (short) 1, BlockSize, null, null);
+          true, (short) 1, BlockSize, null, null, null);
       Assert.fail("testCreate - expected exception is not thrown");
     } catch (IOException e) {
       // expected
@@ -463,7 +463,7 @@ public class TestNamenodeRetryCache {
     assertTrue(namesystem.hasRetryCache());
     cacheSet = (LightWeightCache<CacheEntry, CacheEntry>) namesystem
         .getRetryCache().getCacheSet();
-    assertEquals("Retry cache size is wrong", 38, cacheSet.size());
+    assertEquals("Retry cache size is wrong", 39, cacheSet.size());
     iter = cacheSet.iterator();
     while (iter.hasNext()) {
       CacheEntry entry = iter.next();

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+syntax = "proto2";
 option java_package = "org.apache.hadoop.hdfs.protocol.proto";
 option java_outer_classname = "RouterProtocolProtos";
 option java_generic_services = true;
@@ -74,4 +74,19 @@ service RouterAdminProtocolService {
    * Get the list of disabled name services.
    */
   rpc getDisabledNameservices(GetDisabledNameservicesRequestProto) returns (GetDisabledNameservicesResponseProto);
+
+  /**
+   * Refresh mount entries
+   */
+  rpc refreshMountTableEntries(RefreshMountTableEntriesRequestProto) returns(RefreshMountTableEntriesResponseProto);
+
+  /**
+   * Get the destination of a file/directory in the federation.
+   */
+  rpc getDestination(GetDestinationRequestProto) returns (GetDestinationResponseProto);
+
+  /**
+   * Refresh superuser proxy groups mappings on Router.
+   */
+  rpc refreshSuperUserGroupsConfiguration(RefreshSuperUserGroupsConfigurationRequestProto) returns (RefreshSuperUserGroupsConfigurationResponseProto);
 }

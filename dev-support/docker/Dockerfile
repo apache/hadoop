@@ -63,6 +63,7 @@ RUN apt-get -q update \
         libsnappy-dev \
         libssl-dev \
         libtool \
+        libzstd1-dev \
         locales \
         make \
         pinentry-curses \
@@ -105,12 +106,12 @@ ENV CMAKE_HOME /opt/cmake
 ENV PATH "${PATH}:/opt/cmake/bin"
 
 ######
-# Install Google Protobuf 2.5.0 (2.6.0 ships with Xenial)
+# Install Google Protobuf 3.7.1 (2.6.0 ships with Xenial)
 ######
 # hadolint ignore=DL3003
 RUN mkdir -p /opt/protobuf-src \
     && curl -L -s -S \
-      https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz \
+      https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
       -o /opt/protobuf.tar.gz \
     && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
     && cd /opt/protobuf-src \
@@ -146,9 +147,9 @@ ENV FINDBUGS_HOME /usr
 # Install shellcheck (0.4.6, the latest as of 2017-09-26)
 ####
 # hadolint ignore=DL3008
-RUN add-apt-repository -y ppa:jonathonf/ghc-8.0.2 \
+RUN add-apt-repository -y ppa:hvr/ghc \
     && apt-get -q update \
-    && apt-get -q install -y --no-install-recommends shellcheck \
+    && apt-get -q install -y --no-install-recommends shellcheck ghc-8.0.2 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -199,34 +200,17 @@ RUN curl -L -s -S \
 ###
 ENV MAVEN_OPTS -Xms256m -Xmx1536m
 
-
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
 # So tell Yetus not to read the rest of the file:
 # YETUS CUT HERE
 ###
 
-####
-# Install svn & Forrest (for Apache Hadoop website)
-###
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends subversion \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN mkdir -p /opt/apache-forrest \
-    && curl -L -s -S \
-      https://archive.apache.org/dist/forrest/0.8/apache-forrest-0.8.tar.gz \
-      -o /opt/forrest.tar.gz \
-    && tar xzf /opt/forrest.tar.gz --strip-components 1 -C /opt/apache-forrest
-RUN echo 'forrest.home=/opt/apache-forrest' > build.properties
-ENV FORREST_HOME=/opt/apache-forrest
-
 # Hugo static website generator (for new hadoop site and Ozone docs)
-RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.30.2/hugo_0.30.2_Linux-64bit.deb \
+RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.58.3/hugo_0.58.3_Linux-64bit.deb \
     && dpkg --install hugo.deb \
     && rm hugo.deb
+
 
 # Add a welcome message and environment checks.
 COPY hadoop_env_checks.sh /root/hadoop_env_checks.sh

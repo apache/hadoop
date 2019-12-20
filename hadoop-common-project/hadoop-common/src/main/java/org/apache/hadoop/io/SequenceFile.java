@@ -826,8 +826,8 @@ public class SequenceFile {
         this.theMetadata.entrySet().iterator();
       while (iter.hasNext()) {
         Map.Entry<Text, Text> en = iter.next();
-        sb.append("\t").append(en.getKey().toString()).append("\t").append(en.getValue().toString());
-        sb.append("\n");
+        sb.append("\t").append(en.getKey().toString()).append("\t")
+            .append(en.getValue().toString()).append("\n");
       }
       return sb.toString();
     }

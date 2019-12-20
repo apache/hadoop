@@ -22,39 +22,25 @@ import java.io.InputStream;
 
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.util.StringUtils;
-
-import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
 
 /** SFTP FileSystem input stream. */
 class SFTPInputStream extends FSInputStream {
 
   public static final String E_SEEK_NOTSUPPORTED = "Seek not supported";
-  public static final String E_CLIENT_NULL =
-      "SFTP client null or not connected";
   public static final String E_NULL_INPUTSTREAM = "Null InputStream";
   public static final String E_STREAM_CLOSED = "Stream closed";
-  public static final String E_CLIENT_NOTCONNECTED = "Client not connected";
 
   private InputStream wrappedStream;
-  private ChannelSftp channel;
   private FileSystem.Statistics stats;
   private boolean closed;
   private long pos;
 
-  SFTPInputStream(InputStream stream, ChannelSftp channel,
-      FileSystem.Statistics stats) {
+  SFTPInputStream(InputStream stream,  FileSystem.Statistics stats) {
 
     if (stream == null) {
       throw new IllegalArgumentException(E_NULL_INPUTSTREAM);
     }
-    if (channel == null || !channel.isConnected()) {
-      throw new IllegalArgumentException(E_CLIENT_NULL);
-    }
     this.wrappedStream = stream;
-    this.channel = channel;
     this.stats = stats;
 
     this.pos = 0;
@@ -114,17 +100,7 @@ class SFTPInputStream extends FSInputStream {
       return;
     }
     super.close();
+    wrappedStream.close();
     closed = true;
-    if (!channel.isConnected()) {
-      throw new IOException(E_CLIENT_NOTCONNECTED);
-    }
-
-    try {
-      Session session = channel.getSession();
-      channel.disconnect();
-      session.disconnect();
-    } catch (JSchException e) {
-      throw new IOException(StringUtils.stringifyException(e));
-    }
   }
 }

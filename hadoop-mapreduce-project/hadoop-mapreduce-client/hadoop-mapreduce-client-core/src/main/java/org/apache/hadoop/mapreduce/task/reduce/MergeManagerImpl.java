@@ -860,16 +860,15 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     }
 
     @Override
-    public int compareTo(Object obj) {
-      if(obj instanceof CompressAwarePath) {
+    public int compareTo(Path obj) {
+      if (obj instanceof CompressAwarePath) {
         CompressAwarePath compPath = (CompressAwarePath) obj;
-        if(this.compressedSize < compPath.getCompressedSize()) {
-          return -1;
-        } else if (this.getCompressedSize() > compPath.getCompressedSize()) {
-          return 1;
-        }
+        int c = Long.compare(this.compressedSize, compPath.compressedSize);
         // Not returning 0 here so that objects with the same size (but
         // different paths) are still added to the TreeSet.
+        if (c != 0) {
+          return c;
+        }
       }
       return super.compareTo(obj);
     }

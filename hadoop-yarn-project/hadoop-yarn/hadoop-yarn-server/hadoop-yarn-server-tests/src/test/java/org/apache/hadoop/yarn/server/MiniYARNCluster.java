@@ -20,13 +20,14 @@ package org.apache.hadoop.yarn.server;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
+import java.util.LinkedHashSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -35,7 +36,6 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.net.ServerSocketUtil;
@@ -70,7 +70,6 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
-import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
@@ -80,8 +79,7 @@ import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.RequestInterceptor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
-
-
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
@@ -90,6 +88,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilterInitializer;
 import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.MemoryTimelineStateStore;
@@ -312,7 +311,13 @@ public class MiniYARNCluster extends CompositeService {
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED) || enableAHS) {
         addService(new ApplicationHistoryServerWrapper());
     }
-    
+    // to ensure that any FileSystemNodeAttributeStore started by the RM always
+    // uses a unique path, if unset, force it under the test dir.
+    if (conf.get(YarnConfiguration.FS_NODE_ATTRIBUTE_STORE_ROOT_DIR) == null) {
+      File nodeAttrDir = new File(getTestWorkDir(), "nodeattributes");
+      conf.set(YarnConfiguration.FS_NODE_ATTRIBUTE_STORE_ROOT_DIR,
+          nodeAttrDir.getCanonicalPath());
+    }
     super.serviceInit(
         conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf));
   }
@@ -465,21 +470,7 @@ public class MiniYARNCluster extends CompositeService {
   }
 
   public static String getHostname() {
-    try {
-      String hostname = InetAddress.getLocalHost().getHostName();
-      // Create InetSocketAddress to see whether it is resolved or not.
-      // If not, just return "localhost".
-      InetSocketAddress addr =
-          NetUtils.createSocketAddrForHost(hostname, 1);
-      if (addr.isUnresolved()) {
-        return "localhost";
-      } else {
-        return hostname;
-      }
-    }
-    catch (UnknownHostException ex) {
-      throw new RuntimeException(ex);
-    }
+    return "localhost";
   }
 
   private class ResourceManagerWrapper extends AbstractService {
@@ -824,6 +815,26 @@ public class MiniYARNCluster extends CompositeService {
 
     @Override
     protected synchronized void serviceStart() throws Exception {
+
+      // Removing RMAuthenticationFilter as it conflitcs with
+      // TimelineAuthenticationFilter
+      Configuration conf = getConfig();
+      String filterInitializerConfKey = "hadoop.http.filter.initializers";
+      String initializers = conf.get(filterInitializerConfKey, "");
+      String[] parts = initializers.split(",");
+      Set<String> target = new LinkedHashSet<String>();
+      for (String filterInitializer : parts) {
+        filterInitializer = filterInitializer.trim();
+        if (filterInitializer.equals(
+            RMAuthenticationFilterInitializer.class.getName())
+            || filterInitializer.isEmpty()) {
+          continue;
+        }
+        target.add(filterInitializer);
+      }
+      initializers = StringUtils.join(target, ",");
+      conf.set(filterInitializerConfKey, initializers);
+
       appHistoryServer.start();
       if (appHistoryServer.getServiceState() != STATE.STARTED) {
         // AHS could have failed.

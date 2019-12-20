@@ -24,8 +24,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.TargetApplicationsNamespace;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -47,13 +50,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,28 +75,60 @@ import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.cardinali
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetIn;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetNotIn;
 
+/**
+ * Test Container Allocation with SchedulingRequest.
+ */
+@RunWith(Parameterized.class)
 public class TestSchedulingRequestContainerAllocation {
   private static final int GB = 1024;
-
   private YarnConfiguration conf;
-
+  private String placementConstraintHandler;
   RMNodeLabelsManager mgr;
+
+
+  @Parameters
+  public static Collection<Object[]> placementConstarintHandlers() {
+    Object[][] params = new Object[][] {
+        {YarnConfiguration.PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER},
+        {YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER} };
+    return Arrays.asList(params);
+  }
+
+  public TestSchedulingRequestContainerAllocation(
+      String placementConstraintHandler) {
+    this.placementConstraintHandler = placementConstraintHandler;
+  }
 
   @Before
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
+    conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+        this.placementConstraintHandler);
     mgr = new NullRMNodeLabelsManager();
     mgr.init(conf);
   }
 
-  @Test
+  private RMApp submitApp(MockRM rm, int memory, Set<String> appTags)
+      throws Exception {
+    Resource resource = Resource.newInstance(memory, 0);
+    ResourceRequest amResourceRequest = ResourceRequest.newInstance(
+        Priority.newInstance(0), ResourceRequest.ANY, resource, 1);
+    List<ResourceRequest> amResourceRequests =
+        Collections.singletonList(amResourceRequest);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithResource(resource, rm)
+            .withAmLabel(null)
+            .withAmResourceRequests(amResourceRequests)
+            .withApplicationTags(appTags)
+            .build();
+    return MockRMAppSubmitter.submit(rm, data);
+  }
+
+  @Test(timeout = 30000L)
   public void testIntraAppAntiAffinity() throws Exception {
-    Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(
-        new Configuration());
-    csConf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
-        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
+    Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(conf);
 
     // inject node label manager
     MockRM rm1 = new MockRM(csConf) {
@@ -111,7 +150,15 @@ public class TestSchedulingRequestContainerAllocation {
     }
 
     // app1 -> c
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms[0]);
 
     // app1 asks for 10 anti-affinity containers for the same app. It should
@@ -120,18 +167,9 @@ public class TestSchedulingRequestContainerAllocation {
         ResourceSizing.newInstance(10, Resource.newInstance(1024, 1)),
         Priority.newInstance(1), 1L, ImmutableSet.of("mapper"), "mapper");
 
-    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
-
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 4; j++) {
-        cs.handle(new NodeUpdateSchedulerEvent(rmNodes[j]));
-      }
-    }
-
-    // App1 should get 5 containers allocated (1 AM + 1 node each).
-    FiCaSchedulerApp schedulerApp = cs.getApplicationAttempt(
-        am1.getApplicationAttemptId());
-    Assert.assertEquals(5, schedulerApp.getLiveContainers().size());
+    List<Container> allocated = waitForAllocation(4, 3000, am1, nms);
+    Assert.assertEquals(4, allocated.size());
+    Assert.assertEquals(4, getContainerNodesNum(allocated));
 
     // Similarly, app1 asks 10 anti-affinity containers at different priority,
     // it should be satisfied as well.
@@ -141,38 +179,30 @@ public class TestSchedulingRequestContainerAllocation {
         ResourceSizing.newInstance(10, Resource.newInstance(2048, 1)),
         Priority.newInstance(2), 1L, ImmutableSet.of("reducer"), "reducer");
 
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 4; j++) {
-        cs.handle(new NodeUpdateSchedulerEvent(rmNodes[j]));
-      }
-    }
-
-    // App1 should get 9 containers allocated (1 AM + 8 containers).
-    Assert.assertEquals(9, schedulerApp.getLiveContainers().size());
+    allocated = waitForAllocation(4, 3000, am1, nms);
+    Assert.assertEquals(4, allocated.size());
+    Assert.assertEquals(4, getContainerNodesNum(allocated));
 
     // Test anti-affinity to both of "mapper/reducer", we should only get no
     // container allocated
     am1.allocateIntraAppAntiAffinity(
         ResourceSizing.newInstance(10, Resource.newInstance(2048, 1)),
         Priority.newInstance(3), 1L, ImmutableSet.of("reducer2"), "mapper");
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 4; j++) {
-        cs.handle(new NodeUpdateSchedulerEvent(rmNodes[j]));
-      }
-    }
 
-    // App1 should get 10 containers allocated (1 AM + 9 containers).
-    Assert.assertEquals(9, schedulerApp.getLiveContainers().size());
+    boolean caughtException = false;
+    try {
+      allocated = waitForAllocation(1, 3000, am1, nms);
+    } catch (Exception e) {
+      caughtException = true;
+    }
+    Assert.assertTrue(caughtException);
 
     rm1.close();
   }
 
-  @Test
+  @Test(timeout = 30000L)
   public void testIntraAppAntiAffinityWithMultipleTags() throws Exception {
-    Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(
-        new Configuration());
-    csConf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
-        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
+    Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(conf);
 
     // inject node label manager
     MockRM rm1 = new MockRM(csConf) {
@@ -194,7 +224,15 @@ public class TestSchedulingRequestContainerAllocation {
     }
 
     // app1 -> c
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms[0]);
 
     // app1 asks for 2 anti-affinity containers for the same app.
@@ -203,18 +241,9 @@ public class TestSchedulingRequestContainerAllocation {
         Priority.newInstance(1), 1L, ImmutableSet.of("tag_1_1", "tag_1_2"),
         "tag_1_1", "tag_1_2");
 
-    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
-
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 4; j++) {
-        cs.handle(new NodeUpdateSchedulerEvent(rmNodes[j]));
-      }
-    }
-
-    // App1 should get 3 containers allocated (1 AM + 2 task).
-    FiCaSchedulerApp schedulerApp = cs.getApplicationAttempt(
-        am1.getApplicationAttemptId());
-    Assert.assertEquals(3, schedulerApp.getLiveContainers().size());
+    List<Container> allocated = waitForAllocation(2, 3000, am1, nms);
+    Assert.assertEquals(2, allocated.size());
+    Assert.assertEquals(2, getContainerNodesNum(allocated));
 
     // app1 asks for 1 anti-affinity containers for the same app. anti-affinity
     // to tag_1_1/tag_1_2. With allocation_tag = tag_2_1/tag_2_2
@@ -223,33 +252,22 @@ public class TestSchedulingRequestContainerAllocation {
         Priority.newInstance(2), 1L, ImmutableSet.of("tag_2_1", "tag_2_2"),
         "tag_1_1", "tag_1_2");
 
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 4; j++) {
-        cs.handle(new NodeUpdateSchedulerEvent(rmNodes[j]));
-      }
-    }
+    List<Container> allocated1 = waitForAllocation(1, 3000, am1, nms);
+    Assert.assertEquals(1, allocated1.size());
+    allocated.addAll(allocated1);
+    Assert.assertEquals(3, getContainerNodesNum(allocated));
 
-    // App1 should get 4 containers allocated (1 AM + 2 task (first request) +
-    // 1 task (2nd request).
-    Assert.assertEquals(4, schedulerApp.getLiveContainers().size());
-
-    // app1 asks for 10 anti-affinity containers for the same app. anti-affinity
+    // app1 asks for 1 anti-affinity containers for the same app. anti-affinity
     // to tag_1_1/tag_1_2/tag_2_1/tag_2_2. With allocation_tag = tag_3
     am1.allocateIntraAppAntiAffinity(
         ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)),
         Priority.newInstance(3), 1L, ImmutableSet.of("tag_3"),
         "tag_1_1", "tag_1_2", "tag_2_1", "tag_2_2");
 
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 4; j++) {
-        cs.handle(new NodeUpdateSchedulerEvent(rmNodes[j]));
-      }
-    }
-
-    // App1 should get 1 more containers allocated
-    // 1 AM + 2 task (first request) + 1 task (2nd request) +
-    // 1 task (3rd request)
-    Assert.assertEquals(5, schedulerApp.getLiveContainers().size());
+    allocated1 = waitForAllocation(1, 3000, am1, nms);
+    Assert.assertEquals(1, allocated1.size());
+    allocated.addAll(allocated1);
+    Assert.assertEquals(4, getContainerNodesNum(allocated));
 
     rm1.close();
   }
@@ -260,12 +278,9 @@ public class TestSchedulingRequestContainerAllocation {
    * types, see more in TestPlacementConstraintsUtil.
    * @throws Exception
    */
-  @Test
+  @Test(timeout = 30000L)
   public void testInterAppAntiAffinity() throws Exception {
-    Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(
-        new Configuration());
-    csConf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
-        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
+    Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(conf);
 
     // inject node label manager
     MockRM rm1 = new MockRM(csConf) {
@@ -287,7 +302,15 @@ public class TestSchedulingRequestContainerAllocation {
     }
 
     // app1 -> c
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data2);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms[0]);
 
     // app1 asks for 3 anti-affinity containers for the same app. It should
@@ -296,13 +319,9 @@ public class TestSchedulingRequestContainerAllocation {
         ResourceSizing.newInstance(3, Resource.newInstance(1024, 1)),
         Priority.newInstance(1), 1L, ImmutableSet.of("mapper"), "mapper");
 
-    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
-
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 4; j++) {
-        cs.handle(new NodeUpdateSchedulerEvent(rmNodes[j]));
-      }
-    }
+    List<Container> allocated = waitForAllocation(3, 3000, am1, nms);
+    Assert.assertEquals(3, allocated.size());
+    Assert.assertEquals(3, getContainerNodesNum(allocated));
 
     System.out.println("Mappers on HOST0: "
         + rmNodes[0].getAllocationTagsWithCount().get("mapper"));
@@ -311,13 +330,16 @@ public class TestSchedulingRequestContainerAllocation {
     System.out.println("Mappers on HOST2: "
         + rmNodes[2].getAllocationTagsWithCount().get("mapper"));
 
-    // App1 should get 4 containers allocated (1 AM + 3 mappers).
-    FiCaSchedulerApp schedulerApp = cs.getApplicationAttempt(
-        am1.getApplicationAttemptId());
-    Assert.assertEquals(4, schedulerApp.getLiveContainers().size());
-
     // app2 -> c
-    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nms[0]);
 
     // App2 asks for 3 containers that anti-affinity with any mapper,
@@ -330,17 +352,16 @@ public class TestSchedulingRequestContainerAllocation {
         Priority.newInstance(1), 1L, allNs.toString(),
         ImmutableSet.of("foo"), "mapper");
 
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 4; j++) {
-        cs.handle(new NodeUpdateSchedulerEvent(rmNodes[j]));
-      }
-    }
+    List<Container> allocated1 = waitForAllocation(3, 3000, am2, nms);
+    Assert.assertEquals(3, allocated1.size());
+    Assert.assertEquals(1, getContainerNodesNum(allocated1));
+    allocated.addAll(allocated1);
+    Assert.assertEquals(4, getContainerNodesNum(allocated));
 
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
         am2.getApplicationAttemptId());
-
-    // App2 should get 4 containers allocated (1 AM + 3 container).
-    Assert.assertEquals(4, schedulerApp2.getLiveContainers().size());
 
     // The allocated node should not have mapper tag.
     Assert.assertTrue(schedulerApp2.getLiveContainers()
@@ -353,7 +374,15 @@ public class TestSchedulingRequestContainerAllocation {
         }));
 
     // app3 -> c
-    RMApp app3 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nms[0]);
 
     // App3 asks for 3 containers that anti-affinity with any mapper.
@@ -365,17 +394,11 @@ public class TestSchedulingRequestContainerAllocation {
         Priority.newInstance(1), 1L, allNs.toString(),
         ImmutableSet.of("mapper"), "mapper");
 
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 4; j++) {
-        cs.handle(new NodeUpdateSchedulerEvent(rmNodes[j]));
-      }
-    }
 
-    FiCaSchedulerApp schedulerApp3 = cs.getApplicationAttempt(
-        am3.getApplicationAttemptId());
-
-    // App3 should get 2 containers allocated (1 AM + 1 container).
-    Assert.assertEquals(2, schedulerApp3.getLiveContainers().size());
+    allocated1 = waitForAllocation(1, 3000, am3, nms);
+    Assert.assertEquals(1, allocated1.size());
+    allocated.addAll(allocated1);
+    Assert.assertEquals(4, getContainerNodesNum(allocated));
 
     rm1.close();
   }
@@ -405,7 +428,15 @@ public class TestSchedulingRequestContainerAllocation {
     }
 
     // app1 -> c
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms[0]);
 
     // app1 asks for 2 anti-affinity containers for the same app.
@@ -423,12 +454,9 @@ public class TestSchedulingRequestContainerAllocation {
     rm1.close();
   }
 
-  @Test
+  @Test(timeout = 30000L)
   public void testSchedulingRequestWithNullConstraint() throws Exception {
-    Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(
-        new Configuration());
-    csConf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
-        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
+    Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(conf);
 
     // inject node label manager
     MockRM rm1 = new MockRM(csConf) {
@@ -450,7 +478,15 @@ public class TestSchedulingRequestContainerAllocation {
     }
 
     // app1 -> c
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms[0]);
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
@@ -467,14 +503,8 @@ public class TestSchedulingRequestContainerAllocation {
         .schedulingRequests(ImmutableList.of(sc)).build();
     am1.allocate(request);
 
-    for (int i = 0; i < 4; i++) {
-      cs.handle(new NodeUpdateSchedulerEvent(rmNodes[i]));
-    }
-
-    FiCaSchedulerApp schedApp = cs.getApplicationAttempt(
-        am1.getApplicationAttemptId());
-    Assert.assertEquals(2, schedApp.getLiveContainers().size());
-
+    List<Container> allocated = waitForAllocation(1, 3000, am1, nms);
+    Assert.assertEquals(1, allocated.size());
 
     // Send another request with null placement constraint,
     // ensure there is no NPE while handling this request.
@@ -488,22 +518,79 @@ public class TestSchedulingRequestContainerAllocation {
         .schedulingRequests(ImmutableList.of(sc)).build();
     am1.allocate(request1);
 
-    for (int i = 0; i < 4; i++) {
-      cs.handle(new NodeUpdateSchedulerEvent(rmNodes[i]));
-    }
-
-    Assert.assertEquals(4, schedApp.getLiveContainers().size());
+    allocated = waitForAllocation(2, 3000, am1, nms);
+    Assert.assertEquals(2, allocated.size());
 
     rm1.close();
   }
 
-  private void doNodeHeartbeat(MockNM... nms) throws Exception {
+  @Test(timeout = 30000L)
+  public void testInvalidSchedulingRequest() throws Exception {
+
+    Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(conf);
+    MockRM rm1 = new MockRM(csConf) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+
+    // 4 NMs.
+    MockNM[] nms = new MockNM[4];
+    RMNode[] rmNodes = new RMNode[4];
+    for (int i = 0; i < 4; i++) {
+      nms[i] = rm1.registerNode("192.168.0." + i + ":1234", 10 * GB);
+      rmNodes[i] = rm1.getRMContext().getRMNodes().get(nms[i].getNodeId());
+    }
+
+    MockRMAppSubmissionData submissionData =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+        .withAppName("app")
+        .withUser("user")
+        .withAcls(null)
+        .withQueue("c")
+        .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, submissionData);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms[0]);
+
+    // Constraint with Invalid Allocation Tag Namespace
+    PlacementConstraint constraint = targetNotIn("node",
+        allocationTagWithNamespace("invalid", "t1")).build();
+    SchedulingRequest sc = SchedulingRequest
+        .newInstance(1, Priority.newInstance(1),
+        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED),
+        ImmutableSet.of("t1"),
+        ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)),
+        constraint);
+    AllocateRequest request = AllocateRequest.newBuilder()
+        .schedulingRequests(ImmutableList.of(sc)).build();
+    am1.allocate(request);
+
+    try {
+      GenericTestUtils.waitFor(() -> {
+        try {
+          doNodeHeartbeat(nms);
+          AllocateResponse response = am1.schedule();
+          return response.getRejectedSchedulingRequests().size() == 1;
+        } catch (Exception e) {
+          return false;
+        }
+      }, 500, 20000);
+    } catch (Exception e) {
+      Assert.fail("Failed to reject invalid scheduling request");
+    }
+  }
+
+  private static void doNodeHeartbeat(MockNM... nms) throws Exception {
     for (MockNM nm : nms) {
       nm.nodeHeartbeat(true);
     }
   }
 
-  private List<Container> waitForAllocation(int allocNum, int timeout,
+  public static List<Container> waitForAllocation(int allocNum, int timeout,
       MockAM am, MockNM... nms) throws Exception {
     final List<Container> result = new ArrayList<>();
     GenericTestUtils.waitFor(() -> {
@@ -553,7 +640,7 @@ public class TestSchedulingRequestContainerAllocation {
         .build();
   }
 
-  private int getContainerNodesNum(List<Container> containers) {
+  public static int getContainerNodesNum(List<Container> containers) {
     Set<NodeId> nodes = new HashSet<>();
     if (containers != null) {
       containers.forEach(c -> nodes.add(c.getNodeId()));
@@ -566,12 +653,8 @@ public class TestSchedulingRequestContainerAllocation {
     // This test both intra and inter app constraints.
     // Including simple affinity, anti-affinity, cardinality constraints,
     // and simple AND composite constraints.
-    YarnConfiguration config = new YarnConfiguration();
-    config.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
-        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
-    config.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-        ResourceScheduler.class);
-    MockRM rm = new MockRM(config);
+
+    MockRM rm = new MockRM(conf);
     try {
       rm.start();
 
@@ -581,7 +664,7 @@ public class TestSchedulingRequestContainerAllocation {
       MockNM nm4 = rm.registerNode("192.168.0.4:1234", 100*GB, 100);
       MockNM nm5 = rm.registerNode("192.168.0.5:1234", 100*GB, 100);
 
-      RMApp app1 = rm.submitApp(1*GB, ImmutableSet.of("hbase"));
+      RMApp app1 = submitApp(rm, 1*GB, ImmutableSet.of("hbase"));
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
       // App1 (hbase)
@@ -620,7 +703,7 @@ public class TestSchedulingRequestContainerAllocation {
       // App2 (web-server)
       // Web server instance has 2 instance and non of them can be co-allocated
       // with hbase-master.
-      RMApp app2 = rm.submitApp(1*GB, ImmutableSet.of("web-server"));
+      RMApp app2 = submitApp(rm, 1*GB, ImmutableSet.of("web-server"));
       MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm2);
 
       // App2 (web-server)
@@ -657,7 +740,7 @@ public class TestSchedulingRequestContainerAllocation {
       // App3 has multiple instances that must be co-allocated
       // with app2 server instance, and each node cannot have more than
       // 3 instances.
-      RMApp app3 = rm.submitApp(1*GB, ImmutableSet.of("ws-servants"));
+      RMApp app3 = submitApp(rm, 1*GB, ImmutableSet.of("ws-servants"));
       MockAM am3 = MockRM.launchAndRegisterAM(app3, rm, nm3);
 
 
@@ -698,12 +781,8 @@ public class TestSchedulingRequestContainerAllocation {
   @Test(timeout = 30000L)
   public void testMultiAllocationTagsConstraints() throws Exception {
     // This test simulates to use PC to avoid port conflicts
-    YarnConfiguration config = new YarnConfiguration();
-    config.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
-        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
-    config.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-        ResourceScheduler.class);
-    MockRM rm = new MockRM(config);
+
+    MockRM rm = new MockRM(conf);
     try {
       rm.start();
 
@@ -713,7 +792,7 @@ public class TestSchedulingRequestContainerAllocation {
       MockNM nm4 = rm.registerNode("192.168.0.4:1234", 10*GB, 10);
       MockNM nm5 = rm.registerNode("192.168.0.5:1234", 10*GB, 10);
 
-      RMApp app1 = rm.submitApp(1*GB, ImmutableSet.of("server1"));
+      RMApp app1 = submitApp(rm, 1*GB, ImmutableSet.of("server1"));
       // Allocate AM container on nm1
       doNodeHeartbeat(nm1);
       RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -740,7 +819,7 @@ public class TestSchedulingRequestContainerAllocation {
 
       // App1 uses ports: 6000
       String[] server2Ports = new String[] {"port_6000"};
-      RMApp app2 = rm.submitApp(1*GB, ImmutableSet.of("server2"));
+      RMApp app2 = submitApp(rm, 1*GB, ImmutableSet.of("server2"));
       // Allocate AM container on nm1
       doNodeHeartbeat(nm2);
       RMAppAttempt app2attempt1 = app2.getCurrentAppAttempt();
@@ -779,12 +858,7 @@ public class TestSchedulingRequestContainerAllocation {
   public void testInterAppConstraintsWithNamespaces() throws Exception {
     // This test verifies inter-app constraints with namespaces
     // not-self/app-id/app-tag
-    YarnConfiguration config = new YarnConfiguration();
-    config.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
-        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
-    config.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-        ResourceScheduler.class);
-    MockRM rm = new MockRM(config);
+    MockRM rm = new MockRM(conf);
     try {
       rm.start();
 
@@ -801,7 +875,7 @@ public class TestSchedulingRequestContainerAllocation {
         // App1 ~ app5 tag "former5"
         // App6 ~ app10 tag "latter5"
         String applicationTag = i<5 ? "former5" : "latter5";
-        RMApp app = rm.submitApp(1*GB, ImmutableSet.of(applicationTag));
+        RMApp app = submitApp(rm, 1*GB, ImmutableSet.of(applicationTag));
         // Allocate AM container on nm1
         doNodeHeartbeat(nm1, nm2, nm3, nm4, nm5);
         RMAppAttempt attempt = app.getCurrentAppAttempt();
@@ -828,7 +902,7 @@ public class TestSchedulingRequestContainerAllocation {
 
       // *** app-id
       // Submit another app, use app-id constraint against app5
-      RMApp app1 = rm.submitApp(1*GB, ImmutableSet.of("xyz"));
+      RMApp app1 = submitApp(rm, 1*GB, ImmutableSet.of("xyz"));
       // Allocate AM container on nm1
       doNodeHeartbeat(nm1);
       RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -858,7 +932,7 @@ public class TestSchedulingRequestContainerAllocation {
       }
 
       // *** app-tag
-      RMApp app2 = rm.submitApp(1*GB);
+      RMApp app2 = MockRMAppSubmitter.submitWithMemory(1 * GB, rm);
       // Allocate AM container on nm1
       doNodeHeartbeat(nm2);
       RMAppAttempt app2attempt1 = app2.getCurrentAppAttempt();
@@ -883,7 +957,7 @@ public class TestSchedulingRequestContainerAllocation {
       }
 
       // *** not-self
-      RMApp app3 = rm.submitApp(1*GB);
+      RMApp app3 = MockRMAppSubmitter.submitWithMemory(1 * GB, rm);
       // Allocate AM container on nm1
       doNodeHeartbeat(nm3);
       RMAppAttempt app3attempt1 = app3.getCurrentAppAttempt();

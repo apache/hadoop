@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.hdfs.protocol.Block.BLOCK_FILE_PREFIX;
 import static org.apache.hadoop.util.Shell.getMemlockLimit;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
@@ -26,6 +27,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -58,6 +60,7 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
@@ -72,6 +75,9 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.Time;
+import org.apache.log4j.Level;
+import org.apache.log4j.SimpleLayout;
+import org.apache.log4j.WriterAppender;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -234,11 +240,11 @@ public class TestDirectoryScanner {
   }
 
   private String getBlockFile(long id) {
-    return Block.BLOCK_FILE_PREFIX + id;
+    return BLOCK_FILE_PREFIX + id;
   }
 
   private String getMetaFile(long id) {
-    return Block.BLOCK_FILE_PREFIX + id + "_" + DEFAULT_GEN_STAMP
+    return BLOCK_FILE_PREFIX + id + "_" + DEFAULT_GEN_STAMP
         + Block.METADATA_EXTENSION;
   }
 
@@ -383,6 +389,70 @@ public class TestDirectoryScanner {
       scan(2, 1, 0, 0, 0, 0, 1);
       verifyStorageType(blocks.get(0).getBlock().getBlockId(), false);
       scan(1, 0, 0, 0, 0, 0);
+
+    } finally {
+      if (scanner != null) {
+        scanner.shutdown();
+        scanner = null;
+      }
+      cluster.shutdown();
+      cluster = null;
+    }
+  }
+
+  /**
+   * test scan only meta file NOT generate wrong folder structure warn log.
+   */
+  @Test(timeout=600000)
+  public void testScanDirectoryStructureWarn() throws Exception {
+
+    //add a logger stream to check what has printed to log
+    ByteArrayOutputStream loggerStream = new ByteArrayOutputStream();
+    org.apache.log4j.Logger rootLogger =
+        org.apache.log4j.Logger.getRootLogger();
+    rootLogger.setLevel(Level.INFO);
+    WriterAppender writerAppender =
+        new WriterAppender(new SimpleLayout(), loggerStream);
+    rootLogger.addAppender(writerAppender);
+
+    cluster = new MiniDFSCluster
+        .Builder(CONF)
+        .storageTypes(new StorageType[] {
+            StorageType.RAM_DISK, StorageType.DEFAULT })
+        .numDataNodes(1)
+        .build();
+    try {
+      cluster.waitActive();
+      bpid = cluster.getNamesystem().getBlockPoolId();
+      fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
+      client = cluster.getFileSystem().getClient();
+      scanner = new DirectoryScanner(fds, CONF);
+      scanner.setRetainDiffs(true);
+      FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
+
+      // Create a file file on RAM_DISK
+      createFile(GenericTestUtils.getMethodName(), BLOCK_LENGTH, true);
+
+      // Ensure no difference between volumeMap and disk.
+      scan(1, 0, 0, 0, 0, 0);
+
+      //delete thre block file , left the meta file alone
+      deleteBlockFile();
+
+      //scan to ensure log warn not printed
+      scan(1, 1, 0, 1, 0, 0, 0);
+
+      //ensure the warn log not appear and missing block log do appear
+      String logContent = new String(loggerStream.toByteArray());
+      String missingBlockWarn = "Deleted a metadata file" +
+          " for the deleted block";
+      String dirStructureWarnLog = " found in invalid directory." +
+          "  Expected directory: ";
+      assertFalse("directory check print meaningless warning message",
+          logContent.contains(dirStructureWarnLog));
+      assertTrue("missing block warn log not appear",
+          logContent.contains(missingBlockWarn));
+      LOG.info("check pass");
 
     } finally {
       if (scanner != null) {
@@ -1049,8 +1119,9 @@ public class TestDirectoryScanner {
 
   @Test
   public void testDirectoryScannerInFederatedCluster() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration(CONF);
     // Create Federated cluster with two nameservices and one DN
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF)
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(2))
         .numDataNodes(1).build()) {
       cluster.waitActive();
@@ -1066,7 +1137,7 @@ public class TestDirectoryScanner {
       int bp2Files = 2;
       writeFile(fs2, bp2Files);
       // Call the Directory scanner
-      scanner = new DirectoryScanner(fds, CONF);
+      scanner = new DirectoryScanner(fds, conf);
       scanner.setRetainDiffs(true);
       scanner.reconcile();
       // Check blocks in corresponding BP
@@ -1091,10 +1162,79 @@ public class TestDirectoryScanner {
     }
   }
 
+  private static final String SEP = System.getProperty("file.separator");
+
+  /**
+   * Test parsing LocalReplica. We should be able to find the replica's path
+   * even if the replica's dir doesn't match the idToBlockDir.
+   */
+  @Test(timeout = 3000)
+  public void testLocalReplicaParsing() {
+    String baseDir = GenericTestUtils.getRandomizedTempPath();
+    long blkId = getRandomBlockId();
+    File blockDir = DatanodeUtil.idToBlockDir(new File(baseDir), blkId);
+    String subdir1 = new File(blockDir.getParent()).getName();
+
+    // test parsing dir without ./subdir/subdir
+    LocalReplica.ReplicaDirInfo info =
+        LocalReplica.parseBaseDir(new File(baseDir), blkId);
+    assertEquals(baseDir, info.baseDirPath);
+    assertEquals(false, info.hasSubidrs);
+
+    // test when path doesn't match the idToBLockDir.
+    String pathWithOneSubdir = baseDir + SEP + subdir1;
+    info = LocalReplica.parseBaseDir(new File(pathWithOneSubdir), blkId);
+    assertEquals(pathWithOneSubdir, info.baseDirPath);
+    assertEquals(false, info.hasSubidrs);
+
+    // test when path doesn't match the idToBlockDir.
+    String badPath = baseDir + SEP + subdir1 + SEP + "subdir-not-exist";
+    info = LocalReplica.parseBaseDir(new File(badPath), blkId);
+    assertEquals(badPath, info.baseDirPath);
+    assertEquals(false, info.hasSubidrs);
+
+    // test when path matches the idToBlockDir.
+    info = LocalReplica.parseBaseDir(blockDir, blkId);
+    assertEquals(baseDir, info.baseDirPath);
+    assertEquals(true, info.hasSubidrs);
+  }
+
+  /**
+   * Test whether can LocalReplica.updateWithReplica() correct the wrongly
+   * recorded replica location.
+   */
+  @Test(timeout = 3000)
+  public void testLocalReplicaUpdateWithReplica() throws Exception {
+    String baseDir = GenericTestUtils.getRandomizedTempPath();
+    long blkId = getRandomBlockId();
+    File blockDir = DatanodeUtil.idToBlockDir(new File(baseDir), blkId);
+    String subdir2 = blockDir.getName();
+    String subdir1 = new File(blockDir.getParent()).getName();
+    String diskSub = subdir2.equals("subdir0") ? "subdir1" : "subdir0";
+
+    // the block file on disk
+    File diskBlockDir = new File(baseDir + SEP + subdir1 + SEP + diskSub);
+    File realBlkFile = new File(diskBlockDir, BLOCK_FILE_PREFIX + blkId);
+    // the block file in mem
+    File memBlockDir = blockDir;
+    LocalReplica localReplica = (LocalReplica) new ReplicaBuilder(
+        HdfsServerConstants.ReplicaState.FINALIZED)
+        .setDirectoryToUse(memBlockDir).setBlockId(blkId).build();
+
+    // DirectoryScanner find the inconsistent file and try to make it right
+    StorageLocation sl = StorageLocation.parse(realBlkFile.toString());
+    localReplica.updateWithReplica(sl);
+    assertEquals(realBlkFile, localReplica.getBlockFile());
+  }
+
+  public long getRandomBlockId() {
+    return Math.abs(new Random().nextLong());
+  }
+
   private void writeFile(FileSystem fs, int numFiles) throws IOException {
     final String fileName = "/" + GenericTestUtils.getMethodName();
-    final Path filePath = new Path(fileName);
     for (int i = 0; i < numFiles; i++) {
+      final Path filePath = new Path(fileName + i);
       DFSTestUtil.createFile(fs, filePath, 1, (short) 1, 0);
     }
   }

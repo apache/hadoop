@@ -40,8 +40,8 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.cli.UnrecognizedOptionException;
 import org.apache.commons.lang3.Range;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -156,6 +156,7 @@ import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -166,6 +167,7 @@ import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.Keys;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.preprocessor.SubmissionContextPreProcessor;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationAllocation;
@@ -209,7 +211,8 @@ public class ClientRMService extends AbstractService implements
     ApplicationClientProtocol {
   private static final ArrayList<ApplicationReport> EMPTY_APPS_REPORT = new ArrayList<ApplicationReport>();
 
-  private static final Log LOG = LogFactory.getLog(ClientRMService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ClientRMService.class);
 
   final private AtomicInteger applicationCounter = new AtomicInteger(0);
   final private YarnScheduler scheduler;
@@ -230,12 +233,15 @@ public class ClientRMService extends AbstractService implements
   private ReservationSystem reservationSystem;
   private ReservationInputValidator rValidator;
 
+  private SubmissionContextPreProcessor contextPreProcessor;
+
   private boolean filterAppsByUser = false;
 
   private static final EnumSet<RMAppState> ACTIVE_APP_STATES = EnumSet.of(
       RMAppState.ACCEPTED, RMAppState.RUNNING);
 
   private ResourceProfilesManager resourceProfilesManager;
+  private boolean timelineServiceV2Enabled;
 
   public ClientRMService(RMContext rmContext, YarnScheduler scheduler,
       RMAppManager rmAppManager, ApplicationACLsManager applicationACLsManager,
@@ -281,7 +287,8 @@ public class ClientRMService extends AbstractService implements
     
     this.server.addTerseExceptions(ApplicationNotFoundException.class,
         ApplicationAttemptNotFoundException.class,
-        ContainerNotFoundException.class);
+        ContainerNotFoundException.class,
+        YARNFeatureNotEnabledException.class);
 
     // Enable service authorization?
     if (conf.getBoolean(
@@ -306,6 +313,16 @@ public class ClientRMService extends AbstractService implements
                                                YarnConfiguration.RM_ADDRESS,
                                                YarnConfiguration.DEFAULT_RM_ADDRESS,
                                                server.getListenerAddress());
+    this.timelineServiceV2Enabled = YarnConfiguration.
+        timelineServiceV2Enabled(conf);
+
+    if (conf.getBoolean(
+        YarnConfiguration.RM_SUBMISSION_PREPROCESSOR_ENABLED,
+        YarnConfiguration.DEFAULT_RM_SUBMISSION_PREPROCESSOR_ENABLED)) {
+      this.contextPreProcessor = new SubmissionContextPreProcessor();
+      this.contextPreProcessor.start(conf);
+    }
+
     super.serviceStart();
   }
 
@@ -313,6 +330,9 @@ public class ClientRMService extends AbstractService implements
   protected void serviceStop() throws Exception {
     if (this.server != null) {
         this.server.stop();
+    }
+    if (this.contextPreProcessor != null) {
+      this.contextPreProcessor.stop();
     }
     super.serviceStop();
   }
@@ -323,6 +343,11 @@ public class ClientRMService extends AbstractService implements
             YarnConfiguration.RM_ADDRESS,
             YarnConfiguration.DEFAULT_RM_ADDRESS,
             YarnConfiguration.DEFAULT_RM_PORT);
+  }
+
+  @VisibleForTesting
+  SubmissionContextPreProcessor getContextPreProcessor() {
+    return this.contextPreProcessor;
   }
 
   @Private
@@ -580,11 +605,12 @@ public class ClientRMService extends AbstractService implements
       LOG.warn("Unable to get the current user.", ie);
       RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST,
           ie.getMessage(), "ClientRMService",
-          "Exception in submitting application", applicationId, callerContext);
+          "Exception in submitting application", applicationId, callerContext,
+          submissionContext.getQueue());
       throw RPCUtil.getRemoteException(ie);
     }
 
-    if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+    if (timelineServiceV2Enabled) {
       // Sanity check for flow run
       String value = null;
       try {
@@ -603,7 +629,8 @@ public class ClientRMService extends AbstractService implements
             ". Flow run should be a long integer", e);
         RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST,
             e.getMessage(), "ClientRMService",
-            "Exception in submitting application", applicationId);
+            "Exception in submitting application", applicationId,
+            submissionContext.getQueue());
         throw RPCUtil.getRemoteException(e);
       }
     }
@@ -654,6 +681,11 @@ public class ClientRMService extends AbstractService implements
     checkReservationACLs(submissionContext.getQueue(), AuditConstants
             .SUBMIT_RESERVATION_REQUEST, reservationId);
 
+    if (this.contextPreProcessor != null) {
+      this.contextPreProcessor.preProcess(Server.getRemoteIp().getHostName(),
+          applicationId, submissionContext);
+    }
+
     try {
       // call RMAppManager to submit application directly
       rmAppManager.submitApplication(submissionContext,
@@ -662,12 +694,16 @@ public class ClientRMService extends AbstractService implements
       LOG.info("Application with id " + applicationId.getId() + 
           " submitted by user " + user);
       RMAuditLogger.logSuccess(user, AuditConstants.SUBMIT_APP_REQUEST,
-          "ClientRMService", applicationId, callerContext);
+          "ClientRMService", applicationId, callerContext,
+          submissionContext.getQueue(),
+          submissionContext.getNodeLabelExpression());
     } catch (YarnException e) {
       LOG.info("Exception in submitting " + applicationId, e);
       RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST,
           e.getMessage(), "ClientRMService",
-          "Exception in submitting application", applicationId, callerContext);
+          "Exception in submitting application", applicationId, callerContext,
+          submissionContext.getQueue(),
+          submissionContext.getNodeLabelExpression());
       throw e;
     }
 
@@ -771,8 +807,8 @@ public class ClientRMService extends AbstractService implements
     String diagnostics = org.apache.commons.lang3.StringUtils
         .trimToNull(request.getDiagnostics());
     if (diagnostics != null) {
-      message.append(" with diagnostic message: ");
-      message.append(diagnostics);
+      message.append(" with diagnostic message: ")
+          .append(diagnostics);
     }
 
     this.rmContext.getDispatcher().getEventHandler()
@@ -1461,10 +1497,8 @@ public class ClientRMService extends AbstractService implements
       ReservationDefinition contract, String reservationId) {
     if ((contract.getArrival() - clock.getTime()) < reservationSystem
         .getPlanFollowerTimeStep()) {
-      LOG.debug(MessageFormat
-          .format(
-              "Reservation {0} is within threshold so attempting to create synchronously.",
-              reservationId));
+      LOG.debug("Reservation {} is within threshold so attempting to"
+          + " create synchronously.", reservationId);
       reservationSystem.synchronizePlan(planName, true);
       LOG.info(MessageFormat.format("Created reservation {0} synchronously.",
           reservationId));

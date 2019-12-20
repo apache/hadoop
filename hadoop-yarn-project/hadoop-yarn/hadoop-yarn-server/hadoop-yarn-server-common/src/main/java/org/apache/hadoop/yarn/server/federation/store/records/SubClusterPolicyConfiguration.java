@@ -154,9 +154,9 @@ public abstract class SubClusterPolicyConfiguration {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(getType());
-    sb.append(" : ");
-    sb.append(getParams());
+    sb.append(getType())
+        .append(" : ")
+        .append(getParams());
     return sb.toString();
   }
 }

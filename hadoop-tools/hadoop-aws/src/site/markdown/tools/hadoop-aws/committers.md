@@ -173,7 +173,7 @@ This then is the problem which the S3A committers address:
 *How to safely and reliably commit work to Amazon S3 or compatible object store*
 
 
-## Meet the S3A Commmitters
+## Meet the S3A Committers
 
 Since Hadoop 3.1, the S3A FileSystem has been accompanied by classes
 designed to integrate with the Hadoop and Spark job commit protocols, classes
@@ -226,8 +226,8 @@ it is committed through the standard "v1" commit algorithm.
 When the Job is committed, the Job Manager reads the lists of pending writes from its
 HDFS Job destination directory and completes those uploads.
 
-Cancelling a task is straightforward: the local directory is deleted with
-its staged data. Cancelling a job is achieved by reading in the lists of
+Canceling a task is straightforward: the local directory is deleted with
+its staged data. Canceling a job is achieved by reading in the lists of
 pending writes from the HDFS job attempt directory, and aborting those
 uploads. For extra safety, all outstanding multipart writes to the destination directory
 are aborted.
@@ -537,9 +537,8 @@ Conflict management is left to the execution engine itself.
 |--------|-------|-----------|-------------|---------|---------|
 | `mapreduce.fileoutputcommitter.marksuccessfuljobs` | X | X | X | Write a `_SUCCESS` file  at the end of each job | `true` |
 | `fs.s3a.committer.threads` | X | X | X | Number of threads in committers for parallel operations on files. | 8 |
-| `fs.s3a.committer.staging.conflict-mode` |  | X | X | Conflict resolution: `fail`, `abort` or `overwrite`| `fail` |
+| `fs.s3a.committer.staging.conflict-mode` |  | X | X | Conflict resolution: `fail`, `append` or `replace`| `append` |
 | `fs.s3a.committer.staging.unique-filenames` |  | X | X | Generate unique filenames | `true` |
-
 | `fs.s3a.committer.magic.enabled` | X |  | | Enable "magic committer" support in the filesystem | `false` |
 
 
@@ -607,7 +606,7 @@ Conflict management is left to the execution engine itself.
 
 <property>
   <name>fs.s3a.committer.staging.conflict-mode</name>
-  <value>fail</value>
+  <value>append</value>
   <description>
     Staging committer conflict resolution policy.
     Supported: "fail", "append", "replace".
@@ -690,10 +689,15 @@ Filesystem s3a://landsat-pds is not using S3Guard
 The "magic" committer is not supported
 
 S3A Client
-  Endpoint: fs.s3a.endpoint=(unset)
+  Signing Algorithm: fs.s3a.signing-algorithm=(unset)
+  Endpoint: fs.s3a.endpoint=s3.amazonaws.com
   Encryption: fs.s3a.server-side-encryption-algorithm=none
   Input seek policy: fs.s3a.experimental.input.fadvise=normal
-2017-09-27 19:18:57,917 INFO util.ExitUtil: Exiting with status 46: 46: The magic committer is not enabled for s3a://landsat-pds
+  Change Detection Source: fs.s3a.change.detection.source=etag
+  Change Detection Mode: fs.s3a.change.detection.mode=server
+Delegation token support is disabled
+2019-05-17 13:53:38,245 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) -
+ Exiting with status 46: 46: The magic committer is not enabled for s3a://landsat-pds
 ```
 
 ## Error message: "File being created has a magic path, but the filesystem has magic file support disabled:
@@ -785,7 +789,7 @@ This surfaces when either of two conditions are met.
 `fail` and the output/destination directory exists.
 The job will fail in the driver during job setup.
 1. The Partitioned Committer is used with `fs.s3a.committer.staging.conflict-mode` set to
-`fail`  and one of the partitions. The specific task(s) generating conflicting data will fail
+`fail` and one of the partitions exist. The specific task(s) generating conflicting data will fail
 during task commit, which will cause the entire job to fail.
 
 If you are trying to write data and want write conflicts to be rejected, this is the correct

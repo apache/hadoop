@@ -72,8 +72,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -253,7 +253,7 @@ public class MockServiceAM extends ServiceMaster {
         NMClientAsync nmClientAsync = super.createNMClient();
         NMClient nmClient = mock(NMClient.class);
         try {
-          when(nmClient.getContainerStatus(anyObject(), anyObject()))
+          when(nmClient.getContainerStatus(any(), any()))
               .thenAnswer(invocation ->
                   containerStatuses.get(invocation.getArguments()[0]));
         } catch (YarnException | IOException e) {
@@ -453,6 +453,6 @@ public class MockServiceAM extends ServiceMaster {
   public void waitForContainerToRelease(ContainerId containerId)
       throws TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(() -> releasedContainers.contains(containerId),
-        1000, 9990000);
+        1000, 30000);
   }
 }

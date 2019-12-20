@@ -100,6 +100,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       .getLogger(HBaseTimelineWriterImpl.class);
 
   private Connection conn;
+  private TimelineStorageMonitor storageMonitor;
   private TypedBufferedMutator<EntityTable> entityTable;
   private TypedBufferedMutator<AppToFlowTable> appToFlowTable;
   private TypedBufferedMutator<ApplicationTable> applicationTable;
@@ -150,7 +151,14 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     UserGroupInformation ugi = UserGroupInformation.isSecurityEnabled() ?
         UserGroupInformation.getLoginUser() :
         UserGroupInformation.getCurrentUser();
+    storageMonitor = new HBaseStorageMonitor(conf);
     LOG.info("Initialized HBaseTimelineWriterImpl UGI to " + ugi);
+  }
+
+  @Override
+  protected void serviceStart() throws Exception {
+    super.serviceStart();
+    storageMonitor.start();
   }
 
   /**
@@ -160,7 +168,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   public TimelineWriteResponse write(TimelineCollectorContext context,
       TimelineEntities data, UserGroupInformation callerUgi)
       throws IOException {
-
+    storageMonitor.checkStorageIsUp();
     TimelineWriteResponse putStatus = new TimelineWriteResponse();
 
     String clusterId = context.getClusterId();
@@ -242,6 +250,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   public TimelineWriteResponse write(TimelineCollectorContext context,
       TimelineDomain domain)
       throws IOException {
+    storageMonitor.checkStorageIsUp();
     TimelineWriteResponse putStatus = new TimelineWriteResponse();
 
     String clusterId = context.getClusterId();
@@ -591,6 +600,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   @Override
   public TimelineWriteResponse aggregate(TimelineEntity data,
       TimelineAggregationTrack track) throws IOException {
+    storageMonitor.checkStorageIsUp();
     return null;
   }
 
@@ -603,6 +613,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
    */
   @Override
   public void flush() throws IOException {
+    storageMonitor.checkStorageIsUp();
     // flush all buffered mutators
     entityTable.flush();
     appToFlowTable.flush();
@@ -619,40 +630,56 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
    */
   @Override
   protected void serviceStop() throws Exception {
-    if (entityTable != null) {
-      LOG.info("closing the entity table");
-      // The close API performs flushing and releases any resources held
-      entityTable.close();
+    boolean isStorageUp = true;
+    try {
+      storageMonitor.checkStorageIsUp();
+    } catch (IOException e) {
+      LOG.warn("Failed to close the timeline tables as Hbase is down", e);
+      isStorageUp = false;
     }
-    if (appToFlowTable != null) {
-      LOG.info("closing the app_flow table");
-      // The close API performs flushing and releases any resources held
-      appToFlowTable.close();
+
+    if (isStorageUp) {
+      if (entityTable != null) {
+        LOG.info("closing the entity table");
+        // The close API performs flushing and releases any resources held
+        entityTable.close();
+      }
+      if (appToFlowTable != null) {
+        LOG.info("closing the app_flow table");
+        // The close API performs flushing and releases any resources held
+        appToFlowTable.close();
+      }
+      if (applicationTable != null) {
+        LOG.info("closing the application table");
+        applicationTable.close();
+      }
+      if (flowRunTable != null) {
+        LOG.info("closing the flow run table");
+        // The close API performs flushing and releases any resources held
+        flowRunTable.close();
+      }
+      if (flowActivityTable != null) {
+        LOG.info("closing the flowActivityTable table");
+        // The close API performs flushing and releases any resources held
+        flowActivityTable.close();
+      }
+      if (subApplicationTable != null) {
+        subApplicationTable.close();
+      }
+      if (domainTable != null) {
+        domainTable.close();
+      }
+      if (conn != null) {
+        LOG.info("closing the hbase Connection");
+        conn.close();
+      }
     }
-    if (applicationTable != null) {
-      LOG.info("closing the application table");
-      applicationTable.close();
-    }
-    if (flowRunTable != null) {
-      LOG.info("closing the flow run table");
-      // The close API performs flushing and releases any resources held
-      flowRunTable.close();
-    }
-    if (flowActivityTable != null) {
-      LOG.info("closing the flowActivityTable table");
-      // The close API performs flushing and releases any resources held
-      flowActivityTable.close();
-    }
-    if (subApplicationTable != null) {
-      subApplicationTable.close();
-    }
-    if (domainTable != null) {
-      domainTable.close();
-    }
-    if (conn != null) {
-      LOG.info("closing the hbase Connection");
-      conn.close();
-    }
+    storageMonitor.stop();
     super.serviceStop();
   }
+
+  protected TimelineStorageMonitor getTimelineStorageMonitor() {
+    return storageMonitor;
+  }
+
 }

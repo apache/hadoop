@@ -61,6 +61,19 @@ export default Ember.Controller.extend({
       id: 'startedDate',
       headerTitle: 'Started Time',
       contentPath: 'startedDate'
+    }, {
+      id: 'logsLink',
+      headerTitle: 'Logs',
+      contentPath: 'logsLink',
+      cellComponentName: 'em-table-html-cell',
+      getCellContent: function(row) {
+        var containerLogUrl = row.get('containerLogURL');
+        if (containerLogUrl) {
+          return `<a href="${containerLogUrl}&service=${serviceName}">Link</a>`;
+        } else {
+          return 'N/A';
+        }
+      }
     });
 
     return ColumnDef.make(cols);

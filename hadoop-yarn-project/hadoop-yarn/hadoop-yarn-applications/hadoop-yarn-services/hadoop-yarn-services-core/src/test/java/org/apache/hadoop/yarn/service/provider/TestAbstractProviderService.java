@@ -82,7 +82,7 @@ public class TestAbstractProviderService {
     Component component = serviceContext.scheduler.getAllComponents().entrySet()
         .iterator().next().getValue();
     ContainerLaunchService.ComponentLaunchContext clc =
-        createEntryPointCLCFor(testService, component);
+        createEntryPointCLCFor(testService, component, "sleep,9000");
 
     ComponentInstance instance = component.getAllComponentInstances().iterator()
         .next();
@@ -96,12 +96,31 @@ public class TestAbstractProviderService {
   }
 
   @Test
+  public void testBuildContainerLaunchCommandWithSpace() throws Exception {
+    AbstractProviderService providerService = new DockerProviderService();
+    Component component = serviceContext.scheduler.getAllComponents().entrySet()
+        .iterator().next().getValue();
+    ContainerLaunchService.ComponentLaunchContext clc =
+        createEntryPointCLCFor(testService, component, "ls -l \" space\"");
+
+    ComponentInstance instance = component.getAllComponentInstances().iterator()
+        .next();
+    Container container = mock(Container.class);
+    providerService.buildContainerLaunchCommand(launcher, testService, instance,
+        rule.getFs(), serviceContext.scheduler.getConfig(), container, clc,
+        null);
+
+    Assert.assertEquals("commands don't match.",
+        Lists.newArrayList("ls,-l, space"), launcher.getCommands());
+  }
+
+  @Test
   public void testBuildContainerLaunchContext() throws Exception {
     AbstractProviderService providerService = new DockerProviderService();
     Component component = serviceContext.scheduler.getAllComponents().entrySet()
         .iterator().next().getValue();
     ContainerLaunchService.ComponentLaunchContext clc =
-        createEntryPointCLCFor(testService, component);
+        createEntryPointCLCFor(testService, component, "sleep,9000");
 
     ComponentInstance instance = component.getAllComponentInstances().iterator()
         .next();
@@ -118,8 +137,8 @@ public class TestAbstractProviderService {
   }
 
   private static ContainerLaunchService.ComponentLaunchContext
-  createEntryPointCLCFor(Service service, Component component) {
-    String launchCmd = "sleep,9000";
+      createEntryPointCLCFor(Service service, Component component,
+          String launchCmd) {
     Artifact artifact = new Artifact();
     artifact.setType(Artifact.TypeEnum.DOCKER);
     artifact.setId("example");

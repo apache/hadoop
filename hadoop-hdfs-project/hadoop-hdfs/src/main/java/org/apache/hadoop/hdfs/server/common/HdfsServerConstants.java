@@ -157,7 +157,9 @@ public interface HdfsServerConstants {
     // only used for StorageDirectory.analyzeStorage() in hot swap drive scenario.
     // TODO refactor StorageDirectory.analyzeStorage() so that we can do away with
     // this in StartupOption.
-    HOTSWAP("-hotswap");
+    HOTSWAP("-hotswap"),
+    // Startup the namenode in observer mode.
+    OBSERVER("-observer");
 
     private static final Pattern ENUM_WITH_ROLLING_UPGRADE_OPTION = Pattern.compile(
         "(\\w+)\\((\\w+)\\)");
@@ -371,4 +373,6 @@ public interface HdfsServerConstants {
 
   long BLOCK_GROUP_INDEX_MASK = 15;
   byte MAX_BLOCKS_IN_GROUP = 16;
+  // maximum bandwidth per datanode 1TB/sec.
+  long MAX_BANDWIDTH_PER_DATANODE = 1099511627776L;
 }

@@ -19,12 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -33,9 +30,17 @@ import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileWriter;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -46,8 +51,8 @@ import org.junit.Test;
  */
 public class TestApplicationMasterServiceWithFS {
 
-  private static final Log LOG =
-      LogFactory.getLog(TestApplicationMasterServiceWithFS.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestApplicationMasterServiceWithFS.class);
 
   private static final int GB = 1024;
   private static final int MEMORY_ALLOCATION = 3 * GB;
@@ -56,7 +61,7 @@ public class TestApplicationMasterServiceWithFS {
   private static YarnConfiguration configuration;
 
   @BeforeClass
-  public static void setup() throws IOException {
+  public static void setup() {
     String allocFile =
         GenericTestUtils.getTestDir(TEST_FOLDER).getAbsolutePath();
 
@@ -65,21 +70,15 @@ public class TestApplicationMasterServiceWithFS {
         ResourceScheduler.class);
     configuration.set(FairSchedulerConfiguration.ALLOCATION_FILE, allocFile);
 
-    PrintWriter out = new PrintWriter(new FileWriter(allocFile));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("  <queue name=\"queueA\">");
-    out.println(
-        "   <maxContainerAllocation>2048 mb 1 vcores</maxContainerAllocation>");
-    out.println("  </queue>");
-    out.println("  <queue name=\"queueB\">");
-    out.println(
-        "   <maxContainerAllocation>3072 mb 1 vcores</maxContainerAllocation>");
-    out.println("  </queue>");
-    out.println("  <queue name=\"queueC\">");
-    out.println("  </queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .maxContainerAllocation("2048 mb 1 vcores")
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queueB")
+            .maxContainerAllocation("3072 mb 1 vcores")
+            .build())
+        .addQueue(new AllocationFileQueue.Builder("queueC").build())
+        .writeToFile(allocFile);
   }
 
   @AfterClass
@@ -97,7 +96,11 @@ public class TestApplicationMasterServiceWithFS {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
 
     // Submit an application
-    RMApp app1 = rm.submitApp(2 * GB, "queueA");
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder
+        .createWithMemory(2 * GB, rm)
+        .withQueue("queueA")
+        .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
     // kick the scheduling
     nm1.nodeHeartbeat(true);
@@ -139,7 +142,9 @@ public class TestApplicationMasterServiceWithFS {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
 
     // Submit an application
-    RMApp app1 = rm.submitApp(2 * GB, queueName);
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder
+        .createWithMemory(2 * GB, rm).withQueue(queueName).build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
     // kick the scheduling
     nm1.nodeHeartbeat(true);

@@ -124,8 +124,8 @@ public abstract class AbstractDNSToSwitchMapping
             .append("\n");
         switches.add(entry.getValue());
       }
-      builder.append("Nodes: ").append(rack.size()).append("\n");
-      builder.append("Switches: ").append(switches.size()).append("\n");
+      builder.append("Nodes: ").append(rack.size()).append("\n")
+          .append("Switches: ").append(switches.size()).append("\n");
     } else {
       builder.append("No topology information");
     }

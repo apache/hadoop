@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.NodeId;
+
 import java.util.LinkedList;
 import java.util.List;
 
@@ -29,22 +32,36 @@ import java.util.List;
 public class ActivityNode {
   private String activityNodeName;
   private String parentName;
-  private String appPriority;
-  private String requestPriority;
+  private Integer appPriority;
+  private Integer requestPriority;
   private ActivityState state;
   private String diagnostic;
+  private NodeId nodeId;
+  private Long allocationRequestId;
 
   private List<ActivityNode> childNode;
 
   public ActivityNode(String activityNodeName, String parentName,
-      String priority, ActivityState state, String diagnostic, String type) {
+      Integer priority, ActivityState state, String diagnostic,
+      ActivityLevel level, NodeId nodeId, Long allocationRequestId) {
     this.activityNodeName = activityNodeName;
     this.parentName = parentName;
-    if (type != null) {
-      if (type.equals("app")) {
+    if (level != null) {
+      switch (level) {
+      case APP:
         this.appPriority = priority;
-      } else if (type.equals("container")) {
+        break;
+      case REQUEST:
         this.requestPriority = priority;
+        this.allocationRequestId = allocationRequestId;
+        break;
+      case NODE:
+        this.requestPriority = priority;
+        this.allocationRequestId = allocationRequestId;
+        this.nodeId = nodeId;
+        break;
+      default:
+        break;
       }
     }
     this.state = state;
@@ -76,15 +93,23 @@ public class ActivityNode {
     return this.diagnostic;
   }
 
-  public String getAppPriority() {
+  public Integer getAppPriority() {
     return appPriority;
   }
 
-  public String getRequestPriority() {
+  public Integer getRequestPriority() {
     return requestPriority;
   }
 
-  public boolean getType() {
+  public NodeId getNodeId() {
+    return nodeId;
+  }
+
+  public Long getAllocationRequestId() {
+    return allocationRequestId;
+  }
+
+  public boolean isAppType() {
     if (appPriority != null) {
       return true;
     } else {
@@ -92,11 +117,27 @@ public class ActivityNode {
     }
   }
 
+  public boolean isRequestType() {
+    return requestPriority != null && nodeId == null;
+  }
+
+  public String getShortDiagnostic() {
+    if (this.diagnostic == null) {
+      return "";
+    } else {
+      return StringUtils.split(this.diagnostic,
+          ActivitiesManager.DIAGNOSTICS_DETAILS_SEPARATOR)[0];
+    }
+  }
+
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(this.activityNodeName + " ");
-    sb.append(this.appPriority + " ");
-    sb.append(this.state + " ");
+    sb.append(this.activityNodeName + " ")
+        .append(this.appPriority + " ")
+        .append(this.state + " ");
+    if (this.nodeId != null) {
+      sb.append(this.nodeId + " ");
+    }
     if (!this.diagnostic.equals("")) {
       sb.append(this.diagnostic + "\n");
     }

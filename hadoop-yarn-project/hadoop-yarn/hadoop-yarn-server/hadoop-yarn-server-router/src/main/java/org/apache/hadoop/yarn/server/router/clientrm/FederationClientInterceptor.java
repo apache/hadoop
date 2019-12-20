@@ -38,6 +38,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
@@ -214,8 +216,15 @@ public class FederationClientInterceptor
 
     ApplicationClientProtocol clientRMProxy = null;
     try {
+      boolean serviceAuthEnabled = getConf().getBoolean(
+              CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false);
+      UserGroupInformation realUser = user;
+      if (serviceAuthEnabled) {
+        realUser = UserGroupInformation.createProxyUser(
+                user.getShortUserName(), UserGroupInformation.getLoginUser());
+      }
       clientRMProxy = FederationProxyProviderUtil.createRMProxy(getConf(),
-          ApplicationClientProtocol.class, subClusterId, user);
+          ApplicationClientProtocol.class, subClusterId, realUser);
     } catch (Exception e) {
       RouterServerUtil.logAndThrowException(
           "Unable to create the interface to reach the SubCluster "
@@ -269,7 +278,7 @@ public class FederationClientInterceptor
     for (int i = 0; i < numSubmitRetries; ++i) {
       SubClusterId subClusterId = getRandomActiveSubCluster(subClustersActive);
       LOG.debug(
-          "getNewApplication try #" + i + " on SubCluster " + subClusterId);
+          "getNewApplication try #{} on SubCluster {}", i, subClusterId);
       ApplicationClientProtocol clientRMProxy =
           getClientRMProxyForSubCluster(subClusterId);
       GetNewApplicationResponse response = null;
@@ -304,19 +313,19 @@ public class FederationClientInterceptor
    *
    * Base scenarios:
    *
-   * The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into
-   * StateStore with the selected SubCluster (e.g. SC1) and the appId. • The
-   * State Store replies with the selected SubCluster (e.g. SC1). • The Router
+   * The Client submits an application to the Router. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into
+   * StateStore with the selected SubCluster (e.g. SC1) and the appId. The
+   * State Store replies with the selected SubCluster (e.g. SC1). The Router
    * submits the request to the selected SubCluster.
    *
    * In case of State Store failure:
    *
-   * The client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • Due to the
+   * The client submits an application to the Router. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into State
+   * Store with the selected SubCluster (e.g. SC1) and the appId. Due to the
    * State Store down the Router times out and it will retry depending on the
-   * FederationFacade settings. • The Router replies to the client with an error
+   * FederationFacade settings. The Router replies to the client with an error
    * message.
    *
    * If State Store fails after inserting the tuple: identical behavior as
@@ -326,26 +335,26 @@ public class FederationClientInterceptor
    *
    * Scenario 1 – Crash before submission to the ResourceManager
    *
-   * The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • The Router
-   * crashes. • The Client timeouts and resubmits the application. • The Router
-   * selects one SubCluster to forward the request. • The Router inserts a tuple
-   * into State Store with the selected SubCluster (e.g. SC2) and the appId. •
+   * The Client submits an application to the Router. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into State
+   * Store with the selected SubCluster (e.g. SC1) and the appId. The Router
+   * crashes. The Client timeouts and resubmits the application. The Router
+   * selects one SubCluster to forward the request. The Router inserts a tuple
+   * into State Store with the selected SubCluster (e.g. SC2) and the appId.
    * Because the tuple is already inserted in the State Store, it returns the
-   * previous selected SubCluster (e.g. SC1). • The Router submits the request
+   * previous selected SubCluster (e.g. SC1). The Router submits the request
    * to the selected SubCluster (e.g. SC1).
    *
    * Scenario 2 – Crash after submission to the ResourceManager
    *
-   * • The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • The Router
-   * submits the request to the selected SubCluster. • The Router crashes. • The
-   * Client timeouts and resubmit the application. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC2) and the appId. • The State
-   * Store replies with the selected SubCluster (e.g. SC1). • The Router submits
+   * The Client submits an application to the Router. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into State
+   * Store with the selected SubCluster (e.g. SC1) and the appId. The Router
+   * submits the request to the selected SubCluster. The Router crashes. The
+   * Client timeouts and resubmit the application. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into State
+   * Store with the selected SubCluster (e.g. SC2) and the appId. The State
+   * Store replies with the selected SubCluster (e.g. SC1). The Router submits
    * the request to the selected SubCluster (e.g. SC1). When a client re-submits
    * the same application to the same RM, it does not raise an exception and
    * replies with operation successful message.
@@ -354,14 +363,14 @@ public class FederationClientInterceptor
    *
    * In case of ResourceManager failure:
    *
-   * The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • The Router
-   * submits the request to the selected SubCluster. • The entire SubCluster is
-   * down – all the RMs in HA or the master RM is not reachable. • The Router
-   * times out. • The Router selects a new SubCluster to forward the request. •
+   * The Client submits an application to the Router. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into State
+   * Store with the selected SubCluster (e.g. SC1) and the appId. The Router
+   * submits the request to the selected SubCluster. The entire SubCluster is
+   * down – all the RMs in HA or the master RM is not reachable. The Router
+   * times out. The Router selects a new SubCluster to forward the request.
    * The Router update a tuple into State Store with the selected SubCluster
-   * (e.g. SC2) and the appId. • The State Store replies with OK answer. • The
+   * (e.g. SC2) and the appId. The State Store replies with OK answer. The
    * Router submits the request to the selected SubCluster (e.g. SC2).
    */
   @Override
@@ -622,7 +631,7 @@ public class FederationClientInterceptor
           ApplicationClientProtocol protocol =
               getClientRMProxyForSubCluster(subClusterId);
           Method method = ApplicationClientProtocol.class
-              .getDeclaredMethod(request.getMethodName(), request.getTypes());
+              .getMethod(request.getMethodName(), request.getTypes());
           return method.invoke(protocol, request.getParams());
         }
       });

@@ -34,8 +34,8 @@ import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -80,8 +80,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class LeveldbRMStateStore extends RMStateStore {
 
-  public static final Log LOG =
-      LogFactory.getLog(LeveldbRMStateStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(LeveldbRMStateStore.class);
 
   private static final String SEPARATOR = "/";
   private static final String DB_NAME = "yarn-rm-state";
@@ -355,11 +355,9 @@ public class LeveldbRMStateStore extends RMStateStore {
         DelegationKey masterKey = loadDelegationKey(entry.getValue());
         state.rmSecretManagerState.masterKeyState.add(masterKey);
         ++numKeys;
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Loaded RM delegation key from " + key
-              + ": keyId=" + masterKey.getKeyId()
-              + ", expirationDate=" + masterKey.getExpiryDate());
-        }
+        LOG.debug("Loaded RM delegation key from {}: keyId={},"
+            + " expirationDate={}", key, masterKey.getKeyId(),
+            masterKey.getExpiryDate());
       }
     } catch (DBException e) {
       throw new IOException(e);
@@ -377,7 +375,7 @@ public class LeveldbRMStateStore extends RMStateStore {
     try {
       key.readFields(in);
     } finally {
-      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanupWithLogger(LOG, in);
     }
     return key;
   }
@@ -401,10 +399,8 @@ public class LeveldbRMStateStore extends RMStateStore {
         state.rmSecretManagerState.delegationTokenState.put(tokenId,
             renewDate);
         ++numTokens;
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Loaded RM delegation token from " + key
-              + ": tokenId=" + tokenId + ", renewDate=" + renewDate);
-        }
+        LOG.debug("Loaded RM delegation token from {}: tokenId={},"
+            + " renewDate={}", key, tokenId, renewDate);
       }
     } catch (DBException e) {
       throw new IOException(e);
@@ -423,7 +419,7 @@ public class LeveldbRMStateStore extends RMStateStore {
     try {
       tokenData = RMStateStoreUtils.readRMDelegationTokenIdentifierData(in);
     } finally {
-      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanupWithLogger(LOG, in);
     }
     return tokenData;
   }
@@ -441,7 +437,7 @@ public class LeveldbRMStateStore extends RMStateStore {
       try {
         state.rmSecretManagerState.dtSequenceNumber = in.readInt();
       } finally {
-        IOUtils.cleanup(LOG, in);
+        IOUtils.cleanupWithLogger(LOG, in);
       }
     }
   }
@@ -505,10 +501,7 @@ public class LeveldbRMStateStore extends RMStateStore {
       iter.next();
     }
     int numAttempts = appState.attempts.size();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Loaded application " + appId + " with " + numAttempts
-          + " attempts");
-    }
+    LOG.debug("Loaded application {} with {} attempts", appId, numAttempts);
     return numAttempts;
   }
 
@@ -621,9 +614,7 @@ public class LeveldbRMStateStore extends RMStateStore {
   protected void storeApplicationStateInternal(ApplicationId appId,
       ApplicationStateData appStateData) throws IOException {
     String key = getApplicationNodeKey(appId);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing state for app " + appId + " at " + key);
-    }
+    LOG.debug("Storing state for app {} at {}", appId, key);
     try {
       db.put(bytes(key), appStateData.getProto().toByteArray());
     } catch (DBException e) {
@@ -642,9 +633,7 @@ public class LeveldbRMStateStore extends RMStateStore {
       ApplicationAttemptId attemptId,
       ApplicationAttemptStateData attemptStateData) throws IOException {
     String key = getApplicationAttemptNodeKey(attemptId);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing state for attempt " + attemptId + " at " + key);
-    }
+    LOG.debug("Storing state for attempt {} at {}", attemptId, key);
     try {
       db.put(bytes(key), attemptStateData.getProto().toByteArray());
     } catch (DBException e) {
@@ -664,10 +653,7 @@ public class LeveldbRMStateStore extends RMStateStore {
       ApplicationAttemptId attemptId)
       throws IOException {
     String attemptKey = getApplicationAttemptNodeKey(attemptId);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing state for attempt " + attemptId + " at "
-          + attemptKey);
-    }
+    LOG.debug("Removing state for attempt {} at {}", attemptId, attemptKey);
     try {
       db.delete(bytes(attemptKey));
     } catch (DBException e) {
@@ -710,10 +696,9 @@ public class LeveldbRMStateStore extends RMStateStore {
       WriteBatch batch = db.createWriteBatch();
       try {
         String key = getReservationNodeKey(planName, reservationIdName);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Storing state for reservation " + reservationIdName
-              + " plan " + planName + " at " + key);
-        }
+        LOG.debug("Storing state for reservation {} plan {} at {}",
+            reservationIdName, planName, key);
+
         batch.put(bytes(key), reservationAllocation.toByteArray());
         db.write(batch);
       } finally {
@@ -733,10 +718,8 @@ public class LeveldbRMStateStore extends RMStateStore {
         String reservationKey =
             getReservationNodeKey(planName, reservationIdName);
         batch.delete(bytes(reservationKey));
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Removing state for reservation " + reservationIdName
-              + " plan " + planName + " at " + reservationKey);
-        }
+        LOG.debug("Removing state for reservation {} plan {} at {}",
+            reservationIdName, planName, reservationKey);
         db.write(batch);
       } finally {
         batch.close();
@@ -751,9 +734,7 @@ public class LeveldbRMStateStore extends RMStateStore {
     String tokenKey = getRMDTTokenNodeKey(tokenId);
     RMDelegationTokenIdentifierData tokenData =
         new RMDelegationTokenIdentifierData(tokenId, renewDate);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing token to " + tokenKey);
-    }
+    LOG.debug("Storing token to {}", tokenKey);
     try {
       WriteBatch batch = db.createWriteBatch();
       try {
@@ -763,10 +744,8 @@ public class LeveldbRMStateStore extends RMStateStore {
           try (DataOutputStream ds = new DataOutputStream(bs)) {
             ds.writeInt(tokenId.getSequenceNumber());
           }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Storing " + tokenId.getSequenceNumber() + " to "
-                + RM_DT_SEQUENCE_NUMBER_KEY);   
-          }
+          LOG.debug("Storing {} to {}", tokenId.getSequenceNumber(),
+              RM_DT_SEQUENCE_NUMBER_KEY);
           batch.put(bytes(RM_DT_SEQUENCE_NUMBER_KEY), bs.toByteArray());
         }
         db.write(batch);
@@ -796,9 +775,7 @@ public class LeveldbRMStateStore extends RMStateStore {
   protected void removeRMDelegationTokenState(
       RMDelegationTokenIdentifier tokenId) throws IOException {
     String tokenKey = getRMDTTokenNodeKey(tokenId);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing token at " + tokenKey);
-    }
+    LOG.debug("Removing token at {}", tokenKey);
     try {
       db.delete(bytes(tokenKey));
     } catch (DBException e) {
@@ -810,9 +787,7 @@ public class LeveldbRMStateStore extends RMStateStore {
   protected void storeRMDTMasterKeyState(DelegationKey masterKey)
       throws IOException {
     String dbKey = getRMDTMasterKeyNodeKey(masterKey);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing token master key to " + dbKey);
-    }
+    LOG.debug("Storing token master key to {}", dbKey);
     ByteArrayOutputStream os = new ByteArrayOutputStream();
     DataOutputStream out = new DataOutputStream(os);
     try {
@@ -831,9 +806,7 @@ public class LeveldbRMStateStore extends RMStateStore {
   protected void removeRMDTMasterKeyState(DelegationKey masterKey)
       throws IOException {
     String dbKey = getRMDTMasterKeyNodeKey(masterKey);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing token master key at " + dbKey);
-    }
+    LOG.debug("Removing token master key at {}", dbKey);
     try {
       db.delete(bytes(dbKey));
     } catch (DBException e) {

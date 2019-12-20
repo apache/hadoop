@@ -40,6 +40,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -763,10 +764,11 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   private Set<String> resolveRacks(List<String> nodes) {
     Set<String> racks = new HashSet<String>();    
     if (nodes != null) {
-      for (String node : nodes) {
+      List<Node> tmpList = RackResolver.resolve(nodes);
+      for (Node node : tmpList) {
+        String rack = node.getNetworkLocation();
         // Ensure node requests are accompanied by requests for
         // corresponding rack
-        String rack = RackResolver.resolve(node).getNetworkLocation();
         if (rack == null) {
           LOG.warn("Failed to resolve rack for node " + node + ".");
         } else {
@@ -774,7 +776,6 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         }
       }
     }
-    
     return racks;
   }
 
@@ -1035,6 +1036,11 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   @VisibleForTesting
   RemoteRequestsTable<T> getTable(long allocationRequestId) {
     return remoteRequests.get(Long.valueOf(allocationRequestId));
+  }
+
+  @VisibleForTesting
+  Map<Set<String>, List<SchedulingRequest>> getOutstandingSchedRequests() {
+    return outstandingSchedRequests;
   }
 
   RemoteRequestsTable<T> putTable(long allocationRequestId,

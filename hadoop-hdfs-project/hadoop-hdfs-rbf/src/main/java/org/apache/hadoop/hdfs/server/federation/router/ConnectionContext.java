@@ -116,11 +116,11 @@ public class ConnectionContext {
     Class<?> clazz = proxy.getClass();
 
     StringBuilder sb = new StringBuilder();
-    sb.append(clazz.getSimpleName());
-    sb.append("@");
-    sb.append(addr);
-    sb.append("x");
-    sb.append(numThreads);
+    sb.append(clazz.getSimpleName())
+        .append("@")
+        .append(addr)
+        .append("x")
+        .append(numThreads);
     if (closed) {
       sb.append("[CLOSED]");
     }

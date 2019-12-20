@@ -235,7 +235,23 @@ As an example, the endpoint for S3 Frankfurt is `s3.eu-central-1.amazonaws.com`:
 </property>
 ```
 
-## <a name="access_denied"></a> `AccessDeniedException` "Access Denied"
+## <a name="access_denied"></a> "The security token included in the request is invalid"
+
+You are trying to use session/temporary credentials and the session token
+supplied is considered invalid.
+
+```
+org.apache.hadoop.fs.s3a.AWSBadRequestException: initTable on bucket:
+  com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException:
+  The security token included in the request is invalid
+  (Service: AmazonDynamoDBv2; Status Code: 400; Error Code: UnrecognizedClientException)
+```
+
+This can surface if your configuration is setting the `fs.s3a.secret.key`,
+`fs.s3a.access.key` and `fs.s3a.session.key` correctly, but the
+AWS credential provider list set in `AWS_CREDENTIALS_PROVIDER` does not include
+`org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider`.
+
 
 ### <a name="access_denied_unknown-ID"></a> AccessDeniedException "The AWS Access Key Id you provided does not exist in our records."
 
@@ -402,6 +418,28 @@ When trying to write or read SEE-KMS-encrypted data, the client gets a
 
 The caller does not have the permissions to access
 the key with which the data was encrypted.
+
+### <a name="no_region_session_credentials"></a> "Unable to find a region via the region provider chain." when using session credentials.
+
+Region must be provided when requesting session credentials, or an exception will be thrown with the message:
+```
+com.amazonaws.SdkClientException: Unable to find a region via the region provider
+chain. Must provide an explicit region in the builder or setup environment to supply a region.
+```
+In this case you have to set the `fs.s3a.assumed.role.sts.endpoint` property to a valid
+S3 sts endpoint and region like the following:
+
+```xml
+<property>
+    <name>fs.s3a.assumed.role.sts.endpoint</name>
+    <value>${sts.endpoint}</value>
+</property>
+<property>
+    <name>fs.s3a.assumed.role.sts.endpoint.region</name>
+    <value>${sts.region}</value>
+</property>
+```
+
 
 ## <a name="connectivity"></a> Connectivity Problems
 
@@ -699,36 +737,36 @@ org.apache.hadoop.fs.s3a.AWSS3IOException: copyFromLocalFile(file:/tmp/hello.txt
     (Service: Amazon S3; Status Code: 400; Error Code: BadDigest; Request ID: 4018131225),
     S3 Extended Request ID: null
   at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:127)
-	at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:69)
-	at org.apache.hadoop.fs.s3a.S3AFileSystem.copyFromLocalFile(S3AFileSystem.java:1494)
-	at org.apache.hadoop.tools.cloudup.Cloudup.uploadOneFile(Cloudup.java:466)
-	at org.apache.hadoop.tools.cloudup.Cloudup.access$000(Cloudup.java:63)
-	at org.apache.hadoop.tools.cloudup.Cloudup$1.call(Cloudup.java:353)
-	at org.apache.hadoop.tools.cloudup.Cloudup$1.call(Cloudup.java:350)
-	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
-	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)
-	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
-	at java.lang.Thread.run(Thread.java:748)
+  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:69)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.copyFromLocalFile(S3AFileSystem.java:1494)
+  at org.apache.hadoop.tools.cloudup.Cloudup.uploadOneFile(Cloudup.java:466)
+  at org.apache.hadoop.tools.cloudup.Cloudup.access$000(Cloudup.java:63)
+  at org.apache.hadoop.tools.cloudup.Cloudup$1.call(Cloudup.java:353)
+  at org.apache.hadoop.tools.cloudup.Cloudup$1.call(Cloudup.java:350)
+  at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+  at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)
+  at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+  at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+  at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+  at java.lang.Thread.run(Thread.java:748)
 Caused by: com.amazonaws.services.s3.model.AmazonS3Exception:
     The Content-MD5 you specified did not match what we received.
     (Service: Amazon S3; Status Code: 400; Error Code: BadDigest; Request ID: 4018131225),
     S3 Extended Request ID: null
   at com.amazonaws.http.AmazonHttpClient.handleErrorResponse(AmazonHttpClient.java:1307)
-	at com.amazonaws.http.AmazonHttpClient.executeOneRequest(AmazonHttpClient.java:894)
-	at com.amazonaws.http.AmazonHttpClient.executeHelper(AmazonHttpClient.java:597)
-	at com.amazonaws.http.AmazonHttpClient.doExecute(AmazonHttpClient.java:363)
-	at com.amazonaws.http.AmazonHttpClient.executeWithTimer(AmazonHttpClient.java:329)
-	at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:308)
-	at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:3659)
-	at com.amazonaws.services.s3.AmazonS3Client.putObject(AmazonS3Client.java:1422)
-	at com.amazonaws.services.s3.transfer.internal.UploadCallable.uploadInOneChunk(UploadCallable.java:131)
-	at com.amazonaws.services.s3.transfer.internal.UploadCallable.call(UploadCallable.java:123)
-	at com.amazonaws.services.s3.transfer.internal.UploadMonitor.call(UploadMonitor.java:139)
-	at com.amazonaws.services.s3.transfer.internal.UploadMonitor.call(UploadMonitor.java:47)
-	at org.apache.hadoop.fs.s3a.BlockingThreadPoolExecutorService$CallableWithPermitRelease.call(BlockingThreadPoolExecutorService.java:239)
-	... 4 more
+  at com.amazonaws.http.AmazonHttpClient.executeOneRequest(AmazonHttpClient.java:894)
+  at com.amazonaws.http.AmazonHttpClient.executeHelper(AmazonHttpClient.java:597)
+  at com.amazonaws.http.AmazonHttpClient.doExecute(AmazonHttpClient.java:363)
+  at com.amazonaws.http.AmazonHttpClient.executeWithTimer(AmazonHttpClient.java:329)
+  at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:308)
+  at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:3659)
+  at com.amazonaws.services.s3.AmazonS3Client.putObject(AmazonS3Client.java:1422)
+  at com.amazonaws.services.s3.transfer.internal.UploadCallable.uploadInOneChunk(UploadCallable.java:131)
+  at com.amazonaws.services.s3.transfer.internal.UploadCallable.call(UploadCallable.java:123)
+  at com.amazonaws.services.s3.transfer.internal.UploadMonitor.call(UploadMonitor.java:139)
+  at com.amazonaws.services.s3.transfer.internal.UploadMonitor.call(UploadMonitor.java:47)
+  at org.apache.hadoop.fs.s3a.BlockingThreadPoolExecutorService$CallableWithPermitRelease.call(BlockingThreadPoolExecutorService.java:239)
+  ... 4 more
 ```
 
 This stack trace was seen when interacting with a third-party S3 store whose
@@ -950,6 +988,119 @@ if it is required that the data is persisted durably after every
 This includes resilient logging, HBase-style journaling
 and the like. The standard strategy here is to save to HDFS and then copy to S3.
 
+### `RemoteFileChangedException` and read-during-overwrite
+
+```
+org.apache.hadoop.fs.s3a.RemoteFileChangedException: re-open `s3a://my-bucket/test/file.txt':
+  Change reported by S3 while reading at position 1949.
+  ETag f9c186d787d4de9657e99f280ba26555 was unavailable
+  at org.apache.hadoop.fs.s3a.impl.ChangeTracker.processResponse(ChangeTracker.java:137)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.reopen(S3AInputStream.java:200)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$lazySeek$1(S3AInputStream.java:346)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$2(Invoker.java:195)
+  at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:109)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$3(Invoker.java:265)
+  at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:322)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:261)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:193)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:215)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.lazySeek(S3AInputStream.java:339)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.read(S3AInputStream.java:372)
+```
+
+If an S3 object is updated while an S3A filesystem reader has an open
+`InputStream` on it, the reader may encounter `RemoteFileChangedException`.  This
+occurs if the S3A `InputStream` needs to re-open the object (e.g. during a seek())
+and detects the change.
+
+If the change detection mode is configured to 'warn', a warning like the
+following will be seen instead of `RemoteFileChangedException`:
+
+```
+WARN  - ETag change detected on re-open s3a://my-bucket/test/readFileToChange.txt at 1949.
+ Expected f9c186d787d4de9657e99f280ba26555 got 043abff21b7bd068d2d2f27ccca70309
+```
+
+Using a third-party S3 implementation that doesn't support eTags might result in
+the following error.
+
+```
+org.apache.hadoop.fs.s3a.NoVersionAttributeException: `s3a://my-bucket/test/file.txt':
+ Change detection policy requires ETag
+  at org.apache.hadoop.fs.s3a.impl.ChangeTracker.processResponse(ChangeTracker.java:153)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.reopen(S3AInputStream.java:200)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$lazySeek$1(S3AInputStream.java:346)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$2(Invoker.java:195)
+  at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:109)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$3(Invoker.java:265)
+  at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:322)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:261)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:193)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:215)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.lazySeek(S3AInputStream.java:339)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.read(S3AInputStream.java:372)
+```
+
+If the change policy is `versionid` there are a number of possible causes
+
+* The bucket does not have object versioning enabled.
+* The bucket does have versioning enabled, but the object being read was created
+before versioning was enabled.
+* The bucket is on a third-party store which does not support object versioning.
+
+See [Handling Read-During-Overwrite](./index.html#handling_read-during-overwrite)
+for more information.
+
+### `RemoteFileChangedException`: "File to rename not found on guarded S3 store after repeated attempts"
+
+A file being renamed and listed in the S3Guard table could not be found
+in the S3 bucket even after multiple attempts.
+
+```
+org.apache.hadoop.fs.s3a.RemoteFileChangedException: copyFile(/sourcedir/missing, /destdir/)
+ `s3a://example/sourcedir/missing': File not found on S3 after repeated attempts: `s3a://example/sourcedir/missing'
+at org.apache.hadoop.fs.s3a.S3AFileSystem.copyFile(S3AFileSystem.java:3231)
+at org.apache.hadoop.fs.s3a.S3AFileSystem.access$700(S3AFileSystem.java:177)
+at org.apache.hadoop.fs.s3a.S3AFileSystem$RenameOperationCallbacksImpl.copyFile(S3AFileSystem.java:1368)
+at org.apache.hadoop.fs.s3a.impl.RenameOperation.copySourceAndUpdateTracker(RenameOperation.java:448)
+at org.apache.hadoop.fs.s3a.impl.RenameOperation.lambda$initiateCopy$0(RenameOperation.java:412)
+```
+
+Either the file has been deleted, or an attempt was made to read a file before it
+was created and the S3 load balancer has briefly cached the 404 returned by that
+operation. This is something which AWS S3 can do for short periods.
+
+If error occurs and the file is on S3, consider increasing the value of
+`fs.s3a.s3guard.consistency.retry.limit`.
+
+We also recommend using applications/application
+options which do  not rename files when committing work or when copying data
+to S3, but instead write directly to the final destination.
+
+### `RemoteFileChangedException`: "File to rename not found on unguarded S3 store"
+
+```
+org.apache.hadoop.fs.s3a.RemoteFileChangedException: copyFile(/sourcedir/missing, /destdir/)
+ `s3a://example/sourcedir/missing': File to rename not found on unguarded S3 store: `s3a://example/sourcedir/missing'
+at org.apache.hadoop.fs.s3a.S3AFileSystem.copyFile(S3AFileSystem.java:3231)
+at org.apache.hadoop.fs.s3a.S3AFileSystem.access$700(S3AFileSystem.java:177)
+at org.apache.hadoop.fs.s3a.S3AFileSystem$RenameOperationCallbacksImpl.copyFile(S3AFileSystem.java:1368)
+at org.apache.hadoop.fs.s3a.impl.RenameOperation.copySourceAndUpdateTracker(RenameOperation.java:448)
+at org.apache.hadoop.fs.s3a.impl.RenameOperation.lambda$initiateCopy$0(RenameOperation.java:412)
+```
+
+An attempt was made to rename a file in an S3 store not protected by SGuard,
+the directory list operation included the filename in its results but the
+actual operation to rename the file failed.
+
+This can happen because S3 directory listings and the store itself are not
+consistent: the list operation tends to lag changes in the store.
+It is possible that the file has been deleted.
+
+The fix here is to use S3Guard. We also recommend using applications/application
+options which do  not rename files when committing work or when copying data
+to S3, but instead write directly to the final destination.
+
 ## <a name="encryption"></a> S3 Server Side Encryption
 
 ### `AWSS3IOException` `KMS.NotFoundException` "Invalid arn" when using SSE-KMS
@@ -1050,7 +1201,7 @@ shows that it is generally more efficient to abort the TCP connection and initia
 a new one than read to the end of a large file.
 
 Note: the threshold when data is read rather than the stream aborted can be tuned
-by `fs.s3a.readahead.range`; seek policy in `fs.s3a.experimental.fadvise`.
+by `fs.s3a.readahead.range`; seek policy in `fs.s3a.experimental.input.fadvise`.
 
 ### <a name="no_such_bucket"></a> `FileNotFoundException` Bucket does not exist.
 
@@ -1154,17 +1305,20 @@ The number of retries and interval between each retry can be configured:
 
 ```xml
 <property>
-  <name>fs.s3a.attempts.maximum</name>
-  <value>20</value>
-  <description>How many times we should retry commands on transient errors,
-  excluding throttling errors.</description>
+  <name>fs.s3a.retry.limit</name>
+  <value>7</value>
+  <description>
+    Number of times to retry any repeatable S3 client request on failure,
+    excluding throttling requests.
+  </description>
 </property>
 
 <property>
   <name>fs.s3a.retry.interval</name>
   <value>500ms</value>
   <description>
-    Interval between retry attempts.
+    Initial retry interval when retrying operations for any reason other
+    than S3 throttle errors.
   </description>
 </property>
 ```
@@ -1193,3 +1347,40 @@ Please don't do that. Given that the emulated directory rename and delete operat
 are not atomic, even without retries, multiple S3 clients working with the same
 paths can interfere with each other
 
+### <a name="retries"></a> Tuning S3Guard open/rename Retry Policies
+
+When the S3A connector attempts to open a file for which it has an entry in
+its database, it will retry if the desired file is not found. This is
+done if:
+
+* No file is found in S3.
+* There is a file but its version or etag is not consistent with S3Guard table.
+
+These can be symptoms of S3's eventual consistency, hence the retries.
+They can also be caused by changes having been made to the S3 Store without
+SGuard being kept up to date.
+
+For this reason, the number of retry events are limited.
+
+```xml
+<property>
+  <name>fs.s3a.s3guard.consistency.retry.limit</name>
+  <value>7</value>
+  <description>
+    Number of times to retry attempts to read/open/copy files when
+    S3Guard believes a specific version of the file to be available,
+    but the S3 request does not find any version of a file, or a different
+    version.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.consistency.retry.interval</name>
+  <value>2s</value>
+  <description>
+    Initial interval between attempts to retry operations while waiting for S3
+    to become consistent with the S3Guard data.
+    An exponential back-off is used here: every failure doubles the delay.
+  </description>
+</property>
+```

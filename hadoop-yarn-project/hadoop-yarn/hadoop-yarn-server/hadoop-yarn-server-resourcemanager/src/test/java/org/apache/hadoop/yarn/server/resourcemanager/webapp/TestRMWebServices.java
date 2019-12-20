@@ -22,7 +22,8 @@ import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseS
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -30,12 +31,19 @@ import java.io.File;
 import java.io.StringReader;
 import java.security.Principal;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -49,17 +57,27 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.*;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -426,9 +444,11 @@ public class TestRMWebServices extends JerseyTestBase {
           WebServicesTestUtils.getXmlInt(element, "reservedMB"),
           WebServicesTestUtils.getXmlInt(element, "availableMB"),
           WebServicesTestUtils.getXmlInt(element, "allocatedMB"),
+          WebServicesTestUtils.getXmlInt(element, "pendingMB"),
           WebServicesTestUtils.getXmlInt(element, "reservedVirtualCores"),
           WebServicesTestUtils.getXmlInt(element, "availableVirtualCores"),
           WebServicesTestUtils.getXmlInt(element, "allocatedVirtualCores"),
+          WebServicesTestUtils.getXmlInt(element, "pendingVirtualCores"),
           WebServicesTestUtils.getXmlInt(element, "totalVirtualCores"),
           WebServicesTestUtils.getXmlInt(element, "containersAllocated"),
           WebServicesTestUtils.getXmlInt(element, "totalMB"),
@@ -446,13 +466,16 @@ public class TestRMWebServices extends JerseyTestBase {
       Exception {
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject clusterinfo = json.getJSONObject("clusterMetrics");
-    assertEquals("incorrect number of elements", 25, clusterinfo.length());
+    assertEquals("incorrect number of elements", 27, clusterinfo.length());
     verifyClusterMetrics(
         clusterinfo.getInt("appsSubmitted"), clusterinfo.getInt("appsCompleted"),
         clusterinfo.getInt("reservedMB"), clusterinfo.getInt("availableMB"),
-        clusterinfo.getInt("allocatedMB"),
-        clusterinfo.getInt("reservedVirtualCores"), clusterinfo.getInt("availableVirtualCores"),
-        clusterinfo.getInt("allocatedVirtualCores"), clusterinfo.getInt("totalVirtualCores"),
+        clusterinfo.getInt("allocatedMB"), clusterinfo.getInt("pendingMB"),
+        clusterinfo.getInt("reservedVirtualCores"),
+        clusterinfo.getInt("availableVirtualCores"),
+        clusterinfo.getInt("allocatedVirtualCores"),
+        clusterinfo.getInt("pendingVirtualCores"),
+        clusterinfo.getInt("totalVirtualCores"),
         clusterinfo.getInt("containersAllocated"),
         clusterinfo.getInt("totalMB"), clusterinfo.getInt("totalNodes"),
         clusterinfo.getInt("lostNodes"), clusterinfo.getInt("unhealthyNodes"),
@@ -462,8 +485,9 @@ public class TestRMWebServices extends JerseyTestBase {
   }
 
   public void verifyClusterMetrics(int submittedApps, int completedApps,
-      int reservedMB, int availableMB, int allocMB, int reservedVirtualCores,
-      int availableVirtualCores, int allocVirtualCores, int totalVirtualCores,
+      int reservedMB, int availableMB, int allocMB, int pendingMB,
+      int reservedVirtualCores, int availableVirtualCores,
+      int allocVirtualCores, int pendingVirtualCores, int totalVirtualCores,
       int containersAlloc, int totalMB, int totalNodes, int lostNodes,
       int unhealthyNodes, int decommissionedNodes, int rebootedNodes,
       int activeNodes, int shutdownNodes) throws JSONException, Exception {
@@ -486,12 +510,19 @@ public class TestRMWebServices extends JerseyTestBase {
         metrics.getAvailableMB(), availableMB);
     assertEquals("allocatedMB doesn't match",
         metrics.getAllocatedMB(), allocMB);
+    assertEquals("pendingMB doesn't match",
+            metrics.getPendingMB(), pendingMB);
     assertEquals("reservedVirtualCores doesn't match",
         metrics.getReservedVirtualCores(), reservedVirtualCores);
     assertEquals("availableVirtualCores doesn't match",
         metrics.getAvailableVirtualCores(), availableVirtualCores);
+    assertEquals("pendingVirtualCores doesn't match",
+        metrics.getPendingVirtualCores(), pendingVirtualCores);
     assertEquals("allocatedVirtualCores doesn't match",
-        totalVirtualCoresExpect, allocVirtualCores);
+        metrics.getAllocatedVirtualCores(), allocVirtualCores);
+    assertEquals("totalVirtualCores doesn't match",
+        totalVirtualCoresExpect, totalVirtualCores);
+
     assertEquals("containersAllocated doesn't match", 0, containersAlloc);
     assertEquals("totalMB doesn't match", totalMBExpect, totalMB);
     assertEquals(
@@ -855,6 +886,90 @@ public class TestRMWebServices extends JerseyTestBase {
             new RMWebServices(mockRM, conf, mock(HttpServletResponse.class));
     ClusterUserInfo userInfo = webSvc.getClusterUserInfo(mockHsr);
     verifyClusterUserInfo(userInfo, "yarn", "admin");
+  }
+
+  @Test
+  public void testInvalidXMLChars() throws Exception {
+    ResourceManager mockRM = mock(ResourceManager.class);
+
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationReport appReport = ApplicationReport.newInstance(
+        applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
+        "user", "queue", "appname", "host", 124, null,
+        YarnApplicationState.FAILED, "java.lang.Exception: \u0001", "url",
+        0, 0, 0, FinalApplicationStatus.FAILED, null, "N/A", 0.53789f, "YARN",
+        null, null, false, Priority.newInstance(0), "high-mem", "high-mem");
+    List<ApplicationReport> appReports = new ArrayList<ApplicationReport>();
+    appReports.add(appReport);
+
+    GetApplicationsResponse response = mock(GetApplicationsResponse.class);
+    when(response.getApplicationList()).thenReturn(appReports);
+    ClientRMService clientRMService = mock(ClientRMService.class);
+    when(clientRMService.getApplications(any(GetApplicationsRequest.class)))
+        .thenReturn(response);
+    when(mockRM.getClientRMService()).thenReturn(clientRMService);
+
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getDispatcher()).thenReturn(mock(Dispatcher.class));
+
+    ApplicationSubmissionContext applicationSubmissionContext = mock(
+        ApplicationSubmissionContext.class);
+    when(applicationSubmissionContext.getUnmanagedAM()).thenReturn(true);
+
+    RMApp app = mock(RMApp.class);
+    RMAppMetrics appMetrics = new RMAppMetrics(Resource.newInstance(0, 0),
+        0, 0, new HashMap<>(), new HashMap<>());
+    when(app.getDiagnostics()).thenReturn(
+        new StringBuilder("java.lang.Exception: \u0001"));
+    when(app.getApplicationId()).thenReturn(applicationId);
+    when(app.getUser()).thenReturn("user");
+    when(app.getName()).thenReturn("appname");
+    when(app.getQueue()).thenReturn("queue");
+    when(app.getRMAppMetrics()).thenReturn(appMetrics);
+    when(app.getApplicationSubmissionContext()).thenReturn(
+        applicationSubmissionContext);
+
+    ConcurrentMap<ApplicationId, RMApp> applications =
+        new ConcurrentHashMap<>();
+    applications.put(applicationId, app);
+
+    when(rmContext.getRMApps()).thenReturn(applications);
+    when(mockRM.getRMContext()).thenReturn(rmContext);
+
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.FILTER_INVALID_XML_CHARS, true);
+    RMWebServices webSvc = new RMWebServices(mockRM, conf, mock(
+        HttpServletResponse.class));
+
+    HttpServletRequest mockHsr = mock(HttpServletRequest.class);
+    when(mockHsr.getHeader(HttpHeaders.ACCEPT)).
+         thenReturn(MediaType.APPLICATION_XML);
+    Set<String> emptySet = Collections.unmodifiableSet(Collections.emptySet());
+
+    AppsInfo appsInfo = webSvc.getApps(mockHsr, null, emptySet, null,
+        null, null, null, null, null, null, null, emptySet, emptySet, null);
+
+    assertEquals("Incorrect Number of Apps", 1, appsInfo.getApps().size());
+    assertEquals("Invalid XML Characters Present",
+        "java.lang.Exception: \uFFFD", appsInfo.getApps().get(0).getNote());
+  }
+
+  @Test
+  public void testDisableRestAppSubmission() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.ENABLE_REST_APP_SUBMISSIONS, false);
+    RMWebServices webSvc = new RMWebServices(mock(ResourceManager.class), conf,
+        mock(HttpServletResponse.class));
+    HttpServletRequest request = mock(HttpServletRequest.class);
+
+    Response response = webSvc.createNewApplication(request);
+    assertEquals(Status.FORBIDDEN.getStatusCode(), response.getStatus());
+    assertEquals("App submission via REST is disabled.", response.getEntity());
+
+    response = webSvc.submitApplication(
+        mock(ApplicationSubmissionContextInfo.class), request);
+    assertEquals(Status.FORBIDDEN.getStatusCode(), response.getStatus());
+    assertEquals("App submission via REST is disabled.", response.getEntity());
   }
 
   public void verifyClusterUserInfo(ClusterUserInfo userInfo,

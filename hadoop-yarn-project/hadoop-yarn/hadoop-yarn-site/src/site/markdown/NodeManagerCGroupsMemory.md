@@ -20,8 +20,6 @@ YARN has multiple features to enforce container memory limits. There are three t
 2. Strict memory control kills each container that has exceeded its limits. It is using the OOM killer capability of the cgroups Linux kernel feature.
 3. Elastic memory control is also based on cgroups. It allows bursting and starts killing containers only, if the overall system memory usage reaches a limit.
 
-If you use 2. or 3. feature 1. is disabled.
-
 Strict Memory Feature
 ---------------------
 
@@ -131,3 +129,13 @@ Configure the cgroups prerequisites mentioned above.
 `yarn.nodemanager.resource.memory.enforced` should be `false`
 
 `yarn.nodemanager.pmem-check-enabled` or `yarn.nodemanager.vmem-check-enabled` should be `true`. If swapping is turned off the former should be set, the latter should be set otherwise.
+
+
+Configuring elastic memory control and strict container memory enforcement through cgroups
+------------------------------------------
+ADVANCED ONLY
+Elastic memory control and strict container memory enforcement can be enabled at the same time to allow Node Manager to over-allocate itself.
+However, elastic memory control changes how strict container memory enforcement through cgroups is performed. Elastic memory control
+disables the oom killer on the root yarn container cgroup. The oom killer setting overrides that of individual container cgroups, so individual
+containers won't be killed by the oom killer when they go over their memory limit. The strict container memory enforcement in this case falls
+back to the polling-based mechanism.

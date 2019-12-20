@@ -31,6 +31,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.RateLimiter;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -43,11 +45,11 @@ import org.apache.hadoop.fs.StreamCapabilities.StreamCapability;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
+import org.apache.hadoop.hdfs.server.protocol.BalancerProtocols;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -111,8 +113,7 @@ public class NameNodeConnector implements Closeable {
   private final URI nameNodeUri;
   private final String blockpoolID;
 
-  private final NamenodeProtocol namenode;
-  private final ClientProtocol client;
+  private final BalancerProtocols namenode;
   private final KeyManager keyManager;
   final AtomicBoolean fallbackToSimpleAuth = new AtomicBoolean(false);
 
@@ -124,6 +125,7 @@ public class NameNodeConnector implements Closeable {
 
   private final int maxNotChangedIterations;
   private int notChangedIterations = 0;
+  private final RateLimiter getBlocksRateLimiter;
 
   public NameNodeConnector(String name, URI nameNodeUri, Path idPath,
                            List<Path> targetPaths, Configuration conf,
@@ -134,11 +136,19 @@ public class NameNodeConnector implements Closeable {
     this.targetPaths = targetPaths == null || targetPaths.isEmpty() ? Arrays
         .asList(new Path("/")) : targetPaths;
     this.maxNotChangedIterations = maxNotChangedIterations;
+    int getBlocksMaxQps = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_MAX_QPS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_MAX_QPS_DEFAULT);
+    if (getBlocksMaxQps > 0) {
+      LOG.info("getBlocks calls for {} will be rate-limited to {} per second",
+          nameNodeUri, getBlocksMaxQps);
+      this.getBlocksRateLimiter = RateLimiter.create(getBlocksMaxQps);
+    } else {
+      this.getBlocksRateLimiter = null;
+    }
 
     this.namenode = NameNodeProxies.createProxy(conf, nameNodeUri,
-        NamenodeProtocol.class).getProxy();
-    this.client = NameNodeProxies.createProxy(conf, nameNodeUri,
-        ClientProtocol.class, fallbackToSimpleAuth).getProxy();
+        BalancerProtocols.class, fallbackToSimpleAuth).getProxy();
     this.fs = (DistributedFileSystem)FileSystem.get(nameNodeUri, conf);
 
     final NamespaceInfo namespaceinfo = namenode.versionRequest();
@@ -172,8 +182,10 @@ public class NameNodeConnector implements Closeable {
 
   /** @return blocks with locations. */
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
-      minBlockSize)
-      throws IOException {
+      minBlockSize) throws IOException {
+    if (getBlocksRateLimiter != null) {
+      getBlocksRateLimiter.acquire();
+    }
     return namenode.getBlocks(datanode, size, minBlockSize);
   }
 
@@ -194,7 +206,7 @@ public class NameNodeConnector implements Closeable {
   /** @return live datanode storage reports. */
   public DatanodeStorageReport[] getLiveDatanodeStorageReport()
       throws IOException {
-    return client.getDatanodeStorageReport(DatanodeReportType.LIVE);
+    return namenode.getDatanodeStorageReport(DatanodeReportType.LIVE);
   }
 
   /** @return the key manager */

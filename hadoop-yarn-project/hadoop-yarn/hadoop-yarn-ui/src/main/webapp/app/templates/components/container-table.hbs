@@ -54,10 +54,24 @@
       <td title="{{container.nodeHttpAddress}}"><a href="{{container.masterNodeURL}}">{{container.nodeHttpAddress}}</a></td>
     </tr>
     {{/if}}
-    {{#if container.logUrl}}
+    {{#if container.exposedPorts}}
     <tr>
-      <td>Log</td>
-      <td><a href="{{prepend-protocol container.logUrl}}" target="_blank">Link</a></td>
+      <td>Exposed Ports</td>
+      <td title="{{container.exposedPorts}}">{{container.exposedPorts}}</td>
+    </tr>
+    {{/if}}
+    {{#if container.appAttemptContainerLogsURL}}
+    <tr>
+      <td>Logs</td>
+      <td>
+        <a href="{{container.appAttemptContainerLogsURL}}">Link</a>
+      </td>
+    </tr>
+    {{/if}}
+    {{#if container.nodeHttpAddress}}
+    <tr>
+      <td>Terminal</td>
+      <td><a href="{{container.nodeHttpAddress}}/terminal/terminal.template?container={{container.id}}&user.name={{requestedUser}}" target="_blank">Link</a></td>
     </tr>
     {{/if}}
   </tbody>

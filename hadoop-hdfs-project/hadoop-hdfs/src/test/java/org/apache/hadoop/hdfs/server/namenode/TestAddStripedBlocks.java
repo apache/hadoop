@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSStripedOutputStream;
@@ -52,7 +53,6 @@ import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.Rule;
@@ -65,6 +65,9 @@ import java.util.UUID;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertArrayEquals;
 
 public class TestAddStripedBlocks {
   private final ErasureCodingPolicy ecPolicy =
@@ -115,7 +118,7 @@ public class TestAddStripedBlocks {
       final List<DatanodeDescriptor> dnList = new ArrayList<>();
       fsn.getBlockManager().getDatanodeManager().fetchDatanodes(dnList, null, false);
       for (DatanodeDescriptor dn : dnList) {
-        Assert.assertEquals(1, dn.getBlocksScheduled());
+        assertEquals(1, dn.getBlocksScheduled());
       }
     }
 
@@ -128,7 +131,7 @@ public class TestAddStripedBlocks {
     final List<DatanodeDescriptor> dnList = new ArrayList<>();
     fsn.getBlockManager().getDatanodeManager().fetchDatanodes(dnList, null, false);
     for (DatanodeDescriptor dn : dnList) {
-      Assert.assertEquals(0, dn.getBlocksScheduled());
+      assertEquals(0, dn.getBlocksScheduled());
     }
   }
 
@@ -150,7 +153,7 @@ public class TestAddStripedBlocks {
     DFSTestUtil.writeFile(dfs, testPath, "hello again");
     lb = dfs.getClient().getLocatedBlocks(testPath.toString(), 0);
     final long secondId = lb.get(0).getBlock().getBlockId();
-    Assert.assertEquals(firstId + HdfsServerConstants.MAX_BLOCKS_IN_GROUP, secondId);
+    assertEquals(firstId + HdfsServerConstants.MAX_BLOCKS_IN_GROUP, secondId);
   }
 
   private static void writeAndFlushStripedOutputStream(
@@ -177,7 +180,7 @@ public class TestAddStripedBlocks {
 
       BlockInfo[] blocks = fileNode.getBlocks();
       assertEquals(1, blocks.length);
-      Assert.assertTrue(blocks[0].isStriped());
+      assertTrue(blocks[0].isStriped());
 
       checkStripedBlockUC((BlockInfoStriped) fileNode.getLastBlock(), true);
 
@@ -187,7 +190,7 @@ public class TestAddStripedBlocks {
       fileNode = fsdir.getINode4Write(file.toString()).asFile();
       blocks = fileNode.getBlocks();
       assertEquals(1, blocks.length);
-      Assert.assertTrue(blocks[0].isStriped());
+      assertTrue(blocks[0].isStriped());
       checkStripedBlockUC((BlockInfoStriped) fileNode.getLastBlock(), false);
 
       // save namespace, restart namenode, and check
@@ -200,7 +203,7 @@ public class TestAddStripedBlocks {
       fileNode = fsdir.getINode4Write(file.toString()).asFile();
       blocks = fileNode.getBlocks();
       assertEquals(1, blocks.length);
-      Assert.assertTrue(blocks[0].isStriped());
+      assertTrue(blocks[0].isStriped());
       checkStripedBlockUC((BlockInfoStriped) fileNode.getLastBlock(), false);
     } finally {
       IOUtils.cleanup(null, out);
@@ -210,21 +213,21 @@ public class TestAddStripedBlocks {
   private void checkStripedBlockUC(BlockInfoStriped block,
       boolean checkReplica) {
     assertEquals(0, block.numNodes());
-    Assert.assertFalse(block.isComplete());
-    Assert.assertEquals(dataBlocks, block.getDataBlockNum());
-    Assert.assertEquals(parityBlocks, block.getParityBlockNum());
-    Assert.assertEquals(0,
+    assertFalse(block.isComplete());
+    assertEquals(dataBlocks, block.getDataBlockNum());
+    assertEquals(parityBlocks, block.getParityBlockNum());
+    assertEquals(0,
         block.getBlockId() & HdfsServerConstants.BLOCK_GROUP_INDEX_MASK);
 
-    Assert.assertEquals(HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION,
+    assertEquals(HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION,
         block.getBlockUCState());
     if (checkReplica) {
-      Assert.assertEquals(groupSize,
+      assertEquals(groupSize,
           block.getUnderConstructionFeature().getNumExpectedLocations());
       DatanodeStorageInfo[] storages = block.getUnderConstructionFeature()
           .getExpectedStorageLocations();
       for (DataNode dn : cluster.getDataNodes()) {
-        Assert.assertTrue(includeDataNode(dn.getDatanodeId(), storages));
+        assertTrue(includeDataNode(dn.getDatanodeId(), storages));
       }
     }
   }
@@ -257,16 +260,16 @@ public class TestAddStripedBlocks {
       byte[] indices = lastBlk.getUnderConstructionFeature().getBlockIndices();
 
       LocatedBlocks blks = dfs.getClient().getLocatedBlocks(file.toString(), 0L);
-      Assert.assertEquals(1, blks.locatedBlockCount());
+      assertEquals(1, blks.locatedBlockCount());
       LocatedBlock lblk = blks.get(0);
 
-      Assert.assertTrue(lblk instanceof LocatedStripedBlock);
+      assertTrue(lblk instanceof LocatedStripedBlock);
       DatanodeInfo[] datanodes = lblk.getLocations();
       byte[] blockIndices = ((LocatedStripedBlock) lblk).getBlockIndices();
-      Assert.assertEquals(groupSize, datanodes.length);
-      Assert.assertEquals(groupSize, blockIndices.length);
-      Assert.assertArrayEquals(indices, blockIndices);
-      Assert.assertArrayEquals(expectedDNs, datanodes);
+      assertEquals(groupSize, datanodes.length);
+      assertEquals(groupSize, blockIndices.length);
+      assertArrayEquals(indices, blockIndices);
+      assertArrayEquals(expectedDNs, datanodes);
     } finally {
       IOUtils.cleanup(null, out);
     }
@@ -295,8 +298,8 @@ public class TestAddStripedBlocks {
       DatanodeStorageInfo[] locs = lastBlock.getUnderConstructionFeature()
           .getExpectedStorageLocations();
       byte[] indices = lastBlock.getUnderConstructionFeature().getBlockIndices();
-      Assert.assertEquals(groupSize, locs.length);
-      Assert.assertEquals(groupSize, indices.length);
+      assertEquals(groupSize, locs.length);
+      assertEquals(groupSize, indices.length);
 
       // 2. mimic incremental block reports and make sure the uc-replica list in
       // the BlockInfoUCStriped is correct
@@ -318,10 +321,10 @@ public class TestAddStripedBlocks {
       // make sure lastBlock is correct and the storages have been updated
       locs = lastBlock.getUnderConstructionFeature().getExpectedStorageLocations();
       indices = lastBlock.getUnderConstructionFeature().getBlockIndices();
-      Assert.assertEquals(groupSize, locs.length);
-      Assert.assertEquals(groupSize, indices.length);
+      assertEquals(groupSize, locs.length);
+      assertEquals(groupSize, indices.length);
       for (DatanodeStorageInfo newstorage : locs) {
-        Assert.assertTrue(storageIDs.contains(newstorage.getStorageID()));
+        assertTrue(storageIDs.contains(newstorage.getStorageID()));
       }
     } finally {
       IOUtils.cleanup(null, out);
@@ -355,12 +358,12 @@ public class TestAddStripedBlocks {
     DatanodeStorageInfo[] locs = lastBlock.getUnderConstructionFeature()
         .getExpectedStorageLocations();
     byte[] indices = lastBlock.getUnderConstructionFeature().getBlockIndices();
-    Assert.assertEquals(groupSize, locs.length);
-    Assert.assertEquals(groupSize, indices.length);
+    assertEquals(groupSize, locs.length);
+    assertEquals(groupSize, indices.length);
     for (i = 0; i < groupSize; i++) {
-      Assert.assertEquals(storageIDs.get(i),
+      assertEquals(storageIDs.get(i),
           locs[groupSize - 1 - i].getStorageID());
-      Assert.assertEquals(groupSize - i - 1, indices[i]);
+      assertEquals(groupSize - i - 1, indices[i]);
     }
   }
 
@@ -376,10 +379,10 @@ public class TestAddStripedBlocks {
 
     INodeFile fileNode = ns.getFSDirectory().getINode(filePath.toString()).
         asFile();
-    Assert.assertTrue(fileNode.isStriped());
+    assertTrue(fileNode.isStriped());
     BlockInfo stored = fileNode.getBlocks()[0];
     BlockManagerTestUtil.updateState(ns.getBlockManager());
-    Assert.assertEquals(0, ns.getCorruptReplicaBlocks());
+    assertEquals(0, ns.getCorruptReplicaBlocks());
 
     // Now send a block report with correct size
     DatanodeStorage storage = new DatanodeStorage(UUID.randomUUID().toString());
@@ -391,7 +394,7 @@ public class TestAddStripedBlocks {
     ns.processIncrementalBlockReport(
         cluster.getDataNodes().get(0).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
-    Assert.assertEquals(0, ns.getCorruptReplicaBlocks());
+    assertEquals(0, ns.getCorruptReplicaBlocks());
 
     // Now send a block report with wrong size
     reported.setBlockId(stored.getBlockId() + 1);
@@ -401,7 +404,7 @@ public class TestAddStripedBlocks {
     ns.processIncrementalBlockReport(
         cluster.getDataNodes().get(1).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
-    Assert.assertEquals(1, ns.getCorruptReplicaBlocks());
+    assertEquals(1, ns.getCorruptReplicaBlocks());
 
     // Now send a parity block report with correct size
     reported.setBlockId(stored.getBlockId() + dataBlocks);
@@ -411,7 +414,7 @@ public class TestAddStripedBlocks {
     ns.processIncrementalBlockReport(
         cluster.getDataNodes().get(2).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
-    Assert.assertEquals(1, ns.getCorruptReplicaBlocks());
+    assertEquals(1, ns.getCorruptReplicaBlocks());
 
     // Now send a parity block report with wrong size
     reported.setBlockId(stored.getBlockId() + dataBlocks);
@@ -422,11 +425,11 @@ public class TestAddStripedBlocks {
         cluster.getDataNodes().get(3).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
     // the total number of corrupted block info is still 1
-    Assert.assertEquals(1, ns.getCorruptECBlockGroups());
-    Assert.assertEquals(1, ns.getCorruptReplicaBlocks());
-    Assert.assertEquals(0, ns.getCorruptReplicatedBlocks());
+    assertEquals(1, ns.getCorruptECBlockGroups());
+    assertEquals(1, ns.getCorruptReplicaBlocks());
+    assertEquals(0, ns.getCorruptReplicatedBlocks());
     // 2 internal blocks corrupted
-    Assert.assertEquals(2, bm.getCorruptReplicas(stored).size());
+    assertEquals(2, bm.getCorruptReplicas(stored).size());
 
     // Now change the size of stored block, and test verifying the last
     // block size
@@ -438,8 +441,8 @@ public class TestAddStripedBlocks {
     ns.processIncrementalBlockReport(
         cluster.getDataNodes().get(4).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
-    Assert.assertEquals(1, ns.getCorruptReplicaBlocks());
-    Assert.assertEquals(3, bm.getCorruptReplicas(stored).size());
+    assertEquals(1, ns.getCorruptReplicaBlocks());
+    assertEquals(3, bm.getCorruptReplicas(stored).size());
 
     // Now send a parity block report with correct size based on adjusted
     // size of stored block
@@ -452,8 +455,8 @@ public class TestAddStripedBlocks {
     ns.processIncrementalBlockReport(
         cluster.getDataNodes().get(0).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
-    Assert.assertEquals(1, ns.getCorruptReplicaBlocks());
-    Assert.assertEquals(3, bm.getCorruptReplicas(stored).size());
+    assertEquals(1, ns.getCorruptReplicaBlocks());
+    assertEquals(3, bm.getCorruptReplicas(stored).size());
 
     reported.setBlockId(stored.getBlockId() + 1);
     reported.setNumBytes(numStripes * cellSize + 10);
@@ -462,8 +465,8 @@ public class TestAddStripedBlocks {
     ns.processIncrementalBlockReport(
         cluster.getDataNodes().get(0).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
-    Assert.assertEquals(1, ns.getCorruptReplicaBlocks());
-    Assert.assertEquals(3, bm.getCorruptReplicas(stored).size());
+    assertEquals(1, ns.getCorruptReplicaBlocks());
+    assertEquals(3, bm.getCorruptReplicas(stored).size());
 
     reported.setBlockId(stored.getBlockId() + dataBlocks);
     reported.setNumBytes((numStripes + 1) * cellSize);
@@ -472,8 +475,29 @@ public class TestAddStripedBlocks {
     ns.processIncrementalBlockReport(
         cluster.getDataNodes().get(2).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
-    Assert.assertEquals(1, ns.getCorruptReplicaBlocks());
-    Assert.assertEquals(3, bm.getCorruptReplicas(stored).size());
+    assertEquals(1, ns.getCorruptReplicaBlocks());
+    assertEquals(3, bm.getCorruptReplicas(stored).size());
   }
 
+  @Test
+  public void testStripedFlagInBlockLocation() throws IOException {
+    Path replicated = new Path("/blockLocation/replicated");
+    try (FSDataOutputStream out =
+        dfs.createFile(replicated).replicate().recursive().build()) {
+      out.write("this is a replicated file".getBytes());
+    }
+    BlockLocation[] locations = dfs.getFileBlockLocations(replicated, 0, 100);
+    assertEquals("There should be exactly one Block present",
+        1, locations.length);
+    assertFalse("The file is Striped", locations[0].isStriped());
+
+    Path striped = new Path("/blockLocation/striped");
+    try (FSDataOutputStream out = dfs.createFile(striped).recursive().build()) {
+      out.write("this is a striped file".getBytes());
+    }
+    locations = dfs.getFileBlockLocations(striped, 0, 100);
+    assertEquals("There should be exactly one Block present",
+        1, locations.length);
+    assertTrue("The file is not Striped", locations[0].isStriped());
+  }
 }

@@ -31,6 +31,7 @@ module.exports = { // YARN UI App configurations
       cluster: 'ws/v1/cluster',
       metrics: 'ws/v1/cluster/metrics',
       timelineV2: 'ws/v2/timeline',
+      timelineV2Log: 'ws/v2/applicationlog',
       dashService: 'app/v1/services',
       node: '{nodeAddress}/ws/v1/node'
     },

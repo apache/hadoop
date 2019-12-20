@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configurable;
@@ -108,7 +108,8 @@ public class FifoScheduler extends
     AbstractYarnScheduler<FifoAppAttempt, FiCaSchedulerNode> implements
     Configurable {
 
-  private static final Log LOG = LogFactory.getLog(FifoScheduler.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FifoScheduler.class);
 
   private static final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
@@ -396,9 +397,8 @@ public class FifoScheduler extends
     LOG.info("Accepted application " + applicationId + " from user: " + user
         + ", currently num of applications: " + applications.size());
     if (isAppRecovering) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(applicationId + " is recovering. Skip notifying APP_ACCEPTED");
-      }
+      LOG.debug("{} is recovering. Skip notifying APP_ACCEPTED",
+          applicationId);
     } else {
       rmContext.getDispatcher().getEventHandler()
         .handle(new RMAppEvent(applicationId, RMAppEventType.APP_ACCEPTED));
@@ -428,10 +428,8 @@ public class FifoScheduler extends
     LOG.info("Added Application Attempt " + appAttemptId
         + " to scheduler from user " + application.getUser());
     if (isAttemptRecovering) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(appAttemptId
-            + " is recovering. Skipping notifying ATTEMPT_ADDED");
-      }
+      LOG.debug("{} is recovering. Skipping notifying ATTEMPT_ADDED",
+          appAttemptId);
     } else {
       rmContext.getDispatcher().getEventHandler().handle(
         new RMAppAttemptEvent(appAttemptId,

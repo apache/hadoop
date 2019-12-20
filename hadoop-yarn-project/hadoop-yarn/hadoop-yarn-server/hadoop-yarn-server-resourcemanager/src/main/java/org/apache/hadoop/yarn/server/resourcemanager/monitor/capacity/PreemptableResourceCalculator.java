@@ -23,8 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -38,8 +38,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 public class PreemptableResourceCalculator
     extends
       AbstractPreemptableResourceCalculator {
-  private static final Log LOG =
-      LogFactory.getLog(PreemptableResourceCalculator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PreemptableResourceCalculator.class);
 
   /**
    * PreemptableResourceCalculator constructor
@@ -166,10 +166,8 @@ public class PreemptableResourceCalculator
       // check if preemption disabled for the queue
       if (context.getQueueByPartition(queueName,
           RMNodeLabelsManager.NO_LABEL).preemptionDisabled) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("skipping from queue=" + queueName
-              + " because it's a non-preemptable queue");
-        }
+        LOG.debug("skipping from queue={} because it's a non-preemptable"
+            + " queue", queueName);
         continue;
       }
 
@@ -208,19 +206,14 @@ public class PreemptableResourceCalculator
           // Only add resToObtain when it >= 0
           if (Resources.greaterThan(rc, clusterResource, resToObtain,
               Resources.none())) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Queue=" + queueName + " partition=" + qT.partition
-                  + " resource-to-obtain=" + resToObtain);
-            }
+            LOG.debug("Queue={} partition={} resource-to-obtain={}",
+                queueName, qT.partition, resToObtain);
           }
           qT.setActuallyToBePreempted(Resources.clone(resToObtain));
         } else {
           qT.setActuallyToBePreempted(Resources.none());
         }
-
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(qT);
-        }
+        LOG.debug("{}", qT);
       }
     }
   }

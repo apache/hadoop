@@ -38,7 +38,11 @@ import org.junit.Test;
 import java.util.Iterator;
 
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.BECOME_READY;
+import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.START;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.STOP;
+
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConstants
+    .CONTAINER_STATE_REPORT_AS_SERVICE_STATE;
 
 /**
  * Tests for {@link Component}.
@@ -160,6 +164,8 @@ public class TestComponent {
     // reinitialization of a container done
     for(ComponentInstance instance : comp.getAllComponentInstances()) {
       instance.handle(new ComponentInstanceEvent(
+          instance.getContainer().getId(), START));
+      instance.handle(new ComponentInstanceEvent(
           instance.getContainer().getId(), BECOME_READY));
     }
 
@@ -200,6 +206,8 @@ public class TestComponent {
     // second instance finished upgrading
     ComponentInstance instance2 = iter.next();
     instance2.handle(new ComponentInstanceEvent(
+        instance2.getContainer().getId(), ComponentInstanceEventType.START));
+    instance2.handle(new ComponentInstanceEvent(
         instance2.getContainer().getId(),
         ComponentInstanceEventType.BECOME_READY));
 
@@ -230,6 +238,9 @@ public class TestComponent {
 
     // cancel upgrade successful for both instances
     for(ComponentInstance instance : comp.getAllComponentInstances()) {
+      instance.handle(new ComponentInstanceEvent(
+          instance.getContainer().getId(),
+          ComponentInstanceEventType.START));
       instance.handle(new ComponentInstanceEvent(
           instance.getContainer().getId(),
           ComponentInstanceEventType.BECOME_READY));
@@ -423,6 +434,60 @@ public class TestComponent {
       Assert.assertEquals(
           ComponentState.SUCCEEDED,
           componentState);
+    }
+
+    ServiceState serviceState =
+        testService.getState();
+    Assert.assertEquals(
+        ServiceState.SUCCEEDED,
+        serviceState);
+  }
+
+  @Test
+  public void testComponentStateUpdatesWithTerminatingDominantComponents()
+      throws Exception {
+    final String serviceName =
+        "testComponentStateUpdatesWithTerminatingServiceStateComponents";
+
+    Service testService =
+        ServiceTestUtils.createTerminatingDominantComponentJobExample(
+            serviceName);
+    TestServiceManager.createDef(serviceName, testService);
+
+    ServiceContext context = new MockRunningServiceContext(rule, testService);
+
+    for (Component comp : context.scheduler.getAllComponents().values()) {
+      boolean componentIsDominant = comp.getComponentSpec()
+          .getConfiguration().getPropertyBool(
+              CONTAINER_STATE_REPORT_AS_SERVICE_STATE, false);
+      if (componentIsDominant) {
+        Iterator<ComponentInstance> instanceIter = comp.
+            getAllComponentInstances().iterator();
+
+        while (instanceIter.hasNext()) {
+
+          ComponentInstance componentInstance = instanceIter.next();
+          Container instanceContainer = componentInstance.getContainer();
+
+          //stop 1 container
+          ContainerStatus containerStatus = ContainerStatus.newInstance(
+              instanceContainer.getId(),
+              org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE,
+              "successful", 0);
+          comp.handle(new ComponentEvent(comp.getName(),
+              ComponentEventType.CONTAINER_COMPLETED).setStatus(containerStatus)
+              .setContainerId(instanceContainer.getId()));
+          componentInstance.handle(
+              new ComponentInstanceEvent(componentInstance.getContainer().
+                  getId(), ComponentInstanceEventType.STOP).
+                  setStatus(containerStatus));
+        }
+        ComponentState componentState =
+            comp.getComponentSpec().getState();
+        Assert.assertEquals(
+            ComponentState.SUCCEEDED,
+            componentState);
+      }
     }
 
     ServiceState serviceState =

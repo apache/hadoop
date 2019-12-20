@@ -45,6 +45,7 @@ This approach has the same architecture as [YARN federation](../../hadoop-yarn/h
 
 ### Example flow
 The simplest configuration deploys a Router on each NameNode machine.
+The Router monitors the local NameNode and its state and heartbeats to the State Store.
 The Router monitors the local NameNode and heartbeats the state to the State Store.
 When a regular DFS client contacts any of the Routers to access a file in the federated filesystem, the Router checks the Mount Table in the State Store (i.e., the local cache) to find out which subcluster contains the file.
 Then it checks the Membership table in the State Store (i.e., the local cache) for the NameNode responsible for the subcluster.
@@ -68,6 +69,9 @@ To make sure that changes have been propagated to all Routers, each Router heart
 
 The communications between the Routers and the State Store are cached (with timed expiration for freshness).
 This improves the performance of the system.
+
+#### Router heartbeat
+The Router periodically heartbeats its state to the State Store.
 
 #### NameNode heartbeat
 For this role, the Router periodically checks the state of a NameNode (usually on the same server) and reports their high availability (HA) state and load/space status to the State Store.
@@ -143,6 +147,8 @@ For performance reasons, the Router caches the quota usage and updates it period
 will be used for quota-verification during each WRITE RPC call invoked in RouterRPCSever. See [HDFS Quotas Guide](../hadoop-hdfs/HdfsQuotaAdminGuide.html)
 for the quota detail.
 
+Note: When global quota is enabled, setting or clearing sub-cluster's quota directly is not recommended since Router Admin server will override sub-cluster's quota with global quota.
+
 ### State Store
 The (logically centralized, but physically distributed) State Store maintains:
 
@@ -167,7 +173,15 @@ It is similar to the mount table in [ViewFs](../hadoop-hdfs/ViewFs.html) where i
 
 
 ### Security
-Secure authentication and authorization are not supported yet, so the Router will not proxy to Hadoop clusters with security enabled.
+Router supports security similar to [current security model](../hadoop-common/SecureMode.html) in HDFS. This feature is available for both RPC and Web based calls. It has the capability to proxy to underlying secure HDFS clusters.
+
+Similar to Namenode, support exists for both kerberos and token based authentication for clients connecting to routers. Router internally relies on existing security related configs of `core-site.xml` and `hdfs-site.xml` to support this feature. In addition to that, routers need to be configured with its own keytab and principal.
+
+For token based authentication, router issues delegation tokens to upstream clients without communicating with downstream namenodes. Router uses its own credentials to securely proxy to downstream namenode on behalf of upstream real user. Router principal has to be configured as a superuser in all secure downstream namenodes. Refer [here](../hadoop-common/Superusers.html) to configure proxy user for namenode. Along with that, user owning router daemons should be configured with the same identity as namenode process itself. Refer [here](../hadoop-hdfs/HdfsPermissionsGuide.html#The_Super-User) for details.
+Router relies on a state store to distribute tokens across all routers. Apart from default implementation provided users can plugin their own implementation of state store for token management. Default implementation relies on zookeeper for token management. Since a large router/zookeeper cluster could potentially hold millions of tokens, `jute.maxbuffer` system property that zookeeper clients rely on should be appropriately configured in router daemons.
+
+
+See the Apache JIRA ticket [HDFS-13532](https://issues.apache.org/jira/browse/HDFS-13532) for more information on this feature.
 
 
 Deployment
@@ -230,6 +244,12 @@ Ls command will show below information for each mount table entry:
     Source                    Destinations              Owner                     Group                     Mode                      Quota/Usage
     /path                     ns0->/path                root                      supergroup                rwxr-xr-x                 [NsQuota: 50/0, SsQuota: 100 B/0 B]
 
+Mount table cache is refreshed periodically but it can also be refreshed by executing refresh command:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -refresh
+
+The above command will refresh cache of the connected router. This command is redundant when mount table refresh service is enabled as the service will always keep the cache updated.
+
 #### Multiple subclusters
 A mount point also supports mapping multiple subclusters.
 For example, to create a mount point that stores files in subclusters `ns1` and `ns2`.
@@ -253,7 +273,19 @@ RANDOM can be used for reading and writing data from/into different subclusters.
 The common use for this approach is to have the same data in multiple subclusters and balance the reads across subclusters.
 For example, if thousands of containers need to read the same data (e.g., a library), one can use RANDOM to read the data from any of the subclusters.
 
+To determine which subcluster contains a file:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -getDestination /user/user1/file.txt
+
 Note that consistency of the data across subclusters is not guaranteed by the Router.
+By default, if one subcluster is unavailable, writes may fail if they target that subcluster.
+To allow writing in another subcluster, one can make the mount point fault tolerant:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -add /data ns1,ns2 /data -order HASH_ALL -faulttolerant
+
+Note that this can lead to a file to be written in multiple subclusters or a folder missing in one.
+One needs to be aware of the possibility of these inconsistencies and target this `faulttolerant` approach to resilient paths.
+An example for this is the `/app-logs` folder which will mostly write once into a subfolder.
 
 ### Disabling nameservices
 
@@ -265,6 +297,12 @@ For example, one can disable `ns1`, list it and enable it again:
     [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -nameservice enable ns1
 
 This is useful when decommissioning subclusters or when one subcluster is missbehaving (e.g., low performance or unavailability).
+
+### Router server generically refresh
+
+To trigger a runtime-refresh of the resource specified by \<key\> on \<host:ipc\_port\>. For example, to enable white list checking, we just need to send a refresh command other than restart the router server.
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -refreshRouterArgs <host:ipc_port> <key> [arg1..argn]
 
 Client configuration
 --------------------
@@ -315,7 +353,7 @@ This federated namespace can also be set as the default one at **core-site.xml**
 Router configuration
 --------------------
 
-One can add the configurations for Router-based federation to **hdfs-site.xml**.
+One can add the configurations for Router-based federation to **hdfs-rbf-site.xml**.
 The main options are documented in [hdfs-rbf-default.xml](../hadoop-hdfs-rbf/hdfs-rbf-default.xml).
 The configuration values are described in this section.
 
@@ -380,6 +418,9 @@ The connection to the State Store and the internal caching at the Router.
 | dfs.federation.router.store.connection.test | 60000 | How often to check for the connection to the State Store in milliseconds. |
 | dfs.federation.router.cache.ttl | 60000 | How often to refresh the State Store caches in milliseconds. |
 | dfs.federation.router.store.membership.expiration | 300000 | Expiration time in milliseconds for a membership record. |
+| dfs.federation.router.mount-table.cache.update | false | If true, Mount table cache is updated whenever a mount table entry is added, modified or removed for all the routers. |
+| dfs.federation.router.mount-table.cache.update.timeout | 1m | Max time to wait for all the routers to finish their mount table cache update. |
+| dfs.federation.router.mount-table.cache.update.client.max.time | 5m | Max time a RouterClient connection can be cached. |
 
 ### Routing
 
@@ -387,7 +428,7 @@ Forwarding client requests to the right subcluster.
 
 | Property | Default | Description|
 |:---- |:---- |:---- |
-| dfs.federation.router.file.resolver.client.class | `org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver` | Class to resolve files to subclusters. |
+| dfs.federation.router.file.resolver.client.class | `org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver` | Class to resolve files to subclusters. To enable multiple subclusters for a mount point, set to org.apache.hadoop.hdfs.server.federation.resolver.MultipleDestinationMountTableResolver. |
 | dfs.federation.router.namenode.resolver.client.class | `org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver` | Class to resolve the namenode for a subcluster. |
 
 ### Namenode monitoring
@@ -396,7 +437,8 @@ Monitor the namenodes in the subclusters for forwarding the client requests.
 
 | Property | Default | Description|
 |:---- |:---- |:---- |
-| dfs.federation.router.heartbeat.enable | `true` | If `true`, the Router heartbeats into the State Store. |
+| dfs.federation.router.heartbeat.enable | `true` | If `true`, the Router periodically heartbeats its state to the State Store. |
+| dfs.federation.router.namenode.heartbeat.enable | | If `true`, the Router gets namenode heartbeats and send to the State Store. If not explicitly specified takes the same value as for `dfs.federation.router.heartbeat.enable`. |
 | dfs.federation.router.heartbeat.interval | 5000 | How often the Router should heartbeat into the State Store in milliseconds. |
 | dfs.federation.router.monitor.namenode | | The identifier of the namenodes to monitor and heartbeat. |
 | dfs.federation.router.monitor.localnamenode.enable | `true` | If `true`, the Router should monitor the namenode in the local machine. |
@@ -412,11 +454,23 @@ Global quota supported in federation.
 
 | Property | Default | Description|
 |:---- |:---- |:---- |
-| dfs.federation.router.quota.enable | `false` | If `true`, the quota system enabled in the Router. |
+| dfs.federation.router.quota.enable | `false` | If `true`, the quota system enabled in the Router. In that case, setting or clearing sub-cluster's quota directly is not recommended since Router Admin server will override sub-cluster's quota with global quota.|
 | dfs.federation.router.quota-cache.update.interval | 60s | How often the Router updates quota cache. This setting supports multiple time unit suffixes. If no suffix is specified then milliseconds is assumed. |
+
+### Security
+
+Kerberos and Delegation token supported in federation.
+
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.keytab.file |  | The keytab file used by router to login as its service principal. The principal name is configured with 'dfs.federation.router.kerberos.principal'.|
+| dfs.federation.router.kerberos.principal | | The Router service principal. This is typically set to router/_HOST@REALM.TLD. Each Router will substitute _HOST with its own fully qualified hostname at startup. The _HOST placeholder allows using the same configuration setting on all Routers in an HA setup. |
+| dfs.federation.router.kerberos.principal.hostname |  | The hostname for the Router containing this configuration file.  Will be different for each machine. Defaults to current hostname. |
+| dfs.federation.router.kerberos.internal.spnego.principal | `${dfs.web.authentication.kerberos.principal}` | The server principal used by the Router for web UI SPNEGO authentication when Kerberos security is enabled. This is typically set to HTTP/_HOST@REALM.TLD The SPNEGO server principal begins with the prefix HTTP/ by convention. If the value is '*', the web server will attempt to login with every principal specified in the keytab file 'dfs.web.authentication.kerberos.keytab'. |
+| dfs.federation.router.secret.manager.class | `org.apache.hadoop.hdfs.server.federation.router.security.token.ZKDelegationTokenSecretManagerImpl` |  Class to implement state store to delegation tokens. Default implementation uses zookeeper as the backend to store delegation tokens. |
 
 Metrics
 -------
 
 The Router and State Store statistics are exposed in metrics/JMX. These info will be very useful for monitoring.
-More metrics info can see [Router RPC Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#RouterRPCMetrics) and [State Store Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#StateStoreMetrics).
+More metrics info can see [RBF Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#RBFMetrics), [Router RPC Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#RouterRPCMetrics) and [State Store Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#StateStoreMetrics).

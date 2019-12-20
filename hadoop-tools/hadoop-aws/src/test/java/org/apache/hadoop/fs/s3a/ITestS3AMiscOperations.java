@@ -28,14 +28,21 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import org.junit.Assume;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.store.EtagChecksum;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasPathCapabilities;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksPathCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 
 /**
  * Tests of the S3A FileSystem which don't have a specific home and can share
@@ -51,6 +58,15 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     super.setup();
     // checksums are forced on.
     enableChecksums(true);
+  }
+
+  @Override
+  protected Configuration createConfiguration() {
+    final Configuration conf = super.createConfiguration();
+    removeBaseAndBucketOverrides(conf,
+        SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_KEY);
+    return conf;
   }
 
   /**
@@ -142,9 +158,11 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     Path file1 = touchFile("file1");
     EtagChecksum checksum1 = fs.getFileChecksum(file1, 0);
     LOG.info("Checksum for {}: {}", file1, checksum1);
+    assertHasPathCapabilities(fs, file1,
+        CommonPathCapabilities.FS_CHECKSUMS);
     assertNotNull("Null file 1 checksum", checksum1);
     assertNotEquals("file 1 checksum", 0, checksum1.getLength());
-    assertEquals("checksums", checksum1,
+    assertEquals("checksums of empty files", checksum1,
         fs.getFileChecksum(touchFile("file2"), 0));
   }
 
@@ -159,6 +177,8 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     final S3AFileSystem fs = getFileSystem();
     Path file1 = touchFile("file1");
     EtagChecksum checksum1 = fs.getFileChecksum(file1, 0);
+    assertLacksPathCapabilities(fs, file1,
+        CommonPathCapabilities.FS_CHECKSUMS);
     assertNull("Checksums are being generated", checksum1);
   }
 

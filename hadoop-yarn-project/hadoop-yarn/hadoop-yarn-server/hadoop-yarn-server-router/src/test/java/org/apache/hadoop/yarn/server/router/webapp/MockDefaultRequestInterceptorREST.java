@@ -31,6 +31,7 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -43,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -175,6 +177,16 @@ public class MockDefaultRequestInterceptorREST
     NodesInfo nodes = new NodesInfo();
     nodes.add(node);
     return nodes;
+  }
+
+  @Override
+  public ResourceInfo updateNodeResource(HttpServletRequest hsr,
+      String nodeId, ResourceOptionInfo resourceOption) {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+    Resource resource = resourceOption.getResourceOption().getResource();
+    return new ResourceInfo(resource);
   }
 
   @Override

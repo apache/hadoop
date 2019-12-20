@@ -23,7 +23,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -257,7 +256,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
 
     @Override
     public String getShortUsage() {
-      return "[" + getName() + " [-w] -path <path>]\n";
+      return "[" + getName() + " -path <path>]\n";
     }
 
     @Override
@@ -265,17 +264,6 @@ public class StoragePolicyAdmin extends Configured implements Tool {
       TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("<path>", "The path of the file/directory to satisfy"
           + " storage policy");
-      listing.addRow("-w",
-          "It requests that the command wait till all the files satisfy"
-              + " the policy in given path. This will print the current"
-              + "status of the path in each 10 sec and status are:\n"
-              + "PENDING : Path is in queue and not processed for satisfying"
-              + " the policy.\n"
-              + "IN_PROGRESS : Satisfying the storage policy for"
-              + " path.\n"
-              + "SUCCESS : Storage policy satisfied for the path.\n"
-              + "FAILURE : Few blocks failed to move.\n"
-              + "NOT_AVAILABLE : Status not available.");
       return getShortUsage() + "\n" +
           "Schedule blocks to move based on file/directory policy.\n\n" +
           listing.toString();
@@ -289,10 +277,10 @@ public class StoragePolicyAdmin extends Configured implements Tool {
             "policy.\nUsage: " + getLongUsage());
         return 1;
       }
-
-      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      Path p = new Path(path);
+      final FileSystem fs = FileSystem.get(p.toUri(), conf);
       try {
-        dfs.satisfyStoragePolicy(new Path(path));
+        fs.satisfyStoragePolicy(p);
         System.out.println("Scheduled blocks to move based on the current"
             + " storage policy on " + path);
       } catch (Exception e) {

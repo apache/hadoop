@@ -20,6 +20,10 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesResponse;
+import org.apache.hadoop.yarn.api.records.LocalizationStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.UpdateContainerTokenEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerTokenUpdatedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEvent;
@@ -128,6 +132,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerReInitEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.AbstractContainersLauncher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.SignalContainersLauncherEvent;
@@ -205,7 +210,7 @@ public class ContainerManagerImpl extends CompositeService implements
   private final ContainersMonitor containersMonitor;
   private Server server;
   private final ResourceLocalizationService rsrcLocalizationSrvc;
-  private final ContainersLauncher containersLauncher;
+  private final AbstractContainersLauncher containersLauncher;
   private final AuxServices auxiliaryServices;
   private final NodeManagerMetrics metrics;
 
@@ -227,6 +232,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
   // NM metrics publisher is set only if the timeline service v.2 is enabled
   private NMTimelinePublisher nmMetricsPublisher;
+  private boolean timelineServiceV2Enabled;
 
   public ContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
@@ -258,16 +264,19 @@ public class ContainerManagerImpl extends CompositeService implements
     auxiliaryServices = new AuxServices(auxiliaryLocalPathHandler,
         this.context, this.deletionService);
     auxiliaryServices.registerServiceListener(this);
+    context.setAuxServices(auxiliaryServices);
     addService(auxiliaryServices);
 
     // initialize the metrics publisher if the timeline service v.2 is enabled
     // and the system publisher is enabled
     Configuration conf = context.getConf();
-    if (YarnConfiguration.timelineServiceV2Enabled(conf) &&
-        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
-      LOG.info("YARN system metrics publishing service is enabled");
-      nmMetricsPublisher = createNMTimelinePublisher(context);
-      context.setNMTimelinePublisher(nmMetricsPublisher);
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      if (YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
+        LOG.info("YARN system metrics publishing service is enabled");
+        nmMetricsPublisher = createNMTimelinePublisher(context);
+        context.setNMTimelinePublisher(nmMetricsPublisher);
+      }
+      this.timelineServiceV2Enabled = true;
     }
     this.containersMonitor = createContainersMonitor(exec);
     addService(this.containersMonitor);
@@ -361,9 +370,7 @@ public class ContainerManagerImpl extends CompositeService implements
                appsState.getIterator()) {
         while (rasIterator.hasNext()) {
           ContainerManagerApplicationProto proto = rasIterator.next();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Recovering application with state: " + proto.toString());
-          }
+          LOG.debug("Recovering application with state: {}", proto);
           recoverApplication(proto);
         }
       }
@@ -372,9 +379,7 @@ public class ContainerManagerImpl extends CompositeService implements
                stateStore.getContainerStateIterator()) {
         while (rcsIterator.hasNext()) {
           RecoveredContainerState rcs = rcsIterator.next();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Recovering container with state: " + rcs);
-          }
+          LOG.debug("Recovering container with state: {}", rcs);
           recoverContainer(rcs);
         }
       }
@@ -421,20 +426,16 @@ public class ContainerManagerImpl extends CompositeService implements
       FlowContextProto fcp = p.getFlowContext();
       fc = new FlowContext(fcp.getFlowName(), fcp.getFlowVersion(),
           fcp.getFlowRunId());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "Recovering Flow context: " + fc + " for an application " + appId);
-      }
+      LOG.debug(
+          "Recovering Flow context: {} for an application {}", fc, appId);
     } else {
       // in upgrade situations, where there is no prior existing flow context,
       // default would be used.
       fc = new FlowContext(TimelineUtils.generateDefaultFlowName(null, appId),
           YarnConfiguration.DEFAULT_FLOW_VERSION, appId.getClusterTimestamp());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "No prior existing flow context found. Using default Flow context: "
-                + fc + " for an application " + appId);
-      }
+      LOG.debug(
+          "No prior existing flow context found. Using default Flow context: "
+          + "{} for an application {}", fc, appId);
     }
 
     LOG.info("Recovering application " + appId);
@@ -568,9 +569,21 @@ public class ContainerManagerImpl extends CompositeService implements
     return nmTimelinePublisherLocal;
   }
 
-  protected ContainersLauncher createContainersLauncher(Context context,
-      ContainerExecutor exec) {
-    return new ContainersLauncher(context, this.dispatcher, exec, dirsHandler, this);
+  protected AbstractContainersLauncher createContainersLauncher(
+      Context ctxt, ContainerExecutor exec) {
+    Class<? extends AbstractContainersLauncher> containersLauncherClass =
+        ctxt.getConf()
+            .getClass(YarnConfiguration.NM_CONTAINERS_LAUNCHER_CLASS,
+                ContainersLauncher.class, AbstractContainersLauncher.class);
+    AbstractContainersLauncher launcher;
+    try {
+      launcher = ReflectionUtils.newInstance(containersLauncherClass,
+          ctxt.getConf());
+      launcher.init(ctxt, this.dispatcher, exec, dirsHandler, this);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return launcher;
   }
 
   protected EventHandler<ApplicationEvent> createApplicationEventDispatcher() {
@@ -1187,7 +1200,7 @@ public class ContainerManagerImpl extends CompositeService implements
   private FlowContext getFlowContext(ContainerLaunchContext launchContext,
       ApplicationId applicationID) {
     FlowContext flowContext = null;
-    if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+    if (timelineServiceV2Enabled) {
       String flowName = launchContext.getEnvironment()
           .get(TimelineUtils.FLOW_NAME_TAG_PREFIX);
       String flowVersion = launchContext.getEnvironment()
@@ -1199,11 +1212,8 @@ public class ContainerManagerImpl extends CompositeService implements
         flowRunId = Long.parseLong(flowRunIdStr);
       }
       flowContext = new FlowContext(flowName, flowVersion, flowRunId);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "Flow context: " + flowContext + " created for an application "
-                + applicationID);
-      }
+      LOG.debug("Flow context: {} created for an application {}",
+          flowContext, applicationID);
     }
     return flowContext;
   }
@@ -1339,8 +1349,8 @@ public class ContainerManagerImpl extends CompositeService implements
       if (isResourceChange) {
         increasedContainer =
             org.apache.hadoop.yarn.api.records.Container.newInstance(
-                containerId, null, null, targetResource, null, null,
-                currentExecType);
+                containerId, null, null, targetResource, null,
+                null, currentExecType);
         if (context.getIncreasedContainers().putIfAbsent(containerId,
             increasedContainer) != null){
           throw RPCUtil.getRemoteException("Container " + containerId.toString()
@@ -1509,6 +1519,8 @@ public class ContainerManagerImpl extends CompositeService implements
     sb.append(status.getIPs()).append(", ");
     sb.append("Host: ");
     sb.append(status.getHost()).append(", ");
+    sb.append("ExposedPorts: ");
+    sb.append(status.getExposedPorts()).append(", ");
     sb.append("ContainerSubState: ");
     sb.append(status.getContainerSubState());
     sb.append("]");
@@ -1959,5 +1971,58 @@ public class ContainerManagerImpl extends CompositeService implements
     if (!invalidApps.isEmpty()) {
       dispatcher.getEventHandler().handle(new LogHandlerTokenUpdatedEvent());
     }
+  }
+
+  @Override
+  public GetLocalizationStatusesResponse getLocalizationStatuses(
+      GetLocalizationStatusesRequest request) throws YarnException,
+      IOException {
+    Map<ContainerId, List<LocalizationStatus>> allStatuses = new HashMap<>();
+    Map<ContainerId, SerializedException> failedRequests = new HashMap<>();
+
+    UserGroupInformation remoteUgi = getRemoteUgi();
+    NMTokenIdentifier identifier = selectNMTokenIdentifier(remoteUgi);
+    if (identifier == null) {
+      throw RPCUtil.getRemoteException(INVALID_NMTOKEN_MSG);
+    }
+    String remoteUser = remoteUgi.getUserName();
+    for (ContainerId id : request.getContainerIds()) {
+      try {
+        List<LocalizationStatus> statuses = getLocalizationStatusesInternal(id,
+            identifier, remoteUser);
+        allStatuses.put(id, statuses);
+      } catch (YarnException e) {
+        failedRequests.put(id, SerializedException.newInstance(e));
+      }
+    }
+    return GetLocalizationStatusesResponse.newInstance(allStatuses,
+        failedRequests);
+  }
+
+  private List<LocalizationStatus> getLocalizationStatusesInternal(
+      ContainerId containerID,
+      NMTokenIdentifier nmTokenIdentifier, String remoteUser)
+      throws YarnException {
+    Container container = this.context.getContainers().get(containerID);
+
+    LOG.info("Getting localization status for {}", containerID);
+    authorizeGetAndStopContainerRequest(containerID, container, false,
+        nmTokenIdentifier, remoteUser);
+
+    String containerIDStr = containerID.toString();
+    if (container == null) {
+      if (nodeStatusUpdater.isContainerRecentlyStopped(containerID)) {
+        throw RPCUtil.getRemoteException("Container " + containerIDStr
+            + " was recently stopped on node manager.");
+      } else {
+        throw RPCUtil.getRemoteException("Container " + containerIDStr
+            + " is not handled by this NodeManager");
+      }
+    }
+    return container.getLocalizationStatuses();
+  }
+
+  public ResourceLocalizationService getResourceLocalizationService() {
+    return rsrcLocalizationSrvc;
   }
 }

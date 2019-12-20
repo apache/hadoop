@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -46,8 +46,8 @@ import java.util.Map;
  */
 public abstract class YarnConfigurationStore {
 
-  public static final Log LOG =
-      LogFactory.getLog(YarnConfigurationStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(YarnConfigurationStore.class);
   /**
    * LogMutation encapsulates the fields needed for configuration mutation
    * audit logging and recovery.
@@ -124,6 +124,19 @@ public abstract class YarnConfigurationStore {
    * @return configuration as key-value
    */
   public abstract Configuration retrieve() throws IOException;
+
+
+  /**
+   * Format the persisted configuration.
+   * @throws IOException on failure to format
+   */
+  public abstract void format() throws Exception;
+
+  /**
+   * Get the last updated config version.
+   * @return Last updated config version.
+   */
+  public abstract long getConfigVersion() throws Exception;
 
   /**
    * Get a list of confirmed configuration mutations starting from a given id.

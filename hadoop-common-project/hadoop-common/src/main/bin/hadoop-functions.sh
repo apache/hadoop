@@ -585,7 +585,7 @@ function hadoop_bootstrap
 
   #
   # short-cuts. vendors may redefine these as well, preferably
-  # in hadoop-layouts.sh
+  # in hadoop-layout.sh
   #
   HADOOP_COMMON_DIR=${HADOOP_COMMON_DIR:-"share/hadoop/common"}
   HADOOP_COMMON_LIB_JARS_DIR=${HADOOP_COMMON_LIB_JARS_DIR:-"share/hadoop/common/lib"}
@@ -1921,6 +1921,22 @@ function hadoop_start_secure_daemon
     exit 1
   fi
 
+  if [[ -z "${HADOOP_DAEMON_JSVC_EXTRA_OPTS}" ]]; then
+    # If HADOOP_DAEMON_JSVC_EXTRA_OPTS is not set
+    if ${jsvc} -help | grep -q "\-cwd"; then
+      # Check if jsvc -help has entry for option -cwd
+      hadoop_debug "Your jsvc supports -cwd option." \
+        "Adding option '-cwd .'. See HADOOP-16276 for details."
+      HADOOP_DAEMON_JSVC_EXTRA_OPTS="-cwd ."
+    else
+      hadoop_debug "Your jsvc doesn't support -cwd option." \
+        "No need to add option '-cwd .'. See HADOOP-16276 for details."
+    fi
+  else
+    hadoop_debug "HADOOP_DAEMON_JSVC_EXTRA_OPTS is set." \
+      "Ignoring jsvc -cwd option detection and addition."
+  fi
+
   # note that shellcheck will throw a
   # bogus for-our-use-case 2086 here.
   # it doesn't properly support multi-line situations
@@ -1929,6 +1945,7 @@ function hadoop_start_secure_daemon
   hadoop_debug "Final HADOOP_OPTS: ${HADOOP_OPTS}"
   hadoop_debug "Final JSVC_HOME: ${JSVC_HOME}"
   hadoop_debug "jsvc: ${jsvc}"
+  hadoop_debug "Final HADOOP_DAEMON_JSVC_EXTRA_OPTS: ${HADOOP_DAEMON_JSVC_EXTRA_OPTS}"
   hadoop_debug "Class name: ${class}"
   hadoop_debug "Command line options: $*"
 
@@ -1941,6 +1958,7 @@ function hadoop_start_secure_daemon
   # shellcheck disable=SC2086
   exec "${jsvc}" \
     "-Dproc_${daemonname}" \
+    ${HADOOP_DAEMON_JSVC_EXTRA_OPTS} \
     -outfile "${daemonoutfile}" \
     -errfile "${daemonerrfile}" \
     -pidfile "${daemonpidfile}" \
@@ -2364,6 +2382,10 @@ function hadoop_verify_user_perm
   declare command=$2
   declare uvar
 
+  if [[ ${command} =~ \. ]]; then
+    return 1
+  fi
+
   uvar=$(hadoop_build_custom_subcmd_var "${program}" "${command}" USER)
 
   if [[ -n ${!uvar} ]]; then
@@ -2392,6 +2414,10 @@ function hadoop_need_reexec
   # we've already been re-execed, bail
 
   if [[ "${HADOOP_REEXECED_CMD}" = true ]]; then
+    return 1
+  fi
+
+  if [[ ${command} =~ \. ]]; then
     return 1
   fi
 
@@ -2428,6 +2454,10 @@ function hadoop_subcommand_opts
   declare ucommand
 
   if [[ -z "${program}" || -z "${command}" ]]; then
+    return 1
+  fi
+
+  if [[ ${command} =~ \. ]]; then
     return 1
   fi
 
@@ -2518,7 +2548,7 @@ function hadoop_do_classpath_subcommand
   fi
 }
 
-## @description  generic shell script opton parser.  sets
+## @description  generic shell script option parser.  sets
 ## @description  HADOOP_PARSE_COUNTER to set number the
 ## @description  caller should shift
 ## @audience     private

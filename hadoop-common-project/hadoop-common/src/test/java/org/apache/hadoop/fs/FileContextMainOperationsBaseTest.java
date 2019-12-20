@@ -23,10 +23,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.NoSuchElementException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -40,6 +43,8 @@ import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import static org.apache.hadoop.fs.CreateFlag.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 
 /**
  * <p>
@@ -1326,13 +1331,10 @@ public abstract class FileContextMainOperationsBaseTest  {
     final Path path = new Path(rootPath, "zoo");
     createFile(path);
     final long length = fc.getFileStatus(path).getLen();
-    FSDataInputStream fsdis = fc.open(path, 2048);
-    try {
-      byte[] bb = new byte[(int)length];
+    try (FSDataInputStream fsdis = fc.open(path, 2048)) {
+      byte[] bb = new byte[(int) length];
       fsdis.readFully(bb);
       assertArrayEquals(data, bb);
-    } finally {
-      fsdis.close();
     }
   }
 
@@ -1452,4 +1454,87 @@ public abstract class FileContextMainOperationsBaseTest  {
   private Path getTestRootPath(FileContext fc, String pathString) {
     return fileContextTestHelper.getTestRootPath(fc, pathString);
   }
+
+  /**
+   * Create a path under the test path.
+   * @param filepath path string in
+   * @return a path qualified by the test filesystem
+   * @throws IOException IO problems
+   */
+  protected Path path(String filepath) throws IOException {
+    return getTestRootPath(fc, filepath);
+  }
+
+  /**
+   * Describe a test. This is a replacement for javadocs
+   * where the tests role is printed in the log output
+   * @param text description
+   */
+  protected void describe(String text) {
+    LOG.info(text);
+  }
+
+  @Test
+  public void testOpenFileRead() throws Exception {
+    final Path path = path("testOpenFileRead");
+    createFile(path);
+    final long length = fc.getFileStatus(path).getLen();
+    try (FSDataInputStream fsdis = fc.openFile(path)
+        .opt("fs.test.something", true)
+        .opt("fs.test.something2", 3)
+        .opt("fs.test.something3", "3")
+        .build().get()) {
+      byte[] bb = new byte[(int) length];
+      fsdis.readFully(bb);
+      assertArrayEquals(data, bb);
+    }
+  }
+
+  @Test
+  public void testOpenFileUnknownOption() throws Throwable {
+    describe("calling openFile fails when a 'must()' option is unknown");
+
+    final Path path = path("testOpenFileUnknownOption");
+    FutureDataInputStreamBuilder builder =
+        fc.openFile(path)
+            .opt("fs.test.something", true)
+            .must("fs.test.something", true);
+    intercept(IllegalArgumentException.class,
+        () -> builder.build());
+  }
+
+  @Test
+  public void testOpenFileLazyFail() throws Throwable {
+    describe("openFile fails on a missing file in the get() and not before");
+    FutureDataInputStreamBuilder builder =
+        fc.openFile(path("testOpenFileUnknownOption"))
+            .opt("fs.test.something", true);
+    interceptFuture(FileNotFoundException.class, "", builder.build());
+  }
+
+  @Test
+  public void testOpenFileApplyRead() throws Throwable {
+    describe("use the apply sequence");
+    Path path = path("testOpenFileApplyRead");
+    createFile(path);
+    CompletableFuture<Long> readAllBytes = fc.openFile(path)
+        .build()
+        .thenApply(ContractTestUtils::readStream);
+    assertEquals("Wrong number of bytes read from stream",
+        data.length,
+        (long)readAllBytes.get());
+  }
+
+  @Test
+  public void testOpenFileApplyAsyncRead() throws Throwable {
+    describe("verify that async accept callbacks are evaluated");
+    Path path = path("testOpenFileApplyAsyncRead");
+    createFile(path);
+    CompletableFuture<FSDataInputStream> future = fc.openFile(path).build();
+    AtomicBoolean accepted = new AtomicBoolean(false);
+    future.thenAcceptAsync(i -> accepted.set(true)).get();
+    assertTrue("async accept operation not invoked",
+        accepted.get());
+  }
+
 }

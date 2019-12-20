@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.util.curator.ZKCuratorManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
@@ -58,8 +59,8 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
 
-  public static final Log LOG =
-      LogFactory.getLog(TestZKConfigurationStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestZKConfigurationStore.class);
 
   private static final int ZK_TIMEOUT_MS = 10000;
   private TestingServer curatorTestingServer;
@@ -117,6 +118,8 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
     confStore.initialize(conf, schedConf, rmContext);
     assertEquals("val", confStore.retrieve().get("key"));
 
+    assertNull(confStore.retrieve().get(YarnConfiguration.RM_HOSTNAME));
+
     // Create a new configuration store, and check for old configuration
     confStore = createConfStore();
     schedConf.set("key", "badVal");
@@ -125,6 +128,30 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
     assertEquals("val", confStore.retrieve().get("key"));
   }
 
+
+  @Test
+  public void testFormatConfiguration() throws Exception {
+    schedConf.set("key", "val");
+    confStore.initialize(conf, schedConf, rmContext);
+    assertEquals("val", confStore.retrieve().get("key"));
+    confStore.format();
+    assertNull(confStore.retrieve());
+  }
+
+  @Test
+  public void testGetConfigurationVersion() throws Exception {
+    confStore.initialize(conf, schedConf, rmContext);
+    long v1 = confStore.getConfigVersion();
+    assertEquals(1, v1);
+    Map<String, String> update = new HashMap<>();
+    update.put("keyver", "valver");
+    YarnConfigurationStore.LogMutation mutation =
+        new YarnConfigurationStore.LogMutation(update, TEST_USER);
+    confStore.logMutation(mutation);
+    confStore.confirmMutation(true);
+    long v2 = confStore.getConfigVersion();
+    assertEquals(2, v2);
+  }
 
   @Test
   public void testPersistUpdatedConfiguration() throws Exception {
@@ -193,6 +220,28 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
     assertEquals(2, logs.size());
     assertEquals("val2", logs.get(0).getUpdates().get("key2"));
     assertEquals("val3", logs.get(1).getUpdates().get("key3"));
+  }
+
+
+  @Test
+  public void testDisableAuditLogs() throws Exception {
+    conf.setLong(YarnConfiguration.RM_SCHEDCONF_MAX_LOGS, 0);
+    confStore.initialize(conf, schedConf, rmContext);
+    String znodeParentPath = conf.get(YarnConfiguration.
+        RM_SCHEDCONF_STORE_ZK_PARENT_PATH,
+        YarnConfiguration.DEFAULT_RM_SCHEDCONF_STORE_ZK_PARENT_PATH);
+    String logsPath = ZKCuratorManager.getNodePath(znodeParentPath, "LOGS");
+    byte[] data = null;
+    ((ZKConfigurationStore) confStore).zkManager.setData(logsPath, data, -1);
+
+    Map<String, String> update = new HashMap<>();
+    update.put("key1", "val1");
+    YarnConfigurationStore.LogMutation mutation =
+        new YarnConfigurationStore.LogMutation(update, TEST_USER);
+    confStore.logMutation(mutation);
+
+    data = ((ZKConfigurationStore) confStore).zkManager.getData(logsPath);
+    assertNull("Failed to Disable Audit Logs", data);
   }
 
   public Configuration createRMHAConf(String rmIds, String rmId,

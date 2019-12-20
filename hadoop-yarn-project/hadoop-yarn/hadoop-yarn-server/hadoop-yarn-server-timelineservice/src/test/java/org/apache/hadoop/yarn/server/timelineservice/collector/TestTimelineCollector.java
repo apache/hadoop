@@ -27,25 +27,31 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector.AggregationStatusTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.junit.Test;
 
 import com.google.common.collect.Sets;
+import org.mockito.internal.stubbing.answers.AnswersWithDelay;
+import org.mockito.internal.stubbing.answers.Returns;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TestTimelineCollector {
 
@@ -104,7 +110,7 @@ public class TestTimelineCollector {
     TimelineEntities testEntities = generateTestEntities(groups, n);
     TimelineEntity resultEntity = TimelineCollector.aggregateEntities(
         testEntities, "test_result", "TEST_AGGR", true);
-    assertEquals(resultEntity.getMetrics().size(), groups * 3);
+    assertThat(resultEntity.getMetrics()).hasSize(groups * 3);
 
     for (int i = 0; i < groups; i++) {
       Set<TimelineMetric> metrics = resultEntity.getMetrics();
@@ -125,7 +131,7 @@ public class TestTimelineCollector {
     TimelineEntities testEntities1 = generateTestEntities(1, n);
     TimelineEntity resultEntity1 = TimelineCollector.aggregateEntities(
         testEntities1, "test_result", "TEST_AGGR", false);
-    assertEquals(resultEntity1.getMetrics().size(), 3);
+    assertThat(resultEntity1.getMetrics()).hasSize(3);
 
     Set<TimelineMetric> metrics = resultEntity1.getMetrics();
     for (TimelineMetric m : metrics) {
@@ -165,17 +171,49 @@ public class TestTimelineCollector {
    * putEntityAsync() calls.
    */
   @Test
-  public void testPutEntityAsync() throws IOException {
+  public void testPutEntityAsync() throws Exception {
     TimelineWriter writer = mock(TimelineWriter.class);
     TimelineCollector collector = new TimelineCollectorForTest(writer);
-
+    collector.init(new Configuration());
+    collector.start();
     TimelineEntities entities = generateTestEntities(1, 1);
     collector.putEntitiesAsync(
         entities, UserGroupInformation.createRemoteUser("test-user"));
-
+    Thread.sleep(1000);
     verify(writer, times(1)).write(any(TimelineCollectorContext.class),
         any(TimelineEntities.class), any(UserGroupInformation.class));
     verify(writer, never()).flush();
+    collector.stop();
+  }
+
+  /**
+   * Test TimelineCollector's discarding entities in case of async writes if
+   * write is taking too much time.
+   */
+  @Test
+  public void testAsyncEntityDiscard() throws Exception {
+    TimelineWriter writer = mock(TimelineWriter.class);
+
+    when(writer.write(any(), any(), any())).thenAnswer(
+        new AnswersWithDelay(500, new Returns(new TimelineWriteResponse())));
+    TimelineCollector collector = new TimelineCollectorForTest(writer);
+    Configuration config = new Configuration();
+    config
+        .setInt(YarnConfiguration.TIMELINE_SERVICE_WRITER_ASYNC_QUEUE_CAPACITY,
+            3);
+    collector.init(config);
+    collector.start();
+    for (int i = 0; i < 10; ++i) {
+      TimelineEntities entities = generateTestEntities(i + 1, 1);
+      collector.putEntitiesAsync(entities,
+          UserGroupInformation.createRemoteUser("test-user"));
+    }
+    Thread.sleep(3000);
+    verify(writer, times(4))
+        .write(any(TimelineCollectorContext.class), any(TimelineEntities.class),
+            any(UserGroupInformation.class));
+    verify(writer, never()).flush();
+    collector.stop();
   }
 
   /**

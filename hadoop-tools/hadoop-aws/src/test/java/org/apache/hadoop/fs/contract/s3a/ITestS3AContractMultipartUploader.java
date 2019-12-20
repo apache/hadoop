@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.fs.contract.s3a;
 
-import java.io.IOException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractContractMultipartUploaderTest;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 
@@ -35,6 +34,9 @@ import static org.apache.hadoop.fs.s3a.scale.AbstractSTestS3AHugeFiles.DEFAULT_H
 
 /**
  * Test MultipartUploader with S3A.
+ * Although not an S3A Scale test subclass, it uses the -Dscale option
+ * to enable it, and partition size option to control the size of
+ * parts uploaded.
  */
 public class ITestS3AContractMultipartUploader extends
     AbstractContractMultipartUploaderTest {
@@ -79,6 +81,35 @@ public class ITestS3AContractMultipartUploader extends
     return new S3AContract(conf);
   }
 
+  /**
+   * Bigger test: use the scale timeout.
+   * @return the timeout for scale tests.
+   */
+  @Override
+  protected int getTestTimeoutMillis() {
+    return SCALE_TEST_TIMEOUT_MILLIS;
+  }
+
+
+  @Override
+  protected boolean supportsConcurrentUploadsToSamePath() {
+    return true;
+  }
+
+  /**
+   * Provide a pessimistic time to become consistent.
+   * @return a time in milliseconds
+   */
+  @Override
+  protected int timeToBecomeConsistentMillis() {
+    return 30 * 1000;
+  }
+
+  @Override
+  protected boolean finalizeConsumesUploadIdImmediately() {
+    return false;
+  }
+
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -103,14 +134,29 @@ public class ITestS3AContractMultipartUploader extends
   public void teardown() throws Exception {
     Path teardown = path("teardown").getParent();
     S3AFileSystem fs = getFileSystem();
-    WriteOperationHelper helper = fs.getWriteOperationHelper();
-    try {
-      LOG.info("Teardown: aborting outstanding uploads under {}", teardown);
-      int count = helper.abortMultipartUploadsUnderPath(fs.pathToKey(teardown));
-      LOG.info("Found {} incomplete uploads", count);
-    } catch (IOException e) {
-      LOG.warn("IOE in teardown", e);
+    if (fs != null) {
+      WriteOperationHelper helper = fs.getWriteOperationHelper();
+      try {
+        LOG.info("Teardown: aborting outstanding uploads under {}", teardown);
+        int count = helper.abortMultipartUploadsUnderPath(
+            fs.pathToKey(teardown));
+        LOG.info("Found {} incomplete uploads", count);
+      } catch (Exception e) {
+        LOG.warn("Exeception in teardown", e);
+      }
     }
     super.teardown();
+  }
+
+  /**
+   * S3 has no concept of directories, so this test does not apply.
+   */
+  public void testDirectoryInTheWay() throws Exception {
+    // no-op
+  }
+
+  @Override
+  public void testMultipartUploadReverseOrder() throws Exception {
+    ContractTestUtils.skip("skipped for speed");
   }
 }

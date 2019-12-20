@@ -112,12 +112,14 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    *          Old name of the snapshot
    * @param newName
    *          New name the snapshot will be renamed to
+   * @param mtime The snapshot modification time set by Time.now().
    * @throws SnapshotException
    *           Throw SnapshotException when either the snapshot with the old
    *           name does not exist or a snapshot with the new name already
    *           exists
    */
-  public void renameSnapshot(String path, String oldName, String newName)
+  public void renameSnapshot(String path, String oldName, String newName,
+      long mtime)
       throws SnapshotException {
     final int indexOfOld = searchSnapshot(DFSUtil.string2Bytes(oldName));
     if (indexOfOld < 0) {
@@ -137,6 +139,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       Snapshot snapshot = snapshotsByNames.remove(indexOfOld);
       final INodeDirectory ssRoot = snapshot.getRoot();
       ssRoot.setLocalName(newNameBytes);
+      ssRoot.setModificationTime(mtime, Snapshot.CURRENT_STATE_ID);
       indexOfNew = -indexOfNew - 1;
       if (indexOfNew <= indexOfOld) {
         snapshotsByNames.add(indexOfNew, snapshot);
@@ -166,10 +169,17 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     this.snapshotsByNames.add(snapshot);
   }
 
-  /** Add a snapshot. */
+  /**
+   * Add a snapshot.
+   * @param snapshotRoot Root of the snapshot.
+   * @param name Name of the snapshot.
+   * @param mtime The snapshot creation time set by Time.now().
+   * @throws SnapshotException Throw SnapshotException when there is a snapshot
+   *           with the same name already exists or snapshot quota exceeds
+   */
   public Snapshot addSnapshot(INodeDirectory snapshotRoot, int id, String name,
       final LeaseManager leaseManager, final boolean captureOpenFiles,
-      int maxSnapshotLimit)
+      int maxSnapshotLimit, long now)
       throws SnapshotException {
     //check snapshot quota
     final int n = getNumSnapshots();
@@ -195,8 +205,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     d.setSnapshotRoot(s.getRoot());
     snapshotsByNames.add(-i - 1, s);
 
-    // set modification time
-    final long now = Time.now();
+    // modification time is the snapshot creation time
     snapshotRoot.updateModificationTime(now, Snapshot.CURRENT_STATE_ID);
     s.getRoot().setModificationTime(now, Snapshot.CURRENT_STATE_ID);
 
@@ -389,9 +398,13 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
         if (change) {
           diffReport.addDirDiff(dir, relativePath, diff);
         }
+      } else {
+        diffReport.incrementDirsProcessed();
       }
+      long startTime = Time.monotonicNow();
       ReadOnlyList<INode> children = dir.getChildrenList(earlierSnapshot
           .getId());
+      diffReport.addChildrenListingTime(Time.monotonicNow() - startTime);
       for (INode child : children) {
         final byte[] name = child.getLocalNameBytes();
         boolean toProcess = !diff.containsDeleted(name);
@@ -418,6 +431,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       if (change) {
         diffReport.addFileDiff(file, relativePath);
       }
+      diffReport.incrementFilesProcessed();
     }
   }
 

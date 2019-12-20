@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -107,8 +107,8 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
   IntraQueuePreemptionComputePlugin fifoPreemptionComputePlugin = null;
   final CapacitySchedulerPreemptionContext context;
 
-  private static final Log LOG =
-      LogFactory.getLog(IntraQueueCandidatesSelector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(IntraQueueCandidatesSelector.class);
 
   IntraQueueCandidatesSelector(
       CapacitySchedulerPreemptionContext preemptionContext) {
@@ -178,8 +178,8 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
 
         // 7. Based on the selected resource demand per partition, select
         // containers with known policy from inter-queue preemption.
+        leafQueue.getReadLock().lock();
         try {
-          leafQueue.getReadLock().lock();
           for (FiCaSchedulerApp app : apps) {
             preemptFromLeastStarvedApp(leafQueue, app, selectedCandidates,
                 curCandidates, clusterResource, totalPreemptedResourceAllowed,
@@ -201,10 +201,8 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
       // Initialize used resource of a given user for rolling computation.
       rollingResourceUsagePerUser.put(user, Resources.clone(
           leafQueue.getUser(user).getResourceUsage().getUsed(partition)));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Rolling resource usage for user:" + user + " is : "
-            + rollingResourceUsagePerUser.get(user));
-      }
+      LOG.debug("Rolling resource usage for user:{} is : {}", user,
+          rollingResourceUsagePerUser.get(user));
     }
   }
 
@@ -220,12 +218,8 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
 
     List<RMContainer> liveContainers = new ArrayList<>(app.getLiveContainers());
     sortContainers(liveContainers);
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          "totalPreemptedResourceAllowed for preemption at this round is :"
-              + totalPreemptedResourceAllowed);
-    }
+    LOG.debug("totalPreemptedResourceAllowed for preemption at this"
+        + " round is :{}", totalPreemptedResourceAllowed);
 
     Resource rollingUsedResourcePerUser = rollingResourceUsagePerUser
         .get(app.getUser());
@@ -257,13 +251,11 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
       // UserLimit (or equals to), we must skip such containers.
       if (fifoPreemptionComputePlugin.skipContainerBasedOnIntraQueuePolicy(app,
           clusterResource, rollingUsedResourcePerUser, c)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "Skipping container: " + c.getContainerId() + " with resource:"
-                  + c.getAllocatedResource() + " as UserLimit for user:"
-                  + app.getUser() + " with resource usage: "
-                  + rollingUsedResourcePerUser + " is going under UL");
-        }
+        LOG.debug("Skipping container: {} with resource:{} as UserLimit for"
+            + " user:{} with resource usage: {} is going under UL",
+            c.getContainerId(), c.getAllocatedResource(), app.getUser(),
+            rollingUsedResourcePerUser);
+
         break;
       }
 

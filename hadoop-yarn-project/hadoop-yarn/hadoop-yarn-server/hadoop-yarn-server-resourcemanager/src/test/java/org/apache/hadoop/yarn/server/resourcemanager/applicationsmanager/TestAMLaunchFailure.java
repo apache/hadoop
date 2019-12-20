@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
+/*
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -25,8 +26,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -55,10 +56,12 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+*/
 
 /* a test case that tests the launch failure of a AM */
 public class TestAMLaunchFailure {
-//  private static final Log LOG = LogFactory.getLog(TestAMLaunchFailure.class);
+//  private static final Logger LOG =
+//      LoggerFactory.getLogger(TestAMLaunchFailure.class);
 //  private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 //  ApplicationsManagerImpl asmImpl;
 //  YarnScheduler scheduler = new DummyYarnScheduler();

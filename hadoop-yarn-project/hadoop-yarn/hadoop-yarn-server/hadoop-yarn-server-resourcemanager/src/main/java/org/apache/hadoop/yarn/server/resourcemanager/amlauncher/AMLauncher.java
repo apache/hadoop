@@ -26,8 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
@@ -75,7 +75,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class AMLauncher implements Runnable {
 
-  private static final Log LOG = LogFactory.getLog(AMLauncher.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AMLauncher.class);
 
   private ContainerManagementProtocol containerMgrProxy;
 
@@ -84,6 +85,7 @@ public class AMLauncher implements Runnable {
   private final AMLauncherEventType eventType;
   private final RMContext rmContext;
   private final Container masterContainer;
+  private boolean timelineServiceV2Enabled;
 
   @SuppressWarnings("rawtypes")
   private final EventHandler handler;
@@ -96,6 +98,8 @@ public class AMLauncher implements Runnable {
     this.rmContext = rmContext;
     this.handler = rmContext.getDispatcher().getEventHandler();
     this.masterContainer = application.getMasterContainer();
+    this.timelineServiceV2Enabled = YarnConfiguration.
+        timelineServiceV2Enabled(conf);
   }
 
   private void connect() throws IOException {
@@ -268,7 +272,7 @@ public class AMLauncher implements Runnable {
   }
 
   private void setFlowContext(ContainerLaunchContext container) {
-    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+    if (timelineServiceV2Enabled) {
       Map<String, String> environment = container.getEnvironment();
       ApplicationId applicationId =
           application.getAppAttemptId().getApplicationId();
@@ -349,8 +353,8 @@ public class AMLauncher implements Runnable {
         LOG.info("Error cleaning master ", ie);
       } catch (YarnException e) {
         StringBuilder sb = new StringBuilder("Container ");
-        sb.append(masterContainer.getId().toString());
-        sb.append(" is not handled by this NodeManager");
+        sb.append(masterContainer.getId().toString())
+            .append(" is not handled by this NodeManager");
         if (!e.getMessage().contains(sb.toString())) {
           // Ignoring if container is already killed by Node Manager.
           LOG.info("Error cleaning master ", e);

@@ -417,9 +417,9 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
                 // Don't trim the CN, though!
                 final String cn = StringUtils.toLowerCase(it.next());
                 // Store CN in StringBuffer in case we need to report an error.
-                buf.append(" <");
-                buf.append(cn);
-                buf.append('>');
+            buf.append(" <")
+            .append(cn)
+            .append('>');
                 if (it.hasNext()) {
                     buf.append(" OR");
                 }

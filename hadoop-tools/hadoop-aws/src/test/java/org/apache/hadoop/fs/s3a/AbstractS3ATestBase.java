@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
@@ -33,6 +34,7 @@ import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 
 /**
  * An extension of the contract test base set up for S3A tests.
@@ -45,11 +47,22 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
-    return new S3AContract(conf);
+    return new S3AContract(conf, false);
+  }
+
+  @Override
+  public void setup() throws Exception {
+    Thread.currentThread().setName("setup");
+    // force load the local FS -not because we want the FS, but we need all
+    // filesystems which add default configuration resources to do it before
+    // our tests start adding/removing options. See HADOOP-16626.
+    FileSystem.getLocal(new Configuration());
+    super.setup();
   }
 
   @Override
   public void teardown() throws Exception {
+    Thread.currentThread().setName("teardown");
     super.teardown();
     describe("closing file system");
     IOUtils.closeStream(getFileSystem());
@@ -75,7 +88,8 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
    */
   @Override
   protected Configuration createConfiguration() {
-    return S3ATestUtils.prepareTestConfiguration(super.createConfiguration());
+    Configuration conf = super.createConfiguration();
+    return S3ATestUtils.prepareTestConfiguration(conf);
   }
 
   protected Configuration getConfiguration() {
@@ -129,14 +143,18 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     ContractTestUtils.verifyFileContents(getFileSystem(), path, data);
   }
 
+  protected String getTestTableName(String suffix) {
+    return getTestDynamoTablePrefix(getConfiguration()) + suffix;
+  }
+
   /**
    * Assert that an exception failed with a specific status code.
    * @param e exception
    * @param code expected status code
-   * @throws AWSS3IOException rethrown if the status code does not match.
+   * @throws AWSServiceIOException rethrown if the status code does not match.
    */
-  protected void assertStatusCode(AWSS3IOException e, int code)
-      throws AWSS3IOException {
+  protected void assertStatusCode(AWSServiceIOException e, int code)
+      throws AWSServiceIOException {
     if (e.getStatusCode() != code) {
       throw e;
     }

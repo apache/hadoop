@@ -146,11 +146,11 @@ public final class HBaseTimelineSchemaUtils {
    */
   public static String convertApplicationIdToString(ApplicationId appId) {
     StringBuilder sb = new StringBuilder(64);
-    sb.append(ApplicationId.appIdStrPrefix);
-    sb.append("_");
-    sb.append(appId.getClusterTimestamp());
-    sb.append('_');
-    sb.append(APP_ID_FORMAT.get().format(appId.getId()));
+    sb.append(ApplicationId.appIdStrPrefix)
+        .append("_")
+        .append(appId.getClusterTimestamp())
+        .append('_')
+        .append(APP_ID_FORMAT.get().format(appId.getId()));
     return sb.toString();
   }
 }

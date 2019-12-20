@@ -28,8 +28,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -70,7 +71,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 public class FSAppAttempt extends SchedulerApplicationAttempt
     implements Schedulable {
 
-  private static final Log LOG = LogFactory.getLog(FSAppAttempt.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FSAppAttempt.class);
   private static final DefaultResourceCalculator RESOURCE_CALCULATOR
       = new DefaultResourceCalculator();
 
@@ -98,6 +100,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   private final Map<String, Set<String>> reservations = new HashMap<>();
 
   private final List<FSSchedulerNode> blacklistNodeIds = new ArrayList<>();
+
+  private boolean enableAMPreemption;
+
   /**
    * Delay scheduling: We often want to prioritize scheduling of node-local
    * containers over rack-local or off-switch containers. To achieve this
@@ -120,6 +125,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     this.startTime = scheduler.getClock().getTime();
     this.lastTimeAtFairShare = this.startTime;
     this.appPriority = Priority.newInstance(1);
+    this.enableAMPreemption = scheduler.getConf()
+            .getAMPreemptionEnabled(getQueue().getQueueName());
   }
 
   /**
@@ -131,8 +138,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   void containerCompleted(RMContainer rmContainer,
       ContainerStatus containerStatus, RMContainerEventType event) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       Container container = rmContainer.getContainer();
       ContainerId containerId = container.getId();
 
@@ -149,10 +156,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       // Inform the container
       rmContainer.handle(
           new RMContainerFinishedEvent(containerId, containerStatus, event));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Completed container: " + rmContainer.getContainerId()
-            + " in state: " + rmContainer.getState() + " event:" + event);
-      }
+      LOG.debug("Completed container: {} in state: {} event:{}",
+          rmContainer.getContainerId(), rmContainer.getState(), event);
+
 
       untrackContainerForPreemption(rmContainer);
       if (containerStatus.getDiagnostics().
@@ -162,7 +168,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
       Resource containerResource = rmContainer.getContainer().getResource();
       RMAuditLogger.logSuccess(getUser(), AuditConstants.RELEASE_CONTAINER,
-          "SchedulerApp", getApplicationId(), containerId, containerResource);
+          "SchedulerApp", getApplicationId(), containerId, containerResource,
+          rmContainer.getQueueName(), null);
 
       // Update usage metrics
       queue.getMetrics().releaseResources(
@@ -180,8 +187,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   private void unreserveInternal(
       SchedulerRequestKey schedulerKey, FSSchedulerNode node) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       Map<NodeId, RMContainer> reservedContainers = this.reservedContainers.get(
           schedulerKey);
       RMContainer reservedContainer = reservedContainers.remove(
@@ -245,14 +252,11 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
     Resource headroom = policy.getHeadroom(queueFairShare,
         queueUsage, maxAvailableResource);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Headroom calculation for " + this.getName() + ":" +
-          "Min(" +
-          "(queueFairShare=" + queueFairShare +
-          " - queueUsage=" + queueUsage + ")," +
-          " maxAvailableResource=" + maxAvailableResource +
-          "Headroom=" + headroom);
-    }
+    LOG.debug("Headroom calculation for {}:Min((queueFairShare={} -"
+        + " queueUsage={}), maxAvailableResource={} Headroom={}",
+        this.getName(), queueFairShare, queueUsage, maxAvailableResource,
+        headroom);
+
     return headroom;
   }
 
@@ -283,8 +287,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       return NodeType.OFF_SWITCH;
     }
 
+    writeLock.lock();
     try {
-      writeLock.lock();
 
       // Default level is NODE_LOCAL
       if (!allowedLocalityLevel.containsKey(schedulerKey)) {
@@ -353,19 +357,16 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       return NodeType.OFF_SWITCH;
     }
 
+    writeLock.lock();
     try {
-      writeLock.lock();
 
       // default level is NODE_LOCAL
       if (!allowedLocalityLevel.containsKey(schedulerKey)) {
         // add the initial time of priority to prevent comparing with FsApp
         // startTime and allowedLocalityLevel degrade
         lastScheduledContainer.put(schedulerKey, currentTimeMs);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "Init the lastScheduledContainer time, priority: " + schedulerKey
-                  .getPriority() + ", time: " + currentTimeMs);
-        }
+        LOG.debug("Init the lastScheduledContainer time, priority: {},"
+            + " time: {}", schedulerKey.getPriority(), currentTimeMs);
         allowedLocalityLevel.put(schedulerKey, NodeType.NODE_LOCAL);
         return NodeType.NODE_LOCAL;
       }
@@ -424,8 +425,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     RMContainer rmContainer;
     Container container;
 
+    writeLock.lock();
     try {
-      writeLock.lock();
       // Update allowed locality level
       NodeType allowed = allowedLocalityLevel.get(schedulerKey);
       if (allowed != null) {
@@ -479,7 +480,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       }
       RMAuditLogger.logSuccess(getUser(), AuditConstants.ALLOC_CONTAINER,
           "SchedulerApp", getApplicationId(), container.getId(),
-          container.getResource());
+          container.getResource(), getQueueName(), null);
     } finally {
       writeLock.unlock();
     }
@@ -497,8 +498,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   void resetAllowedLocalityLevel(
       SchedulerRequestKey schedulerKey, NodeType level) {
     NodeType old;
+    writeLock.lock();
     try {
-      writeLock.lock();
       old = allowedLocalityLevel.put(schedulerKey, level);
     } finally {
       writeLock.unlock();
@@ -594,6 +595,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       return false;
     }
 
+    if (container.isAMContainer() && !enableAMPreemption) {
+      return false;
+    }
+
     // Sanity check that the app owns this container
     if (!getLiveContainersMap().containsKey(container.getContainerId()) &&
         !newlyAllocatedContainers.contains(container)) {
@@ -663,9 +668,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   @Override
   public synchronized void recoverContainer(SchedulerNode node,
       RMContainer rmContainer) {
+    writeLock.lock();
     try {
-      writeLock.lock();
-
       super.recoverContainer(node, rmContainer);
 
       if (!rmContainer.getState().equals(RMContainerState.COMPLETED)) {
@@ -775,8 +779,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     String rackName =
         node.getRackName() == null ? "NULL" : node.getRackName();
 
+    writeLock.lock();
     try {
-      writeLock.lock();
       Set<String> rackReservations = reservations.get(rackName);
       if (rackReservations == null) {
         rackReservations = new HashSet<>();
@@ -792,8 +796,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     String rackName =
         node.getRackName() == null ? "NULL" : node.getRackName();
 
+    writeLock.lock();
     try {
-      writeLock.lock();
       Set<String> rackReservations = reservations.get(rackName);
       if (rackReservations != null) {
         rackReservations.remove(node.getNodeName());
@@ -866,12 +870,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         if (reserved) {
           unreserve(schedulerKey, node);
         }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(String.format(
-              "Resource ask %s fits in available node resources %s, " +
-                      "but no container was allocated",
-              capability, available));
-        }
+        LOG.debug("Resource ask {} fits in available node resources {},"
+            + " but no container was allocated", capability, available);
         return Resources.none();
       }
 
@@ -895,10 +895,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       return capability;
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Resource request: " + capability + " exceeds the available"
-          + " resources of the node.");
-    }
+    LOG.debug("Resource request: {} exceeds the available"
+          + " resources of the node.", capability);
 
     // The desired container won't fit here, so reserve
     // Reserve only, if app does not wait for preempted resources on the node,
@@ -909,9 +907,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
             type, schedulerKey)) {
       updateAMDiagnosticMsg(capability, " exceeds the available resources of "
           + "the node and the request is reserved)");
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(getName() + "'s resource request is reserved.");
-      }
+      LOG.debug("{}'s resource request is reserved.", getName());
       return FairScheduler.CONTAINER_RESERVED;
     } else {
       updateAMDiagnosticMsg(capability, " exceeds the available resources of "
@@ -940,8 +936,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     if (!isAmRunning() && !getUnmanagedAM()) {
       // Return true if we have not ask, or queue is not be able to run app's AM
       PendingAsk ask = appSchedulingInfo.getNextPendingAsk();
-      if (ask.getCount() == 0 || !getQueue().canRunAppAM(
-          ask.getPerAllocationResource())) {
+      if (ask != null && (ask.getCount() == 0 || !getQueue().canRunAppAM(
+          ask.getPerAllocationResource()))) {
         return true;
       }
     }
@@ -962,8 +958,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     // For each priority, see if we can schedule a node local, rack local
     // or off-switch request. Rack of off-switch requests may be delayed
     // (not scheduled) in order to promote better locality.
+    writeLock.lock();
     try {
-      writeLock.lock();
 
       // TODO (wandga): All logics in this method should be added to
       // SchedulerPlacement#canDelayTo which is independent from scheduler.
@@ -1398,9 +1394,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     }
 
     StringBuilder diagnosticMessageBldr = new StringBuilder();
-    diagnosticMessageBldr.append(" (Resource request: ");
-    diagnosticMessageBldr.append(resource);
-    diagnosticMessageBldr.append(reason);
+    diagnosticMessageBldr.append(" (Resource request: ")
+        .append(resource)
+        .append(reason);
     updateAMContainerDiagnostics(AMState.INACTIVATED,
         diagnosticMessageBldr.toString());
   }
@@ -1429,5 +1425,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   @Override
   public boolean isPreemptable() {
     return getQueue().isPreemptable();
+  }
+
+  @VisibleForTesting
+  public void setEnableAMPreemption(boolean enableAMPreemption) {
+    this.enableAMPreemption = enableAMPreemption;
   }
 }

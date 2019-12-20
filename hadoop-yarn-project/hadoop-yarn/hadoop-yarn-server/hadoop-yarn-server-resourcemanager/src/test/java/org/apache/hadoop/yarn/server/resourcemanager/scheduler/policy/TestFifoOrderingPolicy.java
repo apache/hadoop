@@ -25,6 +25,8 @@ import org.junit.Test;
 
 import org.apache.hadoop.yarn.api.records.Priority;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class TestFifoOrderingPolicy {
   
   @Test
@@ -33,14 +35,14 @@ public class TestFifoOrderingPolicy {
       new FifoOrderingPolicy<MockSchedulableEntity>();
     MockSchedulableEntity r1 = new MockSchedulableEntity();
     MockSchedulableEntity r2 = new MockSchedulableEntity();
-    
-    Assert.assertEquals(policy.getComparator().compare(r1, r2), 0);
+
+    assertThat(policy.getComparator().compare(r1, r2)).isEqualTo(0);
     
     r1.setSerial(1);
-    Assert.assertEquals(policy.getComparator().compare(r1, r2), 1);
+    assertThat(policy.getComparator().compare(r1, r2)).isEqualTo(1);
     
     r2.setSerial(2);
-    Assert.assertEquals(policy.getComparator().compare(r1, r2), -1);
+    assertThat(policy.getComparator().compare(r1, r2)).isEqualTo(-1);
   }
   
   @Test
@@ -61,7 +63,7 @@ public class TestFifoOrderingPolicy {
     schedOrder.addSchedulableEntity(msp3);
     
     //Assignment, oldest to youngest
-    checkSerials(schedOrder.getAssignmentIterator(), new long[]{1, 2, 3});
+    checkSerials(schedOrder.getAssignmentIterator(IteratorSelector.EMPTY_ITERATOR_SELECTOR), new long[]{1, 2, 3});
     
     //Preemption, youngest to oldest
     checkSerials(schedOrder.getPreemptionIterator(), new long[]{3, 2, 1});

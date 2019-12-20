@@ -18,6 +18,9 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.simulateSlowNamenode;
+import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.simulateThrowExceptionRouterRpcServer;
+import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.transitionClusterNSToStandby;
+import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.transitionClusterNSToActive;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -26,7 +29,9 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -44,8 +49,12 @@ import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCMetrics;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,14 +79,19 @@ public class TestRouterClientRejectOverload {
     }
   }
 
-  private void setupCluster(boolean overloadControl) throws Exception {
+  @Rule
+  public ExpectedException exceptionRule = ExpectedException.none();
+
+  private void setupCluster(boolean overloadControl, boolean ha)
+      throws Exception {
     // Build and start a federated cluster
-    cluster = new StateStoreDFSCluster(false, 2);
+    cluster = new StateStoreDFSCluster(ha, 2);
     Configuration routerConf = new RouterConfigBuilder()
         .stateStore()
         .metrics()
         .admin()
         .rpc()
+        .heartbeat()
         .build();
 
     // Reduce the number of RPC clients threads to overload the Router easy
@@ -97,7 +111,7 @@ public class TestRouterClientRejectOverload {
 
   @Test
   public void testWithoutOverloadControl() throws Exception {
-    setupCluster(false);
+    setupCluster(false, false);
 
     // Nobody should get overloaded
     testOverloaded(0);
@@ -120,7 +134,7 @@ public class TestRouterClientRejectOverload {
 
   @Test
   public void testOverloadControl() throws Exception {
-    setupCluster(true);
+    setupCluster(true, false);
 
     List<RouterContext> routers = cluster.getRouters();
     FederationRPCMetrics rpcMetrics0 =
@@ -238,6 +252,178 @@ public class TestRouterClientRejectOverload {
           num >= expOverloadMin);
       assertTrue("Expected <=" + expOverloadMax + " but was " + num,
           num <= expOverloadMax);
+    }
+  }
+
+  @Test
+  public void testConnectionNullException() throws Exception {
+    setupCluster(false, false);
+
+    // Choose 1st router
+    RouterContext routerContext = cluster.getRouters().get(0);
+    Router router = routerContext.getRouter();
+    // This router will throw ConnectionNullException
+    simulateThrowExceptionRouterRpcServer(router.getRpcServer());
+
+    // Set dfs.client.failover.random.order false, to pick 1st router at first
+    Configuration conf = cluster.getRouterClientConf();
+    conf.setBoolean("dfs.client.failover.random.order", false);
+    // Client to access Router Cluster
+    DFSClient routerClient =
+        new DFSClient(new URI("hdfs://fed"), conf);
+
+    // Get router0 metrics
+    FederationRPCMetrics rpcMetrics0 = cluster.getRouters().get(0)
+        .getRouter().getRpcServer().getRPCMetrics();
+    // Get router1 metrics
+    FederationRPCMetrics rpcMetrics1 = cluster.getRouters().get(1)
+        .getRouter().getRpcServer().getRPCMetrics();
+
+    // Original failures
+    long originalRouter0Failures = rpcMetrics0.getProxyOpFailureCommunicate();
+    long originalRouter1Failures = rpcMetrics1.getProxyOpFailureCommunicate();
+
+    // RPC call must be successful
+    routerClient.getFileInfo("/");
+
+    // Router 0 failures will increase
+    assertEquals(originalRouter0Failures + 1,
+        rpcMetrics0.getProxyOpFailureCommunicate());
+    // Router 1 failures will not change
+    assertEquals(originalRouter1Failures,
+        rpcMetrics1.getProxyOpFailureCommunicate());
+  }
+
+  /**
+   * When failover occurs, no namenodes are available within a short time.
+   * Client will success after some retries.
+   */
+  @Test
+  public void testNoNamenodesAvailable() throws Exception{
+    setupCluster(false, true);
+
+    transitionClusterNSToStandby(cluster);
+
+    Configuration conf = cluster.getRouterClientConf();
+    // Set dfs.client.failover.random.order false, to pick 1st router at first
+    conf.setBoolean("dfs.client.failover.random.order", false);
+
+    // Retries is 3 (see FailoverOnNetworkExceptionRetry#shouldRetry, will fail
+    // when reties > max.attempts), so total access is 4.
+    conf.setInt("dfs.client.retry.max.attempts", 2);
+    DFSClient routerClient = new DFSClient(new URI("hdfs://fed"), conf);
+
+    // Get router0 metrics
+    FederationRPCMetrics rpcMetrics0 = cluster.getRouters().get(0)
+        .getRouter().getRpcServer().getRPCMetrics();
+    // Get router1 metrics
+    FederationRPCMetrics rpcMetrics1 = cluster.getRouters().get(1)
+        .getRouter().getRpcServer().getRPCMetrics();
+
+    // Original failures
+    long originalRouter0Failures = rpcMetrics0.getProxyOpNoNamenodes();
+    long originalRouter1Failures = rpcMetrics1.getProxyOpNoNamenodes();
+
+    // GetFileInfo will throw Exception
+    String exceptionMessage = "org.apache.hadoop.hdfs.server.federation."
+        + "router.NoNamenodesAvailableException: No namenodes available "
+        + "under nameservice ns0";
+    exceptionRule.expect(RemoteException.class);
+    exceptionRule.expectMessage(exceptionMessage);
+    routerClient.getFileInfo("/");
+
+    // Router 0 failures will increase
+    assertEquals(originalRouter0Failures + 4,
+        rpcMetrics0.getProxyOpNoNamenodes());
+    // Router 1 failures do not change
+    assertEquals(originalRouter1Failures,
+        rpcMetrics1.getProxyOpNoNamenodes());
+
+    // Make name services available
+    transitionClusterNSToActive(cluster, 0);
+    for (RouterContext routerContext : cluster.getRouters()) {
+      // Manually trigger the heartbeat
+      Collection<NamenodeHeartbeatService> heartbeatServices = routerContext
+          .getRouter().getNamenodeHeartbeatServices();
+      for (NamenodeHeartbeatService service : heartbeatServices) {
+        service.periodicInvoke();
+      }
+      // Update service cache
+      routerContext.getRouter().getStateStore().refreshCaches(true);
+    }
+
+    originalRouter0Failures = rpcMetrics0.getProxyOpNoNamenodes();
+
+    // RPC call must be successful
+    routerClient.getFileInfo("/");
+    // Router 0 failures do not change
+    assertEquals(originalRouter0Failures, rpcMetrics0.getProxyOpNoNamenodes());
+  }
+
+  @Test
+  public void testAsyncCallerPoolMetrics() throws Exception {
+    setupCluster(true, false);
+    simulateSlowNamenode(cluster.getCluster().getNameNode(0), 2);
+    final ObjectMapper objectMapper = new ObjectMapper();
+
+    // Set only one router to make test easier
+    cluster.getRouters().remove(1);
+    FederationRPCMetrics metrics = cluster.getRouters().get(0).getRouter()
+        .getRpcServer().getRPCMetrics();
+
+    // No active connection initially
+    Map<String, Integer> result = objectMapper
+        .readValue(metrics.getAsyncCallerPool(), Map.class);
+    assertEquals(0, result.get("active").intValue());
+    assertEquals(0, result.get("total").intValue());
+    assertEquals(4, result.get("max").intValue());
+
+    ExecutorService exec = Executors.newSingleThreadExecutor();
+
+    try {
+      // Run a client request to create an active connection
+      exec.submit(() -> {
+        DFSClient routerClient = null;
+        try {
+          routerClient = new DFSClient(new URI("hdfs://fed"),
+              cluster.getRouterClientConf());
+          String clientName = routerClient.getClientName();
+          ClientProtocol routerProto = routerClient.getNamenode();
+          routerProto.renewLease(clientName);
+        } catch (Exception e) {
+          fail("Client request failed: " + e);
+        } finally {
+          if (routerClient != null) {
+            try {
+              routerClient.close();
+            } catch (IOException e) {
+              LOG.error("Cannot close the client");
+            }
+          }
+        }
+      });
+
+      // Wait for client request to be active
+      GenericTestUtils.waitFor(() -> {
+        try {
+          Map<String, Integer> newResult = objectMapper.readValue(
+              metrics.getAsyncCallerPool(), Map.class);
+          if (newResult.get("active") != 1) {
+            return false;
+          }
+          if (newResult.get("max") != 4) {
+            return false;
+          }
+          int total = newResult.get("total");
+          // "total" is dynamic
+          return total >= 1 && total <= 4;
+        } catch (Exception e) {
+          LOG.error("Not able to parse metrics result: " + e);
+        }
+        return false;
+      }, 100, 2000);
+    } finally {
+      exec.shutdown();
     }
   }
 }

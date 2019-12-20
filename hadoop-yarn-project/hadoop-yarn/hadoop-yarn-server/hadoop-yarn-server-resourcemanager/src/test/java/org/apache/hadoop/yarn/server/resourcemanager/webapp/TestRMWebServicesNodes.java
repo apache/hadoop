@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -25,29 +26,47 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.Enumeration;
 import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.TreeMap;
 import java.util.Iterator;
 
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
@@ -57,6 +76,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.RackResolver;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -75,6 +98,7 @@ import org.xml.sax.InputSource;
 
 import com.google.common.base.Joiner;
 import com.google.inject.Guice;
+import com.google.inject.Singleton;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientResponse.Status;
@@ -86,19 +110,55 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 public class TestRMWebServicesNodes extends JerseyTestBase {
 
   private static MockRM rm;
+  private static YarnConfiguration conf;
+
+  private static String userName;
 
   private static class WebServletModule extends ServletModule {
     @Override
     protected void configureServlets() {
       bind(JAXBContextResolver.class);
+      try {
+        userName = UserGroupInformation.getCurrentUser().getShortUserName();
+      } catch (IOException ioe) {
+        throw new RuntimeException("Unable to get current user name "
+            + ioe.getMessage(), ioe);
+      }
+      conf = new YarnConfiguration();
+      conf.set(YarnConfiguration.YARN_ADMIN_ACL, userName);
       bind(RMWebServices.class);
       bind(GenericExceptionHandler.class);
-      rm = new MockRM(new Configuration());
+      rm = new MockRM(conf);
       rm.getRMContext().getContainerTokenSecretManager().rollMasterKey();
       rm.getRMContext().getNMTokenSecretManager().rollMasterKey();
       rm.disableDrainEventsImplicitly();
       bind(ResourceManager.class).toInstance(rm);
+      filter("/*").through(TestRMCustomAuthFilter.class);
       serve("/*").with(GuiceContainer.class);
+    }
+  }
+
+  /**
+   * Custom filter to be able to test auth methods and let the other ones go.
+   */
+  @Singleton
+  public static class TestRMCustomAuthFilter extends AuthenticationFilter {
+
+    @Override
+    protected Properties getConfiguration(String configPrefix,
+        FilterConfig filterConfig) throws ServletException {
+      Properties props = new Properties();
+      Enumeration<?> names = filterConfig.getInitParameterNames();
+      while (names.hasMoreElements()) {
+        String name = (String) names.nextElement();
+        if (name.startsWith(configPrefix)) {
+          String value = filterConfig.getInitParameter(name);
+          props.put(name.substring(configPrefix.length()), value);
+        }
+      }
+      props.put(AuthenticationFilter.AUTH_TYPE, "simple");
+      props.put(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "true");
+      return props;
     }
   }
 
@@ -531,7 +591,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
   }
 
   private void verifyNonexistNodeException(String message, String type, String classname) {
-    assertTrue("exception message incorrect",
+    assertTrue("exception message incorrect: " + message,
         "java.lang.Exception: nodeId, node_invalid:99, is not found"
             .matches(message));
     assertTrue("exception type incorrect", "NotFoundException".matches(type));
@@ -704,6 +764,64 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     verifyNodeInfo(info, rmnode1);
   }
 
+  @Test
+  public void testUpdateNodeResource() throws Exception {
+    WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH);
+
+    r = r.queryParam("user.name", userName);
+    RMNode rmnode = getRunningRMNode("h1", 1234, 5120);
+    String rmnodeId = rmnode.getNodeID().toString();
+    assertEquals("h1:1234", rmnodeId);
+
+    // assert memory and default vcores
+    ClientResponse response = r.path(RMWSConsts.NODES).path(rmnodeId)
+        .accept(MediaType.APPLICATION_XML)
+        .get(ClientResponse.class);
+    NodeInfo nodeInfo0 = response.getEntity(NodeInfo.class);
+    ResourceInfo nodeResource0 = nodeInfo0.getTotalResource();
+    assertEquals(5120, nodeResource0.getMemorySize());
+    assertEquals(4, nodeResource0.getvCores());
+
+    // the RM needs to be running to process the resource update
+    rm.start();
+
+    // update memory to 8192MB and 5 cores
+    Resource resource = Resource.newInstance(8192, 5);
+    ResourceOptionInfo resourceOption = new ResourceOptionInfo(
+        ResourceOption.newInstance(resource, 1000));
+    response = r.path(RMWSConsts.NODES).path(rmnodeId).path("resource")
+        .entity(resourceOption, MediaType.APPLICATION_XML_TYPE)
+        .accept(MediaType.APPLICATION_XML)
+        .post(ClientResponse.class);
+    assertResponseStatusCode(Status.OK, response.getStatusInfo());
+    ResourceInfo updatedResource = response.getEntity(ResourceInfo.class);
+    assertEquals(8192, updatedResource.getMemorySize());
+    assertEquals(5, updatedResource.getvCores());
+
+    // assert updated memory and cores
+    response = r.path(RMWSConsts.NODES).path(rmnodeId)
+        .accept(MediaType.APPLICATION_XML)
+        .get(ClientResponse.class);
+    NodeInfo nodeInfo1 = response.getEntity(NodeInfo.class);
+    ResourceInfo nodeResource1 = nodeInfo1.getTotalResource();
+    assertEquals(8192, nodeResource1.getMemorySize());
+    assertEquals(5, nodeResource1.getvCores());
+
+    // test non existing node
+    response = r.path(RMWSConsts.NODES).path("badnode").path("resource")
+        .entity(resourceOption, MediaType.APPLICATION_XML_TYPE)
+        .accept(MediaType.APPLICATION_JSON)
+        .post(ClientResponse.class);
+    assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
+    JSONObject json = response.getEntity(JSONObject.class);
+    JSONObject exception = json.getJSONObject("RemoteException");
+    assertEquals("IllegalArgumentException", exception.getString("exception"));
+    String msg = exception.getString("message");
+    assertTrue("Wrong message: " + msg, msg.startsWith("Invalid NodeId"));
+
+    rm.stop();
+  }
+
   public void verifyNodesXML(NodeList nodes, RMNode nm)
       throws JSONException,
       Exception {
@@ -740,7 +858,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
 
   public void verifyNodeInfo(JSONObject nodeInfo, RMNode nm)
       throws JSONException, Exception {
-    assertEquals("incorrect number of elements", 20, nodeInfo.length());
+    assertEquals("incorrect number of elements", 21, nodeInfo.length());
 
     JSONObject resourceInfo = nodeInfo.getJSONObject("resourceUtilization");
     verifyNodeInfoGeneric(nm, nodeInfo.getString("state"),
@@ -879,6 +997,72 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     rm.stop();
   }
 
+  @Test
+  public void testNodeAttributesInfo() throws Exception {
+    ResourceTrackerService resourceTrackerService =
+        rm.getResourceTrackerService();
+    RegisterNodeManagerRequest registerReq =
+        Records.newRecord(RegisterNodeManagerRequest.class);
+    NodeId nodeId = NodeId.newInstance("host1", 1234);
+    Resource capability = BuilderUtils.newResource(1024, 1);
+    registerReq.setResource(capability);
+    registerReq.setNodeId(nodeId);
+    registerReq.setHttpPort(1234);
+    registerReq.setNMVersion(YarnVersionInfo.getVersion());
+    RegisterNodeManagerResponse registerResponse =
+        resourceTrackerService.registerNodeManager(registerReq);
+
+    Set<NodeAttribute> nodeAttributes = new HashSet<>();
+    nodeAttributes.add(NodeAttribute.newInstance(
+        NodeAttribute.PREFIX_DISTRIBUTED, "host",
+        NodeAttributeType.STRING, "host1"));
+    nodeAttributes.add(NodeAttribute.newInstance(
+        NodeAttribute.PREFIX_DISTRIBUTED, "rack",
+        NodeAttributeType.STRING, "rack1"));
+
+    NodeHeartbeatRequest heartbeatReq =
+        Records.newRecord(NodeHeartbeatRequest.class);
+    NodeStatus nodeStatus =
+        NodeStatus.newInstance(nodeId, 0, new ArrayList<ContainerStatus>(),
+        null, null, null, null, null);
+    heartbeatReq.setNodeStatus(nodeStatus);
+    heartbeatReq.setLastKnownNMTokenMasterKey(registerResponse
+        .getNMTokenMasterKey());
+    heartbeatReq.setLastKnownContainerTokenMasterKey(registerResponse
+        .getContainerTokenMasterKey());
+    heartbeatReq.setNodeAttributes(nodeAttributes);
+    resourceTrackerService.nodeHeartbeat(heartbeatReq);
+
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("nodes").accept("application/json").get(ClientResponse.class);
+
+    JSONObject nodesInfoJson = response.getEntity(JSONObject.class);
+    JSONArray nodes = nodesInfoJson.getJSONObject("nodes")
+        .getJSONArray("node");
+    JSONObject nodeJson = nodes.getJSONObject(0);
+    JSONArray nodeAttributesInfo = nodeJson.getJSONObject("nodeAttributesInfo")
+        .getJSONArray("nodeAttributeInfo");
+    assertEquals(nodeAttributes.size(), nodeAttributesInfo.length());
+
+    Iterator<NodeAttribute> it = nodeAttributes.iterator();
+    for (int j=0; j<nodeAttributesInfo.length(); j++) {
+      JSONObject nodeAttributeInfo = nodeAttributesInfo.getJSONObject(j);
+      NodeAttribute expectedNodeAttribute = it.next();
+      String expectedPrefix = expectedNodeAttribute.getAttributeKey()
+          .getAttributePrefix();
+      String expectedName = expectedNodeAttribute.getAttributeKey()
+          .getAttributeName();
+      String expectedType = expectedNodeAttribute.getAttributeType()
+          .toString();
+      String expectedValue = expectedNodeAttribute.getAttributeValue();
+      assertEquals(expectedPrefix, nodeAttributeInfo.getString("prefix"));
+      assertEquals(expectedName, nodeAttributeInfo.getString("name"));
+      assertEquals(expectedType, nodeAttributeInfo.getString("type"));
+      assertEquals(expectedValue, nodeAttributeInfo.getString("value"));
+    }
+  }
+
   private void verifyNodeAllocationTag(JSONObject json,
       Map<String, Map<String, Long>> expectedAllocationTags)
       throws JSONException {
@@ -905,8 +1089,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
       for (int j=0; j<tagsInfo.length(); j++) {
         JSONObject tagInfo = tagsInfo.getJSONObject(j);
         String expectedTag = it.next();
-        assertEquals(tagInfo.getString("allocationTag"), expectedTag);
-        assertEquals(tagInfo.getLong("allocationsCount"),
+        assertThat(tagInfo.getString("allocationTag")).isEqualTo(expectedTag);
+        assertThat(tagInfo.getLong("allocationsCount")).isEqualTo(
             expectedTags.get(expectedTag).longValue());
       }
     }

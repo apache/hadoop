@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -41,6 +42,7 @@ import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
@@ -208,7 +210,7 @@ public class LeaseManager {
    * read or write lock.
    *
    * @param ancestorDir the ancestor {@link INodeDirectory}
-   * @return Set<INodesInPath>
+   * @return {@code Set<INodesInPath>}
    */
   public Set<INodesInPath> getINodeWithLeases(final INodeDirectory
       ancestorDir) throws IOException {
@@ -302,7 +304,9 @@ public class LeaseManager {
 
     int count = 0;
     String fullPathName = null;
-    for (Long inodeId: inodeIds) {
+    Iterator<Long> inodeIdIterator = inodeIds.iterator();
+    while (inodeIdIterator.hasNext()) {
+      Long inodeId = inodeIdIterator.next();
       final INodeFile inodeFile =
           fsnamesystem.getFSDirectory().getInode(inodeId).asFile();
       if (!inodeFile.isUnderConstruction()) {
@@ -312,7 +316,8 @@ public class LeaseManager {
       }
 
       fullPathName = inodeFile.getFullPathName();
-      if (StringUtils.isEmpty(path) || fullPathName.startsWith(path)) {
+      if (StringUtils.isEmpty(path) ||
+          DFSUtil.isParentEntry(fullPathName, path)) {
         openFileEntries.add(new OpenFileEntry(inodeFile.getId(), fullPathName,
             inodeFile.getFileUnderConstructionFeature().getClientName(),
             inodeFile.getFileUnderConstructionFeature().getClientMachine()));
@@ -323,7 +328,8 @@ public class LeaseManager {
         break;
       }
     }
-    boolean hasMore = (numResponses < remainingLeases.size());
+    // avoid rescanning all leases when we have checked all leases already
+    boolean hasMore = inodeIdIterator.hasNext();
     return new BatchedListEntries<>(openFileEntries, hasMore);
   }
 

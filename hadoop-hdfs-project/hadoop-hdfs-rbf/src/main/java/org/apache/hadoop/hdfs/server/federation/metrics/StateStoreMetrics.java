@@ -39,7 +39,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @Metrics(name = "StateStoreActivity", about = "Router metrics",
     context = "dfs")
-public final class StateStoreMetrics implements StateStoreMBean {
+public class StateStoreMetrics implements StateStoreMBean {
 
   private final MetricsRegistry registry = new MetricsRegistry("router");
 
@@ -53,6 +53,8 @@ public final class StateStoreMetrics implements StateStoreMBean {
   private MutableRate failures;
 
   private Map<String, MutableGaugeInt> cacheSizes;
+
+  protected StateStoreMetrics() {}
 
   private StateStoreMetrics(Configuration conf) {
     registry.tag(SessionId, "RouterSession");

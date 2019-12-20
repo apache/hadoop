@@ -40,6 +40,9 @@ public abstract class RouterState extends BaseRecord {
   /** Expiration time in ms for this entry. */
   private static long expirationMs;
 
+  /** Deletion time in ms for this entry when it is expired. */
+  private static long deletionMs;
+
   /**
    * Constructors.
    */
@@ -87,6 +90,10 @@ public abstract class RouterState extends BaseRecord {
   public abstract void setCompileInfo(String info);
 
   public abstract long getDateStarted();
+
+  public abstract void setAdminAddress(String adminAddress);
+
+  public abstract String getAdminAddress();
 
   /**
    * Get the identifier for the Router. It uses the address.
@@ -164,5 +171,19 @@ public abstract class RouterState extends BaseRecord {
 
   public static void setExpirationMs(long time) {
     RouterState.expirationMs = time;
+  }
+
+  @Override
+  public boolean isExpired() {
+    return getStatus() == RouterServiceState.EXPIRED;
+  }
+
+  @Override
+  public long getDeletionMs() {
+    return RouterState.deletionMs;
+  }
+
+  public static void setDeletionMs(long time) {
+    RouterState.deletionMs = time;
   }
 }

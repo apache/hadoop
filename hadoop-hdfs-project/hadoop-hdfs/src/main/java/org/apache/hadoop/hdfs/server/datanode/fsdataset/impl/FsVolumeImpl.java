@@ -120,6 +120,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   private final File currentDir;    // <StorageDirectory>/current
   private final DF usage;
   private final ReservedSpaceCalculator reserved;
+  private long cachedCapacity;
   private CloseableReferenceCount reference = new CloseableReferenceCount();
 
   // Disk space reserved for blocks (RBW or Re-replicating) open for write.
@@ -163,6 +164,20 @@ public class FsVolumeImpl implements FsVolumeSpi {
     this.storageType = storageLocation.getStorageType();
     this.configuredCapacity = -1;
     this.usage = usage;
+    if (this.usage != null) {
+      reserved = new ReservedSpaceCalculator.Builder(conf)
+          .setUsage(this.usage).setStorageType(storageType).build();
+      boolean fixedSizeVolume = conf.getBoolean(
+          DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_KEY,
+          DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_DEFAULT);
+      if (fixedSizeVolume) {
+        cachedCapacity = this.usage.getCapacity();
+      }
+    } else {
+      reserved = null;
+      LOG.warn("Setting reserved to null as usage is null");
+      cachedCapacity = -1;
+    }
     if (currentDir != null) {
       File parent = currentDir.getParentFile();
       cacheExecutor = initializeCacheExecutor(parent);
@@ -173,8 +188,6 @@ public class FsVolumeImpl implements FsVolumeSpi {
     }
     this.conf = conf;
     this.fileIoProvider = fileIoProvider;
-    this.reserved = new ReservedSpaceCalculator.Builder(conf)
-        .setUsage(usage).setStorageType(storageType).build();
   }
 
   protected ThreadPoolExecutor initializeCacheExecutor(File parent) {
@@ -397,7 +410,12 @@ public class FsVolumeImpl implements FsVolumeSpi {
   @VisibleForTesting
   public long getCapacity() {
     if (configuredCapacity < 0L) {
-      long remaining = usage.getCapacity() - getReserved();
+      long remaining;
+      if (cachedCapacity > 0L) {
+        remaining = cachedCapacity - getReserved();
+      } else {
+        remaining = usage.getCapacity() - getReserved();
+      }
       return Math.max(remaining, 0L);
     }
     return configuredCapacity;
@@ -473,7 +491,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   long getReserved(){
-    return reserved.getReserved();
+    return reserved != null ? reserved.getReserved() : 0;
   }
 
   @VisibleForTesting
@@ -1369,7 +1387,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
       if (!Block.isBlockFilename(file)) {
         if (isBlockMetaFile(Block.BLOCK_FILE_PREFIX, file.getName())) {
           long blockId = Block.getBlockId(file.getName());
-          verifyFileLocation(file.getParentFile(), bpFinalizedDir,
+          verifyFileLocation(file, bpFinalizedDir,
               blockId);
           report.add(new ScanInfo(blockId, null, file, this));
         }

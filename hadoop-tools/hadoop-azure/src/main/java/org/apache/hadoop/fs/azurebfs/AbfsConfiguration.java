@@ -25,9 +25,12 @@ import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.LongConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.StringConfigurationValidatorAnnotation;
@@ -56,7 +59,7 @@ import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
 import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
-import org.apache.hadoop.fs.azurebfs.utils.SSLSocketFactoryEx;
+import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -69,6 +72,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class AbfsConfiguration{
+
   private final Configuration rawConfig;
   private final String accountName;
   private final boolean isSecure;
@@ -146,6 +150,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ENABLE_FLUSH)
   private boolean enableFlush;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_DISABLE_OUTPUTSTREAM_FLUSH,
+      DefaultValue = DEFAULT_DISABLE_OUTPUTSTREAM_FLUSH)
+  private boolean disableOutputStreamFlush;
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_AUTOTHROTTLING,
       DefaultValue = DEFAULT_ENABLE_AUTOTHROTTLING)
   private boolean enableAutoThrottling;
@@ -165,6 +173,18 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ALWAYS_USE_HTTPS,
           DefaultValue = DEFAULT_ENABLE_HTTPS)
   private boolean alwaysUseHttps;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_USE_UPN,
+      DefaultValue = DEFAULT_USE_UPN)
+  private boolean useUpn;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_CHECK_ACCESS, DefaultValue = DEFAULT_ENABLE_CHECK_ACCESS)
+  private boolean isCheckAccessEnabled;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_LATENCY_TRACK,
+          DefaultValue = DEFAULT_ABFS_LATENCY_TRACK)
+  private boolean trackLatency;
 
   private Map<String, String> storageAccountKeys;
 
@@ -211,6 +231,16 @@ public class AbfsConfiguration{
    */
   public String get(String key) {
     return rawConfig.get(accountConf(key), rawConfig.get(key));
+  }
+
+  /**
+   * Returns the account-specific value if it exists, then looks for an
+   * account-agnostic value.
+   * @param key Account-agnostic configuration key
+   * @return value if one exists, else the default value
+   */
+  public String getString(String key, String defaultValue) {
+    return rawConfig.get(accountConf(key), rawConfig.get(key, defaultValue));
   }
 
   /**
@@ -377,6 +407,10 @@ public class AbfsConfiguration{
     return this.azureBlockSize;
   }
 
+  public boolean isCheckAccessEnabled() {
+    return this.isCheckAccessEnabled;
+  }
+
   public String getAzureBlockLocationHost() {
     return this.azureBlockLocationHost;
   }
@@ -413,6 +447,10 @@ public class AbfsConfiguration{
     return this.enableFlush;
   }
 
+  public boolean isOutputStreamFlushDisabled() {
+    return this.disableOutputStreamFlush;
+  }
+
   public boolean isAutoThrottlingEnabled() {
     return this.enableAutoThrottling;
   }
@@ -421,7 +459,7 @@ public class AbfsConfiguration{
     return this.userAgentId;
   }
 
-  public SSLSocketFactoryEx.SSLChannelMode getPreferredSSLFactoryOption() {
+  public DelegatingSSLSocketFactory.SSLChannelMode getPreferredSSLFactoryOption() {
     return getEnum(FS_AZURE_SSL_CHANNEL_MODE_KEY, DEFAULT_FS_AZURE_SSL_CHANNEL_MODE);
   }
 
@@ -439,6 +477,19 @@ public class AbfsConfiguration{
 
   public boolean isHttpsAlwaysUsed() {
     return this.alwaysUseHttps;
+  }
+
+  public boolean isUpnUsed() {
+    return this.useUpn;
+  }
+
+  /**
+   * Whether {@code AbfsClient} should track and send latency info back to storage servers.
+   *
+   * @return a boolean indicating whether latency should be tracked.
+   */
+  public boolean shouldTrackLatency() {
+    return this.trackLatency;
   }
 
   public AccessTokenProvider getTokenProvider() throws TokenAccessProviderException {
@@ -460,13 +511,25 @@ public class AbfsConfiguration{
           String password = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD);
           tokenProvider = new UserPasswordTokenProvider(authEndpoint, username, password);
         } else if (tokenProviderClass == MsiTokenProvider.class) {
+          String authEndpoint = getTrimmedPasswordString(
+              FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
           String tenantGuid = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
           String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
-          tokenProvider = new MsiTokenProvider(tenantGuid, clientId);
+          String authority = getTrimmedPasswordString(
+              FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
+          authority = appendSlashIfNeeded(authority);
+          tokenProvider = new MsiTokenProvider(authEndpoint, tenantGuid,
+              clientId, authority);
         } else if (tokenProviderClass == RefreshTokenBasedTokenProvider.class) {
+          String authEndpoint = getTrimmedPasswordString(
+              FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT);
           String refreshToken = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN);
           String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
-          tokenProvider = new RefreshTokenBasedTokenProvider(clientId, refreshToken);
+          tokenProvider = new RefreshTokenBasedTokenProvider(authEndpoint,
+              clientId, refreshToken);
         } else {
           throw new IllegalArgumentException("Failed to initialize " + tokenProviderClass);
         }
@@ -496,7 +559,7 @@ public class AbfsConfiguration{
       } catch(IllegalArgumentException e) {
         throw e;
       } catch (Exception e) {
-        throw new TokenAccessProviderException("Unable to load custom token provider class.", e);
+        throw new TokenAccessProviderException("Unable to load custom token provider class: " + e, e);
       }
 
     } else {
@@ -617,4 +680,25 @@ public class AbfsConfiguration{
   void setEnableFlush(boolean enableFlush) {
     this.enableFlush = enableFlush;
   }
+
+  @VisibleForTesting
+  void setDisableOutputStreamFlush(boolean disableOutputStreamFlush) {
+    this.disableOutputStreamFlush = disableOutputStreamFlush;
+  }
+
+  private String getTrimmedPasswordString(String key, String defaultValue) throws IOException {
+    String value = getPasswordString(key);
+    if (StringUtils.isBlank(value)) {
+      value = defaultValue;
+    }
+    return value.trim();
+  }
+
+  private String appendSlashIfNeeded(String authority) {
+    if (!authority.endsWith(AbfsHttpConstants.FORWARD_SLASH)) {
+      authority = authority + AbfsHttpConstants.FORWARD_SLASH;
+    }
+    return authority;
+  }
+
 }

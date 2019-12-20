@@ -35,6 +35,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.google.common.collect.Sets;
+import org.assertj.core.api.Assertions;
 import org.hamcrest.core.StringStartsWith;
 import org.junit.After;
 import org.junit.Before;
@@ -117,10 +118,10 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
   /**
    * Test array for parameterized test runs: how many threads and
-   * how many files to use.
+   * whether or not filenames are unique.
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="threads-{0}-unique-{1}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][] {
         {0, false},
@@ -142,6 +143,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         uniqueFilenames);
     jobConf.set(FS_S3A_COMMITTER_STAGING_UUID,
         UUID.randomUUID().toString());
+    jobConf.set(RETRY_INTERVAL, "100ms");
+    jobConf.setInt(RETRY_LIMIT, 1);
 
     this.results = new StagingTestBase.ClientResults();
     this.errors = new StagingTestBase.ClientErrors();
@@ -157,7 +160,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     this.tac = new TaskAttemptContextImpl(
         new Configuration(job.getConfiguration()), AID);
 
-    this.jobCommitter = new MockedStagingCommitter(OUTPUT_PATH, tac);
+    this.jobCommitter = new MockedStagingCommitter(outputPath, tac);
     jobCommitter.setupJob(job);
 
     // get the task's configuration copy so modifications take effect
@@ -172,7 +175,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     this.conf.set(BUFFER_DIR,
         String.format("%s/local-0/, %s/local-1 ", tmp, tmp));
 
-    this.committer = new MockedStagingCommitter(OUTPUT_PATH, tac);
+    this.committer = new MockedStagingCommitter(outputPath, tac);
     Paths.resetTempFolderCache();
   }
 
@@ -533,33 +536,31 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
           return jobCommitter.toString();
         });
 
-    assertEquals("Should have succeeded to commit some uploads",
-        5, results.getCommits().size());
-
-    assertEquals("Should have deleted the files that succeeded",
-        5, results.getDeletes().size());
 
     Set<String> commits = results.getCommits()
         .stream()
-        .map((commit) -> commit.getBucketName() + commit.getKey())
+        .map(commit ->
+            "s3a://" + commit.getBucketName() + "/" + commit.getKey())
         .collect(Collectors.toSet());
 
     Set<String> deletes = results.getDeletes()
         .stream()
-        .map((delete) -> delete.getBucketName() + delete.getKey())
+        .map(delete ->
+            "s3a://" + delete.getBucketName() + "/" + delete.getKey())
         .collect(Collectors.toSet());
 
-    assertEquals("Committed and deleted objects should match",
-        commits, deletes);
+    Assertions.assertThat(commits)
+        .describedAs("Committed objects compared to deleted paths %s", results)
+        .containsExactlyInAnyOrderElementsOf(deletes);
 
-    assertEquals("Mismatch in aborted upload count",
-        7, results.getAborts().size());
-
+    Assertions.assertThat(results.getAborts())
+        .describedAs("aborted count in %s", results)
+        .hasSize(7);
     Set<String> uploadIds = getCommittedIds(results.getCommits());
     uploadIds.addAll(getAbortedIds(results.getAborts()));
-
-    assertEquals("Should have committed/deleted or aborted all uploads",
-        uploads, uploadIds);
+    Assertions.assertThat(uploadIds)
+        .describedAs("Combined commit/delete and aborted upload IDs")
+        .containsExactlyInAnyOrderElementsOf(uploads);
 
     assertPathDoesNotExist(fs, "jobAttemptPath not deleted", jobAttemptPath);
   }
@@ -608,7 +609,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
       TaskAttemptContext attempt = new TaskAttemptContextImpl(
           new Configuration(jobContext.getConfiguration()), attemptID);
       MockedStagingCommitter taskCommitter = new MockedStagingCommitter(
-          OUTPUT_PATH, attempt);
+          outputPath, attempt);
       commitTask(taskCommitter, attempt, numFiles);
     }
 

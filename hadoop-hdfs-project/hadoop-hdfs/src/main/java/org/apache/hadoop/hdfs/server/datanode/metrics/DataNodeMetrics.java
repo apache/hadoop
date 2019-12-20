@@ -34,6 +34,7 @@ import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -159,8 +160,16 @@ public class DataNodeMetrics {
   private MutableCounterLong ecReconstructionDecodingTimeMillis;
   @Metric("Milliseconds spent on write by erasure coding worker")
   private MutableCounterLong ecReconstructionWriteTimeMillis;
+  @Metric("Sum of all BPServiceActors command queue length")
+  private MutableCounterLong sumOfActorCommandQueueLength;
+  @Metric("Num of processed commands of all BPServiceActors")
+  private MutableCounterLong numProcessedCommands;
 
   final MetricsRegistry registry = new MetricsRegistry("datanode");
+  @Metric("Milliseconds spent on calling NN rpc")
+  private MutableRatesWithAggregation
+      nnRpcLatency = registry.newRatesWithAggregation("nnRpcLatency");
+
   final String name;
   JvmMetrics jvmMetrics = null;
   private DataNodeUsageReportUtil dnUsageReportUtil;
@@ -232,25 +241,41 @@ public class DataNodeMetrics {
   public JvmMetrics getJvmMetrics() {
     return jvmMetrics;
   }
-  
-  public void addHeartbeat(long latency) {
+
+  public void addHeartbeat(long latency, String rpcMetricSuffix) {
     heartbeats.add(latency);
+    if (rpcMetricSuffix != null) {
+      nnRpcLatency.add("HeartbeatsFor" + rpcMetricSuffix, latency);
+    }
   }
 
-  public void addHeartbeatTotal(long latency) {
+  public void addHeartbeatTotal(long latency, String rpcMetricSuffix) {
     heartbeatsTotal.add(latency);
+    if (rpcMetricSuffix != null) {
+      nnRpcLatency.add("HeartbeatsTotalFor" + rpcMetricSuffix, latency);
+    }
   }
 
-  public void addLifeline(long latency) {
+  public void addLifeline(long latency, String rpcMetricSuffix) {
     lifelines.add(latency);
+    if (rpcMetricSuffix != null) {
+      nnRpcLatency.add("LifelinesFor" + rpcMetricSuffix, latency);
+    }
   }
 
-  public void addBlockReport(long latency) {
+  public void addBlockReport(long latency, String rpcMetricSuffix) {
     blockReports.add(latency);
+    if (rpcMetricSuffix != null) {
+      nnRpcLatency.add("BlockReportsFor" + rpcMetricSuffix, latency);
+    }
   }
 
-  public void addIncrementalBlockReport(long latency) {
+  public void addIncrementalBlockReport(long latency,
+      String rpcMetricSuffix) {
     incrementalBlockReports.add(latency);
+    if (rpcMetricSuffix != null) {
+      nnRpcLatency.add("IncrementalBlockReportsFor" + rpcMetricSuffix, latency);
+    }
   }
 
   public void addCacheReport(long latency) {
@@ -530,5 +555,13 @@ public class DataNodeMetrics {
     return dnUsageReportUtil.getUsageReport(bytesWritten.value(), bytesRead
             .value(), totalWriteTime.value(), totalReadTime.value(),
         blocksWritten.value(), blocksRead.value(), timeSinceLastReport);
+  }
+
+  public void incrActorCmdQueueLength(int delta) {
+    sumOfActorCommandQueueLength.incr(delta);
+  }
+
+  public void incrNumProcessedCommands() {
+    numProcessedCommands.incr();
   }
 }

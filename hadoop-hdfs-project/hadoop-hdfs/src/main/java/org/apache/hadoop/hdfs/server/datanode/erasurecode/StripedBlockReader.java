@@ -129,7 +129,7 @@ class StripedBlockReader {
       return BlockReaderRemote.newBlockReader(
           "dummy", block, blockToken, offsetInBlock,
           block.getNumBytes() - offsetInBlock, true, "", peer, source,
-          null, stripedReader.getCachingStrategy(), -1);
+          null, stripedReader.getCachingStrategy(), -1, conf);
     } catch (IOException e) {
       LOG.info("Exception while creating remote block reader, datanode {}",
           source, e);

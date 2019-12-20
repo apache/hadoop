@@ -19,16 +19,13 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator;
-
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 
 /**
  * FPGA plugin interface for vendor to implement. Used by {@link FpgaDiscoverer} and
@@ -38,15 +35,20 @@ import java.util.Map;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public interface AbstractFpgaVendorPlugin extends Configurable{
+public interface AbstractFpgaVendorPlugin {
 
   /**
    * Check vendor's toolchain and required environment
+   * @param conf Hadoop configuration
+   * @return true if the initialization was successful
    * */
   boolean initPlugin(Configuration conf);
 
   /**
    * Diagnose the devices using vendor toolchain but no need to parse device information
+   *
+   * @param timeout timeout in milliseconds
+   * @return true if the diagnostics was successful
    * */
   boolean diagnose(int timeout);
 
@@ -55,11 +57,13 @@ public interface AbstractFpgaVendorPlugin extends Configurable{
    * @param timeout The vendor plugin should return result during this time
    * @return The result will be added to FPGAResourceAllocator for later scheduling
    * */
-  List<FpgaResourceAllocator.FpgaDevice> discover(int timeout);
+  List<FpgaDevice> discover(int timeout);
 
   /**
    * Since all vendor plugins share a {@link org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator}
    * which distinguish FPGA devices by type. Vendor plugin must report this.
+   *
+   * @return the type of FPGA plugin represented as a string
    * */
   String getFpgaType();
 
@@ -72,19 +76,14 @@ public interface AbstractFpgaVendorPlugin extends Configurable{
    * localized file path and value is soft link names
    * @return The absolute path string of IP file
    * */
-  String downloadIP(String id, String dstDir, Map<Path, List<String>> localizedResources);
+  String retrieveIPfilePath(String id, String dstDir,
+      Map<Path, List<String>> localizedResources);
 
   /**
    * The vendor plugin configure an IP file to a device
    * @param ipPath The absolute path of the IP file
-   * @param majorMinorNumber The device in format &lt;major:minor&gt;
+   * @param device The FPGA device object
    * @return configure device ok or not
    * */
-  boolean configureIP(String ipPath, String majorMinorNumber);
-
-  @Override
-  void setConf(Configuration conf);
-
-  @Override
-  Configuration getConf();
+  boolean configureIP(String ipPath, FpgaDevice device);
 }

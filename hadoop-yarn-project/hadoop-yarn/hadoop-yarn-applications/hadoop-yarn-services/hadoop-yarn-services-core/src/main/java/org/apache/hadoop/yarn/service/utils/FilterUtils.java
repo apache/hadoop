@@ -21,10 +21,11 @@ package org.apache.hadoop.yarn.service.utils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol;
 import org.apache.hadoop.yarn.service.ServiceContext;
-import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.ComponentContainers;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,9 +37,11 @@ public class FilterUtils {
    * @param context   service context
    * @param filterReq filter request
    */
-  public static List<Container> filterInstances(ServiceContext context,
+  public static List<ComponentContainers> filterInstances(
+      ServiceContext context,
       ClientAMProtocol.GetCompInstancesRequestProto filterReq) {
-    List<Container> results = new ArrayList<>();
+    Map<String, ComponentContainers> containersByComp = new HashMap<>();
+
     Map<ContainerId, ComponentInstance> instances =
         context.scheduler.getLiveInstances();
 
@@ -72,10 +75,20 @@ public class FilterUtils {
       }
 
       if (include) {
-        results.add(instance.getContainerSpec());
+        ComponentContainers compContainers =
+            containersByComp.computeIfAbsent(instance.getCompName(),
+                k -> {
+                  ComponentContainers result = new ComponentContainers();
+                  result.setContainers(new ArrayList<>());
+                  result.setComponentName(instance.getCompName());
+                  return result;
+                });
+
+        compContainers.addContainer(instance.getContainerSpec());
       }
     }));
-
-    return results;
+    List<ComponentContainers> result = new ArrayList<>();
+    result.addAll(containersByComp.values());
+    return result;
   }
 }

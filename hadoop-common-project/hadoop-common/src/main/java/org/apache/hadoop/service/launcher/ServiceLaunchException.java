@@ -78,4 +78,18 @@ public class ServiceLaunchException extends ExitUtil.ExitException
     }
   }
 
+  /**
+   * Create a formatted exception.
+   * <p>
+   * This uses {@link String#format(String, Object...)}
+   * to build the formatted exception in the ENGLISH locale.
+   * @param exitCode exit code
+   * @param cause inner cause
+   * @param format format for message to use in exception
+   * @param args list of arguments
+   */
+  public ServiceLaunchException(int exitCode, Throwable cause,
+      String format, Object... args) {
+    super(exitCode, String.format(Locale.ENGLISH, format, args), cause);
+  }
 }

@@ -19,20 +19,26 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
 import java.util.List;
+import java.util.Map;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
 public class UpdatedContainerInfo {
   private List<ContainerStatus> newlyLaunchedContainers;
   private List<ContainerStatus> completedContainers;
+  private List<Map.Entry<ApplicationId, ContainerStatus>> updateContainers;
   
   public UpdatedContainerInfo() {
   }
 
-  public UpdatedContainerInfo(List<ContainerStatus> newlyLaunchedContainers
-      , List<ContainerStatus> completedContainers) {
+  public UpdatedContainerInfo(List<ContainerStatus> newlyLaunchedContainers,
+                              List<ContainerStatus> completedContainers,
+                              List<Map.Entry<ApplicationId, ContainerStatus>>
+                                  updateContainers) {
     this.newlyLaunchedContainers = newlyLaunchedContainers;
     this.completedContainers = completedContainers;
+    this.updateContainers = updateContainers;
   } 
 
   public List<ContainerStatus> getNewlyLaunchedContainers() {
@@ -41,5 +47,9 @@ public class UpdatedContainerInfo {
 
   public List<ContainerStatus> getCompletedContainers() {
     return this.completedContainers;
+  }
+
+  public List<Map.Entry<ApplicationId, ContainerStatus>> getUpdateContainers() {
+    return this.updateContainers;
   }
 }

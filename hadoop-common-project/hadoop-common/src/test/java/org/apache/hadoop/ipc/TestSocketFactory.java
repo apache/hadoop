@@ -33,22 +33,19 @@ import java.util.Map;
 
 import javax.net.SocketFactory;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.SocksSocketFactory;
 import org.apache.hadoop.net.StandardSocketFactory;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * test StandardSocketFactory and SocksSocketFactory NetUtils
@@ -111,10 +108,12 @@ public class TestSocketFactory {
         .getDefaultSocketFactory(conf);
     dummyCache.put(defaultSocketFactory, toBeCached2);
 
-    Assert
-        .assertEquals("The cache contains two elements", 2, dummyCache.size());
-    Assert.assertEquals("Equals of both socket factory shouldn't be same",
-        defaultSocketFactory.equals(dummySocketFactory), false);
+    assertThat(dummyCache.size())
+        .withFailMessage("The cache contains two elements")
+        .isEqualTo(2);
+    assertThat(defaultSocketFactory)
+        .withFailMessage("Equals of both socket factory shouldn't be same")
+        .isNotEqualTo(dummySocketFactory);
 
     assertSame(toBeCached2, dummyCache.remove(defaultSocketFactory));
     dummyCache.put(defaultSocketFactory, toBeCached2);
@@ -184,14 +183,13 @@ public class TestSocketFactory {
         "localhost", 0));
 
     SocksSocketFactory templateWithProxy = new SocksSocketFactory(proxy);
-    assertFalse(templateWithoutProxy.equals(templateWithProxy));
+    assertThat(templateWithoutProxy).isNotEqualTo(templateWithProxy);
 
     Configuration configuration = new Configuration();
     configuration.set("hadoop.socks.server", "localhost:0");
 
     templateWithoutProxy.setConf(configuration);
-    assertTrue(templateWithoutProxy.equals(templateWithProxy));
-
+    assertThat(templateWithoutProxy).isEqualTo(templateWithProxy);
   }
 
   private void checkSocket(Socket socket) throws Exception {
@@ -200,8 +198,7 @@ public class TestSocketFactory {
     DataOutputStream out = new DataOutputStream(socket.getOutputStream());
     out.writeBytes("test\n");
     String answer = input.readLine();
-    assertEquals("TEST", answer);
-
+    assertThat(answer).isEqualTo("TEST");
   }
 
   /**
