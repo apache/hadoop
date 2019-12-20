@@ -842,9 +842,13 @@
             <executions>
               <execution>
                 <id>parallel-tests-createdir</id>
+                <phase>process-test-resources</phase>
                 <goals>
                   <goal>parallel-tests-createdir</goal>
                 </goals>
+                <configuration>
+                  <testBuildData>${test.build.data}</testBuildData>
+                </configuration>
               </execution>
             </executions>
           </plugin>
