@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.csi.client;
 
 import csi.v0.Csi;
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -36,7 +34,6 @@ import java.io.IOException;
  */
 public class TestCsiClient {
 
-  private static File testRoot = null;
   private static File socketFile = null;
   private static String domainSocket = null;
   private static FakeCsiDriver driver = null;
@@ -50,8 +47,11 @@ public class TestCsiClient {
 
   @AfterClass
   public static void tearDown() throws IOException {
-    if (testRoot != null) {
-      FileUtils.deleteDirectory(testRoot);
+    if (socketFile != null && socketFile.exists()) {
+      if (!socketFile.delete()) {
+        String message = "Unable to delete file " + socketFile + ".";
+        throw new IOException(message);
+      }
     }
   }
 
