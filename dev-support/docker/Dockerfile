@@ -188,7 +188,7 @@ RUN curl -L -s -S https://deb.nodesource.com/setup_8.x | bash - \
 RUN curl -s -S https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
     && echo 'deb https://dl.yarnpkg.com/debian/ stable main' > /etc/apt/sources.list.d/yarn.list \
     && apt-get -q update \
-    && apt-get install -y --no-install-recommends yarn=1.12.1-1 \
+    && apt-get install -y --no-install-recommends yarn=1.21.1-1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
