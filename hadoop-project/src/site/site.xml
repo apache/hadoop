@@ -77,6 +77,7 @@
       <item name="Commands Reference" href="hadoop-project-dist/hadoop-hdfs/HDFSCommands.html"/>
       <item name="NameNode HA With QJM" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithQJM.html"/>
       <item name="NameNode HA With NFS" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithNFS.html"/>
+      <item name="Observer NameNode" href="hadoop-project-dist/hadoop-hdfs/ObserverNameNode.html"/>
       <item name="Federation" href="hadoop-project-dist/hadoop-hdfs/Federation.html"/>
       <item name="ViewFs" href="hadoop-project-dist/hadoop-hdfs/ViewFs.html"/>
       <item name="Snapshots" href="hadoop-project-dist/hadoop-hdfs/HdfsSnapshots.html"/>

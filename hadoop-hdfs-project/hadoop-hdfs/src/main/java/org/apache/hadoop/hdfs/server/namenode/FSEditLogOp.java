@@ -1788,7 +1788,15 @@ public abstract class FSEditLogOp {
     }
   }
 
-  /** Similar with {@link SetGenstampV1Op} */
+  /**
+   * This operation does not actually update gen stamp immediately,
+   * the new gen stamp is recorded as impending gen stamp.
+   * The global generation stamp on Standby Node is updated when
+   * the block with the next generation stamp is actually received.
+   * We keep logging this operation for backward compatibility.
+   * The impending gen stamp will take effect when the standby
+   * transition to become an active.
+   */
   static class SetGenstampV2Op extends FSEditLogOp {
     long genStampV2;
 

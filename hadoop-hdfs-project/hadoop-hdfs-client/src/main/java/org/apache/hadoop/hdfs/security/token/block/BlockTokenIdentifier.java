@@ -19,12 +19,14 @@
 package org.apache.hadoop.hdfs.security.token.block;
 
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.EnumSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -116,6 +118,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   }
 
   public void setHandshakeMsg(byte[] bytes) {
+    cache = null; // invalidate the cache
     handshakeMsg = bytes;
   }
 
@@ -159,6 +162,16 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   @Override
   public void readFields(DataInput in) throws IOException {
     this.cache = null;
+    if (in instanceof DataInputStream) {
+      final DataInputStream dis = (DataInputStream) in;
+      // this.cache should be assigned the raw bytes from the input data for
+      // upgrading compatibility. If we won't mutate fields and call getBytes()
+      // for something (e.g retrieve password), we should return the raw bytes
+      // instead of serializing the instance self fields to bytes, because we
+      // may lose newly added fields which we can't recognize.
+      this.cache = IOUtils.readFullyToByteArray(dis);
+      dis.reset();
+    }
     expiryDate = WritableUtils.readVLong(in);
     keyId = WritableUtils.readVInt(in);
     userId = WritableUtils.readString(in);

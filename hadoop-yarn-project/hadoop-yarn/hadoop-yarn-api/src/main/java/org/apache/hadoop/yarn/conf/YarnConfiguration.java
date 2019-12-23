@@ -1594,6 +1594,17 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_MIN_PER_DISK_FREE_SPACE_MB =
       NM_DISK_HEALTH_CHECK_PREFIX + "min-free-space-per-disk-mb";
   /**
+   * The minimum space that must be available on an offline
+   * disk for it to be marked as online.  The value should not be less
+   * than NM_MIN_PER_DISK_FREE_SPACE_MB.  If its value is less than
+   * NM_MIN_PER_DISK_FREE_SPACE_MB or is not set, it will be set to the
+   * same value as NM_MIN_PER_DISK_FREE_SPACE_MB.
+   * This applies to nm-local-dirs and nm-log-dirs.
+   */
+  public static final String NM_WM_HIGH_PER_DISK_FREE_SPACE_MB =
+      NM_DISK_HEALTH_CHECK_PREFIX +
+          "min-free-space-per-disk-watermark-high-mb";
+  /**
    * By default, all of the disk can be used before it is marked as offline.
    */
   public static final long DEFAULT_NM_MIN_PER_DISK_FREE_SPACE_MB = 0;
@@ -3437,6 +3448,13 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String NM_CONTAINERS_LAUNCHER_CLASS =
       NM_PREFIX + "containers-launcher.class";
+
+  // Configuration for the prefix of the tag which contains workflow ID,
+  // followed by the prefix.
+  public static final String YARN_WORKFLOW_ID_TAG_PREFIX =
+      YARN_PREFIX + "workflow-id.tag-prefix";
+  public static final String DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX =
+      "workflowid:";
 
   public YarnConfiguration() {
     super();

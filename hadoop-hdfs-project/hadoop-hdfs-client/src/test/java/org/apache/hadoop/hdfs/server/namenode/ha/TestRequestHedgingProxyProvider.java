@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.io.retry.MultiException;
+import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -528,6 +529,11 @@ public class TestRequestHedgingProxyProvider {
           InetSocketAddress nnAddr, Class<ClientProtocol> xface,
           UserGroupInformation ugi, boolean withRetries) throws IOException {
         return iterator.next();
+      }
+
+      @Override
+      public void setAlignmentContext(AlignmentContext alignmentContext) {
+        // no-op
       }
     };
   }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -258,6 +259,11 @@ public class TestConfiguredFailoverProxyProvider {
         } else {
           throw new IOException("Name node address not found");
         }
+      }
+
+      @Override
+      public void setAlignmentContext(AlignmentContext alignmentContext) {
+        // no-op
       }
     };
   }

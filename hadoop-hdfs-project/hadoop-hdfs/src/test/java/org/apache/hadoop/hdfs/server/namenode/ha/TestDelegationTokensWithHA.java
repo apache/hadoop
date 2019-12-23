@@ -156,7 +156,7 @@ public class TestDelegationTokensWithHA {
       cluster.shutdownNameNode(0);
       logCapture.clearOutput();
       dfs.access(new Path("/"), FsAction.READ);
-      assertTrue(logCapture.getOutput().contains("Assuming Standby state"));
+      assertTrue(logCapture.getOutput().contains("Failed to connect to"));
     } finally {
       logCapture.stopCapturing();
     }

@@ -289,10 +289,20 @@ public class StandbyCheckpointer {
         // TODO should there be some smarts here about retries nodes that
         //  are not the active NN?
         CheckpointReceiverEntry receiverEntry = checkpointReceivers.get(url);
-        if (upload.get() == TransferFsImage.TransferResult.SUCCESS) {
+        TransferFsImage.TransferResult uploadResult = upload.get();
+        if (uploadResult == TransferFsImage.TransferResult.SUCCESS) {
           receiverEntry.setLastUploadTime(monotonicNow());
           receiverEntry.setIsPrimary(true);
         } else {
+          // Getting here means image upload is explicitly rejected
+          // by the other node. This could happen if:
+          // 1. the other is also a standby, or
+          // 2. the other is active, but already accepted another
+          // newer image, or
+          // 3. the other is active but has a recent enough image.
+          // All these are valid cases, just log for information.
+          LOG.info("Image upload rejected by the other NameNode: " +
+              uploadResult);
           receiverEntry.setIsPrimary(false);
         }
       } catch (ExecutionException e) {
