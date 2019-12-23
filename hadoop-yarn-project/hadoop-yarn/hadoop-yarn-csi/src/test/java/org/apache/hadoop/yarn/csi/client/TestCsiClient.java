@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.csi.client;
 
 import csi.v0.Csi;
 import org.apache.commons.io.FileUtils;
+import org.apache.curator.shaded.com.google.common.io.Files;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -35,20 +36,24 @@ import java.io.IOException;
  */
 public class TestCsiClient {
 
-  private static File socketFile = null;
+  private static File testRoot = null;
   private static String domainSocket = null;
   private static FakeCsiDriver driver = null;
 
   @BeforeClass
-  public static void setUp() {
-    socketFile = new File("/tmp", "yarn-csi-test.sock");
-    domainSocket = "unix://" + socketFile.getAbsolutePath();
+  public static void setUp() throws IOException {
+    testRoot = Files.createTempDir();
+    File socketPath = new File(testRoot, "csi.sock");
+    FileUtils.forceMkdirParent(socketPath);
+    domainSocket = "unix://" + socketPath.getAbsolutePath();
     driver = new FakeCsiDriver(domainSocket);
   }
 
   @AfterClass
-  public static void tearDown() throws IOException{
-    FileUtils.forceDelete(socketFile);
+  public static void tearDown() throws IOException {
+    if (testRoot != null) {
+      FileUtils.deleteDirectory(testRoot);
+    }
   }
 
   @Before
