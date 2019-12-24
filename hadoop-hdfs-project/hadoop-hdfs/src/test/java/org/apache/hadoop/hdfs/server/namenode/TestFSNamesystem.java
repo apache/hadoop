@@ -90,7 +90,7 @@ public class TestFSNamesystem {
     LeaseManager leaseMan = fsn.getLeaseManager();
     leaseMan.addLease("client1", fsn.getFSDirectory().allocateNewInodeId());
     assertEquals(1, leaseMan.countLease());
-    fsn.clear();
+    clearNamesystem(fsn);
     leaseMan = fsn.getLeaseManager();
     assertEquals(0, leaseMan.countLease());
   }
@@ -185,13 +185,22 @@ public class TestFSNamesystem {
     FSNamesystem fsn = new FSNamesystem(conf, fsImage);
     fsn.imageLoadComplete();
     assertTrue(fsn.isImageLoaded());
-    fsn.clear();
-    assertFalse(fsn.isImageLoaded());
+    clearNamesystem(fsn);
     final INodeDirectory root = (INodeDirectory) fsn.getFSDirectory()
             .getINode("/");
     assertTrue(root.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
     fsn.imageLoadComplete();
     assertTrue(fsn.isImageLoaded());
+  }
+
+  private void clearNamesystem(FSNamesystem fsn) {
+    fsn.writeLock();
+    try {
+      fsn.clear();
+      assertFalse(fsn.isImageLoaded());
+    } finally {
+      fsn.writeUnlock();
+    }
   }
 
   @Test
