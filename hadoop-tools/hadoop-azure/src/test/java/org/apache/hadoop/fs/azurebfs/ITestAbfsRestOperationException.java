@@ -101,11 +101,11 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
         (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(),
         config);
     RetryTestTokenProvider.ResetStatusToFirstTokenFetch();
-
-    intercept(Exception.class,
-        ()-> {
-          fs1.getFileStatus(new Path("/"));
-        });
+    try {
+      fs1.getFileStatus(new Path("/"));
+    } catch (Exception ex) {
+      // Expected to fail as
+    }
 
     // Number of retries done should be as configured
     Assert.assertTrue(
