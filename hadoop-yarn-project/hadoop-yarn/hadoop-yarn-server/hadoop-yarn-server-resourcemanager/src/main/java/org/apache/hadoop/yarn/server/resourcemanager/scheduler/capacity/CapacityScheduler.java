@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.AppNameMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
@@ -382,7 +383,11 @@ public class CapacityScheduler extends
       if (scheduleAsynchronously) {
         asyncSchedulerThreads = new ArrayList<>();
         for (int i = 0; i < maxAsyncSchedulingThreads; i++) {
-          asyncSchedulerThreads.add(new AsyncScheduleThread(this));
+          AsyncScheduleThread as = new AsyncScheduleThread(this);
+          as.setUncaughtExceptionHandler(
+                    new RMCriticalThreadUncaughtExceptionHandler(rmContext));
+
+          asyncSchedulerThreads.add(as);
         }
         resourceCommitterService = new ResourceCommitterService(this);
         asyncMaxPendingBacklogs = this.conf.getInt(
