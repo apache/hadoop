@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.protocol;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.curator.shaded.com.google.common.base.Preconditions;
+import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.hdfs.DFSUtilClient;
 
