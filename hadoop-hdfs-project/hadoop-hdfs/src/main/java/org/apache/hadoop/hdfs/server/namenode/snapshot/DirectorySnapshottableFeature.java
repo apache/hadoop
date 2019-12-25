@@ -233,12 +233,13 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    * @param reclaimContext records blocks and inodes that need to be reclaimed
    * @param snapshotRoot The directory where we take snapshots
    * @param snapshotName The name of the snapshot to be removed
+   * @param now The snapshot deletion time set by Time.now().
    * @return The removed snapshot. Null if no snapshot with the given name
    *         exists.
    */
   public Snapshot removeSnapshot(
       INode.ReclaimContext reclaimContext, INodeDirectory snapshotRoot,
-      String snapshotName) throws SnapshotException {
+      String snapshotName, long now) throws SnapshotException {
     final int i = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
     if (i < 0) {
       throw new SnapshotException("Cannot delete snapshot " + snapshotName
@@ -250,6 +251,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       snapshotRoot.cleanSubtree(reclaimContext, snapshot.getId(), prior);
       // remove from snapshotsByNames after successfully cleaning the subtree
       snapshotsByNames.remove(i);
+      snapshotRoot.updateModificationTime(now, Snapshot.CURRENT_STATE_ID);
       return snapshot;
     }
   }
