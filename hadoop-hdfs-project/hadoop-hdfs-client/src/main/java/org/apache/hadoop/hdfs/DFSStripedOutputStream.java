@@ -556,7 +556,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
         // if this is the end of the block group, end each internal block
         if (shouldEndBlockGroup()) {
           flushAllInternals();
-          checkStreamerFailures();
+          checkStreamerFailures(false);
           for (int i = 0; i < numAllBlocks; i++) {
             final StripedDataStreamer s = setCurrentStreamer(i);
             if (s.isHealthy()) {
@@ -567,7 +567,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
           }
         } else {
           // check failure state for all the streamers. Bump GS if necessary
-          checkStreamerFailures();
+          checkStreamerFailures(true);
         }
       }
       setCurrentStreamer(next);
@@ -623,15 +623,18 @@ public class DFSStripedOutputStream extends DFSOutputStream
    * written a full stripe (i.e., enqueue all packets for a full stripe), or
    * when we're closing the outputstream.
    */
-  private void checkStreamerFailures() throws IOException {
+  private void checkStreamerFailures(boolean isNeedFlushAllPackets)
+      throws IOException {
     Set<StripedDataStreamer> newFailed = checkStreamers();
     if (newFailed.size() == 0) {
       return;
     }
 
-    // for healthy streamers, wait till all of them have fetched the new block
-    // and flushed out all the enqueued packets.
-    flushAllInternals();
+    if (isNeedFlushAllPackets) {
+      // for healthy streamers, wait till all of them have fetched the new block
+      // and flushed out all the enqueued packets.
+      flushAllInternals();
+    }
     // recheck failed streamers again after the flush
     newFailed = checkStreamers();
     while (newFailed.size() > 0) {
@@ -1188,7 +1191,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
         // flush all the data packets
         flushAllInternals();
         // check failures
-        checkStreamerFailures();
+        checkStreamerFailures(false);
 
         for (int i = 0; i < numAllBlocks; i++) {
           final StripedDataStreamer s = setCurrentStreamer(i);
