@@ -273,6 +273,7 @@ public abstract class AbstractService implements Service {
   @Override
   public final boolean waitForServiceToStop(long timeout) {
     boolean completed = terminationNotification.get();
+    boolean interrupted = false;
     while (!completed) {
       try {
         synchronized(terminationNotification) {
@@ -284,7 +285,12 @@ public abstract class AbstractService implements Service {
       } catch (InterruptedException e) {
         // interrupted; have another look at the flag
         completed = terminationNotification.get();
+        interrupted = true;
       }
+    }
+    if (interrupted) {
+      // Restore interrupted flag
+      Thread.currentThread().interrupt();
     }
     return terminationNotification.get();
   }

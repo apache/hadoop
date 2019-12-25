@@ -121,6 +121,7 @@ public class ShellCommandFencer
       outPumper.join();
     } catch (InterruptedException ie) {
       LOG.warn("Interrupted while waiting for fencing command: " + cmd);
+      Thread.currentThread().interrupt();
       return false;
     }
     

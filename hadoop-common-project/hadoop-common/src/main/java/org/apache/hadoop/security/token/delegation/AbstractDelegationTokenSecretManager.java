@@ -663,6 +663,7 @@ extends AbstractDelegationTokenIdentifier>
       try {
         tokenRemoverThread.join();
       } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(
             "Unable to join on token removal thread", e);
       }

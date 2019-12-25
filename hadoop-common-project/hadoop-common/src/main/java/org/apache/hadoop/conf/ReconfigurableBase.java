@@ -206,6 +206,7 @@ public abstract class ReconfigurableBase
     try {
       tempThread.join();
     } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
     }
   }
 

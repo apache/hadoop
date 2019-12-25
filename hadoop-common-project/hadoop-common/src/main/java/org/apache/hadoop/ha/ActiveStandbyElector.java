@@ -849,6 +849,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
       try {
         zkClient.close();
       } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new IOException("Interrupted while closing ZK",
             e);
       }
@@ -875,7 +876,8 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     try {
       tempZk.close();
     } catch(InterruptedException e) {
-      LOG.warn(e.toString());
+      LOG.warn("Interrupted", e);
+      Thread.currentThread().interrupt();
     }
     zkConnectionState = ConnectionState.TERMINATED;
     wantToBeInElection = false;

@@ -94,6 +94,7 @@ public class PowerShellFencer extends Configured implements FenceMethod {
       outPumper.join();
     } catch (InterruptedException ie) {
       LOG.warn("Interrupted while waiting for fencing command: " + ps1script);
+      Thread.currentThread().interrupt();
       return false;
     }
 

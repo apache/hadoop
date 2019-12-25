@@ -214,6 +214,7 @@ class MetricsSinkAdapter implements SinkQueue.Consumer<MetricsBuffer> {
       sinkThread.join();
     } catch (InterruptedException e) {
       LOG.warn("Stop interrupted", e);
+      Thread.currentThread().interrupt();
     }
   }
 
@@ -246,6 +247,7 @@ class MetricsSinkAdapter implements SinkQueue.Consumer<MetricsBuffer> {
         return notificationSemaphore.tryAcquire(millisecondsToWait,
             TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         return false;
       }
     }

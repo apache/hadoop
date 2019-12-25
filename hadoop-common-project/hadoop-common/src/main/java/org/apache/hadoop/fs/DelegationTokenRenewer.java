@@ -205,6 +205,7 @@ public class DelegationTokenRenewer
         INSTANCE.join();
       } catch (InterruptedException e) {
         LOG.warn("Failed to reset renewer");
+        Thread.currentThread().interrupt();
       } finally {
         INSTANCE = null;
       }
@@ -242,7 +243,8 @@ public class DelegationTokenRenewer
       } catch (InterruptedException ie) {
         LOG.error("Interrupted while canceling token for " + fs.getUri()
             + "filesystem");
-        LOG.debug("Exception in removeRenewAction: {}", ie);
+        LOG.debug("Exception in removeRenewAction", ie);
+        Thread.currentThread().interrupt();
       }
     }
   }
@@ -258,6 +260,7 @@ public class DelegationTokenRenewer
           queue.add(action);
         }
       } catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
         return;
       } catch (Exception ie) {
         action.weakFs.get().LOG.warn("Failed to renew token, action=" + action,

@@ -282,13 +282,17 @@ public class RetryCache {
         "Entry from the cache should not be null");
     // Wait for in progress request to complete
     synchronized (mapEntry) {
+      boolean interrupted = false;
       while (mapEntry.state == CacheEntry.INPROGRESS) {
         try {
           mapEntry.wait();
         } catch (InterruptedException ie) {
-          // Restore the interrupted status
-          Thread.currentThread().interrupt();
+          interrupted = true;
         }
+      }
+      if (interrupted) {
+        // Restore the interrupted status
+        Thread.currentThread().interrupt();
       }
       // Previous request has failed, the expectation is is that it will be
       // retried again.

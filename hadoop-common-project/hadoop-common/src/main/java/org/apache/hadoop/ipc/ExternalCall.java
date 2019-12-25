@@ -56,13 +56,7 @@ public abstract class ExternalCall<T> extends Call {
   private void waitForCompletion() throws InterruptedException {
     synchronized(done) {
       while (!done.get()) {
-        try {
-          done.wait();
-        } catch (InterruptedException ie) {
-          if (Thread.interrupted()) {
-            throw ie;
-          }
-        }
+        done.wait();
       }
     }
   }

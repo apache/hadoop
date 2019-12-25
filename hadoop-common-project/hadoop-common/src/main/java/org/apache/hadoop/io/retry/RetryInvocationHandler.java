@@ -130,13 +130,9 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
           Thread.sleep(retryInfo.delay);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Interrupted while waiting to retry", e);
-          }
-          InterruptedIOException intIOE = new InterruptedIOException(
-              "Retry interrupted");
-          intIOE.initCause(e);
-          throw intIOE;
+          LOG.debug("Interrupted while waiting to retry", e);
+          throw (InterruptedIOException) new InterruptedIOException(
+              "Retry interrupted").initCause(e);
         }
       }
       processRetryInfo();

@@ -21,6 +21,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_DNS_NAMESERVER_KEY;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -517,7 +518,8 @@ public final class SecurityUtil {
     try {
       return ugi.doAs(action);
     } catch (InterruptedException ie) {
-      throw new IOException(ie);
+      Thread.currentThread().interrupt();
+      throw new InterruptedIOException("Action interrupted");
     }
   }
 

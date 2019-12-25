@@ -1044,12 +1044,10 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
+    } catch (IOException ioe) {
+      throw ioe;
     } catch (Exception e) {
-      if (e instanceof IOException) {
-        throw (IOException) e;
-      } else {
-        throw new IOException(e);
-      }
+      throw new IOException(e);
     }
     return token;
   }

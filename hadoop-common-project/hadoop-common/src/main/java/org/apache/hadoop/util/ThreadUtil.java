@@ -21,6 +21,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.util.concurrent.Uninterruptibles;
+
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -35,8 +37,13 @@ public class ThreadUtil {
    * {@link InterruptedException} encountered.
    * 
    * @param millis the number of milliseconds for the current thread to sleep
+   *
+   * @deprecated Use
+   *             {@link Uninterruptibles#sleepUninterruptibly(long, java.util.concurrent.TimeUnit)}
    */
+  @Deprecated
   public static void sleepAtLeastIgnoreInterrupts(long millis) {
+    boolean interrupted = false;
     long start = Time.now();
     while (Time.now() - start < millis) {
       long timeToSleep = millis -
@@ -45,7 +52,11 @@ public class ThreadUtil {
         Thread.sleep(timeToSleep);
       } catch (InterruptedException ie) {
         LOG.warn("interrupted while sleeping", ie);
+        interrupted = true;
       }
+    }
+    if (interrupted) {
+      Thread.currentThread().interrupt();
     }
   }
 

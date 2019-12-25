@@ -94,6 +94,7 @@ class Tail extends FsCommand {
       try {
         Thread.sleep(followDelay);
       } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         break;
       }
       offset = dumpFromOffset(item, offset);

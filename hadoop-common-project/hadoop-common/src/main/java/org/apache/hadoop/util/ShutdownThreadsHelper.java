@@ -63,6 +63,7 @@ public class ShutdownThreadsHelper {
       return true;
     } catch (InterruptedException ie) {
       LOG.warn("Interrupted while shutting down thread - " + thread.getName());
+      Thread.currentThread().interrupt();
       return false;
     }
   }

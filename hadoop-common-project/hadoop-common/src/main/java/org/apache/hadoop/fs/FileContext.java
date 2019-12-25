@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -351,9 +352,10 @@ public class FileContext implements PathCapabilities {
         throw ex;
       }
     } catch (InterruptedException ex) {
-      LOG.error(ex.toString());
-      throw new IOException("Failed to get the AbstractFileSystem for path: "
-          + uri, ex);
+      LOG.debug("Thread interrupted", ex);
+      Thread.currentThread().interrupt();
+      throw new InterruptedIOException(
+          "Failed to get the AbstractFileSystem for path: " + uri);
     }
   }
   

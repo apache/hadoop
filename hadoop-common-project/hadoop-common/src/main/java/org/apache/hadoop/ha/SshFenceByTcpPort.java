@@ -163,6 +163,7 @@ public class SshFenceByTcpPort extends Configured
       return rc == 0;
     } catch (InterruptedException e) {
       LOG.warn("Interrupted while trying to fence via ssh", e);
+      Thread.currentThread().interrupt();
       return false;
     } catch (IOException e) {
       LOG.warn("Unknown failure while trying to fence via ssh", e);

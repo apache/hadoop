@@ -21,6 +21,9 @@ package org.apache.hadoop.fs.shell;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import com.google.common.util.concurrent.Uninterruptibles;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -134,7 +137,7 @@ class SetReplication extends FsCommand {
         
         out.print(".");
         out.flush();
-        try {Thread.sleep(10000);} catch (InterruptedException e) {}
+        Uninterruptibles.sleepUninterruptibly(10L, TimeUnit.SECONDS);
       }
       out.println(" done");
     }

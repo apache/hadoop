@@ -994,6 +994,7 @@ public class UserGroupInformation {
           rp = null;
         } catch (InterruptedException ie) {
           LOG.warn("Terminating renewal thread");
+          Thread.currentThread().interrupt();
           return;
         } catch (IOException ie) {
           metrics.renewalFailuresTotal.incr();

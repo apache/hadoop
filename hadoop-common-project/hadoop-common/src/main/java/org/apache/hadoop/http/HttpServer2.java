@@ -1248,6 +1248,7 @@ public final class HttpServer2 implements FilterContainer {
     } catch (IOException e) {
       throw e;
     } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw (IOException) new InterruptedIOException(
           "Interrupted while starting HTTP server").initCause(e);
     } catch (Exception e) {
