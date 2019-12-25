@@ -289,11 +289,16 @@ public class INodeDirectory extends INodeWithAdditionalFields
         leaseManager, captureOpenFiles, maxSnapshotLimit, mtime);
   }
 
+  /**
+   * Delete a snapshot.
+   * @param snapshotName Name of the snapshot.
+   * @param mtime The snapshot deletion time set by Time.now().
+   */
   public Snapshot removeSnapshot(
-      ReclaimContext reclaimContext, String snapshotName)
+      ReclaimContext reclaimContext, String snapshotName, long mtime)
       throws SnapshotException {
     return getDirectorySnapshottableFeature().removeSnapshot(
-        reclaimContext, this, snapshotName);
+        reclaimContext, this, snapshotName, mtime);
   }
 
   /**
