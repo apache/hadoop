@@ -69,8 +69,8 @@ import org.junit.Test;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.*;
-
 
 /**
  * <p>
@@ -477,10 +477,10 @@ abstract public class ViewFileSystemBaseTest {
     Assert.assertEquals(targetBL.length, viewBL.length);
     int i = 0;
     for (BlockLocation vbl : viewBL) {
-      Assert.assertEquals(vbl.toString(), targetBL[i].toString());
-      Assert.assertEquals(targetBL[i].getOffset(), vbl.getOffset());
-      Assert.assertEquals(targetBL[i].getLength(), vbl.getLength());
-      i++;     
+      assertThat(vbl.toString(), equalTo(targetBL[i].toString()));
+      assertThat(vbl.getOffset(), equalTo(targetBL[i].getOffset()));
+      assertThat(vbl.getLength(), equalTo(targetBL[i].getLength()));
+      i++;
     } 
   }
 

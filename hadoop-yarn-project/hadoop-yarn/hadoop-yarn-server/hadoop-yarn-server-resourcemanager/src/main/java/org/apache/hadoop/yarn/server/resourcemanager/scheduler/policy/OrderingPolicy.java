@@ -129,4 +129,10 @@ public interface OrderingPolicy<S extends SchedulableEntity> {
    */
   public String getInfo();
 
+  /**
+   * Return configuration name (which will be used to set ordering policy).
+   * @return configuration name
+   */
+  String getConfigName();
+
 }

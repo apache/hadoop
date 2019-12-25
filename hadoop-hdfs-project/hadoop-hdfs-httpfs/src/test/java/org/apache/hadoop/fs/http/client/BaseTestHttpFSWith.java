@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -1141,7 +1142,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     LIST_STATUS_BATCH, GETTRASHROOT, STORAGEPOLICY, ERASURE_CODING,
     CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT,
     ALLOW_SNAPSHOT, DISALLOW_SNAPSHOT, DISALLOW_SNAPSHOT_EXCEPTION,
-    FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST
+    FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST,
+    GET_SERVERDEFAULTS, CHECKACCESS
   }
 
   private void operation(Operation op) throws Exception {
@@ -1262,7 +1264,14 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     case GET_SNAPSHOTTABLE_DIRECTORY_LIST:
       testGetSnapshottableDirListing();
       break;
+    case GET_SERVERDEFAULTS:
+      testGetServerDefaults();
+      break;
+    case CHECKACCESS:
+      testAccess();
+      break;
     }
+
   }
 
   @Parameterized.Parameters
@@ -1701,5 +1710,62 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     Assert.assertTrue(strEntries.contains(aclGroup));
     // Clean up
     proxyFs.delete(new Path(dir), true);
+  }
+
+  private void verifyGetServerDefaults(FileSystem fs, DistributedFileSystem dfs)
+      throws Exception {
+    FsServerDefaults sds = null;
+    if (fs instanceof HttpFSFileSystem) {
+      HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+      sds = httpFS.getServerDefaults();
+    } else if (fs instanceof WebHdfsFileSystem) {
+      WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+      sds = webHdfsFileSystem.getServerDefaults();
+    } else {
+      Assert.fail(
+          fs.getClass().getSimpleName() + " doesn't support getServerDefaults");
+    }
+    // Verify result with DFS
+    FsServerDefaults dfssds = dfs.getServerDefaults();
+    Assert.assertEquals(JsonUtil.toJsonString(sds),
+        JsonUtil.toJsonString(dfssds));
+  }
+
+  private void testGetServerDefaults() throws Exception {
+    if (!this.isLocalFS()) {
+      FileSystem fs = this.getHttpFSFileSystem();
+      Path path1 = new Path("/");
+      DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+          .get(path1.toUri(), this.getProxiedFSConf());
+      verifyGetServerDefaults(fs, dfs);
+    }
+  }
+
+  private void testAccess() throws Exception {
+    if (!this.isLocalFS()) {
+      FileSystem fs = this.getHttpFSFileSystem();
+      Path path1 = new Path("/");
+      DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+          .get(path1.toUri(), this.getProxiedFSConf());
+      verifyAccess(fs, dfs);
+    }
+  }
+
+  private void verifyAccess(FileSystem fs, DistributedFileSystem dfs)
+      throws Exception {
+    Path p1 = new Path("/p1");
+    dfs.mkdirs(p1);
+    dfs.setOwner(p1, "user1", "group1");
+    dfs.setPermission(p1, new FsPermission((short) 0444));
+
+    if (fs instanceof HttpFSFileSystem) {
+      HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+      httpFS.access(p1, FsAction.READ);
+    } else if (fs instanceof WebHdfsFileSystem) {
+      WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+      webHdfsFileSystem.access(p1, FsAction.READ);
+    } else {
+      Assert.fail(fs.getClass().getSimpleName() + " doesn't support access");
+    }
   }
 }

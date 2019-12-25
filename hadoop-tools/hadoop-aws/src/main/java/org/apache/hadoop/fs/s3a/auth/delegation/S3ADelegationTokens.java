@@ -352,7 +352,7 @@ public class S3ADelegationTokens extends AbstractDTService {
 
   /**
    * Predicate: will this binding issue a DT if requested
-   * in a call to {@link #getBoundOrNewDT(EncryptionSecrets)}?
+   * in a call to {@link #getBoundOrNewDT(EncryptionSecrets, Text)}?
    * That is: should the filesystem declare that it is issuing
    * delegation tokens?
    * @return a declaration of what will happen when asked for a token.
@@ -368,10 +368,12 @@ public class S3ADelegationTokens extends AbstractDTService {
    * @return a delegation token.
    * @throws IOException if one cannot be created
    * @param encryptionSecrets encryption secrets for any new token.
+   * @param renewer the token renewer.
    */
   @SuppressWarnings("OptionalGetWithoutIsPresent")
   public Token<AbstractS3ATokenIdentifier> getBoundOrNewDT(
-      final EncryptionSecrets encryptionSecrets)
+      final EncryptionSecrets encryptionSecrets,
+      final Text renewer)
       throws IOException {
     LOG.debug("Delegation token requested");
     if (isBoundToDT()) {
@@ -382,13 +384,13 @@ public class S3ADelegationTokens extends AbstractDTService {
       // not bound to a token, so create a new one.
       // issued DTs are not cached so that long-lived filesystems can
       // reliably issue session/role tokens.
-      return createDelegationToken(encryptionSecrets);
+      return createDelegationToken(encryptionSecrets, renewer);
     }
   }
 
   /**
    * How many delegation tokens have been issued?
-   * @return the number times {@link #createDelegationToken(EncryptionSecrets)}
+   * @return the number times {@link #createDelegationToken(EncryptionSecrets, Text)}
    * returned a token.
    */
   public int getCreationCount() {
@@ -400,12 +402,14 @@ public class S3ADelegationTokens extends AbstractDTService {
    * This will only be called if a new DT is needed, that is: the
    * filesystem has been deployed unbonded.
    * @param encryptionSecrets encryption secrets for the token.
+   * @param renewer the token renewer
    * @return the token
    * @throws IOException if one cannot be created
    */
   @VisibleForTesting
   public Token<AbstractS3ATokenIdentifier> createDelegationToken(
-      final EncryptionSecrets encryptionSecrets) throws IOException {
+      final EncryptionSecrets encryptionSecrets,
+      final Text renewer) throws IOException {
     requireServiceStarted();
     checkArgument(encryptionSecrets != null,
         "Null encryption secrets");
@@ -420,7 +424,7 @@ public class S3ADelegationTokens extends AbstractDTService {
     try(DurationInfo ignored = new DurationInfo(LOG, DURATION_LOG_AT_INFO,
         "Creating New Delegation Token", tokenBinding.getKind())) {
       Token<AbstractS3ATokenIdentifier> token
-          = tokenBinding.createDelegationToken(rolePolicy, encryptionSecrets);
+          = tokenBinding.createDelegationToken(rolePolicy, encryptionSecrets, renewer);
       if (token != null) {
         token.setService(service);
         noteTokenCreated(token);

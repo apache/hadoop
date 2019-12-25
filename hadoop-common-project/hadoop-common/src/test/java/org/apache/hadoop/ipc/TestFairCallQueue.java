@@ -31,7 +31,13 @@ import static org.mockito.Mockito.times;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -49,6 +55,8 @@ import org.mockito.Mockito;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestFairCallQueue {
   private FairCallQueue<Schedulable> fcq;
@@ -85,17 +93,17 @@ public class TestFairCallQueue {
     Configuration conf = new Configuration();
     FairCallQueue<Schedulable> fairCallQueue;
     fairCallQueue = new FairCallQueue<Schedulable>(1, 1000, "ns", conf);
-    assertEquals(fairCallQueue.remainingCapacity(), 1000);
+    assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1000);
     fairCallQueue = new FairCallQueue<Schedulable>(4, 1000, "ns", conf);
-    assertEquals(fairCallQueue.remainingCapacity(), 1000);
+    assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1000);
     fairCallQueue = new FairCallQueue<Schedulable>(7, 1000, "ns", conf);
-    assertEquals(fairCallQueue.remainingCapacity(), 1000);
+    assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1000);
     fairCallQueue = new FairCallQueue<Schedulable>(1, 1025, "ns", conf);
-    assertEquals(fairCallQueue.remainingCapacity(), 1025);
+    assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1025);
     fairCallQueue = new FairCallQueue<Schedulable>(4, 1025, "ns", conf);
-    assertEquals(fairCallQueue.remainingCapacity(), 1025);
+    assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1025);
     fairCallQueue = new FairCallQueue<Schedulable>(7, 1025, "ns", conf);
-    assertEquals(fairCallQueue.remainingCapacity(), 1025);
+    assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1025);
   }
 
   @Test

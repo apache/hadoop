@@ -177,7 +177,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         csContext.getRMContext().getHAServiceState()
             != HAServiceProtocol.HAServiceState.STANDBY) {
       // Ensure queue hierarchy in the new XML file is proper.
-      validateQueueHierarchy(queues, newQueues);
+      validateQueueHierarchy(queues, newQueues, newConf);
     }
 
     // Add new queues and delete OldQeueus only after validation.
@@ -309,7 +309,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
    * @param newQueues new queues
    */
   private void validateQueueHierarchy(Map<String, CSQueue> queues,
-      Map<String, CSQueue> newQueues) throws IOException {
+      Map<String, CSQueue> newQueues, CapacitySchedulerConfiguration newConf)
+      throws IOException {
     // check that all static queues are included in the newQueues list
     for (Map.Entry<String, CSQueue> e : queues.entrySet()) {
       if (!(AbstractAutoCreatedLeafQueue.class.isAssignableFrom(e.getValue()
@@ -319,7 +320,18 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         CSQueue newQueue = newQueues.get(queueName);
         if (null == newQueue) {
           // old queue doesn't exist in the new XML
-          if (oldQueue.getState() == QueueState.STOPPED) {
+          String configPrefix = newConf.getQueuePrefix(
+              oldQueue.getQueuePath());
+          QueueState newQueueState = null;
+          try {
+            newQueueState = QueueState.valueOf(
+                newConf.get(configPrefix + "state"));
+          } catch (Exception ex) {
+            LOG.warn("Not a valid queue state for queue "
+                + oldQueue.getQueuePath());
+          }
+          if (oldQueue.getState() == QueueState.STOPPED ||
+              newQueueState == QueueState.STOPPED) {
             LOG.info("Deleting Queue " + queueName + ", as it is not"
                 + " present in the modified capacity configuration xml");
           } else{

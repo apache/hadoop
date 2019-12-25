@@ -46,8 +46,7 @@ import java.util.concurrent.CompletableFuture;
 import static org.apache.hadoop.fs.Options.ChecksumOpt;
 import static org.apache.hadoop.fs.Options.CreateOpts;
 import static org.apache.hadoop.fs.Options.Rename;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @SuppressWarnings("deprecation")
 public class TestHarFileSystem {
@@ -279,13 +278,8 @@ public class TestHarFileSystem {
   @Test
   public void testFileChecksum() throws Exception {
     final Path p = new Path("har://file-localhost/foo.har/file1");
-    final HarFileSystem harfs = new HarFileSystem();
-    try {
-      Assert.assertEquals(null, harfs.getFileChecksum(p));
-    } finally {
-      if (harfs != null) {
-        harfs.close();
-      }
+    try (HarFileSystem harfs = new HarFileSystem()) {
+      assertThat(harfs.getFileChecksum(p)).isNull();
     }
   }
 
@@ -299,30 +293,30 @@ public class TestHarFileSystem {
       // case 1: range starts before current har block and ends after
       BlockLocation[] b = { new BlockLocation(null, null, 10, 10) };
       HarFileSystem.fixBlockLocations(b, 0, 20, 5);
-      assertEquals(b[0].getOffset(), 5);
-      assertEquals(b[0].getLength(), 10);
+      assertThat(b[0].getOffset()).isEqualTo(5);
+      assertThat(b[0].getLength()).isEqualTo(10);
     }
     {
       // case 2: range starts in current har block and ends after
       BlockLocation[] b = { new BlockLocation(null, null, 10, 10) };
       HarFileSystem.fixBlockLocations(b, 0, 20, 15);
-      assertEquals(b[0].getOffset(), 0);
-      assertEquals(b[0].getLength(), 5);
+      assertThat(b[0].getOffset()).isZero();
+      assertThat(b[0].getLength()).isEqualTo(5);
     }
     {
       // case 3: range starts before current har block and ends in
       // current har block
       BlockLocation[] b = { new BlockLocation(null, null, 10, 10) };
       HarFileSystem.fixBlockLocations(b, 0, 10, 5);
-      assertEquals(b[0].getOffset(), 5);
-      assertEquals(b[0].getLength(), 5);
+      assertThat(b[0].getOffset()).isEqualTo(5);
+      assertThat(b[0].getLength()).isEqualTo(5);
     }
     {
       // case 4: range starts and ends in current har block
       BlockLocation[] b = { new BlockLocation(null, null, 10, 10) };
       HarFileSystem.fixBlockLocations(b, 0, 6, 12);
-      assertEquals(b[0].getOffset(), 0);
-      assertEquals(b[0].getLength(), 6);
+      assertThat(b[0].getOffset()).isZero();
+      assertThat(b[0].getLength()).isEqualTo(6);
     }
 
     // now try a range where start == 3
@@ -330,30 +324,30 @@ public class TestHarFileSystem {
       // case 5: range starts before current har block and ends after
       BlockLocation[] b = { new BlockLocation(null, null, 10, 10) };
       HarFileSystem.fixBlockLocations(b, 3, 20, 5);
-      assertEquals(b[0].getOffset(), 5);
-      assertEquals(b[0].getLength(), 10);
+      assertThat(b[0].getOffset()).isEqualTo(5);
+      assertThat(b[0].getLength()).isEqualTo(10);
     }
     {
       // case 6: range starts in current har block and ends after
       BlockLocation[] b = { new BlockLocation(null, null, 10, 10) };
       HarFileSystem.fixBlockLocations(b, 3, 20, 15);
-      assertEquals(b[0].getOffset(), 3);
-      assertEquals(b[0].getLength(), 2);
+      assertThat(b[0].getOffset()).isEqualTo(3);
+      assertThat(b[0].getLength()).isEqualTo(2);
     }
     {
       // case 7: range starts before current har block and ends in
       // current har block
       BlockLocation[] b = { new BlockLocation(null, null, 10, 10) };
       HarFileSystem.fixBlockLocations(b, 3, 7, 5);
-      assertEquals(b[0].getOffset(), 5);
-      assertEquals(b[0].getLength(), 5);
+      assertThat(b[0].getOffset()).isEqualTo(5);
+      assertThat(b[0].getLength()).isEqualTo(5);
     }
     {
       // case 8: range starts and ends in current har block
       BlockLocation[] b = { new BlockLocation(null, null, 10, 10) };
       HarFileSystem.fixBlockLocations(b, 3, 3, 12);
-      assertEquals(b[0].getOffset(), 3);
-      assertEquals(b[0].getLength(), 3);
+      assertThat(b[0].getOffset()).isEqualTo(3);
+      assertThat(b[0].getLength()).isEqualTo(3);
     }
 
     // test case from JIRA MAPREDUCE-1752
@@ -361,10 +355,10 @@ public class TestHarFileSystem {
       BlockLocation[] b = { new BlockLocation(null, null, 512, 512),
                             new BlockLocation(null, null, 1024, 512) };
       HarFileSystem.fixBlockLocations(b, 0, 512, 896);
-      assertEquals(b[0].getOffset(), 0);
-      assertEquals(b[0].getLength(), 128);
-      assertEquals(b[1].getOffset(), 128);
-      assertEquals(b[1].getLength(), 384);
+      assertThat(b[0].getOffset()).isZero();
+      assertThat(b[0].getLength()).isEqualTo(128);
+      assertThat(b[1].getOffset()).isEqualTo(128);
+      assertThat(b[1].getLength()).isEqualTo(384);
     }
   }
 
@@ -396,7 +390,9 @@ public class TestHarFileSystem {
         }
       }
     }
-    assertTrue((errors + " methods were not overridden correctly - see log"),
-        errors <= 0);
+    assertThat(errors)
+        .withFailMessage(errors +
+            " methods were not overridden correctly - see log")
+        .isLessThanOrEqualTo(0);
   }
 }

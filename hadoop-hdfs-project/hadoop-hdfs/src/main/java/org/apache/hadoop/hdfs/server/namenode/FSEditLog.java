@@ -1116,10 +1116,19 @@ public class FSEditLog implements LogsPurgeable {
       .setNewHolder(newHolder);
     logEdit(op);
   }
-  
-  void logCreateSnapshot(String snapRoot, String snapName, boolean toLogRpcIds) {
+
+  /**
+   * Log that a snapshot is created.
+   * @param snapRoot Root of the snapshot.
+   * @param snapName Name of the snapshot.
+   * @param toLogRpcIds If it is logging RPC ids.
+   * @param mtime The snapshot creation time set by Time.now().
+   */
+  void logCreateSnapshot(String snapRoot, String snapName, boolean toLogRpcIds,
+      long mtime) {
     CreateSnapshotOp op = CreateSnapshotOp.getInstance(cache.get())
-        .setSnapshotRoot(snapRoot).setSnapshotName(snapName);
+        .setSnapshotRoot(snapRoot).setSnapshotName(snapName)
+        .setSnapshotMTime(mtime);
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
@@ -1131,11 +1140,19 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
   
+  /**
+   * Log that a snapshot is renamed.
+   * @param path Root of the snapshot.
+   * @param snapOldName Old name of the snapshot.
+   * @param snapNewName New name the snapshot will be renamed to.
+   * @param toLogRpcIds If it is logging RPC ids.
+   * @param mtime The snapshot modification time set by Time.now().
+   */
   void logRenameSnapshot(String path, String snapOldName, String snapNewName,
-      boolean toLogRpcIds) {
+      boolean toLogRpcIds, long mtime) {
     RenameSnapshotOp op = RenameSnapshotOp.getInstance(cache.get())
         .setSnapshotRoot(path).setSnapshotOldName(snapOldName)
-        .setSnapshotNewName(snapNewName);
+        .setSnapshotNewName(snapNewName).setSnapshotMTime(mtime);
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }

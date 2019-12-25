@@ -85,7 +85,7 @@ Optional packages:
 * Linux FUSE
   $ sudo apt-get install fuse libfuse-dev
 * ZStandard compression
-    $ sudo apt-get install zstd
+  $ sudo apt-get install libzstd1-dev
 * PMDK library for storage class memory(SCM) as HDFS cache backend
   Please refer to http://pmem.io/ and https://github.com/pmem/pmdk
 
@@ -104,8 +104,6 @@ Maven main modules:
          - hadoop-hdfs-project          (Hadoop HDFS)
          - hadoop-yarn-project          (Hadoop YARN)
          - hadoop-mapreduce-project     (Hadoop MapReduce)
-         - hadoop-ozone                 (Hadoop Ozone)
-         - hadoop-hdds                  (Hadoop Distributed Data Store)
          - hadoop-tools                 (Hadoop tools like Streaming, Distcp, etc.)
          - hadoop-dist                  (Hadoop distribution assembler)
          - hadoop-client-modules        (Hadoop client modules)

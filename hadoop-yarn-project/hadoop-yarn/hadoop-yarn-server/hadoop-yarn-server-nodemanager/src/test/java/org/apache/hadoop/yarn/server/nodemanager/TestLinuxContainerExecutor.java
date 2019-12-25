@@ -717,6 +717,14 @@ public class TestLinuxContainerExecutor {
     verify(lce, times(1)).updateYarnSysFS(ctx, user, appId, spec);
   }
 
+  @Test
+  public void testGetLocalResources() throws Exception {
+    Container container = mock(Container.class);
+    LinuxContainerExecutor lce = mock(LinuxContainerExecutor.class);
+    lce.getLocalResources(container);
+    verify(lce, times(1)).getLocalResources(container);
+  }
+
   private static class TestResourceHandler implements LCEResourcesHandler {
     static Set<ContainerId> postExecContainers = new HashSet<ContainerId>();
 

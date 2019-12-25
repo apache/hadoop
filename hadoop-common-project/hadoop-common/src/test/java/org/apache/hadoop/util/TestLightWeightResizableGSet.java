@@ -27,7 +27,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /** Testing {@link LightWeightResizableGSet} */
 public class TestLightWeightResizableGSet {
@@ -132,23 +132,23 @@ public class TestLightWeightResizableGSet {
     final LightWeightResizableGSet<TestKey, TestElement> set =
         new LightWeightResizableGSet<TestKey, TestElement>();
 
-    assertEquals(set.size(), 0);
+    assertThat(set.size()).isZero();
 
     // put all elements
     for (int i = 0; i < elements.length; i++) {
       TestElement element = set.put(elements[i]);
-      assertTrue(element == null);
+      assertThat(element).isNull();
     }
 
     // check the set size
-    assertEquals(set.size(), elements.length);
+    assertThat(set.size()).isEqualTo(elements.length);
 
     // check all elements exist in the set and the data is correct
     for (int i = 0; i < elements.length; i++) {
-      assertTrue(set.contains(elements[i]));
+      assertThat(set.contains(elements[i])).isTrue();
 
       TestElement element = set.get(elements[i]);
-      assertEquals(elements[i].getData(), element.getData());
+      assertThat(elements[i].getData()).isEqualTo(element.getData());
     }
 
     TestKey[] keys = getKeys(elements);
@@ -157,39 +157,38 @@ public class TestLightWeightResizableGSet {
     // update the set
     for (int i = 0; i < newElements.length; i++) {
       TestElement element = set.put(newElements[i]);
-      assertTrue(element != null);
+      assertThat(element).isNotNull();
     }
 
     // check the set size
-    assertEquals(set.size(), elements.length);
+    assertThat(set.size()).isEqualTo(elements.length);
 
     // check all elements exist in the set and the data is updated to new value
     for (int i = 0; i < keys.length; i++) {
-      assertTrue(set.contains(keys[i]));
+      assertThat(set.contains(keys[i])).isTrue();
 
       TestElement element = set.get(keys[i]);
-      assertEquals(newElements[i].getData(), element.getData());
+      assertThat(newElements[i].getData()).isEqualTo(element.getData());
     }
 
     // test LightWeightHashGSet#values
     Collection<TestElement> cElements = set.values();
-    assertEquals(cElements.size(), elements.length);
+    assertThat(cElements.size()).isEqualTo(elements.length);
     for (TestElement element : cElements) {
-      assertTrue(set.contains(element));
+      assertThat(set.contains(element)).isTrue();
     }
 
     // remove elements
     for (int i = 0; i < keys.length; i++) {
       TestElement element = set.remove(keys[i]);
-
-      assertTrue(element != null);
+      assertThat(element).isNotNull();
 
       // the element should not exist after remove
-      assertFalse(set.contains(keys[i]));
+      assertThat(set.contains(keys[i])).isFalse();
     }
 
     // check the set size
-    assertEquals(set.size(), 0);
+    assertThat(set.size()).isZero();
   }
 
   @Test(timeout = 60000)
@@ -198,33 +197,33 @@ public class TestLightWeightResizableGSet {
     final LightWeightResizableGSet<TestKey, TestElement> set =
         new LightWeightResizableGSet<TestKey, TestElement>();
 
-    assertEquals(set.size(), 0);
+    assertThat(set.size()).isZero();
 
     // put all elements
     for (int i = 0; i < elements.length; i++) {
       TestElement element = set.put(elements[i]);
-      assertTrue(element == null);
+      assertThat(element).isNull();
     }
 
     // check the set size
-    assertEquals(set.size(), elements.length);
+    assertThat(set.size()).isEqualTo(elements.length);
 
     // remove all through clear
     {
       set.clear();
-      assertEquals(set.size(), 0);
+      assertThat(set.size()).isZero();
 
       // check all elements removed
       for (int i = 0; i < elements.length; i++) {
-        assertFalse(set.contains(elements[i]));
+        assertThat(set.contains(elements[i])).isFalse();
       }
-      assertFalse(set.iterator().hasNext());
+      assertThat(set.iterator().hasNext()).isFalse();
     }
 
     // put all elements back
     for (int i = 0; i < elements.length; i++) {
       TestElement element = set.put(elements[i]);
-      assertTrue(element == null);
+      assertThat(element).isNull();
     }
 
     // remove all through iterator
@@ -232,22 +231,22 @@ public class TestLightWeightResizableGSet {
       for (Iterator<TestElement> iter = set.iterator(); iter.hasNext(); ) {
         TestElement element = iter.next();
         // element should be there before removing
-        assertTrue(set.contains(element));
+        assertThat(set.contains(element)).isTrue();
         iter.remove();
         // element should not be there now
-        assertFalse(set.contains(element));
+        assertThat(set.contains(element)).isFalse();
       }
 
       // the deleted elements should not be there
       for (int i = 0; i < elements.length; i++) {
-        assertFalse(set.contains(elements[i]));
+        assertThat(set.contains(elements[i])).isFalse();
       }
 
       // iterator should not have next
-      assertFalse(set.iterator().hasNext());
+      assertThat(set.iterator().hasNext()).isFalse();
 
       // check the set size
-      assertEquals(set.size(), 0);
+      assertThat(set.size()).isZero();
     }
   }
 }

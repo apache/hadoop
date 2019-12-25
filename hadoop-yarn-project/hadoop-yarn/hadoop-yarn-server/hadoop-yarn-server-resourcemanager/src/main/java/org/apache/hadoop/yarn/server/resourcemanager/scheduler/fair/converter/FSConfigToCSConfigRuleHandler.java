@@ -35,7 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Class that determines what should happen if the FS->CS converter
+ * Class that determines what should happen if the FS-&gt;CS converter
  * encounters a property that is currently not supported.
  *
  * Acceptable values are either "abort" or "warning".

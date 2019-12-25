@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
 
 /** The class represents a cluster of computer with a tree hierarchical
  * network topology.
@@ -874,11 +875,33 @@ public class NetworkTopology {
      * This method is called if the reader is a datanode,
      * so nonDataNodeReader flag is set to false.
      */
-    sortByDistance(reader, nodes, activeLen, false);
+    sortByDistance(reader, nodes, activeLen, list -> Collections.shuffle(list));
   }
 
   /**
-   * Sort nodes array by network distance to <i>reader</i>.
+   * Sort nodes array by network distance to <i>reader</i> with secondary sort.
+   * <p>
+   * In a three-level topology, a node can be either local, on the same rack,
+   * or on a different rack from the reader. Sorting the nodes based on network
+   * distance from the reader reduces network traffic and improves
+   * performance.
+   * <p>
+   * As an additional twist, we also randomize the nodes at each network
+   * distance. This helps with load balancing when there is data skew.
+   *
+   * @param reader    Node where data will be read
+   * @param nodes     Available replicas with the requested data
+   * @param activeLen Number of active nodes at the front of the array
+   * @param secondarySort a secondary sorting strategy which can inject into
+   *     that point from outside to help sort the same distance.
+   */
+  public <T extends Node> void sortByDistance(Node reader, T[] nodes,
+      int activeLen, Consumer<List<T>> secondarySort){
+    sortByDistance(reader, nodes, activeLen, secondarySort, false);
+  }
+
+  /**
+   * Sort nodes array by network distance to <i>reader</i> with secondary sort.
    * <p> using network location. This is used when the reader
    * is not a datanode. Sorting the nodes based on network distance
    * from the reader reduces network traffic and improves
@@ -895,7 +918,27 @@ public class NetworkTopology {
      * This method is called if the reader is not a datanode,
      * so nonDataNodeReader flag is set to true.
      */
-    sortByDistance(reader, nodes, activeLen, true);
+    sortByDistanceUsingNetworkLocation(reader, nodes, activeLen,
+        list -> Collections.shuffle(list));
+  }
+
+  /**
+   * Sort nodes array by network distance to <i>reader</i>.
+   * <p> using network location. This is used when the reader
+   * is not a datanode. Sorting the nodes based on network distance
+   * from the reader reduces network traffic and improves
+   * performance.
+   * <p>
+   *
+   * @param reader    Node where data will be read
+   * @param nodes     Available replicas with the requested data
+   * @param activeLen Number of active nodes at the front of the array
+   * @param secondarySort a secondary sorting strategy which can inject into
+   *     that point from outside to help sort the same distance.
+   */
+  public <T extends Node> void sortByDistanceUsingNetworkLocation(Node reader,
+      T[] nodes, int activeLen, Consumer<List<T>> secondarySort) {
+    sortByDistance(reader, nodes, activeLen, secondarySort, true);
   }
 
   /**
@@ -909,7 +952,8 @@ public class NetworkTopology {
    * @param activeLen Number of active nodes at the front of the array
    * @param nonDataNodeReader True if the reader is not a datanode
    */
-  private void sortByDistance(Node reader, Node[] nodes, int activeLen,
+  private <T extends Node> void sortByDistance(Node reader, T[] nodes,
+      int activeLen, Consumer<List<T>> secondarySort,
       boolean nonDataNodeReader) {
     /** Sort weights for the nodes array */
     int[] weights = new int[activeLen];
@@ -921,23 +965,23 @@ public class NetworkTopology {
       }
     }
     // Add weight/node pairs to a TreeMap to sort
-    TreeMap<Integer, List<Node>> tree = new TreeMap<Integer, List<Node>>();
+    TreeMap<Integer, List<T>> tree = new TreeMap<>();
     for (int i=0; i<activeLen; i++) {
       int weight = weights[i];
-      Node node = nodes[i];
-      List<Node> list = tree.get(weight);
+      T node = nodes[i];
+      List<T> list = tree.get(weight);
       if (list == null) {
         list = Lists.newArrayListWithExpectedSize(1);
         tree.put(weight, list);
       }
       list.add(node);
     }
-
+    // Sort nodes which have the same weight using secondarySort.
     int idx = 0;
-    for (List<Node> list: tree.values()) {
+    for (List<T> list: tree.values()) {
       if (list != null) {
-        Collections.shuffle(list, r);
-        for (Node n: list) {
+        secondarySort.accept(list);
+        for (T n: list) {
           nodes[idx] = n;
           idx++;
         }

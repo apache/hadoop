@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.isParentEntry;
+import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import java.util.HashSet;
 import java.util.Map.Entry;
@@ -57,6 +57,21 @@ public class RouterQuotaManager {
     readLock.lock();
     try {
       return this.cache.keySet();
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  /**
+   * Is the path a mount entry.
+   *
+   * @param path the path.
+   * @return {@code true} if path is a mount entry; {@code false} otherwise.
+   */
+  boolean isMountEntry(String path) {
+    readLock.lock();
+    try {
+      return this.cache.containsKey(path);
     } finally {
       readLock.unlock();
     }
@@ -149,6 +164,27 @@ public class RouterQuotaManager {
     writeLock.lock();
     try {
       this.cache.put(path, quotaUsage);
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  /**
+   * Update quota in cache. The usage will be preserved.
+   * @param path Mount table path.
+   * @param quota Corresponding quota value.
+   */
+  public void updateQuota(String path, RouterQuotaUsage quota) {
+    writeLock.lock();
+    try {
+      RouterQuotaUsage.Builder builder = new RouterQuotaUsage.Builder()
+          .quota(quota.getQuota()).spaceQuota(quota.getSpaceQuota());
+      RouterQuotaUsage current = this.cache.get(path);
+      if (current != null) {
+        builder.fileAndDirectoryCount(current.getFileAndDirectoryCount())
+            .spaceConsumed(current.getSpaceConsumed());
+      }
+      this.cache.put(path, builder.build());
     } finally {
       writeLock.unlock();
     }

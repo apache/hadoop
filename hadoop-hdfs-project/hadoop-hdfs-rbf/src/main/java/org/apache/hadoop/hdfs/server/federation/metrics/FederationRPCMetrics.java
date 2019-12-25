@@ -220,6 +220,11 @@ public class FederationRPCMetrics implements FederationRPCMBean {
     return rpcServer.getRPCClient().getJSON();
   }
 
+  @Override
+  public String getAsyncCallerPool() {
+    return rpcServer.getRPCClient().getAsyncCallerPoolJson();
+  }
+
   /**
    * Add the time to proxy an operation from the moment the Router sends it to
    * the Namenode until it replied.

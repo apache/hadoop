@@ -18,8 +18,15 @@
 package org.apache.hadoop.hdfs.server.balancer;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,6 +40,8 @@ import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider;
 import org.junit.Test;
@@ -116,10 +125,25 @@ public class TestBalancerWithHANameNodes {
   /**
    * Test Balancer with ObserverNodes.
    */
-  @Test(timeout = 60000)
+  @Test(timeout = 120000)
   public void testBalancerWithObserver() throws Exception {
+    testBalancerWithObserver(false);
+  }
+
+  /**
+   * Test Balancer with ObserverNodes when one has failed.
+   */
+  @Test(timeout = 180000)
+  public void testBalancerWithObserverWithFailedNode() throws Exception {
+    testBalancerWithObserver(true);
+  }
+
+  private void testBalancerWithObserver(boolean withObserverFailure)
+      throws Exception {
     final Configuration conf = new HdfsConfiguration();
     TestBalancer.initConf(conf);
+    // Avoid the same FS being reused between tests
+    conf.setBoolean("fs.hdfs.impl.disable.cache", true);
 
     MiniQJMHACluster qjmhaCluster = null;
     try {
@@ -128,12 +152,29 @@ public class TestBalancerWithHANameNodes {
       cluster = qjmhaCluster.getDfsCluster();
       cluster.waitClusterUp();
       cluster.waitActive();
+      List<FSNamesystem> namesystemSpies = new ArrayList<>();
+      for (int i = 0; i < cluster.getNumNameNodes(); i++) {
+        namesystemSpies.add(
+            NameNodeAdapter.spyOnNamesystem(cluster.getNameNode(i)));
+      }
+      if (withObserverFailure) {
+        // First observer NN is at index 2
+        cluster.shutdownNameNode(2);
+      }
 
       DistributedFileSystem dfs = HATestUtil.configureObserverReadFs(
           cluster, conf, ObserverReadProxyProvider.class, true);
       client = dfs.getClient().getNamenode();
 
       doTest(conf);
+      for (int i = 0; i < cluster.getNumNameNodes(); i++) {
+        // First observer node is at idx 2, or 3 if 2 has been shut down
+        // It should get both getBlocks calls, all other NNs should see 0 calls
+        int expectedObserverIdx = withObserverFailure ? 3 : 2;
+        int expectedCount = (i == expectedObserverIdx) ? 2 : 0;
+        verify(namesystemSpies.get(i), times(expectedCount))
+            .getBlocks(any(), anyLong(), anyLong());
+      }
     } finally {
       if (qjmhaCluster != null) {
         qjmhaCluster.shutdown();

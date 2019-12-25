@@ -194,7 +194,13 @@ public class DFSNetworkTopology extends NetworkTopology {
     }
     if (!(node instanceof DFSTopologyNodeImpl)) {
       // a node is either DFSTopologyNodeImpl, or a DatanodeDescriptor
-      return ((DatanodeDescriptor)node).hasStorageType(type) ? node : null;
+      // if a node is DatanodeDescriptor and excludedNodes contains it,
+      // return null;
+      if (excludedNodes != null && excludedNodes.contains(node)) {
+        LOG.debug("{} in excludedNodes", node);
+        return null;
+      }
+      return ((DatanodeDescriptor) node).hasStorageType(type) ? node : null;
     }
     DFSTopologyNodeImpl root = (DFSTopologyNodeImpl)node;
     Node excludeRoot = excludedScope == null ? null : getNode(excludedScope);
@@ -259,10 +265,11 @@ public class DFSNetworkTopology extends NetworkTopology {
   }
 
   private boolean isNodeInScope(Node node, String scope) {
-    if (!scope.endsWith("/")) {
-      scope += "/";
+    if (!scope.endsWith(NodeBase.PATH_SEPARATOR_STR)) {
+      scope += NodeBase.PATH_SEPARATOR_STR;
     }
-    String nodeLocation = node.getNetworkLocation() + "/";
+    String nodeLocation =
+        node.getNetworkLocation() + NodeBase.PATH_SEPARATOR_STR;
     return nodeLocation.startsWith(scope);
   }
 

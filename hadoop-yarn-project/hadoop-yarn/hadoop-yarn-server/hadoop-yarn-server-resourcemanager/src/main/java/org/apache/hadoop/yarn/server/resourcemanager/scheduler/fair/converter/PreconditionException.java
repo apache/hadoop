@@ -20,7 +20,7 @@ import org.apache.commons.cli.MissingArgumentException;
 
 /**
  * Indicates that some preconditions were not met
- * before FS->CS conversion.
+ * before FS-&gt;CS conversion.
  *
  */
 public class PreconditionException extends RuntimeException {

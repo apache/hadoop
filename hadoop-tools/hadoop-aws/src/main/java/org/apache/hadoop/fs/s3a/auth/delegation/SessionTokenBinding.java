@@ -353,7 +353,8 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
   @Retries.RetryTranslated
   public SessionTokenIdentifier createTokenIdentifier(
       final Optional<RoleModel.Policy> policy,
-      final EncryptionSecrets encryptionSecrets) throws IOException {
+      final EncryptionSecrets encryptionSecrets,
+      final Text renewer) throws IOException {
     requireServiceStarted();
 
     final MarshalledCredentials marshalledCredentials;
@@ -384,11 +385,12 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
       }
     }
     return new SessionTokenIdentifier(getKind(),
-        getOwnerText(),
-        getCanonicalUri(),
-        marshalledCredentials,
-        encryptionSecrets,
-        origin);
+         getOwnerText(),
+         renewer,
+         getCanonicalUri(),
+         marshalledCredentials,
+         encryptionSecrets,
+         origin);
   }
 
   @Override

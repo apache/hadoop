@@ -17,7 +17,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 /**
- * Thrown by the FS->CS converter if it encounters an
+ * Thrown by the FS-&gt;CS converter if it encounters an
  * unsupported property.
  */
 public class UnsupportedPropertyException extends RuntimeException {

@@ -114,7 +114,10 @@ public class NetworkBinding {
   /**
    * Given an S3 bucket region as returned by a bucket location query,
    * fix it into a form which can be used by other AWS commands.
-   * https://forums.aws.amazon.com/thread.jspa?messageID=796829&tstart=0
+   * <p>
+   * <a href="https://forums.aws.amazon.com/thread.jspa?messageID=796829">
+   * https://forums.aws.amazon.com/thread.jspa?messageID=796829</a>
+   * </p>
    * See also {@code com.amazonaws.services.s3.model.Region.fromValue()}
    * for its conversion logic.
    * @param region region from S3 call.

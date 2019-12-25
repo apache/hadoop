@@ -17,7 +17,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 /**
- * POJO that holds values for the FS->CS converter.
+ * POJO that holds values for the FS-&gt;CS converter.
  *
  */
 public final class FSConfigToCSConfigConverterParams {

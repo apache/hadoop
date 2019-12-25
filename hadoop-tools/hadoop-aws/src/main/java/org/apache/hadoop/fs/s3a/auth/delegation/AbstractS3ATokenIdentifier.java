@@ -103,7 +103,8 @@ public abstract class AbstractS3ATokenIdentifier
    * Constructor.
    * @param kind token kind.
    * @param uri filesystem URI.
-   * @param owner token owner
+   * @param owner token owner.
+   * @param renewer token renewer.
    * @param origin origin text for diagnostics.
    * @param encryptionSecrets encryption secrets to set.
    */
@@ -111,9 +112,14 @@ public abstract class AbstractS3ATokenIdentifier
       final Text kind,
       final URI uri,
       final Text owner,
+      final Text renewer,
       final String origin,
       final EncryptionSecrets encryptionSecrets) {
-    this(kind, owner, new Text(), new Text(), uri);
+    this(kind,
+         owner,
+         (renewer != null ? renewer : new Text()),
+         new Text(),
+         uri);
     this.origin = requireNonNull(origin);
     this.encryptionSecrets = requireNonNull(encryptionSecrets);
   }
@@ -237,6 +243,7 @@ public abstract class AbstractS3ATokenIdentifier
     sb.append(getKind());
     sb.append("; uri=").append(uri);
     sb.append("; timestamp=").append(created);
+    sb.append("; renewer=").append(getRenewer());
     sb.append("; encryption=").append(encryptionSecrets.toString());
     sb.append("; ").append(uuid);
     sb.append("; ").append(origin);

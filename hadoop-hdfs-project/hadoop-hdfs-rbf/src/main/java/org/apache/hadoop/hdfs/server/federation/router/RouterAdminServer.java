@@ -84,6 +84,7 @@ import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolPB;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolServerSideTranslatorPB;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.AbstractService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -240,6 +241,13 @@ public class RouterAdminServer extends AbstractService
     return this.adminAddress;
   }
 
+  void checkSuperuserPrivilege() throws AccessControlException {
+    RouterPermissionChecker pc = RouterAdminServer.getPermissionChecker();
+    if (pc != null) {
+      pc.checkSuperuserPrivilege();
+    }
+  }
+
   @Override
   protected void serviceInit(Configuration configuration) throws Exception {
     this.conf = configuration;
@@ -345,7 +353,7 @@ public class RouterAdminServer extends AbstractService
         ((StateStoreCache) this.router.getSubclusterResolver()).loadCache(true);
       }
       Quota routerQuota = this.router.getRpcServer().getQuotaModule();
-      routerQuota.setQuota(path, nsQuota, ssQuota, null);
+      routerQuota.setQuota(path, nsQuota, ssQuota, null, false);
     }
   }
 
@@ -391,6 +399,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public EnterSafeModeResponse enterSafeMode(EnterSafeModeRequest request)
       throws IOException {
+    checkSuperuserPrivilege();
     boolean success = false;
     RouterSafemodeService safeModeService = this.router.getSafemodeService();
     if (safeModeService != null) {
@@ -411,6 +420,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public LeaveSafeModeResponse leaveSafeMode(LeaveSafeModeRequest request)
       throws IOException {
+    checkSuperuserPrivilege();
     boolean success = false;
     RouterSafemodeService safeModeService = this.router.getSafemodeService();
     if (safeModeService != null) {
@@ -507,11 +517,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public DisableNameserviceResponse disableNameservice(
       DisableNameserviceRequest request) throws IOException {
-
-    RouterPermissionChecker pc = getPermissionChecker();
-    if (pc != null) {
-      pc.checkSuperuserPrivilege();
-    }
+    checkSuperuserPrivilege();
 
     String nsId = request.getNameServiceId();
     boolean success = false;
@@ -544,10 +550,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public EnableNameserviceResponse enableNameservice(
       EnableNameserviceRequest request) throws IOException {
-    RouterPermissionChecker pc = getPermissionChecker();
-    if (pc != null) {
-      pc.checkSuperuserPrivilege();
-    }
+    checkSuperuserPrivilege();
 
     String nsId = request.getNameServiceId();
     DisabledNameserviceStore store = getDisabledNameserviceStore();
@@ -618,5 +621,11 @@ public class RouterAdminServer extends AbstractService
   public Collection<RefreshResponse> refresh(String identifier, String[] args) {
     // Let the registry handle as needed
     return RefreshRegistry.defaultRegistry().dispatch(identifier, args);
+  }
+
+  @Override // RouterGenericManager
+  public boolean refreshSuperUserGroupsConfiguration() throws IOException {
+    ProxyUsers.refreshSuperUserGroupsConfiguration();
+    return true;
   }
 }

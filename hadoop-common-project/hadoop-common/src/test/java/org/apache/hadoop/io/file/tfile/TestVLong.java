@@ -33,6 +33,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class TestVLong {
   private static String ROOT = GenericTestUtils.getTestDir().getAbsolutePath();
   private Configuration conf;
@@ -70,8 +72,7 @@ public class TestVLong {
 
     FSDataInputStream in = fs.open(path);
     for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; ++i) {
-      long n = Utils.readVLong(in);
-      Assert.assertEquals(n, i);
+      assertThat(Utils.readVLong(in)).isEqualTo(i);
     }
     in.close();
     fs.delete(path, false);
@@ -85,8 +86,7 @@ public class TestVLong {
     out.close();
     FSDataInputStream in = fs.open(path);
     for (int i = Short.MIN_VALUE; i <= Short.MAX_VALUE; ++i) {
-      long n = Utils.readVLong(in);
-      Assert.assertEquals(n, ((long) i) << shift);
+      assertThat(Utils.readVLong(in)).isEqualTo(((long) i) << shift);
     }
     in.close();
     long ret = fs.getFileStatus(path).getLen();
@@ -165,7 +165,7 @@ public class TestVLong {
 
     FSDataInputStream in = fs.open(path);
     for (int i = 0; i < data.length; ++i) {
-      Assert.assertEquals(Utils.readVLong(in), data[i]);
+      assertThat(Utils.readVLong(in)).isEqualTo(data[i]);
     }
     in.close();
     fs.delete(path, false);

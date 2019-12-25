@@ -35,6 +35,8 @@ import org.junit.Test;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class TestShellBasedIdMapping {
   
   private static final Map<Integer, Integer> EMPTY_PASS_THROUGH_MAP =
@@ -295,18 +297,19 @@ public class TestShellBasedIdMapping {
   @Test
   public void testUserUpdateSetting() throws IOException {
     ShellBasedIdMapping iug = new ShellBasedIdMapping(new Configuration());
-    assertEquals(iug.getTimeout(),
+    assertThat(iug.getTimeout()).isEqualTo(
         IdMappingConstant.USERGROUPID_UPDATE_MILLIS_DEFAULT);
 
     Configuration conf = new Configuration();
     conf.setLong(IdMappingConstant.USERGROUPID_UPDATE_MILLIS_KEY, 0);
     iug = new ShellBasedIdMapping(conf);
-    assertEquals(iug.getTimeout(), IdMappingConstant.USERGROUPID_UPDATE_MILLIS_MIN);
+    assertThat(iug.getTimeout()).isEqualTo(
+        IdMappingConstant.USERGROUPID_UPDATE_MILLIS_MIN);
 
     conf.setLong(IdMappingConstant.USERGROUPID_UPDATE_MILLIS_KEY,
         IdMappingConstant.USERGROUPID_UPDATE_MILLIS_DEFAULT * 2);
     iug = new ShellBasedIdMapping(conf);
-    assertEquals(iug.getTimeout(),
+    assertThat(iug.getTimeout()).isEqualTo(
         IdMappingConstant.USERGROUPID_UPDATE_MILLIS_DEFAULT * 2);
   }
   

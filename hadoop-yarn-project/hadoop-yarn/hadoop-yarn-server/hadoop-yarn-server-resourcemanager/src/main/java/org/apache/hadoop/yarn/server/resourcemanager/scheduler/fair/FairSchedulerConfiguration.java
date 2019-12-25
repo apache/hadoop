@@ -86,7 +86,7 @@ public class FairSchedulerConfiguration extends Configuration {
   private static final String CONF_PREFIX =  "yarn.scheduler.fair.";
 
   /**
-   * Used during FS->CS conversion. When enabled, background threads are
+   * Used during FS-&gt;CS conversion. When enabled, background threads are
    * not started. This property should NOT be used by end-users!
    */
   public static final String MIGRATION_MODE = CONF_PREFIX + "migration.mode";
@@ -168,6 +168,10 @@ public class FairSchedulerConfiguration extends Configuration {
   /** Whether preemption is enabled. */
   public static final String  PREEMPTION = CONF_PREFIX + "preemption";
   public static final boolean DEFAULT_PREEMPTION = false;
+
+  protected static final String AM_PREEMPTION_PREFIX =
+          CONF_PREFIX + "am.preemption.";
+  protected static final boolean DEFAULT_AM_PREEMPTION = true;
 
   protected static final String PREEMPTION_THRESHOLD =
       CONF_PREFIX + "preemption.cluster-utilization-threshold";
@@ -393,6 +397,10 @@ public class FairSchedulerConfiguration extends Configuration {
 
   public boolean getPreemptionEnabled() {
     return getBoolean(PREEMPTION, DEFAULT_PREEMPTION);
+  }
+
+  public boolean getAMPreemptionEnabled(String queueName) {
+    return getBoolean(AM_PREEMPTION_PREFIX + queueName, DEFAULT_AM_PREEMPTION);
   }
 
   public float getPreemptionUtilizationThreshold() {

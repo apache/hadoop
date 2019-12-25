@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.Whitebox;
-import org.apache.hadoop.util.Daemon;
 import org.junit.Assert;
 
 import com.google.common.base.Preconditions;
@@ -147,13 +146,6 @@ public class BlockManagerTestUtil {
   }
 
   /**
-   * @return redundancy monitor thread instance from block manager.
-   */
-  public static Daemon getRedundancyThread(final BlockManager blockManager) {
-    return blockManager.getRedundancyThread();
-  }
-
-  /**
    * Stop the redundancy monitor thread.
    */
   public static void stopRedundancyThread(final BlockManager blockManager)
@@ -166,6 +158,14 @@ public class BlockManagerTestUtil {
       throw new IOException(
           "Interrupted while trying to stop RedundancyMonitor");
     }
+  }
+
+  /**
+   * Wakeup the timer thread of PendingReconstructionBlocks.
+   */
+  public static void wakeupPendingReconstructionTimerThread(
+      final BlockManager blockManager) {
+    blockManager.pendingReconstruction.getTimerThread().interrupt();
   }
 
   public static HeartbeatManager getHeartbeatManager(
@@ -393,5 +393,21 @@ public class BlockManagerTestUtil {
       final DatanodeManager dnm =
           nn.getNamesystem().getBlockManager().getDatanodeManager();
       return !dnm.getNetworkTopology().contains(dnm.getDatanode(dnUuid));
+  }
+
+  /**
+   * Remove storage from block.
+   */
+  public static void removeStorage(BlockInfo block,
+      DatanodeStorageInfo storage) {
+    block.removeStorage(storage);
+  }
+
+  /**
+   * Add storage to block.
+   */
+  public static void addStorage(BlockInfo block, DatanodeStorageInfo storage,
+      Block reportedBlock) {
+    block.addStorage(storage, reportedBlock);
   }
 }

@@ -949,10 +949,13 @@ public class RouterClientProtocol implements ClientProtocol {
       for (DatanodeStorageReport dn : dns) {
         DatanodeInfo dnInfo = dn.getDatanodeInfo();
         String nodeId = dnInfo.getXferAddr();
-        if (!datanodesMap.containsKey(nodeId)) {
+        DatanodeStorageReport oldDn = datanodesMap.get(nodeId);
+        if (oldDn == null ||
+            dnInfo.getLastUpdate() > oldDn.getDatanodeInfo().getLastUpdate()) {
           datanodesMap.put(nodeId, dn);
+        } else {
+          LOG.debug("{} is in multiple subclusters", nodeId);
         }
-        // TODO merge somehow, right now it just takes the first one
       }
     }
 
@@ -1585,7 +1588,7 @@ public class RouterClientProtocol implements ClientProtocol {
   public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
       StorageType type) throws IOException {
     rpcServer.getQuotaModule()
-        .setQuota(path, namespaceQuota, storagespaceQuota, type);
+        .setQuota(path, namespaceQuota, storagespaceQuota, type, true);
   }
 
   @Override

@@ -17,7 +17,7 @@
  */
 
 /**
- * This package contains classes related to the Fair Scheduler ->
+ * This package contains classes related to the Fair Scheduler -&gt;
  * Capacity Scheduler conversion.
  */
 
