@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -33,6 +34,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
@@ -663,8 +665,12 @@ public class TestRouterAdminCLI {
         + "-owner <owner> -group <group> -mode <mode>]\n" + "\t[-rm <source>]\n"
         + "\t[-ls [-d] <path>]\n"
         + "\t[-getDestination <path>]\n"
-        + "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
-        + "<quota in bytes or quota size string>]\n" + "\t[-clrQuota <path>]\n"
+        + "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota"
+        + " <quota in bytes or quota size string>]\n"
+        + "\t[-setStorageTypeQuota <path> -storageType <storage type>"
+        + " <quota in bytes or quota size string>]\n"
+        + "\t[-clrQuota <path>]\n"
+        + "\t[-clrStorageTypeQuota <path>]\n"
         + "\t[-safemode enter | leave | get]\n"
         + "\t[-nameservice enable | disable <nameservice>]\n"
         + "\t[-getDisabledNameservices]\n"
@@ -672,6 +678,99 @@ public class TestRouterAdminCLI {
         + "\t[-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]";
     assertTrue("Wrong message: " + out, out.toString().contains(expected));
     out.reset();
+  }
+
+  /**
+   * Test command -setStorageTypeQuota with wrong arguments.
+   */
+  @Test
+  public void testWrongArgumentsWhenSetStorageTypeQuota() throws Exception {
+    String src = "/type-QuotaMounttable";
+    // verify wrong arguments.
+    System.setErr(new PrintStream(err));
+    String[] argv =
+        new String[] {"-setStorageTypeQuota", src, "check", "c2", "c3"};
+    ToolRunner.run(admin, argv);
+    assertTrue(err.toString().contains("Invalid argument : check"));
+  }
+
+  /**
+   * Test command -setStorageTypeQuota.
+   */
+  @Test
+  public void testSetStorageTypeQuota() throws Exception {
+    String nsId = "ns0";
+    String src = "/type-QuotaMounttable";
+    String dest = "/type-QuotaMounttable";
+    try {
+      addMountTable(src, nsId, dest);
+
+      // verify the default quota.
+      MountTable mountTable = getMountTable(src).get(0);
+      RouterQuotaUsage quotaUsage = mountTable.getQuota();
+      for (StorageType t : StorageType.values()) {
+        assertEquals(RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT,
+            quotaUsage.getTypeConsumed(t));
+        assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getTypeQuota(t));
+      }
+
+      // set storage type quota.
+      long ssQuota = 100;
+      setStorageTypeQuota(src, ssQuota, StorageType.DISK);
+
+      // verify if the quota is set
+      mountTable = getMountTable(src).get(0);
+      quotaUsage = mountTable.getQuota();
+      assertEquals(ssQuota, quotaUsage.getTypeQuota(StorageType.DISK));
+    } finally {
+      rmMountTable(src);
+    }
+  }
+
+  /**
+   * Test command -clrStorageTypeQuota.
+   */
+  @Test
+  public void testClearStorageTypeQuota() throws Exception {
+    String nsId = "ns0";
+    String src = "/type-QuotaMounttable";
+    String src1 = "/type-QuotaMounttable1";
+    String dest = "/type-QuotaMounttable";
+    String dest1 = "/type-QuotaMounttable1";
+    long ssQuota = 100;
+    try {
+      // add mount points.
+      addMountTable(src, nsId, dest);
+      addMountTable(src1, nsId, dest1);
+
+      // set storage type quota to src and src1.
+      setStorageTypeQuota(src, ssQuota, StorageType.DISK);
+      assertEquals(ssQuota,
+          getMountTable(src).get(0).getQuota().getTypeQuota(StorageType.DISK));
+      setStorageTypeQuota(src1, ssQuota, StorageType.DISK);
+      assertEquals(ssQuota,
+          getMountTable(src1).get(0).getQuota().getTypeQuota(StorageType.DISK));
+
+      // clrQuota of src and src1.
+      assertEquals(0, ToolRunner
+          .run(admin, new String[] {"-clrStorageTypeQuota", src, src1}));
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+
+      // Verify whether the storage type quotas are cleared.
+      List<MountTable> mountTables = getMountTable("/");
+      for (int i = 0; i < 2; i++) {
+        MountTable mountTable = mountTables.get(i);
+        RouterQuotaUsage quotaUsage = mountTable.getQuota();
+        for (StorageType t : StorageType.values()) {
+          assertEquals(RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT,
+              quotaUsage.getTypeConsumed(t));
+          assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getTypeQuota(t));
+        }
+      }
+    } finally {
+      rmMountTable(src);
+      rmMountTable(src1);
+    }
   }
 
   @Test
@@ -1452,5 +1551,34 @@ public class TestRouterAdminCLI {
     argv = new String[] {"-add", "/mntft", "ns0,ns1", "/tmp",
         "-order", "HASH_ALL", "-faulttolerant"};
     assertEquals(0, ToolRunner.run(admin, argv));
+  }
+
+  private void addMountTable(String src, String nsId, String dst)
+      throws Exception {
+    String[] argv = new String[] {"-add", src, nsId, dst};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+  }
+
+  private List<MountTable> getMountTable(String src) throws IOException {
+    GetMountTableEntriesRequest getRequest =
+        GetMountTableEntriesRequest.newInstance(src);
+    GetMountTableEntriesResponse getResponse =
+        client.getMountTableManager().getMountTableEntries(getRequest);
+    return getResponse.getEntries();
+  }
+
+  private void setStorageTypeQuota(String src, long ssQuota, StorageType type)
+      throws Exception {
+    assertEquals(0, ToolRunner.run(admin,
+        new String[] {"-setStorageTypeQuota", src, "-storageType", type.name(),
+            String.valueOf(ssQuota)}));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+  }
+
+  private void rmMountTable(String src) throws Exception {
+    String[] argv = new String[] {"-rm", src};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
   }
 }
