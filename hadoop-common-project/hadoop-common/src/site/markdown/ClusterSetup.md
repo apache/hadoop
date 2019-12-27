@@ -27,7 +27,7 @@ This document does not cover advanced topics such as [Security](./SecureMode.htm
 Prerequisites
 -------------
 
-* Install Java. See the [Hadoop Wiki](http://wiki.apache.org/hadoop/HadoopJavaVersions) for known good versions.
+* Install Java. See the [Hadoop Wiki](https://cwiki.apache.org/confluence/display/HADOOP/Hadoop+Java+Versions) for known good versions.
 * Download a stable version of Hadoop from Apache mirrors.
 
 Installation
