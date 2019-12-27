@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.MountTableRecordProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.MountTableRecordProto.Builder;
@@ -28,9 +29,13 @@ import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProt
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.MountTableRecordProtoOrBuilder;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RemoteLocationProto;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.QuotaUsageProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeQuotaInfosProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeQuotaInfoProto;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
+import static org.apache.hadoop.hdfs.server.federation.router.Quota.eachByStorageType;
 import org.apache.hadoop.hdfs.server.federation.router.RouterAdminServer;
 import org.apache.hadoop.hdfs.server.federation.router.RouterPermissionChecker;
 import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
@@ -275,17 +280,31 @@ public class MountTablePBImpl extends MountTable implements PBRecord {
     long nsCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
     long ssQuota = HdfsConstants.QUOTA_RESET;
     long ssCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
+    long[] typeQuota = new long[StorageType.values().length];
+    long[] typeConsume = new long[StorageType.values().length];
+    eachByStorageType(t -> typeQuota[t.ordinal()] = HdfsConstants.QUOTA_RESET);
+    eachByStorageType(t -> typeConsume[t.ordinal()] =
+        RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT);
     if (proto.hasQuota()) {
       QuotaUsageProto quotaProto = proto.getQuota();
       nsQuota = quotaProto.getQuota();
       nsCount = quotaProto.getFileAndDirectoryCount();
       ssQuota = quotaProto.getSpaceQuota();
       ssCount = quotaProto.getSpaceConsumed();
+      if (quotaProto.hasTypeQuotaInfos()) {
+        StorageTypeQuotaInfosProto typeInfo = quotaProto.getTypeQuotaInfos();
+        for (StorageTypeQuotaInfoProto tp : typeInfo.getTypeQuotaInfoList()) {
+          typeQuota[StorageType.parseStorageType(tp.getType().name())
+              .ordinal()] = tp.getQuota();
+          typeConsume[StorageType.parseStorageType(tp.getType().name())
+              .ordinal()] = tp.getConsumed();
+        }
+      }
     }
 
     RouterQuotaUsage.Builder builder = new RouterQuotaUsage.Builder()
         .quota(nsQuota).fileAndDirectoryCount(nsCount).spaceQuota(ssQuota)
-        .spaceConsumed(ssCount);
+        .spaceConsumed(ssCount).typeQuota(typeQuota).typeConsumed(typeConsume);
     return builder.build();
   }
 
@@ -295,10 +314,21 @@ public class MountTablePBImpl extends MountTable implements PBRecord {
     if (quota == null) {
       builder.clearQuota();
     } else {
-      QuotaUsageProto quotaUsage = QuotaUsageProto.newBuilder()
-          .setFileAndDirectoryCount(quota.getFileAndDirectoryCount())
+      QuotaUsageProto.Builder quotaBuilder = QuotaUsageProto.newBuilder();
+      quotaBuilder.setFileAndDirectoryCount(quota.getFileAndDirectoryCount())
           .setQuota(quota.getQuota()).setSpaceConsumed(quota.getSpaceConsumed())
-          .setSpaceQuota(quota.getSpaceQuota()).build();
+          .setSpaceQuota(quota.getSpaceQuota());
+      if (quota.isTypeQuotaSet()) {
+        StorageTypeQuotaInfosProto.Builder infoBuilder =
+            StorageTypeQuotaInfosProto.newBuilder();
+        eachByStorageType(t -> infoBuilder.addTypeQuotaInfo(
+            StorageTypeQuotaInfoProto.newBuilder()
+                .setType(HdfsProtos.StorageTypeProto.valueOf(t.name()))
+                .setQuota(quota.getTypeQuota(t))
+                .setConsumed(quota.getTypeConsumed(t)).build()));
+        quotaBuilder.setTypeQuotaInfos(infoBuilder.build());
+      }
+      QuotaUsageProto quotaUsage = quotaBuilder.build();
       builder.setQuota(quotaUsage);
     }
   }
