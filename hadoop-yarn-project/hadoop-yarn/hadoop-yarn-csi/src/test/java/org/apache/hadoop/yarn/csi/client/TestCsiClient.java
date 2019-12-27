@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.csi.client;
 
 import csi.v0.Csi;
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.test.GenericTestUtils;
+import com.google.common.io.Files;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -42,7 +42,7 @@ public class TestCsiClient {
 
   @BeforeClass
   public static void setUp() throws IOException {
-    testRoot = GenericTestUtils.getTestDir("csi-test");
+    testRoot = Files.createTempDir();
     File socketPath = new File(testRoot, "csi.sock");
     FileUtils.forceMkdirParent(socketPath);
     domainSocket = "unix://" + socketPath.getAbsolutePath();
