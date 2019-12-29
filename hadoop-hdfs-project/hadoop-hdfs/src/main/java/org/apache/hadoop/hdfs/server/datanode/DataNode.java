@@ -2624,6 +2624,8 @@ public class DataNode extends ReconfigurableBase
         handleBadBlock(b, ie, false);
         LOG.warn("{}:Failed to transfer {} to {} got",
             bpReg, b, targets[0], ie);
+      } catch (Throwable t) {
+        LOG.error("Failed to transfer block " + b, t);
       } finally {
         decrementXmitsInProgress();
         IOUtils.closeStream(blockSender);
