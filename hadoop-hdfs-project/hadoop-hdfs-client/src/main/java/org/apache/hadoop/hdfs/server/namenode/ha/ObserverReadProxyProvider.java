@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -412,6 +413,13 @@ public class ObserverReadProxyProvider<T>
               throw ite.getCause();
             }
             Exception e = (Exception) ite.getCause();
+            if (e instanceof InterruptedIOException ||
+                e instanceof InterruptedException) {
+              // If interrupted, do not retry.
+              LOG.warn("Invocation returned interrupted exception on [{}];",
+                  current.proxyInfo, e);
+              throw e;
+            }
             if (e instanceof RemoteException) {
               RemoteException re = (RemoteException) e;
               Exception unwrapped = re.unwrapRemoteException(
