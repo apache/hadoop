@@ -206,6 +206,7 @@
     <powermock.version>1.5.6</powermock.version>
     <solr.version>7.7.0</solr.version>
     <openssl-wildfly.version>1.0.7.Final</openssl-wildfly.version>
+    <prometheus.version>0.8.1</prometheus.version>
   </properties>
 
   <dependencyManagement>
@@ -1709,6 +1710,30 @@
         <groupId>net.java.dev.jna</groupId>
         <artifactId>jna</artifactId>
         <version>${jna.version}</version>
+      </dependency>
+      <!-- The client -->
+      <dependency>
+        <groupId>io.prometheus</groupId>
+        <artifactId>simpleclient</artifactId>
+        <version>${prometheus.version}</version>
+      </dependency>
+      <!-- Hotspot JVM metrics-->
+      <dependency>
+        <groupId>io.prometheus</groupId>
+        <artifactId>simpleclient_hotspot</artifactId>
+        <version>${prometheus.version}</version>
+      </dependency>
+      <!-- Exposition HTTPServer-->
+      <dependency>
+        <groupId>io.prometheus</groupId>
+        <artifactId>simpleclient_httpserver</artifactId>
+        <version>${prometheus.version}</version>
+      </dependency>
+      <!-- Pushgateway exposition-->
+      <dependency>
+        <groupId>io.prometheus</groupId>
+        <artifactId>simpleclient_pushgateway</artifactId>
+        <version>${prometheus.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

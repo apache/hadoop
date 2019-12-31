@@ -24,7 +24,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.apache.hadoop.metrics2.sink.PrometheusMetricsSink;
+import org.apache.hadoop.metrics2.sink.prometheus.PrometheusMetricsSink;
 
 /**
  * Servlet to publish hadoop metrics in prometheus format.
