@@ -130,6 +130,13 @@ public class FSOperations {
           hdfsFileStatus.getFileId());
       json.put(HttpFSFileSystem.STORAGEPOLICY_JSON,
           hdfsFileStatus.getStoragePolicy());
+      if (hdfsFileStatus.getErasureCodingPolicy() != null) {
+        json.put(HttpFSFileSystem.ECPOLICYNAME_JSON,
+            hdfsFileStatus.getErasureCodingPolicy().getName());
+        json.put(HttpFSFileSystem.ECPOLICY_JSON,
+            JsonUtil.getEcPolicyAsMap(
+                hdfsFileStatus.getErasureCodingPolicy()));
+      }
     }
     if (fileStatus.getPermission().getAclBit()) {
       json.put(HttpFSFileSystem.ACL_BIT_JSON, true);
