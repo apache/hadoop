@@ -157,7 +157,7 @@ public class JsonUtil {
     return m;
   }
 
-  private static Map<String, Object> getEcPolicyAsMap(
+  public static Map<String, Object> getEcPolicyAsMap(
       final ErasureCodingPolicy ecPolicy) {
     /** Convert an ErasureCodingPolicy to a map. */
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
