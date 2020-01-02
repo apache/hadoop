@@ -21,7 +21,7 @@ import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PMEM_CACHE_DIRS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -65,18 +65,16 @@ import org.slf4j.event.Level;
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY;
-
 /**
  * Tests HDFS persistent memory cache by PmemMappableBlockLoader.
  *
  * Bogus persistent memory volume is used to cache blocks.
  */
-public class TestCacheByPmemMappableBlockLoader {
+public class TestPmemCacheRecovery {
   protected static final org.slf4j.Logger LOG =
       LoggerFactory.getLogger(TestCacheByPmemMappableBlockLoader.class);
 
-  protected static final long CACHE_CAPACITY = 64 * 1024;
+  protected static final long CACHE_AMOUNT = 64 * 1024;
   protected static final long BLOCK_SIZE = 4 * 1024;
 
   private static Configuration conf;
@@ -84,6 +82,7 @@ public class TestCacheByPmemMappableBlockLoader {
   private static DistributedFileSystem fs;
   private static DataNode dn;
   private static FsDatasetCache cacheManager;
+  private static String blockPoolId = "";
   /**
    * Used to pause DN BPServiceActor threads. BPSA threads acquire the
    * shared read lock. The test acquires the write lock for exclusive access.
@@ -126,19 +125,20 @@ public class TestCacheByPmemMappableBlockLoader {
   @Before
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
-    conf.setLong(
-        DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS, 100);
+    conf.setBoolean(DFS_DATANODE_PMEM_CACHE_RECOVERY_KEY, true);
+    conf.setLong(DFSConfigKeys.
+        DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS, 100);
     conf.setLong(DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY, 500);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
-    conf.setInt(DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY, 10);
+    conf.setInt(
+        DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY, 10);
 
     // Configuration for pmem cache
     new File(PMEM_DIR_0).getAbsoluteFile().mkdir();
     new File(PMEM_DIR_1).getAbsoluteFile().mkdir();
     // Configure two bogus pmem volumes
     conf.set(DFS_DATANODE_PMEM_CACHE_DIRS_KEY, PMEM_DIR_0 + "," + PMEM_DIR_1);
-    PmemVolumeManager.setMaxBytes((long) (CACHE_CAPACITY * 0.5));
 
     prevCacheManipulator = NativeIO.POSIX.getCacheManipulator();
     NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
@@ -165,39 +165,45 @@ public class TestCacheByPmemMappableBlockLoader {
     NativeIO.POSIX.setCacheManipulator(prevCacheManipulator);
   }
 
+  protected static void restartCluster() throws Exception {
+    conf = new HdfsConfiguration();
+    conf.setBoolean(DFS_DATANODE_PMEM_CACHE_RECOVERY_KEY, true);
+    conf.setLong(DFSConfigKeys.
+        DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS, 100);
+    conf.setLong(DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY, 500);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(
+        DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY, 10);
+    // Configure two bogus pmem volumes
+    conf.set(DFS_DATANODE_PMEM_CACHE_DIRS_KEY, PMEM_DIR_0 + "," + PMEM_DIR_1);
+
+    prevCacheManipulator = NativeIO.POSIX.getCacheManipulator();
+    NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
+
+    FsDatasetImpl.setBlockPoolId(blockPoolId);
+    cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build();
+    cluster.waitActive();
+
+    fs = cluster.getFileSystem();
+    dn = cluster.getDataNodes().get(0);
+    cacheManager = ((FsDatasetImpl) dn.getFSDataset()).cacheManager;
+  }
+
   protected static void shutdownCluster() {
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;
     }
-  }
-
-  @Test
-  public void testPmemVolumeManager() throws IOException {
-    PmemVolumeManager pmemVolumeManager = PmemVolumeManager.getInstance();
-    assertNotNull(pmemVolumeManager);
-    assertEquals(CACHE_CAPACITY, pmemVolumeManager.getCacheCapacity());
-    // Test round-robin selection policy
-    long count1 = 0, count2 = 0;
-    for (int i = 0; i < 10; i++) {
-      Byte index = pmemVolumeManager.chooseVolume(BLOCK_SIZE);
-      String volume = pmemVolumeManager.getVolumeByIndex(index);
-      if (volume.equals(PmemVolumeManager.getRealPmemDir(PMEM_DIR_0))) {
-        count1++;
-      } else if (volume.equals(PmemVolumeManager.getRealPmemDir(PMEM_DIR_1))) {
-        count2++;
-      } else {
-        fail("Unexpected persistent storage location:" + volume);
-      }
-    }
-    assertEquals(count1, count2);
+    PmemVolumeManager.reset();
   }
 
   public List<ExtendedBlockId> getExtendedBlockId(Path filePath, long fileLen)
       throws IOException {
     List<ExtendedBlockId> keys = new ArrayList<>();
-    HdfsBlockLocation[] locs =
-        (HdfsBlockLocation[]) fs.getFileBlockLocations(filePath, 0, fileLen);
+    HdfsBlockLocation[] locs = (HdfsBlockLocation[]) fs.getFileBlockLocations(
+        filePath, 0, fileLen);
     for (HdfsBlockLocation loc : locs) {
       long bkid = loc.getLocatedBlock().getBlock().getBlockId();
       String bpid = loc.getLocatedBlock().getBlock().getBlockPoolId();
@@ -207,17 +213,14 @@ public class TestCacheByPmemMappableBlockLoader {
   }
 
   @Test(timeout = 60000)
-  public void testCacheAndUncache() throws Exception {
-    final int maxCacheBlocksNum =
-        Ints.checkedCast(CACHE_CAPACITY / BLOCK_SIZE);
+  public void testCacheRecovery() throws Exception {
+    final int cacheBlocksNum =
+        Ints.checkedCast(CACHE_AMOUNT / BLOCK_SIZE);
     BlockReaderTestUtil.enableHdfsCachingTracing();
-    Assert.assertEquals(0, CACHE_CAPACITY % BLOCK_SIZE);
-    assertEquals(CACHE_CAPACITY, cacheManager.getCacheCapacity());
-    // DRAM cache is expected to be disabled.
-    assertEquals(0L, cacheManager.getMemCacheCapacity());
+    Assert.assertEquals(0, CACHE_AMOUNT % BLOCK_SIZE);
 
     final Path testFile = new Path("/testFile");
-    final long testFileLen = maxCacheBlocksNum * BLOCK_SIZE;
+    final long testFileLen = cacheBlocksNum * BLOCK_SIZE;
     DFSTestUtil.createFile(fs, testFile,
         testFileLen, (short) 1, 0xbeef);
     List<ExtendedBlockId> blockKeys =
@@ -233,24 +236,57 @@ public class TestCacheByPmemMappableBlockLoader {
         MetricsRecordBuilder dnMetrics = getMetrics(dn.getMetrics().name());
         long blocksCached =
             MetricsAsserts.getLongCounter("BlocksCached", dnMetrics);
-        if (blocksCached != maxCacheBlocksNum) {
-          LOG.info("waiting for " + maxCacheBlocksNum + " blocks to " +
+        if (blocksCached != cacheBlocksNum) {
+          LOG.info("waiting for " + cacheBlocksNum + " blocks to " +
               "be cached. Right now " + blocksCached + " blocks are cached.");
           return false;
         }
-        LOG.info(maxCacheBlocksNum + " blocks are now cached.");
+        LOG.info(cacheBlocksNum + " blocks are now cached.");
         return true;
       }
     }, 1000, 30000);
 
-    // The pmem cache space is expected to have been used up.
-    assertEquals(CACHE_CAPACITY, cacheManager.getCacheUsed());
-    // There should be no cache used on DRAM.
-    assertEquals(0L, cacheManager.getMemCacheUsed());
+    assertEquals(CACHE_AMOUNT, cacheManager.getCacheUsed());
     Map<ExtendedBlockId, Byte> blockKeyToVolume =
         PmemVolumeManager.getInstance().getBlockKeyToVolume();
     // All block keys should be kept in blockKeyToVolume
-    assertEquals(blockKeyToVolume.size(), maxCacheBlocksNum);
+    assertEquals(blockKeyToVolume.size(), cacheBlocksNum);
+    assertTrue(blockKeyToVolume.keySet().containsAll(blockKeys));
+    // Test each replica's cache file path
+    for (ExtendedBlockId key : blockKeys) {
+      if (blockPoolId.isEmpty()) {
+        blockPoolId = key.getBlockPoolId();
+      }
+      String cachePath = cacheManager.
+          getReplicaCachePath(key.getBlockPoolId(), key.getBlockId());
+      // The cachePath shouldn't be null if the replica has been cached
+      // to pmem.
+      assertNotNull(cachePath);
+      Path path = new Path(cachePath);
+      String fileName = path.getName();
+      if (cachePath.startsWith(PMEM_DIR_0)) {
+        String expectPath = PmemVolumeManager.
+            getRealPmemDir(PMEM_DIR_0) + "/" + key.getBlockPoolId();
+        assertTrue(path.toString().startsWith(expectPath));
+        assertTrue(key.getBlockId() == Long.parseLong(fileName));
+      } else if (cachePath.startsWith(PMEM_DIR_1)) {
+        String expectPath = PmemVolumeManager.
+            getRealPmemDir(PMEM_DIR_1) + "/" + key.getBlockPoolId();
+        assertTrue(path.toString().startsWith(expectPath));
+        assertTrue(key.getBlockId() == Long.parseLong(fileName));
+      } else {
+        fail("The cache path is not the expected one: " + cachePath);
+      }
+    }
+
+    // Trigger cache recovery
+    shutdownCluster();
+    restartCluster();
+
+    assertEquals(CACHE_AMOUNT, cacheManager.getCacheUsed());
+    blockKeyToVolume = PmemVolumeManager.getInstance().getBlockKeyToVolume();
+    // All block keys should be kept in blockKeyToVolume
+    assertEquals(blockKeyToVolume.size(), cacheBlocksNum);
     assertTrue(blockKeyToVolume.keySet().containsAll(blockKeys));
     // Test each replica's cache file path
     for (ExtendedBlockId key : blockKeys) {
@@ -276,33 +312,10 @@ public class TestCacheByPmemMappableBlockLoader {
       }
     }
 
-    // Try to cache another file. Caching this file should fail
-    // due to lack of available cache space.
-    final Path smallTestFile = new Path("/smallTestFile");
-    final long smallTestFileLen =  BLOCK_SIZE;
-    DFSTestUtil.createFile(fs, smallTestFile,
-        smallTestFileLen, (short) 1, 0xbeef);
-    // Try to cache more blocks when no cache space is available.
-    final long smallFileCacheDirectiveId = fs.addCacheDirective(
-        new CacheDirectiveInfo.Builder().setPool("testPool").
-            setPath(smallTestFile).setReplication((short) 1).build());
-
-    // Wait for enough time to verify smallTestFile could not be cached.
-    Thread.sleep(10000);
-    MetricsRecordBuilder dnMetrics = getMetrics(dn.getMetrics().name());
-    long blocksCached =
-        MetricsAsserts.getLongCounter("BlocksCached", dnMetrics);
-    // The cached block num should not be increased.
-    assertTrue(blocksCached == maxCacheBlocksNum);
-    // The blockKeyToVolume should just keep the block keys for the testFile.
-    assertEquals(blockKeyToVolume.size(), maxCacheBlocksNum);
-    assertTrue(blockKeyToVolume.keySet().containsAll(blockKeys));
-    // Stop trying to cache smallTestFile to avoid interfering the
-    // verification for uncache functionality.
-    fs.removeCacheDirective(smallFileCacheDirectiveId);
-
     // Uncache the test file
-    fs.removeCacheDirective(cacheDirectiveId);
+    for (ExtendedBlockId key : blockKeys) {
+      cacheManager.uncacheBlock(blockPoolId, key.getBlockId());
+    }
     // Wait for uncaching
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
@@ -310,13 +323,13 @@ public class TestCacheByPmemMappableBlockLoader {
         MetricsRecordBuilder dnMetrics = getMetrics(dn.getMetrics().name());
         long blocksUncached =
             MetricsAsserts.getLongCounter("BlocksUncached", dnMetrics);
-        if (blocksUncached != maxCacheBlocksNum) {
-          LOG.info("waiting for " + maxCacheBlocksNum + " blocks to be " +
+        if (blocksUncached != cacheBlocksNum) {
+          LOG.info("waiting for " + cacheBlocksNum + " blocks to be " +
               "uncached. Right now " + blocksUncached +
               " blocks are uncached.");
           return false;
         }
-        LOG.info(maxCacheBlocksNum + " blocks have been uncached.");
+        LOG.info(cacheBlocksNum + " blocks have been uncached.");
         return true;
       }
     }, 1000, 30000);
