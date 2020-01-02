@@ -270,6 +270,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @VisibleForTesting
   final AutoCloseableLock datasetLock;
   private final Condition datasetLockCondition;
+  private static String blockPoolId = "";
   
   /**
    * An FSDataset has a directory where it loads its data files.
@@ -2843,6 +2844,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     if (volumeExceptions.hasExceptions()) {
       throw volumeExceptions;
     }
+    // For test use only.
+    if (!blockPoolId.isEmpty()) {
+      bpid = blockPoolId;
+    }
+    cacheManager.initCache(bpid);
+  }
+
+  @VisibleForTesting
+  public static void setBlockPoolId(String bpid) {
+    blockPoolId = bpid;
   }
 
   @Override
@@ -3372,8 +3383,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   void stopAllDataxceiverThreads(FsVolumeImpl volume) {
     try (AutoCloseableLock lock = datasetLock.acquire()) {
-      for (String blockPoolId : volumeMap.getBlockPoolList()) {
-        Collection<ReplicaInfo> replicas = volumeMap.replicas(blockPoolId);
+      for (String bpid : volumeMap.getBlockPoolList()) {
+        Collection<ReplicaInfo> replicas = volumeMap.replicas(bpid);
         for (ReplicaInfo replicaInfo : replicas) {
           if ((replicaInfo.getState() == ReplicaState.TEMPORARY
               || replicaInfo.getState() == ReplicaState.RBW)
