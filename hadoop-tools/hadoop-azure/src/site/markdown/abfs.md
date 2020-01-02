@@ -90,7 +90,6 @@ Hflush() being the only documented API that can provide persistent data
 transfer, Flush() also attempting to persist buffered data will lead to
 performance issues.
 
-
 ## Testing ABFS
 
 ### <a name="flushconfigoptions"></a> Access Options
