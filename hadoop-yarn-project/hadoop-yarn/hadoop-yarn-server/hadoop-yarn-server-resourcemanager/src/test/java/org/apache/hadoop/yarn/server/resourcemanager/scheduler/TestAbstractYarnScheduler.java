@@ -53,6 +53,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.NMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ParameterizedSchedulerTestBase;
@@ -402,7 +404,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
           new SchedulerApplication<FiCaSchedulerApp>(null, mockAPp.getUser());
 
       // Second app with one app attempt
-      RMApp app = rm1.submitApp(200);
+      RMApp app = MockRMAppSubmitter.submitWithMemory(200, rm1);
       MockAM am1 = MockRM.launchAndRegisterAM(app, rm1, nm1);
       final ContainerId runningContainer =
           ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
@@ -439,9 +441,21 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       MockNM nm1 = new MockNM("127.0.0.1:1234",
           10240, rm1.getResourceTrackerService());
       nm1.registerNode();
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+          .withAppName("name")
+          .withUser("user")
+          .withAcls(new HashMap<>())
+          .withUnmanagedAM(false)
+          .withQueue("default")
+          .withMaxAppAttempts(-1)
+          .withCredentials(null)
+          .withAppType("Test")
+          .withWaitForAppAcceptedState(false)
+          .withKeepContainers(true)
+          .build();
       RMApp app1 =
-          rm1.submitApp(200, "name", "user", new HashMap<>(), false, "default",
-              -1, null, "Test", false, true);
+          MockRMAppSubmitter.submit(rm1, data);
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
       // allocate 1 container with tag1
@@ -530,10 +544,21 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     MockRM rm1 = new MockRM(conf);
     try {
       rm1.start();
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+          .withAppName("name")
+          .withUser("user")
+          .withAcls(new HashMap<ApplicationAccessType, String>())
+          .withUnmanagedAM(false)
+          .withQueue("default")
+          .withMaxAppAttempts(-1)
+          .withCredentials(null)
+          .withAppType("Test")
+          .withWaitForAppAcceptedState(false)
+          .withKeepContainers(true)
+          .build();
       RMApp app1 =
-          rm1.submitApp(200, "name", "user",
-              new HashMap<ApplicationAccessType, String>(), false, "default",
-              -1, null, "Test", false, true);
+          MockRMAppSubmitter.submit(rm1, data);
       MockNM nm1 =
           new MockNM("127.0.0.1:1234", 10240, rm1.getResourceTrackerService());
       nm1.registerNode();
@@ -642,10 +667,21 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     MockRM rm1 = new MockRM(conf);
     try {
       rm1.start();
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+          .withAppName("name")
+          .withUser("user")
+          .withAcls(new HashMap<ApplicationAccessType, String>())
+          .withUnmanagedAM(false)
+          .withQueue("default")
+          .withMaxAppAttempts(-1)
+          .withCredentials(null)
+          .withAppType("Test")
+          .withWaitForAppAcceptedState(false)
+          .withKeepContainers(true)
+          .build();
       RMApp app1 =
-          rm1.submitApp(200, "name", "user",
-              new HashMap<ApplicationAccessType, String>(), false, "default",
-              -1, null, "Test", false, true);
+          MockRMAppSubmitter.submit(rm1, data);
       MockNM nm1 =
           new MockNM("127.0.0.1:1234", 10240, rm1.getResourceTrackerService());
       nm1.registerNode();
@@ -730,10 +766,21 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     MockRM rm = new MockRM(conf);
     try {
       rm.start();
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(200, rm)
+          .withAppName("name")
+          .withUser("user")
+          .withAcls(new HashMap<ApplicationAccessType, String>())
+          .withUnmanagedAM(false)
+          .withQueue("default")
+          .withMaxAppAttempts(-1)
+          .withCredentials(null)
+          .withAppType("Test")
+          .withWaitForAppAcceptedState(false)
+          .withKeepContainers(true)
+          .build();
       RMApp rmApp =
-          rm.submitApp(200, "name", "user",
-            new HashMap<ApplicationAccessType, String>(), false, "default", -1,
-            null, "Test", false, true);
+          MockRMAppSubmitter.submit(rm, data);
       MockNM node =
           new MockNM("127.0.0.1:1234", 10240, rm.getResourceTrackerService());
       node.registerNode();
@@ -988,10 +1035,21 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     MockRM rm1 = new MockRM(conf);
     try {
       rm1.start();
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+          .withAppName("name")
+          .withUser("user")
+          .withAcls(new HashMap<ApplicationAccessType, String>())
+          .withUnmanagedAM(false)
+          .withQueue("default")
+          .withMaxAppAttempts(-1)
+          .withCredentials(null)
+          .withAppType("Test")
+          .withWaitForAppAcceptedState(false)
+          .withKeepContainers(true)
+          .build();
       RMApp app1 =
-          rm1.submitApp(200, "name", "user",
-              new HashMap<ApplicationAccessType, String>(), false, "default",
-              -1, null, "Test", false, true);
+          MockRMAppSubmitter.submit(rm1, data);
       MockNM nm1 =
           new MockNM("127.0.0.1:1234", 10240, rm1.getResourceTrackerService());
       nm1.registerNode();

@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.FSPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PrimaryGroupPlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.RejectPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.SecondaryGroupExistingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.SpecifiedPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserPlacementRule;
@@ -51,15 +52,15 @@ class QueuePlacementConverter {
       ruleCount++;
       if (rule instanceof UserPlacementRule) {
         UserPlacementRule userRule = (UserPlacementRule) rule;
-        if (mapping.length() > 0) {
-          mapping.append(";");
-        }
 
         // nested rule
         if (userRule.getParentRule() != null) {
           handleNestedRule(mapping, userRule);
         } else {
           if (!userAsDefaultQueue) {
+            if (mapping.length() > 0) {
+              mapping.append(";");
+            }
             mapping.append("u:" + USER + ":" + USER);
           }
         }
@@ -82,8 +83,11 @@ class QueuePlacementConverter {
         mapping.append("u:" + USER + ":").append(defaultRule.defaultQueueName);
       } else if (rule instanceof SecondaryGroupExistingPlacementRule) {
         // TODO: wait for YARN-9840
+        if (mapping.length() > 0) {
+          mapping.append(";");
+        }
         mapping.append("u:" + USER + ":" + SECONDARY_GROUP);
-      } else {
+      } else if (!(rule instanceof RejectPlacementRule)) {
         throw new IllegalArgumentException("Unknown placement rule: " + rule);
       }
     }
@@ -99,6 +103,9 @@ class QueuePlacementConverter {
   private void handleNestedRule(StringBuilder mapping,
       UserPlacementRule userRule) {
     PlacementRule pr = userRule.getParentRule();
+    if (mapping.length() > 0) {
+      mapping.append(";");
+    }
     if (pr instanceof PrimaryGroupPlacementRule) {
       // TODO: wait for YARN-9841
       mapping.append("u:" + USER + ":" + PRIMARY_GROUP + "." + USER);

@@ -72,6 +72,21 @@
       guard_with_startup_progress(function(d) {
         for (var k in d) {
           data[k] = k === 'federation' ? workaround(d[k].beans[0]) : d[k].beans[0];
+          if (k === 'router') {
+            var routerInfo = d[k].beans[0];
+            data[k].selfState = "unavailable";
+            if (routerInfo.Safemode === true) {
+              data[k].selfState = "safemode";
+            } else if (routerInfo.RouterStatus === "INITIALIZING" || routerInfo.RouterStatus === "RUNNING") {
+              data[k].selfState = "active";
+            } else if (routerInfo.RouterStatus === "SAFEMODE") {
+              data[k].selfState = "safemode";
+            } else if (routerInfo.RouterStatus === "STOPPING") {
+              data[k].selfState = "standby";
+            } else if (routerInfo.RouterStatus === "UNAVAILABLE" || routerInfo.RouterStatus === "SHUTDOWN") {
+              data[k].selfState = "unavailable";
+            }
+          }
         }
         render();
       }),

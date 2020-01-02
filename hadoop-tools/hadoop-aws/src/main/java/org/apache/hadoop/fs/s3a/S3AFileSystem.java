@@ -306,22 +306,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws IOException {
     // get the host; this is guaranteed to be non-null, non-empty
     bucket = name.getHost();
-    LOG.debug("Initializing S3AFileSystem for {}", bucket);
-    // clone the configuration into one with propagated bucket options
-    Configuration conf = propagateBucketOptions(originalConf, bucket);
-    // patch the Hadoop security providers
-    patchSecurityCredentialProviders(conf);
-    // look for delegation token support early.
-    boolean delegationTokensEnabled = hasDelegationTokenBinding(conf);
-    if (delegationTokensEnabled) {
-      LOG.debug("Using delegation tokens");
-    }
-    // set the URI, this will do any fixup of the URI to remove secrets,
-    // canonicalize.
-    setUri(name, delegationTokensEnabled);
-    super.initialize(uri, conf);
-    setConf(conf);
     try {
+      LOG.debug("Initializing S3AFileSystem for {}", bucket);
+      // clone the configuration into one with propagated bucket options
+      Configuration conf = propagateBucketOptions(originalConf, bucket);
+      // patch the Hadoop security providers
+      patchSecurityCredentialProviders(conf);
+      // look for delegation token support early.
+      boolean delegationTokensEnabled = hasDelegationTokenBinding(conf);
+      if (delegationTokensEnabled) {
+        LOG.debug("Using delegation tokens");
+      }
+      // set the URI, this will do any fixup of the URI to remove secrets,
+      // canonicalize.
+      setUri(name, delegationTokensEnabled);
+      super.initialize(uri, conf);
+      setConf(conf);
 
       // look for encryption data
       // DT Bindings may override this
@@ -381,6 +381,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       initCannedAcls(conf);
 
+      // This initiates a probe against S3 for the bucket existing.
+      // It is where all network and authentication configuration issues
+      // surface, and is potentially slow.
       verifyBucketExists();
 
       inputPolicy = S3AInputPolicy.getPolicy(
@@ -426,9 +429,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         LOG.debug("Using metadata store {}, authoritative store={}, authoritative path={}",
             getMetadataStore(), allowAuthoritativeMetadataStore, allowAuthoritativePaths);
       }
+
+      // LOG if S3Guard is disabled on the warn level set in config
+      if (!hasMetadataStore()) {
+        String warnLevel = conf.getTrimmed(S3GUARD_DISABLED_WARN_LEVEL,
+            DEFAULT_S3GUARD_DISABLED_WARN_LEVEL);
+        S3Guard.logS3GuardDisabled(LOG, warnLevel, bucket);
+      }
+
       initMultipartUploads(conf);
     } catch (AmazonClientException e) {
+      // amazon client exception: stop all services then throw the translation
+      stopAllServices();
       throw translateException("initializing ", new Path(name), e);
+    } catch (IOException | RuntimeException e) {
+      // other exceptions: stop the services.
+      stopAllServices();
+      throw e;
     }
 
   }
@@ -2192,7 +2209,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Invoke {@link #removeKeysS3(List, boolean)} with handling of
+   * Invoke {@link #removeKeysS3(List, boolean, boolean)} with handling of
    * {@code MultiObjectDeleteException}.
    *
    * @param keysToDelete collection of keys to delete on the s3-backend.
@@ -2398,9 +2415,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         key = key + '/';
       }
 
-      DirListingMetadata dirMeta =
-          S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
       boolean allowAuthoritative = allowAuthoritative(f);
+      DirListingMetadata dirMeta =
+          S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider,
+              allowAuthoritative);
       if (allowAuthoritative && dirMeta != null && dirMeta.isAuthoritative()) {
         return S3Guard.dirMetaToStatuses(dirMeta);
       }
@@ -2632,11 +2650,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     String key = pathToKey(path);
     LOG.debug("Getting path status for {}  ({})", path, key);
 
+    boolean allowAuthoritative = allowAuthoritative(path);
     // Check MetadataStore, if any.
     PathMetadata pm = null;
     if (hasMetadataStore()) {
       pm = S3Guard.getWithTtl(metadataStore, path, ttlTimeProvider,
-          needEmptyDirectoryFlag);
+          needEmptyDirectoryFlag, allowAuthoritative);
     }
     Set<Path> tombstones = Collections.emptySet();
     if (pm != null) {
@@ -2652,9 +2671,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // modification - compare the modTime to check if metadata is up to date
       // Skip going to s3 if the file checked is a directory. Because if the
       // dest is also a directory, there's no difference.
-      // TODO After HADOOP-16085 the modification detection can be done with
-      //  etags or object version instead of modTime
-      boolean allowAuthoritative = allowAuthoritative(path);
+
       if (!pm.getFileStatus().isDirectory() &&
           !allowAuthoritative &&
           probes.contains(StatusProbeEnum.Head)) {
@@ -2692,7 +2709,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           return msStatus;
         } else {
           DirListingMetadata children =
-              S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
+              S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider,
+                  allowAuthoritative);
           if (children != null) {
             tombstones = children.listTombstones();
           }
@@ -3110,25 +3128,41 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     try {
       super.close();
     } finally {
-      if (transfers != null) {
-        transfers.shutdownNow(true);
-        transfers = null;
-      }
-      HadoopExecutors.shutdown(boundedThreadPool, LOG,
-          THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
-      boundedThreadPool = null;
-      HadoopExecutors.shutdown(unboundedThreadPool, LOG,
-          THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
-      unboundedThreadPool = null;
-      S3AUtils.closeAll(LOG, metadataStore, instrumentation);
-      metadataStore = null;
-      instrumentation = null;
-      closeAutocloseables(LOG, credentials);
-      cleanupWithLogger(LOG, delegationTokens.orElse(null));
-      cleanupWithLogger(LOG, signerManager);
-      signerManager = null;
-      credentials = null;
+      stopAllServices();
     }
+  }
+
+  /**
+   * Stop all services.
+   * This is invoked in close() and during failures of initialize()
+   * -make sure that all operations here are robust to failures in
+   * both the expected state of this FS and of failures while being stopped.
+   */
+  protected synchronized void stopAllServices() {
+    if (transfers != null) {
+      try {
+        transfers.shutdownNow(true);
+      } catch (RuntimeException e) {
+        // catch and swallow for resilience.
+        LOG.debug("When shutting down", e);
+      }
+      transfers = null;
+    }
+    HadoopExecutors.shutdown(boundedThreadPool, LOG,
+        THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
+    boundedThreadPool = null;
+    HadoopExecutors.shutdown(unboundedThreadPool, LOG,
+        THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
+    unboundedThreadPool = null;
+    closeAutocloseables(LOG, credentials);
+    cleanupWithLogger(LOG,
+        metadataStore,
+        instrumentation,
+        delegationTokens.orElse(null),
+        signerManager);
+    delegationTokens = Optional.empty();
+    signerManager = null;
+    credentials = null;
   }
 
   /**
@@ -3962,7 +3996,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           cachedFilesIterator = metadataStoreListFilesIterator;
         } else {
           DirListingMetadata meta =
-              S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
+              S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider,
+                  allowAuthoritative);
           if (meta != null) {
             tombstones = meta.listTombstones();
           } else {
@@ -4037,13 +4072,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               final String key = maybeAddTrailingSlash(pathToKey(path));
               final Listing.FileStatusAcceptor acceptor =
                   new Listing.AcceptAllButSelfAndS3nDirs(path);
+              boolean allowAuthoritative = allowAuthoritative(f);
               DirListingMetadata meta =
                   S3Guard.listChildrenWithTtl(metadataStore, path,
-                      ttlTimeProvider);
+                      ttlTimeProvider, allowAuthoritative);
               final RemoteIterator<S3AFileStatus> cachedFileStatusIterator =
                   listing.createProvidedFileStatusIterator(
                       S3Guard.dirMetaToStatuses(meta), filter, acceptor);
-              boolean allowAuthoritative = allowAuthoritative(f);
               return (allowAuthoritative && meta != null
                   && meta.isAuthoritative())
                   ? listing.createLocatedFileStatusIterator(

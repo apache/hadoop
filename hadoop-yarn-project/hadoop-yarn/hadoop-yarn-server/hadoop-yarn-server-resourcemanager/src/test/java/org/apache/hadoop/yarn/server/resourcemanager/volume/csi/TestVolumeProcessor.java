@@ -36,6 +36,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -146,7 +148,15 @@ public class TestVolumeProcessor {
 
   @Test (timeout = 10000L)
   public void testVolumeProvisioning() throws Exception {
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, mockNMS[0]);
     Resource resource = Resource.newInstance(1024, 1);
     ResourceInformation volumeResource = ResourceInformation
@@ -199,7 +209,15 @@ public class TestVolumeProcessor {
 
   @Test (timeout = 30000L)
   public void testInvalidRequest() throws Exception {
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, mockNMS[0]);
     Resource resource = Resource.newInstance(1024, 1);
     ResourceInformation volumeResource = ResourceInformation
@@ -233,7 +251,15 @@ public class TestVolumeProcessor {
 
   @Test (timeout = 30000L)
   public void testProvisioningFailures() throws Exception {
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, mockNMS[0]);
 
     CsiAdaptorProtocol mockedClient = Mockito
@@ -276,7 +302,13 @@ public class TestVolumeProcessor {
 
   @Test (timeout = 10000L)
   public void testVolumeResourceAllocate() throws Exception {
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    RMApp app1 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .build());
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, mockNMS[0]);
     Resource resource = Resource.newInstance(1024, 1);
     ResourceInformation volumeResource = ResourceInformation

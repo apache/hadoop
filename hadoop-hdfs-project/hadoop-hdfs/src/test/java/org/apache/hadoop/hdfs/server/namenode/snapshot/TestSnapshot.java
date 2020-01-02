@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -454,6 +455,62 @@ public class TestSnapshot {
     rootNode = fsdir.getINode4Write(root.toString()).asDirectory();
     assertTrue(rootNode.isSnapshottable());
     assertEquals(0, rootNode.getDirectorySnapshottableFeature().getSnapshotQuota());
+  }
+
+  @Test(timeout = 60000)
+  public void testSnapshotMtime() throws Exception {
+    Path dir = new Path("/dir");
+    Path sub = new Path(dir, "sub");
+    Path subFile = new Path(sub, "file");
+    DFSTestUtil.createFile(hdfs, subFile, BLOCKSIZE, REPLICATION, seed);
+
+    hdfs.allowSnapshot(dir);
+    Path snapshotPath = hdfs.createSnapshot(dir, "s1");
+    FileStatus oldSnapshotStatus = hdfs.getFileStatus(snapshotPath);
+    cluster.restartNameNodes();
+    FileStatus newSnapshotStatus = hdfs.getFileStatus(snapshotPath);
+    assertEquals(oldSnapshotStatus.getModificationTime(),
+        newSnapshotStatus.getModificationTime());
+  }
+
+  @Test(timeout = 60000)
+  public void testRenameSnapshotMtime() throws Exception {
+    Path dir = new Path("/dir");
+    Path sub = new Path(dir, "sub");
+    Path subFile = new Path(sub, "file");
+    DFSTestUtil.createFile(hdfs, subFile, BLOCKSIZE, REPLICATION, seed);
+
+    hdfs.allowSnapshot(dir);
+    Path snapshotPath = hdfs.createSnapshot(dir, "s1");
+    FileStatus oldSnapshotStatus = hdfs.getFileStatus(snapshotPath);
+    hdfs.renameSnapshot(dir, "s1", "s2");
+    Path snapshotRenamePath = new Path("/dir/.snapshot/s2");
+    FileStatus newSnapshotStatus = hdfs.getFileStatus(snapshotRenamePath);
+    assertNotEquals(oldSnapshotStatus.getModificationTime(),
+        newSnapshotStatus.getModificationTime());
+  }
+
+  /**
+   * Test snapshot directory mtime after snapshot deletion.
+   */
+  @Test(timeout = 60000)
+  public void testDeletionSnapshotMtime() throws Exception {
+    Path dir = new Path("/dir");
+    Path sub = new Path(dir, "sub");
+    Path subFile = new Path(sub, "file");
+    DFSTestUtil.createFile(hdfs, subFile, BLOCKSIZE, REPLICATION, seed);
+
+    hdfs.allowSnapshot(dir);
+    Path snapshotPath = hdfs.createSnapshot(dir, "s1");
+    FileStatus oldSnapshotStatus = hdfs.getFileStatus(snapshotPath);
+    hdfs.deleteSnapshot(dir, "s1");
+    FileStatus dirStatus = hdfs.getFileStatus(dir);
+    assertNotEquals(dirStatus.getModificationTime(),
+        oldSnapshotStatus.getModificationTime());
+    cluster.restartNameNodes();
+    FileStatus newSnapshotStatus = hdfs.getFileStatus(dir);
+    assertEquals(dirStatus.getModificationTime(),
+        newSnapshotStatus.getModificationTime());
   }
 
   /**

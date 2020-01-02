@@ -17,11 +17,18 @@
  */
 package org.apache.hadoop.fs.http.server;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
@@ -42,6 +49,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.text.MessageFormat;
@@ -54,6 +62,7 @@ import java.util.Map;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DataParam;
@@ -64,6 +73,7 @@ import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.lib.server.Service;
 import org.apache.hadoop.lib.server.ServiceException;
 import org.apache.hadoop.lib.service.Groups;
@@ -1635,5 +1645,97 @@ public class TestHttpFSServer extends HFSTestCase {
         checksum.get("bytes"));
     Assert.assertEquals(28L, checksum.get("length"));
     Assert.assertEquals("MD5-of-0MD5-of-512CRC32C", checksum.get("algorithm"));
+  }
+
+  private void verifyGetServerDefaults(DistributedFileSystem dfs)
+      throws Exception {
+    // Send a request
+    HttpURLConnection conn =
+        sendRequestToHttpFSServer("/", "GETSERVERDEFAULTS", "");
+    // Should return HTTP_OK
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    // Verify the response
+    BufferedReader reader =
+        new BufferedReader(new InputStreamReader(conn.getInputStream()));
+    // The response should be a one-line JSON string.
+    String dirLst = reader.readLine();
+    FsServerDefaults dfsDirLst = dfs.getServerDefaults();
+    Assert.assertNotNull(dfsDirLst);
+    Assert.assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testGetServerDefaults() throws Exception {
+    createHttpFSServer(false, false);
+    String pathStr1 = "/";
+    Path path1 = new Path(pathStr1);
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .get(path1.toUri(), TestHdfsHelper.getHdfsConf());
+    verifyGetServerDefaults(dfs);
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testAccess() throws Exception {
+    createHttpFSServer(false, false);
+    final String dir = "/xattrTest";
+    Path path1 = new Path(dir);
+
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .get(path1.toUri(), TestHdfsHelper.getHdfsConf());
+    dfs.mkdirs(new Path(dir));
+
+    HttpURLConnection conn =
+        sendRequestToHttpFSServer(dir, "CHECKACCESS", "fsaction=r--");
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    HttpURLConnection conn1 =
+        sendRequestToHttpFSServer(dir, "CHECKACCESS", "fsaction=-w-");
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn1.getResponseCode());
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testECPolicy() throws Exception {
+    createHttpFSServer(false, false);
+    final ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies
+        .getByID(SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
+    final String ecPolicyName = ecPolicy.getName();
+    // Create an EC dir and write a test file in it
+    final Path ecDir = new Path("/ec");
+
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .get(ecDir.toUri(), TestHdfsHelper.getHdfsConf());
+    Path ecFile = new Path(ecDir, "ec_file.txt");
+    dfs.mkdirs(ecDir);
+    dfs.enableErasureCodingPolicy(ecPolicyName);
+    dfs.setErasureCodingPolicy(ecDir, ecPolicyName);
+    // Create a EC file
+    DFSTestUtil.createFile(dfs, ecFile, 1024, (short) 1, 0);
+
+    // Verify that ecPolicy is set in getFileStatus response for ecFile
+    String getFileStatusResponse =
+        getStatus(ecFile.toString(), "GETFILESTATUS");
+    JSONParser parser = new JSONParser();
+    JSONObject jsonObject = (JSONObject) parser.parse(getFileStatusResponse);
+    JSONObject details = (JSONObject) jsonObject.get("FileStatus");
+    String ecpolicyForECfile = (String) details.get("ecPolicy");
+    assertEquals("EC policy for ecFile should match the set EC policy",
+        ecpolicyForECfile, ecPolicyName);
+
+    // Verify httpFs getFileStatus with WEBHDFS REST API
+    WebHdfsFileSystem httpfsWebHdfs = (WebHdfsFileSystem) FileSystem.get(
+        new URI("webhdfs://"
+            + TestJettyHelper.getJettyURL().toURI().getAuthority()),
+        TestHdfsHelper.getHdfsConf());
+    HdfsFileStatus httpfsFileStatus =
+        (HdfsFileStatus) httpfsWebHdfs.getFileStatus(ecFile);
+    assertNotNull(httpfsFileStatus.getErasureCodingPolicy());
   }
 }

@@ -18,18 +18,25 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.IOException;
+
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import org.junit.Test;
+
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.Test;
-
-import java.io.IOException;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionTestsDisabled;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
 
 /**
  * Test whether or not encryption works by turning it on. Some checks
@@ -38,11 +45,18 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
  */
 public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
 
+  protected static final String AWS_KMS_SSE_ALGORITHM = "aws:kms";
+
+  protected static final String SSE_C_ALGORITHM = "AES256";
+
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.disableFilesystemCaching(conf);
-    conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
+    removeBaseAndBucketOverrides(conf,
+        SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_KEY);
+    conf.set(SERVER_SIDE_ENCRYPTION_ALGORITHM,
             getSSEAlgorithm().getMethod());
     return conf;
   }
@@ -51,8 +65,34 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
       0, 1, 2, 3, 4, 5, 254, 255, 256, 257, 2 ^ 12 - 1
   };
 
+  protected void requireEncryptedFileSystem() {
+    skipIfEncryptionTestsDisabled(getFileSystem().getConf());
+  }
+
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    requireEncryptedFileSystem();
+  }
+
+  /**
+   * This examines how encryption settings propagate better.
+   * If the settings are actually in a JCEKS file, then the
+   * test override will fail; this is here to help debug the problem.
+   */
+  @Test
+  public void testEncryptionSettingPropagation() throws Throwable {
+    S3AFileSystem fs = getFileSystem();
+    S3AEncryptionMethods algorithm = getEncryptionAlgorithm(
+        fs.getBucket(), fs.getConf());
+    assertEquals("Configuration has wrong encryption algorithm",
+        getSSEAlgorithm(), algorithm);
+  }
+
   @Test
   public void testEncryption() throws Throwable {
+    requireEncryptedFileSystem();
+    validateEncrytionSecrets(getFileSystem().getEncryptionSecrets());
     for (int size: SIZES) {
       validateEncryptionForFilesize(size);
     }
@@ -60,10 +100,11 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
 
   @Test
   public void testEncryptionOverRename() throws Throwable {
-    skipIfEncryptionTestsDisabled(getConfiguration());
     Path src = path(createFilename(1024));
     byte[] data = dataset(1024, 'a', 'z');
     S3AFileSystem fs = getFileSystem();
+    EncryptionSecrets secrets = fs.getEncryptionSecrets();
+    validateEncrytionSecrets(secrets);
     writeDataset(fs, src, data, data.length, 1024 * 1024, true);
     ContractTestUtils.verifyFileContents(fs, src, data);
     Path dest = path(src.getName() + "-copy");
@@ -72,8 +113,19 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     assertEncrypted(dest);
   }
 
+  /**
+   * Verify that the filesystem encryption secrets match expected.
+   * This makes sure that the settings have propagated properly.
+   * @param secrets encryption secrets of the filesystem.
+   */
+  protected void validateEncrytionSecrets(final EncryptionSecrets secrets) {
+    assertNotNull("No encryption secrets for filesystem", secrets);
+    S3AEncryptionMethods sseAlgorithm = getSSEAlgorithm();
+    assertEquals("Filesystem has wrong encryption algorithm",
+        sseAlgorithm, secrets.getEncryptionMethod());
+  }
+
   protected void validateEncryptionForFilesize(int len) throws IOException {
-    skipIfEncryptionTestsDisabled(getConfiguration());
     describe("Create an encrypted file of size " + len);
     String src = createFilename(len);
     Path path = writeThenReadFile(src, len);
@@ -98,15 +150,17 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     ObjectMetadata md = getFileSystem().getObjectMetadata(path);
     switch(getSSEAlgorithm()) {
     case SSE_C:
-      assertEquals("AES256", md.getSSECustomerAlgorithm());
+      assertNull("Metadata algorithm should have been null",
+          md.getSSEAlgorithm());
+      assertEquals("Wrong SSE-C algorithm", SSE_C_ALGORITHM, md.getSSECustomerAlgorithm());
       String md5Key = convertKeyToMd5();
-      assertEquals(md5Key, md.getSSECustomerKeyMd5());
+      assertEquals("getSSECustomerKeyMd5() wrong", md5Key, md.getSSECustomerKeyMd5());
       break;
     case SSE_KMS:
-      assertEquals("aws:kms", md.getSSEAlgorithm());
+      assertEquals(AWS_KMS_SSE_ALGORITHM, md.getSSEAlgorithm());
       //S3 will return full arn of the key, so specify global arn in properties
       assertEquals(this.getConfiguration().
-          getTrimmed(Constants.SERVER_SIDE_ENCRYPTION_KEY),
+          getTrimmed(SERVER_SIDE_ENCRYPTION_KEY),
           md.getSSEAwsKmsKeyId());
       break;
     default:
@@ -123,8 +177,8 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
    * key
    */
   private String convertKeyToMd5() {
-    String base64Key = getConfiguration().getTrimmed(
-        Constants.SERVER_SIDE_ENCRYPTION_KEY
+    String base64Key = getFileSystem().getConf().getTrimmed(
+        SERVER_SIDE_ENCRYPTION_KEY
     );
     byte[] key = Base64.decodeBase64(base64Key);
     byte[] md5 =  DigestUtils.md5(key);

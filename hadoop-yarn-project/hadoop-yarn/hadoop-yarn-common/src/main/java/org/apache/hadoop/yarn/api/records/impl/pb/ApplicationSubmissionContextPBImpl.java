@@ -21,11 +21,11 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -247,7 +247,7 @@ extends ApplicationSubmissionContext {
       return;
     }
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
-    this.applicationTags = new HashSet<String>();
+    this.applicationTags = new TreeSet<>();
     this.applicationTags.addAll(p.getApplicationTagsList());
   }
 
@@ -305,7 +305,7 @@ extends ApplicationSubmissionContext {
     }
     checkTags(tags);
     // Convert applicationTags to lower case and add
-    this.applicationTags = new HashSet<String>();
+    this.applicationTags = new TreeSet<>();
     for (String tag : tags) {
       this.applicationTags.add(StringUtils.toLowerCase(tag));
     }

@@ -260,7 +260,8 @@ public class MembershipNamenodeResolver
         routerId, report.getNameserviceId(), report.getNamenodeId(),
         report.getClusterId(), report.getBlockPoolId(), report.getRpcAddress(),
         report.getServiceAddress(), report.getLifelineAddress(),
-        report.getWebAddress(), report.getState(), report.getSafemode());
+        report.getWebScheme(), report.getWebAddress(), report.getState(),
+        report.getSafemode());
 
     if (report.statsValid()) {
       MembershipStats stats = MembershipStats.newInstance();

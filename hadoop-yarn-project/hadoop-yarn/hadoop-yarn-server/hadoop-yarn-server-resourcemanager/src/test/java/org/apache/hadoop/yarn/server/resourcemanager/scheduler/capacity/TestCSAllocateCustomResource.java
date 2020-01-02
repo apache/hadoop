@@ -26,6 +26,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -122,7 +124,13 @@ public class TestCSAllocateCustomResource {
     // submit app
     Resource amResource = Resources.createResource(1 * g, 1);
     amResource.setResourceValue(customResourceType, 1);
-    RMApp app1 = rm.submitApp(amResource, "app", "user", null, "a");
+    RMApp app1 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithResource(amResource, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .build());
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
     // am request containers

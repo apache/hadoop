@@ -276,24 +276,42 @@ public class INodeDirectory extends INodeWithAdditionalFields
     getDirectorySnapshottableFeature().setSnapshotQuota(snapshotQuota);
   }
 
+  /**
+   * Add a snapshot.
+   * @param name Name of the snapshot.
+   * @param mtime The snapshot creation time set by Time.now().
+   */
   public Snapshot addSnapshot(int id, String name,
       final LeaseManager leaseManager, final boolean captureOpenFiles,
-      int maxSnapshotLimit)
+      int maxSnapshotLimit, long mtime)
       throws SnapshotException {
     return getDirectorySnapshottableFeature().addSnapshot(this, id, name,
-        leaseManager, captureOpenFiles, maxSnapshotLimit);
+        leaseManager, captureOpenFiles, maxSnapshotLimit, mtime);
   }
 
+  /**
+   * Delete a snapshot.
+   * @param snapshotName Name of the snapshot.
+   * @param mtime The snapshot deletion time set by Time.now().
+   */
   public Snapshot removeSnapshot(
-      ReclaimContext reclaimContext, String snapshotName)
+      ReclaimContext reclaimContext, String snapshotName, long mtime)
       throws SnapshotException {
     return getDirectorySnapshottableFeature().removeSnapshot(
-        reclaimContext, this, snapshotName);
+        reclaimContext, this, snapshotName, mtime);
   }
 
-  public void renameSnapshot(String path, String oldName, String newName)
-      throws SnapshotException {
-    getDirectorySnapshottableFeature().renameSnapshot(path, oldName, newName);
+  /**
+   * Rename a snapshot.
+   * @param path The directory path where the snapshot was taken.
+   * @param oldName Old name of the snapshot
+   * @param newName New name the snapshot will be renamed to
+   * @param mtime The snapshot modification time set by Time.now().
+   */
+  public void renameSnapshot(String path, String oldName, String newName,
+      long mtime) throws SnapshotException {
+    getDirectorySnapshottableFeature().renameSnapshot(path, oldName, newName,
+        mtime);
   }
 
   /** add DirectorySnapshottableFeature */

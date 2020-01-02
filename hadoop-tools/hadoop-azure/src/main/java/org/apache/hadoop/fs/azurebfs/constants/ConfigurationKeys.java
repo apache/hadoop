@@ -62,6 +62,10 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_DISABLE_OUTPUTSTREAM_FLUSH = "fs.azure.disable.outputstream.flush";
   public static final String FS_AZURE_USER_AGENT_PREFIX_KEY = "fs.azure.user.agent.prefix";
   public static final String FS_AZURE_SSL_CHANNEL_MODE_KEY = "fs.azure.ssl.channel.mode";
+  /** Provides a config to enable/disable the checkAccess API.
+   *  By default this will be
+   *  FileSystemConfigurations.DEFAULT_ENABLE_CHECK_ACCESS. **/
+  public static final String FS_AZURE_ENABLE_CHECK_ACCESS = "fs.azure.enable.check.access";
   public static final String FS_AZURE_USE_UPN = "fs.azure.use.upn";
   /** User principal names (UPNs) have the format “{alias}@{domain}”. If true,
    *  only {alias} is included when a UPN would otherwise appear in the output
@@ -114,6 +118,8 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN = "fs.azure.account.oauth2.refresh.token";
   /** Key for oauth AAD refresh token endpoint: {@value}. */
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT = "fs.azure.account.oauth2.refresh.token.endpoint";
+  /** Key for enabling the tracking of ABFS API latency and sending the latency numbers to the ABFS API service */
+  public static final String FS_AZURE_ABFS_LATENCY_TRACK = "fs.azure.abfs.latency.track";
 
   public static String accountProperty(String property, String account) {
     return property + "." + account;

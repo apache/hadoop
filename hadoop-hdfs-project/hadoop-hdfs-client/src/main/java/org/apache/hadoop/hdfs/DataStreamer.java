@@ -1788,7 +1788,7 @@ class DataStreamer extends Daemon {
         restartingNodes.clear();
       } catch (IOException ie) {
         if (!errorState.isRestartingNode()) {
-          LOG.info("Exception in createBlockOutputStream " + this, ie);
+          LOG.warn("Exception in createBlockOutputStream " + this, ie);
         }
         if (ie instanceof InvalidEncryptionKeyException &&
             refetchEncryptionKey > 0) {

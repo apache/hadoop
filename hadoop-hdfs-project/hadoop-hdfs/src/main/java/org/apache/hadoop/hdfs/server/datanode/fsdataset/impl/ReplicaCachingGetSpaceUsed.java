@@ -59,6 +59,7 @@ public class ReplicaCachingGetSpaceUsed extends FSCachingGetSpaceUsed {
 
   public ReplicaCachingGetSpaceUsed(Builder builder) throws IOException {
     super(builder);
+    setShouldFirstRefresh(false);
     volume = builder.getVolume();
     bpid = builder.getBpid();
   }

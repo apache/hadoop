@@ -410,6 +410,14 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
   }
 
   @Test
+  public void testECMultipleDestinations() throws Exception {
+    setupOrderMountPath(DestinationOrder.HASH_ALL);
+    Path mountPath = new Path("/mount/dir");
+    routerFs.setErasureCodingPolicy(mountPath, "RS-6-3-1024k");
+    assertTrue(routerFs.getFileStatus(mountPath).isErasureCoded());
+  }
+
+  @Test
   public void testACLMultipleDestinations() throws Exception {
     setupOrderMountPath(DestinationOrder.HASH_ALL);
     Path mountPath = new Path("/mount/dir/dir");

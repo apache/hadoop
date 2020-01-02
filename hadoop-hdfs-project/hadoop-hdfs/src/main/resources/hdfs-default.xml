@@ -307,7 +307,9 @@
 <property>
   <name>dfs.namenode.redundancy.considerLoad</name>
   <value>true</value>
-  <description>Decide if chooseTarget considers the target's load or not
+  <description>
+    Decide if chooseTarget considers the target's load or not when write.
+    Turn on by default.
   </description>
 </property>
 
@@ -318,6 +320,15 @@
       before being rejected for writes, only if considerLoad is true.
     </description>
   </property>
+
+<property>
+  <name>dfs.namenode.read.considerLoad</name>
+  <value>false</value>
+  <description>
+    Decide if sort block locations considers the target's load or not when read.
+    Turn off by default.
+  </description>
+</property>
 
 <property>
   <name>dfs.datanode.httpserver.filter.handlers</name>
@@ -1078,6 +1089,41 @@
     a large number of nodes at once.
       
     A value of 0 means no limit will be enforced.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.decommission.monitor.class</name>
+  <value>org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminDefaultMonitor</value>
+  <description>
+    Determines the implementation used for the decommission manager. The only
+    valid options are:
+
+    org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminDefaultMonitor
+    org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminBackoffMonitor
+
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.decommission.backoff.monitor.pending.limit</name>
+  <value>10000</value>
+  <description>
+    When the Backoff monitor is enabled, determines the maximum number of blocks
+    related to decommission and maintenance operations that can be loaded
+    into the replication queue at any given time. Every
+    dfs.namenode.decommission.interval seconds, the list is checked to see if
+    the blocks have become fully replicated and then further blocks are added
+    to reach the limit defined in this parameter.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.decommission.backoff.monitor.pending.blocks.per.lock</name>
+  <value>1000</value>
+  <description>
+    When loading blocks into the replication queue, release the namenode write
+    lock after the defined number of blocks have been processed.
   </description>
 </property>
 
@@ -2640,12 +2686,21 @@
 </property>
 
 <property>
-  <name>dfs.datanode.cache.pmem.dirs</name>
+  <name>dfs.datanode.pmem.cache.dirs</name>
   <value></value>
   <description>
     This value specifies the persistent memory directory used for caching block
-    replica. It matters only if the value of dfs.datanode.cache.loader.class is
-    PmemMappableBlockLoader. Multiple directories separated by "," are acceptable.
+    replica. Multiple directories separated by "," are acceptable.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.pmem.cache.recovery</name>
+  <value>true</value>
+  <description>
+    This value specifies whether previous cache on persistent memory will be recovered.
+    This configuration can take effect only if persistent memory cache is enabled by
+    specifying value for 'dfs.datanode.pmem.cache.dirs'.
   </description>
 </property>
 
@@ -2975,6 +3030,79 @@
     milliseconds.
   </description>
 </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.enabled</name>
+    <value>false</value>
+    <description>
+      Set to true to enable dead node detection in client side. Then all the DFSInputStreams of the same client can
+      share the dead node information.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.deadnode.queue.max</name>
+    <value>100</value>
+    <description>
+      The max queue size of probing dead node.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.suspectnode.queue.max</name>
+    <value>1000</value>
+    <description>
+      The max queue size of probing suspect node.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.probe.deadnode.threads</name>
+    <value>10</value>
+    <description>
+      The maximum number of threads to use for probing dead node.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.probe.suspectnode.threads</name>
+    <value>10</value>
+    <description>
+      The maximum number of threads to use for probing suspect node.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.rpc.threads</name>
+    <value>20</value>
+    <description>
+      The maximum number of threads to use for calling RPC call to recheck the liveness of dead node.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.probe.deadnode.interval.ms</name>
+    <value>60000</value>
+    <description>
+      Interval time in milliseconds for probing dead node behavior.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.probe.suspectnode.interval.ms</name>
+    <value>300</value>
+    <description>
+      Interval time in milliseconds for probing suspect node behavior.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.probe.connection.timeout.ms</name>
+    <value>20000</value>
+    <description>
+      Connection timeout for probing dead node in milliseconds.
+    </description>
+  </property>
 
 <property>
   <name>dfs.namenode.lease-recheck-interval-ms</name>
@@ -3646,7 +3774,16 @@
     HTTPS port for DataNode.
   </description>
 </property>
-
+<property>
+  <name>dfs.namenode.get-blocks.max-qps</name>
+  <value>20</value>
+  <description>
+    The maximum number of getBlocks RPCs data movement utilities can make to
+    a NameNode per second. Values less than or equal to 0 disable throttling.
+    This affects anything that uses a NameNodeConnector, i.e., the Balancer,
+    Mover, and StoragePolicySatisfier.
+  </description>
+</property>
 <property>
   <name>dfs.balancer.dispatcherThreads</name>
   <value>200</value>
@@ -4309,6 +4446,16 @@
   <description>
     If false, break block transfers on 32-bit machines greater than
     or equal to 2GB into smaller chunks.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.fixed.volume.size</name>
+  <value>false</value>
+  <description>
+    If false, call function getTotalSpace of File to get capacity of volume
+    during every heartbeat.
+    If true, cache the capacity when when the first call, and reuse it later.
   </description>
 </property>
 
@@ -5039,14 +5186,6 @@
   <value></value>
   <description>
     Kerberos keytab file for the Secondary NameNode.
-  </description>
-</property>
-
-<property>
-  <name>dfs.web.authentication.filter</name>
-  <value>org.apache.hadoop.hdfs.web.AuthFilter</value>
-  <description>
-    Authentication filter class used for WebHDFS.
   </description>
 </property>
 

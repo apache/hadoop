@@ -38,6 +38,8 @@ import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -104,7 +106,15 @@ public class TestRMWebServicesSchedulerActivities
     nm.registerNode();
 
     try {
-      RMApp app1 = rm.submitApp(10, "app1", "user1", null, "b1");
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(10, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .withUnmanagedAM(false)
+              .build();
+      RMApp app1 = MockRMAppSubmitter.submit(rm, data);
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm);
       am1.allocate(Arrays.asList(ResourceRequest
           .newInstance(Priority.UNDEFINED, "127.0.0.1",
@@ -160,7 +170,15 @@ public class TestRMWebServicesSchedulerActivities
     nm.registerNode();
 
     try {
-      RMApp app1 = rm.submitApp(1024, "app1", "user1", null, "b1");
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .withUnmanagedAM(false)
+              .build();
+      RMApp app1 = MockRMAppSubmitter.submit(rm, data);
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm);
       am1.allocate(Arrays.asList(ResourceRequest
           .newInstance(Priority.UNDEFINED, "127.0.0.1",
@@ -248,7 +266,15 @@ public class TestRMWebServicesSchedulerActivities
     nm.registerNode();
 
     try {
-      RMApp app1 = rm.submitApp(1024, "app1", "user1", null, "b1");
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .withUnmanagedAM(false)
+              .build();
+      RMApp app1 = MockRMAppSubmitter.submit(rm, data);
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm);
       am1.allocate(Arrays.asList(ResourceRequest
           .newInstance(Priority.UNDEFINED, "127.0.0.1",
@@ -300,10 +326,26 @@ public class TestRMWebServicesSchedulerActivities
     nm2.registerNode();
 
     try {
-      RMApp app1 = rm.submitApp(10, "app1", "user1", null, "b1");
+      MockRMAppSubmissionData data1 =
+          MockRMAppSubmissionData.Builder.createWithMemory(10, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .withUnmanagedAM(false)
+              .build();
+      RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-      RMApp app2 = rm.submitApp(10, "app2", "user1", null, "b2");
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(10, rm)
+              .withAppName("app2")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b2")
+              .withUnmanagedAM(false)
+              .build();
+      RMApp app2 = MockRMAppSubmitter.submit(rm, data);
       MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm2);
 
       am1.allocate(Arrays.asList(ResourceRequest
@@ -420,7 +462,15 @@ public class TestRMWebServicesSchedulerActivities
     nm.registerNode();
 
     try {
-      RMApp app1 = rm.submitApp(10, "app1", "user1", null, "b1");
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(10, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .withUnmanagedAM(false)
+              .build();
+      RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
       //Get JSON
       WebResource r = resource();
@@ -470,7 +520,15 @@ public class TestRMWebServicesSchedulerActivities
     nm.registerNode();
 
     try {
-      RMApp app1 = rm.submitApp(10, "app1", "user1", null, "b1");
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(10, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .withUnmanagedAM(false)
+              .build();
+      RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
       //Get JSON
       WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
@@ -524,7 +582,15 @@ public class TestRMWebServicesSchedulerActivities
     nm.registerNode();
 
     try {
-      RMApp app1 = rm.submitApp(1024, "app1", "user1", null, "b1");
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .withUnmanagedAM(false)
+              .build();
+      RMApp app1 = MockRMAppSubmitter.submit(rm, data);
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm);
       am1.allocate(Arrays.asList(ResourceRequest
           .newInstance(Priority.UNDEFINED, "127.0.0.1",
@@ -570,7 +636,15 @@ public class TestRMWebServicesSchedulerActivities
     nm.registerNode();
 
     try {
-      RMApp app1 = rm.submitApp(1024, "app1", "user1", null, "b1");
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .withUnmanagedAM(false)
+              .build();
+      RMApp app1 = MockRMAppSubmitter.submit(rm, data);
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm);
       am1.allocate(Arrays.asList(ResourceRequest
           .newInstance(Priority.UNDEFINED, "127.0.0.1",
@@ -604,7 +678,15 @@ public class TestRMWebServicesSchedulerActivities
     rm.start();
 
     try {
-      RMApp app1 = rm.submitApp(1024, "app1", "user1", null, "b1");
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .withUnmanagedAM(false)
+              .build();
+      RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
       //Get JSON
       WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
@@ -635,10 +717,26 @@ public class TestRMWebServicesSchedulerActivities
     nm2.registerNode();
 
     try {
-      RMApp app1 = rm.submitApp(10, "app1", "user1", null, "b1");
+      MockRMAppSubmissionData data1 =
+          MockRMAppSubmissionData.Builder.createWithMemory(10, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .withUnmanagedAM(false)
+              .build();
+      RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-      RMApp app2 = rm.submitApp(10, "app2", "user1", null, "b2");
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(10, rm)
+              .withAppName("app2")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b2")
+              .withUnmanagedAM(false)
+              .build();
+      RMApp app2 = MockRMAppSubmitter.submit(rm, data);
       MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm2);
 
       am1.allocate(Arrays.asList(ResourceRequest
@@ -693,7 +791,13 @@ public class TestRMWebServicesSchedulerActivities
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 8 * 1024);
 
     try {
-      RMApp app1 = rm.submitApp(512, "app1", "user1", null, "b1");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(512, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
       WebResource r = resource();
@@ -750,7 +854,13 @@ public class TestRMWebServicesSchedulerActivities
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
 
     try {
-      RMApp app1 = rm.submitApp(512, "app1", "user1", null, "b1");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(512, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
       // init scheduling request
@@ -813,7 +923,13 @@ public class TestRMWebServicesSchedulerActivities
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 8 * 1024);
 
     try {
-      RMApp app1 = rm.submitApp(512, "app1", "user1", null, "b1");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(512, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
       WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
@@ -859,7 +975,13 @@ public class TestRMWebServicesSchedulerActivities
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 8 * 1024);
 
     try {
-      RMApp app1 = rm.submitApp(512, "app1", "user1", null, "b1");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(512, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
       WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
@@ -911,7 +1033,13 @@ public class TestRMWebServicesSchedulerActivities
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 8 * 1024);
 
     try {
-      RMApp app1 = rm.submitApp(512, "app1", "user1", null, "b1");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(512, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
       WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
@@ -1042,7 +1170,13 @@ public class TestRMWebServicesSchedulerActivities
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 8 * 1024);
     try {
-      RMApp app1 = rm.submitApp(512, "app1", "user1", null, "b1");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(512, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
       WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
@@ -1110,7 +1244,13 @@ public class TestRMWebServicesSchedulerActivities
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 8 * 1024);
     try {
-      RMApp app1 = rm.submitApp(512, "app1", "user1", null, "b1");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(512, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
       // am1 asks for 10 * 512MB container
       am1.allocate("*", 512, 10, new ArrayList<>());
@@ -1212,7 +1352,13 @@ public class TestRMWebServicesSchedulerActivities
     MockNM nm3 = rm.registerNode("127.0.0.3:1234", 4 * 1024);
 
     try {
-      RMApp app1 = rm.submitApp(5120, "app1", "user1", null, "b1");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(5120, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .build());
 
       WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
@@ -1278,7 +1424,13 @@ public class TestRMWebServicesSchedulerActivities
     nm2.registerNode();
 
     try {
-      RMApp app1 = rm.submitApp(10, "app1", "user1", null, "b1");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(10, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
       am1.allocate(Arrays.asList(
@@ -1363,7 +1515,13 @@ public class TestRMWebServicesSchedulerActivities
     nm2.registerNode();
 
     try {
-      RMApp app1 = rm.submitApp(10, "app1", "user1", null, "a1a");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(10, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("a1a")
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
       am1.allocate(Arrays.asList(
