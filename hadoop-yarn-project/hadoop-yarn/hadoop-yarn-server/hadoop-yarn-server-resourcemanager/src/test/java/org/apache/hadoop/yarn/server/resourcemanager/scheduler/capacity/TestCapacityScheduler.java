@@ -61,6 +61,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.TestGroupsCaching;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -5329,6 +5330,8 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         TestGroupsCaching.FakeunPrivilegedGroupMapping.class, ShellBasedUnixGroupsMapping.class);
     config.set(CommonConfigurationKeys.HADOOP_USER_GROUP_STATIC_OVERRIDES,
         "a1" +"=" + "agroup" + "");
+    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(config);
+
     config.set(CapacitySchedulerConfiguration.QUEUE_MAPPING,
         "g:agroup:%user");
 

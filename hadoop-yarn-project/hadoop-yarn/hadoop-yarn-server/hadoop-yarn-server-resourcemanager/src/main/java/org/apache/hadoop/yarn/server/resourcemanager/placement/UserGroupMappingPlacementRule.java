@@ -366,9 +366,9 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
 
     // initialize groups if mappings are present
     if (newMappings.size() > 0) {
-      Groups groups = new Groups(conf);
       this.mappings = newMappings;
-      this.groups = groups;
+      this.groups = Groups.getUserToGroupsMappingService(
+          ((CapacityScheduler)scheduler).getConf());
       this.overrideWithQueueMappings = overrideWithQueueMappings;
       return true;
     }
