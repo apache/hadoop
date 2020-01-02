@@ -27,12 +27,14 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_SPLIT_THRESHO
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_SPLIT_THRESHOLD_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_PMEM_DIRS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_LIFELINE_INTERVAL_SECONDS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NON_LOCAL_LAZY_PERSIST;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NON_LOCAL_LAZY_PERSIST_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PMEM_CACHE_DIRS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PMEM_CACHE_RECOVERY_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PMEM_CACHE_RECOVERY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_DERIVED_QOP_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_DERIVED_QOP_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
@@ -93,6 +95,7 @@ public class DNConf {
   final boolean encryptDataTransfer;
   final boolean connectToDnViaHostname;
   final boolean overwriteDownstreamDerivedQOP;
+  private final boolean pmemCacheRecoveryEnabled;
 
   final long readaheadLength;
   final long heartBeatInterval;
@@ -264,7 +267,7 @@ public class DNConf {
         DFS_DATANODE_MAX_LOCKED_MEMORY_DEFAULT);
 
     this.pmemDirs = getConf().getTrimmedStrings(
-        DFS_DATANODE_CACHE_PMEM_DIRS_KEY);
+        DFS_DATANODE_PMEM_CACHE_DIRS_KEY);
 
     this.restartReplicaExpiry = getConf().getLong(
         DFS_DATANODE_RESTART_REPLICA_EXPIRY_KEY,
@@ -285,6 +288,10 @@ public class DNConf {
     String[] dataDirs =
         getConf().getTrimmedStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
     this.volsConfigured = (dataDirs == null) ? 0 : dataDirs.length;
+
+    this.pmemCacheRecoveryEnabled = getConf().getBoolean(
+        DFS_DATANODE_PMEM_CACHE_RECOVERY_KEY,
+        DFS_DATANODE_PMEM_CACHE_RECOVERY_DEFAULT);
   }
 
   // We get minimumNameNodeVersion via a method so it can be mocked out in tests.
@@ -294,7 +301,7 @@ public class DNConf {
   
   /**
    * Returns the configuration.
-   * 
+   *
    * @return Configuration the configuration
    */
   public Configuration getConf() {
@@ -433,5 +440,9 @@ public class DNConf {
 
   public String[] getPmemVolumes() {
     return pmemDirs;
+  }
+
+  public boolean getPmemCacheRecoveryEnabled() {
+    return pmemCacheRecoveryEnabled;
   }
 }
