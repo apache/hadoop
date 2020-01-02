@@ -135,17 +135,18 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
    */
   private long importDir() throws IOException {
     Preconditions.checkArgument(status.isDirectory());
-    long items;
+    long totalCountOfEntriesWritten = 0;
     final Path basePath = status.getPath();
     final MetadataStore ms = getStore();
+    LOG.info("Importing directory {}", basePath);
     try (BulkOperationState operationState = ms
         .initiateBulkWrite(
             BulkOperationState.OperationType.Import,
             basePath)) {
+      long countOfFilesWritten = 0;
+      long countOfDirsWritten = 0;
       RemoteIterator<S3ALocatedFileStatus> it = getFilesystem()
           .listFilesAndEmptyDirectories(basePath, true);
-      items = 0;
-
       while (it.hasNext()) {
         S3ALocatedFileStatus located = it.next();
         S3AFileStatus child;
@@ -155,11 +156,14 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
           child = DynamoDBMetadataStore.makeDirStatus(path,
               located.getOwner());
           dirCache.add(path);
+          // and update the dir count
+          countOfDirsWritten++;
         } else {
           child = located.toS3AFileStatus();
         }
 
-        putParentsIfNotPresent(child, operationState);
+        int parentsWritten = putParentsIfNotPresent(child, operationState);
+        LOG.debug("Wrote {} parent entries", parentsWritten);
 
         // We don't blindly overwrite any existing file entry in S3Guard with a
         // new one, Because that may lose the version information.
@@ -192,22 +196,31 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
               }
             }
           }
+          if (child != null) {
+            countOfFilesWritten++;
+          }
         }
         if (child != null) {
           // there's an entry to add.
+
+          // log entry spaced to same width
+          String t = isDirectory ? "Dir " : "File";
           if (verbose) {
-            LOG.info("{} {}",
-                isDirectory ? "Dir " : "File",   // Spaced to same width
-                path);
+            LOG.info("{} {}", t, path);
+          } else {
+            LOG.debug("{} {}", t, path);
           }
           S3Guard.putWithTtl(
               ms,
               new PathMetadata(child),
               getFilesystem().getTtlTimeProvider(),
               operationState);
-          items++;
+          totalCountOfEntriesWritten++;
         }
       }
+      LOG.info("Updated S3Guard with {} files and {} directory entries",
+          countOfFilesWritten, countOfDirsWritten);
+
       // here all entries are imported.
       // tell the store that everything should be marked as auth
       if (authoritative) {
@@ -216,7 +229,7 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
         ms.markAsAuthoritative(basePath, operationState);
       }
     }
-    return items;
+    return totalCountOfEntriesWritten;
   }
 
   /**
@@ -224,17 +237,19 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
    *
    * There's duplication here with S3Guard DDB ancestor state, but this
    * is designed to work across implementations.
-   * @param f the file or an empty directory.
+   * @param status the file or an empty directory.
    * @param operationState store's bulk update state.
+   * @return number of entries written.
    * @throws IOException on I/O errors.
    */
-  private void putParentsIfNotPresent(FileStatus f,
+  private int putParentsIfNotPresent(FileStatus status,
       @Nullable BulkOperationState operationState) throws IOException {
-    Preconditions.checkNotNull(f);
-    Path parent = f.getPath().getParent();
+    Preconditions.checkNotNull(status);
+    Path parent = status.getPath().getParent();
+    int count = 0;
     while (parent != null) {
       if (dirCache.contains(parent)) {
-        return;
+        return count;
       }
       final ITtlTimeProvider timeProvider
           = getFilesystem().getTtlTimeProvider();
@@ -242,14 +257,16 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
           timeProvider, false, true);
       if (pmd == null || pmd.isDeleted()) {
         S3AFileStatus dir = DynamoDBMetadataStore.makeDirStatus(parent,
-            f.getOwner());
+            status.getOwner());
         S3Guard.putWithTtl(getStore(), new PathMetadata(dir),
             timeProvider,
             operationState);
+        count++;
       }
       dirCache.add(parent);
       parent = parent.getParent();
     }
+    return count;
   }
 
 }

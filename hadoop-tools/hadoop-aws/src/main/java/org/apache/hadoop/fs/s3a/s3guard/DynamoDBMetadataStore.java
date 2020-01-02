@@ -1414,13 +1414,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
-   * Get the value of an optional boolean attribute.
+   * Get the value of an optional boolean attribute, falling back to the
+   * default value if the attribute is absent.
    * @param item Item
    * @param attrName Attribute name
    * @param defVal Default value
    * @return The value or the default
    */
-  private static boolean hasBoolAttribute(Item item,
+  private static boolean getBoolAttribute(Item item,
       String attrName,
       boolean defVal) {
     return item.hasAttribute(attrName) ? item.getBoolean(attrName) : defVal;
@@ -2169,13 +2170,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
       String stateStr = AncestorState.stateAsString(state);
       for (Item item : items) {
         boolean tombstone = !itemExists(item);
-        boolean isDir = hasBoolAttribute(item, IS_DIR, false);
-        boolean auth = hasBoolAttribute(item, IS_AUTHORITATIVE, false);
+        boolean isDir = getBoolAttribute(item, IS_DIR, false);
+        boolean auth = getBoolAttribute(item, IS_AUTHORITATIVE, false);
         OPERATIONS_LOG.debug("{} {} {}{}{}",
             stateStr,
             tombstone ? "TOMBSTONE" : "PUT",
             itemPrimaryKeyToString(item),
-            auth ? " [auth] " : "",
+            auth ? " [auth]" : "",
             isDir ? " directory" : "");
       }
     }
