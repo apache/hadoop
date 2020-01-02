@@ -33,7 +33,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
@@ -184,6 +186,30 @@ public class FsDatasetCache {
     this.memCacheStats = cacheLoader.initialize(this.getDnConf());
   }
 
+  /**
+   * For persistent memory cache, create cache subdirectory specified with
+   * blockPoolId to store cache data.
+   * Recover the status of cache in persistent memory, if any.
+   */
+  public void initCache(String bpid) throws IOException {
+    if (cacheLoader.isTransientCache()) {
+      return;
+    }
+    PmemVolumeManager.getInstance().createBlockPoolDir(bpid);
+    if (getDnConf().getPmemCacheRecoveryEnabled()) {
+      final Map<ExtendedBlockId, MappableBlock> keyToMappableBlock =
+          PmemVolumeManager.getInstance().recoverCache(bpid, cacheLoader);
+      Set<Map.Entry<ExtendedBlockId, MappableBlock>> entrySet
+          = keyToMappableBlock.entrySet();
+      for (Map.Entry<ExtendedBlockId, MappableBlock> entry : entrySet) {
+        mappableBlockMap.put(entry.getKey(),
+            new Value(keyToMappableBlock.get(entry.getKey()), State.CACHED));
+        numBlocksCached.addAndGet(1);
+        dataset.datanode.getMetrics().incrBlocksCached(1);
+      }
+    }
+  }
+
   DNConf getDnConf() {
     return this.dataset.datanode.getDnConf();
   }
@@ -191,7 +217,7 @@ public class FsDatasetCache {
   /**
    * Get the cache path if the replica is cached into persistent memory.
    */
-  String getReplicaCachePath(String bpid, long blockId) {
+  String getReplicaCachePath(String bpid, long blockId) throws IOException {
     if (cacheLoader.isTransientCache() ||
         !isCached(bpid, blockId)) {
       return null;

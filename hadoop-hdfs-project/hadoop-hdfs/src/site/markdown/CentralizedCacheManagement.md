@@ -224,7 +224,7 @@ Be sure to configure one of the following properties for DRAM cache or persisten
 
     This setting is shared with the [Lazy Persist Writes feature](./MemoryStorage.html). The Data Node will ensure that the combined memory used by Lazy Persist Writes and Centralized Cache Management does not exceed the amount configured in `dfs.datanode.max.locked.memory`.
 
-*   dfs.datanode.cache.pmem.dirs
+*   dfs.datanode.pmem.cache.dirs
 
     This property specifies the cache volume of persistent memory. For multiple volumes, they should be separated by “,”, e.g. “/mnt/pmem0, /mnt/pmem1”. The default value is empty. If this property is configured, the volume capacity will be detected. And there is no need to configure `dfs.datanode.max.locked.memory`.
 
@@ -253,6 +253,10 @@ The following properties are not required, but may be specified for tuning:
 *   dfs.namenode.path.based.cache.block.map.allocation.percent
 
     The percentage of the Java heap which we will allocate to the cached blocks map. The cached blocks map is a hash map which uses chained hashing. Smaller maps may be accessed more slowly if the number of cached blocks is large; larger maps will consume more memory. The default is 0.25 percent.
+
+*   dfs.datanode.pmem.cache.recovery
+
+    This parameter is used to determine whether to recover the status for previous cache on persistent memory during the start of DataNode. If it is enabled, DataNode will recover the status for previously cached data on persistent memory. Thus, re-caching data will be avoided. If this property is not enabled, DataNode will clean up the previous cache, if any, on persistent memory. This property can only work when persistent memory is enabled, i.e., `dfs.datanode.pmem.cache.dirs` is configured.
 
 ### OS Limits
 
