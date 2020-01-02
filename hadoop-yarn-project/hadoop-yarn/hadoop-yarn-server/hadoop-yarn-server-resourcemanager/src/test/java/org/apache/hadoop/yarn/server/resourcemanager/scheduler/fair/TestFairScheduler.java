@@ -51,6 +51,8 @@ import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
+import org.apache.hadoop.security.Groups;
+import org.apache.hadoop.security.JniBasedUnixGroupsMappingWithFallback;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -1806,6 +1808,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   public void testQueuePlacementWithPolicy() throws Exception {
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
+    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(conf);
     scheduler.init(conf);
     scheduler.start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
@@ -1851,6 +1854,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals("root.somequeue", scheduler.getSchedulerApp(appId).getQueueName());
     appId = createSchedulingRequest(1024, "default", "otheruser");
     assertEquals("root.default", scheduler.getSchedulerApp(appId).getQueueName());
+
+    // undo the group change
+    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        JniBasedUnixGroupsMappingWithFallback.class,
+        GroupMappingServiceProvider.class);
+    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(conf);
   }
 
   @Test
@@ -1903,6 +1912,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
+    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(conf);
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
     out.println("<allocations>");
@@ -1928,6 +1938,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         "user1");
 
     assertEquals("root.user1group.user1", user1Leaf.getName());
+    // undo the group change
+    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        JniBasedUnixGroupsMappingWithFallback.class,
+        GroupMappingServiceProvider.class);
+    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(conf);
   }
 
   @Test
