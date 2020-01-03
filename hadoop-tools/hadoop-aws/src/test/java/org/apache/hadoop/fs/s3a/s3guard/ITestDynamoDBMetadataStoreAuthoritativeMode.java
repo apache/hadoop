@@ -262,7 +262,8 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
   @Test
   public void testEmptyDirMarkerIsAuth() {
     final S3AFileStatus st = new S3AFileStatus(true, dir, "root");
-    final DDBPathMetadata md = (DDBPathMetadata) authoritativeEmptyDirectoryMarker(st);
+    final DDBPathMetadata md = (DDBPathMetadata)
+        authoritativeEmptyDirectoryMarker(st);
     Assertions.assertThat(md)
         .describedAs("Metadata %s", md)
         .matches(DDBPathMetadata::isAuthoritativeDir, "is auth dir")

@@ -237,15 +237,15 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
    *
    * There's duplication here with S3Guard DDB ancestor state, but this
    * is designed to work across implementations.
-   * @param status the file or an empty directory.
+   * @param fileStatus the file or an empty directory.
    * @param operationState store's bulk update state.
    * @return number of entries written.
    * @throws IOException on I/O errors.
    */
-  private int putParentsIfNotPresent(FileStatus status,
+  private int putParentsIfNotPresent(FileStatus fileStatus,
       @Nullable BulkOperationState operationState) throws IOException {
-    Preconditions.checkNotNull(status);
-    Path parent = status.getPath().getParent();
+    Preconditions.checkNotNull(fileStatus);
+    Path parent = fileStatus.getPath().getParent();
     int count = 0;
     while (parent != null) {
       if (dirCache.contains(parent)) {
@@ -257,7 +257,7 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
           timeProvider, false, true);
       if (pmd == null || pmd.isDeleted()) {
         S3AFileStatus dir = DynamoDBMetadataStore.makeDirStatus(parent,
-            status.getOwner());
+            fileStatus.getOwner());
         S3Guard.putWithTtl(getStore(), new PathMetadata(dir),
             timeProvider,
             operationState);

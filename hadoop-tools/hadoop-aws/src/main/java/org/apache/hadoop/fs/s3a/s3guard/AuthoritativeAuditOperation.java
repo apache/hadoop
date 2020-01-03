@@ -100,7 +100,7 @@ public class AuthoritativeAuditOperation extends AbstractStoreOperation {
    * Examine the path metadata and verify that the dir is authoritative.
    * @param md metadata.
    * @param requireAuth require all directories to be authoritative
-   * @throws NonAuthoritativeDirException if it is non-auth and requireAuth=true.
+   * @throws NonAuthoritativeDirException if it is !auth and requireAuth=true.
    */
   private void verifyAuthDir(final DDBPathMetadata md,
       final boolean requireAuth)
