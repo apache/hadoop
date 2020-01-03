@@ -36,6 +36,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -72,6 +73,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.AddBlockPoolException;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
@@ -402,6 +404,50 @@ public class TestDataNodeVolumeFailure {
     DataNodeTestUtils.waitForDiskError(dn0,
         DataNodeTestUtils.getVolume(dn0, dn0Vol2));
     assertTrue(dn0.shouldRun());
+  }
+
+  /**
+   * Test {@link DataNode#refreshVolumes(String)} not deadLock with
+   * {@link BPOfferService#registrationSucceeded(BPServiceActor,
+   * DatanodeRegistration)}.
+   */
+  @Test(timeout=10000)
+  public void testRefreshDeadLock() throws Exception {
+    CountDownLatch latch = new CountDownLatch(1);
+    DataNodeFaultInjector.set(new DataNodeFaultInjector() {
+      public void delayWhenOfferServiceHoldLock() {
+        try {
+          latch.await();
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+    });
+
+    DataNode dn = cluster.getDataNodes().get(0);
+    File volume = cluster.getInstanceStorageDir(0, 0);
+    String dataDirs = volume.getPath();
+    List<BPOfferService> allBpOs = dn.getAllBpOs();
+    BPOfferService service = allBpOs.get(0);
+    BPServiceActor actor = service.getBPServiceActors().get(0);
+    DatanodeRegistration bpRegistration = actor.getBpRegistration();
+
+    Thread register = new Thread(() -> {
+      try {
+        service.registrationSucceeded(actor, bpRegistration);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    });
+
+    register.start();
+    String newdir = dataDirs + "tmp";
+    // Make sure service have get writelock
+    latch.countDown();
+    String result = dn.reconfigurePropertyImpl(
+        DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, newdir);
+    assertNotNull(result);
   }
 
   /**
