@@ -1585,9 +1585,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @param cutoff Oldest modification time to allow
    * @param keyPrefix The prefix for the keys that should be removed
    * @param items expired items
+   * @return count of pruned items.
    * @throws IOException Any IO/DDB failure.
    * @throws InterruptedIOException if the prune was interrupted
-   * @return count of pruned items.
    */
   private int innerPrune(
       final PruneMode pruneMode, final long cutoff, final String keyPrefix,

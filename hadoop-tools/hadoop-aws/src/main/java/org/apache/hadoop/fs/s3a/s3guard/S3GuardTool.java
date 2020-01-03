@@ -118,6 +118,10 @@ public abstract class S3GuardTool extends Configured implements Tool,
   static final int E_BAD_STATE = EXIT_NOT_ACCEPTABLE;
   static final int E_NOT_FOUND = EXIT_NOT_FOUND;
 
+  /** Error String when the wrong FS is used for binding: {@value}. **/
+  @VisibleForTesting
+  public static final String WRONG_FILESYSTEM = "Wrong filesystem for ";
+
   /**
    * The FS we close when we are closed.
    */
@@ -391,7 +395,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
         "Expected bucket option to be %s but was %s",
         S3GUARD_METASTORE_NULL, updatedBucketOption);
 
-    setFilesystem(FileSystem.newInstance(uri, conf));
+    bindFilesystem(FileSystem.newInstance(uri, conf));
   }
 
   /**
@@ -434,19 +438,23 @@ public abstract class S3GuardTool extends Configured implements Tool,
   /**
    * Sets the filesystem; it must be an S3A FS instance, or a FilterFS
    * around an S3A Filesystem.
-   * @param filesystem filesystem to bind to
+   * @param bindingFS filesystem to bind to
+   * @return the bound FS.
+   * @throws ExitUtil.ExitException if the FS is not an S3 FS
    */
-  protected void setFilesystem(FileSystem filesystem) {
-    FileSystem fs = filesystem;
-    baseFS = filesystem;
+  protected S3AFileSystem bindFilesystem(FileSystem bindingFS) {
+    FileSystem fs = bindingFS;
+    baseFS = bindingFS;
     while (fs instanceof FilterFileSystem) {
       fs = ((FilterFileSystem) fs).getRawFileSystem();
     }
     if (!(fs instanceof S3AFileSystem)) {
-      throw invalidArgs("URI %s is not a S3A file system: %s",
-          fs.getUri(), fs.getClass().getName());
+      throw new ExitUtil.ExitException(EXIT_SERVICE_UNAVAILABLE,
+          WRONG_FILESYSTEM + "URI " + fs.getUri() + " : "
+          + fs.getClass().getName());
     }
-    this.filesystem = (S3AFileSystem) fs;
+    filesystem = (S3AFileSystem) fs;
+    return filesystem;
   }
 
   @VisibleForTesting
@@ -749,12 +757,12 @@ public abstract class S3GuardTool extends Configured implements Tool,
     public static final String NAME = "import";
     public static final String PURPOSE = "import metadata from existing S3 " +
         "data";
-    public static final String AUTH_FLAG = "auth";
-    private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
+    public static final String AUTH_FLAG = "authoritative";
+    private static final String USAGE = NAME + " [OPTIONS] [s3a://PATH]\n" +
         "\t" + PURPOSE + "\n\n" +
         "Common options:\n" +
-        "  -" + AUTH_FLAG + " Mark imported directory data as authoritative.\n" +
-        "  -" + VERBOSE + " Verbose Output.\n" +
+        "  -" + AUTH_FLAG + " - Mark imported directory data as authoritative.\n" +
+        "  -" + VERBOSE + " - Verbose Output.\n" +
         "  -" + META_FLAG + " URL - Metadata repository details " +
         "(implementation-specific)\n" +
         "\n" +
@@ -1198,8 +1206,8 @@ public abstract class S3GuardTool extends Configured implements Tool,
         unguardedConf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
       }
 
-      setFilesystem(FileSystem.newInstance(fsURI, unguardedConf));
-      S3AFileSystem fs = getFilesystem();
+      S3AFileSystem fs = bindFilesystem(
+          FileSystem.newInstance(fsURI, unguardedConf));
       Configuration conf = fs.getConf();
       URI fsUri = fs.getUri();
       MetadataStore store = fs.getMetadataStore();
@@ -1671,19 +1679,19 @@ public abstract class S3GuardTool extends Configured implements Tool,
     public static final String NAME = "authoritative";
 
     public static final String CHECK_FLAG = "check-config";
-    public static final String REQUIRE_AUTH = "require-auth";
+    public static final String REQUIRE_AUTH = "required";
 
     public static final String PURPOSE = "Audits a DynamoDB S3Guard "
         + "repository for all the entries being 'authoritative'";
 
-    private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n"
+    private static final String USAGE = NAME + " [OPTIONS] [s3a://PATH]\n"
         + "\t" + PURPOSE + "\n\n"
         + "Options:\n"
-        + "  -" + REQUIRE_AUTH + " Require directories under the path to"
+        + "  -" + REQUIRE_AUTH + " - Require directories under the path to"
         + " be authoritative.\n"
-        +  " -" + CHECK_FLAG + " Check the configuration for the path to"
-        + " be authoritative"
-        + "  -" + VERBOSE + " Verbose Output.\n";
+        + "  -" + CHECK_FLAG + " - Check the configuration for the path to"
+        + " be authoritative\n"
+        + "  -" + VERBOSE + " - Verbose Output.\n";
 
     Authoritative(Configuration conf) {
       super(conf, CHECK_FLAG, REQUIRE_AUTH, VERBOSE);
@@ -1723,7 +1731,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
 
       if (!(ms instanceof DynamoDBMetadataStore)) {
         errorln(s3Path + " path uses MS: " + ms);
-        errorln(NAME + " can be only used with a DynamoDB backed s3a bucket.");
+        errorln(NAME + " can be only used with a DynamoDB-backed S3Guard table.");
         errorln(USAGE);
         return ERROR;
       }
@@ -1735,7 +1743,6 @@ public abstract class S3GuardTool extends Configured implements Tool,
           // path isn't considered auth in the S3A bucket info
           errorln("Path " + auditPath
               + " is not configured to be authoritative");
-          errorln(USAGE);
           return AuthoritativeAuditOperation.ERROR_PATH_NOT_AUTH_IN_FS;
         }
       }

@@ -131,7 +131,7 @@ public class AuthoritativeAuditOperation extends AbstractStoreOperation {
    */
   public Pair<Integer, Integer> audit(Path path) throws IOException {
     try (DurationInfo ignored =
-             new DurationInfo(LOG, "audit %s", path)) {
+             new DurationInfo(LOG, "Audit %s", path)) {
       return executeAudit(path, requireAuthoritative, true);
     }
   }
@@ -174,38 +174,41 @@ public class AuthoritativeAuditOperation extends AbstractStoreOperation {
       dirs++;
       final DDBPathMetadata dir = queue.poll();
       final Path p = dir.getFileStatus().getPath();
+      LOG.debug("Directory {}", dir.prettyPrint());
       // log a message about the dir state, with root treated specially
       if (!p.isRoot()) {
-        LOG.info("Directory {} {} authoritative",
-            p,
-            dir.isAuthoritativeDir() ? "is" : "is not");
+        if (!dir.isAuthoritativeDir()) {
+          LOG.warn("Directory {} is not authoritative", p);
+          nonauth++;
+          verifyAuthDir(dir, requireAuth);
+        } else {
+          LOG.info("Directory {}", p);
+        }
       } else {
         // this is done to avoid the confusing message about root not being
         // authoritative
         LOG.info("Root directory {}", p);
       }
-      LOG.debug("Directory {}", dir);
-      verifyAuthDir(dir, requireAuth);
 
       // list its children
       if (recursive) {
-        final DirListingMetadata entry = metastore.listChildren(
-            p);
+        final DirListingMetadata entry = metastore.listChildren(p);
 
         if (entry != null) {
           final Collection<PathMetadata> listing = entry.getListing();
           int files = 0, subdirs = 0;
           for (PathMetadata e : listing) {
             if (isDirectory(e)) {
-              final DDBPathMetadata e1 = (DDBPathMetadata) e;
-              verifyAuthDir(e1, requireAuth);
-              queue.add(e1);
+              // queue for auditing
+              queue.add((DDBPathMetadata) e);
               subdirs++;
             } else {
               files++;
             }
           }
-          LOG.info("  files {}; directories {}", files, subdirs);
+          if (verbose && files > 0 || subdirs > 0) {
+            LOG.info("  files {}; directories {}", files, subdirs);
+          }
         } else {
           LOG.info("Directory {} has been deleted", dir);
         }
