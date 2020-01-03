@@ -14,23 +14,6 @@
  */
 package org.apache.hadoop.metrics2.sink.prometheus;
 
-import org.apache.commons.configuration2.SubsetConfiguration;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.metrics2.AbstractMetric;
-import org.apache.hadoop.metrics2.MetricsException;
-import org.apache.hadoop.metrics2.MetricsRecord;
-import org.apache.hadoop.metrics2.MetricsSink;
-import org.apache.hadoop.metrics2.MetricsTag;
-
-import io.prometheus.client.CollectorRegistry;
-import io.prometheus.client.Counter;
-import io.prometheus.client.Gauge;
-import io.prometheus.client.exporter.PushGateway;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
@@ -39,16 +22,36 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import io.prometheus.client.CollectorRegistry;
+import io.prometheus.client.Counter;
+import io.prometheus.client.Gauge;
+import io.prometheus.client.exporter.PushGateway;
+
+import org.apache.commons.configuration2.SubsetConfiguration;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.metrics2.AbstractMetric;
+import org.apache.hadoop.metrics2.MetricsException;
+import org.apache.hadoop.metrics2.MetricsRecord;
+import org.apache.hadoop.metrics2.MetricsSink;
+import org.apache.hadoop.metrics2.MetricsTag;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.apache.hadoop.metrics2.MetricType.COUNTER;
 import static org.apache.hadoop.metrics2.MetricType.GAUGE;
 
+/**
+ * A metrics sink that writes to a Prometheus PushGateWay.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class PushGatewaySink implements MetricsSink, Closeable {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PushGatewaySink.class);
 
-  private static final Log LOG = LogFactory.getLog(PushGatewaySink.class);
-
-  private static final String APP_ID = "app_id";
   private static final String JOB_NAME = "job";
   private static final String HOST_KEY = "host";
   private static final String PORT_KEY = "port";
@@ -135,7 +138,6 @@ public class PushGatewaySink implements MetricsSink, Closeable {
         }
       }
       pg.push(registry, jobName, groupingKey);
-      LOG.info("pushing succeed");
     } catch (Exception e) {
       LOG.error("pushing job's metrics to gateway is failed ", e);
     }
@@ -161,15 +163,14 @@ public class PushGatewaySink implements MetricsSink, Closeable {
       for (String kv : kvs) {
         int idx = kv.indexOf("=");
         if (idx < 0) {
-          LOG.warn("Invalid prometheusPushGateway groupingKey:" + kv + ", will be ignored");
+          LOG.warn("Invalid prometheusPushGateway groupingKey:{}, will be ignored", kv);
           continue;
         }
 
         String labelKey = kv.substring(0, idx);
         String labelValue = kv.substring(idx + 1);
         if (StringUtils.isEmpty(labelKey) || StringUtils.isEmpty(labelValue)) {
-          LOG.warn("Invalid groupingKey labelKey:" + labelKey + ", labelValue:" + labelValue
-              + " must not be empty");
+          LOG.warn("Invalid groupingKey labelKey:{}, labelValue:{} must not be empty", labelKey, labelValue);
           continue;
         }
         groupingKey.put(labelKey, labelValue);
@@ -186,6 +187,5 @@ public class PushGatewaySink implements MetricsSink, Closeable {
 
   @Override
   public void close() throws IOException {
-
   }
 }
