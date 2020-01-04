@@ -3378,6 +3378,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = getQuotaCommand(nsQuota, ssQuota);
     final FSPermissionChecker pc = getPermissionChecker();
     try {
+      checkSuperuserPrivilege(pc);
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -7197,6 +7198,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     String poolInfoStr = null;
     try {
+      checkSuperuserPrivilege();
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -7223,6 +7225,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String poolNameStr = "{poolName: " +
         (req == null ? null : req.getPoolName()) + "}";
     try {
+      checkSuperuserPrivilege();
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -7248,6 +7251,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     String poolNameStr = "{poolName: " + cachePoolName + "}";
     try {
+      checkSuperuserPrivilege();
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
