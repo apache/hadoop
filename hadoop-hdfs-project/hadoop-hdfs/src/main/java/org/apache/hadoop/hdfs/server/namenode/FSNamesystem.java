@@ -8507,7 +8507,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param dst destination file.
    * @throws IOException on Error.
    */
-  boolean swapBlockList(final String src, final String dst)
+  boolean swapBlockList(final String src, final String dst, long genTimestamp)
       throws IOException {
     final String operationName = "swapBlockList";
     checkOperation(OperationCategory.WRITE);
@@ -8518,7 +8518,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       try {
         checkOperation(OperationCategory.WRITE);
         checkNameNodeSafeMode("Cannot swap block list." + src + ", " + dst);
-        res = SwapBlockListOp.swapBlocks(dir, pc, src, dst);
+        res = SwapBlockListOp.swapBlocks(dir, pc, src, dst, genTimestamp);
       } finally {
         writeUnlock(operationName);
       }

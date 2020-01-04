@@ -735,7 +735,6 @@ public class INodeFile extends INodeWithAdditionalFields
   /**
    * This method replaces blocks in a file with the supplied blocks.
    * @param newBlocks List of new blocks.
-   * @param newId new block collection id.
    */
   void replaceBlocks(BlockInfo[] newBlocks) {
     this.blocks = Arrays.copyOf(newBlocks, newBlocks.length);
@@ -1277,11 +1276,13 @@ public class INodeFile extends INodeWithAdditionalFields
   /**
    * Update Header with new Block Layout and Redundancy bits.
    * @param newBlockLayoutPolicy new block layout policy.
+   * @param newStoragePolicy new storage policy ID.
    */
-  void updateHeaderWithNewBlockLayoutPolicy(byte newBlockLayoutPolicy) {
+  void updateHeaderWithNewPolicy(byte newBlockLayoutPolicy,
+                                 byte newStoragePolicy) {
     this.header = HeaderFormat.toLong(
         HeaderFormat.getPreferredBlockSize(header),
         newBlockLayoutPolicy,
-        HeaderFormat.getStoragePolicyID(header));
+        newStoragePolicy);
   }
 }

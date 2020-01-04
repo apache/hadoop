@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile.HeaderFormat;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.junit.After;
@@ -100,7 +101,7 @@ public class TestSwapBlockList {
     // Source file not found.
     try {
       fsn.swapBlockList("/TestSwapBlockList/dir1/fileXYZ",
-          "/TestSwapBlockList/dir1/dir11/file3");
+          "/TestSwapBlockList/dir1/dir11/file3", 0L);
       Assert.fail();
     } catch (IOException ioEx) {
       Assert.assertTrue(ioEx instanceof FileNotFoundException);
@@ -111,7 +112,7 @@ public class TestSwapBlockList {
     // Destination file not found.
     try {
       fsn.swapBlockList("/TestSwapBlockList/dir1/file1",
-          "/TestSwapBlockList/dir1/dir11/fileXYZ");
+          "/TestSwapBlockList/dir1/dir11/fileXYZ", 0L);
       Assert.fail();
     } catch (IOException ioEx) {
       Assert.assertTrue(ioEx instanceof FileNotFoundException);
@@ -122,7 +123,7 @@ public class TestSwapBlockList {
     // Source is Directory, not a file.
     try {
       fsn.swapBlockList("/TestSwapBlockList/dir1",
-          "/TestSwapBlockList/dir1/dir11/file3");
+          "/TestSwapBlockList/dir1/dir11/file3", 0L);
       Assert.fail();
     } catch (IOException ioEx) {
       Assert.assertTrue(
@@ -138,7 +139,7 @@ public class TestSwapBlockList {
         dstFile, FSDirectory.DirOp.WRITE).getLastINode();
     dstInodeFile.toUnderConstruction("TestClient", "TestClientMachine");
     try {
-      fsn.swapBlockList(sourceFile, dstFile);
+      fsn.swapBlockList(sourceFile, dstFile, 0L);
       Assert.fail();
     } catch (IOException ioEx) {
       Assert.assertTrue(
@@ -149,11 +150,26 @@ public class TestSwapBlockList {
     SnapshotTestHelper.createSnapshot(hdfs, subDir2, "s0");
     dstFile = "/TestSwapBlockList/dir2/file4";
     try {
-      fsn.swapBlockList(sourceFile, dstFile);
+      fsn.swapBlockList(sourceFile, dstFile, 0L);
       Assert.fail();
     } catch (IOException ioEx) {
       Assert.assertTrue(
           ioEx.getMessage().contains(dstFile + " is in a snapshot directory."));
+    }
+
+    // Check if gen timestamp validation works.
+    dstFile = "/TestSwapBlockList/dir1/file2";
+    dstInodeFile = (INodeFile) fsdir.resolvePath(fsdir.getPermissionChecker(),
+            dstFile, FSDirectory.DirOp.WRITE).getLastINode();
+    long genStamp = dstInodeFile.getLastBlock().getGenerationStamp();
+    dstInodeFile.getLastBlock().setGenerationStamp(genStamp + 1);
+    try {
+      fsn.swapBlockList(sourceFile, dstFile, genStamp);
+      Assert.fail();
+    } catch (IOException ioEx) {
+      Assert.assertTrue(
+          ioEx.getMessage().contains(dstFile +
+              " has last block with different gen timestamp."));
     }
   }
 
@@ -175,7 +191,8 @@ public class TestSwapBlockList {
     BlockInfo[] dstBlockLocationsBeforeSwap = dstInodeFile.getBlocks();
     long dstHeader = dstInodeFile.getHeaderLong();
 
-    fsn.swapBlockList(sourceFile, dstFile);
+    fsn.swapBlockList(sourceFile, dstFile,
+        dstInodeFile.getLastBlock().getGenerationStamp());
     assertBlockListEquality(dstBlockLocationsBeforeSwap,
         srcInodeFile.getBlocks(), srcInodeFile.getId());
     assertBlockListEquality(srcBlockLocationsBeforeSwap,
@@ -186,6 +203,12 @@ public class TestSwapBlockList {
         HeaderFormat.getBlockLayoutPolicy(dstInodeFile.getHeaderLong()));
     assertEquals(HeaderFormat.getBlockLayoutPolicy(dstHeader),
         HeaderFormat.getBlockLayoutPolicy(srcInodeFile.getHeaderLong()));
+
+    // Assert Storage policy
+    assertEquals(HeaderFormat.getStoragePolicyID(srcHeader),
+        HeaderFormat.getStoragePolicyID(dstInodeFile.getHeaderLong()));
+    assertEquals(HeaderFormat.getStoragePolicyID(dstHeader),
+        HeaderFormat.getStoragePolicyID(srcInodeFile.getHeaderLong()));
   }
 
   @Test
