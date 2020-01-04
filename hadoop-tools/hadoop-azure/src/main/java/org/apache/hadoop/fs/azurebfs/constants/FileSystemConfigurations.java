@@ -68,5 +68,7 @@ public final class FileSystemConfigurations {
 
   public static final boolean DEFAULT_USE_UPN = false;
 
+  public static final boolean DEFAULT_ENABLE_CHECK_ACCESS = false;
+
   private FileSystemConfigurations() {}
 }

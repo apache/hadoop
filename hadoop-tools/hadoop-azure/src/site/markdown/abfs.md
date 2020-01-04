@@ -92,6 +92,10 @@ performance issues.
 
 ## Testing ABFS
 
+### <a name="flushconfigoptions"></a> Access Options
+Config `fs.azure.enable.check.access` needs to be set true to enable
+ the AzureBlobFileSystem.access().
+
 See the relevant section in [Testing Azure](testing_azure.html).
 
 ## References
