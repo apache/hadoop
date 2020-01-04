@@ -575,42 +575,41 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     cluster.getZkfc(1).gracefulFailoverToYou();
     cluster.getZkfc(0).gracefulFailoverToYou();
   }
-  
+
+  @Test
+  public void testGracefulFailoverMultipleZKfcs() throws Exception {
+    cluster.start(3);
+
+    cluster.waitForActiveLockHolder(0);
+
+    // failover to first
+    cluster.getService(1).getZKFCProxy(conf, 5000).gracefulFailover();
+    cluster.waitForActiveLockHolder(1);
+
+    // failover to second
+    cluster.getService(2).getZKFCProxy(conf, 5000).gracefulFailover();
+    cluster.waitForActiveLockHolder(2);
+
+    // failover back to original
+    cluster.getService(0).getZKFCProxy(conf, 5000).gracefulFailover();
+    cluster.waitForActiveLockHolder(0);
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return cluster.getService(0).fenceCount == 0 &&
+            cluster.getService(1).fenceCount == 0 &&
+            cluster.getService(2).fenceCount == 0 &&
+            cluster.getService(0).activeTransitionCount == 2 &&
+            cluster.getService(1).activeTransitionCount == 1 &&
+            cluster.getService(2).activeTransitionCount == 1;
+      }
+    }, 100, 60 * 1000);
+  }
+
   private int runFC(DummyHAService target, String ... args) throws Exception {
     DummyZKFC zkfc = new DummyZKFC(conf, target);
     return zkfc.run(args);
-  }
-
-  @Test(timeout = 25000)
-  public void testGracefulFailoverMultipleZKfcs() throws Exception {
-    try {
-      cluster.start(3);
-
-      cluster.waitForActiveLockHolder(0);
-
-      // failover to first
-      cluster.getService(1).getZKFCProxy(conf, 5000).gracefulFailover();
-      cluster.waitForActiveLockHolder(1);
-
-      // failover to second
-      cluster.getService(2).getZKFCProxy(conf, 5000).gracefulFailover();
-      cluster.waitForActiveLockHolder(2);
-
-      // failover back to original
-      cluster.getService(0).getZKFCProxy(conf, 5000).gracefulFailover();
-      cluster.waitForActiveLockHolder(0);
-
-      Thread.sleep(10000); // allow to quiesce
-
-      assertEquals(0, cluster.getService(0).fenceCount);
-      assertEquals(0, cluster.getService(1).fenceCount);
-      assertEquals(0, cluster.getService(2).fenceCount);
-      assertEquals(2, cluster.getService(0).activeTransitionCount);
-      assertEquals(1, cluster.getService(1).activeTransitionCount);
-      assertEquals(1, cluster.getService(2).activeTransitionCount);
-    } finally {
-      cluster.stop();
-    }
   }
 
 }
