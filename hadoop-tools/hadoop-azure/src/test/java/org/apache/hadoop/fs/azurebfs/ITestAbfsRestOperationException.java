@@ -20,11 +20,16 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Verify the AbfsRestOperationException error message format.
@@ -71,5 +76,41 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
       Assert.assertTrue(errorFields[5].contains("RequestId")
               && errorFields[5].contains("Time"));
     }
+  }
+
+  @Test
+  public void testRequestRetryConfig() throws Exception {
+    testRetryLogic(0);
+    testRetryLogic(3);
+  }
+
+  public void testRetryLogic(int numOfRetries) throws Exception {
+    AzureBlobFileSystem fs = this.getFileSystem();
+
+    Configuration config = new Configuration(this.getRawConfiguration());
+    String accountName = config.get("fs.azure.abfs.account.name");
+    // Setup to configure custom token provider
+    config.set("fs.azure.account.auth.type." + accountName, "Custom");
+    config.set("fs.azure.account.oauth.provider.type." + accountName, "org.apache.hadoop.fs"
+        + ".azurebfs.oauth2.RetryTestTokenProvider");
+    config.set("fs.azure.io.retry.max.retries", Integer.toString(numOfRetries));
+    // Stop filesystem creation as it will lead to calls to store.
+    config.set("fs.azure.createRemoteFileSystemDuringInitialization", "false");
+
+    final AzureBlobFileSystem fs1 =
+        (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(),
+        config);
+    RetryTestTokenProvider.ResetStatusToFirstTokenFetch();
+    try {
+      fs1.getFileStatus(new Path("/"));
+    } catch (Exception ex) {
+      // Expected to fail as
+    }
+
+    // Number of retries done should be as configured
+    Assert.assertTrue(
+        "Number of token fetch retries (" + RetryTestTokenProvider.reTryCount
+            + ") done, does not match with max " + "retry count configured (" + numOfRetries
+            + ")", RetryTestTokenProvider.reTryCount == numOfRetries);
   }
 }
