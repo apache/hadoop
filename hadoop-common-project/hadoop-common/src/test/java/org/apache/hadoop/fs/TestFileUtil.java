@@ -1507,7 +1507,7 @@ public class TestFileUtil {
     FileSystem fs = FileSystem.newInstance(uri, conf);
     Path testPath = new Path(new Path(uri), "writebytes.out");
 
-    byte[] write = new byte[] { 0x00, 0x01, 0x02, 0x03 };
+    byte[] write = new byte[] {0x00, 0x01, 0x02, 0x03};
 
     FileUtil.write(fs, testPath, write);
 
@@ -1555,7 +1555,8 @@ public class TestFileUtil {
 
     FileUtil.write(fs, testPath, write, StandardCharsets.UTF_8);
 
-    String read = FileUtils.readFileToString(new File(testPath.toUri()), StandardCharsets.UTF_8);
+    String read = FileUtils.readFileToString(new File(testPath.toUri()),
+        StandardCharsets.UTF_8);
 
     assertEquals(write, read);
     assertEquals(write, read);

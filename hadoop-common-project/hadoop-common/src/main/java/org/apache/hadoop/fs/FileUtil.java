@@ -1659,7 +1659,7 @@ public class FileUtil {
     Objects.requireNonNull(path);
     Objects.requireNonNull(bytes);
 
-    try (final FSDataOutputStream out = fs.create(path)) {
+    try (FSDataOutputStream out = fs.create(path)) {
       out.write(bytes);
     }
 
@@ -1674,10 +1674,10 @@ public class FileUtil {
    * charset. This utility method opens the file for writing, creating the file
    * if it does not exist, or overwrites an existing file.
    *
+   * @param fs the files system with which to create the file
    * @param path the path to the file
    * @param lines a Collection to iterate over the char sequences
    * @param cs the charset to use for encoding
-   * @param options options specifying how the file is opened
    *
    * @return the file system
    *
@@ -1709,10 +1709,10 @@ public class FileUtil {
    * specified charset. This utility method opens the file for writing, creating
    * the file if it does not exist, or overwrites an existing file.
    *
+   * @param fs the files system with which to create the file
    * @param path the path to the file
    * @param charseq the char sequence to write to the file
    * @param cs the charset to use for encoding
-   * @param options options specifying how the file is opened
    *
    * @return the file system
    *
@@ -1740,9 +1740,9 @@ public class FileUtil {
    * UTF-8. This utility method opens the file for writing, creating the file if
    * it does not exist, or overwrites an existing file.
    *
+   * @param fs the files system with which to create the file
    * @param path the path to the file
    * @param charseq the char sequence to write to the file
-   * @param options options specifying how the file is opened
    *
    * @return the file system
    *
