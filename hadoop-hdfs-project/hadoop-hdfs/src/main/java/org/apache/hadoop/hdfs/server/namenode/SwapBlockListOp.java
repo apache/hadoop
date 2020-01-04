@@ -42,7 +42,8 @@ public final class SwapBlockListOp {
   }
 
   static SwapBlockListResult swapBlocks(FSDirectory fsd, FSPermissionChecker pc,
-                          String src, String dst) throws IOException {
+                          String src, String dst, long genTimestamp)
+      throws IOException {
 
     final INodesInPath srcIIP = fsd.resolvePath(pc, src, DirOp.WRITE);
     final INodesInPath dstIIP = fsd.resolvePath(pc, dst, DirOp.WRITE);
@@ -57,7 +58,7 @@ public final class SwapBlockListOp {
     SwapBlockListResult result = null;
     fsd.writeLock();
     try {
-      result = swapBlockList(fsd, srcIIP, dstIIP);
+      result = swapBlockList(fsd, srcIIP, dstIIP, genTimestamp);
     } finally {
       fsd.writeUnlock();
     }
@@ -66,7 +67,8 @@ public final class SwapBlockListOp {
 
   private static SwapBlockListResult swapBlockList(FSDirectory fsd,
                                     final INodesInPath srcIIP,
-                                    final INodesInPath dstIIP)
+                                    final INodesInPath dstIIP,
+                                    long genTimestamp)
       throws IOException {
 
     assert fsd.hasWriteLock();
@@ -84,6 +86,16 @@ public final class SwapBlockListOp {
     INodeFile srcINodeFile = (INodeFile) srcIIP.getLastINode();
     INodeFile dstINodeFile = (INodeFile) dstIIP.getLastINode();
 
+    String errorPrefix = "DIR* FSDirectory.swapBlockList: ";
+    String error = "Swap Block List destination file ";
+    BlockInfo lastBlock = dstINodeFile.getLastBlock();
+    if (lastBlock != null && lastBlock.getGenerationStamp() != genTimestamp) {
+      error  += dstIIP.getPath() +
+          " has last block with different gen timestamp.";
+      NameNode.stateChangeLog.warn(errorPrefix + error);
+      throw new IOException(error);
+    }
+
     long mtime = Time.now();
     BlockInfo[] dstINodeFileBlocks = dstINodeFile.getBlocks();
     dstINodeFile.replaceBlocks(srcINodeFile.getBlocks());
@@ -97,10 +109,15 @@ public final class SwapBlockListOp {
     byte srcBlockLayoutPolicy =
         HeaderFormat.getBlockLayoutPolicy(srcHeader);
 
-    dstINodeFile.updateHeaderWithNewBlockLayoutPolicy(srcBlockLayoutPolicy);
+    byte dstStoragePolicyID = HeaderFormat.getStoragePolicyID(dstHeader);
+    byte srcStoragePolicyID = HeaderFormat.getStoragePolicyID(srcHeader);
+
+    dstINodeFile.updateHeaderWithNewPolicy(srcBlockLayoutPolicy,
+        srcStoragePolicyID);
     dstINodeFile.setModificationTime(mtime);
 
-    srcINodeFile.updateHeaderWithNewBlockLayoutPolicy(dstBlockLayoutPolicy);
+    srcINodeFile.updateHeaderWithNewPolicy(dstBlockLayoutPolicy,
+        dstStoragePolicyID);
     srcINodeFile.setModificationTime(mtime);
 
     return new SwapBlockListResult(true,
@@ -143,7 +160,6 @@ public final class SwapBlockListOp {
       NameNode.stateChangeLog.warn(errorPrefix + error);
       throw new IOException(error);
     }
-
   }
 
   static class SwapBlockListResult {
