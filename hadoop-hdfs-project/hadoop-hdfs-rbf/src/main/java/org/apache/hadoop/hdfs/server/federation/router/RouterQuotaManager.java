@@ -29,6 +29,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 /**
@@ -217,17 +218,18 @@ public class RouterQuotaManager {
 
   /**
    * Check if the quota was set.
-   * @param quota RouterQuotaUsage set in mount table.
+   * @param quota the quota usage.
    * @return True if the quota is set.
    */
-  public boolean isQuotaSet(RouterQuotaUsage quota) {
+  public static boolean isQuotaSet(QuotaUsage quota) {
     if (quota != null) {
       long nsQuota = quota.getQuota();
       long ssQuota = quota.getSpaceQuota();
 
       // once nsQuota or ssQuota was set, this mount table is quota set
       if (nsQuota != HdfsConstants.QUOTA_RESET
-          || ssQuota != HdfsConstants.QUOTA_RESET) {
+          || ssQuota != HdfsConstants.QUOTA_RESET || Quota.orByStorageType(
+              t -> quota.getTypeQuota(t) != HdfsConstants.QUOTA_RESET)) {
         return true;
       }
     }

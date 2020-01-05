@@ -16,36 +16,33 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.ExtendedBlockId;
-
-import java.io.Closeable;
+package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 /**
- * Represents an HDFS block that is mapped by the DataNode.
+ * Header for a Web UI column. This used with TH.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-public interface MappableBlock extends Closeable {
+public class ColumnHeader {
+  private String selector;
+  private String cdata;
+
+  public ColumnHeader(String pselector, String pcdata) {
+    this.selector = pselector;
+    this.cdata = pcdata;
+  }
 
   /**
-   * Get the number of bytes that have been cached.
-   * @return the number of bytes that have been cached.
+   * Get the selector field for the TH.
+   * @return Selector.
    */
-  long getLength();
+  public String getSelector() {
+    return this.selector;
+  }
 
   /**
-   * Get cache address if applicable.
-   * Return -1 if not applicable.
+   * Get the cdata field for the TH.
+   * @return CData.
    */
-  long getAddress();
-
-  /**
-   * Get cached block's ExtendedBlockId.
-   * @return cached block's ExtendedBlockId..
-   */
-  ExtendedBlockId getKey();
+  public String getCData() {
+    return this.cdata;
+  }
 }

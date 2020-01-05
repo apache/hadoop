@@ -78,7 +78,7 @@ public class TestSnapshotManager {
 
     // Delete a snapshot to free up a slot.
     //
-    sm.deleteSnapshot(iip, "", mock(INode.ReclaimContext.class));
+    sm.deleteSnapshot(iip, "", mock(INode.ReclaimContext.class), Time.now());
 
     // Attempt to create a snapshot again. It should still fail due
     // to snapshot ID rollover.

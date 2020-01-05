@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
@@ -231,6 +232,30 @@ public class TestRouterQuota {
     appendData("/testdir4/file", nnContext2.getClient(), BLOCK_SIZE);
   }
 
+  @Test
+  public void testStorageTypeQuotaExceed() throws Exception {
+    long ssQuota = BLOCK_SIZE * 3;
+    DFSClient routerClient = routerContext.getClient();
+    prepareStorageTypeQuotaTestMountTable(StorageType.DISK, BLOCK_SIZE,
+        ssQuota * 2, ssQuota, BLOCK_SIZE + 1, BLOCK_SIZE + 1);
+
+    // Verify quota exceed on Router.
+    LambdaTestUtils.intercept(DSQuotaExceededException.class,
+        "The DiskSpace quota is exceeded", "Expect quota exceed exception.",
+        () -> appendData("/type0/file", routerClient, BLOCK_SIZE));
+    LambdaTestUtils.intercept(DSQuotaExceededException.class,
+        "The DiskSpace quota is exceeded", "Expect quota exceed exception.",
+        () -> appendData("/type0/type1/file", routerClient, BLOCK_SIZE));
+
+    // Verify quota exceed on NN1.
+    LambdaTestUtils.intercept(QuotaByStorageTypeExceededException.class,
+        "Quota by storage type", "Expect quota exceed exception.",
+        () -> appendData("/type0/file", nnContext1.getClient(), BLOCK_SIZE));
+    LambdaTestUtils.intercept(QuotaByStorageTypeExceededException.class,
+        "Quota by storage type", "Expect quota exceed exception.",
+        () -> appendData("/type1/file", nnContext1.getClient(), BLOCK_SIZE));
+  }
+
   /**
    * Add a mount table entry to the mount table through the admin API.
    * @param entry Mount table entry to add.
@@ -375,6 +400,46 @@ public class TestRouterQuota {
     assertEquals(ssQuota, quota1.getSpaceQuota());
     assertEquals(nsQuota, quota2.getQuota());
     assertEquals(ssQuota, quota2.getSpaceQuota());
+  }
+
+  @Test
+  public void testStorageTypeQuota() throws Exception {
+    long ssQuota = BLOCK_SIZE * 3;
+    int fileSize = BLOCK_SIZE;
+    prepareStorageTypeQuotaTestMountTable(StorageType.DISK, BLOCK_SIZE,
+        ssQuota * 2, ssQuota, fileSize, fileSize);
+
+    // Verify /type0 quota on NN1.
+    ClientProtocol client = nnContext1.getClient().getNamenode();
+    QuotaUsage usage = client.getQuotaUsage("/type0");
+    assertEquals(HdfsConstants.QUOTA_RESET, usage.getQuota());
+    assertEquals(HdfsConstants.QUOTA_RESET, usage.getSpaceQuota());
+    verifyTypeQuotaAndConsume(new long[] {-1, -1, ssQuota * 2, -1, -1}, null,
+        usage);
+    // Verify /type1 quota on NN1.
+    usage = client.getQuotaUsage("/type1");
+    assertEquals(HdfsConstants.QUOTA_RESET, usage.getQuota());
+    assertEquals(HdfsConstants.QUOTA_RESET, usage.getSpaceQuota());
+    verifyTypeQuotaAndConsume(new long[] {-1, -1, ssQuota, -1, -1}, null,
+        usage);
+
+    FileSystem routerFs = routerContext.getFileSystem();
+    QuotaUsage u0 = routerFs.getQuotaUsage(new Path("/type0"));
+    QuotaUsage u1 = routerFs.getQuotaUsage(new Path("/type0/type1"));
+    // Verify /type0/type1 storage type quota usage on Router.
+    assertEquals(HdfsConstants.QUOTA_RESET, u1.getQuota());
+    assertEquals(2, u1.getFileAndDirectoryCount());
+    assertEquals(HdfsConstants.QUOTA_RESET, u1.getSpaceQuota());
+    assertEquals(fileSize * 3, u1.getSpaceConsumed());
+    verifyTypeQuotaAndConsume(new long[] {-1, -1, ssQuota, -1, -1},
+        new long[] {0, 0, fileSize * 3, 0, 0}, u1);
+    // Verify /type0 storage type quota usage on Router.
+    assertEquals(HdfsConstants.QUOTA_RESET, u0.getQuota());
+    assertEquals(4, u0.getFileAndDirectoryCount());
+    assertEquals(HdfsConstants.QUOTA_RESET, u0.getSpaceQuota());
+    assertEquals(fileSize * 3 * 2, u0.getSpaceConsumed());
+    verifyTypeQuotaAndConsume(new long[] {-1, -1, ssQuota * 2, -1, -1},
+        new long[] {0, 0, fileSize * 3 * 2, 0, 0}, u0);
   }
 
   @Test
@@ -1153,5 +1218,60 @@ public class TestRouterQuota {
     RouterQuotaUpdateService updateService = routerContext.getRouter()
         .getQuotaCacheUpdateService();
     updateService.periodicInvoke();
+  }
+
+  /**
+   * Add two mount tables.
+   * /type0              --> ns0---/type0 [-1, -1, {STORAGE_TYPE:quota}]
+   * /type0/type1        --> ns0---/type1 [-1, -1, {STORAGE_TYPE:quota}]
+   *
+   * Add two files with storage policy HOT.
+   * /type0/file         --> ns0---/type0/file
+   * /type0/type1/file   --> ns0---/type1/file
+   */
+  private void prepareStorageTypeQuotaTestMountTable(StorageType type,
+      long blkSize, long quota0, long quota1, int len0, int len1)
+      throws Exception {
+    final FileSystem nnFs1 = nnContext1.getFileSystem();
+
+    nnFs1.mkdirs(new Path("/type0"));
+    nnFs1.mkdirs(new Path("/type1"));
+    ((DistributedFileSystem) nnContext1.getFileSystem())
+        .createFile(new Path("/type0/file")).storagePolicyName("HOT")
+        .blockSize(blkSize).build().close();
+    ((DistributedFileSystem) nnContext1.getFileSystem())
+        .createFile(new Path("/type1/file")).storagePolicyName("HOT")
+        .blockSize(blkSize).build().close();
+    DFSClient client = nnContext1.getClient();
+    appendData("/type0/file", client, len0);
+    appendData("/type1/file", client, len1);
+
+    MountTable mountTable = MountTable
+        .newInstance("/type0", Collections.singletonMap("ns0", "/type0"));
+    mountTable.setQuota(
+        new RouterQuotaUsage.Builder().typeQuota(type, quota0).build());
+    addMountTable(mountTable);
+    mountTable = MountTable
+        .newInstance("/type0/type1", Collections.singletonMap("ns0", "/type1"));
+    mountTable.setQuota(
+        new RouterQuotaUsage.Builder().typeQuota(type, quota1).build());
+    addMountTable(mountTable);
+
+    // ensure mount table is updated to Router.
+    RouterQuotaUpdateService updateService = routerContext.getRouter()
+        .getQuotaCacheUpdateService();
+    updateService.periodicInvoke();
+  }
+
+  private void verifyTypeQuotaAndConsume(long[] quota, long[] consume,
+      QuotaUsage usage) {
+    for (StorageType t : StorageType.values()) {
+      if (quota != null) {
+        assertEquals(quota[t.ordinal()], usage.getTypeQuota(t));
+      }
+      if (consume != null) {
+        assertEquals(consume[t.ordinal()], usage.getTypeConsumed(t));
+      }
+    }
   }
 }

@@ -29,6 +29,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
+import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -560,8 +561,10 @@ public class TestQueuePlacementPolicy {
     sb.append("  </rule>");
     sb.append("</queuePlacementPolicy>");
 
+    // change the group resolution
     CONF.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         PeriodGroupsMapping.class, GroupMappingServiceProvider.class);
+    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(CONF);
     // User queue would be created under primary group queue, and the period
     // in the group name should be converted into _dot_
     createPolicy(sb.toString());
@@ -569,8 +572,10 @@ public class TestQueuePlacementPolicy {
     context = placementManager.placeApplication(asc, "user1");
     assertEquals("root.user1_dot_group.user1", context.getQueue());
 
+    // undo the group resolution change
     CONF.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
+    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(CONF);
   }
 
   @Test

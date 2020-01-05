@@ -233,9 +233,6 @@ public class FSDirAttrOp {
    */
   static void setQuota(FSDirectory fsd, FSPermissionChecker pc, String src,
       long nsQuota, long ssQuota, StorageType type) throws IOException {
-    if (fsd.isPermissionEnabled()) {
-      pc.checkSuperuserPrivilege();
-    }
 
     fsd.writeLock();
     try {

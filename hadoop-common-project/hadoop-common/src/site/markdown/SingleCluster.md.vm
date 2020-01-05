@@ -39,7 +39,7 @@ $H3 Required Software
 
 Required software for Linux include:
 
-1.  Java™ must be installed. Recommended Java versions are described at [HadoopJavaVersions](http://wiki.apache.org/hadoop/HadoopJavaVersions).
+1.  Java™ must be installed. Recommended Java versions are described at [HadoopJavaVersions](https://cwiki.apache.org/confluence/display/HADOOP/Hadoop+Java+Versions).
 
 2.  ssh must be installed and sshd must be running to use the Hadoop scripts that manage remote Hadoop daemons if the optional start and stop scripts are to be used. Additionally, it is recommmended that pdsh also be installed for better ssh resource management.
 

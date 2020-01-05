@@ -115,7 +115,7 @@ public class JsonUtilClient {
   }
 
   /** Convert a Json map to a HdfsFileStatus object. */
-  static HdfsFileStatus toFileStatus(final Map<?, ?> json,
+  public static HdfsFileStatus toFileStatus(final Map<?, ?> json,
       boolean includesType) {
     if (json == null) {
       return null;
@@ -158,11 +158,12 @@ public class JsonUtilClient {
     if (ecPolicyObj != null) {
       Map<String, String> extraOptions = (Map) ecPolicyObj.get("extraOptions");
       ECSchema ecSchema = new ECSchema((String) ecPolicyObj.get("codecName"),
-          (int) ecPolicyObj.get("numDataUnits"),
-          (int) ecPolicyObj.get("numParityUnits"), extraOptions);
+          (int) ((Number) ecPolicyObj.get("numDataUnits")).longValue(),
+          (int) ((Number) ecPolicyObj.get("numParityUnits")).longValue(),
+          extraOptions);
       ecPolicy = new ErasureCodingPolicy((String) ecPolicyObj.get("name"),
-          ecSchema, (int) ecPolicyObj.get("cellSize"),
-          (byte) (int) ecPolicyObj.get("id"));
+          ecSchema, (int) ((Number) ecPolicyObj.get("cellSize")).longValue(),
+          (byte) (int) ((Number) ecPolicyObj.get("id")).longValue());
 
     }
 
