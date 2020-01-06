@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.util.EnumSet;
 
@@ -108,8 +109,7 @@ public class ITestAzureBlobFileSystemCreate extends
   }
 
   /**
-   * Attempts to write to the azure stream after it is closed will raise
-   * an IOException.
+   * Attempts to use to the ABFS stream after it is closed.
    */
   @Test
   public void testWriteAfterClose() throws Throwable {
@@ -120,7 +120,25 @@ public class ITestAzureBlobFileSystemCreate extends
     intercept(IOException.class, () -> out.write('a'));
     intercept(IOException.class, () -> out.write(new byte[]{'a'}));
     // hsync is not ignored on a closed stream
-    // out.hsync();Are you
+    // out.hsync();
+    out.flush();
+    out.close();
+  }
+
+  /**
+   * Attempts to double close an ABFS output stream from within a
+   * FilterOutputStream.
+   * That class handles a double failure on close badly if the second
+   * exception rethrows the first.
+   */
+  @Test
+  public void testFilteredDoubleClose() throws Throwable {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path testPath = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
+    FilterOutputStream out = new FilterOutputStream(fs.create(testPath));
+    out.close();
+    intercept(IOException.class, () -> out.write('a'));
+    intercept(IOException.class, () -> out.write(new byte[]{'a'}));
     out.flush();
     out.close();
   }
