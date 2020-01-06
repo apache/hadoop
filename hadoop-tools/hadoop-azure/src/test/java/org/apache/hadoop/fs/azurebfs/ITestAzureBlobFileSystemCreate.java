@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.EnumSet;
 
 import org.junit.Test;
@@ -29,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test create operation.
@@ -103,5 +105,23 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.createNonRecursive(testFile, true, 1024, (short) 1, 1024, null)
         .close();
     assertIsFile(fs, testFile);
+  }
+
+  /**
+   * Attempts to write to the azure stream after it is closed will raise
+   * an IOException.
+   */
+  @Test
+  public void testWriteAfterClose() throws Throwable {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path testPath = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
+    FSDataOutputStream out = fs.create(testPath);
+    out.close();
+    intercept(IOException.class, () -> out.write('a'));
+    intercept(IOException.class, () -> out.write(new byte[]{'a'}));
+    // hsync is not ignored on a closed stream
+    // out.hsync();Are you
+    out.flush();
+    out.close();
   }
 }
