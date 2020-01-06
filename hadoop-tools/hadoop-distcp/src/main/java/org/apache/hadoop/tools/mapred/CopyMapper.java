@@ -85,6 +85,7 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
   private boolean append = false;
   private boolean verboseLog = false;
   private boolean directWrite = false;
+  private boolean noLocalWrite = false;
   private EnumSet<FileAttribute> preserve = EnumSet.noneOf(FileAttribute.class);
 
   private FileSystem targetFS = null;
@@ -114,7 +115,8 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
         PRESERVE_STATUS.getConfigLabel()));
     directWrite = conf.getBoolean(
         DistCpOptionSwitch.DIRECT_WRITE.getConfigLabel(), false);
-
+    noLocalWrite = conf.getBoolean(
+        DistCpOptionSwitch.NO_LOCAL_WRITE.getConfigLabel(), false);
     targetWorkPath = new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
     Path targetFinalPath = new Path(conf.get(
             DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH));

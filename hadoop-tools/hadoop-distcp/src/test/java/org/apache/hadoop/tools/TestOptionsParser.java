@@ -804,4 +804,18 @@ public class TestOptionsParser {
         "hdfs://localhost:8020/target/"});
     assertThat(options.getFiltersFile()).isEqualTo("/tmp/filters.txt");
   }
+
+  @Test
+  public void testParseNoLocalWrite() {
+    DistCpOptions options = OptionsParser.parse(new String[] {
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    Assert.assertEquals(options.shouldNoLocalWrite(), false);
+
+    options = OptionsParser.parse(new String[] {
+        "-noLocalWrite",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    Assert.assertEquals(options.shouldNoLocalWrite(), true);
+  }
 }

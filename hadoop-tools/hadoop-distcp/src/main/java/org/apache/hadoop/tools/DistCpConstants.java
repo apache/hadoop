@@ -128,6 +128,10 @@ public final class DistCpConstants {
   public static final String CONF_LABEL_BLOCKS_PER_CHUNK =
       "distcp.blocks.per.chunk";
 
+  /** Whether DistCp Copy should avoid write on local datanode. */
+  public static final String CONF_LABEL_NO_LOCAL_WRITE =
+      "distcp.no.local.write";
+
   /**
    * Constants for DistCp return code to shell / consumer of ToolRunner's run
    */

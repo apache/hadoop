@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.tools.CopyListingFileStatus;
@@ -189,6 +190,8 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         DistCpOptionSwitch.COPY_BUFFER_SIZE.getConfigLabel(),
         DistCpConstants.COPY_BUFFER_SIZE_DEFAULT);
     final OutputStream outStream;
+    boolean noLocalWrite = context.getConfiguration().getBoolean(
+        DistCpOptionSwitch.NO_LOCAL_WRITE.getConfigLabel(), false);
     if (action == FileAction.OVERWRITE) {
       // If there is an erasure coding policy set on the target directory,
       // files will be written to the target directory using the same EC policy.
@@ -197,14 +200,25 @@ public class RetriableFileCopyCommand extends RetriableCommand {
           targetFS, targetPath);
       final long blockSize = getBlockSize(fileAttributes, source,
           targetFS, targetPath);
+      EnumSet<CreateFlag> createFlags =
+          EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE);
+      if (noLocalWrite) {
+        createFlags.add(CreateFlag.NO_LOCAL_WRITE);
+      }
       FSDataOutputStream out = targetFS.create(targetPath, permission,
-          EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
-          copyBufferSize, repl, blockSize, context,
+          createFlags, copyBufferSize, repl, blockSize, context,
           getChecksumOpt(fileAttributes, sourceChecksum));
       outStream = new BufferedOutputStream(out);
     } else {
-      outStream = new BufferedOutputStream(targetFS.append(targetPath,
-          copyBufferSize));
+      if (targetFS instanceof DistributedFileSystem && noLocalWrite) {
+        outStream = new BufferedOutputStream(
+            ((DistributedFileSystem) targetFS).append(targetPath,
+                EnumSet.of(CreateFlag.APPEND, CreateFlag.NO_LOCAL_WRITE),
+                copyBufferSize, context));
+      } else {
+        outStream = new BufferedOutputStream(targetFS.append(targetPath,
+            copyBufferSize));
+      }
     }
     return copyBytes(source, sourceOffset, outStream, copyBufferSize,
         context);

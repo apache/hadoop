@@ -650,4 +650,22 @@ public abstract class AbstractContractDistCpTest
                     Collections.singletonList(srcDir), destDir)
                     .withDirectWrite(true)));
   }
+
+  @Test
+  public void testDistCpWithNoLocalWrite() throws Exception {
+    describe("test dictcp job compatibility with option: noLocalWrite");
+    Path target = distCpDeepDirectoryStructure(localFS, localDir, remoteFS,
+        remoteDir);
+    lsR("Local to update", localFS, localDir);
+    lsR("Remote before update", remoteFS, target);
+    Job job = runDistCp(buildWithStandardOptions(
+        new DistCpOptions.Builder(
+            Collections.singletonList(localDir), target)
+            .withDeleteMissing(true)
+            .withSyncFolder(true)
+            .withCRC(true)
+            .withOverwrite(false)
+            .withNoLocalWrite(true)));
+    assertTrue(job.isSuccessful());
+  }
 }
