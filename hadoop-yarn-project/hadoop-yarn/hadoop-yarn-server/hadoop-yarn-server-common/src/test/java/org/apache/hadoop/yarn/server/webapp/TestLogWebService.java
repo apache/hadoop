@@ -42,14 +42,14 @@ public class TestLogWebService {
 
   private HttpServletRequest request;
   private LogWebServiceTest logWebService;
-  private static TimelineEntity entity;
   private ApplicationId appId;
   private ContainerId cId;
   private String user = "user1";
   private Map<String, TimelineEntity> entities;
   private String nodeHttpAddress = "localhost:0";
 
-  @Before public void setup() throws Exception {
+  @Before
+  public void setup() throws Exception {
     appId = ApplicationId.fromString("application_1518143905142_509690");
     cId =
         ContainerId.fromString("container_e138_1518143905142_509690_01_000001");
@@ -62,23 +62,26 @@ public class TestLogWebService {
 
   }
 
-  @Test public void testGetApp() {
-
-    LogWebService.AppInfo app =
+  @Test
+  public void testGetApp() {
+    BasicAppInfo app =
         logWebService.getApp(request, appId.toString(), null);
     Assert.assertEquals("RUNNING", app.getAppState().toString());
     Assert.assertEquals(user, app.getUser());
   }
 
-  @Test public void testGetContainer() {
-    LogWebService.ContainerInfo container = logWebService
-        .getContainer(request, appId.toString(), cId.toString(), null);
-    Assert.assertEquals(nodeHttpAddress, container.getNodeHttpAddress());
+  @Test
+  public void testGetContainer() {
+    String address = logWebService
+        .getNodeHttpAddress(request, appId.toString(), null, cId.toString(),
+            null);
+    Assert.assertEquals(this.nodeHttpAddress, address);
   }
 
   class LogWebServiceTest extends LogWebService {
 
-    @Override protected TimelineEntity getEntity(String path,
+    @Override
+    protected TimelineEntity getEntity(String path,
         MultivaluedMap<String, String> params) throws IOException {
       if (path.endsWith(cId.toString())) {
         return entities.get(cId.toString());
