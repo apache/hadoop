@@ -352,7 +352,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   /**
    * Populate the map with the State Store versions.
    *
-   * @param innerInfo Map with the information.
+   * @param map Map with the information.
    * @param version State Store versions.
    */
   private static void setStateStoreVersions(
