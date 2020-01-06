@@ -259,7 +259,15 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   }
 
   private synchronized void flushInternal(boolean isClose) throws IOException {
-    maybeThrowLastError();
+    try {
+      maybeThrowLastError();
+    } catch (IOException e) {
+      if (isClose) {
+        // wrap existing exception so as to avoid breaking try-with-resources
+        throw new IOException("Skipping final flush and write due to " + e, e);
+      } else
+        throw e;
+    }
     writeCurrentBufferToService();
     flushWrittenBytesToService(isClose);
   }
