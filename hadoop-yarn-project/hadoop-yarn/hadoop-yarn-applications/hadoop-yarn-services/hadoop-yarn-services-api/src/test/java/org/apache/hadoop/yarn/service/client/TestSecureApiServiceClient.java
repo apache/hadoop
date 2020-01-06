@@ -41,6 +41,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.SaslRpcServer.QualityOfProtection;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.log4j.Logger;
 import org.eclipse.jetty.server.Server;
@@ -152,6 +153,7 @@ public class TestSecureApiServiceClient extends KerberosSecurityTestcase {
     rmServers.add("localhost:8088");
     testConf.set("yarn.resourcemanager.webapp.address",
         "localhost:8088");
+    testConf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     asc = new ApiServiceClient() {
       @Override
       List<String> getRMHAWebAddresses(Configuration conf) {
