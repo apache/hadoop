@@ -1091,7 +1091,7 @@ Sure enough, the output:
     goodbye 1
     hadoop 2
     hello 2
-    horld 2
+    world 2
 
 #### Highlights
 
