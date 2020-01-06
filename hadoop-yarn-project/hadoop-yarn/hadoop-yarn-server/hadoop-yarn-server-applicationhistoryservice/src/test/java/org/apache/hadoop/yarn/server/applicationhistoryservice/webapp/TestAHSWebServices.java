@@ -24,6 +24,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -64,6 +67,7 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
+import org.apache.hadoop.yarn.server.webapp.LogServlet;
 import org.apache.hadoop.yarn.server.webapp.LogWebServiceUtils;
 import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
@@ -88,7 +92,6 @@ import org.junit.runners.Parameterized;
 import com.google.inject.Guice;
 import com.google.inject.Singleton;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientResponse.Status;
 import com.sun.jersey.api.client.GenericType;
@@ -137,17 +140,13 @@ public class TestAHSWebServices extends JerseyTestBase {
     };
     historyClientService.init(conf);
     historyClientService.start();
-    ahsWebservice = new AHSWebServices(historyClientService, conf) {
-      @Override
-      public String getNMWebAddressFromRM(Configuration configuration,
-          String nodeId) throws ClientHandlerException,
-          UniformInterfaceException, JSONException {
-        if (nodeId.equals(NM_ID)) {
-          return NM_WEBADDRESS;
-        }
-        return null;
-      }
-    };
+
+    ahsWebservice = new AHSWebServices(historyClientService, conf);
+    LogServlet logServlet = spy(ahsWebservice.getLogServlet());
+    doReturn(null).when(logServlet).getNMWebAddressFromRM(any());
+    doReturn(NM_WEBADDRESS).when(logServlet).getNMWebAddressFromRM(NM_ID);
+    ahsWebservice.setLogServlet(logServlet);
+
     fs = FileSystem.get(conf);
     GuiceServletConfig.setInjector(
         Guice.createInjector(new WebServletModule()));
@@ -171,7 +170,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     @Override
     protected void configureServlets() {
       bind(JAXBContextResolver.class);
-      bind(AHSWebServices.class).toInstance(ahsWebservice);;
+      bind(AHSWebServices.class).toInstance(ahsWebservice);
       bind(GenericExceptionHandler.class);
       bind(ApplicationBaseProtocol.class).toInstance(historyClientService);
       serve("/*").with(GuiceContainer.class);
