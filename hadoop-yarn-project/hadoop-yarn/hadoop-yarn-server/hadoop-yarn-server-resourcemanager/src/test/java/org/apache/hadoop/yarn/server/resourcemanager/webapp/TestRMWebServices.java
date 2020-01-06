@@ -703,12 +703,14 @@ public class TestRMWebServices extends JerseyTestBase {
     // verify we don't get any apps when querying
     HttpServletRequest mockHsr = mock(HttpServletRequest.class);
     AppsInfo appsInfo = webSvc.getApps(mockHsr, null, emptySet, null,
-        null, null, null, null, null, null, null, emptySet, emptySet, null);
+        null, null, null, null, null, null, null, emptySet, emptySet, null,
+        null);
     assertTrue(appsInfo.getApps().isEmpty());
 
     // verify we don't get an NPE when specifying a final status query
     appsInfo = webSvc.getApps(mockHsr, null, emptySet, "FAILED",
-        null, null, null, null, null, null, null, emptySet, emptySet, null);
+        null, null, null, null, null, null, null, emptySet, emptySet, null,
+        null);
     assertTrue(appsInfo.getApps().isEmpty());
   }
 
@@ -947,7 +949,8 @@ public class TestRMWebServices extends JerseyTestBase {
     Set<String> emptySet = Collections.unmodifiableSet(Collections.emptySet());
 
     AppsInfo appsInfo = webSvc.getApps(mockHsr, null, emptySet, null,
-        null, null, null, null, null, null, null, emptySet, emptySet, null);
+        null, null, null, null, null, null, null, emptySet, emptySet,
+        null, null);
 
     assertEquals("Incorrect Number of Apps", 1, appsInfo.getApps().size());
     assertEquals("Invalid XML Characters Present",
