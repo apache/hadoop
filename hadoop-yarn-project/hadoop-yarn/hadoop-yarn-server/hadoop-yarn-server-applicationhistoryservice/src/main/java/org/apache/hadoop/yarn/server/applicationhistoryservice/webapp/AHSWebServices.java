@@ -107,7 +107,8 @@ public class AHSWebServices extends WebServices {
   public AppsInfo get(@Context HttpServletRequest req,
       @Context HttpServletResponse res) {
     return getApps(req, res, null, Collections.<String> emptySet(), null, null,
-      null, null, null, null, null, null, Collections.<String> emptySet());
+      null, null, null, null, null, null, null,
+        Collections.<String> emptySet());
   }
 
   @GET
@@ -126,12 +127,13 @@ public class AHSWebServices extends WebServices {
       @QueryParam("startedTimeEnd") String startedEnd,
       @QueryParam("finishedTimeBegin") String finishBegin,
       @QueryParam("finishedTimeEnd") String finishEnd,
+      @QueryParam("name") String name,
       @QueryParam("applicationTypes") Set<String> applicationTypes) {
     initForReadableEndpoints(res);
     validateStates(stateQuery, statesQuery);
     return super.getApps(req, res, stateQuery, statesQuery, finalStatusQuery,
       userQuery, queueQuery, count, startedBegin, startedEnd, finishBegin,
-      finishEnd, applicationTypes);
+      finishEnd, name, applicationTypes);
   }
 
   @GET

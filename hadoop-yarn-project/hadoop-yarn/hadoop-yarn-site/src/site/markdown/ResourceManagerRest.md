@@ -1564,6 +1564,7 @@ Multiple parameters can be specified for GET operations. The started and finishe
       * finishedTimeEnd - applications with finish time ending with this time, specified in ms since epoch
       * applicationTypes - applications matching the given application types, specified as a comma-separated list.
       * applicationTags - applications matching any of the given application tags, specified as a comma-separated list.
+      * name - name of the application
       * deSelects - a generic fields which will be skipped in the result.
 
 ### Elements of the *apps* (Applications) object
