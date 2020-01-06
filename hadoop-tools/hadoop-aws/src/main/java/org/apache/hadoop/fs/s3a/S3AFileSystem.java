@@ -2415,9 +2415,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         key = key + '/';
       }
 
-      DirListingMetadata dirMeta =
-          S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
       boolean allowAuthoritative = allowAuthoritative(f);
+      DirListingMetadata dirMeta =
+          S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider,
+              allowAuthoritative);
       if (allowAuthoritative && dirMeta != null && dirMeta.isAuthoritative()) {
         return S3Guard.dirMetaToStatuses(dirMeta);
       }
@@ -2649,11 +2650,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     String key = pathToKey(path);
     LOG.debug("Getting path status for {}  ({})", path, key);
 
+    boolean allowAuthoritative = allowAuthoritative(path);
     // Check MetadataStore, if any.
     PathMetadata pm = null;
     if (hasMetadataStore()) {
       pm = S3Guard.getWithTtl(metadataStore, path, ttlTimeProvider,
-          needEmptyDirectoryFlag);
+          needEmptyDirectoryFlag, allowAuthoritative);
     }
     Set<Path> tombstones = Collections.emptySet();
     if (pm != null) {
@@ -2669,9 +2671,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // modification - compare the modTime to check if metadata is up to date
       // Skip going to s3 if the file checked is a directory. Because if the
       // dest is also a directory, there's no difference.
-      // TODO After HADOOP-16085 the modification detection can be done with
-      //  etags or object version instead of modTime
-      boolean allowAuthoritative = allowAuthoritative(path);
+
       if (!pm.getFileStatus().isDirectory() &&
           !allowAuthoritative &&
           probes.contains(StatusProbeEnum.Head)) {
@@ -2709,7 +2709,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           return msStatus;
         } else {
           DirListingMetadata children =
-              S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
+              S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider,
+                  allowAuthoritative);
           if (children != null) {
             tombstones = children.listTombstones();
           }
@@ -3995,7 +3996,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           cachedFilesIterator = metadataStoreListFilesIterator;
         } else {
           DirListingMetadata meta =
-              S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
+              S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider,
+                  allowAuthoritative);
           if (meta != null) {
             tombstones = meta.listTombstones();
           } else {
@@ -4070,13 +4072,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               final String key = maybeAddTrailingSlash(pathToKey(path));
               final Listing.FileStatusAcceptor acceptor =
                   new Listing.AcceptAllButSelfAndS3nDirs(path);
+              boolean allowAuthoritative = allowAuthoritative(f);
               DirListingMetadata meta =
                   S3Guard.listChildrenWithTtl(metadataStore, path,
-                      ttlTimeProvider);
+                      ttlTimeProvider, allowAuthoritative);
               final RemoteIterator<S3AFileStatus> cachedFileStatusIterator =
                   listing.createProvidedFileStatusIterator(
                       S3Guard.dirMetaToStatuses(meta), filter, acceptor);
-              boolean allowAuthoritative = allowAuthoritative(f);
               return (allowAuthoritative && meta != null
                   && meta.isAuthoritative())
                   ? listing.createLocatedFileStatusIterator(

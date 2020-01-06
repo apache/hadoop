@@ -213,10 +213,6 @@ public class LocalMetadataStore implements MetadataStore {
     }
 
     if (listing != null) {
-      listing.removeExpiredEntriesFromListing(
-          ttlTimeProvider.getMetadataTtl(), ttlTimeProvider.getNow());
-      LOG.debug("listChildren [after removing expired entries] ({}) -> {}",
-          path, listing.prettyPrint());
       // Make a copy so callers can mutate without affecting our state
       return new DirListingMetadata(listing);
     }

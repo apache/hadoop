@@ -135,6 +135,8 @@ two different reasons:
     * All interactions with the S3 bucket(s) must be through S3A clients sharing
     the same metadata store.
     * This is independent from which metadata store implementation is used.
+    * In authoritative mode the metadata TTL metadata expiry is not effective.
+    This means that the metadata entries won't expire on authoritative paths.
 
 * Authoritative directory listings (isAuthoritative bit)
     * Tells if the stored directory listing metadata is complete.
@@ -193,10 +195,14 @@ In particular: **If the Metadata Store is declared as authoritative,
 all interactions with the S3 bucket(s) must be through S3A clients sharing
 the same Metadata Store**
 
-It can be configured how long a directory listing in the MetadataStore is
-considered as authoritative. If `((lastUpdated + ttl) <= now)` is false, the
-directory  listing is no longer considered authoritative, so the flag will be
-removed on `S3AFileSystem` level.
+#### TTL metadata expiry
+
+It can be configured how long an entry is valid in the MetadataStore
+**if the authoritative mode is turned off**, or the path is not
+configured to be authoritative.
+If `((lastUpdated + ttl) <= now)` is false for an entry, the entry will
+be expired, so the S3 bucket will be queried for fresh metadata.
+The time for expiry of metadata can be set as the following:
 
 ```xml
 <property>
@@ -917,9 +923,46 @@ Metadata Store Diagnostics:
   table={ ... }
   write-capacity=20
 ```
-
 *Note*: There is a limit to how many times in a 24 hour period the capacity
 of a bucket can be changed, either through this command or the AWS console.
+
+### Check the consistency of the metadata store, `s3guard fsck`
+
+Compares S3 with MetadataStore, and returns a failure status if any
+rules or invariants are violated. Only works with DynamoDB metadata stores.
+
+```bash
+hadoop s3guard fsck [-check | -internal] (s3a://BUCKET | s3a://PATH_PREFIX)
+```
+
+`-check` operation checks the metadata store from the S3 perspective, but
+does not fix any issues.
+The consistency issues will be logged in ERROR loglevel.
+
+`-internal` operation checks the internal consistency of the metadata store,
+but does not fix any issues.
+
+The errors found will be logged at the ERROR log level.
+
+*Note*: `-check` and `-internal` operations can be used only as separate
+commands. Running `fsck` with both will result in an error.
+
+Example
+
+```bash
+hadoop s3guard fsck -check s3a://ireland-1/path_prefix/
+```
+
+Checks the metadata store while iterating through the S3 bucket.
+The path_prefix will be used as the root element of the check.
+
+```bash
+hadoop s3guard fsck -internal s3a://ireland-1/path_prefix/
+```
+
+Checks the metadata store internal consistency.
+The path_prefix will be used as the root element of the check.
+
 
 ## Debugging and Error Handling
 

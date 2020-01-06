@@ -37,6 +37,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -178,7 +180,15 @@ public class TestNodeLabelContainerAllocation {
 
     // launch an app to queue a1 (label = x), and check all container will
     // be allocated in h1
-    RMApp app1 = rm1.submitApp(200, "app", "user", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     
     // A has only 10% of x, so it can only allocate one container in label=empty
@@ -268,7 +278,15 @@ public class TestNodeLabelContainerAllocation {
 
     // launch an app to queue a1 (label = x), and check all container will
     // be allocated in h1
-    RMApp app1 = rm1.submitApp(1024, "app", "user", null, "a1");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data2);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // request a container (label = y). can be allocated on nm2 
@@ -282,7 +300,15 @@ public class TestNodeLabelContainerAllocation {
 
     // launch an app to queue b1 (label = y), and check all container will
     // be allocated in h5
-    RMApp app2 = rm1.submitApp(1024, "app", "user", null, "b1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm5);
 
     // request a container for AM, will succeed
@@ -296,7 +322,15 @@ public class TestNodeLabelContainerAllocation {
         RMContainerState.ALLOCATED));
     
     // launch an app to queue b2
-    RMApp app3 = rm1.submitApp(1024, "app", "user", null, "b2");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b2")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nm5);
 
     // request a container. try to allocate on nm1 (label = x) and nm3 (label =
@@ -347,7 +381,15 @@ public class TestNodeLabelContainerAllocation {
 
     // launch an app to queue a1 (label = x), and check all container will
     // be allocated in h1
-    RMApp app1 = rm1.submitApp(200, "app", "user", null, "a1");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data2);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm3);
 
     // request a container.
@@ -363,7 +405,15 @@ public class TestNodeLabelContainerAllocation {
 
     // launch an app to queue b1 (label = y), and check all container will
     // be allocated in h2
-    RMApp app2 = rm1.submitApp(200, "app", "user", null, "b1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm3);
 
     // request a container.
@@ -378,7 +428,15 @@ public class TestNodeLabelContainerAllocation {
     
     // launch an app to queue c1 (label = ""), and check all container will
     // be allocated in h3
-    RMApp app3 = rm1.submitApp(200, "app", "user", null, "c1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nm3);
 
     // request a container.
@@ -423,7 +481,15 @@ public class TestNodeLabelContainerAllocation {
 
     // launch an app to queue a1 (label = x), and check all container will
     // be allocated in h1
-    RMApp app1 = rm1.submitApp(200, "app", "user", null, "a1");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data2);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // request a container.
@@ -439,7 +505,15 @@ public class TestNodeLabelContainerAllocation {
 
     // launch an app to queue b1 (label = y), and check all container will
     // be allocated in h2
-    RMApp app2 = rm1.submitApp(200, "app", "user", null, "b1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm2);
 
     // request a container.
@@ -454,7 +528,15 @@ public class TestNodeLabelContainerAllocation {
     
     // launch an app to queue c1 (label = ""), and check all container will
     // be allocated in h3
-    RMApp app3 = rm1.submitApp(200, "app", "user", null, "c1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nm3);
 
     // request a container.
@@ -503,7 +585,15 @@ public class TestNodeLabelContainerAllocation {
 
     // launch an app to queue a1 (label = x), and check all container will
     // be allocated in h1
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // request a container.
@@ -569,10 +659,26 @@ public class TestNodeLabelContainerAllocation {
 
     // launch an app to queue a1 (label = x), and check all container will
     // be allocated in h1
-    RMApp app1 = rm1.submitApp(1 * GB, "app1", "user", null, "a1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app1")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
-    RMApp app2 = rm1.submitApp(1 * GB, "app2", "user", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app2")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     MockRM.launchAndRegisterAM(app2, rm1, nm1);
 
     // request a container.
@@ -654,7 +760,15 @@ public class TestNodeLabelContainerAllocation {
     MockNM nm2 = rm1.registerNode("h2:1234", 40 * GB); // label = y
     // launch an app to queue b1 (label = y), AM container should be launched in
     // nm2
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "b1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm2);
     // Creating request set when request before ANY is not having label and any
     // is having label
@@ -752,11 +866,27 @@ public class TestNodeLabelContainerAllocation {
     MockNM nm2 = rm1.registerNode("h2:1234", 100 * GB); // label = <empty>
 
     // launch an app to queue b1 (label = y), AM container should be launched in nm2
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "b1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm2);
     
     // launch another app to queue b1 (label = y), AM container should be launched in nm2
-    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "b1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm2);
 
     // request container and nm1 do heartbeat (nm2 has label=y), note that app1
@@ -830,7 +960,15 @@ public class TestNodeLabelContainerAllocation {
     MockNM nm2 = rm1.registerNode("h2:1234", 100 * GB); // label = <empty>
 
     // launch an app to queue b1 (label = y), AM container should be launched in nm3
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "b1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm2);
     
     // request containers from am2, priority=1 asks for "" and priority=2 asks
@@ -881,7 +1019,15 @@ public class TestNodeLabelContainerAllocation {
     ContainerId nextContainerId;
 
     // launch an app to queue b1 (label = y), AM container should be launched in nm3
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "b1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm2);
     
     // request containers from am2, priority=1 asks for "" * 6 (id from 4 to 9),
@@ -999,27 +1145,75 @@ public class TestNodeLabelContainerAllocation {
     MockNM nm2 = rm1.registerNode("h2:1234", 100 * GB); // label = <empty>
 
     // app1 -> a1
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a1");
+    MockRMAppSubmissionData data5 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data5);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     
     // app2 -> a2
-    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "a2");
+    MockRMAppSubmissionData data4 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a2")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data4);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm2);
     
     // app3 -> b1
-    RMApp app3 = rm1.submitApp(1 * GB, "app", "user", null, "b1");
+    MockRMAppSubmissionData data3 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data3);
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nm1);
     
     // app4 -> b2
-    RMApp app4 = rm1.submitApp(1 * GB, "app", "user", null, "b2");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b2")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app4 = MockRMAppSubmitter.submit(rm1, data2);
     MockAM am4 = MockRM.launchAndRegisterAM(app4, rm1, nm2);
     
     // app5 -> c1
-    RMApp app5 = rm1.submitApp(1 * GB, "app", "user", null, "c1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app5 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am5 = MockRM.launchAndRegisterAM(app5, rm1, nm1);
     
     // app6 -> b2
-    RMApp app6 = rm1.submitApp(1 * GB, "app", "user", null, "c2");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c2")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app6 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am6 = MockRM.launchAndRegisterAM(app6, rm1, nm2);
     
     // Each application request 5 * 1GB container
@@ -1108,7 +1302,15 @@ public class TestNodeLabelContainerAllocation {
     MockNM nm2 = rm1.registerNode("h2:1234", 10 * GB); // label = <empty>
 
     // app1 -> b
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "b");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm2);
     
     // Each application request 50 * 1GB container
@@ -1172,7 +1374,15 @@ public class TestNodeLabelContainerAllocation {
     MockNM nm1 = rm1.registerNode(nodeIdStr, 8 * GB); // label = x
 
     // launch an app to queue b1 (label = y), AM container should be launched in nm3
-    RMApp app = rm1.submitApp(1 * GB, "app", "user", null, "b1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm1, data);
    
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
@@ -1259,7 +1469,15 @@ public class TestNodeLabelContainerAllocation {
     MockNM nm2 = rm1.registerNode("h2:1234", 10 * GB); // label = <empty>
 
     // app1 -> a
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm2);
 
     // app1 asks for 10 partition= containers
@@ -1447,7 +1665,15 @@ public class TestNodeLabelContainerAllocation {
     checkQueueUsedCapacity("root", cs, "", 0f, 0f);
 
     // app1 -> a1
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "a1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
 
     // app1 asks for 1 partition= containers
@@ -1498,7 +1724,15 @@ public class TestNodeLabelContainerAllocation {
     // submit an app to a2, uses 1 NON_PARTITIONED container and 1 PARTITIONED
     // container
     // app2 -> a2
-    RMApp app2 = rm.submitApp(1 * GB, "app", "user", null, "a2");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a2")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm2);
 
     // app1 asks for 1 partition= containers
@@ -1655,19 +1889,51 @@ public class TestNodeLabelContainerAllocation {
     MockNM nm2 = rm.registerNode("h2:1234", 10 * GB); // label = <empty>
     
     // app1 -> a
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "a");
+    MockRMAppSubmissionData data3 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data3);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
     
     // app2 -> b
-    RMApp app2 = rm.submitApp(1 * GB, "app", "user", null, "b");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data2);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm2);
     
     // app3 -> c
-    RMApp app3 = rm.submitApp(1 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm, data1);
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm, nm2);
     
     // app4 -> d
-    RMApp app4 = rm.submitApp(1 * GB, "app", "user", null, "d");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("d")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app4 = MockRMAppSubmitter.submit(rm, data);
     MockAM am4 = MockRM.launchAndRegisterAM(app4, rm, nm2);
 
     // Test case 1
@@ -1817,11 +2083,27 @@ public class TestNodeLabelContainerAllocation {
     MockNM nm1 = rm.registerNode("h1:1234", 10 * GB); // label = x
 
     // app1 -> a
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "a", "x");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withAmLabel("x")
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
     // app2 -> b
-    RMApp app2 = rm.submitApp(1 * GB, "app", "user", null, "b", "x");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b")
+            .withAmLabel("x")
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm1);
 
     // Both a/b has used_capacity(x) = 0, when doing exclusive allocation, a
@@ -1909,7 +2191,15 @@ public class TestNodeLabelContainerAllocation {
     nm1.registerNode();
 
     // Launch app1 in a1, resource usage is 1GB (am) + 4GB * 2 = 9GB
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "a1", "x");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("x")
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
     am1.allocate("*", 4 * GB, 2, new ArrayList<ContainerId>(), "x");
     doNMHeartbeat(rm, nm1.getNodeId(), 10);
@@ -1917,7 +2207,15 @@ public class TestNodeLabelContainerAllocation {
         cs.getApplicationAttempt(am1.getApplicationAttemptId()));
 
     // Try to launch app2 in a2, asked 2GB, should success
-    RMApp app2 = rm.submitApp(2 * GB, "app", "user", null, "a2", "x");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a2")
+            .withAmLabel("x")
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm1);
 
     // am2 asks more resources, cannot success because current used = 9G (app1)
@@ -1998,7 +2296,15 @@ public class TestNodeLabelContainerAllocation {
     assertEquals(0 * GB, leafQueueB.getMetrics().getAllocatedMB());
 
     // app1 -> a
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a", "x");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withAmLabel("x")
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // app1 asks for 5 partition=x containers
@@ -2103,7 +2409,15 @@ public class TestNodeLabelContainerAllocation {
     MockNM nm1 = rm1.registerNode("h1:1234", 10 * GB); // label = x
     MockNM nm2 = rm1.registerNode("h2:1234", 10 * GB); // label = <no_label>
     // app1 -> a
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm2);
 
     // app1 asks for 3 partition= containers
@@ -2212,7 +2526,14 @@ public class TestNodeLabelContainerAllocation {
     assertEquals(0 * GB, leafQueueA.getMetrics().getAllocatedMB());
 
     // app1 -> a
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a", "x");
+    RMApp app1 = MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withAmLabel("x")
+            .build());
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // app1 asks for 5 partition=x containers
@@ -2245,7 +2566,14 @@ public class TestNodeLabelContainerAllocation {
     assertEquals(0 * GB, leafQueueA.getMetrics().getAllocatedMB());
 
     // app2 -> a
-    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "a", "");
+    RMApp app2 = MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withAmLabel("")
+            .build());
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm2);
 
     // app2 asks for 5 partition= containers
@@ -2370,7 +2698,15 @@ public class TestNodeLabelContainerAllocation {
     rm1.start();
     MockNM nm1 = rm1.registerNode("h1:1234", 20 * GB); // label = x
     // app1 -> a1
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a1", "x");
+    MockRMAppSubmissionData data3 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("x")
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data3);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // app1 asks for 6 partition=x containers
@@ -2390,7 +2726,15 @@ public class TestNodeLabelContainerAllocation {
 
     // Try to launch app2 in a2, asked 2GB, should success
     // app2 -> a2
-    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "a2", "x");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a2")
+            .withAmLabel("x")
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data2);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
 
     // app2 asks for 4 partition=x containers
@@ -2414,7 +2758,15 @@ public class TestNodeLabelContainerAllocation {
 
     // Try to launch app3 in a2, asked 6GB, should fail
     // app3 -> a2
-    RMApp app3 = rm1.submitApp(1 * GB, "app", "user", null, "a2", "x");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a2")
+            .withAmLabel("x")
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nm1);
 
     am3.allocate("*", 1 * GB, 6, new ArrayList<ContainerId>(), "x");
@@ -2434,7 +2786,15 @@ public class TestNodeLabelContainerAllocation {
     rm1.waitForAppRemovedFromScheduler(app1.getApplicationId());
 
     // app4 -> a1, try to allocate more than 6GB resource, should fail
-    RMApp app4 = rm1.submitApp(1 * GB, "app", "user", null, "a1", "x");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("x")
+            .build();
+    RMApp app4 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am4 = MockRM.launchAndRegisterAM(app4, rm1, nm1);
 
     // app3 asks for 7 partition=x containers

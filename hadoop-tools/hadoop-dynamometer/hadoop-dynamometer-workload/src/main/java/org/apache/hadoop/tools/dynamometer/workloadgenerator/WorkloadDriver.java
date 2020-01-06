@@ -168,16 +168,27 @@ public class WorkloadDriver extends Configured implements Tool {
   // recognize this
   @SuppressWarnings("unchecked")
   private Class<? extends WorkloadMapper<?, ?, ?, ?>> getMapperClass(
-      String className) throws ClassNotFoundException {
-    if (!className.contains(".")) {
-      className = WorkloadDriver.class.getPackage().getName() + "." + className;
+      String className) {
+    String[] potentialQualifiedClassNames = {
+        WorkloadDriver.class.getPackage().getName() + "." + className,
+        AuditReplayMapper.class.getPackage().getName() + "." + className,
+        className
+    };
+    for (String qualifiedClassName : potentialQualifiedClassNames) {
+      Class<?> mapperClass;
+      try {
+        mapperClass = getConf().getClassByName(qualifiedClassName);
+      } catch (ClassNotFoundException cnfe) {
+        continue;
+      }
+      if (!WorkloadMapper.class.isAssignableFrom(mapperClass)) {
+        throw new IllegalArgumentException(className + " is not a subclass of "
+            + WorkloadMapper.class.getCanonicalName());
+      }
+      return (Class<? extends WorkloadMapper<?, ?, ?, ?>>) mapperClass;
     }
-    Class<?> mapperClass = getConf().getClassByName(className);
-    if (!WorkloadMapper.class.isAssignableFrom(mapperClass)) {
-      throw new IllegalArgumentException(className + " is not a subclass of "
-          + WorkloadMapper.class.getCanonicalName());
-    }
-    return (Class<? extends WorkloadMapper<?, ?, ?, ?>>) mapperClass;
+    throw new IllegalArgumentException("Unable to find workload mapper class: "
+        + className);
   }
 
   private String getMapperUsageInfo(String mapperClassName)

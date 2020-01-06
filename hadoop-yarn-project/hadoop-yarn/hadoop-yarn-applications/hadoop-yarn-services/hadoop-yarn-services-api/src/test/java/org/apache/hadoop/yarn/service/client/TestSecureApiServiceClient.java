@@ -140,7 +140,7 @@ public class TestSecureApiServiceClient extends KerberosSecurityTestcase {
     props = new HashMap<String, String>();
     props.put(Sasl.QOP, QualityOfProtection.AUTHENTICATION.saslQop);
     server = new Server(8088);
-    ((QueuedThreadPool)server.getThreadPool()).setMaxThreads(10);
+    ((QueuedThreadPool)server.getThreadPool()).setMaxThreads(20);
     ServletContextHandler context = new ServletContextHandler();
     context.setContextPath("/app");
     server.setHandler(context);

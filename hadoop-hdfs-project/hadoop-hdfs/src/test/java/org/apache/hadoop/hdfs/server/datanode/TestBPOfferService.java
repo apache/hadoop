@@ -18,7 +18,15 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
+
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
@@ -36,6 +44,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1043,6 +1052,31 @@ public class TestBPOfferService {
       }
     } finally {
       bpos.stop();
+    }
+  }
+
+  @Test(timeout = 15000)
+  public void testCommandProcessingThread() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      List<DataNode> datanodes = cluster.getDataNodes();
+      assertEquals(datanodes.size(), 1);
+      DataNode datanode = datanodes.get(0);
+
+      // Try to write file and trigger NN send back command to DataNode.
+      FileSystem fs = cluster.getFileSystem();
+      Path file = new Path("/test");
+      DFSTestUtil.createFile(fs, file, 10240L, (short)1, 0L);
+
+      MetricsRecordBuilder mrb = getMetrics(datanode.getMetrics().name());
+      assertTrue("Process command nums is not expected.",
+          getLongCounter("NumProcessedCommands", mrb) > 0);
+      assertEquals(0, getLongCounter("SumOfActorCommandQueueLength", mrb));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 }

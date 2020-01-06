@@ -33,6 +33,8 @@ import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -530,8 +532,24 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     //Start RM so that it accepts app submissions
     rm.start();
     try {
-      rm.submitApp(10, "app1", "user1", null, "b1");
-      rm.submitApp(20, "app2", "user2", null, "b1");
+      MockRMAppSubmissionData data1 =
+          MockRMAppSubmissionData.Builder.createWithMemory(10, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .withUnmanagedAM(false)
+              .build();
+      MockRMAppSubmitter.submit(rm, data1);
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(20, rm)
+              .withAppName("app2")
+              .withUser("user2")
+              .withAcls(null)
+              .withQueue("b1")
+              .withUnmanagedAM(false)
+              .build();
+      MockRMAppSubmitter.submit(rm, data);
 
       //Get the XML from ws/v1/cluster/scheduler
       WebResource r = resource();
@@ -611,8 +629,24 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     //Start RM so that it accepts app submissions
     rm.start();
     try {
-      rm.submitApp(10, "app1", "user1", null, "b1");
-      rm.submitApp(20, "app2", "user2", null, "b1");
+      MockRMAppSubmissionData data1 =
+          MockRMAppSubmissionData.Builder.createWithMemory(10, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b1")
+              .withUnmanagedAM(false)
+              .build();
+      MockRMAppSubmitter.submit(rm, data1);
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(20, rm)
+              .withAppName("app2")
+              .withUser("user2")
+              .withAcls(null)
+              .withQueue("b1")
+              .withUnmanagedAM(false)
+              .build();
+      MockRMAppSubmitter.submit(rm, data);
 
       //Get JSON
       WebResource r = resource();

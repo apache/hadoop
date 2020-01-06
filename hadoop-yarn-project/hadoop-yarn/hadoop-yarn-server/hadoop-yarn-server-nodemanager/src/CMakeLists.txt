@@ -23,6 +23,8 @@ include(HadoopCommon)
 # Set gtest path
 set(GTEST_SRC_DIR ${CMAKE_SOURCE_DIR}/../../../../../hadoop-common-project/hadoop-common/src/main/native/gtest)
 
+set(HADOOP_COMMON_SEC_PATH ${HADOOP_COMMON_PATH}/src/main/native/src/org/apache/hadoop/security)
+
 # determine if container-executor.conf.dir is an absolute
 # path in case the OS we're compiling on doesn't have
 # a hook in get_executable. We'll use this define
@@ -116,7 +118,7 @@ include_directories(
     main/native/container-executor
     main/native/container-executor/impl
     main/native/oom-listener/impl
-    ${HADOOP_COMMON_PATH}/src/main/native/src/org/apache/hadoop/security
+    ${HADOOP_COMMON_SEC_PATH}
 )
 # add gtest as system library to suppress gcc warnings
 include_directories(SYSTEM ${GTEST_SRC_DIR}/include)
@@ -147,6 +149,8 @@ add_library(container
     main/native/container-executor/impl/runc/runc_launch_cmd.c
     main/native/container-executor/impl/runc/runc_reap.c
     main/native/container-executor/impl/runc/runc_write_config.c
+    ${HADOOP_COMMON_SEC_PATH}/hadoop_user_info.c
+    ${HADOOP_COMMON_SEC_PATH}/hadoop_group_info.c
 )
 
 add_executable(container-executor
@@ -155,7 +159,6 @@ add_executable(container-executor
 
 target_link_libraries(container-executor
     container
-    ${HADOOP_COMMON_PATH}/target/native/target/usr/local/lib/libhadoop.a
     crypto
 )
 
@@ -168,7 +171,6 @@ add_executable(test-container-executor
 target_link_libraries(test-container-executor
     container
     ${EXTRA_LIBS}
-    ${HADOOP_COMMON_PATH}/target/native/target/usr/local/lib/libhadoop.a
     crypto
 )
 
@@ -193,7 +195,6 @@ add_executable(cetest
 target_link_libraries(cetest
         gtest
         container
-        ${HADOOP_COMMON_PATH}/target/native/target/usr/local/lib/libhadoop.a
         crypto
 )
 

@@ -454,6 +454,38 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
         ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
+    assertEquals("Failed to remove the queue",
+        1, newCSConf.getQueues("root.a").length);
+    assertEquals("Failed to remove the right queue",
+        "a1", newCSConf.getQueues("root.a")[0]);
+  }
+
+  @Test
+  public void testStopWithRemoveQueue() throws Exception {
+    WebResource r = resource();
+
+    ClientResponse response;
+
+    // Set state of queues to STOPPED.
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    Map<String, String> stoppedParam = new HashMap<>();
+    stoppedParam.put(CapacitySchedulerConfiguration.STATE,
+        QueueState.STOPPED.toString());
+    QueueConfigInfo stoppedInfo = new QueueConfigInfo("root.a.a2",
+        stoppedParam);
+    updateInfo.getUpdateQueueInfo().add(stoppedInfo);
+
+    updateInfo.getRemoveQueueInfo().add("root.a.a2");
+    response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-conf").queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(YarnWebServiceUtils.toJson(updateInfo,
+        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class);
+
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    CapacitySchedulerConfiguration newCSConf =
+        ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
     assertEquals(1, newCSConf.getQueues("root.a").length);
     assertEquals("a1", newCSConf.getQueues("root.a")[0]);
   }

@@ -805,15 +805,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
           // get a null in DDBPathMetadata.
           DDBPathMetadata dirPathMeta = get(path);
 
-          // Filter expired entries.
           final DirListingMetadata dirListing =
               getDirListingMetadataFromDirMetaAndList(path, metas,
                   dirPathMeta);
-          if(dirListing != null) {
-            dirListing.removeExpiredEntriesFromListing(
-                ttlTimeProvider.getMetadataTtl(),
-                ttlTimeProvider.getNow());
-          }
           return dirListing;
         });
   }
@@ -1001,7 +995,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     if (!newDirs.isEmpty()) {
       // patch up the time.
       patchLastUpdated(newDirs, ttlTimeProvider);
-      innerPut(newDirs, operationState, ttlTimeProvider);
+      innerPut(newDirs, operationState);
     }
   }
 
@@ -1244,7 +1238,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public void put(
       final Collection<? extends PathMetadata> metas,
       @Nullable final BulkOperationState operationState) throws IOException {
-    innerPut(pathMetaToDDBPathMeta(metas), operationState, ttlTimeProvider);
+    innerPut(pathMetaToDDBPathMeta(metas), operationState);
   }
 
   /**
@@ -1258,15 +1252,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * create entries in the table without parents.
    * @param metas metadata entries to write.
    * @param operationState (nullable) operational state for a bulk update
-   * @param ttlTp The time provider for metadata expiry
    * @throws IOException failure.
    */
   @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   @Retries.RetryTranslated
   private void innerPut(
       final Collection<DDBPathMetadata> metas,
-      @Nullable final BulkOperationState operationState,
-      final ITtlTimeProvider ttlTp) throws IOException {
+      @Nullable final BulkOperationState operationState) throws IOException {
     if (metas.isEmpty()) {
       // Happens when someone calls put() with an empty list.
       LOG.debug("Ignoring empty list of entries to put");
@@ -1641,7 +1633,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     try {
       LOG.debug("innerPut on metas: {}", metas);
       if (!metas.isEmpty()) {
-        innerPut(metas, state, ttlTimeProvider);
+        innerPut(metas, state);
       }
     } catch (IOException e) {
       String msg = String.format("IOException while setting false "
@@ -2001,17 +1993,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Override
   public void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider) {
     this.ttlTimeProvider = ttlTimeProvider;
-  }
-
-  /**
-   * Extract a time provider from the argument or fall back to the
-   * one in the constructor.
-   * @param ttlTp nullable time source passed in as an argument.
-   * @return a non-null time source.
-   */
-  private ITtlTimeProvider extractTimeProvider(
-      @Nullable ITtlTimeProvider ttlTp) {
-    return ttlTp != null ? ttlTp : this.ttlTimeProvider;
   }
 
   /**

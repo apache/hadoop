@@ -201,16 +201,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
-  /**
-   * The deepCopyReplica call doesn't use the datasetock since it will lead the
-   * potential deadlock with the {@link FsVolumeList#addBlockPool} call.
-   */
   @Override
   public Set<? extends Replica> deepCopyReplica(String bpid)
       throws IOException {
-    Set<? extends Replica> replicas =
-        new HashSet<>(volumeMap.replicas(bpid) == null ? Collections.EMPTY_SET
-            : volumeMap.replicas(bpid));
+    Set<? extends Replica> replicas = null;
+    try (AutoCloseableLock lock = datasetLock.acquire()) {
+      replicas = new HashSet<>(volumeMap.replicas(bpid) == null ? Collections.
+          EMPTY_SET : volumeMap.replicas(bpid));
+    }
     return Collections.unmodifiableSet(replicas);
   }
 
@@ -273,6 +271,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @VisibleForTesting
   final AutoCloseableLock datasetLock;
   private final Condition datasetLockCondition;
+  private static String blockPoolId = "";
   
   /**
    * An FSDataset has a directory where it loads its data files.
@@ -2846,6 +2845,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     if (volumeExceptions.hasExceptions()) {
       throw volumeExceptions;
     }
+    // For test use only.
+    if (!blockPoolId.isEmpty()) {
+      bpid = blockPoolId;
+    }
+    cacheManager.initCache(bpid);
+  }
+
+  @VisibleForTesting
+  public static void setBlockPoolId(String bpid) {
+    blockPoolId = bpid;
   }
 
   @Override
@@ -3375,8 +3384,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   void stopAllDataxceiverThreads(FsVolumeImpl volume) {
     try (AutoCloseableLock lock = datasetLock.acquire()) {
-      for (String blockPoolId : volumeMap.getBlockPoolList()) {
-        Collection<ReplicaInfo> replicas = volumeMap.replicas(blockPoolId);
+      for (String bpid : volumeMap.getBlockPoolList()) {
+        Collection<ReplicaInfo> replicas = volumeMap.replicas(bpid);
         for (ReplicaInfo replicaInfo : replicas) {
           if ((replicaInfo.getState() == ReplicaState.TEMPORARY
               || replicaInfo.getState() == ReplicaState.RBW)

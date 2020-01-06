@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.isParentEntry;
+import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import java.util.HashSet;
 import java.util.Map.Entry;
@@ -29,6 +29,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 /**
@@ -170,6 +171,27 @@ public class RouterQuotaManager {
   }
 
   /**
+   * Update quota in cache. The usage will be preserved.
+   * @param path Mount table path.
+   * @param quota Corresponding quota value.
+   */
+  public void updateQuota(String path, RouterQuotaUsage quota) {
+    writeLock.lock();
+    try {
+      RouterQuotaUsage.Builder builder = new RouterQuotaUsage.Builder()
+          .quota(quota.getQuota()).spaceQuota(quota.getSpaceQuota());
+      RouterQuotaUsage current = this.cache.get(path);
+      if (current != null) {
+        builder.fileAndDirectoryCount(current.getFileAndDirectoryCount())
+            .spaceConsumed(current.getSpaceConsumed());
+      }
+      this.cache.put(path, builder.build());
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  /**
    * Remove the entity from cache.
    * @param path Mount table path.
    */
@@ -196,17 +218,18 @@ public class RouterQuotaManager {
 
   /**
    * Check if the quota was set.
-   * @param quota RouterQuotaUsage set in mount table.
+   * @param quota the quota usage.
    * @return True if the quota is set.
    */
-  public boolean isQuotaSet(RouterQuotaUsage quota) {
+  public static boolean isQuotaSet(QuotaUsage quota) {
     if (quota != null) {
       long nsQuota = quota.getQuota();
       long ssQuota = quota.getSpaceQuota();
 
       // once nsQuota or ssQuota was set, this mount table is quota set
       if (nsQuota != HdfsConstants.QUOTA_RESET
-          || ssQuota != HdfsConstants.QUOTA_RESET) {
+          || ssQuota != HdfsConstants.QUOTA_RESET || Quota.orByStorageType(
+              t -> quota.getTypeQuota(t) != HdfsConstants.QUOTA_RESET)) {
         return true;
       }
     }

@@ -886,7 +886,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       DatanodeInfo[] result = entry.getValue();
       for (DatanodeInfo node : result) {
         String nodeId = node.getXferAddr();
-        if (!datanodesMap.containsKey(nodeId)) {
+        DatanodeInfo dn = datanodesMap.get(nodeId);
+        if (dn == null || node.getLastUpdate() > dn.getLastUpdate()) {
           // Add the subcluster as a suffix to the network location
           node.setNetworkLocation(
               NodeBase.PATH_SEPARATOR_STR + ns.getNameserviceId() +
@@ -1518,6 +1519,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
           if (quotaUsage != null) {
             quotaUsage.verifyNamespaceQuota();
             quotaUsage.verifyStoragespaceQuota();
+            quotaUsage.verifyQuotaByStorageType();
           }
         }
       }

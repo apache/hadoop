@@ -89,6 +89,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
@@ -1825,16 +1826,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.READ);
     BatchedListEntries<OpenFileEntry> batchedListEntries;
+    String normalizedPath = new Path(path).toString(); // normalize path.
     try {
       readLock();
       try {
         checkOperation(OperationCategory.READ);
         if (openFilesTypes.contains(OpenFilesType.ALL_OPEN_FILES)) {
           batchedListEntries = leaseManager.getUnderConstructionFiles(prevId,
-              path);
+              normalizedPath);
         } else {
           if (openFilesTypes.contains(OpenFilesType.BLOCKING_DECOMMISSION)) {
-            batchedListEntries = getFilesBlockingDecom(prevId, path);
+            batchedListEntries = getFilesBlockingDecom(prevId, normalizedPath);
           } else {
             throw new IllegalArgumentException("Unknown OpenFileType: "
                 + openFilesTypes);
@@ -1873,7 +1875,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
         String fullPathName = inodeFile.getFullPathName();
         if (org.apache.commons.lang3.StringUtils.isEmpty(path)
-            || fullPathName.startsWith(path)) {
+            || DFSUtil.isParentEntry(fullPathName, path)) {
           openFileEntries.add(new OpenFileEntry(inodeFile.getId(),
               inodeFile.getFullPathName(),
               inodeFile.getFileUnderConstructionFeature().getClientName(),
@@ -3376,6 +3378,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = getQuotaCommand(nsQuota, ssQuota);
     final FSPermissionChecker pc = getPermissionChecker();
     try {
+      checkSuperuserPrivilege(pc);
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -5665,7 +5668,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         skip++;
         if (inode != null) {
           String src = inode.getFullPathName();
-          if (src.startsWith(path)){
+          if (isParentEntry(src, path)) {
             corruptFiles.add(new CorruptFileBlockInfo(src, blk));
             count++;
             if (count >= maxCorruptFileBlocksReturn)
@@ -7195,6 +7198,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     String poolInfoStr = null;
     try {
+      checkSuperuserPrivilege();
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -7221,6 +7225,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String poolNameStr = "{poolName: " +
         (req == null ? null : req.getPoolName()) + "}";
     try {
+      checkSuperuserPrivilege();
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -7246,6 +7251,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     String poolNameStr = "{poolName: " + cachePoolName + "}";
     try {
+      checkSuperuserPrivilege();
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);

@@ -153,6 +153,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.non.local.lazy.persist";
   public static final boolean DFS_DATANODE_NON_LOCAL_LAZY_PERSIST_DEFAULT =
       false;
+  public static final String DFS_DATANODE_FIXED_VOLUME_SIZE_KEY =
+      "dfs.datanode.fixed.volume.size";
+  public static final boolean DFS_DATANODE_FIXED_VOLUME_SIZE_DEFAULT = false;
 
   // This setting is for testing/internal use only.
   public static final String  DFS_DATANODE_DUPLICATE_REPLICA_DELETION = "dfs.datanode.duplicate.replica.deletion";
@@ -405,9 +408,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_DATANODE_CACHE_REVOCATION_POLLING_MS_DEFAULT = 500L;
 
   // Multiple dirs separated by "," are acceptable.
-  public static final String DFS_DATANODE_CACHE_PMEM_DIRS_KEY =
-      "dfs.datanode.cache.pmem.dirs";
-  public static final String DFS_DATANODE_CACHE_PMEM_DIRS_DEFAULT = "";
+  public static final String DFS_DATANODE_PMEM_CACHE_DIRS_KEY =
+      "dfs.datanode.pmem.cache.dirs";
+  public static final String DFS_DATANODE_PMEM_CACHE_DIRS_DEFAULT = "";
+  public static final String  DFS_DATANODE_PMEM_CACHE_RECOVERY_KEY =
+      "dfs.datanode.pmem.cache.recovery";
+  public static final boolean DFS_DATANODE_PMEM_CACHE_RECOVERY_DEFAULT =
+      true;
 
   public static final String DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_KEY = "dfs.namenode.datanode.registration.ip-hostname-check";
   public static final boolean DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_DEFAULT = true;
@@ -805,6 +812,21 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_NAMENODE_DECOMMISSION_BLOCKS_PER_INTERVAL_DEFAULT = 500000;
   public static final String  DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES = "dfs.namenode.decommission.max.concurrent.tracked.nodes";
   public static final int     DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES_DEFAULT = 100;
+  public static final String  DFS_NAMENODE_DECOMMISSION_MONITOR_CLASS
+      = "dfs.namenode.decommission.monitor.class";
+  public static final String
+      DFS_NAMENODE_DECOMMISSION_MONITOR_CLASS_DEFAULT =
+      "org.apache.hadoop.hdfs.server.blockmanagement."+
+          "DatanodeAdminDefaultMonitor";
+  public static final String
+      DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT
+      = "dfs.namenode.decommission.backoff.monitor.pending.limit";
+  public static final int
+      DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT_DEFAULT = 10000;
+  public static final String DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK =
+      "dfs.namenode.decommission.backoff.monitor.pending.blocks.per.lock";
+  public static final int DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK_DEFAULT
+      = 1000;
   public static final String  DFS_NAMENODE_HANDLER_COUNT_KEY = "dfs.namenode.handler.count";
   public static final int     DFS_NAMENODE_HANDLER_COUNT_DEFAULT = 10;
   public static final String  DFS_NAMENODE_LIFELINE_HANDLER_RATIO_KEY =

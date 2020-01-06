@@ -59,7 +59,7 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
    * Test array for parameterized test runs.
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "auth={0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {true}, {false}
@@ -133,21 +133,30 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
 
       // get an authoritative listing in ms
       fs.listStatus(dir);
+
       // check if authoritative
       DirListingMetadata dirListing =
-          S3Guard.listChildrenWithTtl(ms, dir, mockTimeProvider);
+          S3Guard.listChildrenWithTtl(ms, dir, mockTimeProvider, authoritative);
       assertTrue("Listing should be authoritative.",
           dirListing.isAuthoritative());
       // change the time, and assume it's not authoritative anymore
+      // if the metadatastore is not authoritative.
       when(mockTimeProvider.getNow()).thenReturn(102L);
-      dirListing = S3Guard.listChildrenWithTtl(ms, dir, mockTimeProvider);
-      assertFalse("Listing should not be authoritative.",
-          dirListing.isAuthoritative());
+      dirListing = S3Guard.listChildrenWithTtl(ms, dir, mockTimeProvider,
+          authoritative);
+      if (authoritative) {
+        assertTrue("Listing should be authoritative.",
+            dirListing.isAuthoritative());
+      } else {
+        assertFalse("Listing should not be authoritative.",
+            dirListing.isAuthoritative());
+      }
 
       // get an authoritative listing in ms again - retain test
       fs.listStatus(dir);
       // check if authoritative
-      dirListing = S3Guard.listChildrenWithTtl(ms, dir, mockTimeProvider);
+      dirListing = S3Guard.listChildrenWithTtl(ms, dir, mockTimeProvider,
+          authoritative);
       assertTrue("Listing shoud be authoritative after listStatus.",
           dirListing.isAuthoritative());
     } finally {
@@ -189,16 +198,24 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
       when(mockTimeProvider.getNow()).thenReturn(110L);
 
       // metadata is expired so this should refresh the metadata with
-      // last_updated to the getNow()
+      // last_updated to the getNow() if the store is not authoritative
       final FileStatus fileExpire1Status = fs.getFileStatus(fileExpire1);
       assertNotNull(fileExpire1Status);
-      assertEquals(110L, ms.get(fileExpire1).getLastUpdated());
+      if (authoritative) {
+        assertEquals(100L, ms.get(fileExpire1).getLastUpdated());
+      } else {
+        assertEquals(110L, ms.get(fileExpire1).getLastUpdated());
+      }
 
       // metadata is expired so this should refresh the metadata with
-      // last_updated to the getNow()
+      // last_updated to the getNow() if the store is not authoritative
       final FileStatus fileExpire2Status = fs.getFileStatus(fileExpire2);
       assertNotNull(fileExpire2Status);
-      assertEquals(110L, ms.get(fileExpire2).getLastUpdated());
+      if (authoritative) {
+        assertEquals(101L, ms.get(fileExpire2).getLastUpdated());
+      } else {
+        assertEquals(110L, ms.get(fileExpire2).getLastUpdated());
+      }
 
       final FileStatus fileRetainStatus = fs.getFileStatus(fileRetain);
       assertEquals("Modification time of these files should be equal.",
@@ -347,17 +364,25 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
           .hasSize(11)
           .contains(tombstonedPath);
 
-      // listing will be filtered, and won't contain the tombstone with oldtime
+      // listing will be filtered if the store is not authoritative,
+      // and won't contain the tombstone with oldtime
       when(mockTimeProvider.getNow()).thenReturn(newTime);
-      final DirListingMetadata filteredDLM = getDirListingMetadata(ms,
-          baseDirPath);
+      final DirListingMetadata filteredDLM = S3Guard.listChildrenWithTtl(
+          ms, baseDirPath, mockTimeProvider, authoritative);
       containedPaths = filteredDLM.getListing().stream()
           .map(pm -> pm.getFileStatus().getPath())
           .collect(Collectors.toList());
-      Assertions.assertThat(containedPaths)
-          .describedAs("Full listing of path %s", baseDirPath)
-          .hasSize(10)
-          .doesNotContain(tombstonedPath);
+      if (authoritative) {
+        Assertions.assertThat(containedPaths)
+            .describedAs("Full listing of path %s", baseDirPath)
+            .hasSize(11)
+            .contains(tombstonedPath);
+      } else {
+        Assertions.assertThat(containedPaths)
+            .describedAs("Full listing of path %s", baseDirPath)
+            .hasSize(10)
+            .doesNotContain(tombstonedPath);
+      }
     } finally {
       fs.delete(baseDirPath, true);
       fs.setTtlTimeProvider(originalTimeProvider);

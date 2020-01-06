@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
+package org.apache.hadoop.yarn.webapp.dao;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -24,11 +24,14 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 
+/**
+ * This class stores the Scheduler Configuration.
+ */
 @XmlRootElement(name = "configuration")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ConfInfo {
 
-  protected ArrayList<ConfItem> property = new ArrayList<>();
+  private ArrayList<ConfItem> property = new ArrayList<>();
 
   public ConfInfo() {
   } // JAXB needs this
@@ -46,6 +49,9 @@ public class ConfInfo {
     return property;
   }
 
+  /**
+   * This class stores the Configuration Property.
+   */
   @XmlAccessorType(XmlAccessType.FIELD)
   public static class ConfItem {
 

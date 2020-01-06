@@ -1133,9 +1133,18 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
   
-  void logDeleteSnapshot(String snapRoot, String snapName, boolean toLogRpcIds) {
+  /**
+   * Log that a snapshot is deleted.
+   * @param snapRoot Root of the snapshot.
+   * @param snapName Name of the snapshot.
+   * @param toLogRpcIds If it is logging RPC ids.
+   * @param mtime The snapshot deletion time set by Time.now().
+   */
+  void logDeleteSnapshot(String snapRoot, String snapName, boolean toLogRpcIds,
+      long mtime) {
     DeleteSnapshotOp op = DeleteSnapshotOp.getInstance(cache.get())
-        .setSnapshotRoot(snapRoot).setSnapshotName(snapName);
+        .setSnapshotRoot(snapRoot).setSnapshotName(snapName)
+        .setSnapshotMTime(mtime);
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }

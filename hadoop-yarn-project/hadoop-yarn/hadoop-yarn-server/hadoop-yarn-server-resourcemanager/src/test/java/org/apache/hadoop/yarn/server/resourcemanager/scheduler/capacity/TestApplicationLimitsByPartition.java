@@ -47,6 +47,8 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -155,14 +157,38 @@ public class TestApplicationLimitsByPartition {
     MockNM nm3 = rm1.registerNode("h3:1234", 10 * GB); // label = <empty>
 
     // Submit app1 with 1Gb AM resource to Queue A1 for label X
-    RMApp app1 = rm1.submitApp(GB, "app", "user", null, "a1", "x");
+    MockRMAppSubmissionData data5 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("x")
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data5);
 
     // Submit app2 with 1Gb AM resource to Queue A1 for label X
-    RMApp app2 = rm1.submitApp(GB, "app", "user", null, "a1", "x");
+    MockRMAppSubmissionData data4 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("x")
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data4);
 
     // Submit 3rd app to Queue A1 for label X, and this will be pending as
     // AM limit is already crossed for label X. (2GB)
-    RMApp pendingApp = rm1.submitApp(GB, "app", "user", null, "a1", "x");
+    MockRMAppSubmissionData data3 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("x")
+            .build();
+    RMApp pendingApp = MockRMAppSubmitter.submit(rm1, data3);
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a1");
@@ -185,16 +211,40 @@ public class TestApplicationLimitsByPartition {
 
     // Now verify the same test case in Queue C1 where label is not configured.
     // Submit an app to Queue C1 with empty label
-    RMApp app3 = rm1.submitApp(GB, "app", "user", null, "c1");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data2);
     MockRM.launchAndRegisterAM(app3, rm1, nm3);
 
     // Submit next app to Queue C1 with empty label
-    RMApp app4 = rm1.submitApp(GB, "app", "user", null, "c1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app4 = MockRMAppSubmitter.submit(rm1, data1);
     MockRM.launchAndRegisterAM(app4, rm1, nm3);
 
     // Submit 3rd app to Queue C1. This will be pending as Queue's am-limit
     // is reached.
-    pendingApp = rm1.submitApp(GB, "app", "user", null, "c1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c1")
+            .withUnmanagedAM(false)
+            .build();
+    pendingApp = MockRMAppSubmitter.submit(rm1, data);
 
     leafQueue = (LeafQueue) cs.getQueue("c1");
     Assert.assertNotNull(leafQueue);
@@ -262,14 +312,30 @@ public class TestApplicationLimitsByPartition {
     MockNM nm3 = rm1.registerNode("h3:1234", 10 * GB); // label = <empty>
 
     // Submit app1 (2 GB) to Queue A1 and label X
-    RMApp app1 = rm1.submitApp(2 * GB, "app", "user", null, "a1", "x");
+    MockRMAppSubmissionData data3 =
+        MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("x")
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data3);
     // This app must be activated eventhough the am-resource per-partition
     // limit is only for 1.5GB.
     MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // Submit 2nd app to label "X" with one GB and it must be pending since
     // am-resource per-partition limit is crossed (1.5 GB was the limit).
-    rm1.submitApp(GB, "app", "user", null, "a1", "x");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("x")
+            .build();
+    MockRMAppSubmitter.submit(rm1, data2);
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a1");
@@ -283,14 +349,30 @@ public class TestApplicationLimitsByPartition {
     // to see queue level am-resource-limit is still working as expected.
 
     // Submit an app to Queue C1 with empty label (2 GB)
-    RMApp app3 = rm1.submitApp(2 * GB, "app", "user", null, "c1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data1);
     // This app must be activated even though the am-resource per-queue
     // limit is only for 1.5GB
     MockRM.launchAndRegisterAM(app3, rm1, nm3);
 
     // Submit 2nd app to C1 (Default label, hence am-limit per-queue will be
     // considered).
-    rm1.submitApp(GB, "app", "user", null, "c1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c1")
+            .withUnmanagedAM(false)
+            .build();
+    MockRMAppSubmitter.submit(rm1, data);
 
     leafQueue = (LeafQueue) cs.getQueue("c1");
     Assert.assertNotNull(leafQueue);
@@ -337,11 +419,27 @@ public class TestApplicationLimitsByPartition {
     rm1.registerNode("h3:1234", 10 * GB); // label = <empty>
 
     // Submit app1 (2 GB) to Queue A1 and label X
-    RMApp app1 = rm1.submitApp(2 * GB, "app", "user", null, "a1", "x");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("x")
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
 
     // Submit 2nd app to label "X" with one GB. Since queue am-limit is 2GB,
     // 2nd app will be pending and first one will get activated.
-    RMApp pendingApp = rm1.submitApp(GB, "app", "user", null, "a1", "x");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("x")
+            .build();
+    RMApp pendingApp = MockRMAppSubmitter.submit(rm1, data);
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a1");
@@ -405,14 +503,30 @@ public class TestApplicationLimitsByPartition {
     rm1.registerNode("h3:1234", 10 * GB); // label = <empty>
 
     // Submit app1 with 1Gb AM resource to Queue A1 for label X for user0
-    RMApp app1 = rm1.submitApp(GB, "app", user_0, null, "a1", "x");
+    MockRMAppSubmissionData data3 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser(user_0)
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("x")
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data3);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // Place few allocate requests to make it an active application
     am1.allocate("*", 1 * GB, 15, new ArrayList<ContainerId>(), "");
 
     // Now submit 2nd app to Queue A1 for label X for user1
-    RMApp app2 = rm1.submitApp(GB, "app", user_1, null, "a1", "x");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser(user_1)
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("x")
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data2);
     MockRM.launchAndRegisterAM(app2, rm1, nm1);
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
@@ -426,7 +540,15 @@ public class TestApplicationLimitsByPartition {
 
     // Submit 3rd app to Queue A1 for label X for user1. Now user1 will have
     // 2 applications (2 GB resource) and user0 will have one app (1GB).
-    RMApp app3 = rm1.submitApp(GB, "app", user_1, null, "a1", "x");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser(user_1)
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("x")
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am2 = MockRM.launchAndRegisterAM(app3, rm1, nm1);
 
     // Place few allocate requests to make it an active application. This is
@@ -438,7 +560,15 @@ public class TestApplicationLimitsByPartition {
     // 4Gb -> 40% of label "X" in queue A1
     // Since we have 2 users, 50% of 4Gb will be max for each user. Here user1
     // has already crossed this 2GB limit, hence this app will be pending.
-    RMApp pendingApp = rm1.submitApp(GB, "app", user_1, null, "a1", "x");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser(user_1)
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("x")
+            .build();
+    RMApp pendingApp = MockRMAppSubmitter.submit(rm1, data);
 
     // Verify active applications count per user and also in queue level.
     Assert.assertEquals(3, leafQueue.getNumActiveApplications());
@@ -518,15 +648,39 @@ public class TestApplicationLimitsByPartition {
     MockNM nm5 = rm1.registerNode("h5:1234", 10 * GB); // label = <empty>
 
     // Submit app1 with 2Gb AM resource to Queue A1 for label Y
-    RMApp app1 = rm1.submitApp(2 * GB, "app", "user", null, "a1", "y");
+    MockRMAppSubmissionData data4 =
+        MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("y")
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data4);
     MockRM.launchAndRegisterAM(app1, rm1, nm2);
 
     // Submit app2 with 1Gb AM resource to Queue A1 for label Y
-    RMApp app2 = rm1.submitApp(GB, "app", "user", null, "a1", "y");
+    MockRMAppSubmissionData data3 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("y")
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data3);
     MockRM.launchAndRegisterAM(app2, rm1, nm3);
 
     // Submit another app with 1Gb AM resource to Queue A1 for label Y
-    rm1.submitApp(GB, "app", "user", null, "a1", "y");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withAmLabel("y")
+            .build();
+    MockRMAppSubmitter.submit(rm1, data2);
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a1");
@@ -546,11 +700,27 @@ public class TestApplicationLimitsByPartition {
     Assert.assertEquals(1, leafQueue.getNumPendingApplications());
 
     // Submit app3 with 1Gb AM resource to Queue B1 (no_label)
-    RMApp app3 = rm1.submitApp(GB, "app", "user", null, "b1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data1);
     MockRM.launchAndRegisterAM(app3, rm1, nm5);
 
     // Submit another app with 1Gb AM resource to Queue B1 (no_label)
-    rm1.submitApp(GB, "app", "user", null, "b1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    MockRMAppSubmitter.submit(rm1, data);
 
     leafQueue = (LeafQueue) cs.getQueue("b1");
     Assert.assertNotNull(leafQueue);
@@ -810,12 +980,30 @@ public class TestApplicationLimitsByPartition {
 
     Resource amResource = Resource.newInstance(GB, 1);
 
-    rm.submitApp(amResource, "app-1", userName, null, queueName);
-    rm.submitApp(amResource, "app-2", userName, null, queueName);
+    MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithResource(amResource, rm)
+            .withAppName("app-1")
+            .withUser(userName)
+            .withAcls(null)
+            .withQueue(queueName)
+            .build());
+    MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithResource(amResource, rm)
+            .withAppName("app-2")
+            .withUser(userName)
+            .withAcls(null)
+            .withQueue(queueName)
+            .build());
 
     // app-3 should not be activated as amLimit will be reached
     // for memory
-    rm.submitApp(amResource, "app-3", userName, null, queueName);
+    MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithResource(amResource, rm)
+            .withAppName("app-3")
+            .withUser(userName)
+            .withAcls(null)
+            .withQueue(queueName)
+            .build());
 
     Assert.assertEquals("PendingApplications should be 1", 1,
         queueA.getNumPendingApplications());

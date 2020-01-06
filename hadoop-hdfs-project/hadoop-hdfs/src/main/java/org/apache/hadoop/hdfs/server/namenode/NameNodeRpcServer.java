@@ -1793,11 +1793,22 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     nn.checkHaStateChange(req);
     nn.transitionToActive();
   }
-  
+
   @Override // HAServiceProtocol
-  public synchronized void transitionToStandby(StateChangeRequestInfo req) 
+  public synchronized void transitionToStandby(StateChangeRequestInfo req)
       throws ServiceFailedException, AccessControlException, IOException {
     checkNNStartup();
+    // This is to eliminate any race condition between manual transition of
+    // namenode into Observer, and ZKFC auto failover election, when the
+    // namenode has already participated in the
+    // ZKFC election, before transition to Observer state as Standby Node.
+    // For more details check : HDFS-14961.
+    if (nn.getState().equals(NameNode.OBSERVER_STATE.toString())
+        && req.getSource() == RequestSource.REQUEST_BY_ZKFC) {
+      throw new AccessControlException(
+          "Request from ZK failover controller at " + Server.getRemoteAddress()
+              + " denied since the namenode is in Observer state.");
+    }
     nn.checkHaStateChange(req);
     nn.transitionToStandby();
   }

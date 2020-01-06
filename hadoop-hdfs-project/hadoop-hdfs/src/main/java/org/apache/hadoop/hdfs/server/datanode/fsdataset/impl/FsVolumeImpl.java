@@ -120,6 +120,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   private final File currentDir;    // <StorageDirectory>/current
   private final DF usage;
   private final ReservedSpaceCalculator reserved;
+  private long cachedCapacity;
   private CloseableReferenceCount reference = new CloseableReferenceCount();
 
   // Disk space reserved for blocks (RBW or Re-replicating) open for write.
@@ -166,9 +167,16 @@ public class FsVolumeImpl implements FsVolumeSpi {
     if (this.usage != null) {
       reserved = new ReservedSpaceCalculator.Builder(conf)
           .setUsage(this.usage).setStorageType(storageType).build();
+      boolean fixedSizeVolume = conf.getBoolean(
+          DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_KEY,
+          DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_DEFAULT);
+      if (fixedSizeVolume) {
+        cachedCapacity = this.usage.getCapacity();
+      }
     } else {
       reserved = null;
       LOG.warn("Setting reserved to null as usage is null");
+      cachedCapacity = -1;
     }
     if (currentDir != null) {
       File parent = currentDir.getParentFile();
@@ -402,7 +410,12 @@ public class FsVolumeImpl implements FsVolumeSpi {
   @VisibleForTesting
   public long getCapacity() {
     if (configuredCapacity < 0L) {
-      long remaining = usage.getCapacity() - getReserved();
+      long remaining;
+      if (cachedCapacity > 0L) {
+        remaining = cachedCapacity - getReserved();
+      } else {
+        remaining = usage.getCapacity() - getReserved();
+      }
       return Math.max(remaining, 0L);
     }
     return configuredCapacity;

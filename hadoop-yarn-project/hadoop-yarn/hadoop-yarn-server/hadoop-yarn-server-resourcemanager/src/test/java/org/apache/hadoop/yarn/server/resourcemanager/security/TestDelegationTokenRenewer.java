@@ -88,6 +88,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart.TestSecurityMockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
@@ -355,6 +357,35 @@ public class TestDelegationTokenRenewer {
    
     token1.setService(new Text("localhost:0"));
     return token1;
+  }
+
+  private RMApp submitApp(MockRM rm, Credentials cred, ByteBuffer tokensConf)
+      throws Exception {
+    int maxAttempts = rm.getConfig().getInt(
+        YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder.create()
+        .withResource(Resource.newInstance(200, 1))
+        .withAppName("app1")
+        .withUser("user")
+        .withAcls(null)
+        .withUnmanagedAM(false)
+        .withQueue(null)
+        .withMaxAppAttempts(maxAttempts)
+        .withCredentials(cred)
+        .withAppType(null)
+        .withWaitForAppAcceptedState(true)
+        .withKeepContainers(false)
+        .withApplicationId(null)
+        .withAttemptFailuresValidityInterval(0)
+        .withLogAggregationContext(null)
+        .withCancelTokensWhenComplete(true)
+        .withAppPriority(Priority.newInstance(0))
+        .withAmLabel(null)
+        .withApplicationTimeouts(null)
+        .withTokensConf(tokensConf)
+        .build();
+    return MockRMAppSubmitter.submit(rm, data);
   }
   
   
@@ -948,9 +979,16 @@ public class TestDelegationTokenRenewer {
     credentials.addToken(userText1, token1);
 
     RMApp app =
-        rm.submitApp(200, "name", "user",
-          new HashMap<ApplicationAccessType, String>(), false, "default", 1,
-          credentials);
+        MockRMAppSubmitter.submit(rm,
+            MockRMAppSubmissionData.Builder.createWithMemory(200, rm)
+                .withAppName("name")
+                .withUser("user")
+                .withAcls(new HashMap<ApplicationAccessType, String>())
+                .withUnmanagedAM(false)
+                .withQueue("default")
+                .withMaxAppAttempts(1)
+                .withCredentials(credentials)
+                .build());
 
     // wait for the initial expiring hdfs token to be removed from allTokens
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -1029,9 +1067,16 @@ public class TestDelegationTokenRenewer {
     MockRM rm1 = new TestSecurityMockRM(yarnConf);
     MemoryRMStateStore memStore = (MemoryRMStateStore) rm1.getRMStateStore();
     rm1.start();
-    RMApp app = rm1.submitApp(200, "name", "user",
-        new HashMap<ApplicationAccessType, String>(), false, "default", 1,
-        credentials);
+    RMApp app = MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+            .withAppName("name")
+            .withUser("user")
+            .withAcls(new HashMap<ApplicationAccessType, String>())
+            .withUnmanagedAM(false)
+            .withQueue("default")
+            .withMaxAppAttempts(1)
+            .withCredentials(credentials)
+            .build());
 
     // create token2
     Text userText2 = new Text("user1");
@@ -1127,7 +1172,7 @@ public class TestDelegationTokenRenewer {
     rm.start();
 
     // submit an app without delegationToken
-    RMApp app = rm.submitApp(200);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(200, rm);
 
     // wait for the new retrieved hdfs token.
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -1184,8 +1229,15 @@ public class TestDelegationTokenRenewer {
     // submit app1 with a token, set cancelTokenWhenComplete to false;
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemorySize(200);
-    RMApp app1 = rm.submitApp(resource, "name", "user", null, false, null, 2,
-        credentials, null, true, false, false, null, 0, null, false, null);
+    MockRMAppSubmissionData data1 = MockRMAppSubmissionData.Builder
+        .createWithResource(resource, rm)
+        .withAppName("name")
+        .withUser("user")
+        .withMaxAppAttempts(2)
+        .withCredentials(credentials)
+        .withCancelTokensWhenComplete(false)
+        .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
     rm.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
     DelegationTokenRenewer renewer =
@@ -1194,8 +1246,15 @@ public class TestDelegationTokenRenewer {
     Assert.assertNotNull(dttr);
 
     // submit app2 with the same token, set cancelTokenWhenComplete to true;
-    RMApp app2 = rm.submitApp(resource, "name", "user", null, false, null, 2,
-        credentials, null, true, false, false, null, 0, null, true, null);
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder
+        .createWithResource(resource, rm)
+        .withAppName("name")
+        .withUser("user")
+        .withMaxAppAttempts(2)
+        .withCredentials(credentials)
+        .withCancelTokensWhenComplete(true)
+        .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm1);
     rm.waitForState(app2.getApplicationId(), RMAppState.RUNNING);
     finishAMAndWaitForComplete(app2, rm, nm1, am2, dttr);
@@ -1250,17 +1309,29 @@ public class TestDelegationTokenRenewer {
 
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemorySize(200);
+    MockRMAppSubmissionData data2 = MockRMAppSubmissionData.Builder
+        .createWithResource(resource, rm).withAppName("name")
+        .withUser("user")
+        .withMaxAppAttempts(2)
+        .withCredentials(credentials)
+        .build();
     RMApp app1 =
-        rm.submitApp(resource, "name", "user", null, false, null, 2, credentials,
-          null, true, false, false, null, 0, null, true, null);
+        MockRMAppSubmitter.submit(rm, data2);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
     rm.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
 
     DelegationTokenToRenew dttr = renewer.getAllTokens().get(token1);
     Assert.assertNotNull(dttr);
     Assert.assertTrue(dttr.referringAppIds.contains(app1.getApplicationId()));
-    RMApp app2 = rm.submitApp(resource, "name", "user", null, false, null, 2,
-        credentials, null, true, false, false, null, 0, null, true, null);
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithResource(resource, rm)
+        .withResource(resource)
+        .withAppName("name")
+        .withUser("user")
+        .withMaxAppAttempts(2)
+        .withCredentials(credentials)
+        .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data1);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm1);
     rm.waitForState(app2.getApplicationId(), RMAppState.RUNNING);
     Assert.assertTrue(renewer.getAllTokens().containsKey(token1));
@@ -1276,8 +1347,15 @@ public class TestDelegationTokenRenewer {
     Assert.assertFalse(dttr.isTimerCancelled());
     Assert.assertFalse(Renewer.cancelled);
 
-    RMApp app3 = rm.submitApp(resource, "name", "user", null, false, null, 2,
-        credentials, null, true, false, false, null, 0, null, true, null);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithResource(resource, rm)
+        .withResource(resource)
+        .withAppName("name")
+        .withUser("user")
+        .withMaxAppAttempts(2)
+        .withCredentials(credentials)
+        .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm, data);
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm, nm1);
     rm.waitForState(app3.getApplicationId(), RMAppState.RUNNING);
     Assert.assertTrue(renewer.getAllTokens().containsKey(token1));
@@ -1370,7 +1448,7 @@ public class TestDelegationTokenRenewer {
     final int confSize = appConf.size();
 
     // submit app
-    RMApp app = rm.submitApp(credentials, tokenConf);
+    RMApp app = submitApp(rm, credentials, tokenConf);
 
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       public Boolean get() {
@@ -1425,7 +1503,7 @@ public class TestDelegationTokenRenewer {
     ByteBuffer tokenConf = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
 
     try {
-      rm.submitApp(credentials, tokenConf);
+      submitApp(rm, credentials, tokenConf);
       Assert.fail();
     } catch (Exception e) {
       e.printStackTrace();

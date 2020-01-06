@@ -298,20 +298,24 @@ public class FrameworkUploader implements Runnable {
       fileSystem.setReplication(targetPath, finalReplication);
       LOG.info("Set replication to " +
           finalReplication + " for path: " + targetPath);
-      long startTime = System.currentTimeMillis();
-      long endTime = startTime;
-      long currentReplication = 0;
-      while(endTime - startTime < timeout * 1000 &&
-           currentReplication < acceptableReplication) {
-        Thread.sleep(1000);
-        endTime = System.currentTimeMillis();
-        currentReplication = getSmallestReplicatedBlockCount();
-      }
-      if (endTime - startTime >= timeout * 1000) {
-        LOG.error(String.format(
-            "Timed out after %d seconds while waiting for acceptable" +
-                " replication of %d (current replication is %d)",
-            timeout, acceptableReplication, currentReplication));
+      if (timeout == 0) {
+        LOG.info("Timeout is set to 0. Skipping replication check.");
+      } else {
+        long startTime = System.currentTimeMillis();
+        long endTime = startTime;
+        long currentReplication = 0;
+        while(endTime - startTime < timeout * 1000 &&
+             currentReplication < acceptableReplication) {
+          Thread.sleep(1000);
+          endTime = System.currentTimeMillis();
+          currentReplication = getSmallestReplicatedBlockCount();
+        }
+        if (endTime - startTime >= timeout * 1000) {
+          LOG.error(String.format(
+              "Timed out after %d seconds while waiting for acceptable" +
+                  " replication of %d (current replication is %d)",
+              timeout, acceptableReplication, currentReplication));
+        }
       }
     } else {
       LOG.info("Cannot set replication to " +

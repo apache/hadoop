@@ -1544,6 +1544,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
    */
   static class Fsck extends S3GuardTool {
     public static final String CHECK_FLAG = "check";
+    public static final String DDB_MS_CONSISTENCY_FLAG = "internal";
 
     public static final String NAME = "fsck";
     public static final String PURPOSE = "Compares S3 with MetadataStore, and "
@@ -1553,10 +1554,12 @@ public abstract class S3GuardTool extends Configured implements Tool {
         "\t" + PURPOSE + "\n\n" +
         "Common options:\n" +
         "  -" + CHECK_FLAG + " Check the metadata store for errors, but do "
-        + "not fix any issues.\n";
+        + "not fix any issues.\n"+
+        "  -" + DDB_MS_CONSISTENCY_FLAG + " Check the dynamodb metadata store "
+        + "for internal consistency.\n";
 
     Fsck(Configuration conf) {
-      super(conf, CHECK_FLAG);
+      super(conf, CHECK_FLAG, DDB_MS_CONSISTENCY_FLAG);
     }
 
     @Override
@@ -1577,6 +1580,21 @@ public abstract class S3GuardTool extends Configured implements Tool {
         throw invalidArgs("no arguments");
       }
       int exitValue = EXIT_SUCCESS;
+
+      final CommandFormat commandFormat = getCommandFormat();
+
+      // check if there's more than one arguments
+      int flags = 0;
+      if (commandFormat.getOpt(CHECK_FLAG)) {
+        flags++;
+      }
+      if (commandFormat.getOpt(DDB_MS_CONSISTENCY_FLAG)) {
+        flags++;
+      }
+      if (flags > 1) {
+        out.println(USAGE);
+        throw invalidArgs("There should be only one parameter used for checking.");
+      }
 
       String s3Path = paths.get(0);
       try {
@@ -1600,25 +1618,25 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
       if (ms == null ||
           !(ms instanceof DynamoDBMetadataStore)) {
-        errorln(s3Path + " path uses MS: " + ms);
+        errorln(s3Path + " path uses metadata store: " + ms);
         errorln(NAME + " can be only used with a DynamoDB backed s3a bucket.");
         errorln(USAGE);
         return ERROR;
       }
 
-      final CommandFormat commandFormat = getCommandFormat();
+      List<S3GuardFsck.ComparePair> violations;
+
       if (commandFormat.getOpt(CHECK_FLAG)) {
         // do the check
         S3GuardFsck s3GuardFsck = new S3GuardFsck(fs, ms);
         try {
-          final List<S3GuardFsck.ComparePair> comparePairs
-              = s3GuardFsck.compareS3ToMs(fs.qualify(root));
-          if (comparePairs.size() > 0) {
-            exitValue = EXIT_FAIL;
-          }
+          violations = s3GuardFsck.compareS3ToMs(fs.qualify(root));
         } catch (IOException e) {
           throw e;
         }
+      } else if (commandFormat.getOpt(DDB_MS_CONSISTENCY_FLAG)) {
+        S3GuardFsck s3GuardFsck = new S3GuardFsck(fs, ms);
+        violations = s3GuardFsck.checkDdbInternalConsistency(fs.qualify(root));
       } else {
         errorln("No supported operation is selected.");
         errorln(USAGE);
@@ -1626,6 +1644,12 @@ public abstract class S3GuardTool extends Configured implements Tool {
       }
 
       out.flush();
+
+      // We fail if there were compare pairs, as the returned compare pairs
+      // contain issues.
+      if (violations == null || violations.size() > 0) {
+        exitValue = EXIT_FAIL;
+      }
       return exitValue;
     }
   }

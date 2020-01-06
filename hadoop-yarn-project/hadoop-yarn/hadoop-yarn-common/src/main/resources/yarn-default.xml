@@ -1291,11 +1291,12 @@
   <property>
     <description>
       Whether to enable application placement based on user ID passed via
-      application tags. When it is enabled, u=&lt;userId&gt; pattern will be checked
-      and if found, the application will be placed onto the found user's queue,
+      application tags. When it is enabled, userid=&lt;userId&gt;
+      pattern will be checked and if found, the application will be placed
+      onto the found user's queue,
       if the original user has enough rights on the passed user's queue.
     </description>
-    <name>application-tag-based-placement.enable</name>
+    <name>yarn.resourcemanager.application-tag-based-placement.enable</name>
     <value>false</value>
   </property>
 
@@ -1304,7 +1305,7 @@
       Comma separated list of users who can use the application tag based
       placement, if it is enabled.
     </description>
-    <name>application-tag-based-placement.username.whitelist</name>
+    <name>yarn.resourcemanager.application-tag-based-placement.username.whitelist</name>
     <value></value>
   </property>
 
@@ -1616,27 +1617,21 @@
   </property>
 
   <property>
-    <description>Frequency of running node health script.</description>
-    <name>yarn.nodemanager.health-checker.interval-ms</name>
-    <value>600000</value>
+    <description>The nodemanager health check scripts to run.</description>
+    <name>yarn.nodemanager.health-checker.scripts</name>
+    <value>script</value>
   </property>
 
   <property>
-    <description>Script time out period.</description>
-    <name>yarn.nodemanager.health-checker.script.timeout-ms</name>
+    <description>Health check script time out period.</description>
+    <name>yarn.nodemanager.health-checker.timeout-ms</name>
     <value>1200000</value>
   </property>
 
   <property>
-    <description>The health check script to run.</description>
-    <name>yarn.nodemanager.health-checker.script.path</name>
-    <value></value>
-  </property>
-
-  <property>
-    <description>The arguments to pass to the health check script.</description>
-    <name>yarn.nodemanager.health-checker.script.opts</name>
-    <value></value>
+    <description>Frequency of running node health scripts.</description>
+    <name>yarn.nodemanager.health-checker.interval-ms</name>
+    <value>600000</value>
   </property>
 
   <property>
@@ -4491,5 +4486,11 @@
     </description>
     <name>yarn.workflow-id.tag-prefix</name>
     <value>workflowid:</value>
+  </property>
+
+  <property>
+    <description>Whether or not to allow application submissions via REST. Default is true.</description>
+    <name>yarn.webapp.enable-rest-app-submissions</name>
+    <value>true</value>
   </property>
 </configuration>
