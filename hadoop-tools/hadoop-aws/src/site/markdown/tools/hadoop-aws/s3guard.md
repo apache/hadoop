@@ -634,7 +634,7 @@ Usage
 ```
 hadoop s3guard import
 
-import [OPTIONS] [s3a://BUCKET]
+import [OPTIONS] [s3a://PATH]
     import metadata from existing S3 data
 
 Common options:
