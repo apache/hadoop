@@ -64,7 +64,7 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
-public class WebServices {
+public class WebServices implements AppInfoProvider {
 
   protected ApplicationBaseProtocol appBaseProt;
 
@@ -219,8 +219,18 @@ public class WebServices {
     return allApps;
   }
 
-  public AppInfo getApp(HttpServletRequest req, HttpServletResponse res,
-      String appId) {
+  public AppInfo getApp(HttpServletRequest req,
+      HttpServletResponse res, String appId) {
+    return getApp(req, appId);
+  }
+
+  @Override
+  public BasicAppInfo getApp(HttpServletRequest req, String appId,
+      String clusterId) {
+    return BasicAppInfo.fromAppInfo(getApp(req, appId));
+  }
+
+  public AppInfo getApp(HttpServletRequest req, String appId) {
     UserGroupInformation callerUGI = getUser(req);
     final ApplicationId id = parseApplicationId(appId);
     ApplicationReport app = null;
@@ -356,8 +366,17 @@ public class WebServices {
     return containersInfo;
   }
 
+  @Override
+  public String getNodeHttpAddress(HttpServletRequest req,
+      String appId, String appAttemptId,
+      String containerId, String clusterId) {
+    ContainerInfo containerInfo = getContainer(req, appId,
+        appAttemptId, containerId);
+    return containerInfo.getNodeHttpAddress();
+  }
+
   public ContainerInfo getContainer(HttpServletRequest req,
-      HttpServletResponse res, String appId, String appAttemptId,
+      String appId, String appAttemptId,
       String containerId) {
     UserGroupInformation callerUGI = getUser(req);
     ApplicationId aid = parseApplicationId(appId);
@@ -390,6 +409,12 @@ public class WebServices {
           + " not found");
     }
     return new ContainerInfo(container);
+  }
+
+  public ContainerInfo getContainer(HttpServletRequest req,
+      HttpServletResponse res, String appId, String appAttemptId,
+      String containerId) {
+    return getContainer(req, appId, appAttemptId, containerId);
   }
 
   protected void initForReadableEndpoints(HttpServletResponse response) {
