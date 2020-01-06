@@ -393,4 +393,22 @@ public abstract class GetApplicationsRequest {
   @Private
   @Unstable
   public abstract void setScope(ApplicationsRequestScope scope);
+
+  /**
+   * Set the name to filter applications.
+   *
+   * @return the name
+   */
+  @Private
+  @Unstable
+  public abstract String getName();
+
+  /**
+   * Get the name to filter applications.
+   *
+   * @param name of the application
+   */
+  @Private
+  @Unstable
+  public abstract void setName(String name);
 }

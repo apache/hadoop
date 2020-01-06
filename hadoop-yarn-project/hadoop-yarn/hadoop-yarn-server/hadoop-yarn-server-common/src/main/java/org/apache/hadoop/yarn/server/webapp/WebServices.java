@@ -75,7 +75,7 @@ public class WebServices {
   public AppsInfo getApps(HttpServletRequest req, HttpServletResponse res,
       String stateQuery, Set<String> statesQuery, String finalStatusQuery,
       String userQuery, String queueQuery, String count, String startedBegin,
-      String startedEnd, String finishBegin, String finishEnd,
+      String startedEnd, String finishBegin, String finishEnd, String nameQuery,
       Set<String> applicationTypes) {
     UserGroupInformation callerUGI = getUser(req);
     boolean checkEnd = false;
@@ -207,6 +207,11 @@ public class WebServices {
           && (appReport.getFinishTime() < fBegin || appReport.getFinishTime() > fEnd)) {
         continue;
       }
+
+      if (nameQuery != null && !nameQuery.equals(appReport.getName())) {
+        continue;
+      }
+
       AppInfo app = new AppInfo(appReport);
 
       allApps.add(app);
