@@ -96,6 +96,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Globber;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
+import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
@@ -541,7 +542,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Using delegation tokens");
       S3ADelegationTokens tokens = new S3ADelegationTokens();
       this.delegationTokens = Optional.of(tokens);
-      tokens.bindToFileSystem(getCanonicalUri(), this);
+      tokens.bindToFileSystem(getCanonicalUri(),
+          createStoreContext(),
+          createDelegationOperations());
       tokens.init(conf);
       tokens.start();
       // switch to the DT provider and bypass all other configured
@@ -572,6 +575,26 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
         .createS3Client(getUri(), bucket, credentials, uaSuffix);
+  }
+
+  /**
+   * Implementation of all operations used by delegation tokens.
+   */
+  private class DelegationOperationsImpl implements DelegationOperations {
+
+    @Override
+    public List<RoleModel.Statement> listAWSPolicyRules(final Set<AccessLevel> access) {
+      return S3AFileSystem.this.listAWSPolicyRules(access);
+    }
+  }
+
+  /**
+   * Create an instance of the delegation operations.
+   * @return callbacks for DT support.
+   */
+  @VisibleForTesting
+  public DelegationOperations createDelegationOperations() {
+    return new DelegationOperationsImpl();
   }
 
   /**
