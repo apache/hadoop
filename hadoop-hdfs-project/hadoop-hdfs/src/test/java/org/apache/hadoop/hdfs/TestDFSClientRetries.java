@@ -394,6 +394,7 @@ public class TestDFSClientRetries {
       Mockito.verify(spyNN, timeout(10000).times(1)).renewLease(
           Mockito.anyString());
       verifyEmptyLease(leaseRenewer);
+      GenericTestUtils.waitFor(() -> client.isFilesBeingWrittenEmpty(), 100, 10000);
       try {
         out1.write(new byte[256]);
         fail("existing output stream should be aborted");
@@ -758,11 +759,7 @@ public class TestDFSClientRetries {
   }
 
   private void verifyEmptyLease(LeaseRenewer leaseRenewer) throws Exception {
-    int sleepCount = 0;
-    while (!leaseRenewer.isEmpty() && sleepCount++ < 20) {
-      Thread.sleep(500);
-    }
-    assertTrue("Lease should be empty.", leaseRenewer.isEmpty());
+    GenericTestUtils.waitFor(() -> leaseRenewer.isEmpty(), 100, 10000);
   }
 
   class DFSClientReader implements Runnable {
