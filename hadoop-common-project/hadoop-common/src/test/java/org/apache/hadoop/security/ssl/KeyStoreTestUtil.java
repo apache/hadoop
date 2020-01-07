@@ -68,6 +68,10 @@ import org.bouncycastle.x509.X509V1CertificateGenerator;
 
 public class KeyStoreTestUtil {
 
+  public final static String SERVER_KEY_STORE_PASSWORD_DEFAULT = "serverP";
+  public final static String CLIENT_KEY_STORE_PASSWORD_DEFAULT = "clientP";
+  public final static String TRUST_STORE_PASSWORD_DEFAULT = "trustP";
+
   public static String getClasspathDir(Class klass) throws Exception {
     String file = klass.getName();
     file = file.replace('.', '/') + ".class";
@@ -257,30 +261,57 @@ public class KeyStoreTestUtil {
     setupSSLConfig(keystoresDir, sslConfDir, conf, useClientCert, true,"");
   }
 
-    /**
-     * Performs complete setup of SSL configuration in preparation for testing an
-     * SSLFactory.  This includes keys, certs, keystores, truststores, the server
-     * SSL configuration file, the client SSL configuration file, and the master
-     * configuration file read by the SSLFactory.
-     *
-     * @param keystoresDir
-     * @param sslConfDir
-     * @param conf
-     * @param useClientCert
-     * @param trustStore
-     * @param excludeCiphers
-     * @throws Exception
-     */
-    public static void setupSSLConfig(String keystoresDir, String sslConfDir,
-                                    Configuration conf, boolean useClientCert,
-      boolean trustStore, String excludeCiphers)
-    throws Exception {
+  /**
+   * Performs complete setup of SSL configuration in preparation for testing an
+   * SSLFactory.  This includes keys, certs, keystores, truststores, the server
+   * SSL configuration file, the client SSL configuration file, and the master
+   * configuration file read by the SSLFactory.
+   *
+   * @param keystoresDir
+   * @param sslConfDir
+   * @param conf
+   * @param useClientCert
+   * @param trustStore
+   * @param excludeCiphers
+   * @throws Exception
+   */
+  public static void setupSSLConfig(String keystoresDir, String sslConfDir,
+      Configuration conf, boolean useClientCert, boolean trustStore,
+      String excludeCiphers) throws Exception {
+    setupSSLConfig(keystoresDir, sslConfDir, conf, useClientCert, trustStore,
+        excludeCiphers, SERVER_KEY_STORE_PASSWORD_DEFAULT,
+        CLIENT_KEY_STORE_PASSWORD_DEFAULT, TRUST_STORE_PASSWORD_DEFAULT);
+  }
+
+
+  /**
+   * Performs complete setup of SSL configuration in preparation for testing an
+   * SSLFactory.  This includes keys, certs, keystores, truststores, the server
+   * SSL configuration file, the client SSL configuration file, and the master
+   * configuration file read by the SSLFactory and the passwords required to
+   * access the keyStores (Server and Client KeyStore Passwords and
+   * TrustStore Password).
+   *
+   * @param keystoresDir
+   * @param sslConfDir
+   * @param conf
+   * @param useClientCert
+   * @param trustStore
+   * @param excludeCiphers
+   * @param serverPassword
+   * @param clientPassword
+   * @param trustPassword
+   * @throws Exception
+   */
+  @SuppressWarnings("checkstyle:parameternumber")
+  public static void setupSSLConfig(String keystoresDir, String sslConfDir,
+      Configuration conf, boolean useClientCert, boolean trustStore,
+      String excludeCiphers, String serverPassword, String clientPassword,
+      String trustPassword) throws Exception {
+
     String clientKS = keystoresDir + "/clientKS.jks";
-    String clientPassword = "clientP";
     String serverKS = keystoresDir + "/serverKS.jks";
-    String serverPassword = "serverP";
     String trustKS = null;
-    String trustPassword = "trustP";
 
     File sslClientConfFile = new File(sslConfDir, getClientSSLConfigFileName());
     File sslServerConfFile = new File(sslConfDir, getServerSSLConfigFileName());
@@ -310,10 +341,10 @@ public class KeyStoreTestUtil {
       KeyStoreTestUtil.createTrustStore(trustKS, trustPassword, certs);
     }
 
-    Configuration clientSSLConf = createClientSSLConfig(clientKS, clientPassword,
-      clientPassword, trustKS, excludeCiphers);
-    Configuration serverSSLConf = createServerSSLConfig(serverKS, serverPassword,
-      serverPassword, trustKS, excludeCiphers);
+    Configuration clientSSLConf = createClientSSLConfig(clientKS,
+        clientPassword, clientPassword, trustKS, trustPassword, excludeCiphers);
+    Configuration serverSSLConf = createServerSSLConfig(serverKS,
+        serverPassword, serverPassword, trustKS, trustPassword, excludeCiphers);
 
     saveConfig(sslClientConfFile, clientSSLConf);
     saveConfig(sslServerConfFile, serverSSLConf);
@@ -336,9 +367,10 @@ public class KeyStoreTestUtil {
    * @return Configuration for client SSL
    */
   public static Configuration createClientSSLConfig(String clientKS,
-      String password, String keyPassword, String trustKS) {
+      String password, String keyPassword, String trustKS,
+      String trustPassword) {
     return createSSLConfig(SSLFactory.Mode.CLIENT,
-      clientKS, password, keyPassword, trustKS, "");
+      clientKS, password, keyPassword, trustKS, trustPassword, "");
   }
 
   /**
@@ -353,10 +385,11 @@ public class KeyStoreTestUtil {
    * @param excludeCiphers String comma separated ciphers to exclude
    * @return Configuration for client SSL
    */
-    public static Configuration createClientSSLConfig(String clientKS,
-      String password, String keyPassword, String trustKS, String excludeCiphers) {
+  public static Configuration createClientSSLConfig(String clientKS,
+      String password, String keyPassword, String trustKS,
+      String trustPassword, String excludeCiphers) {
     return createSSLConfig(SSLFactory.Mode.CLIENT,
-      clientKS, password, keyPassword, trustKS, excludeCiphers);
+      clientKS, password, keyPassword, trustKS, trustPassword, excludeCiphers);
   }
 
   /**
@@ -372,9 +405,10 @@ public class KeyStoreTestUtil {
    * @throws java.io.IOException
    */
   public static Configuration createServerSSLConfig(String serverKS,
-      String password, String keyPassword, String trustKS) throws IOException {
+      String password, String keyPassword, String trustKS, String trustPassword)
+      throws IOException {
     return createSSLConfig(SSLFactory.Mode.SERVER,
-      serverKS, password, keyPassword, trustKS, "");
+      serverKS, password, keyPassword, trustKS, trustPassword, "");
   }
 
   /**
@@ -390,10 +424,11 @@ public class KeyStoreTestUtil {
    * @return
    * @throws IOException
    */
-    public static Configuration createServerSSLConfig(String serverKS,
-      String password, String keyPassword, String trustKS, String excludeCiphers) throws IOException {
+  public static Configuration createServerSSLConfig(String serverKS,
+      String password, String keyPassword, String trustKS, String trustPassword,
+      String excludeCiphers) throws IOException {
     return createSSLConfig(SSLFactory.Mode.SERVER,
-      serverKS, password, keyPassword, trustKS, excludeCiphers);
+      serverKS, password, keyPassword, trustKS, trustPassword, excludeCiphers);
   }
 
   /**
@@ -445,8 +480,8 @@ public class KeyStoreTestUtil {
    * @return Configuration for SSL
    */
   private static Configuration createSSLConfig(SSLFactory.Mode mode,
-    String keystore, String password, String keyPassword, String trustKS, String excludeCiphers) {
-    String trustPassword = "trustP";
+      String keystore, String password, String keyPassword, String trustKS,
+      String trustStorePwd, String excludeCiphers) {
 
     Configuration sslConf = new Configuration(false);
     if (keystore != null) {
@@ -466,10 +501,10 @@ public class KeyStoreTestUtil {
       sslConf.set(FileBasedKeyStoresFactory.resolvePropertyName(mode,
         FileBasedKeyStoresFactory.SSL_TRUSTSTORE_LOCATION_TPL_KEY), trustKS);
     }
-    if (trustPassword != null) {
+    if (trustStorePwd != null) {
       sslConf.set(FileBasedKeyStoresFactory.resolvePropertyName(mode,
         FileBasedKeyStoresFactory.SSL_TRUSTSTORE_PASSWORD_TPL_KEY),
-        trustPassword);
+          trustStorePwd);
     }
     if(null != excludeCiphers && !excludeCiphers.isEmpty()) {
       sslConf.set(FileBasedKeyStoresFactory.resolvePropertyName(mode,
