@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
-import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.util.EnumSet;
 
@@ -29,6 +28,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -132,14 +132,27 @@ public class ITestAzureBlobFileSystemCreate extends
    * exception rethrows the first.
    */
   @Test
-  public void testFilteredDoubleClose() throws Throwable {
+  public void testTryWithResources() throws Throwable {
     final AzureBlobFileSystem fs = getFileSystem();
     Path testPath = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
-    FilterOutputStream out = new FilterOutputStream(fs.create(testPath));
-    out.close();
-    intercept(IOException.class, () -> out.write('a'));
-    intercept(IOException.class, () -> out.write(new byte[]{'a'}));
-    out.flush();
-    out.close();
+    try (FSDataOutputStream out = fs.create(testPath)) {
+      out.write('1');
+      out.hsync();
+      // this will cause the next write to failAll
+      fs.delete(testPath, false);
+      out.write('2');
+      out.hsync();
+      fail("Expected a failure");
+    } catch (FileNotFoundException fnfe) {
+      // the exception raised in close() must be in the caught exception's
+      // suppressed list
+      Throwable[] suppressed = fnfe.getSuppressed();
+      assertEquals("suppressed count", 1, suppressed.length);
+      Throwable inner = suppressed[0];
+      if (!(inner instanceof IOException)) {
+        throw inner;
+      }
+      GenericTestUtils.assertExceptionContains(fnfe.getMessage(), inner);
+    }
   }
 }
