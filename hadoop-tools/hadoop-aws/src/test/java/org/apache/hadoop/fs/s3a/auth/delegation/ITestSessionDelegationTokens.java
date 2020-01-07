@@ -263,7 +263,10 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
         TemporaryAWSCredentialsProvider.NAME);
     session.setSecretsInConfiguration(conf);
     try(S3ADelegationTokens delegationTokens2 = new S3ADelegationTokens()) {
-      delegationTokens2.bindToFileSystem(fs.getCanonicalUri(), fs);
+      delegationTokens2.bindToFileSystem(
+          fs.getCanonicalUri(),
+          fs.createStoreContext(),
+          fs.createDelegationOperations());
       delegationTokens2.init(conf);
       delegationTokens2.start();
 
