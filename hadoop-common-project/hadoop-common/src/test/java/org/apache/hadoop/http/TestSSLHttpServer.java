@@ -62,16 +62,15 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
       LoggerFactory.getLogger(TestSSLHttpServer.class);
   private static final String HTTPS_CIPHER_SUITES_KEY = "https.cipherSuites";
   private static final String JAVAX_NET_DEBUG_KEY = "javax.net.debug";
-  private static final String SSL_SERVER_KEYSTORE_PROP_PREFIX = "ssl.server" +
-          ".keystore";
-  private static final String SSL_SERVER_TRUSTSTORE_PROP_PREFIX = "ssl.server" +
-          ".truststore";
+  static final String SSL_SERVER_KEYSTORE_PROP_PREFIX = "ssl.server.keystore";
+  static final String SSL_SERVER_TRUSTSTORE_PROP_PREFIX = "ssl.server" +
+      ".truststore";
 
-  private static final String SERVLET_NAME_LONGHEADER = "longheader";
-  private static final String SERVLET_PATH_LONGHEADER =
+  static final String SERVLET_NAME_LONGHEADER = "longheader";
+  static final String SERVLET_PATH_LONGHEADER =
       "/" + SERVLET_NAME_LONGHEADER;
-  private static final String SERVLET_NAME_ECHO = "echo";
-  private static final String SERVLET_PATH_ECHO = "/" + SERVLET_NAME_ECHO;
+  static final String SERVLET_NAME_ECHO = "echo";
+  static final String SERVLET_PATH_ECHO = "/" + SERVLET_NAME_ECHO;
 
   private static HttpServer2 server;
   private static String keystoreDir;
@@ -79,7 +78,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   private static SSLFactory clientSslFactory;
   private static String cipherSuitesPropertyValue;
   private static String sslDebugPropertyValue;
-  private static final String EXCLUDED_CIPHERS =
+  static final String EXCLUDED_CIPHERS =
           "TLS_ECDHE_RSA_WITH_RC4_128_SHA,"
       + "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA, \n"
       + "SSL_RSA_WITH_DES_CBC_SHA,"
@@ -98,7 +97,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
       + "TLS_DHE_RSA_WITH_AES_128_CBC_SHA,\t\n "
       + "TLS_DHE_DSS_WITH_AES_128_CBC_SHA";
 
-  private static final String INCLUDED_PROTOCOLS = "SSLv2Hello,TLSv1.1";
+  static final String INCLUDED_PROTOCOLS = "SSLv2Hello,TLSv1.1";
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -166,7 +165,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
    * This ensures that the value https.cipherSuites does
    * not affect the result of tests.
    */
-  private static void storeHttpsCipherSuites() {
+  static void storeHttpsCipherSuites() {
     String cipherSuites = System.getProperty(HTTPS_CIPHER_SUITES_KEY);
     if (cipherSuites != null) {
       LOG.info(
@@ -177,7 +176,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     System.clearProperty(HTTPS_CIPHER_SUITES_KEY);
   }
 
-  private static void restoreHttpsCipherSuites() {
+  static void restoreHttpsCipherSuites() {
     if (cipherSuitesPropertyValue != null) {
       LOG.info("Restoring property {} to value: {}", HTTPS_CIPHER_SUITES_KEY,
           cipherSuitesPropertyValue);
@@ -186,7 +185,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     }
   }
 
-  private static void turnOnSSLDebugLogging() {
+  static void turnOnSSLDebugLogging() {
     String sslDebug = System.getProperty(JAVAX_NET_DEBUG_KEY);
     if (sslDebug != null) {
       sslDebugPropertyValue = sslDebug;
@@ -194,7 +193,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     System.setProperty(JAVAX_NET_DEBUG_KEY, "all");
   }
 
-  private static void restoreSSLDebugLogging() {
+  static void restoreSSLDebugLogging() {
     if (sslDebugPropertyValue != null) {
       System.setProperty(JAVAX_NET_DEBUG_KEY, sslDebugPropertyValue);
       sslDebugPropertyValue = null;
