@@ -394,7 +394,8 @@ public class TestDFSClientRetries {
       Mockito.verify(spyNN, timeout(10000).times(1)).renewLease(
           Mockito.anyString());
       verifyEmptyLease(leaseRenewer);
-      GenericTestUtils.waitFor(() -> client.isFilesBeingWrittenEmpty(), 100, 10000);
+      GenericTestUtils.waitFor(() -> client.isFilesBeingWrittenEmpty(),
+          100, 10000);
       try {
         out1.write(new byte[256]);
         fail("existing output stream should be aborted");
