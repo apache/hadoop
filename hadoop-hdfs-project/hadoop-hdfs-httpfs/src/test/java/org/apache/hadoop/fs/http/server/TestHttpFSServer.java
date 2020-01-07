@@ -1738,4 +1738,50 @@ public class TestHttpFSServer extends HFSTestCase {
         (HdfsFileStatus) httpfsWebHdfs.getFileStatus(ecFile);
     assertNotNull(httpfsFileStatus.getErasureCodingPolicy());
   }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testErasureCodingPolicy() throws Exception {
+    createHttpFSServer(false, false);
+    final String dir = "/ecPolicy";
+    Path path1 = new Path(dir);
+    final ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies
+        .getByID(SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
+    final String ecPolicyName = ecPolicy.getName();
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .get(path1.toUri(), TestHdfsHelper.getHdfsConf());
+    dfs.mkdirs(new Path(dir));
+    dfs.enableErasureCodingPolicy(ecPolicyName);
+
+    HttpURLConnection conn =
+        putCmdWithReturn(dir, "SETECPOLICY", "ecpolicy=" + ecPolicyName);
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+
+    HttpURLConnection conn1 = sendRequestToHttpFSServer(dir, "GETECPOLICY", "");
+    // Should return HTTP_OK
+    Assert.assertEquals(conn1.getResponseCode(), HttpURLConnection.HTTP_OK);
+    // Verify the response
+    BufferedReader reader =
+        new BufferedReader(new InputStreamReader(conn1.getInputStream()));
+    // The response should be a one-line JSON string.
+    String dirLst = reader.readLine();
+    ErasureCodingPolicy dfsDirLst = dfs.getErasureCodingPolicy(path1);
+    Assert.assertNotNull(dfsDirLst);
+    Assert.assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
+
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    URL url = new URL(TestJettyHelper.getJettyURL(),
+        MessageFormat.format("/webhdfs/v1{0}?user.name={1}&op={2}&{3}", dir,
+            user, "UNSETECPOLICY", ""));
+    HttpURLConnection conn2 = (HttpURLConnection) url.openConnection();
+    conn2.setRequestMethod("POST");
+    conn2.connect();
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn2.getResponseCode());
+
+    // response should be null
+    dfsDirLst = dfs.getErasureCodingPolicy(path1);
+    Assert.assertNull(dfsDirLst);
+  }
 }
