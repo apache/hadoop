@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AclPermissionPa
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.BlockSizeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DataParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DestinationParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ECPolicyParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.FilterParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.FsActionParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.GroupParam;
@@ -438,6 +439,14 @@ public class HttpFSServer {
       response = Response.ok().build();
       break;
     }
+    case GETECPOLICY: {
+      FSOperations.FSGetErasureCodingPolicy command =
+          new FSOperations.FSGetErasureCodingPolicy(path);
+      String js = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", path);
+      response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
     default: {
       throw new IOException(
           MessageFormat.format("Invalid HTTP GET operation [{0}]", op.value()));
@@ -600,6 +609,14 @@ public class HttpFSServer {
          AUDIT_LOG.info("Unset storage policy [{}]", path);
          response = Response.ok().build();
          break;
+      }
+      case UNSETECPOLICY: {
+        FSOperations.FSUnSetErasureCodingPolicy command =
+            new FSOperations.FSUnSetErasureCodingPolicy(path);
+        fsExecute(user, command);
+        AUDIT_LOG.info("Unset ec policy [{}]", path);
+        response = Response.ok().build();
+        break;
       }
       default: {
         throw new IOException(
@@ -880,6 +897,15 @@ public class HttpFSServer {
             PolicyNameParam.class);
         FSOperations.FSSetStoragePolicy command =
             new FSOperations.FSSetStoragePolicy(path, policyName);
+        fsExecute(user, command);
+        AUDIT_LOG.info("[{}] to policy [{}]", path, policyName);
+        response = Response.ok().build();
+        break;
+      }
+      case SETECPOLICY: {
+        String policyName = params.get(ECPolicyParam.NAME, ECPolicyParam.class);
+        FSOperations.FSSetErasureCodingPolicy command =
+            new FSOperations.FSSetErasureCodingPolicy(path, policyName);
         fsExecute(user, command);
         AUDIT_LOG.info("[{}] to policy [{}]", path, policyName);
         response = Response.ok().build();

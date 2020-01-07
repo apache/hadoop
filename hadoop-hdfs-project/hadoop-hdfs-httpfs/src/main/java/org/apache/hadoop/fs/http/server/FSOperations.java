@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -1895,6 +1896,90 @@ public class FSOperations {
         dfs.access(path, mode);
       } else {
         throw new UnsupportedOperationException("checkaccess is "
+            + "not supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Executor that performs a setErasureCodingPolicy operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSSetErasureCodingPolicy
+      implements FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+    private String policyName;
+
+    public FSSetErasureCodingPolicy(String path, String policyName) {
+      this.path = new Path(path);
+      this.policyName = policyName;
+    }
+
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        dfs.setErasureCodingPolicy(path, policyName);
+      } else {
+        throw new UnsupportedOperationException("setErasureCodingPolicy is "
+            + "not supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Executor that performs a getErasureCodingPolicy operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSGetErasureCodingPolicy
+      implements FileSystemAccess.FileSystemExecutor<String> {
+
+    private Path path;
+
+    public FSGetErasureCodingPolicy(String path) {
+      this.path = new Path(path);
+    }
+
+    @Override
+    public String execute(FileSystem fs) throws IOException {
+      ErasureCodingPolicy policy = null;
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        policy = dfs.getErasureCodingPolicy(path);
+      } else {
+        throw new UnsupportedOperationException("getErasureCodingPolicy is "
+            + "not supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      return JsonUtil.toJsonString(policy);
+    }
+  }
+
+  /**
+   * Executor that performs a unsetErasureCodingPolicy operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSUnSetErasureCodingPolicy
+      implements FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+
+    public FSUnSetErasureCodingPolicy(String path) {
+      this.path = new Path(path);
+    }
+
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        dfs.unsetErasureCodingPolicy(path);
+      } else {
+        throw new UnsupportedOperationException("unsetErasureCodingPolicy is "
             + "not supported for HttpFs on " + fs.getClass()
             + ". Please check your fs.defaultFS configuration");
       }
