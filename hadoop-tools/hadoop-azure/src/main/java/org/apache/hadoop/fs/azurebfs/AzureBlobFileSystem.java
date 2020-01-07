@@ -107,6 +107,8 @@ public class AzureBlobFileSystem extends FileSystem {
 
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.abfsStore = new AzureBlobFileSystemStore(uri, this.isSecureScheme(), configuration);
+    LOG.trace("AzureBlobFileSystemStore init complete");
+
     final AbfsConfiguration abfsConfiguration = abfsStore.getAbfsConfiguration();
 
     this.setWorkingDirectory(this.getHomeDirectory());
@@ -121,6 +123,7 @@ public class AzureBlobFileSystem extends FileSystem {
       }
     }
 
+    LOG.trace("Initiate check for delegation token manager");
     if (UserGroupInformation.isSecurityEnabled()) {
       this.delegationTokenEnabled = abfsConfiguration.isDelegationTokenManagerEnabled();
 
@@ -137,6 +140,7 @@ public class AzureBlobFileSystem extends FileSystem {
     // Initialize ABFS authorizer
     //
     this.authorizer = abfsConfiguration.getAbfsAuthorizer();
+    LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
   }
 
   @Override

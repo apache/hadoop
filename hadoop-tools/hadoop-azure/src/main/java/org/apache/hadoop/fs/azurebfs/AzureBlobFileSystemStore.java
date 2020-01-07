@@ -148,8 +148,12 @@ public class AzureBlobFileSystemStore implements Closeable {
     } catch (IllegalAccessException exception) {
       throw new FileSystemOperationUnhandledException(exception);
     }
+
+    LOG.trace("AbfsConfiguration init complete");
+
     this.userGroupInformation = UserGroupInformation.getCurrentUser();
     this.userName = userGroupInformation.getShortUserName();
+    LOG.trace("UGI init complete");
     if (!abfsConfiguration.getSkipUserGroupMetadataDuringInitialization()) {
       try {
         this.primaryUserGroup = userGroupInformation.getPrimaryGroupName();
@@ -161,6 +165,7 @@ public class AzureBlobFileSystemStore implements Closeable {
       //Provide a default group name
       this.primaryUserGroup = userName;
     }
+    LOG.trace("primaryUserGroup is {}", this.primaryUserGroup);
 
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
@@ -170,6 +175,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     this.abfsPerfTracker = new AbfsPerfTracker(fileSystemName, accountName, this.abfsConfiguration);
     initializeClient(uri, fileSystemName, accountName, useHttps);
     this.identityTransformer = new IdentityTransformer(abfsConfiguration.getRawConfiguration());
+    LOG.trace("IdentityTransformer init complete");
   }
 
   /**
@@ -296,6 +302,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   public void setFilesystemProperties(final Hashtable<String, String> properties)
       throws AzureBlobFileSystemException {
     if (properties == null || properties.isEmpty()) {
+      LOG.trace("setFilesystemProperties no properties present");
       return;
     }
 
@@ -1116,6 +1123,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     AccessTokenProvider tokenProvider = null;
 
     if (abfsConfiguration.getAuthType(accountName) == AuthType.SharedKey) {
+      LOG.trace("Fetching SharedKey credentials");
       int dotIndex = accountName.indexOf(AbfsHttpConstants.DOT);
       if (dotIndex <= 0) {
         throw new InvalidUriException(
@@ -1124,14 +1132,17 @@ public class AzureBlobFileSystemStore implements Closeable {
       creds = new SharedKeyCredentials(accountName.substring(0, dotIndex),
             abfsConfiguration.getStorageAccountKey());
     } else {
+      LOG.trace("Fetching token provider");
       tokenProvider = abfsConfiguration.getTokenProvider();
       ExtensionHelper.bind(tokenProvider, uri,
             abfsConfiguration.getRawConfiguration());
     }
 
-    this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
+    LOG.trace("Initializing AbfsClient for {}", baseUrl);
+    this.client =  new AbfsClient(baseUrl, creds, abfsConfiguration,
         new ExponentialRetryPolicy(abfsConfiguration.getMaxIoRetries()),
         tokenProvider, abfsPerfTracker);
+    LOG.trace("AbfsClient init complete");
   }
 
   private String getOctalNotation(FsPermission fsPermission) {
