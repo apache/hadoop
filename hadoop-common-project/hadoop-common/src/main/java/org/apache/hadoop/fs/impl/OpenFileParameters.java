@@ -23,8 +23,11 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 
+import static java.util.Objects.requireNonNull;
+
 /**
- * All the parameters from the openFile builder for the {@code openFileWithOptions} commands.
+ * All the parameters from the openFile builder for the
+ * {@code openFileWithOptions} commands.
  *
  * If/when new attributes added to the builder, this class will be extended.
  */
@@ -54,12 +57,12 @@ public class OpenFileParameters {
   }
 
   public OpenFileParameters withMandatoryKeys(final Set<String> mandatoryKeys) {
-    this.mandatoryKeys = mandatoryKeys;
+    this.mandatoryKeys = requireNonNull(mandatoryKeys);
     return this;
   }
 
   public OpenFileParameters withOptions(final Configuration options) {
-    this.options = options;
+    this.options = requireNonNull(options);
     return this;
   }
 

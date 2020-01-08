@@ -4372,23 +4372,35 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Extract the status from the optional parameter, falling
-   * back to a HEAD for the file only (not the directory).
+   * Extract the status from the optional parameter, querying
+   * S3Guard/s3 if it is absent.
    * @param path path of the status
-   * @param status optional status
+   * @param optStatus optional status
    * @return a file status
    * @throws FileNotFoundException if there is no normal file at that path
    * @throws IOException IO failure
    */
   private S3AFileStatus extractOrFetchSimpleFileStatus(
-      final Path path, final Optional<S3AFileStatus> status)
+      final Path path, final Optional<S3AFileStatus> optStatus)
       throws IOException {
-    if (status.isPresent()) {
-      return status.get();
+    S3AFileStatus fileStatus;
+    if (optStatus.isPresent()) {
+      fileStatus = optStatus.get();
     } else {
-      return innerGetFileStatus(path, false,
+      // this looks at s3guard and gets any type of status back,
+      // if it falls back to S3 it does a HEAD only.
+      // therefore: if there is no S3Guard and there is a dir, this
+      // will fail
+      fileStatus = innerGetFileStatus(path, false,
           StatusProbeEnum.HEAD_ONLY);
     }
+    // we check here for the passed in status or the S3Guard value
+    // for being a directory
+    if (fileStatus.isDirectory()) {
+      throw new FileNotFoundException("Can't open " + path
+          + " because it is a directory");
+    }
+    return fileStatus;
   }
 
   /**
@@ -4408,7 +4420,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final Path rawPath,
       final OpenFileParameters parameters) throws IOException {
     final Path path = qualify(rawPath);
-
     Configuration options = parameters.getOptions();
     Set<String> mandatoryKeys = parameters.getMandatoryKeys();
     String sql = options.get(SelectConstants.SELECT_SQL, null);
@@ -4426,7 +4437,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           "for " + path + " in non-select file I/O");
     }
     FileStatus providedStatus = parameters.getStatus();
-    S3AFileStatus fileStatus = null;
+    S3AFileStatus fileStatus;
     if (providedStatus != null) {
       Preconditions.checkArgument(path.equals(providedStatus.getPath()),
           "FileStatus parameter is not for the path %s: %s",
@@ -4445,9 +4456,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         fileStatus = ((S3ALocatedFileStatus) providedStatus).toS3AFileStatus();
       } else {
         LOG.debug("Ignoring file status {}", providedStatus);
+        fileStatus = null;
       }
+    } else {
+      fileStatus = null;
     }
-    Optional<S3AFileStatus> ost = Optional.of(fileStatus);
+    Optional<S3AFileStatus> ost = Optional.ofNullable(fileStatus);
     CompletableFuture<FSDataInputStream> result = new CompletableFuture<>();
     if (!isSelect) {
       // normal path.

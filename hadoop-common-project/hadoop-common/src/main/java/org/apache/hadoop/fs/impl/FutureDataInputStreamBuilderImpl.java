@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathHandle;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 
@@ -76,8 +76,8 @@ public abstract class FutureDataInputStreamBuilderImpl
    */
   protected FutureDataInputStreamBuilderImpl(@Nonnull FileContext fc,
       @Nonnull Path path) throws IOException {
-    super(checkNotNull(path));
-    checkNotNull(fc);
+    super(requireNonNull(path, "path"));
+    requireNonNull(fc, "file context");
     this.fileSystem = null;
     bufferSize = IO_FILE_BUFFER_SIZE_DEFAULT;
   }
@@ -89,8 +89,8 @@ public abstract class FutureDataInputStreamBuilderImpl
    */
   protected FutureDataInputStreamBuilderImpl(@Nonnull FileSystem fileSystem,
       @Nonnull Path path) {
-    super(checkNotNull(path));
-    this.fileSystem = checkNotNull(fileSystem);
+    super(requireNonNull(path, "path"));
+    this.fileSystem = requireNonNull(fileSystem, "fileSystem");
     initFromFS();
   }
 
@@ -115,7 +115,7 @@ public abstract class FutureDataInputStreamBuilderImpl
   }
 
   protected FileSystem getFS() {
-    checkNotNull(fileSystem);
+    requireNonNull(fileSystem, "fileSystem");
     return fileSystem;
   }
 
@@ -148,7 +148,7 @@ public abstract class FutureDataInputStreamBuilderImpl
 
   @Override
   public FutureDataInputStreamBuilder withFileStatus(FileStatus status) {
-    this.status = checkNotNull(status);
+    this.status = requireNonNull(status, "status");
     return this;
   }
 
