@@ -146,8 +146,9 @@ public class DockerContainerExecutor extends ContainerExecutor {
     List<String> logDirs = dirsHandler.getLogDirs();
 
     ContainerLocalizer localizer =
-      new ContainerLocalizer(lfs, user, appId, locId, getPaths(localDirs),
-        RecordFactoryProvider.getRecordFactory(getConf()));
+        new ContainerLocalizer(lfs, user, appId, locId,
+            nmPrivateContainerTokensPath.getName(), getPaths(localDirs),
+            RecordFactoryProvider.getRecordFactory(getConf()));
 
     createUserLocalDirs(localDirs, user);
     createUserCacheDirs(localDirs, user);
@@ -158,7 +159,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
     Path appStorageDir = getWorkingDir(localDirs, user, appId);
 
     String tokenFn =
-      String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT, locId);
+        String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT, locId);
     Path tokenDst = new Path(appStorageDir, tokenFn);
     copyFile(nmPrivateContainerTokensPath, tokenDst, user);
     LOG.info("Copying from " + nmPrivateContainerTokensPath + " to " + tokenDst);
