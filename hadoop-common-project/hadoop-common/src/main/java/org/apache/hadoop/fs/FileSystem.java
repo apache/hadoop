@@ -4608,11 +4608,11 @@ public abstract class FileSystem extends Configured
     @Override
     public CompletableFuture<FSDataInputStream> build() throws IOException {
       Optional<Path> optionalPath = getOptionalPath();
-      OpenFileParameters parameters = new OpenFileParameters();
-      parameters.setMandatoryKeys(getMandatoryKeys());
-      parameters.setOptions(getOptions());
-      parameters.setBufferSize(getBufferSize());
-      parameters.setStatus(getStatus());
+      OpenFileParameters parameters = new OpenFileParameters()
+          .withMandatoryKeys(getMandatoryKeys())
+          .withOptions(getOptions())
+          .withBufferSize(getBufferSize())
+          .withStatus(getStatus());
       if(optionalPath.isPresent()) {
         return getFS().openFileWithOptions(optionalPath.get(),
             parameters);

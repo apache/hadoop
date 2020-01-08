@@ -2924,19 +2924,18 @@ public class FileContext implements PathCapabilities {
     @Override
     public CompletableFuture<FSDataInputStream> build() throws IOException {
       final Path absF = fixRelativePart(getPath());
-      OpenFileParameters parameters = new OpenFileParameters();
-      parameters.setMandatoryKeys(getMandatoryKeys());
-      parameters.setOptions(getOptions());
-      parameters.setBufferSize(getBufferSize());
-      parameters.setStatus(getStatus());
+      OpenFileParameters parameters = new OpenFileParameters()
+          .withMandatoryKeys(getMandatoryKeys())
+          .withOptions(getOptions())
+          .withBufferSize(getBufferSize())
+          .withStatus(getStatus());
       return new FSLinkResolver<CompletableFuture<FSDataInputStream>>() {
         @Override
         public CompletableFuture<FSDataInputStream> next(
             final AbstractFileSystem fs,
             final Path p)
             throws IOException {
-          return fs.openFileWithOptions(p,
-              parameters);
+          return fs.openFileWithOptions(p, parameters);
         }
       }.resolve(FileContext.this, absF);
     }

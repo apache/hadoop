@@ -49,7 +49,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Mode;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
@@ -466,6 +465,17 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         .withFileStatus(new S3ALocatedFileStatus(originalStatus, null))
         .build().get()) {
       instream.read();
+    }
+    try (FSDataInputStream instream = fs.openFile(testpath)
+        .build().get()) {
+      try {
+        instream.read();
+        // No exception only if we don't enforce change detection as exception
+        assertTrue(changeDetectionMode.equals(CHANGE_DETECT_MODE_NONE) ||
+            changeDetectionMode.equals(CHANGE_DETECT_MODE_WARN));
+      } catch (Exception ignored) {
+        // Ignored.
+      }
     }
   }
 

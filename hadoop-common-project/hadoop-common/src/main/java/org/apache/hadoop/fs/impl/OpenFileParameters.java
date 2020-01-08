@@ -53,35 +53,39 @@ public class OpenFileParameters {
   public OpenFileParameters() {
   }
 
-  public Set<String> getMandatoryKeys() {
-    return mandatoryKeys;
+  public OpenFileParameters withMandatoryKeys(final Set<String> mandatoryKeys) {
+    this.mandatoryKeys = mandatoryKeys;
+    return this;
   }
 
-  public void setMandatoryKeys(final Set<String> mandatoryKeys) {
-    this.mandatoryKeys = mandatoryKeys;
+  public OpenFileParameters withOptions(final Configuration options) {
+    this.options = options;
+    return this;
+  }
+
+  public OpenFileParameters withBufferSize(final int bufferSize) {
+    this.bufferSize = bufferSize;
+    return this;
+  }
+
+  public OpenFileParameters withStatus(final FileStatus status) {
+    this.status = status;
+    return this;
+  }
+
+  public Set<String> getMandatoryKeys() {
+    return mandatoryKeys;
   }
 
   public Configuration getOptions() {
     return options;
   }
 
-  public void setOptions(final Configuration options) {
-    this.options = options;
-  }
-
   public int getBufferSize() {
     return bufferSize;
   }
 
-  public void setBufferSize(final int bufferSize) {
-    this.bufferSize = bufferSize;
-  }
-
   public FileStatus getStatus() {
     return status;
-  }
-
-  public void setStatus(final FileStatus status) {
-    this.status = status;
   }
 }
