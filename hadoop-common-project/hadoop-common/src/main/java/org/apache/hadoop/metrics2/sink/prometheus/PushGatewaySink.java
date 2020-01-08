@@ -132,8 +132,7 @@ public class PushGatewaySink implements MetricsSink, Closeable {
           }
           if (LOG.isDebugEnabled()) {
             LOG.debug("register succeed, metrics name is: {} Type is :{} tag is: {} tagValue is {} Value is : {}"
-                , key, metrics.type().toString(), Arrays.toString(labelNames)
-                , Arrays.toString(labelValues), metrics.value().toString());
+                , key, metrics.type(), Arrays.toString(labelNames), Arrays.toString(labelValues), metrics.value());
           }
         }
       }
