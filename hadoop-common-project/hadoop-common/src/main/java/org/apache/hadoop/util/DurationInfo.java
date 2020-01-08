@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.util;
 
+import java.util.function.Supplier;
+
 import org.slf4j.Logger;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-
-import java.util.function.Supplier;
 
 /**
  * A duration with logging of final state at info or debug
