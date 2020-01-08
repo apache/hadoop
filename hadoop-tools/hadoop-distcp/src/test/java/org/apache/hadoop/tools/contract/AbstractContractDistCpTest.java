@@ -666,6 +666,6 @@ public abstract class AbstractContractDistCpTest
             .withCRC(true)
             .withOverwrite(false)
             .withNoLocalWrite(true)));
-    assertTrue(job.isSuccessful());
+    assertTrue("DistCp job did not complete successfully.", job.isSuccessful());
   }
 }

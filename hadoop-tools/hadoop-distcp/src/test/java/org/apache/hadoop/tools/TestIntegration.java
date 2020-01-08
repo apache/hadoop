@@ -520,7 +520,7 @@ public class TestIntegration {
   }
 
   @Test(timeout=100000)
-  public void testNoLocalWrite() {
+  public void testNoLocalWrite() throws IOException {
     try {
       addEntries(listFile, "singlefile1/file1");
       createFiles("singlefile1/file1", "target");
@@ -531,9 +531,6 @@ public class TestIntegration {
       runTest(listFile, target, false, false, false, false, true, conf);
 
       checkResult(target, 1);
-    } catch (IOException e) {
-      LOG.error("Exception encountered while testing distcp", e);
-      Assert.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
     }

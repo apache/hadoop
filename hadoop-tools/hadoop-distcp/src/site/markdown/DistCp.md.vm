@@ -362,7 +362,7 @@ Command Line Options
 | `-copybuffersize <copybuffersize>` | Size of the copy buffer to use. By default, `<copybuffersize>` is set to 8192B | |
 | `-xtrack <path>` | Save information about missing source files to the specified path. | This option is only valid with `-update` option. This is an experimental property and it cannot be used with `-atomic` option. |
 | `-direct` | Write directly to destination paths | Useful for avoiding potentially very expensive temporary file rename operations when the destination is an object store |
-| `-noLocalWrite` | Write data to target cluster with data locality disabled. | If this option is set, the distcp task will not write data replication to local datanode to avoid datanode being imbalanced. This option is suggested to be specified when the data to copy is very large and the DistCp job runs on the target cluster. |
+| `-noLocalWrite` | Write data to an HDFS cluster with data locality disabled. | If this option is set, the distcp task will not write data blocks to their local datanodes, so avoiding datanodes becoming imbalanced. Recommended when the amount of data to copy is very large, the target cluster is HDFS and the DistCp job runs on that target cluster. |
 
 Architecture of DistCp
 ----------------------
