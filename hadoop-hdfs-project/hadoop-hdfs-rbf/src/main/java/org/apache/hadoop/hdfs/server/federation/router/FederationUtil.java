@@ -98,13 +98,10 @@ public final class FederationUtil {
       JSONObject json = new JSONObject(jmxOutput);
       ret = json.getJSONArray("beans");
     } catch (IOException e) {
-      LOG.error("Cannot read JMX bean {} from server {}: {}",
-          beanQuery, webAddress, e.getMessage());
-    } catch (JSONException e) {
-      LOG.error("Cannot parse JMX output for {} from server {}: {}",
-          beanQuery, webAddress, e.getMessage());
+      LOG.error("Cannot read JMX bean {} from server {}: ",
+          beanQuery, webAddress, e);
     } catch (Exception e) {
-      LOG.error("Cannot parse JMX output for {} from server {}: {}",
+      LOG.error("Cannot parse JMX output for {} from server {}: ",
           beanQuery, webAddress, e);
     } finally {
       if (reader != null) {
