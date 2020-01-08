@@ -159,8 +159,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     // randomly choose the local directory
     Path appStorageDir = getWorkingDir(localDirs, user, appId);
 
-    String tokenFn =
-        String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT, locId);
+    String tokenFn = String.format(TOKEN_FILE_NAME_FMT, locId);
     Path tokenDst = new Path(appStorageDir, tokenFn);
     copyFile(nmPrivateContainerTokensPath, tokenDst, user);
     LOG.info("Copying from " + nmPrivateContainerTokensPath
@@ -175,7 +174,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         + localizerFc.getWorkingDirectory());
 
     ContainerLocalizer localizer =
-        createContainerLocalizer(user, appId, locId, localDirs, localizerFc);
+        createContainerLocalizer(user, appId, locId, tokenFn, localDirs,
+            localizerFc);
     // TODO: DO it over RPC for maintaining similarity?
     localizer.runLocalization(nmAddr);
   }
@@ -199,10 +199,10 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   @Private
   @VisibleForTesting
   protected ContainerLocalizer createContainerLocalizer(String user,
-      String appId, String locId, List<String> localDirs,
+      String appId, String locId, String tokenFileName, List<String> localDirs,
       FileContext localizerFc) throws IOException {
     ContainerLocalizer localizer =
-        new ContainerLocalizer(localizerFc, user, appId, locId,
+        new ContainerLocalizer(localizerFc, user, appId, locId, tokenFileName,
             getPaths(localDirs),
             RecordFactoryProvider.getRecordFactory(getConf()));
     return localizer;

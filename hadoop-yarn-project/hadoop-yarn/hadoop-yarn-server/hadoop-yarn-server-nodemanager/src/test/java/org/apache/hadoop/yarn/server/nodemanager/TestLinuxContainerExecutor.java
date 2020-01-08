@@ -361,7 +361,7 @@ public class TestLinuxContainerExecutor {
         dirsHandler
           .getLocalPathForWrite(ResourceLocalizationService.NM_PRIVATE_DIR
               + Path.SEPARATOR
-              + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT, locId));
+              + String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT, locId));
     files.create(nmPrivateContainerTokensPath, EnumSet.of(CREATE, OVERWRITE));
     Configuration config = new YarnConfiguration(conf);
     InetSocketAddress nmAddr =
@@ -374,7 +374,7 @@ public class TestLinuxContainerExecutor {
       @Override
       public void buildMainArgs(List<String> command, String user,
           String appId, String locId, InetSocketAddress nmAddr,
-          List<String> localDirs) {
+          String tokenFileName, List<String> localDirs) {
         MockContainerLocalizer.buildMainArgs(command, user, appId, locId,
           nmAddr, localDirs);
       }
@@ -395,7 +395,7 @@ public class TestLinuxContainerExecutor {
         dirsHandler
           .getLocalPathForWrite(ResourceLocalizationService.NM_PRIVATE_DIR
               + Path.SEPARATOR
-              + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT, locId2));
+              + String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT, locId2));
     files.create(nmPrivateContainerTokensPath2, EnumSet.of(CREATE, OVERWRITE));
     exec.startLocalizer(new LocalizerStartContext.Builder()
             .setNmPrivateContainerTokens(nmPrivateContainerTokensPath2)
