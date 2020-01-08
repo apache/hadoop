@@ -209,6 +209,7 @@ public class TestIncreaseAllocationExpirer {
     Thread.sleep(10000);
     // Verify container size is 1G
     am1.allocate(null, null);
+    rm1.drainEvents();
     Assert.assertEquals(
         1 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
             .getAllocatedResource().getMemorySize());
@@ -433,6 +434,7 @@ public class TestIncreaseAllocationExpirer {
 
     am1.allocate(null, null);
 
+    rm1.drainEvents();
     Assert.assertEquals(
         2 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
             .getAllocatedResource().getMemorySize());
