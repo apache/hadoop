@@ -822,7 +822,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       if (addr != -1) {
         LOG.debug("Get InputStream by cache address.");
         return FsDatasetUtil.getDirectInputStream(
-            addr, info.getBlockDataLength());
+            addr + seekOffset, info.getBlockDataLength() - seekOffset);
       }
       LOG.debug("Get InputStream by cache file path.");
       return FsDatasetUtil.getInputStreamAndSeek(
