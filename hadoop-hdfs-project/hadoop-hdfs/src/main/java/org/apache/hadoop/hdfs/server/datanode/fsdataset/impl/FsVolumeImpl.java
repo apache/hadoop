@@ -196,9 +196,10 @@ public class FsVolumeImpl implements FsVolumeSpi {
         DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY,
         DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_DEFAULT);
 
+    String escapedPath = parent.toString().replaceAll("%", "%%");
     ThreadFactory workerFactory = new ThreadFactoryBuilder()
         .setDaemon(true)
-        .setNameFormat("FsVolumeImplWorker-" + parent.toString() + "-%d")
+        .setNameFormat("FsVolumeImplWorker-" + escapedPath + "-%d")
         .build();
     ThreadPoolExecutor executor = new ThreadPoolExecutor(
         1, maxNumThreads,
