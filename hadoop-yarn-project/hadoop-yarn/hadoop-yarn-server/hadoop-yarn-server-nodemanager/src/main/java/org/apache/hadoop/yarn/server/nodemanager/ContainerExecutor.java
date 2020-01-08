@@ -79,6 +79,7 @@ public abstract class ContainerExecutor implements Configurable {
   private static final Logger LOG =
        LoggerFactory.getLogger(ContainerExecutor.class);
   protected static final String WILDCARD = "*";
+  public static final String TOKEN_FILE_NAME_FMT = "%s.tokens";
 
   /**
    * The permissions to use when creating the launch script.

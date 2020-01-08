@@ -32,7 +32,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -169,7 +168,7 @@ public class ContainerRelaunch extends ContainerLaunch {
        String containerIdStr) throws IOException {
     return dirsHandler.getLocalPathForRead(
         getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
-            + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
+            + String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT,
             containerIdStr));
   }
 

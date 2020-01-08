@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
+import static org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.TOKEN_FILE_NAME_FMT;
 
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 
@@ -231,8 +232,7 @@ public class ContainerLaunch implements Callable<Integer> {
               + CONTAINER_SCRIPT);
       Path nmPrivateTokensPath = dirsHandler.getLocalPathForWrite(
           getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
-              + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
-              containerIdStr));
+              + String.format(TOKEN_FILE_NAME_FMT, containerIdStr));
       Path nmPrivateClasspathJarDir = dirsHandler.getLocalPathForWrite(
           getContainerPrivateDir(appIdStr, containerIdStr));
 

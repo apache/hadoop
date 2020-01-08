@@ -1030,6 +1030,8 @@ public class ResourceLocalizationService extends CompositeService
     private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(getConfig());
 
+    private final String tokenFileName;
+
     LocalizerRunner(LocalizerContext context, String localizerId) {
       super("LocalizerRunner for " + localizerId);
       this.context = context;
@@ -1037,8 +1039,9 @@ public class ResourceLocalizationService extends CompositeService
       this.pending =
           Collections
             .synchronizedList(new ArrayList<LocalizerResourceRequestEvent>());
-      this.scheduled =
-          new HashMap<LocalResourceRequest, LocalizerResourceRequestEvent>();
+      this.scheduled = new HashMap<>();
+      tokenFileName =  String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT,
+         localizerId + Long.toHexString(System.currentTimeMillis()));
     }
 
     public void addResource(LocalizerResourceRequestEvent request) {
@@ -1233,11 +1236,8 @@ public class ResourceLocalizationService extends CompositeService
       Throwable exception = null;
       try {
         // Get nmPrivateDir
-        nmPrivateCTokensPath =
-          dirsHandler.getLocalPathForWrite(
-                NM_PRIVATE_DIR + Path.SEPARATOR
-                    + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
-                        localizerId));
+        nmPrivateCTokensPath = dirsHandler.getLocalPathForWrite(
+                NM_PRIVATE_DIR + Path.SEPARATOR + tokenFileName);
 
         // 0) init queue, etc.
         // 1) write credentials to private dir
