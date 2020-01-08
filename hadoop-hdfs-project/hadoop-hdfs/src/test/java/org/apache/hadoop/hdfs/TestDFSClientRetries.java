@@ -407,7 +407,7 @@ public class TestDFSClientRetries {
       // throws SocketTimeoutException.
       Mockito.doNothing().when(spyNN).renewLease(
           Mockito.anyString());
-      LeaseRenewer leaseRenewer2 = client.getLeaseRenewer();
+      final LeaseRenewer leaseRenewer2 = client.getLeaseRenewer();
       leaseRenewer2.setRenewalTime(100);
       OutputStream out2 = client.create(file2, false);
       Mockito.verify(spyNN, timeout(10000).times(2)).renewLease(
