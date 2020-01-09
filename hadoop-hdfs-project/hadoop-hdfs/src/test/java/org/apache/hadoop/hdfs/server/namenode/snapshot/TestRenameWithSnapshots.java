@@ -2476,4 +2476,28 @@ public class TestRenameWithSnapshots {
     output.println(b);
     return b;
   }
+
+  /**
+   * Test getContentsummary and getQuotausage for an INodeReference.
+   */
+  @Test(timeout = 300000)
+  public void testQuotaForRenameFileInSnapshot() throws Exception {
+    final Path snapshotDir = new Path("/testRenameWithSnapshot");
+    hdfs.mkdirs(snapshotDir, new FsPermission((short) 0777));
+    final Path file = new Path(snapshotDir, "file");
+    DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPL, SEED);
+    hdfs.allowSnapshot(snapshotDir);
+    hdfs.createSnapshot(snapshotDir, "s0");
+    hdfs.mkdirs(new Path("/dir1"));
+
+    // Truncate a file which exists in snapshot , that is an
+    // INodeReference
+    hdfs.truncate(file, 10);
+    hdfs.rename(file, new Path("/dir1"));
+    assertEquals(hdfs.getContentSummary(new Path("/")).getSpaceConsumed(),
+        hdfs.getQuotaUsage(new Path("/")).getSpaceConsumed());
+    assertEquals(
+        hdfs.getContentSummary(new Path("/")).getFileAndDirectoryCount(),
+        hdfs.getQuotaUsage(new Path("/")).getFileAndDirectoryCount());
+  }
 }
