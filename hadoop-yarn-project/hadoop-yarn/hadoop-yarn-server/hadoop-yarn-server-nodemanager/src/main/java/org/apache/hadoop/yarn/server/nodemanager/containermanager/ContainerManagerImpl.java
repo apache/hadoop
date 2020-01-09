@@ -1644,6 +1644,11 @@ public class ContainerManagerImpl extends CompositeService implements
         throws IOException {
       return dirhandlerService.getLocalPathForWrite(path, size, false);
     }
+
+    @Override
+    public Iterable<Path> getAllLocalPathsForRead(String path) throws IOException {
+      return dirhandlerService.getAllLocalPathsForRead(path);
+    }
   }
 
   @SuppressWarnings("unchecked")
