@@ -24,16 +24,16 @@ Please use `s3a:` as the connector to data hosted in S3 with Apache Hadoop.**
 
 See also:
 
-* [Encryption](./encryption.html)
-* [Performance](./performance.html)
-* [S3Guard](./s3guard.html)
-* [Troubleshooting](./troubleshooting_s3a.html)
-* [Committing work to S3 with the "S3A Committers"](./committers.html)
-* [S3A Committers Architecture](./committer_architecture.html)
-* [Working with IAM Assumed Roles](./assumed_roles.html)
-* [S3A Delegation Token Support](./delegation_tokens.html)
-* [S3A Delegation Token Architecture](delegation_token_architecture.html).
-* [Testing](./testing.html)
+* [Encryption](./encryption.md)
+* [Performance](./performance.md)
+* [S3Guard](./s3guard.md)
+* [Troubleshooting](./troubleshooting_s3a.md)
+* [Committing work to S3 with the "S3A Committers"](./committers.md)
+* [S3A Committers Architecture](./committer_architecture.md)
+* [Working with IAM Assumed Roles](./assumed_roles.md)
+* [S3A Delegation Token Support](./delegation_tokens.md)
+* [S3A Delegation Token Architecture](./delegation_token_architecture.md).
+* [Testing](./testing.md)
 
 ## <a name="overview"></a> Overview
 
