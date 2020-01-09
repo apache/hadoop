@@ -82,6 +82,15 @@ public abstract class AbstractFSContractTestBase extends Assert
     Thread.currentThread().setName("JUnit");
   }
 
+  @Before
+  public void nameThread() {
+    Thread.currentThread().setName("JUnit-" + getMethodName());
+  }
+
+  protected String getMethodName() {
+    return methodName.getMethodName();
+  }
+
   /**
    * This must be implemented by all instantiated test cases.
    * -provide the FS contract
@@ -172,6 +181,7 @@ public abstract class AbstractFSContractTestBase extends Assert
    */
   @Before
   public void setup() throws Exception {
+    Thread.currentThread().setName("setup");
     LOG.debug("== Setup ==");
     contract = createContract(createConfiguration());
     contract.init();
@@ -200,6 +210,7 @@ public abstract class AbstractFSContractTestBase extends Assert
    */
   @After
   public void teardown() throws Exception {
+    Thread.currentThread().setName("teardown");
     LOG.debug("== Teardown ==");
     deleteTestDirInTeardown();
     LOG.debug("== Teardown complete ==");

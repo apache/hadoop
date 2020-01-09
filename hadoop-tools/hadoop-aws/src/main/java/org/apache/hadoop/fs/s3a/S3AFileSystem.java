@@ -1245,7 +1245,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     } catch (AmazonClientException e) {
       throw translateException("rename(" + src +", " + dst + ")", src, e);
     } catch (RenameFailedException e) {
-      LOG.debug(e.getMessage());
+      LOG.info("{}", e.getMessage());
+      LOG.debug("rename failure", e);
       return e.getExitCode();
     } catch (FileNotFoundException e) {
       LOG.debug(e.toString());
@@ -2477,7 +2478,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param path path
    * @return true if the path is auth
    */
-  protected boolean allowAuthoritative(final Path path) {
+  public boolean allowAuthoritative(final Path path) {
     return S3Guard.allowAuthoritative(path, this,
         allowAuthoritativeMetadataStore, allowAuthoritativePaths);
   }
@@ -2720,7 +2721,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 + " s3modtime={}; msModTime={} updating metastore",
                 path, s3ModTime, msModTime);
             return S3Guard.putAndReturn(metadataStore, s3AFileStatus,
-                instrumentation, ttlTimeProvider);
+                ttlTimeProvider);
           }
         }
       }
@@ -2755,13 +2756,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       // entry was found, save in S3Guard
       return S3Guard.putAndReturn(metadataStore, s3FileStatus,
-          instrumentation, ttlTimeProvider);
+          ttlTimeProvider);
     } else {
       // there was no entry in S3Guard
       // retrieve the data and update the metadata store in the process.
       return S3Guard.putAndReturn(metadataStore,
           s3GetFileStatus(path, key, probes, tombstones),
-          instrumentation,
           ttlTimeProvider);
     }
   }
@@ -3177,12 +3177,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     HadoopExecutors.shutdown(unboundedThreadPool, LOG,
         THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
     unboundedThreadPool = null;
-    closeAutocloseables(LOG, credentials);
     cleanupWithLogger(LOG,
         metadataStore,
         instrumentation,
         delegationTokens.orElse(null),
         signerManager);
+    closeAutocloseables(LOG, credentials);
     delegationTokens = Optional.empty();
     signerManager = null;
     credentials = null;
@@ -3529,13 +3529,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           activeState = stateToClose;
         }
         S3Guard.addAncestors(metadataStore, p, ttlTimeProvider, activeState);
+        final boolean isDir = objectRepresentsDirectory(key, length);
         S3AFileStatus status = createUploadFileStatus(p,
-            S3AUtils.objectRepresentsDirectory(key, length), length,
+            isDir, length,
             getDefaultBlockSize(p), username, eTag, versionId);
-        S3Guard.putAndReturn(metadataStore, status,
-            instrumentation,
-            ttlTimeProvider,
-            activeState);
+        if (!isDir) {
+          S3Guard.putAndReturn(metadataStore, status,
+              ttlTimeProvider,
+              activeState);
+        } else {
+          // this is a directory marker so put it as such.
+          status.setIsEmptyDirectory(Tristate.TRUE);
+          S3Guard.putAuthDirectoryMarker(metadataStore, status,
+              ttlTimeProvider,
+              activeState);
+        }
       }
     } catch (IOException e) {
       if (failOnMetadataWriteError) {

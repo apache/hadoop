@@ -328,12 +328,13 @@ public interface MetadataStore extends Closeable {
    * additional keyPrefix parameter to filter the pruned keys with a prefix.
    *
    * @param pruneMode Prune Mode
-   * @param cutoff Oldest time to allow (UTC)
+   * @param cutoff Oldest time in milliseconds to allow (UTC)
    * @param keyPrefix The prefix for the keys that should be removed
    * @throws IOException if there is an error
    * @throws UnsupportedOperationException if not implemented
+   * @return the number of pruned entries
    */
-  void prune(PruneMode pruneMode, long cutoff, String keyPrefix)
+  long prune(PruneMode pruneMode, long cutoff, String keyPrefix)
       throws IOException, UnsupportedOperationException;
 
   /**
@@ -351,6 +352,23 @@ public interface MetadataStore extends Closeable {
    * @throws IOException if there is an error
    */
   void updateParameters(Map<String, String> parameters) throws IOException;
+
+  /**
+   * Mark all directories created/touched in an operation as authoritative.
+   * The metastore can now update that path with any authoritative
+   * flags it chooses.
+   * The store may assume that therefore the operation state is complete.
+   * This holds for rename and needs to be documented for import.
+   * @param dest destination path.
+   * @param operationState active state.
+   * @throws IOException failure.
+   * @return the number of directories marked.
+   */
+  default int markAsAuthoritative(Path dest,
+      BulkOperationState operationState)
+      throws IOException {
+    return 0;
+  }
 
   /**
    * Modes of operation for prune.
@@ -389,7 +407,7 @@ public interface MetadataStore extends Closeable {
   default BulkOperationState initiateBulkWrite(
       BulkOperationState.OperationType operation,
       Path dest) throws IOException {
-    return null;
+    return new BulkOperationState(operation);
   }
 
   /**
@@ -401,4 +419,11 @@ public interface MetadataStore extends Closeable {
    */
   void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider);
 
+  /**
+   * Get any S3GuardInstrumentation for this store...must not be null.
+   * @return any store instrumentation.
+   */
+  default MetastoreInstrumentation getInstrumentation() {
+    return new MetastoreInstrumentationImpl();
+  }
 }

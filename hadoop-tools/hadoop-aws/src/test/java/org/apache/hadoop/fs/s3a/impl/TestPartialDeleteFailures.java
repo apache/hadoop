@@ -250,6 +250,7 @@ public class TestPartialDeleteFailures {
     public String getBucketLocation() throws IOException {
       return null;
     }
+
   }
   /**
    * MetadataStore which tracks what is deleted and added.
@@ -346,10 +347,10 @@ public class TestPartialDeleteFailures {
     }
 
     @Override
-    public void prune(final PruneMode pruneMode,
+    public long prune(final PruneMode pruneMode,
         final long cutoff,
         final String keyPrefix) {
-
+      return 0;
     }
 
     @Override
