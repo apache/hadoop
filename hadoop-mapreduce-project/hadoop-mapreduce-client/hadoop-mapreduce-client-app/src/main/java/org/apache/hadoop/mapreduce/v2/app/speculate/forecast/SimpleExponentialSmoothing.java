@@ -24,108 +24,145 @@ import java.util.concurrent.atomic.AtomicReference;
  * Implementation of the static model for Simple exponential smoothing.
  */
 public class SimpleExponentialSmoothing {
-  public final static double DEFAULT_FORECAST = -1.0;
+  private static final double DEFAULT_FORECAST = -1.0;
   private final int kMinimumReads;
   private final long kStagnatedWindow;
   private final long startTime;
   private long timeConstant;
 
+  /**
+   * Holds reference to the current forecast record.
+   */
   private AtomicReference<ForecastRecord> forecastRefEntry;
 
-  public static SimpleExponentialSmoothing createForecast(long timeConstant,
-      int skipCnt, long stagnatedWindow, long timeStamp) {
+  public static SimpleExponentialSmoothing createForecast(
+      final long timeConstant,
+      final int skipCnt, final long stagnatedWindow, final long timeStamp) {
     return new SimpleExponentialSmoothing(timeConstant, skipCnt,
         stagnatedWindow, timeStamp);
   }
 
-  SimpleExponentialSmoothing(long ktConstant, int skipCnt,
-      long stagnatedWindow, long timeStamp) {
-    kMinimumReads = skipCnt;
-    kStagnatedWindow = stagnatedWindow;
+  SimpleExponentialSmoothing(final long ktConstant, final int skipCnt,
+      final long stagnatedWindow, final long timeStamp) {
+    this.kMinimumReads = skipCnt;
+    this.kStagnatedWindow = stagnatedWindow;
     this.timeConstant = ktConstant;
     this.startTime = timeStamp;
     this.forecastRefEntry = new AtomicReference<ForecastRecord>(null);
   }
 
   private class ForecastRecord {
-    private double alpha;
-    private long timeStamp;
-    private double sample;
-    private double rawData;
+    private final double alpha;
+    private final long timeStamp;
+    private final double sample;
+    private final double rawData;
     private double forecast;
-    private double sseError;
-    private long myIndex;
+    private final double sseError;
+    private final long myIndex;
+    private ForecastRecord prevRec;
 
-    ForecastRecord(double forecast, double rawData, long timeStamp) {
-      this(0.0, forecast, rawData, forecast, timeStamp, 0.0, 0);
+    ForecastRecord(final double currForecast, final double currRawData,
+        final long currTimeStamp) {
+      this(0.0, currForecast, currRawData, currForecast, currTimeStamp, 0.0, 0);
     }
 
-    ForecastRecord(double alpha, double sample, double rawData,
-        double forecast, long timeStamp, double accError, long index) {
-      this.timeStamp = timeStamp;
-      this.alpha = alpha;
-      this.sseError = 0.0;
-      this.sample = sample;
-      this.forecast = forecast;
-      this.rawData = rawData;
+    ForecastRecord(final double alphaVal, final double currSample,
+        final double currRawData,
+        final double currForecast, final long currTimeStamp,
+        final double accError,
+        final long index) {
+      this.timeStamp = currTimeStamp;
+      this.alpha = alphaVal;
+      this.sample = currSample;
+      this.forecast = currForecast;
+      this.rawData = currRawData;
       this.sseError = accError;
       this.myIndex = index;
     }
 
-    private double preProcessRawData(double rData, long newTime) {
+    private ForecastRecord createForecastRecord(final double alphaVal,
+        final double currSample,
+        final double currRawData,
+        final double currForecast, final long currTimeStamp,
+        final double accError,
+        final long index,
+        final ForecastRecord prev) {
+      ForecastRecord forecastRec =
+          new ForecastRecord(alphaVal, currSample, currRawData, currForecast,
+              currTimeStamp, accError, index);
+      forecastRec.prevRec = prev;
+      return forecastRec;
+    }
+
+    private double preProcessRawData(final double rData, final long newTime) {
       return processRawData(this.rawData, this.timeStamp, rData, newTime);
     }
 
-    public ForecastRecord append(long newTimeStamp, double rData) {
-      if (this.timeStamp > newTimeStamp) {
+    public ForecastRecord append(final long newTimeStamp, final double rData) {
+      if (this.timeStamp >= newTimeStamp
+          && Double.compare(this.rawData, rData) >= 0) {
+        // progress reported twice. Do nothing.
         return this;
       }
-      double newSample = preProcessRawData(rData, newTimeStamp);
+      ForecastRecord refRecord = this;
+      if (newTimeStamp == this.timeStamp) {
+        // we need to restore old value if possible
+        if (this.prevRec != null) {
+          refRecord = this.prevRec;
+        }
+      }
+      double newSample = refRecord.preProcessRawData(rData, newTimeStamp);
       long deltaTime = this.timeStamp - newTimeStamp;
-      if (this.myIndex == kMinimumReads) {
+      if (refRecord.myIndex == kMinimumReads) {
         timeConstant = Math.max(timeConstant, newTimeStamp - startTime);
       }
       double smoothFactor =
           1 - Math.exp(((double) deltaTime) / timeConstant);
       double forecastVal =
-          smoothFactor * newSample + (1.0 - smoothFactor) * this.forecast;
+          smoothFactor * newSample + (1.0 - smoothFactor) * refRecord.forecast;
       double newSSEError =
-          this.sseError + Math.pow(newSample - this.forecast, 2);
-      return new ForecastRecord(smoothFactor, newSample, rData, forecastVal,
-          newTimeStamp, newSSEError, this.myIndex + 1);
+          refRecord.sseError + Math.pow(newSample - refRecord.forecast, 2);
+      return refRecord
+          .createForecastRecord(smoothFactor, newSample, rData, forecastVal,
+              newTimeStamp, newSSEError, refRecord.myIndex + 1, refRecord);
     }
-
   }
 
-  public boolean isDataStagnated(long timeStamp) {
+  /**
+   * checks if the task is hanging up.
+   * @param timeStamp current time of the scan.
+   * @return true if we have number of samples > kMinimumReads and the record
+   * timestamp has expired.
+   */
+  public boolean isDataStagnated(final long timeStamp) {
     ForecastRecord rec = forecastRefEntry.get();
-    if (rec != null && rec.myIndex <= kMinimumReads) {
-      return (rec.timeStamp + kStagnatedWindow) < timeStamp;
+    if (rec != null && rec.myIndex > kMinimumReads) {
+      return (rec.timeStamp + kStagnatedWindow) > timeStamp;
     }
     return false;
   }
 
-  static double processRawData(double oldRawData, long oldTime,
-      double newRawData, long newTime) {
+  static double processRawData(final double oldRawData, final long oldTime,
+      final double newRawData, final long newTime) {
     double rate = (newRawData - oldRawData) / (newTime - oldTime);
     return rate;
   }
 
-  public void incorporateReading(long timeStamp, double rawData) {
+  public void incorporateReading(final long timeStamp,
+      final double currRawData) {
     ForecastRecord oldRec = forecastRefEntry.get();
     if (oldRec == null) {
       double oldForecast =
-          processRawData(0, startTime, rawData, timeStamp);
+          processRawData(0, startTime, currRawData, timeStamp);
       forecastRefEntry.compareAndSet(null,
           new ForecastRecord(oldForecast, 0.0, startTime));
-      incorporateReading(timeStamp, rawData);
+      incorporateReading(timeStamp, currRawData);
       return;
     }
     while (!forecastRefEntry.compareAndSet(oldRec, oldRec.append(timeStamp,
-        rawData))) {
+        currRawData))) {
       oldRec = forecastRefEntry.get();
     }
-
   }
 
   public double getForecast() {
@@ -136,7 +173,7 @@ public class SimpleExponentialSmoothing {
     return DEFAULT_FORECAST;
   }
 
-  public boolean isDefaultForecast(double value) {
+  public boolean isDefaultForecast(final double value) {
     return value == DEFAULT_FORECAST;
   }
 
@@ -148,7 +185,7 @@ public class SimpleExponentialSmoothing {
     return DEFAULT_FORECAST;
   }
 
-  public boolean isErrorWithinBound(double bound) {
+  public boolean isErrorWithinBound(final double bound) {
     double squaredErr = getSSE();
     if (squaredErr < 0) {
       return false;
@@ -185,8 +222,8 @@ public class SimpleExponentialSmoothing {
     String res = "NULL";
     ForecastRecord rec = forecastRefEntry.get();
     if (rec != null) {
-      res =  "rec.index = " + rec.myIndex + ", forecast t: " + rec.timeStamp +
-          ", forecast: " + rec.forecast
+      res =  "rec.index = " + rec.myIndex + ", forecast t: " + rec.timeStamp
+          + ", forecast: " + rec.forecast
           + ", sample: " + rec.sample + ", raw: " + rec.rawData + ", error: "
           + rec.sseError + ", alpha: " + rec.alpha;
     }
