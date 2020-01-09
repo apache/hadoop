@@ -45,7 +45,7 @@ public final class ConfigurationKeys {
   public static final String AZURE_CONCURRENT_CONNECTION_VALUE_OUT = "fs.azure.concurrentRequestCount.out";
   public static final String AZURE_CONCURRENT_CONNECTION_VALUE_IN = "fs.azure.concurrentRequestCount.in";
   public static final String AZURE_TOLERATE_CONCURRENT_APPEND = "fs.azure.io.read.tolerate.concurrent.append";
-  public static final String AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION = "fs.azure.createRemoteFileSystemDuringInitialization";
+  public static final String AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION = "github*01";
   public static final String AZURE_SKIP_USER_GROUP_METADATA_DURING_INITIALIZATION = "fs.azure.skipUserGroupMetadataDuringInitialization";
   public static final String FS_AZURE_ENABLE_AUTOTHROTTLING = "fs.azure.enable.autothrottling";
   public static final String FS_AZURE_ALWAYS_USE_HTTPS = "fs.azure.always.use.https";
@@ -124,7 +124,12 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ENABLE_DELEGATION_TOKEN = "fs.azure.enable.delegation.token";
   public static final String FS_AZURE_DELEGATION_TOKEN_PROVIDER_TYPE = "fs.azure.delegation.token.provider.type";
 
-  public static final String ABFS_EXTERNAL_AUTHORIZATION_CLASS = "abfs.external.authorization.class";
+  /** External Authorizer **/
+  public static final String FS_AZURE_ABFS_AUTHORIZER = "fs.azure.abfs.authorizer";
+  /** External Authorizer supported Auth Type **/
+  public static final String FS_AZURE_ABFS_AUTHORIZER_AUTH_TYPE = "fs.azure.abfs.authorizer.auth.type";
+  /** SAS token refresh interval before expiry time in seconds **/
+  public static final String FS_AZURE_SAS_REFRESH_INTERVAL_BEFORE_EXPIRY = "fs.azure.sas.refresh.interval.before.expiry";
 
   private ConfigurationKeys() {}
 }

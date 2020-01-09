@@ -73,12 +73,13 @@ public class AbfsFileSystemContext {
 
   public AbfsFileSystemContext(URI uri, Configuration configuration)
       throws IOException {
-    this.uri = uri;
 
-    String[] authorityParts = authorityParts(uri);
+    this.uri = uri;
+    String[] authorityParts = UriUtils.authorityParts(uri);
     this.fileSystemName = authorityParts[0];
     this.accountName = authorityParts[1];
 
+    // Config
     try {
       this.abfsConfiguration = new AbfsConfiguration(configuration,
           accountName);
@@ -86,28 +87,31 @@ public class AbfsFileSystemContext {
       throw new FileSystemOperationUnhandledException(exception);
     }
 
-    this.abfsStoreAuthenticator = new AbfsStoreAuthenticator(
-        this.abfsConfiguration, this.accountName, this.uri);
+    // Authorizer
+    this.authorizer = this.abfsConfiguration.getAbfsAuthorizer();
 
+    // Authenticator
+    this.abfsStoreAuthenticator = new AbfsStoreAuthenticator(
+        this.abfsConfiguration, this.uri, this.authorizer);
+
+    // Secure
     this.httpsEnabled = (
         (this.abfsStoreAuthenticator.getAuthType() == AuthType.OAuth)
             || abfsConfiguration.isHttpsAlwaysUsed()) ?
         true :
         false; //TODO: was isSecureScheme() in AbfsFS - is it needed ?
 
+    // PerfTracker
     this.abfsPerfTracker = new AbfsPerfTracker(this.fileSystemName,
         this.accountName,
         this.abfsConfiguration);
 
-    this.authorizer = this.abfsConfiguration.getAbfsAuthorizer();
-
+    // baseUrl
     final URIBuilder uriBuilder =
         getURIBuilder(getAccountName(),
             isHttpsEnabled());
-
     final String url =
         uriBuilder.toString() + AbfsHttpConstants.FORWARD_SLASH + getFileSystemName();
-
     try {
       this.baseUrl = new URL(url);
     } catch (MalformedURLException e) {
@@ -125,31 +129,6 @@ public class AbfsFileSystemContext {
 
     return this.baseUrl;
 
-  }
-
-  private String[] authorityParts(URI uri) throws
-      InvalidUriAuthorityException, InvalidUriException {
-    final String authority = uri.getRawAuthority();
-    if (null == authority) {
-      throw new InvalidUriAuthorityException(uri.toString());
-    }
-
-    if (!authority.contains(AbfsHttpConstants.AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER)) {
-      throw new InvalidUriAuthorityException(uri.toString());
-    }
-
-    final String[] authorityParts = authority.split(AbfsHttpConstants.AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER, 2);
-
-    if (authorityParts.length < 2 || authorityParts[0] != null
-        && authorityParts[0].isEmpty()) {
-      final String errMsg = String
-          .format("'%s' has a malformed authority, expected container name. "
-                  + "Authority takes the form "
-                  + FileSystemUriSchemes.ABFS_SCHEME + "://[<container name>@]<account name>",
-              uri.toString());
-      throw new InvalidUriException(errMsg);
-    }
-    return authorityParts;
   }
 
   @VisibleForTesting

@@ -18,28 +18,28 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import org.apache.hadoop.fs.azurebfs.authentication.AbfsAuthorizerResult;
+import org.apache.hadoop.fs.azurebfs.authentication.AbfsStoreAuthenticator;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizerUnhandledException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
+import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
+import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.time.Instant;
 import java.util.List;
-
-import org.apache.hadoop.fs.azurebfs.authentication.AbfsAuthorizerResult;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizerUnhandledException;
-import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
-import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.fs.azurebfs.authentication.AbfsStoreAuthenticator;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -113,6 +113,7 @@ private AbfsStoreAuthenticator abfsStoreAuthenticator;
     exponentialRetryPolicy = new ExponentialRetryPolicy();
   }
 */
+  // 14
   AbfsRestOperation(
       final AbfsRestOperationType operationType,
       final String method,
@@ -130,20 +131,6 @@ private AbfsStoreAuthenticator abfsStoreAuthenticator;
     this.storeAuthenticator = abfsFileSystemContext.getAbfsStoreAuthenticator();
     this.abfsPerfTracker = abfsFileSystemContext.getAbfsPerfTracker();
     exponentialRetryPolicy = new ExponentialRetryPolicy();
-  }
-
-  AbfsRestOperation(AbfsRestOperationType operationType,
-      String method,
-      URL url,
-      List<AbfsHttpHeader> requestHeaders,
-      byte[] buffer,
-      int bufferOffset,
-      int bufferLength,
-      final AbfsFileSystemContext abfsFileSystemContext) {
-    this(operationType, method, url, requestHeaders, abfsFileSystemContext);
-    this.buffer = buffer;
-    this.bufferOffset = bufferOffset;
-    this.bufferLength = bufferLength;
   }
 
   AbfsRestOperation(
@@ -178,26 +165,64 @@ private AbfsStoreAuthenticator abfsStoreAuthenticator;
       int bufferLength,
       final AbfsFileSystemContext abfsFileSystemContext,
       final AbfsAuthorizerResult abfsAuthorizerResult) {
-    this(operationType, method, url, requestHeaders,
-        buffer, bufferOffset, bufferLength, abfsFileSystemContext);
+    this(operationType, method, url, requestHeaders, abfsFileSystemContext);
+    this.buffer = buffer;
+    this.bufferOffset = bufferOffset;
+    this.bufferLength = bufferLength;
     processAbfsAuthorizerResult(abfsAuthorizerResult);
   }
 
   private void processAbfsAuthorizerResult(AbfsAuthorizerResult abfsAuthorizerResult)
   {
+
     if (abfsAuthorizerResult.isAuthorizationStatusFetched())
     {
       this.authorizerResult = abfsAuthorizerResult;
       if (abfsAuthorizerResult.isAuthorized() && abfsAuthorizerResult.isSasTokenAvailable())
       {
-        this.abfsStoreAuthenticator =
-            AbfsStoreAuthenticator.getAbfsStoreAuthenticatorForSAS(abfsAuthorizerResult.getSASToken());
+        if (sasTokenNeedsUpdate(abfsAuthorizerResult.getSASToken()))
+        {
+          this.authorizerResult.setAuthorized(false);
+        }
+
+        this.abfsStoreAuthenticator.setSASToken(abfsAuthorizerResult.getSASToken());
       }
       else {
         this.abfsStoreAuthenticator = abfsFileSystemContext.getAbfsStoreAuthenticator();
       }
-
     }
+  }
+
+  private boolean sasTokenNeedsUpdate(String sasToken)
+  {
+    int startIndex = sasToken.indexOf("ske");
+    int endIndex = sasToken.indexOf("&", startIndex);
+    if (endIndex == -1)
+    {
+      endIndex = sasToken.length();
+    }
+    String ske = sasToken.substring(sasToken.indexOf("ske") + 4, // remove ske=
+        endIndex);
+
+    Instant expiryDateTime = Instant.parse(ske);
+    Instant currentDateTime = Instant.now();
+
+    // if expiry is within configured refresh interval,
+    // update SAS token
+    if (expiryDateTime.isBefore(currentDateTime.minusSeconds(
+        abfsFileSystemContext.getAbfsConfiguration()
+            .getSasRefreshIntervalBeforeExpiry()))) {
+      return true;
+    }
+
+    return false;
+
+
+
+
+
+
+
   }
 
   private void checkIfAuthorizedAndUpdateAbfsStoreAuthenticator()
@@ -214,16 +239,14 @@ private AbfsStoreAuthenticator abfsStoreAuthenticator;
           "ABFS authorizer is not initialized. No authorization check will be"
               + " performed.");
     } else {
-      if (!this.authorizerResult.isAuthorizationStatusFetched()) {
+      if ((this.authorizerResult == null) || !this.authorizerResult.isAuthorizationStatusFetched()) {
         updateAuthorizationStatus(abfsFileSystemContext.getAuthorizer(),
             operationType, pathRelativeFromRoot);
       }
 
       if (this.authorizerResult.isAuthorized() && this.authorizerResult
           .isSasTokenAvailable()) {
-        this.abfsStoreAuthenticator = AbfsStoreAuthenticator
-            .getAbfsStoreAuthenticatorForSAS(
-                this.authorizerResult.getSASToken());
+        this.abfsStoreAuthenticator.setSASToken(this.authorizerResult.getSASToken());
       }
     }
   }
@@ -238,7 +261,7 @@ private AbfsStoreAuthenticator abfsStoreAuthenticator;
     boolean isAuthorized = false;
 
     try {
-      isAuthorized = !authorizer.isAuthorized(operationType, pathRelativeFromRoot);
+      isAuthorized = authorizer.isAuthorized(operationType, pathRelativeFromRoot);
     } catch (IOException e) {
       throw new AbfsAuthorizerUnhandledException(e);
     }

@@ -126,50 +126,6 @@ public class AzureBlobFileSystemStore implements Closeable {
 
   private final AbfsFileSystemContext abfsFileSystemContext;
 
-/*
-  public AzureBlobFileSystemStore(URI uri, boolean isSecureScheme,
-      Configuration configuration)
-          throws IOException {
-
-    this.uri = uri;
-
-    String[] authorityParts = authorityParts(uri);
-    final String fileSystemName = authorityParts[0];
-    final String accountName = authorityParts[1];
-
-    try {
-      this.abfsConfiguration = new AbfsConfiguration(configuration, accountName);
-    } catch (IllegalAccessException exception) {
-      throw new FileSystemOperationUnhandledException(exception);
-    }
-
-    this.userGroupInformation = UserGroupInformation.getCurrentUser();
-    this.userName = userGroupInformation.getShortUserName();
-    if (!abfsConfiguration.getSkipUserGroupMetadataDuringInitialization()) {
-      try {
-        this.primaryUserGroup = userGroupInformation.getPrimaryGroupName();
-      } catch (IOException ex) {
-        LOG.error("Failed to get primary group for {}, using user name as primary group name", userName);
-        this.primaryUserGroup = userName;
-      }
-    } else {
-      //Provide a default group name
-      this.primaryUserGroup = userName;
-    }
-
-    this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
-        abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
-    this.authType = abfsConfiguration.getAuthType(accountName);
-    boolean usingOauth = (authType == AuthType.OAuth);
-    boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : isSecureScheme;
-    this.abfsPerfTracker = new AbfsPerfTracker(fileSystemName, accountName, this.abfsConfiguration);
-
-    initializeClient(uri, fileSystemName, accountName, useHttps);
-
-    this.identityTransformer = new IdentityTransformer(abfsConfiguration.getRawConfiguration());
-  }
-*/
-
   public AzureBlobFileSystemStore(AbfsFileSystemContext abfsFileSystemContext)
       throws IOException {
 
@@ -269,41 +225,6 @@ public class AzureBlobFileSystemStore implements Closeable {
 
     return isNamespaceEnabled;
   }
-
-/*  @VisibleForTesting
-  URIBuilder getURIBuilder(final String hostName, boolean isSecure) {
-    String scheme = isSecure ? FileSystemUriSchemes.HTTPS_SCHEME : FileSystemUriSchemes.HTTP_SCHEME;
-
-    final URIBuilder uriBuilder = new URIBuilder();
-    uriBuilder.setScheme(scheme);
-
-    // For testing purposes, an IP address and port may be provided to override
-    // the host specified in the FileSystem URI.  Also note that the format of
-    // the Azure Storage Service URI changes from
-    // http[s]://[account][domain-suffix]/[filesystem] to
-    // http[s]://[ip]:[port]/[account]/[filesystem].
-    String endPoint = abfsConfiguration.get(AZURE_ABFS_ENDPOINT);
-    if (endPoint == null || !endPoint.contains(AbfsHttpConstants.COLON)) {
-      uriBuilder.setHost(hostName);
-      return uriBuilder;
-    }
-
-    // Split ip and port
-    String[] data = endPoint.split(AbfsHttpConstants.COLON);
-    if (data.length != 2) {
-      throw new RuntimeException(String.format("ABFS endpoint is not set correctly : %s, "
-              + "Do not specify scheme when using {IP}:{PORT}", endPoint));
-    }
-    uriBuilder.setHost(data[0].trim());
-    uriBuilder.setPort(Integer.parseInt(data[1].trim()));
-    uriBuilder.setPath("/" + UriUtils.extractAccountNameFromHostName(hostName));
-
-    return uriBuilder;
-  }*/
-
-/*  public AbfsConfiguration getAbfsConfiguration() {
-    return this.abfsConfiguration;
-  }*/
 
   public Hashtable<String, String> getFilesystemProperties() throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("getFilesystemProperties",

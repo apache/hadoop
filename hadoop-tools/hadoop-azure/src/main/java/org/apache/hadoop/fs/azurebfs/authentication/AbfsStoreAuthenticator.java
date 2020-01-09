@@ -18,23 +18,23 @@
 
 package org.apache.hadoop.fs.azurebfs.authentication;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URL;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
+import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
+import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.URI;
 
 /**
  * Adapter class that holds handle to configured authentication instance.
@@ -47,73 +47,70 @@ public class AbfsStoreAuthenticator {
   public static final Logger LOG = LoggerFactory
       .getLogger(AbfsStoreAuthenticator.class);
   private AuthType authType;
-  private String sasToken;
+  private String sasToken = null;
   private SharedKeyCredentials creds;
   private AccessTokenProvider tokenProvider;
+  private boolean isAuthorizerProvidingSAS = false;
+  private AbfsAuthorizer authorizer;
 
   /**
    * AbfsStoreAuthenticator instance holds authentication type
    * and authentication provider instance
    *
    * @param abfsConfiguration
-   * @param accountName
    * @param uri
    * @throws IOException
    */
   // TODO: get accountname from baseUrl
   public AbfsStoreAuthenticator(AbfsConfiguration abfsConfiguration,
-      String accountName, URI uri) throws IOException {
-    this.authType = abfsConfiguration.getAuthType(accountName);
-    sasToken = null;
+      URI uri, AbfsAuthorizer authorizer) throws IOException {
 
-    switch (this.authType) {
-    case OAuth:
-    case Custom:
-      SetTokenProvider(abfsConfiguration, uri);
-      break;
-    case SharedKey:
-      SetSharedCredentialCreds(accountName, uri, abfsConfiguration);
-      int dotIndex = accountName.indexOf(AbfsHttpConstants.DOT);
-      if (dotIndex <= 0) {
-        throw new InvalidUriException(
-            uri.toString() + " - account name is not fully qualified.");
+    String fileSystemname = UriUtils.authorityParts(uri)[0];
+    String accountName = UriUtils.authorityParts(uri)[1];
+    this.authType = abfsConfiguration.getAuthType(accountName);
+
+    if (authorizer != null) {
+      if (abfsConfiguration.getAuthorizerAuthType(fileSystemname, accountName) == AuthType.SAS) {
+        isAuthorizerProvidingSAS = true;
+        this.authorizer = authorizer;
+        this.authType = AuthType.SAS;
+      } else {
+        if (abfsConfiguration.getAuthorizerAuthType(fileSystemname, accountName) != AuthType.None) {
+          throw new UnsupportedOperationException("Authorizer can only be "
+              + "configured to provide SAS AuthType.");
+        }
       }
-      creds = new SharedKeyCredentials(accountName.substring(0, dotIndex),
-          abfsConfiguration.getStorageAccountKey());
-      break;
-    case SAS: // new type - "SAS"
-      if (abfsConfiguration.getAbfsAuthorizer().getClass() == null) {
-        throw new UnsupportedOperationException(
-            "There is no " + "Authorizer configured");
+    }
+
+    if (!isAuthorizerProvidingSAS) {
+      switch (this.authType) {
+      case OAuth:
+      case Custom:
+        setTokenProvider(abfsConfiguration, uri);
+        break;
+      case SharedKey:
+        setSharedCredentialCreds(accountName, uri, abfsConfiguration);
+        int dotIndex = accountName.indexOf(AbfsHttpConstants.DOT);
+        if (dotIndex <= 0) {
+          throw new InvalidUriException(uri.toString() + " - account name is not fully qualified.");
+        }
+        creds = new SharedKeyCredentials(accountName.substring(0, dotIndex),
+            abfsConfiguration.getStorageAccountKey());
+        break;
+      case SAS: // new type - "SAS"
+        if (abfsConfiguration.getAbfsAuthorizer().getClass() == null) {
+          throw new UnsupportedOperationException("There is no " + "Authorizer configured");
+        }
+        break;
       }
-      break;
     }
   }
 
-  /**
-   * Private copy constructor to be used when creating a new instance for
-   * DSAS auth flow
-   *
-   * @param storeAuthenticator
-   */
-  private AbfsStoreAuthenticator() {
+  public void setSASToken(String sasToken) {
+    this.sasToken = sasToken;
   }
 
-  /**
-   * Gets an instance of AbfsStoreAuthenticator for DSAS
-   *
-   * @param sasToken
-   * @return
-   */
-  public static AbfsStoreAuthenticator getAbfsStoreAuthenticatorForSAS(
-      final String sasToken) {
-    AbfsStoreAuthenticator instance = new AbfsStoreAuthenticator();
-    instance.authType = AuthType.SAS;
-    instance.sasToken = sasToken;
-    return instance;
-  }
-
-  private void SetSharedCredentialCreds(String accountName, URI uri,
+  private void setSharedCredentialCreds(String accountName, URI uri,
       AbfsConfiguration abfsConfiguration) throws AzureBlobFileSystemException {
     int dotIndex = accountName.indexOf(AbfsHttpConstants.DOT);
     if (dotIndex <= 0) {
@@ -124,7 +121,7 @@ public class AbfsStoreAuthenticator {
         abfsConfiguration.getStorageAccountKey());
   }
 
-  private void SetTokenProvider(AbfsConfiguration abfsConfiguration, URI uri)
+  private void setTokenProvider(AbfsConfiguration abfsConfiguration, URI uri)
       throws IOException {
     tokenProvider = abfsConfiguration.getTokenProvider();
     ExtensionHelper
@@ -144,7 +141,7 @@ public class AbfsStoreAuthenticator {
   }
 
   public synchronized String getAccessToken() throws IOException {
-    if (tokenProvider != null) {
+  if (tokenProvider != null) {
       return "Bearer " + tokenProvider.getToken().getAccessToken();
     } else {
       return null;

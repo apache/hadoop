@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidati
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.StringConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.Base64StringConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.BooleanConfigurationValidatorAnnotation;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
@@ -46,7 +47,6 @@ import org.apache.hadoop.fs.azurebfs.diagnostics.BooleanConfigurationBasicValida
 import org.apache.hadoop.fs.azurebfs.diagnostics.IntegerConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.LongConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.StringConfigurationBasicValidator;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException.AbfsAuthorizationException;
 import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
@@ -166,10 +166,6 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ENABLE_DELEGATION_TOKEN)
   private boolean enableDelegationToken;
 
-  @StringConfigurationValidatorAnnotation(ConfigurationKey = ABFS_EXTERNAL_AUTHORIZATION_CLASS,
-      DefaultValue = "")
-  private String abfsExternalAuthorizationClass;
-
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ALWAYS_USE_HTTPS,
           DefaultValue = DEFAULT_ENABLE_HTTPS)
   private boolean alwaysUseHttps;
@@ -181,6 +177,14 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_LATENCY_TRACK,
           DefaultValue = DEFAULT_ABFS_LATENCY_TRACK)
   private boolean trackLatency;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_AUTHORIZER,
+      DefaultValue = "")
+  private String abfsAuthorizerClass;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SAS_REFRESH_INTERVAL_BEFORE_EXPIRY,
+      DefaultValue = DEFAULT_SAS_REFRESH_INTERVAL_BEFORE_EXPIRY)
+  private int sasRefreshIntervalBeforeExpiry;
 
   private Map<String, String> storageAccountKeys;
 
@@ -217,6 +221,18 @@ public class AbfsConfiguration{
    */
   public String accountConf(String key) {
     return key + "." + accountName;
+  }
+
+  /**
+   * Appends an account and Abfs FileSystem name to a configuration key
+   * yielding the
+   * account+FileSystem specific form.
+   * @param key [Account+AbfsFileSystem]-agnostic configuration key
+   * @return Account+AbfsFileSystem]-specific configuration key
+   */
+  public String abfsFileSystemConf(String key, String fileSystemName,
+      String accountName) {
+    return key + "." + fileSystemName + accountName;
   }
 
   /**
@@ -302,6 +318,19 @@ public class AbfsConfiguration{
    */
   public <T extends Enum<T>> T getEnum(String name, T defaultValue) {
     return rawConfig.getEnum(accountConf(name),
+        rawConfig.getEnum(name, defaultValue));
+  }
+
+  /**
+   * Returns the account-specific password in string form if it exists, then
+   * looks for an account-agnostic value.
+   * @param name Account-agnostic configuration key
+   * @param defaultValue Value returned if none is configured
+   * @return value in String form if one exists, else null
+   */
+  public <T extends Enum<T>> T getEnum(String name,
+      T defaultValue, String accountName, String fileSystemName) {
+    return rawConfig.getEnum(abfsFileSystemConf(name, fileSystemName, accountName),
         rawConfig.getEnum(name, defaultValue));
   }
 
@@ -459,6 +488,16 @@ public class AbfsConfiguration{
     return getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
   }
 
+  public AuthType getAuthorizerAuthType(String fileSystemName,
+      String accountName) {
+    return getEnum(FS_AZURE_ABFS_AUTHORIZER_AUTH_TYPE,
+        AuthType.None, fileSystemName, accountName);
+  }
+
+  public int getSasRefreshIntervalBeforeExpiry() {
+    return this.sasRefreshIntervalBeforeExpiry;
+  }
+
   public boolean isDelegationTokenManagerEnabled() {
     return enableDelegationToken;
   }
@@ -560,12 +599,8 @@ public class AbfsConfiguration{
     }
   }
 
-  public String getAbfsExternalAuthorizationClass() {
-    return this.abfsExternalAuthorizationClass;
-  }
-
   public AbfsAuthorizer getAbfsAuthorizer() throws IOException {
-    String authClassName = getAbfsExternalAuthorizationClass();
+    String authClassName = this.abfsAuthorizerClass;
     AbfsAuthorizer authorizer = null;
 
     try {

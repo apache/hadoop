@@ -23,7 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 import org.apache.hadoop.fs.permission.FsAction;
 
@@ -37,11 +37,11 @@ public interface AbfsAuthorizer {
   /**
    * Initialize authorizer for Azure Blob File System.
    *
-   * @throws AbfsRestOperationException.AbfsAuthorizationException if unable to initialize the authorizer.
+   * @throws AbfsAuthorizationException if unable to initialize the authorizer.
    * @throws IOException network problems or similar.
    * @throws IllegalArgumentException if the required parameters are not provided.
    */
-  void init() throws AbfsRestOperationException.AbfsAuthorizationException, IOException;
+  void init() throws AbfsAuthorizationException, IOException;
 
   /**
    * Checks if the provided {@link FsAction} is allowed on the provided {@link Path}s.
@@ -49,13 +49,13 @@ public interface AbfsAuthorizer {
    * @param action the {@link FsAction} being requested on the provided {@link Path}s.
    * @param absolutePaths The absolute paths of the storage being accessed.
    * @return true if authorized, otherwise false.
-   * @throws AbfsRestOperationException.AbfsAuthorizationException on authorization failure.
+   * @throws AbfsAuthorizationException on authorization failure.
    * @throws IOException network problems or similar.
    * @throws IllegalArgumentException if the required parameters are not provided.
    */
   boolean isAuthorized(AbfsRestOperationType operationType,
       String relativePathFromAbfsFileSystemRoot)
-      throws AbfsRestOperationException.AbfsAuthorizationException, IOException;
+      throws AbfsAuthorizationException, IOException;
 
   /**
    * Will return User Delegation SAS URI as string for path that was authorized

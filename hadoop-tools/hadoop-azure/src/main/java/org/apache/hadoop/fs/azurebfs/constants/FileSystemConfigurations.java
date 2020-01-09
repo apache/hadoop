@@ -69,5 +69,7 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_USE_UPN = false;
   public static final boolean DEFAULT_ABFS_LATENCY_TRACK = false;
 
+  public static final int DEFAULT_SAS_REFRESH_INTERVAL_BEFORE_EXPIRY = 5 * 60;
+
   private FileSystemConfigurations() {}
 }
