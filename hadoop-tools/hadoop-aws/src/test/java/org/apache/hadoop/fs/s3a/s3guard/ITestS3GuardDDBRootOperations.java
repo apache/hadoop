@@ -153,6 +153,7 @@ public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
     Configuration conf = fs.getConf();
     int result = S3GuardTool.run(conf,
         S3GuardTool.Prune.NAME,
+        "-seconds", "1",
         fsUriStr);
     Assertions.assertThat(result)
         .describedAs("Result of prune %s", fsUriStr)

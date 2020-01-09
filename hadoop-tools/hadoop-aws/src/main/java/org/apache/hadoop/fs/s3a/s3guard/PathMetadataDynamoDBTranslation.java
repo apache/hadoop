@@ -398,4 +398,16 @@ public final class PathMetadataDynamoDBTranslation {
     }
     return "s3a://" + parent + "/" + child;
   }
+
+  /**
+   * Create an empty dir marker which, when passed to the
+   * DDB metastore, is considered authoritative.
+   * @param status file status
+   * @return path metadata.
+   */
+  static PathMetadata authoritativeEmptyDirectoryMarker(
+      final S3AFileStatus status) {
+    return new DDBPathMetadata(status, Tristate.TRUE,
+        false, true, 0);
+  }
 }
