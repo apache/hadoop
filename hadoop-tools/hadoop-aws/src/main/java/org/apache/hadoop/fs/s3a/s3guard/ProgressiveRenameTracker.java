@@ -205,7 +205,6 @@ public class ProgressiveRenameTracker extends RenameTracker {
   public synchronized void moveSourceDirectory() throws IOException {
     // this moves the source directory in the metastore if it has not
     // already been processed.
-    // TODO S3Guard: performance: mark destination dirs as authoritative
     if (!pathsToDelete.contains(getSourceRoot())) {
       final List<Path> toDelete = new ArrayList<>(1);
       final List<PathMetadata> toAdd = new ArrayList<>(1);
@@ -216,6 +215,8 @@ public class ProgressiveRenameTracker extends RenameTracker {
           getOwner());
       getMetadataStore().move(toDelete, toAdd, getOperationState());
     }
+    getMetadataStore().markAsAuthoritative(
+        getDest(), getOperationState());
   }
 
   /**
@@ -237,7 +238,8 @@ public class ProgressiveRenameTracker extends RenameTracker {
 
   @Override
   public synchronized void completeRename() throws IOException {
-    // and finish off by deleting source directories.
+    // mark dest tree as authoritative all the way down.
+    // finish off by deleting source directories.
     sourceObjectsDeleted(pathsToDelete);
     super.completeRename();
   }
