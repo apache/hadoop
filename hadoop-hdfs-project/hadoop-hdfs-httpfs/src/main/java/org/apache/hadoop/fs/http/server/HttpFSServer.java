@@ -526,6 +526,30 @@ public class HttpFSServer {
   }
 
   /**
+   * Special binding for '/' as it is not handled by the wildcard binding.
+   * @param is the inputstream for the request payload.
+   * @param uriInfo the of the request.
+   * @param op the HttpFS operation of the request.
+   * @param params the HttpFS parameters of the request.
+   *
+   * @return the request response.
+   *
+   * @throws IOException thrown if an IO error occurred. Thrown exceptions are
+   *           handled by {@link HttpFSExceptionProvider}.
+   * @throws FileSystemAccessException thrown if a FileSystemAccess related
+   *           error occurred. Thrown exceptions are handled by
+   *           {@link HttpFSExceptionProvider}.
+   */
+  @POST
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8 })
+  public Response postRoot(InputStream is, @Context UriInfo uriInfo,
+      @QueryParam(OperationParam.NAME) OperationParam op,
+      @Context Parameters params, @Context HttpServletRequest request)
+      throws IOException, FileSystemAccessException {
+    return post(is, uriInfo, "/", op, params, request);
+  }
+
+  /**
    * Binding to handle POST requests.
    *
    * @param is the inputstream for the request payload.
