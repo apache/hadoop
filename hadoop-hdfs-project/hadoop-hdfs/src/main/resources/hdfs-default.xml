@@ -2548,6 +2548,8 @@
     The amount of milliseconds after which cached server defaults are updated.
 
     By default this parameter is set to 1 hour.
+    Support multiple time unit suffix(case insensitive), as described
+    in dfs.heartbeat.interval.
   </description>
 </property>
 

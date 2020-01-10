@@ -167,9 +167,10 @@ public class RouterClientProtocol implements ClientProtocol {
         RBFConfigKeys.DFS_ROUTER_CLIENT_MOUNT_TIME_OUT,
         RBFConfigKeys.DFS_ROUTER_CLIENT_MOUNT_TIME_OUT_DEFAULT,
         TimeUnit.MILLISECONDS);
-    this.serverDefaultsValidityPeriod = conf.getLong(
+    this.serverDefaultsValidityPeriod = conf.getTimeDuration(
         DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY,
-        DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT);
+        DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT,
+        TimeUnit.MILLISECONDS);
     // User and group for reporting
     try {
       this.superUser = UserGroupInformation.getCurrentUser().getShortUserName();
