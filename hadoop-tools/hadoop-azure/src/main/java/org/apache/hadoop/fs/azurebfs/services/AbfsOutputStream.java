@@ -56,6 +56,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private boolean supportFlush;
   private boolean disableOutputStreamFlush;
   private boolean supportAppendWithFlush;
+  private boolean disableOutputStreamFlush;
   private volatile IOException lastError;
 
   private long lastFlushOffset;
@@ -92,6 +93,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.path = path;
     this.position = position;
     this.closed = false;
+    this.disableOutputStreamFlush = disableOutputStreamFlush;
     this.supportFlush = supportFlush;
     this.disableOutputStreamFlush = disableOutputStreamFlush;
     this.supportAppendWithFlush = supportAppendWithFlush;
@@ -314,16 +316,43 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
           perfInfo.registerSuccess(true);
           return null;
         }
+        if (flush) {
+          while(lastTotalAppendOffset <  lastFlushOffset);
+        }
+        client.append(path, offset, bytes, 0,
+            bytesLength, flush, isClose);
+        byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
+        return null;
       }
     });
 
-    writeOperations.add(new WriteOperation(job, offset, bytesLength));
+    writeOperations.add(new WriteOperation(job, offset, bytesLength, flush));
 
     // Try to shrink the queue
     shrinkWriteOperationQueue();
   }
 
   private synchronized void flushWrittenBytesToService(boolean isClose) throws IOException {
+    for (WriteOperation writeOperation : writeOperations) {
+      try {
+        writeOperation.task.get();
+      } catch (Exception ex) {
+        if (ex.getCause() instanceof AbfsRestOperationException) {
+          if (((AbfsRestOperationException) ex.getCause()).getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+            throw new FileNotFoundException(ex.getMessage());
+          }
+        }
+        if (ex.getCause() instanceof AzureBlobFileSystemException) {
+          ex = (AzureBlobFileSystemException) ex.getCause();
+        }
+        lastError = new IOException(ex);
+        throw lastError;
+      }
+    }
+    shrinkWriteOperationQueue();
+  }
+
+  private synchronized void completeExistingTasks() throws IOException {
     for (WriteOperation writeOperation : writeOperations) {
       try {
         writeOperation.task.get();

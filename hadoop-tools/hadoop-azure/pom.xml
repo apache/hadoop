@@ -143,13 +143,14 @@
 
   <!-- see hadoop-project/pom.xml for version number declarations -->
   <dependencies>
-		<!-- https://mvnrepository.com/artifact/org.mockito/mockito-all -->
+<!--
 		<dependency>
 				<groupId>org.mockito</groupId>
 				<artifactId>mockito-all</artifactId>
 				<version>1.8.4</version>
 				<scope>test</scope>
 		</dependency>
+-->
 
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -202,7 +203,8 @@
     <dependency>
       <groupId>org.wildfly.openssl</groupId>
       <artifactId>wildfly-openssl</artifactId>
-      <scope>runtime</scope>
+      <version>1.0.9.Final</version>
+      <!--<scope>runtime</scope>-->
     </dependency>
 
     <!--com.fasterxml.jackson is used by WASB, not ABFS-->
@@ -304,6 +306,7 @@
       </activation>
       <build>
         <plugins>
+<!--
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
@@ -334,6 +337,7 @@
               </execution>
             </executions>
           </plugin>
+-->
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
@@ -487,6 +491,7 @@
       </activation>
       <build>
         <plugins>
+<!--
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
@@ -517,6 +522,7 @@
               </execution>
             </executions>
           </plugin>
+-->
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
@@ -653,6 +659,7 @@
       </activation>
       <build>
         <plugins>
+<!--
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
@@ -683,6 +690,7 @@
               </execution>
             </executions>
           </plugin>
+-->
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>

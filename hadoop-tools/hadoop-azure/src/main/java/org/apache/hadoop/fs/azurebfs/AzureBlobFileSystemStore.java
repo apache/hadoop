@@ -183,7 +183,6 @@ public class AzureBlobFileSystemStore implements Closeable {
     initializeClient(uri, fileSystemName, accountName, useHttps);
     this.identityTransformer = new IdentityTransformer(abfsConfiguration.getRawConfiguration());
     LOG.trace("IdentityTransformer init complete");
-
     // Extract the directories that should contain page blobs
     String appendBlobDirs = abfsConfiguration.getAppendBlobDirs();
     if (appendBlobDirs.trim().isEmpty()) {
@@ -459,8 +458,8 @@ public class AzureBlobFileSystemStore implements Closeable {
               isNamespaceEnabled);
 
       final AbfsRestOperation op = client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), false, true,
-              isNamespaceEnabled ? getOctalNotation(permission) : null,
-              isNamespaceEnabled ? getOctalNotation(umask) : null);
+          isNamespaceEnabled ? getOctalNotation(permission) : null,
+          isNamespaceEnabled ? getOctalNotation(umask) : null, false);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
@@ -529,6 +528,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     }
 
     final long offset = overwrite ? 0 : contentLength;
+    perfInfo.registerSuccess(true);
 
     return new AbfsOutputStream(
         client,
