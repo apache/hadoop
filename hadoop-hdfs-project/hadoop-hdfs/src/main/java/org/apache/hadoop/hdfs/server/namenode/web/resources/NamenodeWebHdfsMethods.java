@@ -118,9 +118,6 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.sun.jersey.spi.container.ResourceFilters;
 
-import static org.apache.hadoop.fs.FileSystem.USER_HOME_PREFIX;
-import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
-
 /** Web-hdfs NameNode implementation. */
 @Path("")
 @ResourceFilters(ParamFilter.class)
@@ -1288,7 +1285,7 @@ public class NamenodeWebHdfsMethods {
       return Response.ok().build();
     }
     case GETTRASHROOT: {
-      final String trashPath = getTrashRoot(fullpath);
+      final String trashPath = getTrashRoot(conf, fullpath);
       final String jsonStr = JsonUtil.toJsonString("Path", trashPath);
       return Response.ok(jsonStr).type(MediaType.APPLICATION_JSON).build();
     }
@@ -1348,19 +1345,18 @@ public class NamenodeWebHdfsMethods {
     }
   }
 
-  private String getTrashRoot(String fullPath) throws IOException {
-    String user = UserGroupInformation.getCurrentUser().getShortUserName();
+  private String getTrashRoot(Configuration conf, String fullPath)
+      throws IOException {
+    UserGroupInformation ugi= UserGroupInformation.getCurrentUser();
     org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(fullPath);
     String parentSrc = path.isRoot() ?
         path.toUri().getPath() : path.getParent().toUri().getPath();
     EncryptionZone ez = getRpcClientProtocol().getEZForPath(parentSrc);
     org.apache.hadoop.fs.Path trashRoot;
     if (ez != null) {
-      trashRoot = new org.apache.hadoop.fs.Path(
-          new org.apache.hadoop.fs.Path(ez.getPath(), TRASH_PREFIX), user);
+      trashRoot = DFSUtilClient.getEZTrashRoot(ez, ugi);
     } else {
-      trashRoot = new org.apache.hadoop.fs.Path(
-          new org.apache.hadoop.fs.Path(USER_HOME_PREFIX, user), TRASH_PREFIX);
+      trashRoot = DFSUtilClient.getTrashRoot(conf, ugi);
     }
     return trashRoot.toUri().getPath();
   }

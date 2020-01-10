@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -1013,5 +1014,28 @@ public class DFSUtilClient {
           HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_DEFAULT);
     }
     return new Path(userHomePrefix + "/" + ugi.getShortUserName());
+  }
+
+  /**
+   * Returns trash root in non-encryption zone.
+   * @param conf configuration.
+   * @param ugi user of trash owner.
+   * @return unqualified path of trash root.
+   */
+  public static Path getTrashRoot(Configuration conf,
+      UserGroupInformation ugi) {
+    return new Path(getHomeDirectory(conf, ugi), FileSystem.TRASH_PREFIX);
+  }
+
+  /**
+   * Returns trash root in encryption zone.
+   * @param ez encryption zone.
+   * @param ugi user of trash owner.
+   * @return unqualified path of trash root.
+   */
+  public static Path getEZTrashRoot(EncryptionZone ez,
+      UserGroupInformation ugi) {
+    return new Path(new Path(ez.getPath(), FileSystem.TRASH_PREFIX),
+        ugi.getShortUserName());
   }
 }
