@@ -1790,5 +1790,15 @@ public class TestHttpFSServer extends HFSTestCase {
         putCmdWithReturn(dir1, "SETECPOLICY", "ecpolicy=" + ecPolicyName);
     // Should return HTTP_OK
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn3.getResponseCode());
+
+    // test post operation with path as "/"
+    final String dir2 = "/";
+    URL url1 = new URL(TestJettyHelper.getJettyURL(),
+        MessageFormat.format("/webhdfs/v1{0}?user.name={1}&op={2}&{3}", dir2,
+            user, "UNSETECPOLICY", ""));
+    HttpURLConnection conn4 = (HttpURLConnection) url1.openConnection();
+    conn4.setRequestMethod("POST");
+    conn4.connect();
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn4.getResponseCode());
   }
 }
