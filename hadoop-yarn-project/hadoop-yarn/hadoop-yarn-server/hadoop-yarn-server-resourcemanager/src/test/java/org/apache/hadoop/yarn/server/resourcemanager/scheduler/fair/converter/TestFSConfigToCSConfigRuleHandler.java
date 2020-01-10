@@ -30,6 +30,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Properties;
+
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -41,10 +43,26 @@ public class TestFSConfigToCSConfigRuleHandler {
   private static final String WARNING = "warning";
 
   private FSConfigToCSConfigRuleHandler ruleHandler;
+  private DryRunResultHolder dryRunResultHolder;
+
+  @Before
+  public void setup() {
+    dryRunResultHolder = new DryRunResultHolder();
+  }
+
+
+  private ConversionOptions createDryRunConversionOptions() {
+    return new ConversionOptions(dryRunResultHolder, true);
+  }
+
+  private ConversionOptions createDefaultConversionOptions() {
+    return new ConversionOptions(dryRunResultHolder, false);
+  }
 
   @Test
   public void testInitPropertyActionsToWarning() throws IOException {
-    ruleHandler = new FSConfigToCSConfigRuleHandler(new Properties());
+    ruleHandler = new FSConfigToCSConfigRuleHandler(new Properties(),
+        createDefaultConversionOptions());
 
     ruleHandler.handleChildQueueCount("test", 1);
     ruleHandler.handleDynamicMaxAssign();
@@ -69,7 +87,8 @@ public class TestFSConfigToCSConfigRuleHandler {
     rules.put(USER_MAX_APPS_DEFAULT, WARNING);
     rules.put(USER_MAX_RUNNING_APPS, WARNING);
 
-    ruleHandler = new FSConfigToCSConfigRuleHandler(rules);
+    ruleHandler = new FSConfigToCSConfigRuleHandler(rules,
+        createDefaultConversionOptions());
 
     ruleHandler.handleDynamicMaxAssign();
     ruleHandler.handleMaxCapacityPercentage("test");
@@ -94,7 +113,8 @@ public class TestFSConfigToCSConfigRuleHandler {
     rules.put(USER_MAX_RUNNING_APPS, ABORT);
     rules.put(MAX_CHILD_QUEUE_LIMIT, "1");
 
-    ruleHandler = new FSConfigToCSConfigRuleHandler(rules);
+    ruleHandler = new FSConfigToCSConfigRuleHandler(rules,
+        createDefaultConversionOptions());
 
     expectAbort(() -> ruleHandler.handleChildQueueCount("test", 2),
         ConversionException.class);
@@ -113,9 +133,44 @@ public class TestFSConfigToCSConfigRuleHandler {
     Properties rules = new Properties();
     rules.put(MAX_CHILD_QUEUE_LIMIT, "abc");
 
-    ruleHandler = new FSConfigToCSConfigRuleHandler(rules);
+    ruleHandler = new FSConfigToCSConfigRuleHandler(rules,
+        createDefaultConversionOptions());
 
     ruleHandler.handleChildQueueCount("test", 1);
+  }
+
+  @Test
+  public void testDryRunWarning() {
+    Properties rules = new Properties();
+
+    ruleHandler = new FSConfigToCSConfigRuleHandler(rules,
+        createDryRunConversionOptions());
+
+    ruleHandler.handleDynamicMaxAssign();
+    ruleHandler.handleMaxChildCapacity();
+
+    assertEquals("Number of warnings", 2,
+        dryRunResultHolder.getWarnings().size());
+    assertEquals("Number of errors", 0,
+        dryRunResultHolder.getErrors().size());
+  }
+
+  @Test
+  public void testDryRunError() {
+    Properties rules = new Properties();
+    rules.put(DYNAMIC_MAX_ASSIGN, ABORT);
+    rules.put(MAX_CHILD_CAPACITY, ABORT);
+
+    ruleHandler = new FSConfigToCSConfigRuleHandler(rules,
+        createDryRunConversionOptions());
+
+    ruleHandler.handleDynamicMaxAssign();
+    ruleHandler.handleMaxChildCapacity();
+
+    assertEquals("Number of warnings", 0,
+        dryRunResultHolder.getWarnings().size());
+    assertEquals("Number of errors", 2,
+        dryRunResultHolder.getErrors().size());
   }
 
   private void expectAbort(VoidCall call) {
