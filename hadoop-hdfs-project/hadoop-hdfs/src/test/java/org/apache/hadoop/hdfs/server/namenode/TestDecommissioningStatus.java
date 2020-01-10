@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import java.util.concurrent.TimeoutException;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -220,6 +222,23 @@ public class TestDecommissioningStatus {
   }
 
   /**
+   * Allows the main thread to block until the decommission is checked by the
+   * admin manager.
+   * @param dnAdminMgr admin instance in the datanode manager.
+   * @param trackedNumber number of nodes expected to be DECOMMISSIONED or
+   *        IN_MAINTENANCE.
+   * @throws TimeoutException
+   * @throws InterruptedException
+   */
+  private void waitForDecommissionedNodes(final DatanodeAdminManager dnAdminMgr,
+      final int trackedNumber)
+      throws TimeoutException, InterruptedException {
+    GenericTestUtils
+        .waitFor(() -> dnAdminMgr.getNumTrackedNodes() == trackedNumber,
+            100, 2000);
+  }
+
+  /**
    * Tests Decommissioning Status in DFS.
    */
   @Test
@@ -254,11 +273,13 @@ public class TestDecommissioningStatus {
       dm.refreshNodes(conf);
       decommissionedNodes.add(downnode);
       BlockManagerTestUtil.recheckDecommissionState(dm);
+      // Block until the admin's monitor updates the number of tracked nodes.
+      waitForDecommissionedNodes(dm.getDatanodeAdminManager(), iteration + 1);
       final List<DatanodeDescriptor> decommissioningNodes = dm.getDecommissioningNodes();
       if (iteration == 0) {
         assertEquals(decommissioningNodes.size(), 1);
         DatanodeDescriptor decommNode = decommissioningNodes.get(0);
-       // checkDecommissionStatus(decommNode, 3, 0, 1);
+        checkDecommissionStatus(decommNode, 3, 0, 1);
         checkDFSAdminDecommissionStatus(decommissioningNodes.subList(0, 1),
             fileSys, admin);
       } else {
@@ -330,11 +351,11 @@ public class TestDecommissioningStatus {
 
     // Force DatanodeManager to check decommission state.
     BlockManagerTestUtil.recheckDecommissionState(dm);
-
+    // Block until the admin's monitor updates the number of tracked nodes.
+    waitForDecommissionedNodes(dm.getDatanodeAdminManager(), 1);
     // Verify that the DN remains in DECOMMISSION_INPROGRESS state.
     assertTrue("the node should be DECOMMISSION_IN_PROGRESSS",
         dead.get(0).isDecommissionInProgress());
-
     // Check DatanodeManager#getDecommissionNodes, make sure it returns
     // the node as decommissioning, even if it's dead
     List<DatanodeDescriptor> decomlist = dm.getDecommissioningNodes();
@@ -344,6 +365,8 @@ public class TestDecommissioningStatus {
     // DECOMMISSION_IN_PROGRESS node become DECOMMISSIONED
     AdminStatesBaseTest.cleanupFile(fileSys, f);
     BlockManagerTestUtil.recheckDecommissionState(dm);
+    // Block until the admin's monitor updates the number of tracked nodes.
+    waitForDecommissionedNodes(dm.getDatanodeAdminManager(), 0);
     assertTrue("the node should be decommissioned",
         dead.get(0).isDecommissioned());
 
@@ -378,6 +401,8 @@ public class TestDecommissioningStatus {
     decommissionNode(dnName);
     dm.refreshNodes(conf);
     BlockManagerTestUtil.recheckDecommissionState(dm);
+    // Block until the admin's monitor updates the number of tracked nodes.
+    waitForDecommissionedNodes(dm.getDatanodeAdminManager(), 0);
     assertTrue(dnDescriptor.isDecommissioned());
 
     // Add the node back
@@ -426,6 +451,8 @@ public class TestDecommissioningStatus {
     hostsFileWriter.initExcludeHosts(nodes);
     dm.refreshNodes(conf);
     BlockManagerTestUtil.recheckDecommissionState(dm);
+    // Block until the admin's monitor updates the number of tracked nodes.
+    waitForDecommissionedNodes(dm.getDatanodeAdminManager(), 0);
     assertTrue(dnDescriptor0.isDecommissioned());
     assertTrue(dnDescriptor1.isDecommissioned());
 
