@@ -97,6 +97,7 @@ RUN apt-get -q update \
 # Install cmake 3.1.0 (3.5.1 ships with Xenial)
 # There is no cmake binary available for aarch64. Build from source.
 ######
+# hadolint ignore=DL3003
 RUN mkdir -p /opt/cmake/src \
     && curl -L -s -S \
       https://cmake.org/files/v3.1/cmake-3.1.0-1-src.tar.bz2 \
@@ -200,16 +201,6 @@ RUN curl -s -S https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
     && rm -rf /var/lib/apt/lists/*
 
 ###
-# Install hadolint
-####
-#RUN curl -L -s -S \
-#        https://github.com/hadolint/hadolint/releases/download/v1.11.1/hadolint-Linux-x86_64 \
-#        -o /bin/hadolint \
-#   && chmod a+rx /bin/hadolint \
-#   && shasum -a 512 /bin/hadolint | \
-#        awk '$1!="734e37c1f6619cbbd86b9b249e69c9af8ee1ea87a2b1ff71dccda412e9dac35e63425225a95d71572091a3f0a11e9a04c2fc25d9e91b840530c26af32b9891ca" {exit(1)}'
-
-###
 # Install phantomjs built for aarch64
 ####
 RUN mkdir -p /opt/phantomjs \
@@ -231,7 +222,7 @@ ENV MAVEN_OPTS -Xms256m -Xmx1536m
 # YETUS CUT HERE
 ###
 
-# Hugo static website generator (for new hadoop site and Ozone docs)
+# Hugo static website generator (for new hadoop site docs)
 RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.58.3/hugo_0.58.3_Linux-ARM64.deb \
     && dpkg --install hugo.deb \
     && rm hugo.deb

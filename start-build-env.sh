@@ -22,12 +22,10 @@ cd "$(dirname "$0")" # connect to root
 DOCKER_DIR=dev-support/docker
 DOCKER_FILE="${DOCKER_DIR}/Dockerfile"
 
-CPU_ARCH=$(echo $MACHTYPE | cut -d- -f1)
+CPU_ARCH=$(echo "$MACHTYPE" | cut -d- -f1)
 if [ "$CPU_ARCH" = "aarch64" ]; then
   DOCKER_FILE="${DOCKER_DIR}/Dockerfile_aarch64"
 fi
-
-echo "Building image using $DOCKER_FILE"
 
 docker build -t hadoop-build -f $DOCKER_FILE $DOCKER_DIR
 
@@ -90,6 +88,6 @@ docker run --rm=true $DOCKER_INTERACTIVE_RUN \
   -v "${PWD}:/home/${USER_NAME}/hadoop${V_OPTS:-}" \
   -w "/home/${USER_NAME}/hadoop" \
   -v "${HOME}/.m2:/home/${USER_NAME}/.m2${V_OPTS:-}" \
-  -v "${HOME}/.gnupg:/home/${USER_NAME}/.gnupg" \
+  -v "${HOME}/.gnupg:/home/${USER_NAME}/.gnupg${V_OPTS:-}" \
   -u "${USER_NAME}" \
   "hadoop-build-${USER_ID}" "$@"
