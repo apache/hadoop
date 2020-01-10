@@ -1783,5 +1783,12 @@ public class TestHttpFSServer extends HFSTestCase {
     // response should be null
     dfsDirLst = dfs.getErasureCodingPolicy(path1);
     Assert.assertNull(dfsDirLst);
+
+    // test put opeartion with path as "/"
+    final String dir1 = "/";
+    HttpURLConnection conn3 =
+        putCmdWithReturn(dir1, "SETECPOLICY", "ecpolicy=" + ecPolicyName);
+    // Should return HTTP_OK
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn3.getResponseCode());
   }
 }
