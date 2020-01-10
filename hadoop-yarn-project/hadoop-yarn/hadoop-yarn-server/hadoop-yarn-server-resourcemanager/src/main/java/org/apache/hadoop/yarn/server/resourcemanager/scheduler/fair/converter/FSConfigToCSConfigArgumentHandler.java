@@ -16,6 +16,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
+import java.io.File;
+import java.util.function.Supplier;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -25,7 +28,7 @@ import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Parses arguments passed to the FS-&gt;CS converter.
@@ -35,11 +38,22 @@ import java.io.File;
 public class FSConfigToCSConfigArgumentHandler {
   private static final Logger LOG =
       LoggerFactory.getLogger(FSConfigToCSConfigArgumentHandler.class);
-  private final FSConfigToCSConfigConverter converter;
 
-  public FSConfigToCSConfigArgumentHandler(FSConfigToCSConfigConverter
-      converter) {
-    this.converter = converter;
+  private FSConfigToCSConfigRuleHandler ruleHandler;
+  private FSConfigToCSConfigConverterParams converterParams;
+  private ConversionOptions conversionOptions;
+
+  private Supplier<FSConfigToCSConfigConverter>
+      converterFunc = this::getConverter;
+
+  public FSConfigToCSConfigArgumentHandler() {
+    this.conversionOptions = new ConversionOptions(new DryRunResultHolder(),
+        false);
+  }
+
+  @VisibleForTesting
+  FSConfigToCSConfigArgumentHandler(ConversionOptions conversionOptions) {
+    this.conversionOptions = conversionOptions;
   }
 
   /**
@@ -69,6 +83,8 @@ public class FSConfigToCSConfigArgumentHandler {
             " capacity-scheduler.xml files." +
             "Must have write permission for user who is running this script.",
             true),
+    DRY_RUN("dry run", "d", "dry-run", "Performs a dry-run of the conversion." +
+            "Outputs whether the conversion is possible or not.", false),
     HELP("help", "h", "help", "Displays the list of options", false);
 
     private final String name;
@@ -94,6 +110,7 @@ public class FSConfigToCSConfigArgumentHandler {
 
   int parseAndConvert(String[] args) throws Exception {
     Options opts = createOptions();
+    int retVal = 0;
 
     try {
       if (args.length == 0) {
@@ -109,36 +126,41 @@ public class FSConfigToCSConfigArgumentHandler {
         return 0;
       }
 
-      checkOptionPresent(cliParser, CliOption.YARN_SITE);
-      checkOutputDefined(cliParser);
+      FSConfigToCSConfigConverter converter =
+          prepareAndGetConverter(cliParser);
 
-      FSConfigToCSConfigConverterParams params = validateInputFiles(cliParser);
-      converter.convert(params);
+      converter.convert(converterParams);
     } catch (ParseException e) {
       String msg = "Options parsing failed: " + e.getMessage();
       logAndStdErr(e, msg);
       printHelp(opts);
-      return -1;
+      retVal = -1;
     } catch (PreconditionException e) {
       String msg = "Cannot start FS config conversion due to the following"
           + " precondition error: " + e.getMessage();
-      logAndStdErr(e, msg);
-      return -1;
+      handleException(e, msg);
+      retVal = -1;
     } catch (UnsupportedPropertyException e) {
       String msg = "Unsupported property/setting encountered during FS config "
           + "conversion: " + e.getMessage();
-      logAndStdErr(e, msg);
-      return -1;
+      handleException(e, msg);
+      retVal = -1;
     } catch (ConversionException | IllegalArgumentException e) {
       String msg = "Fatal error during FS config conversion: " + e.getMessage();
-      logAndStdErr(e, msg);
-      return -1;
+      handleException(e, msg);
+      retVal = -1;
     }
 
-    return 0;
+    conversionOptions.handleParsingFinished();
+
+    return retVal;
   }
 
-  private void logAndStdErr(Exception e, String msg) {
+  private void handleException(Exception e, String msg) {
+    conversionOptions.handleGenericException(e, msg);
+  }
+
+  static void logAndStdErr(Exception e, String msg) {
     LOG.debug("Stack trace", e);
     LOG.error(msg);
     System.err.println(msg);
@@ -152,6 +174,20 @@ public class FSConfigToCSConfigArgumentHandler {
     }
 
     return opts;
+  }
+
+  private FSConfigToCSConfigConverter prepareAndGetConverter(
+      CommandLine cliParser) {
+    conversionOptions.setDryRun(
+        cliParser.hasOption(CliOption.DRY_RUN.shortSwitch));
+
+    checkOptionPresent(cliParser, CliOption.YARN_SITE);
+    checkOutputDefined(cliParser);
+
+    converterParams = validateInputFiles(cliParser);
+    ruleHandler = new FSConfigToCSConfigRuleHandler(conversionOptions);
+
+    return converterFunc.get();
   }
 
   private FSConfigToCSConfigConverterParams validateInputFiles(
@@ -238,5 +274,15 @@ public class FSConfigToCSConfigArgumentHandler {
           String.format("Specified path %s does not exist " +
           "(As value of parameter %s)", filePath, cliOption.name));
     }
+  }
+
+  private FSConfigToCSConfigConverter getConverter() {
+    return new FSConfigToCSConfigConverter(ruleHandler, conversionOptions);
+  }
+
+  @VisibleForTesting
+  void setConverterSupplier(Supplier<FSConfigToCSConfigConverter>
+      supplier) {
+    this.converterFunc = supplier;
   }
 }
