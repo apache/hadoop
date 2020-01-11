@@ -4669,6 +4669,18 @@
 </property>
 
 <property>
+  <name>
+    dfs.namenode.available-space-block-placement-policy.balance-local-node
+  </name>
+  <value>false</value>
+  <description>
+    Only used when the dfs.block.replicator.classname is set to
+    org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicy.
+    If true, balances the local node too.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.backup.dnrpc-address</name>
   <value></value>
   <description>
