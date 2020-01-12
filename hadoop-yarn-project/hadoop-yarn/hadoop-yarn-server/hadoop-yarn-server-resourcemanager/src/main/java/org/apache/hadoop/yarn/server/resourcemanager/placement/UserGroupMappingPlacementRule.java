@@ -220,7 +220,11 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
           }
         }
         if (user.equals(mapping.source)) {
-          return getPlacementContext(mapping);
+          if (mapping.queue.equals(PRIMARY_GROUP_MAPPING)) {
+            return getPlacementContext(mapping, groups.getGroups(user).get(0));
+          } else {
+            return getPlacementContext(mapping);
+          }
         }
       }
       if (mapping.type == MappingType.GROUP) {
