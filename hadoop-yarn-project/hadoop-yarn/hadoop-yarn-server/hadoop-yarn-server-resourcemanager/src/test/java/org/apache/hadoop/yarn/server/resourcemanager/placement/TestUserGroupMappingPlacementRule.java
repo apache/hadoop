@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -26,6 +27,7 @@ import java.util.Arrays;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.security.Groups;
+import org.apache.hadoop.security.NullGroupsMapping;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -90,6 +92,7 @@ public class TestUserGroupMappingPlacementRule {
     when(queueManager.getQueue("agroup")).thenReturn(agroup);
     when(queueManager.getQueue("bsubgroup2")).thenReturn(bsubgroup2);
     when(queueManager.getQueue("asubgroup2")).thenReturn(asubgroup2);
+
     rule.setQueueManager(queueManager);
     ApplicationSubmissionContext asc = Records.newRecord(
         ApplicationSubmissionContext.class);
@@ -119,6 +122,20 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
+  public void testNullGroupMapping() throws YarnException {
+    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        NullGroupsMapping.class, GroupMappingServiceProvider.class);
+    try {
+      verifyQueueMapping(
+          new QueueMapping(MappingType.USER, "%user", "%secondary_group"), "a",
+          "default");
+      fail("No Groups for user 'a'");
+    } catch (YarnException e) {
+      // Exception is expected as there are no groups for given user
+    }
+  }
+
+  @Test
   public void testMapping() throws YarnException {
 
     verifyQueueMapping(new QueueMapping(MappingType.USER, "a", "q1"), "a", "q1");
@@ -131,6 +148,10 @@ public class TestUserGroupMappingPlacementRule {
     verifyQueueMapping(
         new QueueMapping(MappingType.USER, "%user", "%primary_group"), "a",
         "agroup");
+    // Queue "bgroup" is not configured, hence "default" should be used
+    verifyQueueMapping(
+        new QueueMapping(MappingType.USER, "%user", "%primary_group"), "b",
+        "default");
     verifyQueueMapping(
         new QueueMapping(MappingType.USER, "%user", "%user", "%primary_group"),
         "a", YarnConfiguration.DEFAULT_QUEUE_NAME, "a", false, "agroup");
