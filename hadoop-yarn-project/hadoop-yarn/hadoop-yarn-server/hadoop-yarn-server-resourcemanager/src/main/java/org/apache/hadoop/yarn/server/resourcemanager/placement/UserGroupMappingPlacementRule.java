@@ -220,7 +220,11 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
           }
         }
         if (user.equals(mapping.source)) {
-          return getPlacementContext(mapping);
+          if (mapping.queue.equals(PRIMARY_GROUP_MAPPING)) {
+            return getPlacementContext(mapping, groups.getGroups(user).get(0));
+          } else {
+            return getPlacementContext(mapping);
+          }
         }
       }
       if (mapping.type == MappingType.GROUP) {
@@ -366,9 +370,9 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
 
     // initialize groups if mappings are present
     if (newMappings.size() > 0) {
-      Groups groups = new Groups(conf);
       this.mappings = newMappings;
-      this.groups = groups;
+      this.groups = Groups.getUserToGroupsMappingService(
+          ((CapacityScheduler)scheduler).getConf());
       this.overrideWithQueueMappings = overrideWithQueueMappings;
       return true;
     }

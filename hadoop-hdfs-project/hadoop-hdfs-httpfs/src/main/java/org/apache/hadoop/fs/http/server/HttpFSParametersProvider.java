@@ -118,6 +118,9 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.GETSNAPSHOTTABLEDIRECTORYLIST, new Class[] {});
     PARAMS_DEF.put(Operation.GETSERVERDEFAULTS, new Class[] {});
     PARAMS_DEF.put(Operation.CHECKACCESS, new Class[] {FsActionParam.class});
+    PARAMS_DEF.put(Operation.SETECPOLICY, new Class[] {ECPolicyParam.class});
+    PARAMS_DEF.put(Operation.GETECPOLICY, new Class[] {});
+    PARAMS_DEF.put(Operation.UNSETECPOLICY, new Class[] {});
   }
 
   public HttpFSParametersProvider() {
@@ -692,6 +695,24 @@ public class HttpFSParametersProvider extends ParametersProvider {
      */
     public FsActionParam(final String str) {
       super(NAME, str, FSACTION_PATTERN);
+    }
+  }
+
+  /**
+   * Class for ecpolicy parameter.
+   */
+  @InterfaceAudience.Private
+  public static class ECPolicyParam extends StringParam {
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = HttpFSFileSystem.EC_POLICY_NAME_PARAM;
+
+    /**
+     * Constructor.
+     */
+    public ECPolicyParam() {
+      super(NAME, null);
     }
   }
 }

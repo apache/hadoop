@@ -391,7 +391,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     AppsInfo responseGet = interceptor.getApps(null, null, null, null, null,
-        null, null, null, null, null, null, null, null, null);
+        null, null, null, null, null, null, null, null, null, null);
 
     Assert.assertNotNull(responseGet);
     Assert.assertEquals(NUM_SUBCLUSTER, responseGet.getApps().size());

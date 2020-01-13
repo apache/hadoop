@@ -125,7 +125,8 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void prune(PruneMode pruneMode, long cutoff, String keyPrefix) {
+  public long prune(PruneMode pruneMode, long cutoff, String keyPrefix) {
+    return 0;
   }
 
   @Override

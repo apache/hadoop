@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.Query;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Time;
+import static org.apache.hadoop.hdfs.server.federation.router.Quota.eachByStorageType;
 
 /**
  * Implementation of the {@link MountTableStore} state store API.
@@ -160,12 +161,16 @@ public class MountTableStoreImpl extends MountTableStore {
               this.getQuotaManager().getQuotaUsage(record.getSourcePath());
           if (quota != null) {
             RouterQuotaUsage oldquota = record.getQuota();
-            RouterQuotaUsage newQuota = new RouterQuotaUsage.Builder()
+            RouterQuotaUsage.Builder builder = new RouterQuotaUsage.Builder()
                 .fileAndDirectoryCount(quota.getFileAndDirectoryCount())
                 .quota(oldquota.getQuota())
                 .spaceConsumed(quota.getSpaceConsumed())
-                .spaceQuota(oldquota.getSpaceQuota()).build();
-            record.setQuota(newQuota);
+                .spaceQuota(oldquota.getSpaceQuota());
+            eachByStorageType(t -> {
+              builder.typeQuota(t, oldquota.getTypeQuota(t));
+              builder.typeConsumed(t, quota.getTypeConsumed(t));
+            });
+            record.setQuota(builder.build());
           }
         }
       }

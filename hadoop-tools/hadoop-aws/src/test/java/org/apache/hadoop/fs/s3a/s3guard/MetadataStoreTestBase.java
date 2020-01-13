@@ -31,6 +31,7 @@ import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
@@ -1275,8 +1277,27 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
       final long time,
       BulkOperationState operationState) throws IOException {
     PathMetadata meta = new PathMetadata(makeFileStatus(key, 1, time));
-    ms.put(meta,
-        operationState);
+    meta.setLastUpdated(time);
+    ms.put(meta, operationState);
+    return meta;
+  }
+
+  /**
+   * Put a dir to the shared DDB table.
+   * @param key key
+   * @param time timestamp.
+   * @param operationState ongoing state
+   * @return the entry
+   * @throws IOException IO failure
+   */
+  protected PathMetadata putDir(
+      final String key,
+      final long time,
+      BulkOperationState operationState) throws IOException {
+    PathMetadata meta = new PathMetadata(
+        basicFileStatus(strToPath(key), 0, true, time));
+    meta.setLastUpdated(time);
+    ms.put(meta, operationState);
     return meta;
   }
 
@@ -1309,4 +1330,10 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
         null, null);
     return new PathMetadata(s3aStatus, Tristate.UNKNOWN, true);
   }
+
+  @Override
+  protected Timeout retrieveTestTimeout() {
+    return Timeout.millis(S3ATestConstants.S3A_TEST_TIMEOUT);
+  }
+
 }

@@ -225,6 +225,9 @@ public enum Statistic {
   S3GUARD_METADATASTORE_THROTTLE_RATE(
       "s3guard_metadatastore_throttle_rate",
       "S3Guard metadata store throttle rate"),
+  S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED(
+      "s3guard_metadatastore_authoritative_directories_updated",
+      "S3Guard metadata store authoritative directories updated from S3"),
 
   STORE_IO_THROTTLED("store_io_throttled", "Requests throttled and retried"),
 

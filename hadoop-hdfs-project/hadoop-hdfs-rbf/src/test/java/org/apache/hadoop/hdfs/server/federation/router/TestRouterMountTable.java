@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -661,6 +662,22 @@ public class TestRouterMountTable {
     } finally {
       nnFs0.delete(new Path("/testrename1"), true);
       nnFs0.delete(new Path("/testrename2"), true);
+    }
+  }
+
+  @Test
+  public void testListStatusMountPoint() throws Exception {
+    try {
+      MountTable addEntry = MountTable.newInstance("/mount/testLsMountEntry",
+          Collections.singletonMap("ns0", "/testLsMountEntryDest"));
+      assertTrue(addMountTable(addEntry));
+      nnFs0.mkdirs(new Path("/testLsMountEntryDest"));
+      DistributedFileSystem routerDfs = (DistributedFileSystem) routerFs;
+      Path mountPath = new Path("/mount/testLsMountEntry");
+      routerDfs.setErasureCodingPolicy(mountPath, "RS-6-3-1024k");
+      assertTrue(routerDfs.listStatus(new Path("/mount"))[0].isErasureCoded());
+    } finally {
+      nnFs0.delete(new Path("/testLsMountEntryDest"), true);
     }
   }
 }

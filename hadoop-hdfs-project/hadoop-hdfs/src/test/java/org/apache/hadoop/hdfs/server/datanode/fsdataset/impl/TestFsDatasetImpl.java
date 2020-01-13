@@ -950,4 +950,17 @@ public class TestFsDatasetImpl {
     }
   }
 
+  @Test(timeout=30000)
+  public void testDataDirWithPercent() throws IOException {
+    String baseDir = new FileSystemTestHelper().getTestRootDir();
+    File dataDir = new File(baseDir, "invalidFormatString-%z");
+    dataDir.mkdirs();
+    FsVolumeImpl volumeFixed = new FsVolumeImplBuilder()
+        .setConf(new HdfsConfiguration())
+        .setDataset(dataset)
+        .setStorageID("storage-id")
+        .setStorageDirectory(
+            new StorageDirectory(StorageLocation.parse(dataDir.getPath())))
+        .build();
+  }
 }

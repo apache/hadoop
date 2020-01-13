@@ -348,11 +348,6 @@
       <artifactId>wildfly-openssl</artifactId>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>org.assertj</groupId>
-      <artifactId>assertj-core</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <build>
@@ -842,9 +837,13 @@
             <executions>
               <execution>
                 <id>parallel-tests-createdir</id>
+                <phase>process-test-resources</phase>
                 <goals>
                   <goal>parallel-tests-createdir</goal>
                 </goals>
+                <configuration>
+                  <testBuildData>${test.build.data}</testBuildData>
+                </configuration>
               </execution>
             </executions>
           </plugin>

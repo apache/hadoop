@@ -64,7 +64,6 @@ public class FSConfigToCSConfigConverter {
   public static final String WARNING_TEXT =
       "WARNING: This feature is experimental and not intended " +
           "for production use!";
-  
 
   private Resource clusterResource;
   private boolean preemptionEnabled = false;
@@ -73,6 +72,7 @@ public class FSConfigToCSConfigConverter {
   private boolean autoCreateChildQueues = false;
   private boolean sizeBasedWeight = false;
   private boolean userAsDefaultQueue = false;
+  private ConversionOptions conversionOptions;
 
   private Configuration yarnSiteConfig;
   private Configuration capacitySchedulerConfig;
@@ -83,8 +83,9 @@ public class FSConfigToCSConfigConverter {
   private boolean consoleMode = false;
 
   public FSConfigToCSConfigConverter(FSConfigToCSConfigRuleHandler
-      ruleHandler) {
+      ruleHandler, ConversionOptions conversionOptions) {
     this.ruleHandler = ruleHandler;
+    this.conversionOptions = conversionOptions;
     this.yarnSiteOutputStream = System.out;
     this.capacitySchedulerOutputStream = System.out;
   }
@@ -257,14 +258,19 @@ public class FSConfigToCSConfigConverter {
     FSParentQueue rootQueue = fs.getQueueManager().getRootQueue();
     emitDefaultMaxApplications();
     emitDefaultMaxAMShare();
-    FSQueueConverter queueConverter = new FSQueueConverter(ruleHandler,
-        capacitySchedulerConfig,
-        preemptionEnabled,
-        sizeBasedWeight,
-        autoCreateChildQueues,
-        clusterResource,
-        queueMaxAMShareDefault,
-        queueMaxAppsDefault);
+
+    FSQueueConverter queueConverter = FSQueueConverterBuilder.create()
+        .withRuleHandler(ruleHandler)
+        .withCapacitySchedulerConfig(capacitySchedulerConfig)
+        .withPreemptionEnabled(preemptionEnabled)
+        .withSizeBasedWeight(sizeBasedWeight)
+        .withAutoCreateChildQueues(autoCreateChildQueues)
+        .withClusterResource(clusterResource)
+        .withQueueMaxAMShareDefault(queueMaxAMShareDefault)
+        .withQueueMaxAppsDefault(queueMaxAppsDefault)
+        .withConversionOptions(conversionOptions)
+        .build();
+
     queueConverter.convertQueueHierarchy(rootQueue);
     emitACLs(fs);
 

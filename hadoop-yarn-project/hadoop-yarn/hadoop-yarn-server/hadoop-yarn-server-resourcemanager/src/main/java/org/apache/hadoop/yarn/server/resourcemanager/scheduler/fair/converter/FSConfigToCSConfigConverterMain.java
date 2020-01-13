@@ -34,12 +34,8 @@ public class FSConfigToCSConfigConverterMain {
 
   public static void main(String[] args) {
     try {
-      FSConfigToCSConfigRuleHandler ruleHandler =
-          new FSConfigToCSConfigRuleHandler();
-      FSConfigToCSConfigConverter converter =
-          new FSConfigToCSConfigConverter(ruleHandler);
       FSConfigToCSConfigArgumentHandler fsConfigConversionArgumentHandler =
-          new FSConfigToCSConfigArgumentHandler(converter);
+          new FSConfigToCSConfigArgumentHandler();
       int exitCode =
           fsConfigConversionArgumentHandler.parseAndConvert(args);
       if (exitCode != 0) {

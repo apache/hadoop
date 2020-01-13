@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AclPermissionPa
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.BlockSizeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DataParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DestinationParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ECPolicyParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.FilterParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.FsActionParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.GroupParam;
@@ -438,6 +439,14 @@ public class HttpFSServer {
       response = Response.ok().build();
       break;
     }
+    case GETECPOLICY: {
+      FSOperations.FSGetErasureCodingPolicy command =
+          new FSOperations.FSGetErasureCodingPolicy(path);
+      String js = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", path);
+      response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
     default: {
       throw new IOException(
           MessageFormat.format("Invalid HTTP GET operation [{0}]", op.value()));
@@ -514,6 +523,30 @@ public class HttpFSServer {
       }
     }
     return response;
+  }
+
+  /**
+   * Special binding for '/' as it is not handled by the wildcard binding.
+   * @param is the inputstream for the request payload.
+   * @param uriInfo the of the request.
+   * @param op the HttpFS operation of the request.
+   * @param params the HttpFS parameters of the request.
+   *
+   * @return the request response.
+   *
+   * @throws IOException thrown if an IO error occurred. Thrown exceptions are
+   *           handled by {@link HttpFSExceptionProvider}.
+   * @throws FileSystemAccessException thrown if a FileSystemAccess related
+   *           error occurred. Thrown exceptions are handled by
+   *           {@link HttpFSExceptionProvider}.
+   */
+  @POST
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8 })
+  public Response postRoot(InputStream is, @Context UriInfo uriInfo,
+      @QueryParam(OperationParam.NAME) OperationParam op,
+      @Context Parameters params, @Context HttpServletRequest request)
+      throws IOException, FileSystemAccessException {
+    return post(is, uriInfo, "/", op, params, request);
   }
 
   /**
@@ -601,6 +634,14 @@ public class HttpFSServer {
          response = Response.ok().build();
          break;
       }
+      case UNSETECPOLICY: {
+        FSOperations.FSUnSetErasureCodingPolicy command =
+            new FSOperations.FSUnSetErasureCodingPolicy(path);
+        fsExecute(user, command);
+        AUDIT_LOG.info("Unset ec policy [{}]", path);
+        response = Response.ok().build();
+        break;
+      }
       default: {
         throw new IOException(
           MessageFormat.format("Invalid HTTP POST operation [{0}]",
@@ -625,6 +666,29 @@ public class HttpFSServer {
     return uriBuilder.build(null);
   }
 
+  /**
+   * Special binding for '/' as it is not handled by the wildcard binding.
+   * @param is the inputstream for the request payload.
+   * @param uriInfo the of the request.
+   * @param op the HttpFS operation of the request.
+   * @param params the HttpFS parameters of the request.
+   *
+   * @return the request response.
+   *
+   * @throws IOException thrown if an IO error occurred. Thrown exceptions are
+   *           handled by {@link HttpFSExceptionProvider}.
+   * @throws FileSystemAccessException thrown if a FileSystemAccess related
+   *           error occurred. Thrown exceptions are handled by
+   *           {@link HttpFSExceptionProvider}.
+   */
+  @PUT
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8 })
+  public Response putRoot(InputStream is, @Context UriInfo uriInfo,
+      @QueryParam(OperationParam.NAME) OperationParam op,
+      @Context Parameters params, @Context HttpServletRequest request)
+      throws IOException, FileSystemAccessException {
+    return put(is, uriInfo, "/", op, params, request);
+  }
 
   /**
    * Binding to handle PUT requests.
@@ -880,6 +944,15 @@ public class HttpFSServer {
             PolicyNameParam.class);
         FSOperations.FSSetStoragePolicy command =
             new FSOperations.FSSetStoragePolicy(path, policyName);
+        fsExecute(user, command);
+        AUDIT_LOG.info("[{}] to policy [{}]", path, policyName);
+        response = Response.ok().build();
+        break;
+      }
+      case SETECPOLICY: {
+        String policyName = params.get(ECPolicyParam.NAME, ECPolicyParam.class);
+        FSOperations.FSSetErasureCodingPolicy command =
+            new FSOperations.FSSetErasureCodingPolicy(path, policyName);
         fsExecute(user, command);
         AUDIT_LOG.info("[{}] to policy [{}]", path, policyName);
         response = Response.ok().build();

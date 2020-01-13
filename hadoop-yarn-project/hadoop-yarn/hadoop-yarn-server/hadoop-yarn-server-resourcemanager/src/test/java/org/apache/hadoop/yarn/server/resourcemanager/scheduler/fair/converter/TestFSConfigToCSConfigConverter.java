@@ -68,6 +68,9 @@ public class TestFSConfigToCSConfigConverter {
   @Mock
   private FSConfigToCSConfigRuleHandler ruleHandler;
 
+  @Mock
+  private DryRunResultHolder dryRunResultHolder;
+
   private FSConfigToCSConfigConverter converter;
   private Configuration config;
 
@@ -93,6 +96,10 @@ public class TestFSConfigToCSConfigConverter {
       new File("src/test/resources/conversion-rules.properties")
         .getAbsolutePath();
 
+  private ConversionOptions createDefaultConversionOptions() {
+    return new ConversionOptions(new DryRunResultHolder(), false);
+  }
+
   @Before
   public void setup() throws IOException {
     config = new Configuration(false);
@@ -109,7 +116,8 @@ public class TestFSConfigToCSConfigConverter {
   }
 
   private void createConverter() {
-    converter = new FSConfigToCSConfigConverter(ruleHandler);
+    converter = new FSConfigToCSConfigConverter(ruleHandler,
+        createDefaultConversionOptions());
     converter.setClusterResource(CLUSTER_RESOURCE);
     ByteArrayOutputStream yarnSiteOut = new ByteArrayOutputStream();
     csConfigOut = new ByteArrayOutputStream();
@@ -325,7 +333,8 @@ public class TestFSConfigToCSConfigConverter {
 
   @Test
   public void testConvertFSConfigurationRulesFile() throws Exception {
-    ruleHandler = new FSConfigToCSConfigRuleHandler();
+    ruleHandler = new FSConfigToCSConfigRuleHandler(
+        createDefaultConversionOptions());
     createConverter();
 
     FSConfigToCSConfigConverterParams params =

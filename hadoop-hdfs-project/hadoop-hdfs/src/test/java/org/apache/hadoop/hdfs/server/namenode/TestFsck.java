@@ -1151,17 +1151,7 @@ public class TestFsck {
       }
     }
 
-    // wait for the namenode to see the corruption
-    final NamenodeProtocols namenode = cluster.getNameNodeRpc();
-    CorruptFileBlocks corruptFileBlocks = namenode
-        .listCorruptFileBlocks("/corruptData", null);
-    int numCorrupt = corruptFileBlocks.getFiles().length;
-    while (numCorrupt == 0) {
-      Thread.sleep(1000);
-      corruptFileBlocks = namenode
-          .listCorruptFileBlocks("/corruptData", null);
-      numCorrupt = corruptFileBlocks.getFiles().length;
-    }
+    waitForCorruptionBlocks(3, "/corruptData");
     outStr = runFsck(conf, -1, true, "/corruptData", "-list-corruptfileblocks");
     System.out.println("2. bad fsck out: " + outStr);
     assertTrue(outStr.contains("has 3 CORRUPT files"));
@@ -2148,17 +2138,7 @@ public class TestFsck {
     hdfs.delete(fp, false);
     numFiles--;
 
-    // wait for the namenode to see the corruption
-    final NamenodeProtocols namenode = cluster.getNameNodeRpc();
-    CorruptFileBlocks corruptFileBlocks = namenode
-        .listCorruptFileBlocks("/corruptData", null);
-    int numCorrupt = corruptFileBlocks.getFiles().length;
-    while (numCorrupt == 0) {
-      Thread.sleep(1000);
-      corruptFileBlocks = namenode
-          .listCorruptFileBlocks("/corruptData", null);
-      numCorrupt = corruptFileBlocks.getFiles().length;
-    }
+    waitForCorruptionBlocks(numSnapshots, "/corruptData");
 
     // with -includeSnapshots all files are reported
     outStr = runFsck(conf, -1, true, "/corruptData",
@@ -2174,6 +2154,30 @@ public class TestFsck {
     System.out.println("3. bad fsck exclude snapshot out: " + outStr);
     assertTrue(outStr.contains("has " + numFiles + " CORRUPT files"));
     assertFalse(outStr.contains("/.snapshot/"));
+  }
+
+  /**
+   * Wait for the namenode to see the corruption.
+   * @param corruptBlocks The expected number of corruptfilelocks
+   * @param path The Directory Path where corruptfileblocks exists
+   * @throws IOException
+   */
+  private void waitForCorruptionBlocks(int corruptBlocks, String path)
+      throws Exception {
+    GenericTestUtils.waitFor(() -> {
+      try {
+        final NamenodeProtocols namenode = cluster.getNameNodeRpc();
+        CorruptFileBlocks corruptFileBlocks =
+            namenode.listCorruptFileBlocks(path, null);
+        int numCorrupt = corruptFileBlocks.getFiles().length;
+        if (numCorrupt == corruptBlocks) {
+          return true;
+        }
+      } catch (Exception e) {
+        LOG.error("Exception while getting Corrupt file blocks", e);
+      }
+      return false;
+    }, 100, 10000);
   }
 
   @Test (timeout = 300000)

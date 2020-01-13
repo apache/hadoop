@@ -74,7 +74,11 @@ public class BulkOperationState implements Closeable {
   public enum OperationType {
     /** Writing data. */
     Put,
-    /** Rename: add and delete. */
+    /**
+     * Rename: add and delete.
+     * After the rename, the tree under the destination path
+     * can be tagged as authoritative.
+     */
     Rename,
     /** Pruning: deleting entries and updating parents. */
     Prune,
@@ -83,6 +87,16 @@ public class BulkOperationState implements Closeable {
     /** Deletion operation. */
     Delete,
     /** FSCK operation. */
-    Fsck
+    Fsck,
+    /**
+     * Bulk directory tree import.
+     * After an import, the entire tree under the path has been
+     * enumerated and should be tagged as authoritative.
+     */
+    Import,
+    /**
+     * Listing update.
+     */
+    Listing,
   }
 }
