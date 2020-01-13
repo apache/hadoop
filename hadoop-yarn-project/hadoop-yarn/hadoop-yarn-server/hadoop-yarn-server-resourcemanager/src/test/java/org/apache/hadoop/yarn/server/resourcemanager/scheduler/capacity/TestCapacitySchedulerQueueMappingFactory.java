@@ -236,8 +236,14 @@ public class TestCapacitySchedulerQueueMappingFactory {
             UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
             "%user", getQueueMapping("%secondary_group", "%user"));
 
+    // u:b4:%secondary_group
+    UserGroupMappingPlacementRule.QueueMapping userQueueMapping3 =
+        new UserGroupMappingPlacementRule.QueueMapping(
+            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
+            "b4", "%secondary_group");
     queueMappingsForUG.add(userQueueMapping1);
     queueMappingsForUG.add(userQueueMapping2);
+    queueMappingsForUG.add(userQueueMapping3);
 
     testNestedUserQueueWithDynamicParentQueue(queueMappingsForUG, true, "f");
 
@@ -410,6 +416,85 @@ public class TestCapacitySchedulerQueueMappingFactory {
 
       ApplicationPlacementContext ctx1 = r.getPlacementForApp(asc, "user2");
       assertEquals("Queue", "user2group", ctx1.getQueue());
+    } finally {
+      if (mockRM != null) {
+        mockRM.close();
+      }
+    }
+  }
+
+  @Test
+  public void testFixedUserWithDynamicGroupQueue() throws Exception {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    setupQueueConfiguration(conf);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
+
+    List<String> queuePlacementRules = new ArrayList<>();
+    queuePlacementRules.add(QUEUE_MAPPING_RULE_USER_GROUP);
+    conf.setQueuePlacementRules(queuePlacementRules);
+
+    List<UserGroupMappingPlacementRule.QueueMapping> existingMappingsForUG =
+        conf.getQueueMappings();
+
+    // set queue mapping
+    List<UserGroupMappingPlacementRule.QueueMapping> queueMappingsForUG =
+        new ArrayList<>();
+
+    // u:user1:b1
+    UserGroupMappingPlacementRule.QueueMapping userQueueMapping1 =
+        new UserGroupMappingPlacementRule.QueueMapping(
+            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
+            "user1", "b1");
+
+    // u:user2:%primary_group
+    UserGroupMappingPlacementRule.QueueMapping userQueueMapping2 =
+        new UserGroupMappingPlacementRule.QueueMapping(
+            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
+            "user2", "%primary_group");
+
+    // u:b4:%secondary_group
+    UserGroupMappingPlacementRule.QueueMapping userQueueMapping3 =
+        new UserGroupMappingPlacementRule.QueueMapping(
+            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER, "b4",
+            "%secondary_group");
+
+    queueMappingsForUG.add(userQueueMapping1);
+    queueMappingsForUG.add(userQueueMapping2);
+    queueMappingsForUG.add(userQueueMapping3);
+    existingMappingsForUG.addAll(queueMappingsForUG);
+    conf.setQueueMappings(existingMappingsForUG);
+
+    //override with queue mappings
+    conf.setOverrideWithQueueMappings(true);
+
+    MockRM mockRM = null;
+    try {
+      mockRM = new MockRM(conf);
+      CapacityScheduler cs = (CapacityScheduler) mockRM.getResourceScheduler();
+      cs.updatePlacementRules();
+      mockRM.start();
+      cs.start();
+
+      ApplicationSubmissionContext asc =
+          Records.newRecord(ApplicationSubmissionContext.class);
+      asc.setQueue("default");
+
+      List<PlacementRule> rules =
+          cs.getRMContext().getQueuePlacementManager().getPlacementRules();
+      UserGroupMappingPlacementRule r =
+          (UserGroupMappingPlacementRule) rules.get(0);
+
+      ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "user1");
+      assertEquals("Queue", "b1", ctx.getQueue());
+
+      ApplicationPlacementContext ctx1 = r.getPlacementForApp(asc, "user2");
+      assertEquals("Queue", "user2group", ctx1.getQueue());
+
+      ApplicationPlacementContext ctx2 = r.getPlacementForApp(asc, "b4");
+      assertEquals("Queue", "b4subgroup1", ctx2.getQueue());
     } finally {
       if (mockRM != null) {
         mockRM.close();
