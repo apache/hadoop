@@ -242,8 +242,8 @@ public class TestCapacitySchedulerQueueMappingFactory {
     testNestedUserQueueWithDynamicParentQueue(queueMappingsForUG, true, "f");
 
     try {
-      testNestedUserQueueWithDynamicParentQueue(queueMappingsForUG, true, "h");
-      fail("Leaf Queue 'h' doesn't exists");
+      testNestedUserQueueWithDynamicParentQueue(queueMappingsForUG, true, "g");
+      fail("Queue 'g' exists, but type is not Leaf Queue");
     } catch (YarnException e) {
       // Exception is expected as there is no such leaf queue
     }

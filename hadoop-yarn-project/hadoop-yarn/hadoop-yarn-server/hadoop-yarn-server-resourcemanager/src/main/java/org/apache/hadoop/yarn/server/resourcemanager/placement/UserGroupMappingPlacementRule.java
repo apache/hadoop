@@ -179,11 +179,15 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
           if (mapping.getParentQueue() != null
               && mapping.getParentQueue().equals(PRIMARY_GROUP_MAPPING)
               && mapping.getQueue().equals(CURRENT_USER_MAPPING)) {
-            QueueMapping queueMapping =
-                new QueueMapping(mapping.getType(), mapping.getSource(),
-                    user, groups.getGroups(user).get(0));
-            validateQueueMapping(queueMapping);
-            return getPlacementContext(queueMapping, user);
+            if (this.queueManager
+                .getQueue(groups.getGroups(user).get(0)) != null) {
+              QueueMapping queueMapping = new QueueMapping(mapping.getType(),
+                  mapping.getSource(), user, groups.getGroups(user).get(0));
+              validateQueueMapping(queueMapping);
+              return getPlacementContext(queueMapping, user);
+            } else {
+              return null;
+            }
           } else if (mapping.getParentQueue() != null
               && mapping.getParentQueue().equals(SECONDARY_GROUP_MAPPING)
               && mapping.getQueue().equals(CURRENT_USER_MAPPING)) {
@@ -203,7 +207,13 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
           } else if (mapping.queue.equals(CURRENT_USER_MAPPING)) {
             return getPlacementContext(mapping, user);
           } else if (mapping.queue.equals(PRIMARY_GROUP_MAPPING)) {
-            return getPlacementContext(mapping, groups.getGroups(user).get(0));
+            if (this.queueManager
+                .getQueue(groups.getGroups(user).get(0)) != null) {
+              return getPlacementContext(mapping,
+                  groups.getGroups(user).get(0));
+            } else {
+              return null;
+            }
           } else if (mapping.queue.equals(SECONDARY_GROUP_MAPPING)) {
             String secondaryGroup = getSecondaryGroup(user);
             if (secondaryGroup != null) {
