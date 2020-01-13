@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.proto.SecurityProtos;
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
@@ -62,8 +62,8 @@ public class ProtobufHelper {
    * This map should not be accessed directly. Used the getFixedByteString
    * methods instead.
    */
-  private static ConcurrentHashMap<Object, ByteString> fixedByteStringCache =
-      new ConcurrentHashMap<>();
+  private final static ConcurrentHashMap<Object, ByteString>
+      fixedByteStringCache = new ConcurrentHashMap<>();
 
   /**
    * Get the ByteString for frequently used fixed and small set strings.
@@ -98,8 +98,8 @@ public class ProtobufHelper {
     return (bytes.length == 0) ? ByteString.EMPTY : ByteString.copyFrom(bytes);
   }
 
-  public static Token<? extends TokenIdentifier> convert(
-      SecurityProtos.TokenProto tokenProto) {
+  public static Token<? extends TokenIdentifier> tokenFromProto(
+      TokenProto tokenProto) {
     Token<? extends TokenIdentifier> token = new Token<>(
         tokenProto.getIdentifier().toByteArray(),
         tokenProto.getPassword().toByteArray(), new Text(tokenProto.getKind()),
@@ -107,8 +107,8 @@ public class ProtobufHelper {
     return token;
   }
 
-  public static SecurityProtos.TokenProto convert(Token<?> tok) {
-    SecurityProtos.TokenProto.Builder builder = SecurityProtos.TokenProto.newBuilder().
+  public static TokenProto protoFromToken(Token<?> tok) {
+    TokenProto.Builder builder = TokenProto.newBuilder().
         setIdentifier(getByteString(tok.getIdentifier())).
         setPassword(getByteString(tok.getPassword())).
         setKindBytes(getFixedByteString(tok.getKind())).

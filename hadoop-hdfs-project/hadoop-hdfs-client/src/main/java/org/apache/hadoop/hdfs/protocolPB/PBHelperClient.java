@@ -324,7 +324,7 @@ public class PBHelperClient {
   }
 
   public static TokenProto convert(Token<?> tok) {
-    return ProtobufHelper.convert(tok);
+    return ProtobufHelper.protoFromToken(tok);
   }
 
   public static ShortCircuitShmIdProto convert(ShmId shmId) {
@@ -802,7 +802,8 @@ public class PBHelperClient {
 
   public static Token<BlockTokenIdentifier> convert(
       TokenProto blockToken) {
-    return (Token<BlockTokenIdentifier>) ProtobufHelper.convert(blockToken);
+    return (Token<BlockTokenIdentifier>) ProtobufHelper
+        .tokenFromProto(blockToken);
   }
 
   // DatanodeId

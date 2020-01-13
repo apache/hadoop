@@ -369,7 +369,7 @@ public class Credentials implements Writable {
       CredentialsKVProto.Builder kv = CredentialsKVProto.newBuilder().
           setAliasBytes(ByteString.copyFrom(
               e.getKey().getBytes(), 0, e.getKey().getLength())).
-          setToken(ProtobufHelper.convert(e.getValue()));
+          setToken(ProtobufHelper.protoFromToken(e.getValue()));
       storage.addTokens(kv.build());
     }
 
@@ -391,7 +391,7 @@ public class Credentials implements Writable {
     CredentialsProto storage = CredentialsProto.parseDelimitedFrom((DataInputStream)in);
     for (CredentialsKVProto kv : storage.getTokensList()) {
       addToken(new Text(kv.getAliasBytes().toByteArray()),
-               ProtobufHelper.convert(kv.getToken()));
+               ProtobufHelper.tokenFromProto(kv.getToken()));
     }
     for (CredentialsKVProto kv : storage.getSecretsList()) {
       addSecretKey(new Text(kv.getAliasBytes().toByteArray()),
