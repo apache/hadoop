@@ -232,10 +232,6 @@ public class PBHelperClient {
   private static final FsAction[] FSACTION_VALUES =
       FsAction.values();
 
-  private static ByteString getFixedByteString(Text key) {
-    return ProtobufHelper.getFixedByteString(key);
-  }
-
   private static ByteString getFixedByteString(String key) {
     return ProtobufHelper.getFixedByteString(key);
   }

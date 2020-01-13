@@ -460,4 +460,10 @@
     <Method name="save"/>
     <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
   </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.ipc.ProtobufHelper" />
+    <Method name="getFixedByteString" />
+    <Bug pattern="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION" />
+  </Match>
 </FindBugsFilter>
