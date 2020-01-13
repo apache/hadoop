@@ -1644,7 +1644,7 @@ public class FileUtil {
    * creating the file if it does not exist, or overwrites an existing file. All
    * bytes in the byte array are written to the file.
    *
-   * @param fs the files system with which to create the file
+   * @param fs the file system with which to create the file
    * @param path the path to the file
    * @param bytes the byte array with the bytes to write
    *
@@ -1659,11 +1659,39 @@ public class FileUtil {
     Objects.requireNonNull(path);
     Objects.requireNonNull(bytes);
 
-    try (FSDataOutputStream out = fs.create(path)) {
+    try (FSDataOutputStream out = fs.createFile(path).overwrite(true).build()) {
       out.write(bytes);
     }
 
     return fs;
+  }
+
+  /**
+   * Writes bytes to a file. This utility method opens the file for writing,
+   * creating the file if it does not exist, or overwrites an existing file. All
+   * bytes in the byte array are written to the file.
+   *
+   * @param fileContext the file context with which to create the file
+   * @param path the path to the file
+   * @param bytes the byte array with the bytes to write
+   *
+   * @return the file context
+   *
+   * @throws NullPointerException if any of the arguments are {@code null}
+   * @throws IOException if an I/O error occurs creating or writing to the file
+   */
+  public static FileContext write(final FileContext fileContext,
+      final Path path, final byte[] bytes) throws IOException {
+
+    Objects.requireNonNull(path);
+    Objects.requireNonNull(bytes);
+
+    try (FSDataOutputStream out =
+        fileContext.create(path).overwrite(true).build()) {
+      out.write(bytes);
+    }
+
+    return fileContext;
   }
 
   /**
@@ -1674,7 +1702,7 @@ public class FileUtil {
    * charset. This utility method opens the file for writing, creating the file
    * if it does not exist, or overwrites an existing file.
    *
-   * @param fs the files system with which to create the file
+   * @param fs the file system with which to create the file
    * @param path the path to the file
    * @param lines a Collection to iterate over the char sequences
    * @param cs the charset to use for encoding
@@ -1693,7 +1721,7 @@ public class FileUtil {
     Objects.requireNonNull(cs);
 
     CharsetEncoder encoder = cs.newEncoder();
-    try (FSDataOutputStream out = fs.create(path);
+    try (FSDataOutputStream out = fs.createFile(path).overwrite(true).build();
         BufferedWriter writer =
             new BufferedWriter(new OutputStreamWriter(out, encoder))) {
       for (CharSequence line : lines) {
@@ -1705,11 +1733,49 @@ public class FileUtil {
   }
 
   /**
+   * Write lines of text to a file. Each line is a char sequence and is written
+   * to the file in sequence with each line terminated by the platform's line
+   * separator, as defined by the system property {@code
+   * line.separator}. Characters are encoded into bytes using the specified
+   * charset. This utility method opens the file for writing, creating the file
+   * if it does not exist, or overwrites an existing file.
+   *
+   * @param fileContext the file context with which to create the file
+   * @param path the path to the file
+   * @param lines a Collection to iterate over the char sequences
+   * @param cs the charset to use for encoding
+   *
+   * @return the file context
+   *
+   * @throws NullPointerException if any of the arguments are {@code null}
+   * @throws IOException if an I/O error occurs creating or writing to the file
+   */
+  public static FileContext write(final FileContext fileContext,
+      final Path path, final Iterable<? extends CharSequence> lines,
+      final Charset cs) throws IOException {
+
+    Objects.requireNonNull(path);
+    Objects.requireNonNull(lines);
+    Objects.requireNonNull(cs);
+
+    CharsetEncoder encoder = cs.newEncoder();
+    try (FSDataOutputStream out = fileContext.create(path).overwrite(true).build();
+        BufferedWriter writer =
+            new BufferedWriter(new OutputStreamWriter(out, encoder))) {
+      for (CharSequence line : lines) {
+        writer.append(line);
+        writer.newLine();
+      }
+    }
+    return fileContext;
+  }
+
+  /**
    * Write a line of text to a file. Characters are encoded into bytes using the
    * specified charset. This utility method opens the file for writing, creating
    * the file if it does not exist, or overwrites an existing file.
    *
-   * @param fs the files system with which to create the file
+   * @param fs the file system with which to create the file
    * @param path the path to the file
    * @param charseq the char sequence to write to the file
    * @param cs the charset to use for encoding
@@ -1727,7 +1793,38 @@ public class FileUtil {
     Objects.requireNonNull(cs);
 
     CharsetEncoder encoder = cs.newEncoder();
-    try (FSDataOutputStream out = fs.create(path);
+    try (FSDataOutputStream out = fs.createFile(path).overwrite(true).build();
+        BufferedWriter writer =
+            new BufferedWriter(new OutputStreamWriter(out, encoder))) {
+      writer.append(charseq);
+    }
+    return fs;
+  }
+
+  /**
+   * Write a line of text to a file. Characters are encoded into bytes using the
+   * specified charset. This utility method opens the file for writing, creating
+   * the file if it does not exist, or overwrites an existing file.
+   *
+   * @param FileContext the file context with which to create the file
+   * @param path the path to the file
+   * @param charseq the char sequence to write to the file
+   * @param cs the charset to use for encoding
+   *
+   * @return the file context
+   *
+   * @throws NullPointerException if any of the arguments are {@code null}
+   * @throws IOException if an I/O error occurs creating or writing to the file
+   */
+  public static FileContext write(final FileContext fs, final Path path,
+      final CharSequence charseq, final Charset cs) throws IOException {
+
+    Objects.requireNonNull(path);
+    Objects.requireNonNull(charseq);
+    Objects.requireNonNull(cs);
+
+    CharsetEncoder encoder = cs.newEncoder();
+    try (FSDataOutputStream out = fs.create(path).overwrite(true).build();
         BufferedWriter writer =
             new BufferedWriter(new OutputStreamWriter(out, encoder))) {
       writer.append(charseq);
@@ -1752,5 +1849,24 @@ public class FileUtil {
   public static FileSystem write(final FileSystem fs, final Path path,
       final CharSequence charseq) throws IOException {
     return write(fs, path, charseq, StandardCharsets.UTF_8);
+  }
+
+  /**
+   * Write a line of text to a file. Characters are encoded into bytes using
+   * UTF-8. This utility method opens the file for writing, creating the file if
+   * it does not exist, or overwrites an existing file.
+   *
+   * @param fileContext the files system with which to create the file
+   * @param path the path to the file
+   * @param charseq the char sequence to write to the file
+   *
+   * @return the file context
+   *
+   * @throws NullPointerException if any of the arguments are {@code null}
+   * @throws IOException if an I/O error occurs creating or writing to the file
+   */
+  public static FileContext write(final FileContext fileContext,
+      final Path path, final CharSequence charseq) throws IOException {
+    return write(fileContext, path, charseq, StandardCharsets.UTF_8);
   }
 }

@@ -1499,12 +1499,12 @@ public class TestFileUtil {
    * Test that bytes are written out correctly to the local file system.
    */
   @Test
-  public void testWriteBytes() throws IOException {
+  public void testWriteBytesFileSystem() throws IOException {
     setupDirs();
 
     URI uri = tmp.toURI();
     Configuration conf = new Configuration();
-    FileSystem fs = FileSystem.newInstance(uri, conf);
+    FileSystem fs = FileSystem.get(uri, conf);
     Path testPath = new Path(new Path(uri), "writebytes.out");
 
     byte[] write = new byte[] {0x00, 0x01, 0x02, 0x03};
@@ -1521,12 +1521,12 @@ public class TestFileUtil {
    * file system.
    */
   @Test
-  public void testWriteStrings() throws IOException {
+  public void testWriteStringsFileSystem() throws IOException {
     setupDirs();
 
     URI uri = tmp.toURI();
     Configuration conf = new Configuration();
-    FileSystem fs = FileSystem.newInstance(uri, conf);
+    FileSystem fs = FileSystem.get(uri, conf);
     Path testPath = new Path(new Path(uri), "writestrings.out");
 
     Collection<String> write = Arrays.asList("over", "the", "lazy", "dog");
@@ -1543,15 +1543,15 @@ public class TestFileUtil {
    * Test that a String is written out correctly to the local file system.
    */
   @Test
-  public void testWriteString() throws IOException {
+  public void testWriteStringFileSystem() throws IOException {
     setupDirs();
 
     URI uri = tmp.toURI();
     Configuration conf = new Configuration();
-    FileSystem fs = FileSystem.newInstance(uri, conf);
+    FileSystem fs = FileSystem.get(uri, conf);
     Path testPath = new Path(new Path(uri), "writestring.out");
 
-    String write = "test string";
+    String write = "A" + "\u00ea" + "\u00f1" + "\u00fc" + "C";
 
     FileUtil.write(fs, testPath, write, StandardCharsets.UTF_8);
 
@@ -1559,6 +1559,115 @@ public class TestFileUtil {
         StandardCharsets.UTF_8);
 
     assertEquals(write, read);
+  }
+
+  /**
+   * Test that a String is written out correctly to the local file system
+   * without specifying a character set.
+   */
+  @Test
+  public void testWriteStringNoCharSetFileSystem() throws IOException {
+    setupDirs();
+
+    URI uri = tmp.toURI();
+    Configuration conf = new Configuration();
+    FileSystem fs = FileSystem.get(uri, conf);
+    Path testPath = new Path(new Path(uri), "writestring.out");
+
+    String write = "A" + "\u00ea" + "\u00f1" + "\u00fc" + "C";
+    FileUtil.write(fs, testPath, write);
+
+    String read = FileUtils.readFileToString(new File(testPath.toUri()),
+        StandardCharsets.UTF_8);
+
+    assertEquals(write, read);
+  }
+
+  /**
+   * Test that bytes are written out correctly to the local file system.
+   */
+  @Test
+  public void testWriteBytesFileContext() throws IOException {
+    setupDirs();
+
+    URI uri = tmp.toURI();
+    Configuration conf = new Configuration();
+    FileContext fc = FileContext.getFileContext(uri, conf);
+    Path testPath = new Path(new Path(uri), "writebytes.out");
+
+    byte[] write = new byte[] {0x00, 0x01, 0x02, 0x03};
+
+    FileUtil.write(fc, testPath, write);
+
+    byte[] read = FileUtils.readFileToByteArray(new File(testPath.toUri()));
+
+    assertArrayEquals(write, read);
+  }
+
+  /**
+   * Test that a Collection of Strings are written out correctly to the local
+   * file system.
+   */
+  @Test
+  public void testWriteStringsFileContext() throws IOException {
+    setupDirs();
+
+    URI uri = tmp.toURI();
+    Configuration conf = new Configuration();
+    FileContext fc = FileContext.getFileContext(uri, conf);
+    Path testPath = new Path(new Path(uri), "writestrings.out");
+
+    Collection<String> write = Arrays.asList("over", "the", "lazy", "dog");
+
+    FileUtil.write(fc, testPath, write, StandardCharsets.UTF_8);
+
+    List<String> read =
+        FileUtils.readLines(new File(testPath.toUri()), StandardCharsets.UTF_8);
+
+    assertEquals(write, read);
+  }
+
+  /**
+   * Test that a String is written out correctly to the local file system.
+   */
+  @Test
+  public void testWriteStringFileContext() throws IOException {
+    setupDirs();
+
+    URI uri = tmp.toURI();
+    Configuration conf = new Configuration();
+    FileContext fc = FileContext.getFileContext(uri, conf);
+    Path testPath = new Path(new Path(uri), "writestring.out");
+
+    String write = "A" + "\u00ea" + "\u00f1" + "\u00fc" + "C";
+
+    FileUtil.write(fc, testPath, write, StandardCharsets.UTF_8);
+
+    String read = FileUtils.readFileToString(new File(testPath.toUri()),
+        StandardCharsets.UTF_8);
+
+    assertEquals(write, read);
+  }
+
+  /**
+   * Test that a String is written out correctly to the local file system
+   * without specifying a character set.
+   */
+  @Test
+  public void testWriteStringNoCharSetFileContext() throws IOException {
+    setupDirs();
+
+    URI uri = tmp.toURI();
+    Configuration conf = new Configuration();
+    FileContext fc = FileContext.getFileContext(uri, conf);
+    Path testPath = new Path(new Path(uri), "writestring.out");
+
+    String write = "A" + "\u00ea" + "\u00f1" + "\u00fc" + "C";
+    FileUtil.write(fc, testPath, write);
+
+    String read = FileUtils.readFileToString(new File(testPath.toUri()),
+        StandardCharsets.UTF_8);
+
     assertEquals(write, read);
   }
 
