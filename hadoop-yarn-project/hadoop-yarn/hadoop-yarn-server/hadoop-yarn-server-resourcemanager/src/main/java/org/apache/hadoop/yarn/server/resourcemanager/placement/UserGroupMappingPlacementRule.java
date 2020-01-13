@@ -168,6 +168,11 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
         break;
       }
     }
+
+    if (secondaryGroup == null && LOG.isDebugEnabled()) {
+      LOG.debug("User {} is not associated with any Secondary "
+          + "Group. Hence it may use the 'default' queue", user);
+    }
     return secondaryGroup;
   }
 
@@ -198,10 +203,6 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
               validateQueueMapping(queueMapping);
               return getPlacementContext(queueMapping, user);
             } else {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("User {} is not associated with any Secondary Group. "
-                    + "Hence it may use the 'default' queue", user);
-              }
               return null;
             }
           } else if (mapping.queue.equals(CURRENT_USER_MAPPING)) {
@@ -219,10 +220,6 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
             if (secondaryGroup != null) {
               return getPlacementContext(mapping, secondaryGroup);
             } else {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("User {} is not associated with any Secondary "
-                    + "Group. Hence it may use the 'default' queue", user);
-              }
               return null;
             }
           } else {
@@ -232,6 +229,13 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
         if (user.equals(mapping.source)) {
           if (mapping.queue.equals(PRIMARY_GROUP_MAPPING)) {
             return getPlacementContext(mapping, groups.getGroups(user).get(0));
+          } else if (mapping.queue.equals(SECONDARY_GROUP_MAPPING)) {
+            String secondaryGroup = getSecondaryGroup(user);
+            if (secondaryGroup != null) {
+              return getPlacementContext(mapping, secondaryGroup);
+            } else {
+              return null;
+            }
           } else {
             return getPlacementContext(mapping);
           }
