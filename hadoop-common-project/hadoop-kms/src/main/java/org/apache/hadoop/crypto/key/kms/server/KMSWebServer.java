@@ -24,7 +24,6 @@ import java.net.URI;
 import java.net.URL;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.ConfigurationWithLogging;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -168,10 +167,8 @@ public class KMSWebServer {
   public static void main(String[] args) throws Exception {
     KMSConfiguration.initLogging();
     StringUtils.startupShutdownMessage(KMSWebServer.class, args, LOG);
-    Configuration conf = new ConfigurationWithLogging(
-        KMSConfiguration.getKMSConf());
-    Configuration sslConf = new ConfigurationWithLogging(
-        SSLFactory.readSSLConfiguration(conf, SSLFactory.Mode.SERVER));
+    Configuration conf = KMSConfiguration.getKMSConf();
+    Configuration sslConf = SSLFactory.readSSLConfiguration(conf, SSLFactory.Mode.SERVER);
     KMSWebServer kmsWebServer = new KMSWebServer(conf, sslConf);
     kmsWebServer.start();
     kmsWebServer.join();
