@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.webapp;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
 
@@ -24,6 +26,8 @@ import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
  * Utility class that wraps application information
  * required by the {@link LogServlet} class.
  */
+@InterfaceAudience.LimitedPrivate({"YARN"})
+@InterfaceStability.Unstable
 class BasicAppInfo {
   private final YarnApplicationState appState;
   private final String user;

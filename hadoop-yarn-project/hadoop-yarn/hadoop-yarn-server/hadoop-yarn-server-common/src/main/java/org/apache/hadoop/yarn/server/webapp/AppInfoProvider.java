@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.webapp;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -26,6 +27,7 @@ import javax.servlet.http.HttpServletRequest;
  * for providing various application related information.
  */
 @InterfaceAudience.LimitedPrivate({"YARN"})
+@InterfaceStability.Unstable
 public interface AppInfoProvider {
 
   /**
