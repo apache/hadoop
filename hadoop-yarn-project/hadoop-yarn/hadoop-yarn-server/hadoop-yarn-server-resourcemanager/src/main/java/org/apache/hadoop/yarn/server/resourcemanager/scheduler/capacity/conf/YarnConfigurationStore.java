@@ -52,7 +52,7 @@ public abstract class YarnConfigurationStore {
    * LogMutation encapsulates the fields needed for configuration mutation
    * audit logging and recovery.
    */
-  static class LogMutation implements Serializable {
+  public static class LogMutation implements Serializable {
     private Map<String, String> updates;
     private String user;
 
@@ -113,11 +113,13 @@ public abstract class YarnConfigurationStore {
    * last logged by {@code logMutation} and marks the mutation as persisted (no
    * longer pending). If isValid is true, merge the mutation with the persisted
    * configuration.
+   * @param pendingMutation the log mutation to apply
    * @param isValid if true, update persisted configuration with pending
    *                mutation.
    * @throws Exception if mutation confirmation fails
    */
-  public abstract void confirmMutation(boolean isValid) throws Exception;
+  public abstract void confirmMutation(LogMutation pendingMutation,
+      boolean isValid) throws Exception;
 
   /**
    * Retrieve the persisted configuration.

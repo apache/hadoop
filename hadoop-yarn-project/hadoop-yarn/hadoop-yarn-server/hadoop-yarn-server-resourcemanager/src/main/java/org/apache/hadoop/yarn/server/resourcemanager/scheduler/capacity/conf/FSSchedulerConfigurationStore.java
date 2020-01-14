@@ -58,7 +58,6 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
   private int maxVersion;
   private Path schedulerConfDir;
   private FileSystem fileSystem;
-  private LogMutation pendingMutation;
   private PathFilter configFilePathFilter;
   private volatile Configuration schedConf;
   private volatile Configuration oldConf;
@@ -134,10 +133,9 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
    */
   @Override
   public void logMutation(LogMutation logMutation) throws IOException {
-    pendingMutation = logMutation;
     LOG.info(new GsonBuilder().serializeNulls().create().toJson(logMutation));
     oldConf = new Configuration(schedConf);
-    Map<String, String> mutations = pendingMutation.getUpdates();
+    Map<String, String> mutations = logMutation.getUpdates();
     for (Map.Entry<String, String> kv : mutations.entrySet()) {
       if (kv.getValue() == null) {
         this.schedConf.unset(kv.getKey());
@@ -149,12 +147,14 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
   }
 
   /**
+   * @param pendingMutation the log mutation to apply
    * @param isValid if true, finalize temp configuration file
    *                if false, remove temp configuration file and rollback
    * @throws Exception throw IOE when write temp configuration file fail
    */
   @Override
-  public void confirmMutation(boolean isValid) throws Exception {
+  public void confirmMutation(LogMutation pendingMutation,
+      boolean isValid) throws Exception {
     if (pendingMutation == null || tempConfigPath == null) {
       LOG.warn("pendingMutation or tempConfigPath is null, do nothing");
       return;
