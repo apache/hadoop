@@ -690,7 +690,8 @@ public class RetryPolicies {
       } else if (e instanceof InvalidToken) {
         return new RetryAction(RetryAction.RetryDecision.FAIL, 0,
             "Invalid or Cancelled Token");
-      } else if (e instanceof AccessControlException) {
+      } else if (e instanceof AccessControlException ||
+              hasWrappedAccessControlException(e)) {
         return new RetryAction(RetryAction.RetryDecision.FAIL, 0,
             "Access denied");
       } else if (e instanceof SocketException
@@ -760,5 +761,14 @@ public class RetryPolicies {
         RetriableException.class);
     return unwrapped instanceof RetriableException ? 
         (RetriableException) unwrapped : null;
+  }
+
+  private static boolean hasWrappedAccessControlException(Exception e) {
+    Throwable throwable = e;
+    while (!(throwable instanceof AccessControlException) &&
+        throwable.getCause() != null) {
+      throwable = throwable.getCause();
+    }
+    return throwable instanceof AccessControlException;
   }
 }
