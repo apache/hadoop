@@ -54,7 +54,6 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
   protected static final Version CURRENT_VERSION_INFO = Version
       .newInstance(0, 1);
   private Configuration conf;
-  private LogMutation pendingMutation;
 
   private String znodeParentPath;
 
@@ -175,12 +174,11 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
       zkManager.safeSetData(logsPath, serializeObject(logs), -1, zkAcl,
               fencingNodePath);
     }
-    pendingMutation = logMutation;
   }
 
   @Override
-  public void confirmMutation(boolean isValid)
-      throws Exception {
+  public void confirmMutation(LogMutation pendingMutation,
+      boolean isValid) throws Exception {
     if (isValid) {
       Configuration storedConfigs = retrieve();
       Map<String, String> mapConf = new HashMap<>();
@@ -201,7 +199,6 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
       zkManager.setData(confVersionPath, String.valueOf(configVersion), -1);
 
     }
-    pendingMutation = null;
   }
 
   @Override

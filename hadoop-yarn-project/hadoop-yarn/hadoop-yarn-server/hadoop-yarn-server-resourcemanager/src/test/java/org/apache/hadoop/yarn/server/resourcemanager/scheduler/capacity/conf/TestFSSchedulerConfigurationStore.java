@@ -100,7 +100,7 @@ public class TestFSSchedulerConfigurationStore {
 
     LogMutation logMutation = new LogMutation(updates, "test");
     configurationStore.logMutation(logMutation);
-    configurationStore.confirmMutation(true);
+    configurationStore.confirmMutation(logMutation, true);
     storeConf = configurationStore.retrieve();
     assertEquals(null, storeConf.get("a"));
     assertEquals("bb", storeConf.get("b"));
@@ -110,7 +110,7 @@ public class TestFSSchedulerConfigurationStore {
 
     updates.put("b", "bbb");
     configurationStore.logMutation(logMutation);
-    configurationStore.confirmMutation(true);
+    configurationStore.confirmMutation(logMutation, true);
     storeConf = configurationStore.retrieve();
     assertEquals(null, storeConf.get("a"));
     assertEquals("bbb", storeConf.get("b"));
@@ -133,7 +133,7 @@ public class TestFSSchedulerConfigurationStore {
 
     LogMutation logMutation = new LogMutation(updates, "test");
     configurationStore.logMutation(logMutation);
-    configurationStore.confirmMutation(false);
+    configurationStore.confirmMutation(logMutation, false);
     storeConf = configurationStore.retrieve();
 
     compareConfig(conf, storeConf);
@@ -168,7 +168,7 @@ public class TestFSSchedulerConfigurationStore {
         updates.put("testkey", "testvalue");
         LogMutation logMutation = new LogMutation(updates, "test");
         configStore.logMutation(logMutation);
-        configStore.confirmMutation(true);
+        configStore.confirmMutation(logMutation, true);
       } catch (IOException e) {
         if (e.getMessage().contains("Filesystem closed")) {
           fail("FSSchedulerConfigurationStore failed to handle " +
