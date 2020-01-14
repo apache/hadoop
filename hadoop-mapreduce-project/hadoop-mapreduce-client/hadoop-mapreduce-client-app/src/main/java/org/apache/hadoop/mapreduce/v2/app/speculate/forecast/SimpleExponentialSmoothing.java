@@ -131,8 +131,8 @@ public class SimpleExponentialSmoothing {
   /**
    * checks if the task is hanging up.
    * @param timeStamp current time of the scan.
-   * @return true if we have number of samples > kMinimumReads and the record
-   * timestamp has expired.
+   * @return true if we have number of samples {@literal >} kMinimumReads and the
+   * record timestamp has expired.
    */
   public boolean isDataStagnated(final long timeStamp) {
     ForecastRecord rec = forecastRefEntry.get();
