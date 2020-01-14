@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
@@ -247,10 +248,10 @@ public class TestSchedConfCLI extends JerseyTestBase {
       globalUpdates.put("schedKey1", "schedVal1");
       schedUpdateInfo.setGlobalParams(globalUpdates);
 
-      provider.logAndApplyMutation(UserGroupInformation.getCurrentUser(),
-          schedUpdateInfo);
+      LogMutation log = provider.logAndApplyMutation(
+          UserGroupInformation.getCurrentUser(), schedUpdateInfo);
       rm.getRMContext().getRMAdminService().refreshQueues();
-      provider.confirmPendingMutation(true);
+      provider.confirmPendingMutation(log, true);
 
       Configuration schedulerConf = provider.getConfiguration();
       assertEquals("schedVal1", schedulerConf.get("schedKey1"));
