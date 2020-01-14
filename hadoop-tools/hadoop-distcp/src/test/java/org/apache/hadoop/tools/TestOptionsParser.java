@@ -810,12 +810,14 @@ public class TestOptionsParser {
     DistCpOptions options = OptionsParser.parse(new String[] {
         "hdfs://localhost:8020/source/first",
         "hdfs://localhost:8020/target/"});
-    Assert.assertFalse(options.shouldNoLocalWrite());
+    Assert.assertFalse("Failed to parse option -noLocalWrite correctly.",
+        options.shouldNoLocalWrite());
 
     options = OptionsParser.parse(new String[] {
         "-noLocalWrite",
         "hdfs://localhost:8020/source/first",
         "hdfs://localhost:8020/target/"});
-    Assert.assertTrue(options.shouldNoLocalWrite());
+    Assert.assertTrue("Failed to parse option -noLocalWrite correctly.",
+        options.shouldNoLocalWrite());
   }
 }

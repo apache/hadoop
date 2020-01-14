@@ -629,7 +629,8 @@ public class TestIntegration {
         long blockSize, Progressable progress, ChecksumOpt checksumOpt)
         throws IOException {
       // check flags in create-op should contain NO_LOCAL_WRITE
-      Assert.assertTrue(flags.contains(CreateFlag.NO_LOCAL_WRITE));
+      Assert.assertTrue("Should contain flag NO_LOCAL_WRITE.",
+          flags.contains(CreateFlag.NO_LOCAL_WRITE));
       return super.create(f, permission, flags, bufferSize, replication,
           blockSize, progress, checksumOpt);
 
