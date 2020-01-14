@@ -63,7 +63,7 @@ public class ProtobufHelper {
    * methods instead.
    */
   private final static ConcurrentHashMap<Object, ByteString>
-      fixedByteStringCache = new ConcurrentHashMap<>();
+      FIXED_BYTESTRING_CACHE = new ConcurrentHashMap<>();
 
   /**
    * Get the ByteString for frequently used fixed and small set strings.
@@ -71,10 +71,10 @@ public class ProtobufHelper {
    * @return
    */
   public static ByteString getFixedByteString(Text key) {
-    ByteString value = fixedByteStringCache.get(key);
+    ByteString value = FIXED_BYTESTRING_CACHE.get(key);
     if (value == null) {
       value = ByteString.copyFromUtf8(key.toString());
-      fixedByteStringCache.put(new Text(key.copyBytes()), value);
+      FIXED_BYTESTRING_CACHE.put(new Text(key.copyBytes()), value);
     }
     return value;
   }
@@ -85,10 +85,10 @@ public class ProtobufHelper {
    * @return
    */
   public static ByteString getFixedByteString(String key) {
-    ByteString value = fixedByteStringCache.get(key);
+    ByteString value = FIXED_BYTESTRING_CACHE.get(key);
     if (value == null) {
       value = ByteString.copyFromUtf8(key);
-      fixedByteStringCache.put(key, value);
+      FIXED_BYTESTRING_CACHE.put(key, value);
     }
     return value;
   }
