@@ -29,6 +29,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.util.Calendar;
 import java.util.Date;
@@ -246,6 +248,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private static final String AZURE_ROOT_CONTAINER = "$root";
 
   private static final int DEFAULT_CONCURRENT_WRITES = 8;
+
+  private static final Charset METADATA_ENCODING = StandardCharsets.UTF_8;
 
   // Concurrent reads reads of data written out of band are disable by default.
   //
@@ -1662,17 +1666,30 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     removeMetadataAttribute(blob, OLD_IS_FOLDER_METADATA_KEY);
   }
 
-  private static void storeLinkAttribute(CloudBlobWrapper blob,
-      String linkTarget) throws UnsupportedEncodingException {
-    // We have to URL encode the link attribute as the link URI could
+  private static String encodeMetadataAttribute(String value) throws UnsupportedEncodingException {
+    // We have to URL encode the attribute as it could
     // have URI special characters which unless encoded will result
     // in 403 errors from the server. This is due to metadata properties
     // being sent in the HTTP header of the request which is in turn used
     // on the server side to authorize the request.
-    String encodedLinkTarget = null;
-    if (linkTarget != null) {
-      encodedLinkTarget = URLEncoder.encode(linkTarget, "UTF-8");
-    }
+    return value == null ? null : URLEncoder.encode(value, METADATA_ENCODING.name());
+  }
+
+  private static String decodeMetadataAttribute(String encoded) throws UnsupportedEncodingException {
+    return encoded == null ? null : URLDecoder.decode(encoded, METADATA_ENCODING.name());
+  }
+
+  private static String ensureValidAttributeName(String attribute) {
+    // Attribute names must be valid C# identifiers so we have to
+    // convert the namespace dots (e.g. "user.something") in the
+    // attribute names. Using underscores here to be consistent with
+    // the constant metadata keys defined earlier in the file
+    return attribute.replace('.', '_');
+  }
+
+  private static void storeLinkAttribute(CloudBlobWrapper blob,
+      String linkTarget) throws UnsupportedEncodingException {
+    String encodedLinkTarget = encodeMetadataAttribute(linkTarget);
     storeMetadataAttribute(blob,
         LINK_BACK_TO_UPLOAD_IN_PROGRESS_METADATA_KEY,
         encodedLinkTarget);
@@ -1686,11 +1703,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     String encodedLinkTarget = getMetadataAttribute(blob,
         LINK_BACK_TO_UPLOAD_IN_PROGRESS_METADATA_KEY,
         OLD_LINK_BACK_TO_UPLOAD_IN_PROGRESS_METADATA_KEY);
-    String linkTarget = null;
-    if (encodedLinkTarget != null) {
-      linkTarget = URLDecoder.decode(encodedLinkTarget, "UTF-8");
-    }
-    return linkTarget;
+    return decodeMetadataAttribute(encodedLinkTarget);
   }
 
   private static boolean retrieveFolderAttribute(CloudBlobWrapper blob) {
@@ -2207,6 +2220,36 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
     } catch (Exception e) {
       // Re-throw the exception as an Azure storage exception.
+      throw new AzureException(e);
+    }
+  }
+
+  @Override
+  public byte[] retrieveAttribute(String key, String attribute) throws IOException {
+    try {
+      checkContainer(ContainerAccessType.PureRead);
+      CloudBlobWrapper blob = getBlobReference(key);
+      blob.downloadAttributes(getInstrumentedContext());
+
+      String value = getMetadataAttribute(blob, ensureValidAttributeName(attribute));
+      value = decodeMetadataAttribute(value);
+      return value == null ? null : value.getBytes(METADATA_ENCODING);
+    } catch (Exception e) {
+      throw new AzureException(e);
+    }
+  }
+
+  @Override
+  public void storeAttribute(String key, String attribute, byte[] value) throws IOException {
+    try {
+      checkContainer(ContainerAccessType.ReadThenWrite);
+      CloudBlobWrapper blob = getBlobReference(key);
+      blob.downloadAttributes(getInstrumentedContext());
+
+      String encodedValue = encodeMetadataAttribute(new String(value, METADATA_ENCODING));
+      storeMetadataAttribute(blob, ensureValidAttributeName(attribute), encodedValue);
+      blob.uploadMetadata(getInstrumentedContext());
+    } catch (Exception e) {
       throw new AzureException(e);
     }
   }
