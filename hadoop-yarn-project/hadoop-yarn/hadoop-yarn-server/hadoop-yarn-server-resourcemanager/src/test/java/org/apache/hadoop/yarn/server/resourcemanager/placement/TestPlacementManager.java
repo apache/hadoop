@@ -22,6 +22,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.MappingType;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -70,11 +72,13 @@ public class TestPlacementManager {
         .getQueuePlacementManager();
 
     List<PlacementRule> queuePlacementRules = new ArrayList<>();
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping =
-        new UserGroupMappingPlacementRule.QueueMapping(
-            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-            USER1,
-            getQueueMapping(PARENT_QUEUE, USER1));
+    QueueMapping userQueueMapping = QueueMappingBuilder.create()
+                                          .type(MappingType.USER)
+                                          .source(USER1)
+                                          .queue(
+                                              getQueueMapping(PARENT_QUEUE,
+                                                  USER1))
+                                          .build();
 
     UserGroupMappingPlacementRule ugRule = new UserGroupMappingPlacementRule(
         false, Arrays.asList(userQueueMapping), null);
