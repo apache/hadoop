@@ -215,6 +215,7 @@ public class FairScheduler extends
   Resource reservationThreshold;
 
   private boolean migration;
+  private boolean noTerminalRuleCheck;
 
   public FairScheduler() {
     super(FairScheduler.class.getName());
@@ -1502,6 +1503,10 @@ public class FairScheduler extends
   public void serviceInit(Configuration conf) throws Exception {
     migration =
         conf.getBoolean(FairSchedulerConfiguration.MIGRATION_MODE, false);
+    noTerminalRuleCheck = migration &&
+        conf.getBoolean(FairSchedulerConfiguration.NO_TERMINAL_RULE_CHECK,
+            false);
+
     initScheduler(conf);
     super.serviceInit(conf);
 
@@ -2000,5 +2005,9 @@ public class FairScheduler extends
       throws YarnException {
     throw new YarnException(
         "Update application priority is not supported in Fair Scheduler");
+  }
+
+  public boolean isNoTerminalRuleCheck() {
+    return noTerminalRuleCheck;
   }
 }
