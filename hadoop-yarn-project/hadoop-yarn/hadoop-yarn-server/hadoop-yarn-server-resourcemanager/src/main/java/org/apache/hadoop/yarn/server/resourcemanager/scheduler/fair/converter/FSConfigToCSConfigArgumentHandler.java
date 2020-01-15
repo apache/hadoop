@@ -85,6 +85,11 @@ public class FSConfigToCSConfigArgumentHandler {
             true),
     DRY_RUN("dry run", "d", "dry-run", "Performs a dry-run of the conversion." +
             "Outputs whether the conversion is possible or not.", false),
+    NO_TERMINAL_RULE_CHECK("no terminal rule check", "t",
+        "no-terminal-rule-check",
+        "Disables checking whether a placement rule is terminal to maintain" +
+        " backward compatibility with configs that were made before YARN-8967.",
+        false),
     HELP("help", "h", "help", "Displays the list of options", false);
 
     private final String name;
@@ -180,6 +185,8 @@ public class FSConfigToCSConfigArgumentHandler {
       CommandLine cliParser) {
     conversionOptions.setDryRun(
         cliParser.hasOption(CliOption.DRY_RUN.shortSwitch));
+    conversionOptions.setNoTerminalRuleCheck(
+        cliParser.hasOption(CliOption.NO_TERMINAL_RULE_CHECK.shortSwitch));
 
     checkOptionPresent(cliParser, CliOption.YARN_SITE);
     checkOutputDefined(cliParser);

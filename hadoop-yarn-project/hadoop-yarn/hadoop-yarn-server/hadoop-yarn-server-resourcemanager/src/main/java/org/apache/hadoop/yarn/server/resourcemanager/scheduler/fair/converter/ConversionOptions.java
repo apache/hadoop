@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 public class ConversionOptions {
   private DryRunResultHolder dryRunResultHolder;
   private boolean dryRun;
+  private boolean noTerminalRuleCheck;
 
   public ConversionOptions(DryRunResultHolder dryRunResultHolder,
       boolean dryRun) {
@@ -30,6 +31,14 @@ public class ConversionOptions {
 
   public void setDryRun(boolean dryRun) {
     this.dryRun = dryRun;
+  }
+
+  public void setNoTerminalRuleCheck(boolean ruleTerminalCheck) {
+    this.noTerminalRuleCheck = ruleTerminalCheck;
+  }
+
+  public boolean isNoRuleTerminalCheck() {
+    return noTerminalRuleCheck;
   }
 
   public void handleWarning(String msg, Logger log) {
