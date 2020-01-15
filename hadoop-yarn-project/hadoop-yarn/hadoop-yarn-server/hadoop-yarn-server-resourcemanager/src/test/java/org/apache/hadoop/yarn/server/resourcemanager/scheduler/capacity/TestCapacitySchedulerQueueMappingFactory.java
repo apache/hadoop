@@ -26,6 +26,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.MappingType;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMappingEntity;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -62,19 +65,19 @@ public class TestCapacitySchedulerQueueMappingFactory {
 
     conf.setQueuePlacementRules(queuePlacementRules);
 
-    List<UserGroupMappingPlacementRule.QueueMapping> existingMappingsForUG =
-        conf.getQueueMappings();
+    List<QueueMapping> existingMappingsForUG = conf.getQueueMappings();
 
     //set queue mapping
-    List<UserGroupMappingPlacementRule.QueueMapping> queueMappingsForUG =
-        new ArrayList<>();
+    List<QueueMapping> queueMappingsForUG = new ArrayList<>();
     for (int i = 0; i < sourceIds.length; i++) {
       //Set C as parent queue name for auto queue creation
-      UserGroupMappingPlacementRule.QueueMapping userQueueMapping =
-          new UserGroupMappingPlacementRule.QueueMapping(
-              UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-              USER + sourceIds[i],
-              getQueueMapping(parentQueue, USER + sourceIds[i]));
+      QueueMapping userQueueMapping = QueueMappingBuilder.create()
+                                          .type(MappingType.USER)
+                                          .source(USER + sourceIds[i])
+                                          .queue(
+                                              getQueueMapping(parentQueue,
+                                                  USER + sourceIds[i]))
+                                          .build();
       queueMappingsForUG.add(userQueueMapping);
     }
 
@@ -152,23 +155,25 @@ public class TestCapacitySchedulerQueueMappingFactory {
     queuePlacementRules.add(QUEUE_MAPPING_RULE_USER_GROUP);
     conf.setQueuePlacementRules(queuePlacementRules);
 
-    List<UserGroupMappingPlacementRule.QueueMapping> existingMappingsForUG =
-        conf.getQueueMappings();
+    List<QueueMapping> existingMappingsForUG = conf.getQueueMappings();
 
     // set queue mapping
-    List<UserGroupMappingPlacementRule.QueueMapping> queueMappingsForUG =
-        new ArrayList<>();
+    List<QueueMapping> queueMappingsForUG = new ArrayList<>();
 
     // u:user1:b1
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping1 =
-        new UserGroupMappingPlacementRule.QueueMapping(
-          UserGroupMappingPlacementRule.QueueMapping.MappingType.USER, "user1",
-          "b1");
+    QueueMapping userQueueMapping1 = QueueMappingBuilder.create()
+                                        .type(QueueMapping.MappingType.USER)
+                                        .source("user1")
+                                        .queue("b1")
+                                        .build();
+
     // u:%user:parentqueue.%user
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping2 =
-        new UserGroupMappingPlacementRule.QueueMapping(
-          UserGroupMappingPlacementRule.QueueMapping.MappingType.USER, "%user",
-          getQueueMapping("c", "%user"));
+    QueueMapping userQueueMapping2 = QueueMappingBuilder.create()
+                                        .type(QueueMapping.MappingType.USER)
+                                        .source("%user")
+                                        .queue(getQueueMapping("c", "%user"))
+                                        .build();
+
     queueMappingsForUG.add(userQueueMapping1);
     queueMappingsForUG.add(userQueueMapping2);
 
@@ -221,26 +226,32 @@ public class TestCapacitySchedulerQueueMappingFactory {
      */
 
     // set queue mapping
-    List<UserGroupMappingPlacementRule.QueueMapping> queueMappingsForUG =
-        new ArrayList<>();
+    List<QueueMapping> queueMappingsForUG = new ArrayList<>();
 
     // u:%user:%primary_group.%user
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping1 =
-        new UserGroupMappingPlacementRule.QueueMapping(
-            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-            "%user", getQueueMapping("%primary_group", "%user"));
+    QueueMapping userQueueMapping1 = QueueMappingBuilder.create()
+                                        .type(QueueMapping.MappingType.USER)
+                                        .source("%user")
+                                        .queue(
+                                            getQueueMapping("%primary_group",
+                                                "%user"))
+                                        .build();
 
     // u:%user:%secondary_group.%user
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping2 =
-        new UserGroupMappingPlacementRule.QueueMapping(
-            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-            "%user", getQueueMapping("%secondary_group", "%user"));
+    QueueMapping userQueueMapping2 = QueueMappingBuilder.create()
+                                        .type(QueueMapping.MappingType.USER)
+                                        .source("%user")
+                                        .queue(
+                                            getQueueMapping("%secondary_group",
+                                                "%user"))
+                                        .build();
 
     // u:b4:%secondary_group
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping3 =
-        new UserGroupMappingPlacementRule.QueueMapping(
-            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-            "b4", "%secondary_group");
+    QueueMapping userQueueMapping3 = QueueMappingBuilder.create()
+                                        .type(QueueMapping.MappingType.USER)
+                                        .source("b4")
+                                        .queue("%secondary_group")
+                                        .build();
     queueMappingsForUG.add(userQueueMapping1);
     queueMappingsForUG.add(userQueueMapping2);
     queueMappingsForUG.add(userQueueMapping3);
@@ -276,20 +287,26 @@ public class TestCapacitySchedulerQueueMappingFactory {
      */
 
     // set queue mapping
-    List<UserGroupMappingPlacementRule.QueueMapping> queueMappingsForUG =
-        new ArrayList<>();
+    List<QueueMapping> queueMappingsForUG = new ArrayList<>();
 
     // u:%user:%primary_group.%user
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping1 =
-        new UserGroupMappingPlacementRule.QueueMapping(
-            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-            "%user", getQueueMapping("%primary_group", "%user"));
+    QueueMapping userQueueMapping1 = QueueMappingBuilder.create()
+                                          .type(QueueMapping.MappingType.USER)
+                                          .source("%user")
+                                          .queue(
+                                              getQueueMapping("%primary_group",
+                                                  "%user"))
+                                          .build();
 
     // u:%user:%secondary_group.%user
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping2 =
-        new UserGroupMappingPlacementRule.QueueMapping(
-            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-            "%user", getQueueMapping("%secondary_group", "%user"));
+    QueueMapping userQueueMapping2 = QueueMappingBuilder.create()
+                                          .type(QueueMapping.MappingType.USER)
+                                          .source("%user")
+                                          .queue(
+                                              getQueueMapping(
+                                                  "%secondary_group", "%user")
+                                              )
+                                          .build();
 
     queueMappingsForUG.add(userQueueMapping2);
     queueMappingsForUG.add(userQueueMapping1);
@@ -298,8 +315,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
   }
 
   private void testNestedUserQueueWithDynamicParentQueue(
-      List<UserGroupMappingPlacementRule.QueueMapping> mapping, boolean primary,
-      String user)
+      List<QueueMapping> mapping, boolean primary, String user)
       throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
@@ -312,8 +328,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
     queuePlacementRules.add(QUEUE_MAPPING_RULE_USER_GROUP);
     conf.setQueuePlacementRules(queuePlacementRules);
 
-    List<UserGroupMappingPlacementRule.QueueMapping> existingMappingsForUG =
-        conf.getQueueMappings();
+    List<QueueMapping> existingMappingsForUG = conf.getQueueMappings();
 
     existingMappingsForUG.addAll(mapping);
     conf.setQueueMappings(existingMappingsForUG);
@@ -367,24 +382,24 @@ public class TestCapacitySchedulerQueueMappingFactory {
     queuePlacementRules.add(QUEUE_MAPPING_RULE_USER_GROUP);
     conf.setQueuePlacementRules(queuePlacementRules);
 
-    List<UserGroupMappingPlacementRule.QueueMapping> existingMappingsForUG =
-        conf.getQueueMappings();
+    List<QueueMapping> existingMappingsForUG = conf.getQueueMappings();
 
     // set queue mapping
-    List<UserGroupMappingPlacementRule.QueueMapping> queueMappingsForUG =
-        new ArrayList<>();
+    List<QueueMapping> queueMappingsForUG = new ArrayList<>();
 
     // u:user1:b1
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping1 =
-        new UserGroupMappingPlacementRule.QueueMapping(
-            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-            "user1", "b1");
+    QueueMapping userQueueMapping1 = QueueMappingBuilder.create()
+                                          .type(QueueMapping.MappingType.USER)
+                                          .source("user1")
+                                          .queue("b1")
+                                          .build();
 
     // u:user2:%primary_group
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping2 =
-        new UserGroupMappingPlacementRule.QueueMapping(
-            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-            "user2", "%primary_group");
+    QueueMapping userQueueMapping2 = QueueMappingBuilder.create()
+                                          .type(QueueMapping.MappingType.USER)
+                                          .source("user2")
+                                          .queue("%primary_group")
+                                          .build();
 
     queueMappingsForUG.add(userQueueMapping1);
     queueMappingsForUG.add(userQueueMapping2);
@@ -436,30 +451,31 @@ public class TestCapacitySchedulerQueueMappingFactory {
     queuePlacementRules.add(QUEUE_MAPPING_RULE_USER_GROUP);
     conf.setQueuePlacementRules(queuePlacementRules);
 
-    List<UserGroupMappingPlacementRule.QueueMapping> existingMappingsForUG =
-        conf.getQueueMappings();
+    List<QueueMapping> existingMappingsForUG = conf.getQueueMappings();
 
     // set queue mapping
-    List<UserGroupMappingPlacementRule.QueueMapping> queueMappingsForUG =
-        new ArrayList<>();
+    List<QueueMapping> queueMappingsForUG = new ArrayList<>();
 
     // u:user1:b1
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping1 =
-        new UserGroupMappingPlacementRule.QueueMapping(
-            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-            "user1", "b1");
+    QueueMapping userQueueMapping1 = QueueMappingBuilder.create()
+                                          .type(QueueMapping.MappingType.USER)
+                                          .source("user1")
+                                          .queue("b1")
+                                          .build();
 
     // u:user2:%primary_group
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping2 =
-        new UserGroupMappingPlacementRule.QueueMapping(
-            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-            "user2", "%primary_group");
+    QueueMapping userQueueMapping2 = QueueMappingBuilder.create()
+                                          .type(QueueMapping.MappingType.USER)
+                                          .source("user2")
+                                          .queue("%primary_group")
+                                          .build();
 
     // u:b4:%secondary_group
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping3 =
-        new UserGroupMappingPlacementRule.QueueMapping(
-            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER, "b4",
-            "%secondary_group");
+    QueueMapping userQueueMapping3 = QueueMappingBuilder.create()
+                                          .type(QueueMapping.MappingType.USER)
+                                          .source("b4")
+                                          .queue("%secondary_group")
+                                          .build();
 
     queueMappingsForUG.add(userQueueMapping1);
     queueMappingsForUG.add(userQueueMapping2);

@@ -46,8 +46,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement
     .ApplicationPlacementContext;
-import org.apache.hadoop.yarn.server.resourcemanager.placement
-    .UserGroupMappingPlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
@@ -268,19 +268,19 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     queuePlacementRules.add(YarnConfiguration.USER_GROUP_PLACEMENT_RULE);
     conf.setQueuePlacementRules(queuePlacementRules);
 
-    List<UserGroupMappingPlacementRule.QueueMapping> existingMappings =
-        conf.getQueueMappings();
+    List<QueueMapping> existingMappings = conf.getQueueMappings();
 
     //set queue mapping
-    List<UserGroupMappingPlacementRule.QueueMapping> queueMappings =
-        new ArrayList<>();
+    List<QueueMapping> queueMappings = new ArrayList<>();
     for (int i = 0; i < userIds.length; i++) {
       //Set C as parent queue name for auto queue creation
-      UserGroupMappingPlacementRule.QueueMapping userQueueMapping =
-          new UserGroupMappingPlacementRule.QueueMapping(
-              UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-              USER + userIds[i],
-              getQueueMapping(parentQueue, USER + userIds[i]));
+      QueueMapping userQueueMapping = QueueMappingBuilder.create()
+                                          .type(QueueMapping.MappingType.USER)
+                                          .source(USER + userIds[i])
+                                          .queue(
+                                              getQueueMapping(parentQueue,
+                                                  USER + userIds[i]))
+                                          .build();
       queueMappings.add(userQueueMapping);
     }
 
@@ -295,12 +295,10 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
       (String parentQueue, CapacitySchedulerConfiguration conf, String
           leafQueueName) {
 
-    List<UserGroupMappingPlacementRule.QueueMapping> existingMappings =
-        conf.getQueueMappings();
+    List<QueueMapping> existingMappings = conf.getQueueMappings();
 
     //set queue mapping
-    List<UserGroupMappingPlacementRule.QueueMapping> queueMappings =
-        new ArrayList<>();
+    List<QueueMapping> queueMappings = new ArrayList<>();
 
     //setup group mapping
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
@@ -309,11 +307,13 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
         TEST_GROUPUSER +"=" + TEST_GROUP + ";invalid_user=invalid_group");
     Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(conf);
 
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping =
-        new UserGroupMappingPlacementRule.QueueMapping(
-            UserGroupMappingPlacementRule.QueueMapping.MappingType.GROUP,
-            TEST_GROUP,
-            getQueueMapping(parentQueue, leafQueueName));
+    QueueMapping userQueueMapping = QueueMappingBuilder.create()
+                                        .type(QueueMapping.MappingType.GROUP)
+                                        .source(TEST_GROUP)
+                                        .queue(
+                                            getQueueMapping(parentQueue,
+                                                leafQueueName))
+                                        .build();
 
     queueMappings.add(userQueueMapping);
     existingMappings.addAll(queueMappings);
@@ -514,13 +514,14 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     return rmApp.getApplicationId();
   }
 
-  protected List<UserGroupMappingPlacementRule.QueueMapping> setupQueueMapping(
+  protected List<QueueMapping> setupQueueMapping(
       CapacityScheduler newCS, String user, String parentQueue, String queue) {
-    List<UserGroupMappingPlacementRule.QueueMapping> queueMappings =
-        new ArrayList<>();
-    queueMappings.add(new UserGroupMappingPlacementRule.QueueMapping(
-        UserGroupMappingPlacementRule.QueueMapping.MappingType.USER, user,
-        getQueueMapping(parentQueue, queue)));
+    List<QueueMapping> queueMappings = new ArrayList<>();
+    queueMappings.add(QueueMappingBuilder.create()
+                          .type(QueueMapping.MappingType.USER)
+                          .source(user)
+                          .queue(getQueueMapping(parentQueue, queue))
+                          .build());
     newCS.getConfiguration().setQueueMappings(queueMappings);
     return queueMappings;
   }
