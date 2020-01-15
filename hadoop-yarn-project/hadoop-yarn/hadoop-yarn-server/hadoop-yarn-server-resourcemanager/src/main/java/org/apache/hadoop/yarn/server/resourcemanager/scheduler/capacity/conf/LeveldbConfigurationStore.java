@@ -75,7 +75,6 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
   private DB versiondb;
   private long maxLogs;
   private Configuration conf;
-  private LogMutation pendingMutation;
   @VisibleForTesting
   protected static final Version CURRENT_VERSION_INFO = Version
       .newInstance(0, 1);
@@ -232,11 +231,11 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
       }
       db.put(bytes(LOG_KEY), serLogMutations(logs));
     }
-    pendingMutation = logMutation;
   }
 
   @Override
-  public void confirmMutation(boolean isValid) throws IOException {
+  public void confirmMutation(LogMutation pendingMutation,
+      boolean isValid) throws IOException {
     WriteBatch updateBatch = db.createWriteBatch();
     if (isValid) {
       for (Map.Entry<String, String> changes :
@@ -252,7 +251,6 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
           bytes(String.valueOf(configVersion)));
     }
     db.write(updateBatch);
-    pendingMutation = null;
   }
 
   private byte[] serLogMutations(LinkedList<LogMutation> mutations) throws

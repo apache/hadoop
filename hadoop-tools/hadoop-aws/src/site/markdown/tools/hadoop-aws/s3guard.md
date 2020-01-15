@@ -227,7 +227,7 @@ hadoop s3guard import [-meta URI] s3a://my-bucket/file-with-bad-metadata
 ```
 
 Programmatic retries of the original operation would require overwrite=true.
-Suppose the original operation was FileSystem.create(myFile, overwrite=false).
+Suppose the original operation was `FileSystem.create(myFile, overwrite=false)`.
 If this operation failed with `MetadataPersistenceException` a repeat of the
 same operation would result in `FileAlreadyExistsException` since the original
 operation successfully created the file in S3 and only failed in writing the
@@ -244,7 +244,7 @@ by setting the following configuration:
 ```
 
 Setting this false is dangerous as it could result in the type of issue S3Guard
-is designed to avoid.  For example, a reader may see an inconsistent listing
+is designed to avoid. For example, a reader may see an inconsistent listing
 after a recent write since S3Guard may not contain metadata about the recently
 written file due to a metadata write error.
 
@@ -622,20 +622,64 @@ if these are both zero then it will be an on-demand table.
 ### Import a bucket: `s3guard import`
 
 ```bash
-hadoop s3guard import [-meta URI] s3a://BUCKET
+hadoop s3guard import [-meta URI] [-authoritative] [-verbose] s3a://PATH
 ```
 
 Pre-populates a metadata store according to the current contents of an S3
-bucket. If the `-meta` option is omitted, the binding information is taken
+bucket/path. If the `-meta` option is omitted, the binding information is taken
 from the `core-site.xml` configuration.
 
+Usage
+
+```
+hadoop s3guard import
+
+import [OPTIONS] [s3a://PATH]
+    import metadata from existing S3 data
+
+Common options:
+  -authoritative - Mark imported directory data as authoritative.
+  -verbose - Verbose Output.
+  -meta URL - Metadata repository details (implementation-specific)
+
+Amazon DynamoDB-specific options:
+  -region REGION - Service region for connections
+
+  URLs for Amazon DynamoDB are of the form dynamodb://TABLE_NAME.
+  Specifying both the -region option and an S3A path
+  is not supported.
+```
+
 Example
+
+Import all files and directories in a bucket into the S3Guard table.
 
 ```bash
 hadoop s3guard import s3a://ireland-1
 ```
 
-### Audit a table: `s3guard diff`
+Import a directory tree, marking directories as authoritative.
+
+```bash
+hadoop s3guard import -authoritative -verbose s3a://ireland-1/fork-0008
+
+2020-01-03 12:05:18,321 [main] INFO - Metadata store DynamoDBMetadataStore{region=eu-west-1,
+ tableName=s3guard-metadata, tableArn=arn:aws:dynamodb:eu-west-1:980678866538:table/s3guard-metadata} is initialized.
+2020-01-03 12:05:18,324 [main] INFO - Starting: Importing s3a://ireland-1/fork-0008
+2020-01-03 12:05:18,324 [main] INFO - Importing directory s3a://ireland-1/fork-0008
+2020-01-03 12:05:18,537 [main] INFO - Dir  s3a://ireland-1/fork-0008/test/doTestListFiles-0-0-0-false
+2020-01-03 12:05:18,630 [main] INFO - Dir  s3a://ireland-1/fork-0008/test/doTestListFiles-0-0-0-true
+2020-01-03 12:05:19,142 [main] INFO - Dir  s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-false/dir-0
+2020-01-03 12:05:19,191 [main] INFO - Dir  s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-false/dir-1
+2020-01-03 12:05:19,240 [main] INFO - Dir  s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-true/dir-0
+2020-01-03 12:05:19,289 [main] INFO - Dir  s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-true/dir-1
+2020-01-03 12:05:19,314 [main] INFO - Updated S3Guard with 0 files and 6 directory entries
+2020-01-03 12:05:19,315 [main] INFO - Marking directory tree s3a://ireland-1/fork-0008 as authoritative
+2020-01-03 12:05:19,342 [main] INFO - Importing s3a://ireland-1/fork-0008: duration 0:01.018s
+Inserted 6 items into Metadata Store
+```
+
+### Compare a S3Guard table and the S3 Store: `s3guard diff`
 
 ```bash
 hadoop s3guard diff [-meta URI] s3a://BUCKET
@@ -856,9 +900,147 @@ the table associated with `s3a://ireland-1` and with the prefix `path_prefix`
 hadoop s3guard prune -hours 1 -minutes 30 -meta dynamodb://ireland-team -region eu-west-1
 ```
 
-Delete all entries more than 90 minutes old from the table "`ireland-team"` in
+Delete all file entries more than 90 minutes old from the table "`ireland-team"` in
 the region `eu-west-1`.
 
+
+### Audit the "authoritative state of a DynamoDB Table, `s3guard authoritative`
+
+This recursively checks a S3Guard table to verify that all directories
+underneath are marked as "authoritative", and/or that the configuration
+is set for the S3A client to treat files and directories urnder the path
+as authoritative.
+
+```
+hadoop s3guard authoritative
+
+authoritative [OPTIONS] [s3a://PATH]
+    Audits a DynamoDB S3Guard repository for all the entries being 'authoritative'
+
+Options:
+  -required Require directories under the path to be authoritative.
+  -check-config Check the configuration for the path to be authoritative
+  -verbose Verbose Output.
+```
+
+Verify that a path under an object store is declared to be authoritative
+in the cluster configuration -and therefore that file entries will not be
+validated against S3, and that directories marked as "authoritative" in the
+S3Guard table will be treated as complete.
+
+```bash
+hadoop s3guard authoritative -check-config s3a:///ireland-1/fork-0003/test/
+
+2020-01-03 11:42:29,147 [main] INFO  Metadata store DynamoDBMetadataStore{
+  region=eu-west-1, tableName=s3guard-metadata, tableArn=arn:aws:dynamodb:eu-west-1:980678866538:table/s3guard-metadata} is initialized.
+Path /fork-0003/test is not configured to be authoritative
+```
+
+Scan a store and report which directories are not marked as authoritative.
+
+```bash
+hadoop s3guard authoritative s3a://ireland-1/
+
+2020-01-03 11:51:58,416 [main] INFO  - Metadata store DynamoDBMetadataStore{region=eu-west-1, tableName=s3guard-metadata, tableArn=arn:aws:dynamodb:eu-west-1:980678866538:table/s3guard-metadata} is initialized.
+2020-01-03 11:51:58,419 [main] INFO  - Starting: audit s3a://ireland-1/
+2020-01-03 11:51:58,422 [main] INFO  - Root directory s3a://ireland-1/
+2020-01-03 11:51:58,469 [main] INFO  -   files 4; directories 12
+2020-01-03 11:51:58,469 [main] INFO  - Directory s3a://ireland-1/Users
+2020-01-03 11:51:58,521 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:58,522 [main] INFO  - Directory s3a://ireland-1/fork-0007
+2020-01-03 11:51:58,573 [main] INFO  - Directory s3a://ireland-1/fork-0001
+2020-01-03 11:51:58,626 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:58,626 [main] INFO  - Directory s3a://ireland-1/fork-0006
+2020-01-03 11:51:58,676 [main] INFO  - Directory s3a://ireland-1/path
+2020-01-03 11:51:58,734 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:58,735 [main] INFO  - Directory s3a://ireland-1/fork-0008
+2020-01-03 11:51:58,802 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:58,802 [main] INFO  - Directory s3a://ireland-1/fork-0004
+2020-01-03 11:51:58,854 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:58,855 [main] WARN   - Directory s3a://ireland-1/fork-0003 is not authoritative
+2020-01-03 11:51:58,905 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:58,906 [main] INFO  - Directory s3a://ireland-1/fork-0005
+2020-01-03 11:51:58,955 [main] INFO  - Directory s3a://ireland-1/customsignerpath2
+2020-01-03 11:51:59,006 [main] INFO  - Directory s3a://ireland-1/fork-0002
+2020-01-03 11:51:59,063 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:59,064 [main] INFO  - Directory s3a://ireland-1/customsignerpath1
+2020-01-03 11:51:59,121 [main] INFO  - Directory s3a://ireland-1/Users/stevel
+2020-01-03 11:51:59,170 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:59,171 [main] INFO  - Directory s3a://ireland-1/fork-0001/test
+2020-01-03 11:51:59,233 [main] INFO  - Directory s3a://ireland-1/path/style
+2020-01-03 11:51:59,282 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:59,282 [main] INFO  - Directory s3a://ireland-1/fork-0008/test
+2020-01-03 11:51:59,338 [main] INFO  -   files 15; directories 10
+2020-01-03 11:51:59,339 [main] INFO  - Directory s3a://ireland-1/fork-0004/test
+2020-01-03 11:51:59,394 [main] WARN   - Directory s3a://ireland-1/fork-0003/test is not authoritative
+2020-01-03 11:51:59,451 [main] INFO  -   files 35; directories 1
+2020-01-03 11:51:59,451 [main] INFO  - Directory s3a://ireland-1/fork-0002/test
+2020-01-03 11:51:59,508 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects
+2020-01-03 11:51:59,558 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:59,559 [main] INFO  - Directory s3a://ireland-1/path/style/access
+2020-01-03 11:51:59,610 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-2-0-false
+2020-01-03 11:51:59,660 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-2-1-false
+2020-01-03 11:51:59,719 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-0-0-true
+2020-01-03 11:51:59,773 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-true
+2020-01-03 11:51:59,824 [main] INFO  -   files 0; directories 2
+2020-01-03 11:51:59,824 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-2-1-true
+2020-01-03 11:51:59,879 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-0-1-false
+2020-01-03 11:51:59,939 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-0-0-false
+2020-01-03 11:51:59,990 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-2-0-true
+2020-01-03 11:52:00,042 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-false
+2020-01-03 11:52:00,094 [main] INFO  -   files 0; directories 2
+2020-01-03 11:52:00,094 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-0-1-true
+2020-01-03 11:52:00,144 [main] WARN   - Directory s3a://ireland-1/fork-0003/test/ancestor is not authoritative
+2020-01-03 11:52:00,197 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk
+2020-01-03 11:52:00,245 [main] INFO  -   files 0; directories 1
+2020-01-03 11:52:00,245 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-true/dir-0
+2020-01-03 11:52:00,296 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-true/dir-1
+2020-01-03 11:52:00,346 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-false/dir-0
+2020-01-03 11:52:00,397 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-false/dir-1
+2020-01-03 11:52:00,479 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk/hadoop-tools
+2020-01-03 11:52:00,530 [main] INFO  -   files 0; directories 1
+2020-01-03 11:52:00,530 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws
+2020-01-03 11:52:00,582 [main] INFO  -   files 0; directories 1
+2020-01-03 11:52:00,582 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target
+2020-01-03 11:52:00,636 [main] INFO  -   files 0; directories 1
+2020-01-03 11:52:00,637 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target/test-dir
+2020-01-03 11:52:00,691 [main] INFO  -   files 0; directories 3
+2020-01-03 11:52:00,691 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target/test-dir/2
+2020-01-03 11:52:00,752 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target/test-dir/5
+2020-01-03 11:52:00,807 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target/test-dir/8
+2020-01-03 11:52:00,862 [main] INFO   - Scanned 45 directories - 3 were not marked as authoritative
+2020-01-03 11:52:00,863 [main] INFO  - audit s3a://ireland-1/: duration 0:02.444s
+```
+
+Scan the path/bucket and fail if any entry is non-authoritative.
+
+```bash
+hadoop s3guard authoritative -verbose -required s3a://ireland-1/
+
+2020-01-03 11:47:40,288 [main] INFO  - Metadata store DynamoDBMetadataStore{region=eu-west-1, tableName=s3guard-metadata, tableArn=arn:aws:dynamodb:eu-west-1:980678866538:table/s3guard-metadata} is initialized.
+2020-01-03 11:47:40,291 [main] INFO  - Starting: audit s3a://ireland-1/
+2020-01-03 11:47:40,295 [main] INFO  - Root directory s3a://ireland-1/
+2020-01-03 11:47:40,336 [main] INFO  -  files 4; directories 12
+2020-01-03 11:47:40,336 [main] INFO  - Directory s3a://ireland-1/Users
+2020-01-03 11:47:40,386 [main] INFO  -  files 0; directories 1
+2020-01-03 11:47:40,386 [main] INFO  - Directory s3a://ireland-1/fork-0007
+2020-01-03 11:47:40,435 [main] INFO  -  files 1; directories 0
+2020-01-03 11:47:40,435 [main] INFO  - Directory s3a://ireland-1/fork-0001
+2020-01-03 11:47:40,486 [main] INFO  -  files 0; directories 1
+2020-01-03 11:47:40,486 [main] INFO  - Directory s3a://ireland-1/fork-0006
+2020-01-03 11:47:40,534 [main] INFO  -  files 1; directories 0
+2020-01-03 11:47:40,535 [main] INFO  - Directory s3a://ireland-1/path
+2020-01-03 11:47:40,587 [main] INFO  -  files 0; directories 1
+2020-01-03 11:47:40,588 [main] INFO  - Directory s3a://ireland-1/fork-0008
+2020-01-03 11:47:40,641 [main] INFO  -  files 0; directories 1
+2020-01-03 11:47:40,642 [main] INFO  - Directory s3a://ireland-1/fork-0004
+2020-01-03 11:47:40,692 [main] INFO  -  files 0; directories 1
+2020-01-03 11:47:40,693 [main] WARN  - Directory s3a://ireland-1/fork-0003 is not authoritative
+2020-01-03 11:47:40,693 [main] INFO  - audit s3a://ireland-1/: duration 0:00.402s
+2020-01-03 11:47:40,698 [main] INFO  - Exiting with status 46: `s3a://ireland-1/fork-0003': Directory is not marked as authoritative in the S3Guard store
+```
+
+This command is primarily for testing.
 
 ### Tune the I/O capacity of the DynamoDB Table, `s3guard set-capacity`
 

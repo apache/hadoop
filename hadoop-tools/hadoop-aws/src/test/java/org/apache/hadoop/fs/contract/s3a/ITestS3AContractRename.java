@@ -18,7 +18,13 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.util.Arrays;
+import java.util.Collection;
+
+import org.junit.Assume;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,17 +40,38 @@ import org.apache.hadoop.fs.s3a.Statistic;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
+import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.S3A_TEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
 /**
  * S3A contract tests covering rename.
+ * Parameterized for auth mode as testRenameWithNonEmptySubDir was failing
+ * during HADOOP-16697 development; this lets us ensure that when S3Guard
+ * is enabled, both auth and nonauth paths work
  */
+@RunWith(Parameterized.class)
 public class ITestS3AContractRename extends AbstractContractRenameTest {
 
   public static final Logger LOG = LoggerFactory.getLogger(
       ITestS3AContractRename.class);
 
+  private final boolean authoritative;
+
+  /**
+   * Parameterization.
+   */
+  @Parameterized.Parameters(name = "auth={0}")
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {false},
+        {true}
+    });
+  }
+
+  public ITestS3AContractRename(boolean authoritative) {
+    this.authoritative = authoritative;
+  }
 
   @Override
   protected int getTestTimeoutMillis() {
@@ -60,6 +87,7 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
     Configuration conf = super.createConfiguration();
     // patch in S3Guard options
     maybeEnableS3Guard(conf);
+    conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritative);
     return conf;
   }
 
@@ -69,9 +97,11 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
   }
 
   @Override
-  public void teardown() throws Exception {
-    describe("\nTeardown\n");
-    super.teardown();
+  public void setup() throws Exception {
+    super.setup();
+    Assume.assumeTrue(
+        "Skipping auth mode tests when the FS doesn't have a metastore",
+        !authoritative || ((S3AFileSystem) getFileSystem()).hasMetadataStore());
   }
 
   @Override

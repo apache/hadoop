@@ -31,7 +31,7 @@
 
   <properties>
     <!-- Set the Release year during release -->
-    <release-year>2019</release-year>
+    <release-year>2020</release-year>
 
     <failIfNoTests>false</failIfNoTests>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
@@ -48,7 +48,7 @@
     <!-- Version number for xerces used by JDiff -->
     <xerces.jdiff.version>2.11.0</xerces.jdiff.version>
 
-    <kafka.version>0.8.2.1</kafka.version>
+    <kafka.version>2.4.0</kafka.version>
 
     <hadoop.assemblies.version>3.3.0-SNAPSHOT</hadoop.assemblies.version>
     <commons-daemon.version>1.0.13</commons-daemon.version>
@@ -70,7 +70,7 @@
     <!-- jackson versions -->
     <jackson.version>1.9.13</jackson.version>
     <jackson2.version>2.9.10</jackson2.version>
-    <jackson2.databind.version>2.9.10.1</jackson2.databind.version>
+    <jackson2.databind.version>2.9.10.2</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.6</httpclient.version>
@@ -107,10 +107,17 @@
     <!-- Apache Commons dependencies -->
     <commons-beanutils.version>1.9.4</commons-beanutils.version>
     <commons-cli.version>1.2</commons-cli.version>
+    <commons-codec.version>1.11</commons-codec.version>
     <commons-collections.version>3.2.2</commons-collections.version>
+    <commons-compress.version>1.19</commons-compress.version>
+    <commons-csv.version>1.0</commons-csv.version>
     <commons-io.version>2.5</commons-io.version>
     <commons-lang3.version>3.7</commons-lang3.version>
+    <commons-logging.version>1.1.3</commons-logging.version>
+    <commons-logging-api.version>1.1</commons-logging-api.version>
     <commons-math3.version>3.1.1</commons-math3.version>
+    <commons-net.version>3.6</commons-net.version>
+    <commons-text.version>1.4</commons-text.version>
 
     <kerby.version>1.0.1</kerby.version>
     <jcache.version>1.0-alpha-1</jcache.version>
@@ -118,8 +125,13 @@
     <hikari.version>2.4.12</hikari.version>
     <mssql.version>6.2.1.jre7</mssql.version>
     <okhttp.version>2.7.5</okhttp.version>
+    <jdom.version>1.1</jdom.version>
     <jna.version>5.2.0</jna.version>
+    <grizzly.version>2.2.21</grizzly.version>
     <gson.version>2.2.4</gson.version>
+    <htrace3.version>3.1.0-incubating</htrace3.version>
+    <htrace4.version>4.1.0-incubating</htrace4.version>
+    <metrics.version>3.2.4</metrics.version>
     <netty3.version>3.10.6.Final</netty3.version>
     <netty4.version>4.1.42.Final</netty4.version>
 
@@ -650,12 +662,12 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-compress</artifactId>
-        <version>1.19</version>
+        <version>${commons-compress.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-csv</artifactId>
-        <version>1.0</version>
+        <version>${commons-csv.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
@@ -670,12 +682,12 @@
       <dependency>
         <groupId>commons-codec</groupId>
         <artifactId>commons-codec</artifactId>
-        <version>1.11</version>
+        <version>${commons-codec.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-net</groupId>
         <artifactId>commons-net</artifactId>
-        <version>3.6</version>
+        <version>${commons-net.version}</version>
       </dependency>
       <dependency>
         <groupId>javax.servlet</groupId>
@@ -872,7 +884,7 @@
       <dependency>
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging</artifactId>
-        <version>1.1.3</version>
+        <version>${commons-logging.version}</version>
         <exclusions>
           <exclusion>
             <groupId>avalon-framework</groupId>
@@ -891,7 +903,7 @@
       <dependency>
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging-api</artifactId>
-        <version>1.1</version>
+        <version>${commons-logging-api.version}</version>
       </dependency>
       <dependency>
         <groupId>log4j</groupId>
@@ -1031,7 +1043,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-text</artifactId>
-        <version>1.4</version>
+        <version>${commons-text.version}</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
@@ -1116,7 +1128,7 @@
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-all</artifactId>
-        <version>1.8.5</version>
+        <version>1.10.19</version>
       </dependency>
       <dependency>
         <groupId>org.objenesis</groupId>
@@ -1172,17 +1184,17 @@
       <dependency>
         <groupId>org.apache.htrace</groupId>
         <artifactId>htrace-core</artifactId>
-        <version>3.1.0-incubating</version>
+        <version>${htrace3.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.htrace</groupId>
         <artifactId>htrace-core4</artifactId>
-        <version>4.1.0-incubating</version>
+        <version>${htrace4.version}</version>
       </dependency>
       <dependency>
         <groupId>org.jdom</groupId>
         <artifactId>jdom</artifactId>
-        <version>1.1</version>
+        <version>${jdom.version}</version>
       </dependency>
       <dependency>
         <groupId>com.googlecode.json-simple</groupId>
@@ -1287,7 +1299,7 @@
       <dependency>
         <groupId>io.dropwizard.metrics</groupId>
         <artifactId>metrics-core</artifactId>
-        <version>3.2.4</version>
+        <version>${metrics.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -1329,17 +1341,17 @@
       <dependency>
         <groupId>org.glassfish.grizzly</groupId>
         <artifactId>grizzly-http-servlet</artifactId>
-        <version>2.2.21</version>
+        <version>${grizzly.version}</version>
       </dependency>
       <dependency>
         <groupId>org.glassfish.grizzly</groupId>
         <artifactId>grizzly-http</artifactId>
-        <version>2.2.21</version>
+        <version>${grizzly.version}</version>
       </dependency>
       <dependency>
         <groupId>org.glassfish.grizzly</groupId>
         <artifactId>grizzly-http-server</artifactId>
-        <version>2.2.21</version>
+        <version>${grizzly.version}</version>
       </dependency>
 
       <dependency>

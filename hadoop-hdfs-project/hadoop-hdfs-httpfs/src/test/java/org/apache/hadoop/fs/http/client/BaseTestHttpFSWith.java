@@ -44,11 +44,13 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.ipc.RemoteException;
@@ -1143,7 +1145,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT,
     ALLOW_SNAPSHOT, DISALLOW_SNAPSHOT, DISALLOW_SNAPSHOT_EXCEPTION,
     FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST,
-    GET_SERVERDEFAULTS, CHECKACCESS
+    GET_SERVERDEFAULTS, CHECKACCESS, SETECPOLICY
   }
 
   private void operation(Operation op) throws Exception {
@@ -1269,6 +1271,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case CHECKACCESS:
       testAccess();
+      break;
+    case SETECPOLICY:
+      testErasureCodingPolicy();
       break;
     }
 
@@ -1766,6 +1771,44 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       webHdfsFileSystem.access(p1, FsAction.READ);
     } else {
       Assert.fail(fs.getClass().getSimpleName() + " doesn't support access");
+    }
+  }
+
+  private void testErasureCodingPolicy() throws Exception {
+    if (!this.isLocalFS()) {
+      FileSystem fs = this.getHttpFSFileSystem();
+      Path path1 = new Path("/");
+      DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+          .get(path1.toUri(), this.getProxiedFSConf());
+      final String dir = "/xattrTest";
+      Path p1 = new Path(dir);
+
+      final ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies
+          .getByID(SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
+      final String ecPolicyName = ecPolicy.getName();
+      dfs.mkdirs(new Path(dir));
+      dfs.enableErasureCodingPolicy(ecPolicyName);
+
+      if (fs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+        httpFS.setErasureCodingPolicy(p1, ecPolicyName);
+        ErasureCodingPolicy ecPolicy1 = httpFS.getErasureCodingPolicy(p1);
+        assertEquals(ecPolicy, ecPolicy1);
+        httpFS.unsetErasureCodingPolicy(p1);
+        ecPolicy1 = httpFS.getErasureCodingPolicy(p1);
+        Assert.assertNull(ecPolicy1);
+      } else if (fs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+        webHdfsFileSystem.setErasureCodingPolicy(p1, ecPolicyName);
+        ErasureCodingPolicy ecPolicy1 =
+            webHdfsFileSystem.getErasureCodingPolicy(p1);
+        assertEquals(ecPolicy, ecPolicy1);
+        webHdfsFileSystem.unsetErasureCodingPolicy(p1);
+        ecPolicy1 = dfs.getErasureCodingPolicy(p1);
+        Assert.assertNull(ecPolicy1);
+      } else {
+        Assert.fail(fs.getClass().getSimpleName() + " doesn't support access");
+      }
     }
   }
 }

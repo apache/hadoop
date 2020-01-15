@@ -38,6 +38,7 @@ import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -64,9 +65,14 @@ public class TestFSConfigToCSConfigConverter {
   private static final String FILE_PREFIX = "file:";
   private static final String FAIR_SCHEDULER_XML =
       prepareFileName("fair-scheduler-conversion.xml");
+  private static final String FS_INVALID_PLACEMENT_RULES_XML =
+      prepareFileName("fair-scheduler-invalidplacementrules.xml");
 
   @Mock
   private FSConfigToCSConfigRuleHandler ruleHandler;
+
+  @Mock
+  private DryRunResultHolder dryRunResultHolder;
 
   private FSConfigToCSConfigConverter converter;
   private Configuration config;
@@ -93,6 +99,10 @@ public class TestFSConfigToCSConfigConverter {
       new File("src/test/resources/conversion-rules.properties")
         .getAbsolutePath();
 
+  private ConversionOptions createDefaultConversionOptions() {
+    return new ConversionOptions(new DryRunResultHolder(), false);
+  }
+
   @Before
   public void setup() throws IOException {
     config = new Configuration(false);
@@ -109,7 +119,8 @@ public class TestFSConfigToCSConfigConverter {
   }
 
   private void createConverter() {
-    converter = new FSConfigToCSConfigConverter(ruleHandler);
+    converter = new FSConfigToCSConfigConverter(ruleHandler,
+        createDefaultConversionOptions());
     converter.setClusterResource(CLUSTER_RESOURCE);
     ByteArrayOutputStream yarnSiteOut = new ByteArrayOutputStream();
     csConfigOut = new ByteArrayOutputStream();
@@ -325,7 +336,8 @@ public class TestFSConfigToCSConfigConverter {
 
   @Test
   public void testConvertFSConfigurationRulesFile() throws Exception {
-    ruleHandler = new FSConfigToCSConfigRuleHandler();
+    ruleHandler = new FSConfigToCSConfigRuleHandler(
+        createDefaultConversionOptions());
     createConverter();
 
     FSConfigToCSConfigConverterParams params =
@@ -435,6 +447,36 @@ public class TestFSConfigToCSConfigConverter {
 
     expectedException.expect(RuntimeException.class);
     converter.convert(params);
+  }
+
+  @Test
+  public void testConversionWithInvalidPlacementRules() throws Exception {
+    config = new Configuration(false);
+    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+        FS_INVALID_PLACEMENT_RULES_XML);
+    config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
+    expectedException.expect(ServiceStateException.class);
+
+    converter.convert(config);
+  }
+
+  @Test
+  public void testConversionWhenInvalidPlacementRulesIgnored()
+      throws Exception {
+    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+        .withClusterResource("vcores=20, memory-mb=240")
+        .withFairSchedulerXmlConfig(FS_INVALID_PLACEMENT_RULES_XML)
+        .build();
+
+    ConversionOptions conversionOptions = createDefaultConversionOptions();
+    conversionOptions.setNoTerminalRuleCheck(true);
+
+    converter = new FSConfigToCSConfigConverter(ruleHandler,
+        conversionOptions);
+
+    converter.convert(params);
+
+    // expected: no exception
   }
 
   private Configuration getConvertedCSConfig() {

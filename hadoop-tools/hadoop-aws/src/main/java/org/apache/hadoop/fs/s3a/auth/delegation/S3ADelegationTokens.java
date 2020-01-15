@@ -34,9 +34,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -154,11 +154,13 @@ public class S3ADelegationTokens extends AbstractDTService {
   }
 
   @Override
-  public void bindToFileSystem(final URI uri, final S3AFileSystem fs)
+  public void bindToFileSystem(final URI uri,
+      final StoreContext context,
+      final DelegationOperations delegationOperations)
       throws IOException {
-    super.bindToFileSystem(uri, fs);
+    super.bindToFileSystem(uri, context, delegationOperations);
     service = getTokenService(getCanonicalUri());
-    stats = fs.getInstrumentation().newDelegationTokenStatistics();
+    stats = context.getInstrumentation().newDelegationTokenStatistics();
   }
 
   /**
@@ -179,7 +181,9 @@ public class S3ADelegationTokens extends AbstractDTService {
         SessionTokenBinding.class,
         AbstractDelegationTokenBinding.class);
     tokenBinding = binding.newInstance();
-    tokenBinding.bindToFileSystem(getCanonicalUri(), getFileSystem());
+    tokenBinding.bindToFileSystem(getCanonicalUri(),
+        getStoreContext(),
+        getPolicyProvider());
     tokenBinding.init(conf);
     tokenBindingName = tokenBinding.getKind().toString();
     LOG.debug("Filesystem {} is using delegation tokens of kind {}",
@@ -415,7 +419,7 @@ public class S3ADelegationTokens extends AbstractDTService {
         "Null encryption secrets");
     // this isn't done in in advance as it needs S3Guard initialized in the
     // filesystem before it can generate complete policies.
-    List<RoleModel.Statement> statements = getFileSystem()
+    List<RoleModel.Statement> statements = getPolicyProvider()
         .listAWSPolicyRules(ACCESS_POLICY);
     Optional<RoleModel.Policy> rolePolicy =
         statements.isEmpty() ?

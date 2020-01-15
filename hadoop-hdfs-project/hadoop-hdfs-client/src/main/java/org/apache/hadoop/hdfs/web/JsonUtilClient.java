@@ -716,6 +716,9 @@ public class JsonUtilClient {
   }
 
   public static ErasureCodingPolicy toECPolicy(Map<?, ?> m) {
+    if (m == null) {
+      return null;
+    }
     byte id = ((Number) m.get("id")).byteValue();
     String name = (String) m.get("name");
     String codec = (String) m.get("codecName");

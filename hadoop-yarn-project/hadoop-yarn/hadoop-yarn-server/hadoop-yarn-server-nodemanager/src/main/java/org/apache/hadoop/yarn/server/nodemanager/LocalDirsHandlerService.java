@@ -644,6 +644,10 @@ public class LocalDirsHandlerService extends AbstractService
     return getPathToRead(pathStr, getLocalDirsForRead());
   }
 
+  public Iterable<Path> getAllLocalPathsForRead(String pathStr) throws IOException {
+    return localDirsAllocator.getAllLocalPathsToRead(pathStr, getConfig());
+  }
+
   public Path getLogPathForWrite(String pathStr, boolean checkWrite)
       throws IOException {
     return logDirsAllocator.getLocalPathForWrite(pathStr,

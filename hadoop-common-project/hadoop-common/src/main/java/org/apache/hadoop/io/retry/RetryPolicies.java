@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.security.sasl.SaslException;
 
+import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
@@ -678,7 +679,7 @@ public class RetryPolicies {
           e instanceof UnknownHostException ||
           e instanceof StandbyException ||
           e instanceof ConnectTimeoutException ||
-          isWrappedStandbyException(e)) {
+          shouldFailoverOnException(e)) {
         return new RetryAction(RetryAction.RetryDecision.FAILOVER_AND_RETRY,
             getFailoverOrRetrySleepTime(failovers));
       } else if (e instanceof RetriableException
@@ -730,12 +731,13 @@ public class RetryPolicies {
     return calculateExponentialTime(time, retries, Long.MAX_VALUE);
   }
 
-  private static boolean isWrappedStandbyException(Exception e) {
+  private static boolean shouldFailoverOnException(Exception e) {
     if (!(e instanceof RemoteException)) {
       return false;
     }
     Exception unwrapped = ((RemoteException)e).unwrapRemoteException(
-        StandbyException.class);
+        StandbyException.class,
+        ObserverRetryOnActiveException.class);
     return unwrapped instanceof StandbyException;
   }
 

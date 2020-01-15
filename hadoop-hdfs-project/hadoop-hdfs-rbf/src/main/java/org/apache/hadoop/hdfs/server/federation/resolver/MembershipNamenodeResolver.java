@@ -161,6 +161,11 @@ public class MembershipNamenodeResolver
             UpdateNamenodeRegistrationRequest.newInstance(
                 record.getNameserviceId(), record.getNamenodeId(), ACTIVE);
         membership.updateNamenodeRegistration(updateRequest);
+
+        cacheNS.remove(nsId);
+        // Invalidating the full cacheBp since getting the blockpool id from
+        // namespace id is quite costly.
+        cacheBP.clear();
       }
     } catch (StateStoreUnavailableException e) {
       LOG.error("Cannot update {} as active, State Store unavailable", address);
