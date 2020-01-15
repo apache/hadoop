@@ -164,6 +164,8 @@ public class FSConfigToCSConfigConverter {
     Configuration conf = new YarnConfiguration();
     conf.addResource(new Path(params.getYarnSiteXmlConfig()));
     conf.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
+    conf.setBoolean(FairSchedulerConfiguration.NO_TERMINAL_RULE_CHECK,
+        conversionOptions.isNoRuleTerminalCheck());
     return conf;
   }
 

@@ -444,4 +444,41 @@ public class TestFSConfigToCSConfigArgumentHandler {
     assertTrue("Unexpected error message",
         error.contains(expectedErrorMessage));
   }
+
+  @Test
+  public void testDisabledTerminalRuleCheck() throws Exception {
+    setupFSConfigConversionFiles(true);
+
+    String[] args = getArgumentsAsArrayWithDefaults("-f",
+        FSConfigConverterTestCommons.FS_ALLOC_FILE,
+        "-r", FSConfigConverterTestCommons.CONVERSION_RULES_FILE, "-p",
+        "-t");
+
+    FSConfigToCSConfigArgumentHandler argumentHandler =
+        new FSConfigToCSConfigArgumentHandler(conversionOptions);
+    argumentHandler.setConverterSupplier(this::getMockConverter);
+
+    argumentHandler.parseAndConvert(args);
+
+    assertTrue("-t switch had no effect",
+        conversionOptions.isNoRuleTerminalCheck());
+  }
+
+  @Test
+  public void testEnabledTerminalRuleCheck() throws Exception {
+    setupFSConfigConversionFiles(true);
+
+    String[] args = getArgumentsAsArrayWithDefaults("-f",
+        FSConfigConverterTestCommons.FS_ALLOC_FILE,
+        "-r", FSConfigConverterTestCommons.CONVERSION_RULES_FILE, "-p");
+
+    FSConfigToCSConfigArgumentHandler argumentHandler =
+        new FSConfigToCSConfigArgumentHandler(conversionOptions);
+    argumentHandler.setConverterSupplier(this::getMockConverter);
+
+    argumentHandler.parseAndConvert(args);
+
+    assertFalse("No terminal rule check was enabled",
+        conversionOptions.isNoRuleTerminalCheck());
+  }
 }
