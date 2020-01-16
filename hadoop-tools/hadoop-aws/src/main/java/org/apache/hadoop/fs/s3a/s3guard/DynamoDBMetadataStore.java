@@ -899,19 +899,18 @@ public class DynamoDBMetadataStore implements MetadataStore,
     List<DDBPathMetadata> sortedPaths = new ArrayList<>(pathsToCreate);
     sortedPaths.sort(PathOrderComparators.TOPMOST_PM_FIRST);
     // iterate through the paths.
-    for (DDBPathMetadata meta : sortedPaths) {
-      Preconditions.checkArgument(meta != null);
-      Path path = meta.getFileStatus().getPath();
+    for (DDBPathMetadata entry : sortedPaths) {
+      Preconditions.checkArgument(entry != null);
+      Path path = entry.getFileStatus().getPath();
       LOG.debug("Adding entry {}", path);
       if (path.isRoot()) {
         // this is a root entry: do not add it.
         break;
       }
-      // create the new entry
-      DDBPathMetadata entry = new DDBPathMetadata(meta);
       // add it to the ancestor state, failing if it is already there and
       // of a different type.
       DDBPathMetadata oldEntry = ancestorState.put(path, entry);
+      boolean addAncestors = true;
       if (oldEntry != null) {
         if (!oldEntry.getFileStatus().isDirectory()
             || !entry.getFileStatus().isDirectory()) {
@@ -928,12 +927,18 @@ public class DynamoDBMetadataStore implements MetadataStore,
           // a directory is already present. Log and continue.
           LOG.debug("Directory at {} being updated with value {}",
               path, entry);
+          // and we skip the the subsequent parent scan as we've already been
+          // here
+          addAncestors = false;
         }
       }
       // add the entry to the ancestry map as an explicitly requested entry.
       ancestry.put(path, Pair.of(EntryOrigin.Requested, entry));
+      // now scan up the ancestor tree to see if there are any
+      // immediately missing entries.
       Path parent = path.getParent();
-      while (!parent.isRoot() && !ancestry.containsKey(parent)) {
+      while (addAncestors
+          && !parent.isRoot() && !ancestry.containsKey(parent)) {
         if (!ancestorState.findEntry(parent, true)) {
           // there is no entry in the ancestor state.
           // look in the store
@@ -947,6 +952,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
             md = itemToPathMetadata(item, username);
             LOG.debug("Found existing entry for parent: {}", md);
             newEntry = Pair.of(EntryOrigin.Retrieved, md);
+            // and we break, assuming that if there is an entry, its parents
+            // are valid too.
+            addAncestors = false;
           } else {
             // A directory entry was not found in the DB. Create one.
             LOG.debug("auto-create ancestor path {} for child path {}",

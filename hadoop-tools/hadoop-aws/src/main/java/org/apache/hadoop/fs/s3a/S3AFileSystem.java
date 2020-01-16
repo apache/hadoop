@@ -3524,7 +3524,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           // information gleaned from addAncestors is preserved into the
           // subsequent put.
           stateToClose = S3Guard.initiateBulkWrite(metadataStore,
-              BulkOperationState.OperationType.Put,
+              BulkOperationState.OperationType.Mkdir,
               keyToPath(key));
           activeState = stateToClose;
         }
