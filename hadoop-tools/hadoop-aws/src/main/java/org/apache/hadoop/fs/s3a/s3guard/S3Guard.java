@@ -316,7 +316,7 @@ public final class S3Guard {
 
       if (!isAuthoritative){
         FileStatus status = dirMetaMap.get(s.getPath());
-        if (status != null
+        if (status != null && !s.isDirectory()
             && s.getModificationTime() > status.getModificationTime()) {
           LOG.debug("Update ms with newer metadata of: {}", status);
           S3Guard.putWithTtl(ms, pathMetadata, timeProvider, operationState);
