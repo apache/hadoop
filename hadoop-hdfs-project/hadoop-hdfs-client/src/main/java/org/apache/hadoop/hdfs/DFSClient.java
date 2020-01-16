@@ -105,6 +105,7 @@ import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -1676,6 +1677,24 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
+   * Get a batched listing for the indicated directories
+   *
+   * @see ClientProtocol#getBatchedListing(String[], byte[], boolean)
+   */
+  public BatchedDirectoryListing batchedListPaths(
+      String[] srcs, byte[] startAfter, boolean needLocation)
+      throws IOException {
+    checkOpen();
+    try {
+      return namenode.getBatchedListing(srcs, startAfter, needLocation);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          FileNotFoundException.class,
+          UnresolvedPathException.class);
+    }
+  }
+
+  /**
    * Get the file info for a specific file or directory.
    * @param src The string representation of the path to the file
    * @return object containing information regarding the file
@@ -1694,7 +1713,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  /**
+ /**
    * Get the file info for a specific file or directory.
    * @param src The string representation of the path to the file
    * @param needBlockToken Include block tokens in {@link LocatedBlocks}.
