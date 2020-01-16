@@ -19,8 +19,8 @@
 package org.apache.hadoop.ipc;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.*;
-import com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hadoop.thirdparty.protobuf_3_7.*;
+import org.apache.hadoop.thirdparty.protobuf_3_7.Descriptors.MethodDescriptor;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;

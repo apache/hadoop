@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf_3_7.TextFormat;
 
 /**
  * Protocol buffer based implementation of {@link ApplicationHomeSubCluster}.

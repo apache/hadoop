@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ContainerStartData;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf_3_7.TextFormat;
 
 public class ContainerStartDataPBImpl extends ContainerStartData {
 

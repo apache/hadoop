@@ -28,8 +28,8 @@ import org.apache.hadoop.ipc.proto.GenericRefreshProtocolProtos.GenericRefreshRe
 import org.apache.hadoop.ipc.proto.GenericRefreshProtocolProtos.GenericRefreshResponseProto;
 import org.apache.hadoop.ipc.proto.GenericRefreshProtocolProtos.GenericRefreshResponseCollectionProto;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf_3_7.RpcController;
+import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
 
 public class GenericRefreshProtocolServerSideTranslatorPB implements
     GenericRefreshProtocolPB {

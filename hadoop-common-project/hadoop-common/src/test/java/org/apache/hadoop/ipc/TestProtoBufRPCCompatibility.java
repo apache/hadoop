@@ -39,9 +39,9 @@ import org.apache.hadoop.net.NetUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf_3_7.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf_3_7.RpcController;
+import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
 
 public class TestProtoBufRPCCompatibility {
 

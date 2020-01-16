@@ -36,8 +36,8 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.RMAp
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf_3_7.ByteString;
+import org.apache.hadoop.thirdparty.protobuf_3_7.TextFormat;
 
 public class ApplicationStateDataPBImpl extends ApplicationStateData {
   ApplicationStateDataProto proto = 

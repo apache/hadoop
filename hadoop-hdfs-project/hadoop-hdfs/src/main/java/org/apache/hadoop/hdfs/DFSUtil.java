@@ -108,7 +108,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf_3_7.BlockingService;
 
 @InterfaceAudience.Private
 public class DFSUtil {

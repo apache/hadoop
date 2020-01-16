@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.ipc;
 
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf_3_7.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf_3_7.RpcController;
+import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;

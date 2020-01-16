@@ -36,7 +36,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.base.Charsets;
-import com.google.protobuf.CodedOutputStream;
+import org.apache.hadoop.thirdparty.protobuf_3_7.CodedOutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -266,7 +266,7 @@ public class ImageWriter implements Closeable {
     e.writeDelimitedTo(dirs);
   }
 
-  private static int getOndiskSize(com.google.protobuf.GeneratedMessageV3 s) {
+  private static int getOndiskSize(org.apache.hadoop.thirdparty.protobuf_3_7.GeneratedMessageV3 s) {
     return CodedOutputStream.computeUInt32SizeNoTag(s.getSerializedSize())
         + s.getSerializedSize();
   }

@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.proto.YarnSecurityTestClientAMTokenProtos.ClientToAMTokenIdentifierForTestProto;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf_3_7.TextFormat;
 
 public class ClientToAMTokenIdentifierForTest extends ClientToAMTokenIdentifier {
 

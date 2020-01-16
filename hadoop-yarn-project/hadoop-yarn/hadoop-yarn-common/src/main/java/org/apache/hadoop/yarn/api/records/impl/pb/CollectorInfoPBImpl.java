@@ -24,7 +24,7 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.proto.YarnProtos.CollectorInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.CollectorInfoProtoOrBuilder;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf_3_7.TextFormat;
 
 /**
  * Protocol record implementation of {@link CollectorInfo}.

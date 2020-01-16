@@ -198,8 +198,8 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterNodeAttributesRe
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAttributesToNodesResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetNodesToAttributesResponseProto;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf_3_7.RpcController;
+import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
 
 @Private
 public class ApplicationClientProtocolPBServiceImpl implements ApplicationClientProtocolPB {

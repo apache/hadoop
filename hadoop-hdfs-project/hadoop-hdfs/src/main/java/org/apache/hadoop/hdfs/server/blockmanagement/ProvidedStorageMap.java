@@ -53,7 +53,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf_3_7.ByteString;
 
 /**
  * This class allows us to manage and multiplex between storages local to

@@ -124,9 +124,9 @@ import org.apache.htrace.core.Tracer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.Message;
+import org.apache.hadoop.thirdparty.protobuf_3_7.ByteString;
+import org.apache.hadoop.thirdparty.protobuf_3_7.CodedOutputStream;
+import org.apache.hadoop.thirdparty.protobuf_3_7.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

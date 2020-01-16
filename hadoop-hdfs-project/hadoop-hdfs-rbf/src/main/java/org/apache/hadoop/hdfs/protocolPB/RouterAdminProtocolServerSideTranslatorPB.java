@@ -99,8 +99,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RemoveMou
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.UpdateMountTableEntryRequestPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.UpdateMountTableEntryResponsePBImpl;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf_3_7.RpcController;
+import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
 
 /**
  * This class is used on the server side. Calls come across the wire for the for

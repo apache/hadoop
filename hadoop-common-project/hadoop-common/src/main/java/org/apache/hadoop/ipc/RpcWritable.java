@@ -29,9 +29,9 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.Message;
+import org.apache.hadoop.thirdparty.protobuf_3_7.CodedInputStream;
+import org.apache.hadoop.thirdparty.protobuf_3_7.CodedOutputStream;
+import org.apache.hadoop.thirdparty.protobuf_3_7.Message;
 
 // note anything marked public is solely for access by SaslRpcClient
 @InterfaceAudience.Private

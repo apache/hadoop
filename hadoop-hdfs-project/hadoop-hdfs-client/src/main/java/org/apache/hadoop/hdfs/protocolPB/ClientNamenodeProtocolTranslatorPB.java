@@ -249,9 +249,9 @@ import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRespons
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.token.Token;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Message;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf_3_7.ByteString;
+import org.apache.hadoop.thirdparty.protobuf_3_7.Message;
+import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
 
 import org.apache.hadoop.util.concurrent.AsyncGet;
 

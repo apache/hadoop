@@ -29,8 +29,8 @@ import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.StartLogSegme
 import org.apache.hadoop.hdfs.server.protocol.FenceResponse;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf_3_7.RpcController;
+import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
 
 /**
  * Implementation for protobuf service that forwards requests

@@ -985,7 +985,7 @@ public class FileSystemRMStateStore extends RMStateStore {
     @Override
     public void processChildNode(String appDirName, String childNodeName,
         byte[] childData)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        throws org.apache.hadoop.thirdparty.protobuf_3_7.InvalidProtocolBufferException {
       if (childNodeName.startsWith(ApplicationId.appIdStrPrefix)) {
         // application
         LOG.debug("Loading application from node: {}", childNodeName);

@@ -83,7 +83,7 @@ import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf_3_7.ByteString;
 
 @InterfaceAudience.Private
 public class FSImageFormatPBSnapshot {

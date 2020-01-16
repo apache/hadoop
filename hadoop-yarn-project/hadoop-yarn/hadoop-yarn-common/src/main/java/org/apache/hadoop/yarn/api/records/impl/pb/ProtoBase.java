@@ -23,9 +23,9 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Message;
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf_3_7.ByteString;
+import org.apache.hadoop.thirdparty.protobuf_3_7.Message;
+import org.apache.hadoop.thirdparty.protobuf_3_7.TextFormat;
 
 @Private
 @Unstable

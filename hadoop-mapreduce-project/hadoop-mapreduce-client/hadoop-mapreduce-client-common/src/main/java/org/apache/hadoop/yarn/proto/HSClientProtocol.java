@@ -30,7 +30,7 @@ public interface HSClientProtocol {
     public interface BlockingInterface extends MRClientProtocolPB {
     }
 
-    public static com.google.protobuf.BlockingService newReflectiveBlockingService(
+    public static org.apache.hadoop.thirdparty.protobuf_3_7.BlockingService newReflectiveBlockingService(
         final HSClientProtocolService.BlockingInterface impl) {
       // The cast is safe
       return MRClientProtocolService

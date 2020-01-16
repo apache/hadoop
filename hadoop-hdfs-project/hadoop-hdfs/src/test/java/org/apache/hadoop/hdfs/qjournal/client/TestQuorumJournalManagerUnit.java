@@ -62,7 +62,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf_3_7.ByteString;
 
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeOp;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.createTxnData;

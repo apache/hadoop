@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf_3_7.ByteString;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
