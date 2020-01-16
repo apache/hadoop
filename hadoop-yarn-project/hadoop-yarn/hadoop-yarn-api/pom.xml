@@ -48,6 +48,12 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop.thirdparty</groupId>
+          <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
@@ -62,10 +68,21 @@
     </dependency>
 
     <dependency>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop.thirdparty</groupId>
+          <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
