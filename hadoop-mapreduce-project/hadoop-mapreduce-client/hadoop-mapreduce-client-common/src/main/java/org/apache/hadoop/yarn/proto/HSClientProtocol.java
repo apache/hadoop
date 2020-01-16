@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.proto;
 
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocolPB;
+import org.apache.hadoop.thirdparty.protobuf_3_7.BlockingService;
 import org.apache.hadoop.yarn.proto.MRClientProtocol.MRClientProtocolService;
 
 /**
@@ -30,7 +31,7 @@ public interface HSClientProtocol {
     public interface BlockingInterface extends MRClientProtocolPB {
     }
 
-    public static org.apache.hadoop.thirdparty.protobuf_3_7.BlockingService newReflectiveBlockingService(
+    public static BlockingService newReflectiveBlockingService(
         final HSClientProtocolService.BlockingInterface impl) {
       // The cast is safe
       return MRClientProtocolService

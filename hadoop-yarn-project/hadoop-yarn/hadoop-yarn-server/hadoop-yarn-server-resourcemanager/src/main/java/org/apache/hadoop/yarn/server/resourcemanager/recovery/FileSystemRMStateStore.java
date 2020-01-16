@@ -31,6 +31,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.hadoop.thirdparty.protobuf_3_7.InvalidProtocolBufferException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -984,8 +985,7 @@ public class FileSystemRMStateStore extends RMStateStore {
 
     @Override
     public void processChildNode(String appDirName, String childNodeName,
-        byte[] childData)
-        throws org.apache.hadoop.thirdparty.protobuf_3_7.InvalidProtocolBufferException {
+        byte[] childData) throws InvalidProtocolBufferException {
       if (childNodeName.startsWith(ApplicationId.appIdStrPrefix)) {
         // application
         LOG.debug("Loading application from node: {}", childNodeName);

@@ -64,6 +64,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressorStream;
+import org.apache.hadoop.thirdparty.protobuf_3_7.GeneratedMessageV3;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -266,7 +267,7 @@ public class ImageWriter implements Closeable {
     e.writeDelimitedTo(dirs);
   }
 
-  private static int getOndiskSize(org.apache.hadoop.thirdparty.protobuf_3_7.GeneratedMessageV3 s) {
+  private static int getOndiskSize(GeneratedMessageV3 s) {
     return CodedOutputStream.computeUInt32SizeNoTag(s.getSerializedSize())
         + s.getSerializedSize();
   }
