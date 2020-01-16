@@ -653,6 +653,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         }
       } catch (FileNotFoundException fne) {
         // Ignore if the file is not found
+      } catch (IOException ioe) {
+        if (RouterRpcClient.isUnavailableException(ioe)) {
+          LOG.debug("Ignore unavailable exception: {}", ioe);
+        } else {
+          throw ioe;
+        }
       }
     }
     return createLocation;

@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_TIMEOUT_KEY;
 
+import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -436,8 +437,7 @@ public class RouterRpcClient {
             this.rpcMonitor.proxyOpFailureStandby();
           }
           failover = true;
-        } else if (ioe instanceof ConnectException ||
-            ioe instanceof ConnectTimeoutException) {
+        } else if (isUnavailableException(ioe)) {
           if (this.rpcMonitor != null) {
             this.rpcMonitor.proxyOpFailureCommunicate();
           }
@@ -503,8 +503,7 @@ public class RouterRpcClient {
       if (ioe instanceof StandbyException) {
         LOG.error("{} at {} is in Standby: {}",
             nnKey, addr, ioe.getMessage());
-      } else if (ioe instanceof ConnectException ||
-          ioe instanceof ConnectTimeoutException) {
+      } else if (isUnavailableException(ioe)) {
         exConnect++;
         LOG.error("{} at {} cannot be reached: {}",
             nnKey, addr, ioe.getMessage());
@@ -563,8 +562,7 @@ public class RouterRpcClient {
           // failover, invoker looks for standby exceptions for failover.
           if (ioe instanceof StandbyException) {
             throw ioe;
-          } else if (ioe instanceof ConnectException ||
-              ioe instanceof ConnectTimeoutException) {
+          } else if (isUnavailableException(ioe)) {
             throw ioe;
           } else {
             throw new StandbyException(ioe.getMessage());
@@ -576,6 +574,27 @@ public class RouterRpcClient {
         throw new IOException(e);
       }
     }
+  }
+
+  /**
+   * Check if the exception comes from an unavailable subcluster.
+   * @param ioe IOException to check.
+   * @return If the exception comes from an unavailable subcluster.
+   */
+  public static boolean isUnavailableException(IOException ioe) {
+    if (ioe instanceof ConnectException ||
+        ioe instanceof ConnectTimeoutException ||
+        ioe instanceof EOFException ||
+        ioe instanceof StandbyException) {
+      return true;
+    }
+    if (ioe instanceof RetriableException) {
+      Throwable cause = ioe.getCause();
+      if (cause instanceof NoNamenodesAvailableException) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -833,8 +852,7 @@ public class RouterRpcClient {
 
     final UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
     final Method m = remoteMethod.getMethod();
-    IOException firstThrownException = null;
-    IOException lastThrownException = null;
+    List<IOException> thrownExceptions = new ArrayList<>();
     Object firstResult = null;
     // Invoke in priority order
     for (final RemoteLocationContext loc : locations) {
@@ -862,29 +880,33 @@ public class RouterRpcClient {
         ioe = processException(ioe, loc);
 
         // Record it and move on
-        lastThrownException =  ioe;
-        if (firstThrownException == null) {
-          firstThrownException = lastThrownException;
-        }
+        thrownExceptions.add(ioe);
       } catch (Exception e) {
         // Unusual error, ClientProtocol calls always use IOException (or
         // RemoteException). Re-wrap in IOException for compatibility with
         // ClientProtcol.
         LOG.error("Unexpected exception {} proxying {} to {}",
             e.getClass(), m.getName(), ns, e);
-        lastThrownException = new IOException(
+        IOException ioe = new IOException(
             "Unexpected exception proxying API " + e.getMessage(), e);
-        if (firstThrownException == null) {
-          firstThrownException = lastThrownException;
-        }
+        thrownExceptions.add(ioe);
       }
     }
 
-    if (firstThrownException != null) {
-      // re-throw the last exception thrown for compatibility
-      throw firstThrownException;
+    if (!thrownExceptions.isEmpty()) {
+      // An unavailable subcluster may be the actual cause
+      // We cannot surface other exceptions (e.g., FileNotFoundException)
+      for (int i = 0; i < thrownExceptions.size(); i++) {
+        IOException ioe = thrownExceptions.get(i);
+        if (isUnavailableException(ioe)) {
+          throw ioe;
+        }
+      }
+
+      // re-throw the first exception thrown for compatibility
+      throw thrownExceptions.get(0);
     }
-    // Return the last result, whether it is the value we are looking for or a
+    // Return the first result, whether it is the value or not
     @SuppressWarnings("unchecked")
     T ret = (T)firstResult;
     return ret;

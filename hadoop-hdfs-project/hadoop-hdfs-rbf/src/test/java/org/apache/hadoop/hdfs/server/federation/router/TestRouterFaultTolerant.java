@@ -25,6 +25,7 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.refre
 import static org.apache.hadoop.hdfs.server.federation.MockNamenode.registerSubclusters;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -40,6 +41,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -51,6 +53,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -72,6 +75,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -153,9 +157,6 @@ public class TestRouterFaultTolerant {
     registerSubclusters(
         routers, namenodes.values(), Collections.singleton("ns1"));
 
-    LOG.info("Stop ns1 to simulate an unavailable subcluster");
-    namenodes.get("ns1").stop();
-
     service = Executors.newFixedThreadPool(10);
   }
 
@@ -208,6 +209,9 @@ public class TestRouterFaultTolerant {
    */
   @Test
   public void testWriteWithFailedSubcluster() throws Exception {
+
+    LOG.info("Stop ns1 to simulate an unavailable subcluster");
+    namenodes.get("ns1").stop();
 
     // Run the actual tests with each approach
     final List<Callable<Boolean>> tasks = new ArrayList<>();
@@ -608,5 +612,64 @@ public class TestRouterFaultTolerant {
     Router router = getRandomRouter();
     return userUgi.doAs(
         (PrivilegedExceptionAction<FileSystem>) () -> getFileSystem(router));
+  }
+
+  @Test
+  public void testReadWithFailedSubcluster() throws Exception {
+
+    DestinationOrder order = DestinationOrder.HASH_ALL;
+    final String mountPoint = "/" + order + "-testread";
+    final Path mountPath = new Path(mountPoint);
+    LOG.info("Setup {} with order {}", mountPoint, order);
+    createMountTableEntry(
+        routers, mountPoint, order, namenodes.keySet());
+
+    FileSystem fs = getRandomRouterFileSystem();
+
+    // Create a file (we don't write because we have no mock Datanodes)
+    final Path fileexisting = new Path(mountPath, "fileexisting");
+    final Path filenotexisting = new Path(mountPath, "filenotexisting");
+    FSDataOutputStream os = fs.create(fileexisting);
+    assertNotNull(os);
+    os.close();
+
+    // We should be able to read existing files
+    FSDataInputStream fsdis = fs.open(fileexisting);
+    assertNotNull("We should be able to read the file", fsdis);
+    // We shouldn't be able to read non-existing files
+    LambdaTestUtils.intercept(FileNotFoundException.class,
+        () -> fs.open(filenotexisting));
+
+    // Check the subcluster where the file got created
+    String nsIdWithFile = null;
+    for (Entry<String, MockNamenode> entry : namenodes.entrySet()) {
+      String nsId = entry.getKey();
+      MockNamenode nn = entry.getValue();
+      int rpc = nn.getRPCPort();
+      FileSystem nnfs = getFileSystem(rpc);
+
+      try {
+        FileStatus fileStatus = nnfs.getFileStatus(fileexisting);
+        assertNotNull(fileStatus);
+        assertNull("The file cannot be in two subclusters", nsIdWithFile);
+        nsIdWithFile = nsId;
+      } catch (FileNotFoundException fnfe) {
+        LOG.debug("File not found in {}", nsId);
+      }
+    }
+    assertNotNull("The file has to be in one subcluster", nsIdWithFile);
+
+    LOG.info("Stop {} to simulate an unavailable subcluster", nsIdWithFile);
+    namenodes.get(nsIdWithFile).stop();
+
+    // We should not get FileNotFoundException anymore
+    try {
+      fs.open(fileexisting);
+      fail("It should throw an unavailable cluster exception");
+    } catch(RemoteException re) {
+      IOException ioe = re.unwrapRemoteException();
+      assertTrue("Expected an unavailable exception for:" + ioe.getClass(),
+          RouterRpcClient.isUnavailableException(ioe));
+    }
   }
 }
