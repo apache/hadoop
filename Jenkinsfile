@@ -23,7 +23,8 @@ pipeline {
 
     options {
         buildDiscarder(logRotator(numToKeepStr: '5'))
-        timeout (time: 5, unit: 'HOURS')
+        //Increasing to 15 hours temporarily to allow precommit to run for all modules.
+        timeout (time: 16, unit: 'HOURS')
         timestamps()
         checkoutToSubdirectory('src')
     }
