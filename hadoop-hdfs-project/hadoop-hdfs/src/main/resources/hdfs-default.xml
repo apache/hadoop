@@ -4557,6 +4557,16 @@
 </property>
 
 <property>
+  <name>dfs.batched.ls.limit</name>
+  <value>100</value>
+  <description>
+    Limit the number of paths that can be listed in a single batched
+    listing call. printed by ls. If less or equal to
+    zero, at most DFS_LIST_LIMIT_DEFAULT (= 1000) will be printed.
+  </description>
+</property>
+
+<property>
   <name>dfs.ls.limit</name>
   <value>1000</value>
   <description>

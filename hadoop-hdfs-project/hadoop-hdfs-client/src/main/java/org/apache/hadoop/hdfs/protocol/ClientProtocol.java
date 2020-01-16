@@ -698,6 +698,24 @@ public interface ClientProtocol {
       boolean needLocation) throws IOException;
 
   /**
+   * Get a partial listing of the input directories
+   *
+   * @param srcs the input directories
+   * @param startAfter the name to start listing after encoded in Java UTF8
+   * @param needLocation if the FileStatus should contain block locations
+   *
+   * @return a partial listing starting after startAfter. null if the input is
+   *   empty
+   * @throws IOException if an I/O error occurred
+   */
+  @Idempotent
+  @ReadOnly(isCoordinated = true)
+  BatchedDirectoryListing getBatchedListing(
+      String[] srcs,
+      byte[] startAfter,
+      boolean needLocation) throws IOException;
+
+  /**
    * Get the list of snapshottable directories that are owned
    * by the current user. Return all the snapshottable directories if the
    * current user is a super user.

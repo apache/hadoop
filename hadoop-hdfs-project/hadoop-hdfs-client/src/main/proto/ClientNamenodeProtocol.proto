@@ -285,6 +285,18 @@ message GetListingResponseProto {
   optional DirectoryListingProto dirList = 1;
 }
 
+message GetBatchedListingRequestProto {
+  repeated string paths = 1;
+  required bytes startAfter = 2;
+  required bool needLocation = 3;
+}
+
+message GetBatchedListingResponseProto {
+  repeated BatchedDirectoryListingProto listings = 1;
+  required bool hasMore = 2;
+  required bytes startAfter = 3;
+}
+
 message GetSnapshottableDirListingRequestProto { // no input parameters
 }
 message GetSnapshottableDirListingResponseProto {
@@ -887,6 +899,7 @@ service ClientNamenodeProtocol {
   rpc delete(DeleteRequestProto) returns(DeleteResponseProto);
   rpc mkdirs(MkdirsRequestProto) returns(MkdirsResponseProto);
   rpc getListing(GetListingRequestProto) returns(GetListingResponseProto);
+  rpc getBatchedListing (GetBatchedListingRequestProto) returns (GetBatchedListingResponseProto);
   rpc renewLease(RenewLeaseRequestProto) returns(RenewLeaseResponseProto);
   rpc recoverLease(RecoverLeaseRequestProto)
       returns(RecoverLeaseResponseProto);
