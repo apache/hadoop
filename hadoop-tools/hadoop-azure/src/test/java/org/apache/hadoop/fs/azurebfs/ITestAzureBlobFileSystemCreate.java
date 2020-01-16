@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.util.EnumSet;
 
@@ -155,4 +156,22 @@ public class ITestAzureBlobFileSystemCreate extends
       GenericTestUtils.assertExceptionContains(fnfe.getMessage(), inner);
     }
   }
+
+  /**
+   * Attempts to write to the azure stream after it is closed will raise
+   * an IOException.
+   */
+  @Test
+  public void testFilterFSWriteAfterClose() throws Throwable {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path testPath = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
+    FSDataOutputStream out = fs.create(testPath);
+    intercept(FileNotFoundException.class,
+        () -> {
+          try (FilterOutputStream fos = new FilterOutputStream(out)) {
+            fs.delete(testPath, false);
+          }
+        });
+  }
+
 }
