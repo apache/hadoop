@@ -169,7 +169,17 @@ public class ITestAzureBlobFileSystemCreate extends
     intercept(FileNotFoundException.class,
         () -> {
           try (FilterOutputStream fos = new FilterOutputStream(out)) {
+            fos.write('a');
+            fos.flush();
+            out.hsync();
             fs.delete(testPath, false);
+            // trigger the first failure
+            throw intercept(FileNotFoundException.class,
+                () -> {
+              fos.write('b');
+              out.hsync();
+              return "hsync didn't raise an IOE";
+            });
           }
         });
   }
