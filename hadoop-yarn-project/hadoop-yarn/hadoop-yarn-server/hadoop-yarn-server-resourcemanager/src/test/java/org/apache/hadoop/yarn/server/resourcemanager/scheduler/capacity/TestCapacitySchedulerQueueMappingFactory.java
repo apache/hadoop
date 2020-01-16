@@ -21,8 +21,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.MappingType;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMappingEntity;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.junit.Test;
 
@@ -57,19 +59,19 @@ public class TestCapacitySchedulerQueueMappingFactory {
 
     conf.setQueuePlacementRules(queuePlacementRules);
 
-    List<UserGroupMappingPlacementRule.QueueMapping> existingMappingsForUG =
-        conf.getQueueMappings();
+    List<QueueMapping> existingMappingsForUG = conf.getQueueMappings();
 
     //set queue mapping
-    List<UserGroupMappingPlacementRule.QueueMapping> queueMappingsForUG =
-        new ArrayList<>();
+    List<QueueMapping> queueMappingsForUG = new ArrayList<>();
     for (int i = 0; i < sourceIds.length; i++) {
       //Set C as parent queue name for auto queue creation
-      UserGroupMappingPlacementRule.QueueMapping userQueueMapping =
-          new UserGroupMappingPlacementRule.QueueMapping(
-              UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-              USER + sourceIds[i],
-              getQueueMapping(parentQueue, USER + sourceIds[i]));
+      QueueMapping userQueueMapping = QueueMappingBuilder.create()
+                                          .type(MappingType.USER)
+                                          .source(USER + sourceIds[i])
+                                          .queue(
+                                              getQueueMapping(parentQueue,
+                                                  USER + sourceIds[i]))
+                                          .build();
       queueMappingsForUG.add(userQueueMapping);
     }
 

@@ -23,18 +23,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping.MappingType;
-
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.MappingType;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -43,6 +39,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
 
 public class UserGroupMappingPlacementRule extends PlacementRule {
   private static final Logger LOG = LoggerFactory
@@ -55,91 +55,6 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
   private boolean overrideWithQueueMappings = false;
   private List<QueueMapping> mappings = null;
   private Groups groups;
-
-  @Private
-  public static class QueueMapping {
-
-    public enum MappingType {
-
-      USER("u"), GROUP("g");
-      private final String type;
-
-      private MappingType(String type) {
-        this.type = type;
-      }
-
-      public String toString() {
-        return type;
-      }
-
-    };
-
-    MappingType type;
-    String source;
-    String queue;
-    String parentQueue;
-
-    public final static String DELIMITER = ":";
-
-    public QueueMapping(MappingType type, String source, String queue) {
-      this.type = type;
-      this.source = source;
-      this.queue = queue;
-      this.parentQueue = null;
-    }
-
-    public QueueMapping(MappingType type, String source,
-        String queue, String parentQueue) {
-      this.type = type;
-      this.source = source;
-      this.queue = queue;
-      this.parentQueue = parentQueue;
-    }
-
-    public String getQueue() {
-      return queue;
-    }
-
-    public String getParentQueue() {
-      return parentQueue;
-    }
-
-    public boolean hasParentQueue() {
-      return parentQueue != null;
-    }
-
-    public MappingType getType() {
-      return type;
-    }
-
-    public String getSource() {
-      return source;
-    }
-
-    @Override
-    public int hashCode() {
-      return super.hashCode();
-    }
-    
-    @Override
-    public boolean equals(Object obj) {
-      if (obj instanceof QueueMapping) {
-        QueueMapping other = (QueueMapping) obj;
-        return (other.type.equals(type) && 
-            other.source.equals(source) && 
-            other.queue.equals(queue));
-      } else {
-        return false;
-      }
-    }
-
-    public String toString() {
-      return type.toString() + DELIMITER + source + DELIMITER +
-        (parentQueue != null ?
-        parentQueue + "." + queue :
-        queue);
-    }
-  }
 
   public UserGroupMappingPlacementRule(){
     this(false, null, null);
@@ -155,24 +70,24 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
   private ApplicationPlacementContext getPlacementForUser(String user)
       throws IOException {
     for (QueueMapping mapping : mappings) {
-      if (mapping.type == MappingType.USER) {
-        if (mapping.source.equals(CURRENT_USER_MAPPING)) {
-          if (mapping.queue.equals(CURRENT_USER_MAPPING)) {
+      if (mapping.getType() == MappingType.USER) {
+        if (mapping.getSource().equals(CURRENT_USER_MAPPING)) {
+          if (mapping.getQueue().equals(CURRENT_USER_MAPPING)) {
             return getPlacementContext(mapping, user);
-          } else if (mapping.queue.equals(PRIMARY_GROUP_MAPPING)) {
+          } else if (mapping.getQueue().equals(PRIMARY_GROUP_MAPPING)) {
             return getPlacementContext(mapping, groups.getGroups(user).get(0));
           } else {
             return getPlacementContext(mapping);
           }
         }
-        if (user.equals(mapping.source)) {
+        if (user.equals(mapping.getSource())) {
           return getPlacementContext(mapping);
         }
       }
-      if (mapping.type == MappingType.GROUP) {
+      if (mapping.getType() == MappingType.GROUP) {
         for (String userGroups : groups.getGroups(user)) {
-          if (userGroups.equals(mapping.source)) {
-            if (mapping.queue.equals(CURRENT_USER_MAPPING)) {
+          if (userGroups.equals(mapping.getSource())) {
+            if (mapping.getQueue().equals(CURRENT_USER_MAPPING)) {
               return getPlacementContext(mapping, user);
             }
             return getPlacementContext(mapping);
@@ -220,7 +135,7 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
 
   private ApplicationPlacementContext getPlacementContext(QueueMapping mapping,
       String leafQueueName) {
-    if (!StringUtils.isEmpty(mapping.parentQueue)) {
+    if (!StringUtils.isEmpty(mapping.getParentQueue())) {
       return new ApplicationPlacementContext(leafQueueName,
           mapping.getParentQueue());
     } else{
@@ -357,8 +272,12 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
       QueuePlacementRuleUtils.validateQueueMappingUnderParentQueue(
               queueManager.getQueue(queuePath.getParentQueue()),
           queuePath.getParentQueue(), queuePath.getLeafQueue());
-      return new QueueMapping(mapping.getType(), mapping.getSource(),
-          queuePath.getLeafQueue(), queuePath.getParentQueue());
+      return QueueMappingBuilder.create()
+                  .type(mapping.getType())
+                  .source(mapping.getSource())
+                  .queue(queuePath.getLeafQueue())
+                  .parentQueue(queuePath.getParentQueue())
+                  .build();
     }
 
     return null;
