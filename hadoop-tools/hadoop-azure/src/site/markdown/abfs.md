@@ -863,36 +863,34 @@ When using [Azure Managed Identities](https://docs.microsoft.com/en-us/azure/act
 
 The following configurations have to be added to core-site.xml to resolve this issue
 
-```
+```xml
 <property>
   <name>fs.azure.identity.transformer.service.principal.id</name>
   <value>service principal object id</value>
   <description>
-    An Azure Active Directory object ID (oid) used as the replacement for names contained
-    in the list specified by “fs.azure.identity.transformer.service.principal.substitution.list”.
-    Notice that instead of setting oid, you can also set $superuser here.
+  An Azure Active Directory object ID (oid) used as the replacement for names contained
+  in the list specified by “fs.azure.identity.transformer.service.principal.substitution.list”.
+  Notice that instead of setting oid, you can also set $superuser here.
   </description>
 </property>
-
 <property>
   <name>fs.azure.identity.transformer.service.principal.substitution.list</name>
   <value>user1</value>
   <description>
-    A comma separated list of names to be replaced with the service principal ID specified by
-    “fs.azure.identity.transformer.service.principal.id”.  This substitution occurs
-    when setOwner, setAcl, modifyAclEntries, or removeAclEntries are invoked with identities
-    contained in the substitution list. Notice that when in non-secure cluster, asterisk symbol *
-    can be used to match all user/group.
+  A comma separated list of names to be replaced with the service principal ID specified by
+  “fs.azure.identity.transformer.service.principal.id”.  This substitution occurs
+  when setOwner, setAcl, modifyAclEntries, or removeAclEntries are invoked with identities
+  contained in the substitution list. Notice that when in non-secure cluster, asterisk symbol *
+  can be used to match all user/group.
   </description>
 </property>
-
 <property>
   <name>fs.azure.use.upn</name>
   <value>true</value>
   <description>
-    User principal names (UPNs) have the format “{alias}@{domain}”. If true,
-    only {alias} is included when a UPN would otherwise appear in the output
-    of APIs like getFileStatus, getOwner, getAclStatus, etc. Default is false.
+  User principal names (UPNs) have the format “{alias}@{domain}”. If true,
+  only {alias} is included when a UPN would otherwise appear in the output
+  of APIs like getFileStatus, getOwner, getAclStatus, etc. Default is false.
   </description>
 </property>
 ```
