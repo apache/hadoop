@@ -56,6 +56,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUESTS;
 import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED;
+import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_RECORD_WRITES;
 import static org.apache.hadoop.fs.s3a.s3guard.AuthoritativeAuditOperation.ERROR_PATH_NOT_AUTH_IN_FS;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.authoritativeEmptyDirectoryMarker;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Authoritative.CHECK_FLAG;
@@ -322,8 +323,18 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
             "is auth");
 
 
-    // Subdir list makes it auth
+    // directory list makes the dir auth and leaves the child auth
     assertListUpdatesAuth(dir);
+
+    // and afterwards, a followup list does not write anything to DDB
+    // (as the dir is auth, its not going to go near the FS to update...)
+    expectOperationUpdatesDDB(0, () -> authFS.listStatus(dir));
+    // mark the dir nonauth again
+    markDirNonauth(dir);
+    // and only one record is written to DDB, the dir marker as auth
+    // the subdir is not overwritten
+    expectOperationUpdatesDDB(1, () -> authFS.listStatus(dir));
+
   }
 
   @Test
@@ -557,7 +568,7 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
   @Test
   public void testAuditS3GuardTool() throws Throwable {
     describe("Test the s3guard audit CLI");
-    authFS.mkdirs(methodAuthPath);
+    mkNonauthDir(methodAuthPath);
     final String path = methodAuthPath.toString();
     // this is non-auth, so the scan is rejected
     expectExecResult(EXIT_NOT_ACCEPTABLE,
@@ -664,7 +675,8 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
   }
 
   /**
-   * Invoke an operation expecting the meta store to be updated{@code updates}
+   * Invoke an operation expecting the meta store to have its
+   * directoryMarkedAuthoritative count to be be updated {@code updates}
    * times and S3 LIST requests made {@code lists} times.
    * @param <T> Return type
    * @param updates Expected count
@@ -685,6 +697,25 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
     final T call = fn.call();
     authDirsMarked.assertDiffEquals(updates);
     listRequests.assertDiffEquals(lists);
+    return call;
+  }
+
+  /**
+   * Invoke an operation expecting {@code writes} records written to DDB.
+   * @param <T> Return type
+   * @param writes Expected count
+   * @param fn Function to invoke
+   * @return Result of the function call
+   * @throws Exception Failure
+   */
+  private <T> T expectOperationUpdatesDDB(
+      int writes,
+      Callable<T> fn)
+      throws Exception {
+    S3ATestUtils.MetricDiff writeDiff = new S3ATestUtils.MetricDiff(authFS,
+        S3GUARD_METADATASTORE_RECORD_WRITES);
+    final T call = fn.call();
+    writeDiff.assertDiffEquals(writes);
     return call;
   }
 
@@ -722,7 +753,7 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
    */
   private void mkNonauthDir(Path path) throws IOException {
     authFS.mkdirs(path);
-    // overwrite
+    // overwrite entry with a nonauth one
     markDirNonauth(path);
   }
 
@@ -734,7 +765,7 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
   private void markDirNonauth(final Path path) throws IOException {
     S3Guard.putWithTtl(metastore,
         nonAuthEmptyDirectoryMarker((S3AFileStatus) authFS.getFileStatus(path)),
-        null, null );
+        null, null);
   }
 
   /**

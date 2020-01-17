@@ -202,6 +202,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
  * same region. The region may also be set explicitly by setting the config
  * parameter {@code fs.s3a.s3guard.ddb.region} to the corresponding region.
  */
+@SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DynamoDBMetadataStore implements MetadataStore,
@@ -1447,6 +1448,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * {@link #processBatchWriteRequest(DynamoDBMetadataStore.AncestorState, PrimaryKey[], Item[])}
    * is only tried once.
    * @param meta Directory listing metadata.
+   * @param unchangedEntries unchanged child entry paths
    * @param operationState operational state for a bulk update
    * @throws IOException IO problem
    */
@@ -1454,6 +1456,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Retries.RetryTranslated
   public void put(
       final DirListingMetadata meta,
+      final List<Path> unchangedEntries,
       @Nullable final BulkOperationState operationState) throws IOException {
     LOG.debug("Saving {} dir meta for {} to table {} in region {}: {}",
         meta.isAuthoritative() ? "auth" : "nonauth",
@@ -1471,8 +1474,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
     final List<DDBPathMetadata> metasToPut = fullPathsToPut(ddbPathMeta,
         ancestorState);
 
-    // next add all children of the directory
-    metasToPut.addAll(pathMetaToDDBPathMeta(meta.getListing()));
+    // next add all changed children of the directory
+    // ones that came from the previous listing are left as-is
+    final Collection<PathMetadata> children = meta.getListing()
+        .stream()
+        .filter(e -> !unchangedEntries.contains(e.getFileStatus().getPath()))
+        .collect(Collectors.toList());
+
+    metasToPut.addAll(pathMetaToDDBPathMeta(children));
 
     // sort so highest-level entries are written to the store first.
     // if a sequence fails, no orphan entries will have been written.

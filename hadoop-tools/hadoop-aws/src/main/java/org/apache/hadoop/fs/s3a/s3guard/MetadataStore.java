@@ -22,6 +22,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -265,11 +266,19 @@ public interface MetadataStore extends Closeable {
    * missing metadata updates (create, delete) made to the same path by
    * another process.
    *
+   * To optimize updates and avoid overwriting existing entries which
+   * may contain extra data, entries in the list of unchangedEntries may
+   * be excluded. That is: the listing metadata has the full list of
+   * what it believes are children, but implementations can opt to ignore
+   * some.
    * @param meta Directory listing metadata.
+   * @param unchangedEntries list of entries in the dir listing which have
+   * not changed since the directory was list scanned on s3guard.
    * @param operationState operational state for a bulk update
    * @throws IOException if there is an error
    */
   void put(DirListingMetadata meta,
+      final List<Path> unchangedEntries,
       @Nullable BulkOperationState operationState) throws IOException;
 
   /**

@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -57,9 +58,11 @@ public class TestS3Guard extends Assert {
    */
   @Test
   public void testDirListingUnion() throws Exception {
+    final Configuration conf = new Configuration(false);
     MetadataStore ms = new LocalMetadataStore();
 
     Path dirPath = new Path("s3a://bucket/dir");
+    ms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
 
     // Two files in metadata store listing
     PathMetadata m1 = makePathMeta("s3a://bucket/dir/ms-file1", false);
@@ -96,12 +99,12 @@ public class TestS3Guard extends Assert {
     when(timeProvider.getNow()).thenReturn(100L);
 
     // act
-    S3Guard.putWithTtl(ms, dlm, timeProvider, null);
+    S3Guard.putWithTtl(ms, dlm, Collections.emptyList(), timeProvider, null);
 
     // assert
     assertEquals("last update in " + dlm, 100L, dlm.getLastUpdated());
     verify(timeProvider, times(1)).getNow();
-    verify(ms, times(1)).put(dlm, null);
+    verify(ms, times(1)).put(dlm, Collections.emptyList(), null);
   }
 
   @Test
