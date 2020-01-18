@@ -462,6 +462,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       fail("Should have failed because the table name is not set!");
     } catch (IllegalArgumentException ignored) {
     }
+
     // config table name
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
@@ -469,8 +470,21 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       fail("Should have failed because as the region is not set!");
     } catch (IllegalArgumentException ignored) {
     }
+
     // config region
     conf.set(S3GUARD_DDB_REGION_KEY, savedRegion);
+    doTestInitializeWithConfiguration(conf, tableName);
+
+    // config table server side encryption (SSE)
+    conf.setBoolean(S3GUARD_DDB_TABLE_SSE_ENABLED, true);
+    doTestInitializeWithConfiguration(conf, tableName);
+  }
+
+  /**
+   * Test initialize() using a Configuration object successfully.
+   */
+  private void doTestInitializeWithConfiguration(Configuration conf,
+      String tableName) throws IOException {
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
       ddbms.initialize(conf, new S3Guard.TtlTimeProvider(conf));

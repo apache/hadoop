@@ -500,7 +500,6 @@ public abstract class S3GuardTool extends Configured implements Tool,
    */
   static class Init extends S3GuardTool {
     public static final String NAME = "init";
-
     public static final String PURPOSE = "initialize metadata repository";
     private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
         "\t" + PURPOSE + "\n\n" +

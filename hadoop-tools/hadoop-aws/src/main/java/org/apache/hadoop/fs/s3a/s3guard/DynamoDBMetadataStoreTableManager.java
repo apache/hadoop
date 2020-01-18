@@ -72,6 +72,7 @@ import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CREATE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_SSE_CMK;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_SSE_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_TAG;
+import static org.apache.hadoop.fs.s3a.S3AUtils.lookupPassword;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateDynamoDBException;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.E_ON_DEMAND_NO_SET_CAPACITY;
@@ -332,7 +333,14 @@ public class DynamoDBMetadataStoreTableManager {
   private SSESpecification getSseSpecFromConfig() {
     final SSESpecification sseSpecification = new SSESpecification();
     sseSpecification.setEnabled(conf.getBoolean(S3GUARD_DDB_TABLE_SSE_ENABLED, false));
-    String cmk = conf.get(S3GUARD_DDB_TABLE_SSE_CMK);
+    String cmk = null;
+    try {
+      // Get DynamoDB table SSE CMK from a configuration/credential provider.
+      cmk = lookupPassword("", conf, S3GUARD_DDB_TABLE_SSE_CMK);
+    } catch (IOException e) {
+      LOG.error("Cannot retrieve " + S3GUARD_DDB_TABLE_SSE_CMK, e);
+    }
+
     if (cmk != null) {
       if (cmk.equals("alias/aws/dynamodb")) {
         LOG.warn("Ignoring default DynamoDB table KMS Master Key alias/aws/dynamodb in configuration");

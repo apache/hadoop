@@ -432,7 +432,7 @@ customer managed CMK. S3Guard code accessing the table is all the same whether
 SSE is enabled or not. For more details on DynamoDB table server side
 encryption, see the AWS page on [Encryption at Rest: How It Works](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/encryption.howitworks.html).
 
-This is the default configuration options, as configured in `core-default.xml`.
+These are the default configuration options, as configured in `core-default.xml`.
 
 ```xml
 <property>
