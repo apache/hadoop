@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 
 import java.io.IOException;
@@ -46,18 +47,21 @@ public interface MutableConfigurationProvider {
    * Log user's requested configuration mutation, and applies it in-memory.
    * @param user User who requested the change
    * @param confUpdate User's requested configuration change
+   * @return LogMutation with update info from given SchedConfUpdateInfo
    * @throws Exception if logging the mutation fails
    */
-  void logAndApplyMutation(UserGroupInformation user, SchedConfUpdateInfo
-      confUpdate) throws Exception;
+  LogMutation logAndApplyMutation(UserGroupInformation user,
+      SchedConfUpdateInfo confUpdate) throws Exception;
 
   /**
    * Confirm last logged mutation.
+   * @param pendingMutation the log mutation to apply
    * @param isValid if the last logged mutation is applied to scheduler
    *                properly.
    * @throws Exception if confirming mutation fails
    */
-  void confirmPendingMutation(boolean isValid) throws Exception;
+  void confirmPendingMutation(LogMutation pendingMutation,
+      boolean isValid) throws Exception;
 
   /**
    * Returns scheduler configuration cached in this provider.

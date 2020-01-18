@@ -440,6 +440,23 @@ $H3 Copy-listing Generator
   of DistCp differs here from the legacy DistCp, in how paths are considered
   for copy.
 
+  One may also customize the filtering of files which shouldn't be copied
+  by passing the current supported implementation of CopyFilter interface
+  or a new implementation can be written. This can be specified by setting the
+  `distcp.filters.class` in the DistCpOptions:
+
+  1. `distcp.filters.class` to "RegexCopyFilter". If you are using this implementation,
+     you will have to pass along "CopyFilter" `distcp.filters.file` which contains the
+     regex used for filtering. Support regular expressions specified by
+     java.util.regex.Pattern.
+  2. `distcp.filters.class` to "RegexpInConfigurationFilter". If you are using this
+     implementation, you will have to pass along the regex also using
+     `distcp.exclude-file-regex` parameter in "DistCpOptions". Support regular
+     expressions specified by java.util.regex.Pattern. This is a more dynamic approach
+     as compared to "RegexCopyFilter".
+  3. `distcp.filters.class` to "TrueCopyFilter". This is used as a default
+     implementation if none of the above options are specified.
+
   The legacy implementation only lists those paths that must definitely be
   copied on to target. E.g. if a file already exists at the target (and
   `-overwrite` isn't specified), the file isn't even considered in the

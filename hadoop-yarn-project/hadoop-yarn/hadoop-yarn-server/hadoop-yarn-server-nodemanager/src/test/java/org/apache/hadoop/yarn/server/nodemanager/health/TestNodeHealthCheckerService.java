@@ -16,12 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.nodemanager;
+package org.apache.hadoop.yarn.server.nodemanager.health;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.NodeHealthScriptRunner;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -42,58 +44,73 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
-public class TestNodeHealthService {
+/**
+ * Test class for {@link NodeHealthCheckerService}.
+ */
+public class TestNodeHealthCheckerService {
 
-  private static volatile Logger LOG =
-       LoggerFactory.getLogger(TestNodeHealthService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestNodeHealthCheckerService.class);
 
-  protected static File testRootDir = new File("target",
-      TestNodeHealthService.class.getName() + "-localDir").getAbsoluteFile();
+  private static final File TEST_ROOT_DIR = new File("target",
+      TestNodeHealthCheckerService.class.getName() + "-localDir")
+      .getAbsoluteFile();
 
-  final static File nodeHealthConfigFile = new File(testRootDir,
+  private static final File NODE_HEALTH_CONFIG_FILE = new File(TEST_ROOT_DIR,
       "modified-mapred-site.xml");
 
-  private File nodeHealthscriptFile = new File(testRootDir,
+  private File nodeHealthScriptFile = new File(TEST_ROOT_DIR,
       Shell.appendScriptExtension("failingscript"));
 
   @Before
   public void setup() {
-    testRootDir.mkdirs();
+    TEST_ROOT_DIR.mkdirs();
   }
 
   @After
   public void tearDown() throws Exception {
-    if (testRootDir.exists()) {
+    if (TEST_ROOT_DIR.exists()) {
       FileContext.getLocalFSFileContext().delete(
-          new Path(testRootDir.getAbsolutePath()), true);
+          new Path(TEST_ROOT_DIR.getAbsolutePath()), true);
     }
-  }
-  
-  private void writeNodeHealthScriptFile(String scriptStr, boolean setExecutable)
-          throws IOException {
-    PrintWriter pw = null;
-    try {
-      FileUtil.setWritable(nodeHealthscriptFile, true);
-      FileUtil.setReadable(nodeHealthscriptFile, true);
-      pw = new PrintWriter(new FileOutputStream(nodeHealthscriptFile));
-      pw.println(scriptStr);
-      pw.flush();
-    } finally {
-      pw.close();
-    }
-    FileUtil.setExecutable(nodeHealthscriptFile, setExecutable);
   }
 
-  private Configuration getConfForNodeHealthScript() {
+  private void writeNodeHealthScriptFile() throws IOException,
+      InterruptedException {
+    try (PrintWriter pw = new PrintWriter(
+        new FileOutputStream(nodeHealthScriptFile))) {
+      FileUtil.chmod(nodeHealthScriptFile.getCanonicalPath(), "u+rwx");
+      pw.println("");
+      pw.flush();
+    }
+  }
+
+  private Configuration getConfForNodeHealthScript(String scriptName) {
     Configuration conf = new Configuration();
-    conf.set(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_PATH,
-        nodeHealthscriptFile.getAbsolutePath());
-    conf.setLong(YarnConfiguration.NM_HEALTH_CHECK_INTERVAL_MS, 500);
-    conf.setLong(
-        YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS, 1000);
+    conf.set(YarnConfiguration.NM_HEALTH_CHECK_SCRIPTS, scriptName);
+    String timeoutConfig =
+        String.format(
+            YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS_TEMPLATE,
+            scriptName);
+    conf.setLong(timeoutConfig, 1000L);
+
+    String intervalConfig =
+        String.format(
+            YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_INTERVAL_MS_TEMPLATE,
+            scriptName);
+    conf.setLong(intervalConfig, 500L);
+
+    String pathConfig =
+        String.format(
+            YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_PATH_TEMPLATE,
+            scriptName);
+    conf.set(pathConfig, nodeHealthScriptFile.getAbsolutePath());
+
     return conf;
   }
 
@@ -109,16 +126,22 @@ public class TestNodeHealthService {
     RecordFactory factory = RecordFactoryProvider.getRecordFactory(null);
     NodeHealthStatus healthStatus =
         factory.newRecordInstance(NodeHealthStatus.class);
-    Configuration conf = getConfForNodeHealthScript();
-    conf.writeXml(new FileOutputStream(nodeHealthConfigFile));
-    conf.addResource(nodeHealthConfigFile.getName());
-    writeNodeHealthScriptFile("", true);
+    String scriptName = "test";
+    Configuration conf = getConfForNodeHealthScript(scriptName);
+    conf.writeXml(new FileOutputStream(NODE_HEALTH_CONFIG_FILE));
+    conf.addResource(NODE_HEALTH_CONFIG_FILE.getName());
+    writeNodeHealthScriptFile();
 
     LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
     NodeHealthScriptRunner nodeHealthScriptRunner =
-        spy(NodeManager.getNodeHealthScriptRunner(conf));
-    NodeHealthCheckerService nodeHealthChecker = new NodeHealthCheckerService(
-    		nodeHealthScriptRunner, dirsHandler);
+        NodeHealthScriptRunner.newInstance(scriptName, conf);
+    if (nodeHealthScriptRunner == null) {
+      fail("Should have created NodeHealthScriptRunner instance");
+    }
+    nodeHealthScriptRunner = spy(nodeHealthScriptRunner);
+    NodeHealthCheckerService nodeHealthChecker =
+        new NodeHealthCheckerService(dirsHandler);
+    nodeHealthChecker.addHealthReporter(nodeHealthScriptRunner);
     nodeHealthChecker.init(conf);
 
     doReturn(true).when(nodeHealthScriptRunner).isHealthy();
@@ -133,7 +156,7 @@ public class TestNodeHealthService {
     Assert.assertTrue("Node health status reported unhealthy", healthStatus
         .getHealthReport().equals(nodeHealthChecker.getHealthReport()));
 
-    doReturn(false).when(nodeHealthScriptRunner).isHealthy();   
+    doReturn(false).when(nodeHealthScriptRunner).isHealthy();
     // update health status
     setHealthStatus(healthStatus, nodeHealthChecker.isHealthy(),
         nodeHealthChecker.getHealthReport(),
@@ -173,5 +196,64 @@ public class TestNodeHealthService {
                     nodeHealthChecker.getDiskHandler()
                         .getDisksHealthReport(false))
             )));
+  }
+
+  private abstract class HealthReporterService extends AbstractService
+      implements HealthReporter {
+    HealthReporterService() {
+      super(HealthReporterService.class.getName());
+    }
+  }
+
+  @Test
+  public void testCustomHealthReporter() throws Exception {
+    String healthReport = "dummy health report";
+    HealthReporterService customHealthReporter = new HealthReporterService() {
+      private int counter = 0;
+
+      @Override
+      public boolean isHealthy() {
+        return counter++ % 2 == 0;
+      }
+
+      @Override
+      public String getHealthReport() {
+        return healthReport;
+      }
+
+      @Override
+      public long getLastHealthReportTime() {
+        return Long.MAX_VALUE;
+      }
+    };
+
+    Configuration conf = new Configuration();
+    LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
+    NodeHealthCheckerService nodeHealthChecker =
+        new NodeHealthCheckerService(dirsHandler);
+    nodeHealthChecker.addHealthReporter(customHealthReporter);
+    nodeHealthChecker.init(conf);
+
+    assertThat(nodeHealthChecker.isHealthy()).isTrue();
+    assertThat(nodeHealthChecker.isHealthy()).isFalse();
+    assertThat(nodeHealthChecker.getHealthReport()).isEqualTo(healthReport);
+    assertThat(nodeHealthChecker.getLastHealthReportTime())
+        .isEqualTo(Long.MAX_VALUE);
+  }
+
+  @Test
+  public void testExceptionReported() {
+    Configuration conf = new Configuration();
+    LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
+    NodeHealthCheckerService nodeHealthChecker =
+        new NodeHealthCheckerService(dirsHandler);
+    nodeHealthChecker.init(conf);
+    assertThat(nodeHealthChecker.isHealthy()).isTrue();
+
+    String message = "An exception was thrown.";
+    Exception exception = new Exception(message);
+    nodeHealthChecker.reportException(exception);
+    assertThat(nodeHealthChecker.isHealthy()).isFalse();
+    assertThat(nodeHealthChecker.getHealthReport()).isEqualTo(message);
   }
 }

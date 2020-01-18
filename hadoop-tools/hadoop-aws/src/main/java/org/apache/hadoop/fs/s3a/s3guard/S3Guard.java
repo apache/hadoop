@@ -48,14 +48,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_AUTHORITATIVE_PATH;
-import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_PUT_PATH_LATENCY;
-import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_PUT_PATH_REQUEST;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createUploadFileStatus;
+import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.authoritativeEmptyDirectoryMarker;
 
 /**
  * Logic for integrating MetadataStore with S3A.
@@ -149,7 +148,6 @@ public final class S3Guard {
    * returns the same S3AFileStatus. Instrumentation monitors the put operation.
    * @param ms MetadataStore to {@code put()} into.
    * @param status status to store
-   * @param instrumentation instrumentation of the s3a file system
    * @param timeProvider Time provider to use when writing entries
    * @return The same status as passed in
    * @throws IOException if metadata store update failed
@@ -157,9 +155,8 @@ public final class S3Guard {
   @RetryTranslated
   public static S3AFileStatus putAndReturn(MetadataStore ms,
       S3AFileStatus status,
-      S3AInstrumentation instrumentation,
       ITtlTimeProvider timeProvider) throws IOException {
-    return putAndReturn(ms, status, instrumentation, timeProvider, null);
+    return putAndReturn(ms, status, timeProvider, null);
   }
 
   /**
@@ -167,7 +164,6 @@ public final class S3Guard {
    * returns the same S3AFileStatus. Instrumentation monitors the put operation.
    * @param ms MetadataStore to {@code put()} into.
    * @param status status to store
-   * @param instrumentation instrumentation of the s3a file system
    * @param timeProvider Time provider to use when writing entries
    * @param operationState possibly-null metastore state tracker.
    * @return The same status as passed in
@@ -177,21 +173,38 @@ public final class S3Guard {
   public static S3AFileStatus putAndReturn(
       final MetadataStore ms,
       final S3AFileStatus status,
-      final S3AInstrumentation instrumentation,
       final ITtlTimeProvider timeProvider,
       @Nullable final BulkOperationState operationState) throws IOException {
     long startTimeNano = System.nanoTime();
     try {
       putWithTtl(ms, new PathMetadata(status), timeProvider, operationState);
     } finally {
-      instrumentation.addValueToQuantiles(
-          S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
-          (System.nanoTime() - startTimeNano));
-      instrumentation.incrementCounter(
-          S3GUARD_METADATASTORE_PUT_PATH_REQUEST,
-          1);
+      ms.getInstrumentation().entryAdded((System.nanoTime() - startTimeNano));
     }
     return status;
+  }
+
+  /**
+   * Creates an authoritative directory marker for the store.
+   * @param ms MetadataStore to {@code put()} into.
+   * @param status status to store
+   * @param timeProvider Time provider to use when writing entries
+   * @param operationState possibly-null metastore state tracker.
+   * @throws IOException if metadata store update failed
+   */
+  @RetryTranslated
+  public static void putAuthDirectoryMarker(
+      final MetadataStore ms,
+      final S3AFileStatus status,
+      final ITtlTimeProvider timeProvider,
+      @Nullable final BulkOperationState operationState) throws IOException {
+    long startTimeNano = System.nanoTime();
+    try {
+      final PathMetadata fileMeta = authoritativeEmptyDirectoryMarker(status);
+      putWithTtl(ms, fileMeta, timeProvider, operationState);
+    } finally {
+      ms.getInstrumentation().entryAdded((System.nanoTime() - startTimeNano));
+    }
   }
 
   /**
@@ -291,7 +304,9 @@ public final class S3Guard {
         .collect(Collectors.toMap(
             pm -> pm.getFileStatus().getPath(), PathMetadata::getFileStatus)
         );
-
+    BulkOperationState operationState = ms.initiateBulkWrite(
+        BulkOperationState.OperationType.Listing,
+        path);
     for (S3AFileStatus s : backingStatuses) {
       if (deleted.contains(s.getPath())) {
         continue;
@@ -304,7 +319,7 @@ public final class S3Guard {
         if (status != null
             && s.getModificationTime() > status.getModificationTime()) {
           LOG.debug("Update ms with newer metadata of: {}", status);
-          S3Guard.putWithTtl(ms, pathMetadata, timeProvider, null);
+          S3Guard.putWithTtl(ms, pathMetadata, timeProvider, operationState);
         }
       }
 
@@ -324,9 +339,16 @@ public final class S3Guard {
     changed = changed || (!dirMeta.isAuthoritative() && isAuthoritative);
 
     if (changed && isAuthoritative) {
+      LOG.debug("Marking the directory {} as authoritative", path);
+      final MetastoreInstrumentation instrumentation
+          = ms.getInstrumentation();
+      if (instrumentation != null) {
+        instrumentation.directoryMarkedAuthoritative();
+      }
       dirMeta.setAuthoritative(true); // This is the full directory contents
-      S3Guard.putWithTtl(ms, dirMeta, timeProvider, null);
+      S3Guard.putWithTtl(ms, dirMeta, timeProvider, operationState);
     }
+    IOUtils.cleanupWithLogger(LOG, operationState);
 
     return dirMetaToStatuses(dirMeta);
   }

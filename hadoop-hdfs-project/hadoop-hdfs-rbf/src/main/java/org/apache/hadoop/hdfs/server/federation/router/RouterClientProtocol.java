@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -88,6 +91,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -122,6 +126,15 @@ public class RouterClientProtocol implements ClientProtocol {
   private final FileSubclusterResolver subclusterResolver;
   private final ActiveNamenodeResolver namenodeResolver;
 
+  /**
+   * Caching server defaults so as to prevent redundant calls to namenode,
+   * similar to DFSClient, caching saves efforts when router connects
+   * to multiple clients.
+   */
+  private volatile FsServerDefaults serverDefaults;
+  private volatile long serverDefaultsLastUpdate;
+  private final long serverDefaultsValidityPeriod;
+
   /** If it requires response from all subclusters. */
   private final boolean allowPartialList;
   /** Time out when getting the mount statistics. */
@@ -155,7 +168,10 @@ public class RouterClientProtocol implements ClientProtocol {
         RBFConfigKeys.DFS_ROUTER_CLIENT_MOUNT_TIME_OUT,
         RBFConfigKeys.DFS_ROUTER_CLIENT_MOUNT_TIME_OUT_DEFAULT,
         TimeUnit.MILLISECONDS);
-
+    this.serverDefaultsValidityPeriod = conf.getTimeDuration(
+        DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY,
+        DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT,
+        TimeUnit.MILLISECONDS);
     // User and group for reporting
     try {
       this.superUser = UserGroupInformation.getCurrentUser().getShortUserName();
@@ -226,9 +242,15 @@ public class RouterClientProtocol implements ClientProtocol {
   @Override
   public FsServerDefaults getServerDefaults() throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
-
-    RemoteMethod method = new RemoteMethod("getServerDefaults");
-    return rpcServer.invokeAtAvailableNs(method, FsServerDefaults.class);
+    long now = Time.monotonicNow();
+    if ((serverDefaults == null) || (now - serverDefaultsLastUpdate
+        > serverDefaultsValidityPeriod)) {
+      RemoteMethod method = new RemoteMethod("getServerDefaults");
+      serverDefaults =
+          rpcServer.invokeAtAvailableNs(method, FsServerDefaults.class);
+      serverDefaultsLastUpdate = now;
+    }
+    return serverDefaults;
   }
 
   @Override
@@ -835,6 +857,12 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
+  public BatchedDirectoryListing getBatchedListing(String[] srcs,
+      byte[] startAfter, boolean needLocation) throws IOException {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
   public HdfsFileStatus getFileInfo(String src) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
@@ -949,10 +977,13 @@ public class RouterClientProtocol implements ClientProtocol {
       for (DatanodeStorageReport dn : dns) {
         DatanodeInfo dnInfo = dn.getDatanodeInfo();
         String nodeId = dnInfo.getXferAddr();
-        if (!datanodesMap.containsKey(nodeId)) {
+        DatanodeStorageReport oldDn = datanodesMap.get(nodeId);
+        if (oldDn == null ||
+            dnInfo.getLastUpdate() > oldDn.getDatanodeInfo().getLastUpdate()) {
           datanodesMap.put(nodeId, dn);
+        } else {
+          LOG.debug("{} is in multiple subclusters", nodeId);
         }
-        // TODO merge somehow, right now it just takes the first one
       }
     }
 
@@ -1918,6 +1949,8 @@ public class RouterClientProtocol implements ClientProtocol {
     FsPermission permission = FsPermission.getDirDefault();
     String owner = this.superUser;
     String group = this.superGroup;
+    EnumSet<HdfsFileStatus.Flags> flags =
+        EnumSet.noneOf(HdfsFileStatus.Flags.class);
     if (subclusterResolver instanceof MountTableResolver) {
       try {
         String mName = name.startsWith("/") ? name : "/" + name;
@@ -1937,6 +1970,9 @@ public class RouterClientProtocol implements ClientProtocol {
             owner = fInfo.getOwner();
             group = fInfo.getGroup();
             childrenNum = fInfo.getChildrenNum();
+            flags = DFSUtil
+                .getFlags(fInfo.isEncrypted(), fInfo.isErasureCoded(),
+                    fInfo.isSnapshotEnabled(), fInfo.hasAcl());
           }
         }
       } catch (IOException e) {
@@ -1968,6 +2004,7 @@ public class RouterClientProtocol implements ClientProtocol {
         .path(DFSUtil.string2Bytes(name))
         .fileId(inodeId)
         .children(childrenNum)
+        .flags(flags)
         .build();
   }
 

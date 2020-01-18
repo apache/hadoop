@@ -59,27 +59,21 @@ public class FSQueueConverter {
   private boolean fifoOrFairSharePolicyUsed;
   private boolean drfPolicyUsedOnQueueLevel;
 
-  @SuppressWarnings("checkstyle:parameternumber")
-  public FSQueueConverter(FSConfigToCSConfigRuleHandler ruleHandler,
-      Configuration capacitySchedulerConfig,
-      boolean preemptionEnabled,
-      boolean sizeBasedWeight,
-      boolean autoCreateChildQueues,
-      Resource clusterResource,
-      float queueMaxAMShareDefault,
-      int queueMaxAppsDefault) {
+  private ConversionOptions conversionOptions;
+
+  public FSQueueConverter(FSQueueConverterBuilder builder) {
     this.leafQueueNames = new HashSet<>();
-    this.ruleHandler = ruleHandler;
-    this.capacitySchedulerConfig = capacitySchedulerConfig;
-    this.preemptionEnabled = preemptionEnabled;
-    this.sizeBasedWeight = sizeBasedWeight;
-    this.clusterResource = clusterResource;
-    this.queueMaxAMShareDefault = queueMaxAMShareDefault;
-    this.autoCreateChildQueues = autoCreateChildQueues;
-    this.queueMaxAppsDefault = queueMaxAppsDefault;
+    this.ruleHandler = builder.ruleHandler;
+    this.capacitySchedulerConfig = builder.capacitySchedulerConfig;
+    this.preemptionEnabled = builder.preemptionEnabled;
+    this.sizeBasedWeight = builder.sizeBasedWeight;
+    this.clusterResource = builder.clusterResource;
+    this.queueMaxAMShareDefault = builder.queueMaxAMShareDefault;
+    this.autoCreateChildQueues = builder.autoCreateChildQueues;
+    this.queueMaxAppsDefault = builder.queueMaxAppsDefault;
+    this.conversionOptions = builder.conversionOptions;
   }
 
-  @SuppressWarnings("checkstyle:linelength")
   public void convertQueueHierarchy(FSQueue queue) {
     List<FSQueue> children = queue.getChildQueues();
     final String queueName = queue.getName();
@@ -87,9 +81,9 @@ public class FSQueueConverter {
     if (queue instanceof FSLeafQueue) {
       String shortName = getQueueShortName(queueName);
       if (!leafQueueNames.add(shortName)) {
-        throw new ConversionException(
-            "Leaf queues must be unique, "
-                + shortName + " is defined at least twice");
+        String msg = String.format("Leaf queues must be unique, "
+                + "%s is defined at least twice", shortName);
+        conversionOptions.handleConversionError(msg);
       }
     }
 
@@ -99,7 +93,6 @@ public class FSQueueConverter {
     emitMaxAllocations(queueName, queue);
     emitPreemptionDisabled(queueName, queue);
 
-    // TODO: COULD BE incorrect! Needs further clarifications
     emitChildCapacity(queue);
     emitMaximumCapacity(queueName, queue);
     emitAutoCreateChildQueue(queueName);
@@ -191,10 +184,13 @@ public class FSQueueConverter {
     if (maxResource == null) {
       if (rawMaxShare.getPercentages() != null) {
         if (clusterResource == null) {
-          throw new ConversionException(
-              String.format("<maxResources> defined in percentages for" +
-                  " queue %s, but cluster resource parameter is not" +
-                  " defined via CLI!", queueName));
+          String message = String.format(
+              "<maxResources> defined in percentages for" +
+              " queue %s, but cluster resource parameter is not" +
+              " defined via CLI!", queueName);
+
+          conversionOptions.handleConversionError(message);
+          return;
         }
 
         ruleHandler.handleMaxCapacityPercentage(queueName);
@@ -209,8 +205,8 @@ public class FSQueueConverter {
             clusterResource.getVirtualCores());
         defined = true;
       } else {
-        throw new PreconditionException(
-            "Illegal ConfigurableResource = " + rawMaxShare);
+        conversionOptions.handlePreconditionError(
+            "Illegal ConfigurableResource object = " + rawMaxShare);
       }
     } else if (isNotUnboundedResource(maxResource)) {
       memSize = maxResource.getMemorySize();
@@ -326,8 +322,9 @@ public class FSQueueConverter {
       drfPolicyUsedOnQueueLevel = true;
       break;
     default:
-      throw new ConversionException("Unexpected ordering policy " +
-          "on queue " + queueName + ": " + policy);
+      String msg = String.format("Unexpected ordering policy " +
+          "on queue %s: %s", queue, policy);
+      conversionOptions.handleConversionError(msg);
     }
   }
 
@@ -489,5 +486,4 @@ public class FSQueueConverter {
       }
     }
   }
-
 }

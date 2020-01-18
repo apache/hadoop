@@ -44,6 +44,7 @@ public class FSConfigToCSConfigRuleHandler {
   private static final Logger LOG =
       LoggerFactory.getLogger(FSConfigToCSConfigRuleHandler.class);
 
+  private ConversionOptions conversionOptions;
 
   public static final String MAX_CHILD_QUEUE_LIMIT =
       "maxChildQueue.limit";
@@ -94,15 +95,18 @@ public class FSConfigToCSConfigRuleHandler {
     initPropertyActions();
   }
 
-  public FSConfigToCSConfigRuleHandler() {
-    properties = new Properties();
-    actions = new HashMap<>();
+  public FSConfigToCSConfigRuleHandler(ConversionOptions conversionOptions) {
+    this.properties = new Properties();
+    this.actions = new HashMap<>();
+    this.conversionOptions = conversionOptions;
   }
 
   @VisibleForTesting
-  FSConfigToCSConfigRuleHandler(Properties props) {
-    properties = props;
-    actions = new HashMap<>();
+  FSConfigToCSConfigRuleHandler(Properties props,
+      ConversionOptions conversionOptions) {
+    this.properties = props;
+    this.actions = new HashMap<>();
+    this.conversionOptions = conversionOptions;
     initPropertyActions();
   }
 
@@ -189,14 +193,13 @@ public class FSConfigToCSConfigRuleHandler {
         } else {
           exceptionMessage = format("Setting %s is not supported", fsSetting);
         }
-        throw new UnsupportedPropertyException(exceptionMessage);
+        conversionOptions.handleError(exceptionMessage);
+        break;
       case WARNING:
-        if (message != null) {
-          LOG.warn(message);
-        } else {
-          LOG.warn("Setting {} is not supported, ignoring conversion",
-              fsSetting);
-        }
+        String loggedMsg = (message != null) ? message :
+            format("Setting %s is not supported, ignoring conversion",
+                fsSetting);
+        conversionOptions.handleWarning(loggedMsg, LOG);
         break;
       default:
         throw new IllegalArgumentException(

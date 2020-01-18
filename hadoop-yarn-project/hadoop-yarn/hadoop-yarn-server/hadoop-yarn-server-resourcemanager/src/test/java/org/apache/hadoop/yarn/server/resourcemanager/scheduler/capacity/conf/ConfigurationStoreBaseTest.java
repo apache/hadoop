@@ -64,7 +64,7 @@ public abstract class ConfigurationStoreBaseTest {
     YarnConfigurationStore.LogMutation mutation1 =
         new YarnConfigurationStore.LogMutation(update1, TEST_USER);
     confStore.logMutation(mutation1);
-    confStore.confirmMutation(true);
+    confStore.confirmMutation(mutation1, true);
     assertEquals("valUpdate1", confStore.retrieve().get("keyUpdate1"));
 
     Map<String, String> update2 = new HashMap<>();
@@ -72,7 +72,7 @@ public abstract class ConfigurationStoreBaseTest {
     YarnConfigurationStore.LogMutation mutation2 =
         new YarnConfigurationStore.LogMutation(update2, TEST_USER);
     confStore.logMutation(mutation2);
-    confStore.confirmMutation(false);
+    confStore.confirmMutation(mutation2, false);
     assertNull("Configuration should not be updated",
         confStore.retrieve().get("keyUpdate2"));
     confStore.close();
@@ -89,7 +89,7 @@ public abstract class ConfigurationStoreBaseTest {
     YarnConfigurationStore.LogMutation mutation =
         new YarnConfigurationStore.LogMutation(update, TEST_USER);
     confStore.logMutation(mutation);
-    confStore.confirmMutation(true);
+    confStore.confirmMutation(mutation, true);
     assertNull(confStore.retrieve().get("key"));
     confStore.close();
   }

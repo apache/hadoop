@@ -43,6 +43,8 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
+import static org.apache.hadoop.io.IOUtils.wrapException;
+
 /**
  * The BlobFsOutputStream for Rest AbfsClient.
  */
@@ -246,6 +248,12 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     try {
       flushInternal(true);
       threadExecutor.shutdown();
+    } catch (IOException e) {
+      // Problems surface in try-with-resources clauses if
+      // the exception thrown in a close == the one already thrown
+      // -so we wrap any exception with a new one.
+      // See HADOOP-16785
+      throw wrapException(path, e.getMessage(), e);
     } finally {
       lastError = new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
       buffer = null;

@@ -346,13 +346,14 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   /**
    * Delete a snapshot for a snapshottable directory
    * @param snapshotName Name of the snapshot to be deleted
+   * @param now is the snapshot deletion time set by Time.now().
    * @param reclaimContext Used to collect information to reclaim blocks
    *                       and inodes
    */
   public void deleteSnapshot(final INodesInPath iip, final String snapshotName,
-      INode.ReclaimContext reclaimContext) throws IOException {
+      INode.ReclaimContext reclaimContext, long now) throws IOException {
     INodeDirectory srcRoot = getSnapshottableRoot(iip);
-    srcRoot.removeSnapshot(reclaimContext, snapshotName);
+    srcRoot.removeSnapshot(reclaimContext, snapshotName, now);
     numSnapshots.getAndDecrement();
   }
 

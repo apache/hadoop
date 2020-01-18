@@ -48,7 +48,9 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.web.JsonUtilClient;
@@ -133,6 +135,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String SNAPSHOT_NAME_PARAM = "snapshotname";
   public static final String OLD_SNAPSHOT_NAME_PARAM = "oldsnapshotname";
   public static final String FSACTION_MODE_PARAM = "fsaction";
+  public static final String EC_POLICY_NAME_PARAM = "ecpolicy";
 
   public static final Short DEFAULT_PERMISSION = 0755;
   public static final String ACLSPEC_DEFAULT = "";
@@ -188,10 +191,12 @@ public class HttpFSFileSystem extends FileSystem
   public static final String FILE_ID_JSON = "fileId";
   public static final String REPLICATION_JSON = "replication";
   public static final String STORAGEPOLICY_JSON = "storagePolicy";
+  public static final String ECPOLICYNAME_JSON = "ecPolicy";
   public static final String XATTRS_JSON = "XAttrs";
   public static final String XATTR_NAME_JSON = "name";
   public static final String XATTR_VALUE_JSON = "value";
   public static final String XATTRNAMES_JSON = "XAttrNames";
+  public static final String ECPOLICY_JSON = "ecPolicyObj";
 
   public static final String FILE_CHECKSUM_JSON = "FileChecksum";
   public static final String CHECKSUM_ALGORITHM_JSON = "algorithm";
@@ -257,7 +262,8 @@ public class HttpFSFileSystem extends FileSystem
     CREATESNAPSHOT(HTTP_PUT), DELETESNAPSHOT(HTTP_DELETE),
     RENAMESNAPSHOT(HTTP_PUT), GETSNAPSHOTDIFF(HTTP_GET),
     GETSNAPSHOTTABLEDIRECTORYLIST(HTTP_GET), GETSERVERDEFAULTS(HTTP_GET),
-    CHECKACCESS(HTTP_GET);
+    CHECKACCESS(HTTP_GET), SETECPOLICY(HTTP_PUT), GETECPOLICY(
+        HTTP_GET), UNSETECPOLICY(HTTP_POST);
 
     private String httpMethod;
 
@@ -846,9 +852,8 @@ public class HttpFSFileSystem extends FileSystem
                                            params, f, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
-    json = (JSONObject) json.get(FILE_STATUS_JSON);
-    f = makeQualified(f);
-    return createFileStatus(f, json);
+    HdfsFileStatus status = JsonUtilClient.toFileStatus(json, true);
+    return status.makeQualified(getUri(), f);
   }
 
   /**
@@ -1620,6 +1625,35 @@ public class HttpFSFileSystem extends FileSystem
     params.put(FSACTION_MODE_PARAM, mode.SYMBOL);
     HttpURLConnection conn =
         getConnection(Operation.CHECKACCESS.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  public void setErasureCodingPolicy(final Path path, String policyName)
+      throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.SETECPOLICY.toString());
+    params.put(EC_POLICY_NAME_PARAM, policyName);
+    HttpURLConnection conn =
+        getConnection(Operation.SETECPOLICY.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  public ErasureCodingPolicy getErasureCodingPolicy(final Path path)
+      throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETECPOLICY.toString());
+    HttpURLConnection conn =
+        getConnection(Operation.GETECPOLICY.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.toECPolicy(json);
+  }
+
+  public void unsetErasureCodingPolicy(final Path path) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.UNSETECPOLICY.toString());
+    HttpURLConnection conn =
+        getConnection(Operation.UNSETECPOLICY.getMethod(), params, path, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 }

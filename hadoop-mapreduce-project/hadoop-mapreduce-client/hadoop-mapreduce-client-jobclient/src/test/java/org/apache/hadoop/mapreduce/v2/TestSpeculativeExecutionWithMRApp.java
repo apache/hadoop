@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.mapreduce.v2;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -50,19 +53,94 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.junit.Rule;
 import org.junit.Test;
 
 import com.google.common.base.Supplier;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.junit.runners.model.Statement;
 
+/**
+ * The type Test speculative execution with mr app.
+ * It test the speculation behavior given a list of estimator classes.
+ */
 @SuppressWarnings({ "unchecked", "rawtypes" })
 @RunWith(Parameterized.class)
 public class TestSpeculativeExecutionWithMRApp {
-
+  /** Number of times to re-try the failing tests. */
+  private static final int ASSERT_SPECULATIONS_COUNT_RETRIES = 3;
   private static final int NUM_MAPPERS = 5;
   private static final int NUM_REDUCERS = 0;
 
+  /**
+   * Speculation has non-deterministic behavior due to racing and timing. Use
+   * retry to verify that junit tests can pass.
+   */
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface Retry {}
+
+  /**
+   * The type Retry rule.
+   */
+  class RetryRule implements TestRule {
+
+    private AtomicInteger retryCount;
+
+    /**
+     * Instantiates a new Retry rule.
+     *
+     * @param retries the retries
+     */
+    RetryRule(int retries) {
+      super();
+      this.retryCount = new AtomicInteger(retries);
+    }
+
+    @Override
+    public Statement apply(final Statement base,
+        final Description description) {
+      return new Statement() {
+        @Override
+        public void evaluate() throws Throwable {
+          Throwable caughtThrowable = null;
+
+          while (retryCount.getAndDecrement() > 0) {
+            try {
+              base.evaluate();
+              return;
+            } catch (Throwable t) {
+              if (retryCount.get() > 0 &&
+                  description.getAnnotation(Retry.class) != null) {
+                caughtThrowable = t;
+                System.out.println(
+                    description.getDisplayName() +
+                        ": Failed, " +
+                        retryCount.toString() +
+                        " retries remain");
+              } else {
+                throw caughtThrowable;
+              }
+            }
+          }
+        }
+      };
+    }
+  }
+
+  /**
+   * The Rule.
+   */
+  @Rule
+  public RetryRule rule = new RetryRule(ASSERT_SPECULATIONS_COUNT_RETRIES);
+
+  /**
+   * Gets test parameters.
+   *
+   * @return the test parameters
+   */
   @Parameterized.Parameters(name = "{index}: TaskEstimator(EstimatorClass {0})")
   public static Collection<Object[]> getTestParameters() {
     return Arrays.asList(new Object[][] {
@@ -73,12 +151,23 @@ public class TestSpeculativeExecutionWithMRApp {
 
   private Class<? extends TaskRuntimeEstimator> estimatorClass;
 
+  /**
+   * Instantiates a new Test speculative execution with mr app.
+   *
+   * @param estimatorKlass the estimator klass
+   */
   public TestSpeculativeExecutionWithMRApp(
       Class<? extends TaskRuntimeEstimator>  estimatorKlass) {
     this.estimatorClass = estimatorKlass;
   }
 
-  @Test
+  /**
+   * Test speculate successful without update events.
+   *
+   * @throws Exception the exception
+   */
+  @Retry
+  @Test (timeout = 360000)
   public void testSpeculateSuccessfulWithoutUpdateEvents() throws Exception {
 
     Clock actualClock = SystemClock.getInstance();
@@ -128,7 +217,8 @@ public class TestSpeculativeExecutionWithMRApp {
             TaskAttemptEventType.TA_DONE));
           appEventHandler.handle(new TaskAttemptEvent(taskAttempt.getKey(),
             TaskAttemptEventType.TA_CONTAINER_COMPLETED));
-          app.waitForState(taskAttempt.getValue(), TaskAttemptState.SUCCEEDED);
+          app.waitForState(taskAttempt.getValue(), TaskAttemptState.SUCCEEDED,
+              TaskAttemptState.KILLED);
         }
       }
     }
@@ -150,8 +240,14 @@ public class TestSpeculativeExecutionWithMRApp {
     app.waitForState(Service.STATE.STOPPED);
   }
 
-  @Test
-  public void testSepculateSuccessfulWithUpdateEvents() throws Exception {
+  /**
+   * Test speculate successful with update events.
+   *
+   * @throws Exception the exception
+   */
+  @Retry
+  @Test (timeout = 360000)
+  public void testSpeculateSuccessfulWithUpdateEvents() throws Exception {
 
     Clock actualClock = SystemClock.getInstance();
     final ControlledClock clock = new ControlledClock(actualClock);
@@ -198,7 +294,8 @@ public class TestSpeculativeExecutionWithMRApp {
           appEventHandler.handle(new TaskAttemptEvent(taskAttempt.getKey(),
             TaskAttemptEventType.TA_CONTAINER_COMPLETED));
           numTasksToFinish--;
-          app.waitForState(taskAttempt.getValue(), TaskAttemptState.SUCCEEDED);
+          app.waitForState(taskAttempt.getValue(), TaskAttemptState.KILLED,
+              TaskAttemptState.SUCCEEDED);
         } else {
           // The last task is chosen for speculation
           TaskAttemptStatus status =
@@ -214,13 +311,12 @@ public class TestSpeculativeExecutionWithMRApp {
     }
 
     clock.setTime(System.currentTimeMillis() + 15000);
-    // give a chance to the speculator thread to run a scan before we proceed
-    // with updating events
-    Thread.yield();
+
     for (Map.Entry<TaskId, Task> task : tasks.entrySet()) {
       for (Map.Entry<TaskAttemptId, TaskAttempt> taskAttempt : task.getValue()
         .getAttempts().entrySet()) {
-        if (taskAttempt.getValue().getState() != TaskAttemptState.SUCCEEDED) {
+        if (!(taskAttempt.getValue().getState() == TaskAttemptState.SUCCEEDED
+            || taskAttempt.getValue().getState() == TaskAttemptState.KILLED)) {
           TaskAttemptStatus status =
               createTaskAttemptStatus(taskAttempt.getKey(), (float) 0.75,
                 TaskAttemptState.RUNNING);

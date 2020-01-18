@@ -42,6 +42,7 @@ import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
@@ -315,7 +316,8 @@ public class LeaseManager {
       }
 
       fullPathName = inodeFile.getFullPathName();
-      if (StringUtils.isEmpty(path) || fullPathName.startsWith(path)) {
+      if (StringUtils.isEmpty(path) ||
+          DFSUtil.isParentEntry(fullPathName, path)) {
         openFileEntries.add(new OpenFileEntry(inodeFile.getId(), fullPathName,
             inodeFile.getFileUnderConstructionFeature().getClientName(),
             inodeFile.getFileUnderConstructionFeature().getClientMachine()));

@@ -33,8 +33,10 @@ public class WebPageUtils {
 
   public static String appsTableInit(
       boolean isFairSchedulerPage, boolean isResourceManager) {
-    // id, user, name, queue, starttime, finishtime, state, status, progress, ui
+    // id, user, name, app type, app tags, queue, priority,
+    // starttime, launchtime, finishtime, state, status, progress, ui
     // FairSchedulerPage's table is a bit different
+    // This is define in RMAppsBlock.COLUMNS for the RM
     return tableInit()
       .append(", 'aaData': appsTableData")
       .append(", bDeferRender: true")
@@ -51,24 +53,26 @@ public class WebPageUtils {
     String progressIndex = "[11]";
     StringBuilder sb = new StringBuilder();
     sb.append("[\n")
-      .append("{'sType':'natural', 'aTargets': [0]")
-      .append(", 'mRender': parseHadoopID }")
-      .append("\n, {'sType':'num-ignore-str', 'aTargets': [6, 7, 8]")
-      .append(", 'mRender': renderHadoopDate }");
+      .append("{'sType':'natural', 'aTargets': [0], ")
+      .append("'mRender': parseHadoopID },\n")
+      .append("{'sType':'num-ignore-str', 'aTargets': [7, 8, 9], ")
+      .append("'mRender': renderHadoopDate },\n");
     if (isResourceManager) {
       // Update following line if any column added in RM page before column 11
-      sb.append("\n, {'sType':'num-ignore-str', 'aTargets': [11, 12, 13, 14, 15] }");
-      // set progress column index to 18
-      progressIndex = "[18]";
+      sb.append("{'sType':'num-ignore-str', ")
+        .append("'aTargets': [12, 13, 14, 15, 16] },\n");
+      // set progress column index to 19
+      progressIndex = "[19]";
     } else if (isFairSchedulerPage) {
       // Update following line if any column added in scheduler page before column 11
-      sb.append("\n, {'sType':'num-ignore-str', 'aTargets': [11, 12, 13, 14, 15] }");
+      sb.append("{'sType':'num-ignore-str', ")
+        .append("'aTargets': [11, 12, 13, 14, 15] },\n");
       // set progress column index to 16
       progressIndex = "[16]";
     }
-    sb.append("\n, {'sType':'numeric', bSearchable:false, 'aTargets':");
-    sb.append(progressIndex);
-    sb.append(", 'mRender': parseHadoopProgress }]");
+    sb.append("{'sType':'numeric', bSearchable:false, 'aTargets':")
+      .append(progressIndex)
+      .append(", 'mRender': parseHadoopProgress }\n]");
     return sb.toString();
   }
 

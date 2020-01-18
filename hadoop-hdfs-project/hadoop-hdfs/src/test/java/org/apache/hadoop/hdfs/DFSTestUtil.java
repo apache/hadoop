@@ -2392,13 +2392,32 @@ public class DFSTestUtil {
     }
   }
 
+  /**
+   * Create open files under root path.
+   * @param fs the filesystem.
+   * @param filePrefix the prefix of the files.
+   * @param numFilesToCreate the number of files to create.
+   */
   public static Map<Path, FSDataOutputStream> createOpenFiles(FileSystem fs,
       String filePrefix, int numFilesToCreate) throws IOException {
+    return createOpenFiles(fs, new Path("/"), filePrefix, numFilesToCreate);
+  }
+
+  /**
+   * Create open files.
+   * @param fs the filesystem.
+   * @param baseDir the base path of the files.
+   * @param filePrefix the prefix of the files.
+   * @param numFilesToCreate the number of files to create.
+   */
+  public static Map<Path, FSDataOutputStream> createOpenFiles(FileSystem fs,
+      Path baseDir, String filePrefix, int numFilesToCreate)
+      throws IOException {
     final Map<Path, FSDataOutputStream> filesCreated = new HashMap<>();
     final byte[] buffer = new byte[(int) (1024 * 1.75)];
     final Random rand = new Random(0xFEED0BACL);
     for (int i = 0; i < numFilesToCreate; i++) {
-      Path file = new Path("/" + filePrefix + "-" + i);
+      Path file = new Path(baseDir, filePrefix + "-" + i);
       FSDataOutputStream stm = fs.create(file, true, 1024, (short) 1, 1024);
       rand.nextBytes(buffer);
       stm.write(buffer);
