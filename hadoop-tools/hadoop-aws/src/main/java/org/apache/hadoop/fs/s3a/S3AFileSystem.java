@@ -1452,7 +1452,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               ? Listing.ACCEPT_ALL_BUT_S3N
               : new Listing.AcceptAllButSelfAndS3nDirs(path),
           status,
-          collectTombstones);
+          collectTombstones,
+          true);
     }
 
     @Override
@@ -3937,7 +3938,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public RemoteIterator<LocatedFileStatus> listFiles(Path f,
       boolean recursive) throws FileNotFoundException, IOException {
     return toLocatedFileStatusIterator(innerListFiles(f, recursive,
-        new Listing.AcceptFilesOnly(qualify(f)), null, true));
+        new Listing.AcceptFilesOnly(qualify(f)), null, true, false));
   }
 
   private static RemoteIterator<LocatedFileStatus> toLocatedFileStatusIterator(
@@ -3964,7 +3965,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   public RemoteIterator<S3ALocatedFileStatus> listFilesAndEmptyDirectories(
       Path f, boolean recursive) throws IOException {
-    return innerListFiles(f, recursive, Listing.ACCEPT_ALL_BUT_S3N, null, true);
+    return innerListFiles(f, recursive, Listing.ACCEPT_ALL_BUT_S3N,
+        null, true, false);
+  }
+
+  /**
+   * Recursive List of files and empty directories, force metadatastore
+   * to act like it is non-authoritative.
+   * @param f path to list from
+   * @param recursive
+   * @return an iterator.
+   * @throws IOException failure
+   */
+  @Retries.RetryTranslated
+  public RemoteIterator<S3ALocatedFileStatus> listFilesAndEmptyDirectoriesForceNonAuth(
+      Path f, boolean recursive) throws IOException {
+    return innerListFiles(f, recursive, Listing.ACCEPT_ALL_BUT_S3N,
+        null, true, true);
   }
 
   /**
@@ -3989,11 +4006,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    *   </li>
    * </ol>
    *
+   * In case of recursive listing, if any of the directories reachable from
+   * the path are not authoritative on the client, this method will query S3
+   * for all the directories in the listing in addition to returning S3Guard
+   * entries.
+   *
    * @param f path
    * @param recursive recursive listing?
    * @param acceptor file status filter
    * @param status optional status of path to list.
    * @param collectTombstones should tombstones be collected from S3Guard?
+   * @param forceNonAuthoritativeMS forces metadata store to act like non
+   *                                authoritative. This is useful when
+   *                                listFiles output is used by import tool.
    * @return an iterator over the listing.
    * @throws IOException failure
    */
@@ -4003,7 +4028,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final boolean recursive,
       final Listing.FileStatusAcceptor acceptor,
       final S3AFileStatus status,
-      final boolean collectTombstones) throws IOException {
+      final boolean collectTombstones,
+      final boolean forceNonAuthoritativeMS) throws IOException {
     entryPoint(INVOCATION_LIST_FILES);
     Path path = qualify(f);
     LOG.debug("listFiles({}, {})", path, recursive);
@@ -4035,6 +4061,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               new MetadataStoreListFilesIterator(metadataStore, pm,
                   allowAuthoritative);
           tombstones = metadataStoreListFilesIterator.listTombstones();
+          // if all of the below is true
+          //  - authoritative access is allowed for this metadatastore for this directory,
+          //  - all the directory listings are authoritative on the client
+          //  - the caller does not force non-authoritative access
+          // return the listing without any further s3 access
+          if (!forceNonAuthoritativeMS &&
+              allowAuthoritative &&
+              metadataStoreListFilesIterator.isRecursivelyAuthoritative()) {
+            S3AFileStatus[] statuses = S3Guard.iteratorToStatuses(
+                metadataStoreListFilesIterator, tombstones);
+            cachedFilesIterator = listing.createProvidedFileStatusIterator(
+                statuses, ACCEPT_ALL, acceptor);
+            return listing.createLocatedFileStatusIterator(cachedFilesIterator);
+          }
           cachedFilesIterator = metadataStoreListFilesIterator;
         } else {
           DirListingMetadata meta =

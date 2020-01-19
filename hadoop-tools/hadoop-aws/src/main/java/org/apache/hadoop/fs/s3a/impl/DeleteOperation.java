@@ -323,7 +323,8 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
       // list files including any under tombstones through S3Guard
       LOG.debug("Getting objects for directory prefix {} to delete", dirKey);
       final RemoteIterator<S3ALocatedFileStatus> locatedFiles =
-          callbacks.listFilesAndEmptyDirectories(path, status, false, true);
+          callbacks.listFilesAndEmptyDirectories(path, status,
+              false, true);
 
       // iterate through and delete. The next() call will block when a new S3
       // page is required; this any active delete submitted to the executor
