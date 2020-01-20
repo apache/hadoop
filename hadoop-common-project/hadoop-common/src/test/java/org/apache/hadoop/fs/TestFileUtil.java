@@ -82,7 +82,7 @@ public class TestFileUtil {
   private static final String LINK = "y";
   private static final String DIR = "dir";
 
-  private static final String file1Name = "file1";
+  private static final String FILE_1_NAME = "file1";
 
   private File del;
   private File tmp;
@@ -365,7 +365,7 @@ public class TestFileUtil {
    * @throws IOException
    */
   private void setupDirsAndNonWritablePermissions() throws IOException {
-    new MyFile(del, file1Name).createNewFile();
+    new MyFile(del, FILE_1_NAME).createNewFile();
 
     // "file1" is non-deletable by default, see MyFile.delete().
 
@@ -410,7 +410,7 @@ public class TestFileUtil {
     
     Assert.assertFalse("The return value should have been false.", ret);
     Assert.assertTrue("The file file1 should not have been deleted.",
-        new File(del, file1Name).exists());
+        new File(del, FILE_1_NAME).exists());
     
     Assert.assertEquals(
         "The directory xSubDir *should* not have been deleted.",
@@ -475,7 +475,7 @@ public class TestFileUtil {
     public boolean delete() {
       LOG.info("Trying to delete myFile " + getAbsolutePath());
       boolean bool = false;
-      if (getName().equals(file1Name)) {
+      if (getName().equals(FILE_1_NAME)) {
         bool = false;
       } else {
         bool = super.delete();
@@ -947,9 +947,6 @@ public class TestFileUtil {
    */
   @Test
   public void testSymlinkWithNullInput() throws IOException {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
-
     File file = new File(del, FILE);
     File link = new File(del, "_link");
 
@@ -967,9 +964,6 @@ public class TestFileUtil {
     // The operation should fail and returns 1
     result = FileUtil.symLink(null, link.getAbsolutePath());
     Assert.assertEquals(1, result);
-
-    file.delete();
-    link.delete();
   }
 
   /**
@@ -980,9 +974,6 @@ public class TestFileUtil {
    */
   @Test
   public void testSymlinkFileAlreadyExists() throws IOException {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
-
     File file = new File(del, FILE);
     File link = new File(del, "_link");
 
@@ -998,9 +989,6 @@ public class TestFileUtil {
     result1 = FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
 
     Assert.assertEquals(1, result1);
-
-    file.delete();
-    link.delete();
   }
 
   /**
@@ -1012,10 +1000,9 @@ public class TestFileUtil {
    */
   @Test
   public void testSymlinkSameFile() throws IOException {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
-
     File file = new File(del, FILE);
+
+    file.delete();
 
     // Create a symbolic link
     // The operation should succeed
@@ -1023,8 +1010,6 @@ public class TestFileUtil {
         FileUtil.symLink(file.getAbsolutePath(), file.getAbsolutePath());
 
     Assert.assertEquals(0, result);
-
-    file.delete();
   }
 
   /**
@@ -1036,8 +1021,6 @@ public class TestFileUtil {
    */
   @Test
   public void testSymlink2DifferentFile() throws IOException {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
     File file = new File(del, FILE);
     File fileSecond = new File(del, FILE + "_1");
     File link = new File(del, "_link");
@@ -1054,10 +1037,6 @@ public class TestFileUtil {
         FileUtil.symLink(fileSecond.getAbsolutePath(), link.getAbsolutePath());
 
     Assert.assertEquals(1, result);
-
-    file.delete();
-    fileSecond.delete();
-    link.delete();
   }
 
   /**
@@ -1069,8 +1048,6 @@ public class TestFileUtil {
    */
   @Test
   public void testSymlink2DifferentLinks() throws IOException {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
     File file = new File(del, FILE);
     File link = new File(del, "_link");
     File linkSecond = new File(del, "_link_1");
@@ -1087,10 +1064,6 @@ public class TestFileUtil {
         FileUtil.symLink(file.getAbsolutePath(), linkSecond.getAbsolutePath());
 
     Assert.assertEquals(0, result);
-
-    file.delete();
-    link.delete();
-    linkSecond.delete();
   }
 
   private void doUntarAndVerify(File tarFile, File untarDir) 
@@ -1223,9 +1196,6 @@ public class TestFileUtil {
     assertTrue("no jars should be returned for a bogus path",
         jars.isEmpty());
 
-    // setup test directory for files
-    assertFalse(tmp.exists());
-    assertTrue(tmp.mkdirs());
 
     // create jar files to be returned
     File jar1 = new File(tmp, "wildcard1.jar");
@@ -1424,9 +1394,6 @@ public class TestFileUtil {
    */
   @Test
   public void testReadSymlink() throws IOException {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
-
     File file = new File(del, FILE);
     File link = new File(del, "_link");
 
@@ -1435,9 +1402,6 @@ public class TestFileUtil {
 
     String result = FileUtil.readLink(link);
     Assert.assertEquals(file.getAbsolutePath(), result);
-
-    file.delete();
-    link.delete();
   }
 
   /**
@@ -1448,9 +1412,6 @@ public class TestFileUtil {
    */
   @Test
   public void testReadSymlinkWithAFileAsInput() throws IOException {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
-
     File file = new File(del, FILE);
 
     String result = FileUtil.readLink(file);
