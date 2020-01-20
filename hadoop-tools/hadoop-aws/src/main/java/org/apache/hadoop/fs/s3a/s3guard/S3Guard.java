@@ -63,6 +63,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.a
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class S3Guard {
+
   private static final Logger LOG = LoggerFactory.getLogger(S3Guard.class);
 
   @InterfaceAudience.Private
@@ -75,6 +76,17 @@ public final class S3Guard {
       S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT =
       DynamoDBClientFactory.DefaultDynamoDBClientFactory.class;
   private static final S3AFileStatus[] EMPTY_LISTING = new S3AFileStatus[0];
+
+
+  /**
+   * Hard-coded policy : {@value}.
+   * If true, when merging an S3 LIST with S3Guard in non-auth mode,
+   * only updated entries are added; new entries are left out.
+   * This policy choice reduces the amount of data stored in Dynamo,
+   * and hence the complexity of the merge in a non-auth listing.
+   */
+  @VisibleForTesting
+  public static final boolean DIR_MERGE_UPDATES_ALL_RECORDS_NONAUTH = true;
 
   // Utility class.  All static functions.
   private S3Guard() { }
@@ -204,6 +216,7 @@ public final class S3Guard {
       final PathMetadata fileMeta = authoritativeEmptyDirectoryMarker(status);
       putWithTtl(ms, fileMeta, timeProvider, operationState);
     } finally {
+      ms.getInstrumentation().directoryMarkedAuthoritative();
       ms.getInstrumentation().entryAdded((System.nanoTime() - startTimeNano));
     }
   }
@@ -338,14 +351,18 @@ public final class S3Guard {
         // in non-auth listings, we compare the file status of the metastore
         // list with those in the FS, and overwrite the MS entry if
         // either of two conditions are met
-        // - there is no entry in the metadata.
-        // - the FS entry for a file (not a dir) is newer.
-        FileStatus status = originalMD != null
+        // - there is no entry in the metadata and
+        //   DIR_MERGE_UPDATES_ALL_RECORDS_NONAUTH is compiled to true
+        // - there is an entry in the metastore the FS entry is newer.
+        FileStatus mdStatus = originalMD != null
             ? originalMD.getFileStatus()
             : null;
-        if (status == null
-          ||(s.getModificationTime() > status.getModificationTime()
-            && !(s.isDirectory() && status.isDirectory()))) {
+        boolean shouldUpdate = mdStatus != null
+            && s.getModificationTime() > mdStatus.getModificationTime();
+        if (DIR_MERGE_UPDATES_ALL_RECORDS_NONAUTH && mdStatus == null) {
+          shouldUpdate = true;
+        }
+        if (shouldUpdate) {
           LOG.debug("Update ms with newer metadata of: {}", s);
           // ensure it gets into the dirListing
           pathMetadata = new PathMetadata(s);

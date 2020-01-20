@@ -3533,13 +3533,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         S3AFileStatus status = createUploadFileStatus(p,
             isDir, length,
             getDefaultBlockSize(p), username, eTag, versionId);
-        if (!isDir) {
+        boolean authoritative = false;
+        if (isDir) {
+          // this is a directory marker so put it as such.
+          status.setIsEmptyDirectory(Tristate.TRUE);
+          // and maybe mark as auth
+          authoritative = allowAuthoritative(p);
+        }
+        if (!authoritative) {
+          // for files and non-auth directories
           S3Guard.putAndReturn(metadataStore, status,
               ttlTimeProvider,
               activeState);
         } else {
-          // this is a directory marker so put it as such.
-          status.setIsEmptyDirectory(Tristate.TRUE);
+          // authoritative directory
           S3Guard.putAuthDirectoryMarker(metadataStore, status,
               ttlTimeProvider,
               activeState);
