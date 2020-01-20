@@ -1728,9 +1728,9 @@ public class TestYarnCLI {
     pw.println("Queue Information : ");
     pw.println("Queue Name : " + "queueA");
     pw.println("\tState : " + "RUNNING");
-    pw.println("\tCapacity : " + "40.0%");
-    pw.println("\tCurrent Capacity : " + "50.0%");
-    pw.println("\tMaximum Capacity : " + "80.0%");
+    pw.println("\tCapacity : " + "40.00%");
+    pw.println("\tCurrent Capacity : " + "50.00%");
+    pw.println("\tMaximum Capacity : " + "80.00%");
     pw.println("\tDefault Node Label expression : " + "GPU");
     pw.println("\tAccessible Node Labels : " + "JDK_7,GPU");
     pw.println("\tPreemption : " + "enabled");
@@ -1895,9 +1895,9 @@ public class TestYarnCLI {
     pw.println("Queue Information : ");
     pw.println("Queue Name : " + "queueA");
     pw.println("\tState : " + "RUNNING");
-    pw.println("\tCapacity : " + "40.0%");
-    pw.println("\tCurrent Capacity : " + "50.0%");
-    pw.println("\tMaximum Capacity : " + "80.0%");
+    pw.println("\tCapacity : " + "40.00%");
+    pw.println("\tCurrent Capacity : " + "50.00%");
+    pw.println("\tMaximum Capacity : " + "80.00%");
     pw.println("\tDefault Node Label expression : "
         + NodeLabel.DEFAULT_NODE_LABEL_PARTITION);
     pw.println("\tAccessible Node Labels : ");
