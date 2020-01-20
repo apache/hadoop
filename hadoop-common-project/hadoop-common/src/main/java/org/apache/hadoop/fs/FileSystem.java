@@ -4612,7 +4612,7 @@ public abstract class FileSystem extends Configured
           .withMandatoryKeys(getMandatoryKeys())
           .withOptions(getOptions())
           .withBufferSize(getBufferSize())
-          .withStatus(super.getStatus());  // explicit so as to avoid IDE warnings
+          .withStatus(super.getStatus());  // explicit to avoid IDE warnings
       if(optionalPath.isPresent()) {
         return getFS().openFileWithOptions(optionalPath.get(),
             parameters);

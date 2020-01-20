@@ -454,8 +454,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     fs.getMetadataStore().put(
         new PathMetadata(forgedStatus, Tristate.FALSE, false));
 
-    // verify the bad etag gets picked up...which it does for etag but not
-    // version ID
+    // verify the bad etag gets picked up.
     LOG.info("Opening stream with s3guard's (invalid) status.");
     try (FSDataInputStream instream = fs.openFile(testpath)
         .build()
@@ -467,10 +466,10 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
             "Read did not raise an exception even though the change detection "
                 + "mode was " + changeDetectionMode
                 + " and the inserted file status was invalid",
-            changeDetectionMode.equals(CHANGE_DETECT_MODE_NONE) ||
-                changeDetectionMode.equals(CHANGE_DETECT_MODE_WARN)
-        || changeDetectionSource.equals(CHANGE_DETECT_SOURCE_VERSION_ID));
-      } catch (Exception ignored) {
+            changeDetectionMode.equals(CHANGE_DETECT_MODE_NONE)
+                || changeDetectionMode.equals(CHANGE_DETECT_MODE_WARN)
+                || changeDetectionSource.equals(CHANGE_DETECT_SOURCE_VERSION_ID));
+      } catch (RemoteFileChangedException ignored) {
         // Ignored.
       }
     }
@@ -482,7 +481,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         .withFileStatus(originalStatus)
         .build()
         .get()) {
-       instream.read();
+      instream.read();
     }
 
     // and this holds for S3A Located Status
@@ -515,10 +514,10 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         .get()) {
       if (changeDetectionSource.equals(CHANGE_DETECT_SOURCE_VERSION_ID)
           && changeDetectionMode.equals(CHANGE_DETECT_MODE_SERVER)) {
-            // the deleted file is still there if you know the version ID
-            // and the check is server-side
-            instream.read();
-          } else {
+          // the deleted file is still there if you know the version ID
+          // and the check is server-side
+          instream.read();
+      } else {
         // all other cases, the read will return 404.
         intercept(FileNotFoundException.class,
             () -> instream.read());
@@ -1009,7 +1008,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         writeFile(testpath, dataset, dataset.length, false);
 
     // overwrite with half the content
-    S3AFileStatus newStatus = writeFile(testpath, dataset, dataset.length / 2, true);
+    S3AFileStatus newStatus = writeFile(testpath, dataset, dataset.length / 2,
+        true);
 
     // put back the original etag, versionId
     S3AFileStatus forgedStatus =

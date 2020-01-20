@@ -1001,7 +1001,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     entryPoint(INVOCATION_OPEN);
     final Path path = qualify(file);
-    S3AFileStatus fileStatus = extractOrFetchSimpleFileStatus(path, providedStatus);
+    S3AFileStatus fileStatus = extractOrFetchSimpleFileStatus(path,
+        providedStatus);
 
     S3AReadOpContext readContext;
     if (options.isPresent()) {
@@ -4319,7 +4320,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     entryPoint(OBJECT_SELECT_REQUESTS);
     requireSelectSupport(source);
     final Path path = makeQualified(source);
-    final S3AFileStatus fileStatus = extractOrFetchSimpleFileStatus(path, providedStatus);
+    final S3AFileStatus fileStatus = extractOrFetchSimpleFileStatus(path,
+        providedStatus);
 
     // readahead range can be dynamically set
     long ra = options.getLong(READAHEAD_RANGE, readAhead);
@@ -4387,18 +4389,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     if (optStatus.isPresent()) {
       fileStatus = optStatus.get();
     } else {
-      // this looks at s3guard and gets any type of status back,
+      // this looks at S3guard and gets any type of status back,
       // if it falls back to S3 it does a HEAD only.
       // therefore: if there is no S3Guard and there is a dir, this
-      // will fail
+      // will raise a FileNotFoundException
       fileStatus = innerGetFileStatus(path, false,
           StatusProbeEnum.HEAD_ONLY);
     }
     // we check here for the passed in status or the S3Guard value
     // for being a directory
     if (fileStatus.isDirectory()) {
-      throw new FileNotFoundException("Can't open " + path
-          + " because it is a directory");
+      throw new FileNotFoundException(path.toString() + " is a directory");
     }
     return fileStatus;
   }

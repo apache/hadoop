@@ -549,14 +549,14 @@ public class ITestS3Select extends AbstractS3SelectTest {
     FutureDataInputStreamBuilder builder =
         getFileSystem().openFile(dir)
             .must(SELECT_SQL, SELECT_ODD_ENTRIES);
-    interceptFuture(PathIOException.class,
+    interceptFuture(FileNotFoundException.class,
         "", builder.build());
 
     // try the parent
     builder = getFileSystem().openFile(dir.getParent())
             .must(SELECT_SQL,
                 SELECT_ODD_ENTRIES);
-    interceptFuture(PathIOException.class,
+    interceptFuture(FileNotFoundException.class,
         "", builder.build());
   }
 
@@ -566,7 +566,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
     FutureDataInputStreamBuilder builder =
         getFileSystem().openFile(path("/"))
             .must(SELECT_SQL, SELECT_ODD_ENTRIES);
-    interceptFuture(PathIOException.class,
+    interceptFuture(FileNotFoundException.class,
         "", builder.build());
   }
 

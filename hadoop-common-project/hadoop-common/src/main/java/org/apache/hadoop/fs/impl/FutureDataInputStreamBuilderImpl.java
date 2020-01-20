@@ -147,13 +147,13 @@ public abstract class FutureDataInputStreamBuilderImpl
   }
 
   @Override
-  public FutureDataInputStreamBuilder withFileStatus(FileStatus status) {
-    this.status = requireNonNull(status, "status");
+  public FutureDataInputStreamBuilder withFileStatus(FileStatus st) {
+    this.status = requireNonNull(st, "status");
     return this;
   }
 
   /**
-   * Get any status set in {@link #withFileStatus(FileStatus)}
+   * Get any status set in {@link #withFileStatus(FileStatus)}.
    * @return a status value or null.
    */
   protected FileStatus getStatus() {

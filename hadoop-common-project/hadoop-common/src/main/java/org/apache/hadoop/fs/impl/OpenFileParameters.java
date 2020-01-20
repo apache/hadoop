@@ -56,23 +56,23 @@ public class OpenFileParameters {
   public OpenFileParameters() {
   }
 
-  public OpenFileParameters withMandatoryKeys(final Set<String> mandatoryKeys) {
-    this.mandatoryKeys = requireNonNull(mandatoryKeys);
+  public OpenFileParameters withMandatoryKeys(final Set<String> keys) {
+    this.mandatoryKeys = requireNonNull(keys);
     return this;
   }
 
-  public OpenFileParameters withOptions(final Configuration options) {
-    this.options = requireNonNull(options);
+  public OpenFileParameters withOptions(final Configuration opts) {
+    this.options = requireNonNull(opts);
     return this;
   }
 
-  public OpenFileParameters withBufferSize(final int bufferSize) {
-    this.bufferSize = bufferSize;
+  public OpenFileParameters withBufferSize(final int size) {
+    this.bufferSize = size;
     return this;
   }
 
-  public OpenFileParameters withStatus(final FileStatus status) {
-    this.status = status;
+  public OpenFileParameters withStatus(final FileStatus st) {
+    this.status = st;
     return this;
   }
 

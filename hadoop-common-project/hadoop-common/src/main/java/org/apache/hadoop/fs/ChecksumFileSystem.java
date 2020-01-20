@@ -850,7 +850,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
         Collections.emptySet(),
         "for " + path);
     return LambdaUtils.eval(
-        new CompletableFuture<>(), () -> open(path, parameters.getBufferSize()));
+        new CompletableFuture<>(),
+        () -> open(path, parameters.getBufferSize()));
   }
 
   /**
