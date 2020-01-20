@@ -75,7 +75,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   private final long accessTime = 0;
   private static ITtlTimeProvider ttlTimeProvider;
 
-  private static final List<Path> UNCHANGED_ENTRIES = Collections.emptyList();
+  private static final List<Path> EMPTY_LIST = Collections.emptyList();
 
   /**
    * Each test should override this.  Will use a new Configuration instance.
@@ -561,7 +561,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     dirMeta.setAuthoritative(true);
     dirMeta.put(new PathMetadata(
         makeFileStatus("/a1/b1/file_new", 100)));
-    ms.put(dirMeta, UNCHANGED_ENTRIES, null);
+    ms.put(dirMeta, EMPTY_LIST, null);
 
     dirMeta = ms.listChildren(strToPath("/a1/b1"));
     assertListingsEqual(dirMeta.getListing(), "/a1/b1/file1", "/a1/b1/file2",
@@ -762,7 +762,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     if (!allowMissing()) {
       DirListingMetadata parentDirMd = ms.listChildren(strToPath(parentDir));
       parentDirMd.setAuthoritative(true);
-      ms.put(parentDirMd, UNCHANGED_ENTRIES, null);
+      ms.put(parentDirMd, EMPTY_LIST, null);
     }
 
     ms.prune(MetadataStore.PruneMode.ALL_BY_MODTIME, time);
@@ -801,7 +801,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
       // set parent dir as authoritative
       DirListingMetadata parentDirMd = ms.listChildren(strToPath(parentDir));
       parentDirMd.setAuthoritative(true);
-      ms.put(parentDirMd, UNCHANGED_ENTRIES, null);
+      ms.put(parentDirMd, EMPTY_LIST, null);
 
       // prune the ms
       ms.prune(MetadataStore.PruneMode.ALL_BY_MODTIME, time);
@@ -833,7 +833,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     }
     DirListingMetadata dirMeta =
         new DirListingMetadata(strToPath(dirPath), metas, authoritative);
-    ms.put(dirMeta, UNCHANGED_ENTRIES, null);
+    ms.put(dirMeta, EMPTY_LIST, null);
 
     if (!allowMissing()) {
       assertDirectorySize(dirPath, filenames.length);
@@ -1014,7 +1014,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     }
     DirListingMetadata dirMeta =
         new DirListingMetadata(strToPath(dirPath), metas, authoritative);
-    ms.put(dirMeta, UNCHANGED_ENTRIES, null);
+    ms.put(dirMeta, EMPTY_LIST, null);
   }
 
   protected void createNewDirs(String... dirs)

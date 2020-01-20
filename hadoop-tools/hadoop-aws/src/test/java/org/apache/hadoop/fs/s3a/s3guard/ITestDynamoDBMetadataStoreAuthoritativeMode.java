@@ -45,8 +45,6 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.rm;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY;
@@ -736,7 +734,7 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
   }
 
   /**
-   * Create a non-auth directory, by creating (then deleting) a subdir.
+   * Create a non-auth directory.
    * @param path dir
    */
   private void mkNonauthDir(Path path) throws IOException {
