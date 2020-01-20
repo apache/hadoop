@@ -2210,7 +2210,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
                 DEFAULT_RM_NODEMANAGER_UNTRACKED_REMOVAL_TIMEOUT_MSEC);
     int nodeRemovalInterval =
         rmContext.getNodesListManager().getNodeRemovalCheckInterval();
-    long maxThreadSleeptime = nodeRemovalInterval + nodeRemovalTimeout;
+    long maxThreadSleeptime = nodeRemovalInterval + nodeRemovalTimeout + 100;
     latch.await(maxThreadSleeptime, TimeUnit.MILLISECONDS);
 
     rmNode = rmContext.getInactiveRMNodes().get(nm2.getNodeId());
