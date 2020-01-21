@@ -57,8 +57,8 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import org.apache.hadoop.thirdparty.protobuf_3_7.ByteString;
-import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class TestBlockListAsLongs {
   static Block b1 = new Block(1, 11, 111);

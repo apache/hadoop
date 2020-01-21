@@ -196,7 +196,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.UpdateApplicationPriorityR
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.UpdateApplicationTimeoutsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SubmitApplicationRequestProto;
 
-import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 @Private
 public class ApplicationClientProtocolPBClientImpl implements ApplicationClientProtocol,

@@ -51,7 +51,7 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import org.apache.hadoop.thirdparty.protobuf_3_7.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * A HDFS specific delegation token secret manager.

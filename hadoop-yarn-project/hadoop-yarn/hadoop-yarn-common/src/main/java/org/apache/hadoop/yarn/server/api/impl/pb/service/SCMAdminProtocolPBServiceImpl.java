@@ -29,8 +29,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RunSharedCacheCleanerTaskRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RunSharedCacheCleanerTaskResponseProto;
 
-import org.apache.hadoop.thirdparty.protobuf_3_7.RpcController;
-import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class SCMAdminProtocolPBServiceImpl implements SCMAdminProtocolPB {
 

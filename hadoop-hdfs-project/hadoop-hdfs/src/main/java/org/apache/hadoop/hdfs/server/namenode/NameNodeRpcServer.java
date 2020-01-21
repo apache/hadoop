@@ -227,7 +227,7 @@ import org.apache.hadoop.util.VersionUtil;
 import org.slf4j.Logger;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.protobuf_3_7.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 import javax.annotation.Nonnull;
 

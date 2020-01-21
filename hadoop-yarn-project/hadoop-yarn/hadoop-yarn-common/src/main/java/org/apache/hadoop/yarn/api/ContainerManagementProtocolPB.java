@@ -24,8 +24,8 @@ import org.apache.hadoop.yarn.proto.ContainerManagementProtocol.ContainerManagem
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SignalContainerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SignalContainerResponseProto;
 
-import org.apache.hadoop.thirdparty.protobuf_3_7.RpcController;
-import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 @Private
 @Unstable

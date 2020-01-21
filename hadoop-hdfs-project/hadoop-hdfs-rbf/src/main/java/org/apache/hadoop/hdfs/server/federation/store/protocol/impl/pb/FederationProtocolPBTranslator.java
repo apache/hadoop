@@ -22,10 +22,10 @@ import java.lang.reflect.Method;
 
 import org.apache.commons.codec.binary.Base64;
 
-import org.apache.hadoop.thirdparty.protobuf_3_7.GeneratedMessageV3;
-import org.apache.hadoop.thirdparty.protobuf_3_7.Message;
-import org.apache.hadoop.thirdparty.protobuf_3_7.Message.Builder;
-import org.apache.hadoop.thirdparty.protobuf_3_7.MessageOrBuilder;
+import org.apache.hadoop.thirdparty.protobuf.GeneratedMessageV3;
+import org.apache.hadoop.thirdparty.protobuf.Message;
+import org.apache.hadoop.thirdparty.protobuf.Message.Builder;
+import org.apache.hadoop.thirdparty.protobuf.MessageOrBuilder;
 
 /**
  * Helper class for setting/getting data elements in an object backed by a

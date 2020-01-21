@@ -29,7 +29,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.Federatio
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
 
-import org.apache.hadoop.thirdparty.protobuf_3_7.Message;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 
 /**
  * Protobuf implementation of the MembershipState record.

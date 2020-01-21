@@ -62,8 +62,8 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.protobuf_3_7.RpcController;
-import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class DatanodeProtocolServerSideTranslatorPB implements
     DatanodeProtocolPB {

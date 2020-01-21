@@ -31,8 +31,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.hadoop.thirdparty.protobuf_3_7.CodedInputStream;
-import org.apache.hadoop.thirdparty.protobuf_3_7.InvalidProtocolBufferException;
+import org.apache.hadoop.thirdparty.protobuf.CodedInputStream;
+import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -51,8 +51,8 @@ import java.util.Map;
 
 import com.google.common.io.CountingOutputStream;
 import com.google.common.primitives.Ints;
-import org.apache.hadoop.thirdparty.protobuf_3_7.ByteString;
-import org.apache.hadoop.thirdparty.protobuf_3_7.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

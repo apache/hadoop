@@ -34,6 +34,8 @@
     <release-year>2020</release-year>
 
     <failIfNoTests>false</failIfNoTests>
+    <!--Whether to proceed to next module if any test failures exist-->
+    <ignoreTestFailure>true</ignoreTestFailure>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     <jetty.version>9.4.20.v20190813</jetty.version>
     <test.exclude>_</test.exclude>
@@ -91,7 +93,7 @@
 
     <hadoop-thirdparty-protobuf.version>1.0.0-SNAPSHOT</hadoop-thirdparty-protobuf.version>
     <hadoop-thirdparty-shaded-prefix>org.apache.hadoop.thirdparty</hadoop-thirdparty-shaded-prefix>
-    <hadoop-thirdparty-shaded-protobuf-prefix>${hadoop-thirdparty-shaded-prefix}.protobuf_3_7</hadoop-thirdparty-shaded-protobuf-prefix>
+    <hadoop-thirdparty-shaded-protobuf-prefix>${hadoop-thirdparty-shaded-prefix}.protobuf</hadoop-thirdparty-shaded-protobuf-prefix>
 
     <zookeeper.version>3.5.6</zookeeper.version>
     <curator.version>4.2.0</curator.version>
@@ -2028,7 +2030,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <testFailureIgnore>true</testFailureIgnore>
+          <testFailureIgnore>${ignoreTestFailure}</testFailureIgnore>
           <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>${surefire.fork.timeout}</forkedProcessTimeoutInSeconds>
           <argLine>${maven-surefire-plugin.argLine}</argLine>

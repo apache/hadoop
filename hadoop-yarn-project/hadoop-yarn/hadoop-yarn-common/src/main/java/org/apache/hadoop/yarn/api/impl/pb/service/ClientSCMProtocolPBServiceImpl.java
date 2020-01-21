@@ -34,8 +34,8 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.ReleaseSharedCacheResource
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.UseSharedCacheResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.UseSharedCacheResourceResponseProto;
 
-import org.apache.hadoop.thirdparty.protobuf_3_7.RpcController;
-import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class ClientSCMProtocolPBServiceImpl implements ClientSCMProtocolPB {
 

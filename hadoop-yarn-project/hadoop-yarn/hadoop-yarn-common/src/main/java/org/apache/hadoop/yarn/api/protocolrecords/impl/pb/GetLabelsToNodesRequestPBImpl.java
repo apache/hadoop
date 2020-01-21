@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesRequest;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetLabelsToNodesRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetLabelsToNodesRequestProtoOrBuilder;
 
-import org.apache.hadoop.thirdparty.protobuf_3_7.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 public class GetLabelsToNodesRequestPBImpl extends GetLabelsToNodesRequest {
 

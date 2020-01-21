@@ -86,8 +86,8 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.CommitResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ContainerUpdateRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ContainerUpdateResponseProto;
 
-import org.apache.hadoop.thirdparty.protobuf_3_7.RpcController;
-import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 @Private
 public class ContainerManagementProtocolPBServiceImpl implements ContainerManagementProtocolPB  {

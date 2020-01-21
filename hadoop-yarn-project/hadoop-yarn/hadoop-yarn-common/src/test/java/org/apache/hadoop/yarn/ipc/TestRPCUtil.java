@@ -27,7 +27,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class TestRPCUtil {
 

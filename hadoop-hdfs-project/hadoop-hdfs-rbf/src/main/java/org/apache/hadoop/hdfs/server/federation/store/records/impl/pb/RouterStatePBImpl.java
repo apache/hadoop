@@ -29,7 +29,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.Federatio
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
 
-import org.apache.hadoop.thirdparty.protobuf_3_7.Message;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 
 /**
  * Protobuf implementation of the RouterState record.

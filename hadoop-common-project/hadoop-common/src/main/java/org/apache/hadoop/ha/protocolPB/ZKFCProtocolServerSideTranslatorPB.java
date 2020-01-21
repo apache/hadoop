@@ -29,8 +29,8 @@ import org.apache.hadoop.ha.proto.ZKFCProtocolProtos.GracefulFailoverResponsePro
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 
-import org.apache.hadoop.thirdparty.protobuf_3_7.RpcController;
-import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 @InterfaceAudience.Private
 @InterfaceStability.Stable

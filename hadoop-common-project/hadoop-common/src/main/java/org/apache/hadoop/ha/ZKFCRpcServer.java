@@ -33,7 +33,7 @@ import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 
-import org.apache.hadoop.thirdparty.protobuf_3_7.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 @InterfaceAudience.LimitedPrivate("HDFS")
 @InterfaceStability.Evolving

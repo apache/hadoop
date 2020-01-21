@@ -76,7 +76,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationAttemptRepor
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerReportRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainersRequestProto;
 
-import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class ApplicationHistoryProtocolPBClientImpl implements
     ApplicationHistoryProtocol, Closeable {

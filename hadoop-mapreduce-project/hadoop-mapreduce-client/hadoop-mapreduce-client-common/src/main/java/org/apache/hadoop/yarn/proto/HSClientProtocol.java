@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.proto;
 
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocolPB;
-import org.apache.hadoop.thirdparty.protobuf_3_7.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.yarn.proto.MRClientProtocol.MRClientProtocolService;
 
 /**

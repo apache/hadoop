@@ -25,8 +25,8 @@ import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolVersionsResp
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.ProtocolSignatureProto;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.ProtocolVersionProto;
 
-import org.apache.hadoop.thirdparty.protobuf_3_7.RpcController;
-import org.apache.hadoop.thirdparty.protobuf_3_7.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 /**
  * This class serves the requests for protocol versions and signatures by
