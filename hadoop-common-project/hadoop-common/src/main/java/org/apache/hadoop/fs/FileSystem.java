@@ -58,6 +58,7 @@ import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -4485,43 +4486,39 @@ public abstract class FileSystem extends Configured
    * the action of opening the file should begin.
    *
    * The base implementation performs a blocking
-   * call to {@link #open(Path, int)}in this call;
+   * call to {@link #open(Path, int)} in this call;
    * the actual outcome is in the returned {@code CompletableFuture}.
    * This avoids having to create some thread pool, while still
    * setting up the expectation that the {@code get()} call
    * is needed to evaluate the result.
    * @param path path to the file
-   * @param mandatoryKeys set of options declared as mandatory.
-   * @param options options set during the build sequence.
-   * @param bufferSize buffer size
+   * @param parameters open file parameters from the builder.
    * @return a future which will evaluate to the opened file.
    * @throws IOException failure to resolve the link.
    * @throws IllegalArgumentException unknown mandatory key
    */
   protected CompletableFuture<FSDataInputStream> openFileWithOptions(
       final Path path,
-      final Set<String> mandatoryKeys,
-      final Configuration options,
-      final int bufferSize) throws IOException {
-    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(mandatoryKeys,
+      final OpenFileParameters parameters) throws IOException {
+    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
+        parameters.getMandatoryKeys(),
         Collections.emptySet(),
         "for " + path);
     return LambdaUtils.eval(
-        new CompletableFuture<>(), () -> open(path, bufferSize));
+        new CompletableFuture<>(), () ->
+            open(path, parameters.getBufferSize()));
   }
 
   /**
    * Execute the actual open file operation.
    * The base implementation performs a blocking
-   * call to {@link #open(Path, int)}in this call;
+   * call to {@link #open(Path, int)} in this call;
    * the actual outcome is in the returned {@code CompletableFuture}.
    * This avoids having to create some thread pool, while still
    * setting up the expectation that the {@code get()} call
    * is needed to evaluate the result.
    * @param pathHandle path to the file
-   * @param mandatoryKeys set of options declared as mandatory.
-   * @param options options set during the build sequence.
-   * @param bufferSize buffer size
+   * @param parameters open file parameters from the builder.
    * @return a future which will evaluate to the opened file.
    * @throws IOException failure to resolve the link.
    * @throws IllegalArgumentException unknown mandatory key
@@ -4530,14 +4527,13 @@ public abstract class FileSystem extends Configured
    */
   protected CompletableFuture<FSDataInputStream> openFileWithOptions(
       final PathHandle pathHandle,
-      final Set<String> mandatoryKeys,
-      final Configuration options,
-      final int bufferSize) throws IOException {
-    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(mandatoryKeys,
+      final OpenFileParameters parameters) throws IOException {
+    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
+        parameters.getMandatoryKeys(),
         Collections.emptySet(), "");
     CompletableFuture<FSDataInputStream> result = new CompletableFuture<>();
     try {
-      result.complete(open(pathHandle, bufferSize));
+      result.complete(open(pathHandle, parameters.getBufferSize()));
     } catch (UnsupportedOperationException tx) {
       // fail fast here
       throw tx;
@@ -4639,12 +4635,17 @@ public abstract class FileSystem extends Configured
     @Override
     public CompletableFuture<FSDataInputStream> build() throws IOException {
       Optional<Path> optionalPath = getOptionalPath();
+      OpenFileParameters parameters = new OpenFileParameters()
+          .withMandatoryKeys(getMandatoryKeys())
+          .withOptions(getOptions())
+          .withBufferSize(getBufferSize())
+          .withStatus(super.getStatus());  // explicit to avoid IDE warnings
       if(optionalPath.isPresent()) {
         return getFS().openFileWithOptions(optionalPath.get(),
-            getMandatoryKeys(), getOptions(), getBufferSize());
+            parameters);
       } else {
         return getFS().openFileWithOptions(getPathHandle(),
-            getMandatoryKeys(), getOptions(), getBufferSize());
+            parameters);
       }
     }
 

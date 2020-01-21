@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
@@ -433,6 +433,106 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   }
 
   /**
+   * Verifies that when the openFile builder is passed in a status,
+   * then that is used to eliminate the getFileStatus call in open();
+   * thus the version and etag passed down are still used.
+   */
+  @Test
+  public void testOpenFileWithStatus() throws Throwable {
+    final Path testpath = path("testOpenFileWithStatus.dat");
+    final byte[] dataset = TEST_DATA_BYTES;
+    S3AFileStatus originalStatus =
+        writeFile(testpath, dataset, dataset.length, true);
+
+    // forge a file status with a different etag
+    // no attempt is made to change the versionID as it will
+    // get rejected by S3 as an invalid version
+    S3AFileStatus forgedStatus =
+        S3AFileStatus.fromFileStatus(originalStatus, Tristate.FALSE,
+            originalStatus.getETag() + "-fake",
+            originalStatus.getVersionId() + "");
+    fs.getMetadataStore().put(
+        new PathMetadata(forgedStatus, Tristate.FALSE, false));
+
+    // verify the bad etag gets picked up.
+    LOG.info("Opening stream with s3guard's (invalid) status.");
+    try (FSDataInputStream instream = fs.openFile(testpath)
+        .build()
+        .get()) {
+      try {
+        instream.read();
+        // No exception only if we don't enforce change detection as exception
+        assertTrue(
+            "Read did not raise an exception even though the change detection "
+                + "mode was " + changeDetectionMode
+                + " and the inserted file status was invalid",
+            changeDetectionMode.equals(CHANGE_DETECT_MODE_NONE)
+                || changeDetectionMode.equals(CHANGE_DETECT_MODE_WARN)
+                || changeDetectionSource.equals(CHANGE_DETECT_SOURCE_VERSION_ID));
+      } catch (RemoteFileChangedException ignored) {
+        // Ignored.
+      }
+    }
+
+    // By passing in the status open() doesn't need to check s3guard
+    // And hence the existing file is opened
+    LOG.info("Opening stream with the original status.");
+    try (FSDataInputStream instream = fs.openFile(testpath)
+        .withFileStatus(originalStatus)
+        .build()
+        .get()) {
+      instream.read();
+    }
+
+    // and this holds for S3A Located Status
+    LOG.info("Opening stream with S3ALocatedFileStatus.");
+    try (FSDataInputStream instream = fs.openFile(testpath)
+        .withFileStatus(new S3ALocatedFileStatus(originalStatus, null))
+        .build()
+        .get()) {
+      instream.read();
+    }
+
+    // if you pass in a status of a dir, it will be rejected
+    S3AFileStatus s2 = new S3AFileStatus(true, testpath, "alice");
+    assertTrue("not a directory " + s2, s2.isDirectory());
+    LOG.info("Open with directory status");
+    interceptFuture(FileNotFoundException.class, "",
+        fs.openFile(testpath)
+            .withFileStatus(s2)
+            .build());
+
+    // now, we delete the file from the store and s3guard
+    // when we pass in the status, there's no HEAD request, so it's only
+    // in the read call where the 404 surfaces.
+    // and there, when versionID is passed to the GET, the data is returned
+    LOG.info("Testing opening a deleted file");
+    fs.delete(testpath, false);
+    try (FSDataInputStream instream = fs.openFile(testpath)
+        .withFileStatus(originalStatus)
+        .build()
+        .get()) {
+      if (changeDetectionSource.equals(CHANGE_DETECT_SOURCE_VERSION_ID)
+          && changeDetectionMode.equals(CHANGE_DETECT_MODE_SERVER)) {
+          // the deleted file is still there if you know the version ID
+          // and the check is server-side
+          instream.read();
+      } else {
+        // all other cases, the read will return 404.
+        intercept(FileNotFoundException.class,
+            () -> instream.read());
+      }
+
+    }
+
+    // whereas without that status, you fail in the get() when a HEAD is
+    // issued
+    interceptFuture(FileNotFoundException.class, "",
+        fs.openFile(testpath).build());
+
+  }
+
+  /**
    * Ensures a file can be read when there is no version metadata
    * (ETag, versionId).
    */
@@ -524,9 +624,11 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         writeFileWithNoVersionMetadata("selectnoversion.dat");
 
     try (FSDataInputStream instream = fs.openFile(testpath)
-        .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build().get()) {
+        .must(SELECT_SQL, "SELECT * FROM S3OBJECT")
+        .build()
+        .get()) {
       assertEquals(QUOTED_TEST_DATA,
-          IOUtils.toString(instream, Charset.forName("UTF-8")).trim());
+          IOUtils.toString(instream, StandardCharsets.UTF_8).trim());
     }
   }
 
@@ -902,15 +1004,12 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   private Path writeOutOfSyncFileVersion(String filename) throws IOException {
     final Path testpath = path(filename);
     final byte[] dataset = TEST_DATA_BYTES;
-    writeDataset(fs, testpath, dataset, dataset.length,
-        1024, false);
-    S3AFileStatus originalStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+    S3AFileStatus originalStatus =
+        writeFile(testpath, dataset, dataset.length, false);
 
     // overwrite with half the content
-    writeDataset(fs, testpath, dataset, dataset.length / 2,
-        1024, true);
-
-    S3AFileStatus newStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+    S3AFileStatus newStatus = writeFile(testpath, dataset, dataset.length / 2,
+        true);
 
     // put back the original etag, versionId
     S3AFileStatus forgedStatus =
@@ -920,6 +1019,23 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         new PathMetadata(forgedStatus, Tristate.FALSE, false));
 
     return testpath;
+  }
+
+  /**
+   * Write data to a file; return the status from the filesystem.
+   * @param path file path
+   * @param dataset dataset to write from
+   * @param length number of bytes from the dataset to write.
+   * @param overwrite overwrite flag
+   * @return the retrieved file status.
+   */
+  private S3AFileStatus writeFile(final Path path,
+      final byte[] dataset,
+      final int length,
+      final boolean overwrite) throws IOException {
+    writeDataset(fs, path, dataset, length,
+        1024, overwrite);
+    return (S3AFileStatus) fs.getFileStatus(path);
   }
 
   /**
@@ -1208,9 +1324,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   private Path writeFileWithNoVersionMetadata(String filename)
       throws IOException {
     final Path testpath = path(filename);
-    writeDataset(fs, testpath, TEST_DATA_BYTES, TEST_DATA_BYTES.length,
-        1024, false);
-    S3AFileStatus originalStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+    S3AFileStatus originalStatus = writeFile(testpath, TEST_DATA_BYTES,
+        TEST_DATA_BYTES.length, false);
 
     // remove ETag and versionId
     S3AFileStatus newStatus = S3AFileStatus.fromFileStatus(originalStatus,

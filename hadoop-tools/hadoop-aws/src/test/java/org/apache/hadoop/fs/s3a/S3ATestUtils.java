@@ -66,12 +66,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFuture;
 import static org.apache.hadoop.fs.s3a.FailureInjectionPolicy.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -1179,6 +1181,31 @@ public final class S3ATestUtils {
     FileStatus status = fs.getFileStatus(path);
     try (FSDataInputStream in = fs.open(path)) {
       byte[] buf = new byte[(int)status.getLen()];
+      in.readFully(0, buf);
+      return new String(buf);
+    }
+  }
+
+  /**
+   * Read in a file and convert to an ascii string, using the openFile
+   * builder API and the file status.
+   * If the status is an S3A FileStatus, any etag or versionId used
+   * will be picked up.
+   * @param fs filesystem
+   * @param status file status, including path
+   * @return the bytes read and converted to a string
+   * @throws IOException IO problems
+   */
+  public static String readWithStatus(
+      final FileSystem fs,
+      final FileStatus status) throws IOException {
+    final CompletableFuture<FSDataInputStream> future =
+        fs.openFile(status.getPath())
+            .withFileStatus(status)
+            .build();
+
+    try (FSDataInputStream in = awaitFuture(future)) {
+      byte[] buf = new byte[(int) status.getLen()];
       in.readFully(0, buf);
       return new String(buf);
     }
