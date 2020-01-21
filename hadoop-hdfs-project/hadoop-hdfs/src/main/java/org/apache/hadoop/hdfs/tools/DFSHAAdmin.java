@@ -17,15 +17,28 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Options;
+import org.apache.hadoop.ha.FailoverController;
+import org.apache.hadoop.ha.FailoverFailedException;
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.HAServiceProtocolHelper;
+import org.apache.hadoop.ha.ServiceFailedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAAdmin;
+import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -38,9 +51,29 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class DFSHAAdmin extends HAAdmin {
 
+  private static final String FORCEFENCE  = "forcefence";
   private static final Logger LOG = LoggerFactory.getLogger(DFSHAAdmin.class);
 
   private String nameserviceId;
+  private final static Map<String, UsageInfo> USAGE_DFS_ONLY =
+      ImmutableMap.<String, UsageInfo> builder()
+          .put("-transitionToObserver", new UsageInfo("<serviceId>",
+                  "Transitions the service into Observer state"))
+          .put("-failover", new UsageInfo(
+              "[--"+FORCEFENCE+"] [--"+FORCEACTIVE+"] "
+                  + "<serviceId> <serviceId>",
+              "Failover from the first service to the second.\n"
+                  + "Unconditionally fence services if the --" + FORCEFENCE
+                  + " option is used.\n"
+                  + "Try to failover to the target service "
+                  + "even if it is not ready if the "
+                  + "--" + FORCEACTIVE + " option is used.")).build();
+
+  private final static Map<String, UsageInfo> USAGE_DFS_MERGED =
+      ImmutableSortedMap.<String, UsageInfo> naturalOrder()
+          .putAll(USAGE)
+          .putAll(USAGE_DFS_ONLY)
+          .build();
 
   protected void setErrOut(PrintStream errOut) {
     this.errOut = errOut;
@@ -93,44 +126,205 @@ public class DFSHAAdmin extends HAAdmin {
     return "Usage: haadmin [-ns <nameserviceId>]";
   }
 
+  /**
+   * Add CLI options which are specific to the failover command and no
+   * others.
+   */
+  private void addFailoverCliOpts(Options failoverOpts) {
+    failoverOpts.addOption(FORCEFENCE, false, "force fencing");
+    failoverOpts.addOption(FORCEACTIVE, false, "force failover");
+    // Don't add FORCEMANUAL, since that's added separately for all commands
+    // that change state.
+  }
+  @Override
+  protected boolean checkParameterValidity(String[] argv){
+    return  checkParameterValidity(argv, USAGE_DFS_MERGED);
+  }
+
   @Override
   protected int runCmd(String[] argv) throws Exception {
-    if (argv.length < 1) {
-      printUsage(errOut);
+
+    if(argv.length < 1){
+      printUsage(errOut, USAGE_DFS_MERGED);
       return -1;
     }
 
     int i = 0;
     String cmd = argv[i++];
-
+    //Process "-ns" Option
     if ("-ns".equals(cmd)) {
       if (i == argv.length) {
         errOut.println("Missing nameservice ID");
-        printUsage(errOut);
+        printUsage(errOut, USAGE_DFS_MERGED);
         return -1;
       }
       nameserviceId = argv[i++];
       if (i >= argv.length) {
         errOut.println("Missing command");
-        printUsage(errOut);
+        printUsage(errOut, USAGE_DFS_MERGED);
         return -1;
       }
       argv = Arrays.copyOfRange(argv, i, argv.length);
+      cmd = argv[0];
     }
 
-    return super.runCmd(argv);
+    if (!checkParameterValidity(argv)){
+      return -1;
+    }
+
+    /*
+       "-help" command has to to be handled here because it should
+       be supported both by HAAdmin and DFSHAAdmin but it is contained in
+       USAGE_DFS_ONLY
+    */
+    if ("-help".equals(cmd)){
+      return help(argv, USAGE_DFS_MERGED);
+    }
+
+    if (!USAGE_DFS_ONLY.containsKey(cmd)) {
+      return super.runCmd(argv);
+    }
+
+    Options opts = new Options();
+    // Add command-specific options
+    if ("-failover".equals(cmd)) {
+      addFailoverCliOpts(opts);
+    }
+    // Mutative commands take FORCEMANUAL option
+    if ("-transitionToObserver".equals(cmd) ||
+        "-failover".equals(cmd)) {
+      opts.addOption(FORCEMANUAL, false,
+          "force manual control even if auto-failover is enabled");
+    }
+    CommandLine cmdLine = parseOpts(cmd, opts, argv, USAGE_DFS_MERGED);
+    if (cmdLine == null) {
+      return -1;
+    }
+
+    if (cmdLine.hasOption(FORCEMANUAL)) {
+      if (!confirmForceManual()) {
+        LOG.error("Aborted");
+        return -1;
+      }
+      // Instruct the NNs to honor this request even if they're
+      // configured for manual failover.
+      setRequestSource(RequestSource.REQUEST_BY_USER_FORCED);
+    }
+
+    if ("-transitionToObserver".equals(cmd)) {
+      return transitionToObserver(cmdLine);
+    } else if ("-failover".equals(cmd)) {
+      return failover(cmdLine);
+    } else {
+      // This line should not be reached
+      throw new AssertionError("Should not get here, command: " + cmd);
+    }
   }
   
   /**
-   * returns the list of all namenode ids for the given configuration 
+   * returns the list of all namenode ids for the given configuration.
    */
   @Override
   protected Collection<String> getTargetIds(String namenodeToActivate) {
-    return DFSUtilClient.getNameNodeIds(getConf(),
-                                        (nameserviceId != null) ? nameserviceId : DFSUtil.getNamenodeNameServiceId(
-                                            getConf()));
+    return DFSUtilClient.getNameNodeIds(
+        getConf(), (nameserviceId != null)?
+            nameserviceId : DFSUtil.getNamenodeNameServiceId(getConf()));
   }
-  
+
+  /**
+   * Check if the target supports the Observer state.
+   * @param target the target to check
+   * @return true if the target support Observer state, false otherwise.
+   */
+  private boolean checkSupportObserver(HAServiceTarget target) {
+    if (target.supportObserver()) {
+      return true;
+    } else {
+      errOut.println(
+          "The target " + target + " doesn't support Observer state.");
+      return false;
+    }
+  }
+
+  private int transitionToObserver(final CommandLine cmd)
+      throws IOException, ServiceFailedException {
+    String[] argv = cmd.getArgs();
+    if (argv.length != 1) {
+      errOut.println("transitionToObserver: incorrect number of arguments");
+      printUsage(errOut, "-transitionToObserver", USAGE_DFS_MERGED);
+      return -1;
+    }
+
+    HAServiceTarget target = resolveTarget(argv[0]);
+    if (!checkSupportObserver(target)) {
+      return -1;
+    }
+    if (!checkManualStateManagementOK(target)) {
+      return -1;
+    }
+    HAServiceProtocol proto = target.getProxy(getConf(), 0);
+    HAServiceProtocolHelper.transitionToObserver(proto, createReqInfo());
+    return 0;
+  }
+
+  private int failover(CommandLine cmd)
+      throws IOException, ServiceFailedException {
+    boolean forceFence = cmd.hasOption(FORCEFENCE);
+    boolean forceActive = cmd.hasOption(FORCEACTIVE);
+
+    int numOpts = cmd.getOptions() == null ? 0 : cmd.getOptions().length;
+    final String[] args = cmd.getArgs();
+
+    if (numOpts > 3 || args.length != 2) {
+      errOut.println("failover: incorrect arguments");
+      printUsage(errOut, "-failover", USAGE_DFS_MERGED);
+      return -1;
+    }
+
+    HAServiceTarget fromNode = resolveTarget(args[0]);
+    HAServiceTarget toNode = resolveTarget(args[1]);
+
+    // Check that auto-failover is consistently configured for both nodes.
+    Preconditions.checkState(
+        fromNode.isAutoFailoverEnabled() ==
+            toNode.isAutoFailoverEnabled(),
+        "Inconsistent auto-failover configs between %s and %s!",
+        fromNode, toNode);
+
+    if (fromNode.isAutoFailoverEnabled()) {
+      if (forceFence || forceActive) {
+        // -forceActive doesn't make sense with auto-HA, since, if the node
+        // is not healthy, then its ZKFC will immediately quit the election
+        // again the next time a health check runs.
+        //
+        // -forceFence doesn't seem to have any real use cases with auto-HA
+        // so it isn't implemented.
+        errOut.println(FORCEFENCE + " and " + FORCEACTIVE + " flags not " +
+            "supported with auto-failover enabled.");
+        return -1;
+      }
+      try {
+        return gracefulFailoverThroughZKFCs(toNode);
+      } catch (UnsupportedOperationException e){
+        errOut.println("Failover command is not supported with " +
+            "auto-failover enabled: " + e.getLocalizedMessage());
+        return -1;
+      }
+    }
+
+    FailoverController fc =
+        new FailoverController(getConf(), getRequestSource());
+
+    try {
+      fc.failover(fromNode, toNode, forceFence, forceActive);
+      out.println("Failover from "+args[0]+" to "+args[1]+" successful");
+    } catch (FailoverFailedException ffe) {
+      errOut.println("Failover failed: " + ffe.getLocalizedMessage());
+      return -1;
+    }
+    return 0;
+  }
+
   public static void main(String[] argv) throws Exception {
     int res = ToolRunner.run(new DFSHAAdmin(), argv);
     System.exit(res);
