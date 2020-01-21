@@ -186,9 +186,7 @@ public class RMAdminCLI extends HAAdmin {
 
   private static void appendHAUsage(final StringBuilder usageBuilder) {
     for (Map.Entry<String,UsageInfo> cmdEntry : USAGE.entrySet()) {
-      if (cmdEntry.getKey().equals("-help")
-          || cmdEntry.getKey().equals("-failover")
-          || cmdEntry.getKey().equals("-transitionToObserver")) {
+      if (cmdEntry.getKey().equals("-help")) {
         continue;
       }
       UsageInfo usageInfo = cmdEntry.getValue();
@@ -251,8 +249,7 @@ public class RMAdminCLI extends HAAdmin {
     if (isHAEnabled) {
       for (Map.Entry<String,UsageInfo> cmdEntry : USAGE.entrySet()) {
         String cmdKey = cmdEntry.getKey();
-        if (!cmdKey.equals("-help") && !cmdKey.equals("-failover")
-            && !cmdKey.equals("-transitionToObserver")) {
+        if (!cmdKey.equals("-help")) {
           UsageInfo usageInfo = cmdEntry.getValue();
           if (usageInfo.args == null) {
             builder.append("   " + cmdKey + "\n");
@@ -304,8 +301,7 @@ public class RMAdminCLI extends HAAdmin {
     }
     if (isHAEnabled) {
       for (String cmdKey : USAGE.keySet()) {
-        if (!cmdKey.equals("-help") && !cmdKey.equals("-failover")
-            && !cmdKey.equals("-transitionToObserver")) {
+        if (!cmdKey.equals("-help")) {
           buildHelpMsg(cmdKey, helpBuilder);
           helpBuilder.append("\n");
         }
@@ -324,8 +320,7 @@ public class RMAdminCLI extends HAAdmin {
    */
   private static void printUsage(String cmd, boolean isHAEnabled) {
     StringBuilder usageBuilder = new StringBuilder();
-    if (ADMIN_USAGE.containsKey(cmd) || USAGE.containsKey(cmd)
-        && (!cmd.equals("-failover") && !cmd.equals("-transitionToObserver"))) {
+    if (ADMIN_USAGE.containsKey(cmd) || USAGE.containsKey(cmd)) {
       buildIndividualUsageMsg(cmd, usageBuilder);
     } else {
       buildUsageMsg(usageBuilder, isHAEnabled);
@@ -732,8 +727,7 @@ public class RMAdminCLI extends HAAdmin {
       return exitCode;
     }
 
-    if (USAGE.containsKey(cmd) && !cmd.equals("-failover")
-        && !cmd.equals("-transitionToObserver")) {
+    if (USAGE.containsKey(cmd)) {
       if (isHAEnabled) {
         return super.run(args);
       }
