@@ -859,9 +859,9 @@ signon page for humans, even though it is a machine calling.
 
 ### `java.io.IOException: The ownership on the staging directory /tmp/hadoop-yarn/staging/user1/.staging is not as expected. It is owned by <principal_id>. The directory must be owned by the submitter user1 or user1`
 
-When using [Azure Managed Identities](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview), the files/directories in ADLS Gen2 are by default owned by the service principal object id i.e. principal ID & submitting jobs as the local OS user 'user1' results in the above exception.
+When using [Azure Managed Identities](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview), the files/directories in ADLS Gen2 by default will be owned by the service principal object id i.e. principal ID & submitting jobs as the local OS user 'user1' results in the above exception.
 
-The following configurations have to be added to core-site.xml to resolve this issue
+The fix is to mimic the ownership to the local OS user, by adding the below properties to`core-site.xml`.
 
 ```xml
 <property>
@@ -882,15 +882,6 @@ The following configurations have to be added to core-site.xml to resolve this i
   when setOwner, setAcl, modifyAclEntries, or removeAclEntries are invoked with identities
   contained in the substitution list. Notice that when in non-secure cluster, asterisk symbol *
   can be used to match all user/group.
-  </description>
-</property>
-<property>
-  <name>fs.azure.use.upn</name>
-  <value>true</value>
-  <description>
-  User principal names (UPNs) have the format “{alias}@{domain}”. If true,
-  only {alias} is included when a UPN would otherwise appear in the output
-  of APIs like getFileStatus, getOwner, getAclStatus, etc. Default is false.
   </description>
 </property>
 ```
