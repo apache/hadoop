@@ -369,7 +369,8 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
-              <forkMode>once</forkMode>
+              <forkCount>1</forkCount>
+              <reuseForks>true</reuseForks>
               <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
               <systemPropertyVariables>
                 <java.security.krb5.conf>${project.build.directory}/test-classes/krb5.conf</java.security.krb5.conf>
