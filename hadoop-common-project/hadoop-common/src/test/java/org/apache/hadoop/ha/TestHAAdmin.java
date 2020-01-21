@@ -83,11 +83,6 @@ public class TestHAAdmin {
     assertOutputContains("transitionToActive: incorrect number of arguments");
     assertEquals(-1, runTool("-transitionToActive", "x", "y"));
     assertOutputContains("transitionToActive: incorrect number of arguments");
-    assertEquals(-1, runTool("-failover"));
-    assertOutputContains("failover: incorrect arguments");
-    assertOutputContains("failover: incorrect arguments");    
-    assertEquals(-1, runTool("-failover", "foo:1234"));
-    assertOutputContains("failover: incorrect arguments");
   }
 
   @Test
