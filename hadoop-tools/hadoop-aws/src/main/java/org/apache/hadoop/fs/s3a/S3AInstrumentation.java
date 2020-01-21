@@ -123,6 +123,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
   private final MutableCounterLong ignoredErrors;
   private final MutableQuantiles putLatencyQuantile;
   private final MutableQuantiles throttleRateQuantile;
+  private final MutableQuantiles s3GuardThrottleRateQuantile;
   private final MutableCounterLong numberOfFilesCreated;
   private final MutableCounterLong numberOfFilesCopied;
   private final MutableCounterLong bytesOfFilesCopied;
@@ -248,7 +249,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     int interval = 1;
     putLatencyQuantile = quantiles(S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
         "ops", "latency", interval);
-    throttleRateQuantile = quantiles(S3GUARD_METADATASTORE_THROTTLE_RATE,
+    s3GuardThrottleRateQuantile = quantiles(S3GUARD_METADATASTORE_THROTTLE_RATE,
+        "events", "frequency (Hz)", interval);
+    throttleRateQuantile = quantiles(STORE_IO_THROTTLE_RATE,
         "events", "frequency (Hz)", interval);
 
     registerAsMetricsSource(name);
@@ -617,6 +620,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       // task in a shared thread pool.
       putLatencyQuantile.stop();
       throttleRateQuantile.stop();
+      s3GuardThrottleRateQuantile.stop();
       metricsSystem.unregisterSource(metricsSourceName);
       int activeSources = --metricsSourceActiveCounter;
       if (activeSources == 0) {
