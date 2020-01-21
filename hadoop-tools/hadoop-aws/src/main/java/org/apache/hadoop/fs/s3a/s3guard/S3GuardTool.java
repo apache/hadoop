@@ -73,6 +73,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.FILESYSTEM_TEMP_PATH;
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableManager.SSE_DEFAULT_MASTER_KEY;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
 
 /**
@@ -576,7 +577,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
         getConf().setBoolean(S3GUARD_DDB_TABLE_SSE_ENABLED, true);
         LOG.debug("SSE flag is passed to command {}", this.getName());
         if (!StringUtils.isEmpty(cmk)) {
-          if (cmk.equals("alias/aws/dynamodb")) {
+          if (SSE_DEFAULT_MASTER_KEY.equals(cmk)) {
             LOG.warn("Ignoring default DynamoDB table KMS Master Key " +
                 "alias/aws/dynamodb in configuration");
           } else {

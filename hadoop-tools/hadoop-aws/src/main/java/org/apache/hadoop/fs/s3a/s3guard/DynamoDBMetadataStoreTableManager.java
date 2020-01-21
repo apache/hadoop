@@ -64,6 +64,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 
 import static java.lang.String.valueOf;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_READ_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT;
@@ -105,6 +106,8 @@ public class DynamoDBMetadataStoreTableManager {
   /** Error: version mismatch. */
   public static final String E_INCOMPATIBLE_ITEM_VERSION
       = "Database table is from an incompatible S3Guard version based on table ITEM.";
+
+  public static final String SSE_DEFAULT_MASTER_KEY = "alias/aws/dynamodb";
 
   /** Invoker for IO. Until configured properly, use try-once. */
   private Invoker invoker = new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL,
@@ -332,7 +335,13 @@ public class DynamoDBMetadataStoreTableManager {
    */
   private SSESpecification getSseSpecFromConfig() {
     final SSESpecification sseSpecification = new SSESpecification();
-    sseSpecification.setEnabled(conf.getBoolean(S3GUARD_DDB_TABLE_SSE_ENABLED, false));
+    boolean enabled = conf.getBoolean(S3GUARD_DDB_TABLE_SSE_ENABLED, false);
+    if (!enabled) {
+      // Do not set other options if SSE is disabled. Otherwise it will throw
+      // ValidationException.
+      return sseSpecification;
+    }
+    sseSpecification.setEnabled(Boolean.TRUE);
     String cmk = null;
     try {
       // Get DynamoDB table SSE CMK from a configuration/credential provider.
@@ -340,14 +349,16 @@ public class DynamoDBMetadataStoreTableManager {
     } catch (IOException e) {
       LOG.error("Cannot retrieve " + S3GUARD_DDB_TABLE_SSE_CMK, e);
     }
-
-    if (cmk != null) {
-      if (cmk.equals("alias/aws/dynamodb")) {
-        LOG.warn("Ignoring default DynamoDB table KMS Master Key alias/aws/dynamodb in configuration");
-      } else {
-        sseSpecification.setSSEType("KMS");
-        sseSpecification.setKMSMasterKeyId(cmk);
-      }
+    if (isEmpty(cmk)) {
+      // Using Amazon managed default master key for DynamoDB table
+      return sseSpecification;
+    }
+    if (SSE_DEFAULT_MASTER_KEY.equals(cmk)) {
+      LOG.warn("Ignoring default DynamoDB table KMS Master Key {}",
+          SSE_DEFAULT_MASTER_KEY);
+    } else {
+      sseSpecification.setSSEType("KMS");
+      sseSpecification.setKMSMasterKeyId(cmk);
     }
     return sseSpecification;
   }
