@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -42,6 +43,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -93,6 +95,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart.TestSecurityMockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -230,6 +233,7 @@ public class TestDelegationTokenRenewer {
     InetSocketAddress sockAddr =
         InetSocketAddress.createUnresolved("localhost", 1234);
     when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);
+    delegationTokenRenewer.setDelegationTokenRenewerPoolTracker(false);
     delegationTokenRenewer.setRMContext(mockContext);
     delegationTokenRenewer.init(conf);
     delegationTokenRenewer.start();
@@ -632,6 +636,7 @@ public class TestDelegationTokenRenewer {
     InetSocketAddress sockAddr =
         InetSocketAddress.createUnresolved("localhost", 1234);
     when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);
+    localDtr.setDelegationTokenRenewerPoolTracker(false);
     localDtr.setRMContext(mockContext);
     localDtr.init(lconf);
     localDtr.start();
@@ -712,6 +717,7 @@ public class TestDelegationTokenRenewer {
     InetSocketAddress sockAddr =
         InetSocketAddress.createUnresolved("localhost", 1234);
     when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);
+    localDtr.setDelegationTokenRenewerPoolTracker(false);
     localDtr.setRMContext(mockContext);
     localDtr.init(lconf);
     localDtr.start();
@@ -1611,5 +1617,174 @@ public class TestDelegationTokenRenewer {
 
     // Ensure incrTokenSequenceNo has been called for token renewal as well.
     Mockito.verify(mockContext, Mockito.times(2)).incrTokenSequenceNo();
+  }
+
+  /**
+   * Test case to ensure token renewer threads are timed out by inducing
+   * artificial delay.
+   *
+   * Because of time out, retries would be attempted till it reaches max retry
+   * attempt and finally asserted using used threads count.
+   *
+   * @throws Exception
+   */
+  @Test(timeout = 30000)
+  public void testTokenThreadTimeout() throws Exception {
+    Configuration yarnConf = new YarnConfiguration();
+    yarnConf.setBoolean(YarnConfiguration.RM_PROXY_USER_PRIVILEGES_ENABLED,
+        true);
+    yarnConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+    yarnConf.setClass(YarnConfiguration.RM_STORE, MemoryRMStateStore.class,
+        RMStateStore.class);
+    yarnConf.setTimeDuration(YarnConfiguration.RM_DT_RENEWER_THREAD_TIMEOUT, 5,
+        TimeUnit.SECONDS);
+    yarnConf.setTimeDuration(
+        YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_INTERVAL, 5,
+        TimeUnit.SECONDS);
+    yarnConf.setInt(YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS,
+        3);
+    UserGroupInformation.setConfiguration(yarnConf);
+
+    Text userText = new Text("user1");
+    DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(userText,
+        new Text("renewer1"), userText);
+    final Token<DelegationTokenIdentifier> originalToken =
+        new Token<>(dtId.getBytes(), "password1".getBytes(), dtId.getKind(),
+            new Text("service1"));
+
+    Credentials credentials = new Credentials();
+    credentials.addToken(userText, originalToken);
+
+    AtomicBoolean renewDelay = new AtomicBoolean(false);
+
+    // -1 is because of thread allocated to pool tracker runnable tasks
+    AtomicInteger threadCounter = new AtomicInteger(-1);
+    renewDelay.set(true);
+    DelegationTokenRenewer renewer = createNewDelegationTokenRenewerForTimeout(
+        yarnConf, threadCounter, renewDelay);
+
+    MockRM rm = new TestSecurityMockRM(yarnConf) {
+      @Override
+      protected DelegationTokenRenewer createDelegationTokenRenewer() {
+        return renewer;
+      }
+    };
+
+    rm.start();
+    rm.submitApp(200, "name", "user",
+        new HashMap<ApplicationAccessType, String>(), false, "default", 1,
+        credentials);
+
+    int attempts = yarnConf.getInt(
+        YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS);
+
+    GenericTestUtils.waitFor(() -> threadCounter.get() >= attempts, 2000,
+        30000);
+
+    // Ensure no. of threads has been used in renewer service thread pool is
+    // higher than the configured max retry attempts
+    assertTrue(threadCounter.get() >= attempts);
+    rm.close();
+  }
+
+  /**
+   * Test case to ensure token renewer threads are running as usual and finally
+   * asserted only 1 thread has been used.
+   *
+   * @throws Exception
+   */
+  @Test(timeout = 30000)
+  public void testTokenThreadTimeoutWithoutDelay() throws Exception {
+    Configuration yarnConf = new YarnConfiguration();
+    yarnConf.setBoolean(YarnConfiguration.RM_PROXY_USER_PRIVILEGES_ENABLED,
+        true);
+    yarnConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+    yarnConf.set(YarnConfiguration.RM_STORE,
+        MemoryRMStateStore.class.getName());
+    yarnConf.setTimeDuration(YarnConfiguration.RM_DT_RENEWER_THREAD_TIMEOUT, 5,
+        TimeUnit.SECONDS);
+    yarnConf.setTimeDuration(
+        YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_INTERVAL, 5,
+        TimeUnit.SECONDS);
+    yarnConf.setInt(YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS,
+        3);
+    UserGroupInformation.setConfiguration(yarnConf);
+
+    Text userText = new Text("user1");
+    DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(userText,
+        new Text("renewer1"), userText);
+    final Token<DelegationTokenIdentifier> originalToken =
+        new Token<>(dtId.getBytes(), "password1".getBytes(), dtId.getKind(),
+            new Text("service1"));
+
+    Credentials credentials = new Credentials();
+    credentials.addToken(userText, originalToken);
+
+    AtomicBoolean renewDelay = new AtomicBoolean(false);
+
+    // -1 is because of thread allocated to pool tracker runnable tasks
+    AtomicInteger threadCounter = new AtomicInteger(-1);
+    DelegationTokenRenewer renwer = createNewDelegationTokenRenewerForTimeout(
+        yarnConf, threadCounter, renewDelay);
+
+    MockRM rm = new TestSecurityMockRM(yarnConf) {
+      @Override
+      protected DelegationTokenRenewer createDelegationTokenRenewer() {
+        return renwer;
+      }
+    };
+
+    rm.start();
+    rm.submitApp(200, "name", "user",
+        new HashMap<ApplicationAccessType, String>(), false, "default", 1,
+        credentials);
+
+    GenericTestUtils.waitFor(() -> threadCounter.get() == 1, 2000, 40000);
+
+    // Ensure only one thread has been used in renewer service thread pool.
+    assertEquals(threadCounter.get(), 1);
+    rm.close();
+  }
+
+  private DelegationTokenRenewer createNewDelegationTokenRenewerForTimeout(
+      Configuration config, final AtomicInteger renewerCounter,
+      final AtomicBoolean renewDelay) {
+    DelegationTokenRenewer renew = new DelegationTokenRenewer() {
+      @Override
+      protected ThreadPoolExecutor createNewThreadPoolService(
+          Configuration configuration) {
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(5, 5, 3L,
+            TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>()) {
+          @Override
+          public Future<?> submit(Runnable r) {
+            renewerCounter.incrementAndGet();
+            return super.submit(r);
+          }
+        };
+        return pool;
+      }
+
+      @Override
+      protected void renewToken(final DelegationTokenToRenew dttr)
+          throws IOException {
+        try {
+          if (renewDelay.get()) {
+            // Delay for 4 times than the configured timeout
+            Thread.sleep(config.getTimeDuration(
+                YarnConfiguration.RM_DT_RENEWER_THREAD_TIMEOUT,
+                YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_TIMEOUT,
+                TimeUnit.MILLISECONDS) * 4);
+          }
+          super.renewToken(dttr);
+        } catch (InterruptedException e) {
+          LOG.info("Sleep Interrupted", e);
+        }
+      }
+    };
+    renew.setDelegationTokenRenewerPoolTracker(true);
+    return renew;
   }
 }
