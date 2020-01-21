@@ -80,13 +80,6 @@ public class NetworkBinding {
         throw new IllegalArgumentException(channelModeString +
                 " is not a valid value for " + SSL_CHANNEL_MODE);
       }
-      if (channelMode == DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL ||
-          channelMode == DelegatingSSLSocketFactory.SSLChannelMode.Default) {
-        throw new UnsupportedOperationException("S3A does not support " +
-                "setting " + SSL_CHANNEL_MODE + " " +
-                DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL + " or " +
-                DelegatingSSLSocketFactory.SSLChannelMode.Default);
-      }
 
       // Look for AWS_SOCKET_FACTORY_CLASSNAME on the classpath and instantiate
       // an instance using the DelegatingSSLSocketFactory as the

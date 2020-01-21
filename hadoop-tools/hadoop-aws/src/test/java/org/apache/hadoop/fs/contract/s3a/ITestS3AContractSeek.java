@@ -24,6 +24,7 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -41,6 +42,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
+import org.apache.hadoop.util.NativeCodeLoader;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
@@ -55,6 +57,9 @@ import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.
         SSLChannelMode.Default_JSSE;
 import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.
         SSLChannelMode.Default_JSSE_with_GCM;
+import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.
+        SSLChannelMode.OpenSSL;
+import static org.junit.Assume.assumeTrue;
 
 
 /**
@@ -84,7 +89,7 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {INPUT_FADV_SEQUENTIAL, Default_JSSE},
-        {INPUT_FADV_RANDOM, Default_JSSE_with_GCM},
+        {INPUT_FADV_RANDOM, OpenSSL},
         {INPUT_FADV_NORMAL, Default_JSSE_with_GCM},
     });
   }
@@ -198,6 +203,14 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   @Override
   public S3AFileSystem getFileSystem() {
     return (S3AFileSystem) super.getFileSystem();
+  }
+
+  @Before
+  public void validateSSLChannelMode() {
+    if (this.sslChannelMode == OpenSSL) {
+      assumeTrue(NativeCodeLoader.isNativeCodeLoaded() &&
+          NativeCodeLoader.buildSupportsOpenssl());
+    }
   }
 
   @Test
