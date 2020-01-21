@@ -1647,10 +1647,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param ex exception.
    */
   public void operationRetried(Exception ex) {
-    Statistic stat = isThrottleException(ex)
-        ? STORE_IO_THROTTLED
-        : IGNORED_ERRORS;
-    incrementStatistic(stat);
+    if (isThrottleException(ex)) {
+      operationThrottled(false);
+    } else {
+      incrementStatistic(IGNORED_ERRORS);
+    }
   }
 
   /**
@@ -1683,11 +1684,28 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public void metastoreOperationRetried(Exception ex,
       int retries,
       boolean idempotent) {
-    operationRetried(ex);
     incrementStatistic(S3GUARD_METADATASTORE_RETRY);
     if (isThrottleException(ex)) {
+      operationThrottled(true);
+    } else {
+      incrementStatistic(IGNORED_ERRORS);
+    }
+  }
+
+  /**
+   * Note that an operation was throttled -this will update
+   * specific counters/metrics.
+   * @param metastore was the throttling observed in the S3Guard metastore?
+   */
+  private void operationThrottled(boolean metastore) {
+    LOG.debug("Request throttled on {}", metastore ? "S3": "DynamoDB");
+    if (metastore) {
       incrementStatistic(S3GUARD_METADATASTORE_THROTTLED);
-      instrumentation.addValueToQuantiles(S3GUARD_METADATASTORE_THROTTLE_RATE, 1);
+      instrumentation.addValueToQuantiles(S3GUARD_METADATASTORE_THROTTLE_RATE,
+          1);
+    } else {
+      incrementStatistic(STORE_IO_THROTTLED);
+      instrumentation.addValueToQuantiles(STORE_IO_THROTTLE_RATE, 1);
     }
   }
 

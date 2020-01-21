@@ -733,8 +733,7 @@ public final class Constants {
   /**
    * Default throttled retry limit: {@value}.
    */
-  public static final int RETRY_THROTTLE_LIMIT_DEFAULT =
-      DEFAULT_MAX_ERROR_RETRIES;
+  public static final int RETRY_THROTTLE_LIMIT_DEFAULT = 20;
 
   /**
    * Interval between retry attempts on throttled requests: {@value}.
@@ -745,7 +744,7 @@ public final class Constants {
   /**
    * Default throttled retry interval: {@value}.
    */
-  public static final String RETRY_THROTTLE_INTERVAL_DEFAULT = "500ms";
+  public static final String RETRY_THROTTLE_INTERVAL_DEFAULT = "5000ms";
 
   /**
    * Should etags be exposed as checksums?
