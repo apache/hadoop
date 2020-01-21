@@ -58,6 +58,10 @@ import org.wildfly.openssl.SSL;
  *     SSL with no modification to the list of enabled ciphers.</li>
  *   </ul>
  * </p>
+ *
+ * In order to load OpenSSL, applications must ensure the wildfly-openssl
+ * artifact is on the classpath. Currently, only ABFS and S3A provide
+ * wildfly-openssl as a runtime dependency.
  */
 public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
 
@@ -170,8 +174,14 @@ public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
         OpenSSLProvider.register();
         openSSLProviderRegistered = true;
       }
+      java.util.logging.Logger logger = java.util.logging.Logger.getLogger(
+                SSL.class.getName());
+      logger.setLevel(Level.WARNING);
       ctx = SSLContext.getInstance("openssl.TLS");
       ctx.init(null, null, null);
+      // Strong reference needs to be kept to logger until initialization of
+      // SSLContext finished (see HADOOP-16174):
+      logger.setLevel(Level.INFO);
       channelMode = SSLChannelMode.OpenSSL;
       break;
     case Default_JSSE:
