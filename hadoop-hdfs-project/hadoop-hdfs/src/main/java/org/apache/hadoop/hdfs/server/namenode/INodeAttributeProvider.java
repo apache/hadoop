@@ -32,21 +32,21 @@ import org.apache.hadoop.security.UserGroupInformation;
 public abstract class INodeAttributeProvider {
 
   public static class AuthorizationContext {
-    String fsOwner;
-    String supergroup;
-    UserGroupInformation callerUgi;
-    INodeAttributes[] inodeAttrs;
-    INode[] inodes;
-    byte[][] pathByNameArr;
-    int snapshotId;
-    String path;
-    int ancestorIndex;
-    boolean doCheckOwner;
-    FsAction ancestorAccess;
-    FsAction parentAccess;
-    FsAction access;
-    FsAction subAccess;
-    boolean ignoreEmptyDir;
+    public String fsOwner;
+    public String supergroup;
+    public UserGroupInformation callerUgi;
+    public INodeAttributes[] inodeAttrs;
+    public INode[] inodes;
+    public byte[][] pathByNameArr;
+    public int snapshotId;
+    public String path;
+    public int ancestorIndex;
+    public boolean doCheckOwner;
+    public FsAction ancestorAccess;
+    public FsAction parentAccess;
+    public FsAction access;
+    public FsAction subAccess;
+    public boolean ignoreEmptyDir;
 
     public AuthorizationContext(
         String fsOwner,
