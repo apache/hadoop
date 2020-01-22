@@ -483,6 +483,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // Whether to enable datanode's stale state detection and usage for writes
   public static final String DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY = "dfs.namenode.avoid.write.stale.datanode";
   public static final boolean DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT = false;
+  // enable and disable logging datanode staleness. Disabled by default.
+  public static final String DFS_NAMENODE_ENABLE_LOG_STALE_DATANODE_KEY =
+      "dfs.namenode.enable.log.stale.datanode";
+  public static final boolean DFS_NAMENODE_ENABLE_LOG_STALE_DATANODE_DEFAULT =
+      false;
   // The default value of the time interval for marking datanodes as stale
   public static final String DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY = "dfs.namenode.stale.datanode.interval";
   public static final long DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT = 30 * 1000; // 30s
