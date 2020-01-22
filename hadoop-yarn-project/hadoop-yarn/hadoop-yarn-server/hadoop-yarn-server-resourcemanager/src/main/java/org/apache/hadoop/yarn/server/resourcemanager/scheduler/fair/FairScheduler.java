@@ -470,27 +470,40 @@ public class FairScheduler extends
       return;
     }
 
+    writeLock.lock();
     try {
-      writeLock.lock();
       RMApp rmApp = rmContext.getRMApps().get(applicationId);
+      // This will re-create the queue on restore, however this could fail if
+      // the config was changed.
       FSLeafQueue queue = assignToQueue(rmApp, queueName, user);
       if (queue == null) {
-        return;
+        if (!isAppRecovering) {
+          return;
+        }
+        // app is recovering we do not want to fail the app now as it was there
+        // before we started the recovery. Add it to the recovery queue:
+        // dynamic queue directly under root, no ACL needed (auto clean up)
+        queueName = "root.recovery";
+        queue = queueMgr.getLeafQueue(queueName, true);
       }
 
-      // Enforce ACLs
-      UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(
-          user);
+      // Skip ACL check for recovering applications: they have been accepted
+      // in the queue already recovery should not break that.
+      if (!isAppRecovering) {
+        // Enforce ACLs
+        UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(
+            user);
 
-      if (!queue.hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi) && !queue
-          .hasAccess(QueueACL.ADMINISTER_QUEUE, userUgi)) {
-        String msg = "User " + userUgi.getUserName()
-            + " cannot submit applications to queue " + queue.getName()
-            + "(requested queuename is " + queueName + ")";
-        LOG.info(msg);
-        rmContext.getDispatcher().getEventHandler().handle(
-            new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED, msg));
-        return;
+        if (!queue.hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi) && !queue
+            .hasAccess(QueueACL.ADMINISTER_QUEUE, userUgi)) {
+          String msg = "User " + userUgi.getUserName()
+              + " cannot submit applications to queue " + queue.getName()
+              + "(requested queuename is " + queueName + ")";
+          LOG.info(msg);
+          rmContext.getDispatcher().getEventHandler().handle(
+              new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED, msg));
+          return;
+        }
       }
 
       SchedulerApplication<FSAppAttempt> application =

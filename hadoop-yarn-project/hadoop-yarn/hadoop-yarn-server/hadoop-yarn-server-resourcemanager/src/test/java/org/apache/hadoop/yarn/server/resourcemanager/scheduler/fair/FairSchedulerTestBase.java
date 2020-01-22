@@ -250,6 +250,31 @@ public class FairSchedulerTestBase {
     scheduler.update();
   }
 
+  protected ApplicationAttemptId createRecoveringApplication(
+      Resource amResource, String queueId, String userId) {
+    ApplicationAttemptId id =
+        createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
+
+    // On restore the app is already created but we need to check the AM
+    // resource, make sure it is set for test
+    ResourceRequest amRequest = createResourceRequest(
+        // cast to int as we're not testing large values so it is safe
+        (int)amResource.getMemorySize(), amResource.getVirtualCores(),
+        ResourceRequest.ANY, 1, 1, true);
+    List<ResourceRequest> amReqs = new ArrayList<>();
+    amReqs.add(amRequest);
+    RMContext rmContext = resourceManager.getRMContext();
+    ApplicationId appId = id.getApplicationId();
+    RMApp rmApp = new RMAppImpl(appId, rmContext, conf, null, userId, null,
+        ApplicationSubmissionContext.newInstance(appId, null, queueId, null,
+        mock(ContainerLaunchContext.class), false, false, 0, amResource,
+        null), scheduler, null, 0, null, null, amReqs);
+    rmContext.getRMApps().put(appId, rmApp);
+
+    scheduler.addApplication(appId, queueId, userId, true);
+    return id;
+  }
+
   protected void createApplicationWithAMResource(ApplicationAttemptId attId,
       String queue, String user, Resource amResource) {
     RMContext rmContext = resourceManager.getRMContext();
