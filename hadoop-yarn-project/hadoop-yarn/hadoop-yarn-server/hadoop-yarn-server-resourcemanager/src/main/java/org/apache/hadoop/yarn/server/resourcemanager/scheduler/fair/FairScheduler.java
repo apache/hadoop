@@ -477,12 +477,25 @@ public class FairScheduler extends
     writeLock.lock();
     try {
       RMApp rmApp = rmContext.getRMApps().get(applicationId);
+      // This will re-create the queue on restore, however this could fail if
+      // the config was changed.
       FSLeafQueue queue = assignToQueue(rmApp, queueName, user);
       if (queue == null) {
-        return;
+        if (!isAppRecovering) {
+          return;
+        }
+        // app is recovering we do not want to fail the app now as it was there
+        // before we started the recovery. Add it to the recovery queue:
+        // dynamic queue directly under root, no ACL needed (auto clean up)
+        queueName = "root.recovery";
+        queue = queueMgr.getLeafQueue(queueName, true);
       }
 
-      if (rmApp != null && rmApp.getAMResourceRequests() != null) {
+      // when recovering the NMs might not have registered and we could have
+      // no resources in the queue, the app is already running and has thus
+      // passed all these checks, skip them now.
+      if (!isAppRecovering && rmApp != null &&
+          rmApp.getAMResourceRequests() != null) {
         // Resources.fitsIn would always return false when queueMaxShare is 0
         // for any resource, but only using Resources.fitsIn is not enough
         // is it would return false for such cases when the requested
@@ -507,17 +520,21 @@ public class FairScheduler extends
         }
       }
 
-      // Enforce ACLs
-      UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(
-          user);
+      // Skip ACL check for recovering applications: they have been accepted
+      // in the queue already recovery should not break that.
+      if (!isAppRecovering) {
+        // Enforce ACLs
+        UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(
+            user);
 
-      if (!queue.hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi) && !queue
-          .hasAccess(QueueACL.ADMINISTER_QUEUE, userUgi)) {
-        String msg = "User " + userUgi.getUserName()
-            + " cannot submit applications to queue " + queue.getName()
-            + "(requested queuename is " + queueName + ")";
-        rejectApplicationWithMessage(applicationId, msg);
-        return;
+        if (!queue.hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi) && !queue
+            .hasAccess(QueueACL.ADMINISTER_QUEUE, userUgi)) {
+          String msg = "User " + userUgi.getUserName()
+              + " cannot submit applications to queue " + queue.getName()
+              + "(requested queuename is " + queueName + ")";
+          rejectApplicationWithMessage(applicationId, msg);
+          return;
+        }
       }
 
       SchedulerApplication<FSAppAttempt> application =
