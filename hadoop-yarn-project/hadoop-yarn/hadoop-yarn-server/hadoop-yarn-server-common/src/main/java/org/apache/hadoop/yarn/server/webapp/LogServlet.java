@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.codehaus.jettison.json.JSONException;
@@ -97,7 +98,7 @@ public class LogServlet extends Configured {
     }
     // if the application finishes, directly find logs
     // from HDFS.
-    if (LogWebServiceUtils.isFinishedState(appInfo.getAppState())) {
+    if (Apps.isApplicationFinalState(appInfo.getAppState())) {
       return LogWebServiceUtils
           .getContainerLogMeta(factory, appId, null, null, containerIdStr,
               false);
@@ -197,7 +198,7 @@ public class LogServlet extends Configured {
               filename, format, length, false);
     }
     String appOwner = appInfo.getUser();
-    if (LogWebServiceUtils.isFinishedState(appInfo.getAppState())) {
+    if (Apps.isApplicationFinalState(appInfo.getAppState())) {
       // directly find logs from HDFS.
       return LogWebServiceUtils
           .sendStreamOutputResponse(factory, appId, appOwner, null,
