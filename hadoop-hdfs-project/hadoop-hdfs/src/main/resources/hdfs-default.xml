@@ -1913,6 +1913,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.enable.log.stale.datanode</name>
+  <value>false</value>
+  <description>
+    Enable and disable logging datanode staleness. Disabled by default.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.stale.datanode.interval</name>
   <value>30000</value>
   <description>
