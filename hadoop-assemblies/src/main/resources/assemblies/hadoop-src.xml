@@ -56,7 +56,6 @@
         <exclude>**/build/**</exclude>
         <exclude>**/file:/**</exclude>
         <exclude>**/SecurityAuth.audit*</exclude>
-        <exclude>hadoop-submarine/**</exclude>
       </excludes>
     </fileSet>
   </fileSets>
