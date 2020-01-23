@@ -569,6 +569,25 @@ public final class Constants {
   public static final long S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT = 0;
 
   /**
+   * Whether server-side encryption (SSE) is enabled or disabled on the table.
+   * By default it's disabled, meaning SSE is set to AWS owned CMK.
+   * @see com.amazonaws.services.dynamodbv2.model.SSESpecification#setEnabled
+   */
+  public static final String S3GUARD_DDB_TABLE_SSE_ENABLED =
+      "fs.s3a.s3guard.ddb.table.sse.enabled";
+
+  /**
+   * The KMS Master Key (CMK) used for the KMS encryption on the table.
+   *
+   * To specify a CMK, this config value can be its key ID, Amazon Resource
+   * Name (ARN), alias name, or alias ARN. Users only provide this config
+   * if the key is different from the default DynamoDB KMS Master Key, which is
+   * alias/aws/dynamodb.
+   */
+  public static final String S3GUARD_DDB_TABLE_SSE_CMK =
+      "fs.s3a.s3guard.ddb.table.sse.cmk";
+
+  /**
    * The maximum put or delete requests per BatchWriteItem request.
    *
    * Refer to Amazon API reference for this limit.
