@@ -89,6 +89,7 @@ import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -2055,6 +2056,37 @@ public class TestDistributedFileSystem {
       int numSSD = Collections.frequency(
           Arrays.asList(locations[0].getStorageTypes()), StorageType.SSD);
       assertEquals("Number of SSD should be 1 but was : " + numSSD, 1, numSSD);
+    }
+  }
+
+  @Test
+  public void testGetECTopologyResultForPolicies() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster = DFSTestUtil.setupCluster(conf, 9, 3, 0)) {
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      dfs.enableErasureCodingPolicy("RS-6-3-1024k");
+      // No policies specified should return result for the enabled policy.
+      ECTopologyVerifierResult result = dfs.getECTopologyResultForPolicies();
+      assertTrue(result.isSupported());
+      // Specified policy requiring more datanodes than present in
+      // the actual cluster.
+      result = dfs.getECTopologyResultForPolicies("RS-10-4-1024k");
+      assertFalse(result.isSupported());
+      // Specify multiple policies that require datanodes equlal or less then
+      // present in the actual cluster
+      result =
+          dfs.getECTopologyResultForPolicies("XOR-2-1-1024k", "RS-3-2-1024k");
+      assertTrue(result.isSupported());
+      // Specify multiple policies with one policy requiring more datanodes than
+      // present in the actual cluster
+      result =
+          dfs.getECTopologyResultForPolicies("RS-10-4-1024k", "RS-3-2-1024k");
+      assertFalse(result.isSupported());
+      // Enable a policy requiring more datanodes than present in
+      // the actual cluster.
+      dfs.enableErasureCodingPolicy("RS-10-4-1024k");
+      result = dfs.getECTopologyResultForPolicies();
+      assertFalse(result.isSupported());
     }
   }
 }

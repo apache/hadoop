@@ -1030,6 +1030,8 @@ service ClientNamenodeProtocol {
       returns(SetErasureCodingPolicyResponseProto);
   rpc unsetErasureCodingPolicy(UnsetErasureCodingPolicyRequestProto)
       returns(UnsetErasureCodingPolicyResponseProto);
+  rpc getECTopologyResultForPolicies(GetECTopologyResultForPoliciesRequestProto)
+      returns(GetECTopologyResultForPoliciesResponseProto);
   rpc getCurrentEditLogTxid(GetCurrentEditLogTxidRequestProto)
       returns(GetCurrentEditLogTxidResponseProto);
   rpc getEditsFromTxid(GetEditsFromTxidRequestProto)
