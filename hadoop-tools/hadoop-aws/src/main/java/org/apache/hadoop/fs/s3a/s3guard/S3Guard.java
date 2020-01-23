@@ -63,7 +63,6 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.a
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class S3Guard {
-
   private static final Logger LOG = LoggerFactory.getLogger(S3Guard.class);
 
   @InterfaceAudience.Private
@@ -77,7 +76,6 @@ public final class S3Guard {
       DynamoDBClientFactory.DefaultDynamoDBClientFactory.class;
   private static final S3AFileStatus[] EMPTY_LISTING = new S3AFileStatus[0];
 
-
   /**
    * Hard-coded policy : {@value}.
    * If true, when merging an S3 LIST with S3Guard in non-auth mode,
@@ -86,7 +84,7 @@ public final class S3Guard {
    * and hence the complexity of the merge in a non-auth listing.
    */
   @VisibleForTesting
-  public static final boolean DIR_MERGE_UPDATES_ALL_RECORDS_NONAUTH = true;
+  public static final boolean DIR_MERGE_UPDATES_ALL_RECORDS_NONAUTH = false;
 
   // Utility class.  All static functions.
   private S3Guard() { }
@@ -305,8 +303,6 @@ public final class S3Guard {
           false);
     }
 
-    Set<Path> deleted = dirMeta.listTombstones();
-
     // Since we treat the MetadataStore as a "fresher" or "consistent" view
     // of metadata, we always use its metadata first.
 
@@ -325,57 +321,62 @@ public final class S3Guard {
     // submit them in a batch; this is more efficient than trickling out the
     // updates one-by-one.
 
-    // track all unchanged entries; used so the metastore can identify entries
-    // it doesn't need to update
-    List<Path> unchangedEntries = new ArrayList<>(dirMeta.getListing().size());
-    List<PathMetadata> nonAuthEntriesToAdd = new ArrayList<>(backingStatuses.size());
-    boolean changed = false;
-    final Map<Path, PathMetadata> dirMetaMap = dirMeta.getListing().stream()
-        .collect(Collectors.toMap(pm -> pm.getFileStatus().getPath(), pm -> pm));
     BulkOperationState operationState = ms.initiateBulkWrite(
         BulkOperationState.OperationType.Listing,
         path);
+    if (isAuthoritative) {
+      authoritativeUnion(ms, path, backingStatuses, dirMeta,
+          timeProvider, operationState);
+    } else {
+      nonAuthoritativeUnion(ms, path, backingStatuses, dirMeta,
+          timeProvider, operationState);
+    }
+    IOUtils.cleanupWithLogger(LOG, operationState);
+
+    return dirMetaToStatuses(dirMeta);
+  }
+
+  /**
+   * Perform the authoritative union operation.
+   * Here all updated/missing entries are added back; we take care
+   * not to overwrite unchanged entries as that will lose their
+   * isAuthoritative bit (HADOOP-16746).
+   * @param ms MetadataStore to use.
+   * @param path path to directory
+   * @param backingStatuses Directory listing from the backing store.
+   * @param dirMeta  Directory listing from MetadataStore.  May be null.
+   * @param timeProvider Time provider to use when updating entries
+   * @param operationState ongoing operation
+   * @throws IOException if metadata store update failed
+   */
+  private static void authoritativeUnion(
+      final MetadataStore ms,
+      final Path path,
+      final List<S3AFileStatus> backingStatuses,
+      final DirListingMetadata dirMeta,
+      final ITtlTimeProvider timeProvider,
+      final BulkOperationState operationState) throws IOException {
+    // track all unchanged entries; used so the metastore can identify entries
+    // it doesn't need to update
+    List<Path> unchangedEntries = new ArrayList<>(dirMeta.getListing().size());
+    boolean changed = !dirMeta.isAuthoritative();
+    Set<Path> deleted = dirMeta.listTombstones();
+    final Map<Path, PathMetadata> dirMetaMap = dirMeta.getListing().stream()
+        .collect(Collectors.toMap(pm -> pm.getFileStatus().getPath(), pm -> pm));
     for (S3AFileStatus s : backingStatuses) {
       final Path statusPath = s.getPath();
       if (deleted.contains(statusPath)) {
         continue;
       }
 
-      final PathMetadata originalMD = dirMetaMap.get(statusPath);
-
-      // this is built up to be whatever entry is added to the dirMeta
+      // this is built up to be whatever entry is to be added to the dirMeta
       // collection
-      PathMetadata pathMetadata = originalMD;
+      PathMetadata pathMetadata = dirMetaMap.get(statusPath);
 
-      if (!isAuthoritative) {
-        // in non-auth listings, we compare the file status of the metastore
-        // list with those in the FS, and overwrite the MS entry if
-        // either of two conditions are met
-        // - there is no entry in the metadata and
-        //   DIR_MERGE_UPDATES_ALL_RECORDS_NONAUTH is compiled to true
-        // - there is an entry in the metastore the FS entry is newer.
-        FileStatus mdStatus = originalMD != null
-            ? originalMD.getFileStatus()
-            : null;
-        boolean shouldUpdate = mdStatus != null
-            && s.getModificationTime() > mdStatus.getModificationTime();
-        if (DIR_MERGE_UPDATES_ALL_RECORDS_NONAUTH && mdStatus == null) {
-          shouldUpdate = true;
-        }
-        if (shouldUpdate) {
-          LOG.debug("Update ms with newer metadata of: {}", s);
-          // ensure it gets into the dirListing
-          pathMetadata = new PathMetadata(s);
-          // add to the list of entries to add later,
-          nonAuthEntriesToAdd.add(pathMetadata);
-        }
-      }
       if (pathMetadata == null) {
-        // there's no entry in the listing already
+        // there's no entry in the listing, so create one.
         pathMetadata = new PathMetadata(s);
-      }
-      // use an object reference equality test
-      if (pathMetadata == originalMD) {
+      } else {
         // no change -add the path to the list of unchangedEntries
         unchangedEntries.add(statusPath);
       }
@@ -387,31 +388,87 @@ public final class S3Guard {
       // Any FileSystem has similar race conditions, but we could persist
       // a stale entry longer.  We could expose an atomic
       // DirListingMetadata#putIfNotPresent()
-      boolean updated = dirMeta.put(pathMetadata);
-      changed = changed || updated;
+      changed |= dirMeta.put(pathMetadata);
     }
-
-    // If dirMeta is not authoritative, but isAuthoritative is true the
-    // directory metadata should be updated. Treat it as a change.
-    changed = changed || (!dirMeta.isAuthoritative() && isAuthoritative);
 
     if (changed) {
-      if (isAuthoritative) {
-        // in an authoritative update, we pass in the full list of entries,
-        // but do declare which have not changed.
-        LOG.debug("Marking the directory {} as authoritative", path);
-        ms.getInstrumentation().directoryMarkedAuthoritative();
-        dirMeta.setAuthoritative(true); // This is the full directory contents
-        // write the updated dir entry and any changed children.
-        S3Guard.putWithTtl(ms, dirMeta, unchangedEntries, timeProvider, operationState);
-      } else {
-        // non-auth, just push out the updated entry list
-        putWithTtl(ms, nonAuthEntriesToAdd, timeProvider, operationState);
-      }
+      // in an authoritative update, we pass in the full list of entries,
+      // but do declare which have not changed to avoid needless and potentially
+      // destructive overwrites.
+      LOG.debug("Marking the directory {} as authoritative", path);
+      ms.getInstrumentation().directoryMarkedAuthoritative();
+      dirMeta.setAuthoritative(true); // This is the full directory contents
+      // write the updated dir entry and any changed children.
+      S3Guard.putWithTtl(ms, dirMeta, unchangedEntries, timeProvider, operationState);
     }
-    IOUtils.cleanupWithLogger(LOG, operationState);
+  }
 
-    return dirMetaToStatuses(dirMeta);
+  /**
+   * Perform the authoritative union operation.
+   * @param ms MetadataStore to use.
+   * @param path path to directory
+   * @param backingStatuses Directory listing from the backing store.
+   * @param dirMeta  Directory listing from MetadataStore.  May be null.
+   * @param timeProvider Time provider to use when updating entries
+   * @param operationState ongoing operation
+   * @throws IOException if metadata store update failed
+   */
+  private static void nonAuthoritativeUnion(
+      final MetadataStore ms,
+      final Path path,
+      final List<S3AFileStatus> backingStatuses,
+      final DirListingMetadata dirMeta,
+      final ITtlTimeProvider timeProvider,
+      final BulkOperationState operationState) throws IOException {
+    List<PathMetadata> entriesToAdd = new ArrayList<>(backingStatuses.size());
+    Set<Path> deleted = dirMeta.listTombstones();
+
+    final Map<Path, PathMetadata> dirMetaMap = dirMeta.getListing().stream()
+        .collect(Collectors.toMap(pm -> pm.getFileStatus().getPath(), pm -> pm));
+    for (S3AFileStatus s : backingStatuses) {
+      final Path statusPath = s.getPath();
+      if (deleted.contains(statusPath)) {
+        continue;
+      }
+
+      // this is the record in dynamo
+      PathMetadata pathMetadata = dirMetaMap.get(statusPath);
+
+      // in non-auth listings, we compare the file status of the metastore
+      // list with those in the FS, and overwrite the MS entry if
+      // either of two conditions are met
+      // - there is no entry in the metastore and
+      //   DIR_MERGE_UPDATES_ALL_RECORDS_NONAUTH is compiled to true
+      // - there is an entry in the metastore the FS entry is newer.
+      boolean shouldUpdate;
+      if (pathMetadata != null) {
+        // entry is in DDB; check modification time
+        shouldUpdate = s.getModificationTime() > (pathMetadata.getFileStatus())
+            .getModificationTime();
+        // create an updated record.
+        pathMetadata = new PathMetadata(s);
+      } else {
+        // entry is not present. Create for insertion into dirMeta
+        pathMetadata = new PathMetadata(s);
+        // use hard-coded policy about updating
+        shouldUpdate = DIR_MERGE_UPDATES_ALL_RECORDS_NONAUTH;
+      }
+      if (shouldUpdate) {
+        // we do want to update DDB and the listing with a new entry.
+        LOG.debug("Update ms with newer metadata of: {}", s);
+        // ensure it gets into the dirListing
+        // add to the list of entries to add later,
+        entriesToAdd.add(pathMetadata);
+      }
+      // add the entry to the union; no-op if it was already there.
+      dirMeta.put(pathMetadata);
+    }
+
+    if (!entriesToAdd.isEmpty()) {
+        // non-auth, just push out the updated entry list
+      LOG.debug("Adding {} entries under directory {}", entriesToAdd.size(), path);
+      putWithTtl(ms, entriesToAdd, timeProvider, operationState);
+    }
   }
 
   /**
