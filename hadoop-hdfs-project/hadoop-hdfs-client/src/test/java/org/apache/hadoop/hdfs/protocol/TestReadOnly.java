@@ -74,7 +74,8 @@ public class TestReadOnly {
           "getEditsFromTxid",
           "getQuotaUsage",
           "msync",
-          "getHAServiceState"
+          "getHAServiceState",
+          "getECTopologyResultForPolicies"
       )
   );
 

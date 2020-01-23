@@ -119,6 +119,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -2805,6 +2806,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           SafeModeException.class,
           UnresolvedPathException.class,
           FileNotFoundException.class, NoECPolicySetException.class);
+    }
+  }
+
+  public ECTopologyVerifierResult getECTopologyResultForPolicies(
+      final String... policyNames) throws IOException {
+    checkOpen();
+    try {
+      return namenode.getECTopologyResultForPolicies(policyNames);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          SafeModeException.class);
     }
   }
 

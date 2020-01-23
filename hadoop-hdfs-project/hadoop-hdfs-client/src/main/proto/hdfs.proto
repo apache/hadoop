@@ -418,6 +418,11 @@ message AddErasureCodingPolicyResponseProto {
   optional string errorMsg = 3;
 }
 
+message ECTopologyVerifierResultProto {
+  required string resultMessage = 1;
+  required bool isSupported = 2;
+}
+
 /**
  * Placeholder type for consistent HDFS operations.
  */

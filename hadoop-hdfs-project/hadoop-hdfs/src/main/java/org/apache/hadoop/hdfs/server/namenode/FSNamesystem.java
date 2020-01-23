@@ -91,6 +91,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LI
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
@@ -7981,6 +7982,48 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
+   * Verifies if the given policies are supported in the given cluster setup.
+   * If not policy is specified checks for all enabled policies.
+   * @param policyNames name of policies.
+   * @return the result if the given policies are supported in the cluster setup
+   * @throws IOException
+   */
+  public ECTopologyVerifierResult getECTopologyResultForPolicies(
+      String[] policyNames) throws IOException {
+    String operationName = "getECTopologyResultForPolicies";
+    checkSuperuserPrivilege(operationName);
+    checkOperation(OperationCategory.UNCHECKED);
+    ECTopologyVerifierResult result;
+    readLock();
+    try {
+      checkOperation(OperationCategory.UNCHECKED);
+      // If no policy name is specified return the result
+      // for all enabled policies.
+      if (policyNames == null || policyNames.length == 0) {
+        result = getEcTopologyVerifierResultForEnabledPolicies();
+      } else {
+        Collection<ErasureCodingPolicy> policies =
+            new ArrayList<ErasureCodingPolicy>();
+        for (int i = 0; i < policyNames.length; i++) {
+          policies.add(FSDirErasureCodingOp
+              .getErasureCodingPolicyByName(this, policyNames[i]));
+        }
+        int numOfDataNodes =
+            getBlockManager().getDatanodeManager().getNumOfDataNodes();
+        int numOfRacks =
+            getBlockManager().getDatanodeManager().getNetworkTopology()
+                .getNumOfRacks();
+        result = ECTopologyVerifier
+            .getECTopologyVerifierResult(numOfRacks, numOfDataNodes, policies);
+      }
+    } finally {
+      readUnlock();
+    }
+    logAuditEvent(true, operationName, null);
+    return result;
+  }
+
+  /**
    * Get the erasure coding policy information for specified path
    */
   ErasureCodingPolicy getErasureCodingPolicy(String src)
@@ -8385,20 +8428,25 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   @Override // NameNodeMXBean
   public String getVerifyECWithTopologyResult() {
-    int numOfDataNodes = getBlockManager().getDatanodeManager()
-        .getNumOfDataNodes();
-    int numOfRacks = getBlockManager().getDatanodeManager()
-        .getNetworkTopology().getNumOfRacks();
-    ErasureCodingPolicy[] enabledEcPolicies =
-        getErasureCodingPolicyManager().getCopyOfEnabledPolicies();
     ECTopologyVerifierResult result =
-        ECTopologyVerifier.getECTopologyVerifierResult(
-            numOfRacks, numOfDataNodes, enabledEcPolicies);
+        getEcTopologyVerifierResultForEnabledPolicies();
 
     Map<String, String> resultMap = new HashMap<String, String>();
     resultMap.put("isSupported", Boolean.toString(result.isSupported()));
     resultMap.put("resultMessage", result.getResultMessage());
     return JSON.toString(resultMap);
+  }
+
+  private ECTopologyVerifierResult getEcTopologyVerifierResultForEnabledPolicies() {
+    int numOfDataNodes =
+        getBlockManager().getDatanodeManager().getNumOfDataNodes();
+    int numOfRacks = getBlockManager().getDatanodeManager().getNetworkTopology()
+        .getNumOfRacks();
+    ErasureCodingPolicy[] enabledEcPolicies =
+        getErasureCodingPolicyManager().getCopyOfEnabledPolicies();
+    return ECTopologyVerifier
+        .getECTopologyVerifierResult(numOfRacks, numOfDataNodes,
+            Arrays.asList(enabledEcPolicies));
   }
 
   // This method logs operatoinName without super user privilege.

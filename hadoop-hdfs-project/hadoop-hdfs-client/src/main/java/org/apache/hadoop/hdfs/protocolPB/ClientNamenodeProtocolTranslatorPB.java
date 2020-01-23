@@ -66,6 +66,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsPartialListing;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -221,6 +222,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.SetErasureCodin
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.UnsetErasureCodingPolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.CodecProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BatchedDirectoryListingProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetECTopologyResultForPoliciesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetECTopologyResultForPoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ErasureCodingPolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsRequestProto;
@@ -1665,14 +1668,30 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void unsetErasureCodingPolicy(String src)
-      throws IOException {
+  public void unsetErasureCodingPolicy(String src) throws IOException {
     final UnsetErasureCodingPolicyRequestProto.Builder builder =
-        ErasureCodingProtos.UnsetErasureCodingPolicyRequestProto.newBuilder();
+        UnsetErasureCodingPolicyRequestProto.newBuilder();
     builder.setSrc(src);
     UnsetErasureCodingPolicyRequestProto req = builder.build();
     try {
       rpcProxy.unsetErasureCodingPolicy(null, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public ECTopologyVerifierResult getECTopologyResultForPolicies(
+      final String... policyNames) throws IOException {
+    final GetECTopologyResultForPoliciesRequestProto.Builder builder =
+        GetECTopologyResultForPoliciesRequestProto.newBuilder();
+    builder.addAllPolicies(Arrays.asList(policyNames));
+    GetECTopologyResultForPoliciesRequestProto req = builder.build();
+    try {
+      GetECTopologyResultForPoliciesResponseProto response =
+          rpcProxy.getECTopologyResultForPolicies(null, req);
+      return PBHelperClient
+          .convertECTopologyVerifierResultProto(response.getResponse());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
