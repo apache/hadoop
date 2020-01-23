@@ -1762,6 +1762,18 @@ public interface ClientProtocol {
   void unsetErasureCodingPolicy(String src) throws IOException;
 
   /**
+   * Verifies if the given policies are supported in the given cluster setup.
+   * If not policy is specified checks for all enabled policies.
+   * @param policyNames name of policies.
+   * @return the result if the given policies are supported in the cluster setup
+   * @throws IOException
+   */
+  @Idempotent
+  @ReadOnly
+  ECTopologyVerifierResult getECTopologyResultForPolicies(String... policyNames)
+      throws IOException;
+
+  /**
    * Get {@link QuotaUsage} rooted at the specified directory.
    *
    * Note: due to HDFS-6763, standby/observer doesn't keep up-to-date info
