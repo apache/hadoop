@@ -40,6 +40,7 @@ import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.ListTagsOfResourceRequest;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
+import com.amazonaws.services.dynamodbv2.model.SSEDescription;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
 import com.amazonaws.services.dynamodbv2.model.Tag;
 import com.amazonaws.services.dynamodbv2.model.TagResourceRequest;
@@ -427,9 +428,11 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
       ddbms.initialize(s3afs, new S3Guard.TtlTimeProvider(conf));
-      verifyTableInitialized(tableName, ddbms.getDynamoDB());
+      Table table = verifyTableInitialized(tableName, ddbms.getDynamoDB());
+      verifyTableSse(conf, table.getDescription());
       assertNotNull(ddbms.getTable());
       assertEquals(tableName, ddbms.getTable().getTableName());
+
       String expectedRegion = conf.get(S3GUARD_DDB_REGION_KEY,
           s3afs.getBucketLocation(bucket));
       assertEquals("DynamoDB table should be in configured region or the same" +
@@ -459,6 +462,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       fail("Should have failed because the table name is not set!");
     } catch (IllegalArgumentException ignored) {
     }
+
     // config table name
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
@@ -466,12 +470,26 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       fail("Should have failed because as the region is not set!");
     } catch (IllegalArgumentException ignored) {
     }
+
     // config region
     conf.set(S3GUARD_DDB_REGION_KEY, savedRegion);
+    doTestInitializeWithConfiguration(conf, tableName);
+
+    // config table server side encryption (SSE)
+    conf.setBoolean(S3GUARD_DDB_TABLE_SSE_ENABLED, true);
+    doTestInitializeWithConfiguration(conf, tableName);
+  }
+
+  /**
+   * Test initialize() using a Configuration object successfully.
+   */
+  private void doTestInitializeWithConfiguration(Configuration conf,
+      String tableName) throws IOException {
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
       ddbms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
-      verifyTableInitialized(tableName, ddbms.getDynamoDB());
+      Table table = verifyTableInitialized(tableName, ddbms.getDynamoDB());
+      verifyTableSse(conf, table.getDescription());
       assertNotNull(ddbms.getTable());
       assertEquals(tableName, ddbms.getTable().getTableName());
       assertEquals("Unexpected key schema found!",
@@ -1106,6 +1124,25 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     assertEquals(tableName, td.getTableName());
     assertEquals("ACTIVE", td.getTableStatus());
     return table;
+  }
+
+  /**
+   * Verify the table is created with correct server side encryption (SSE).
+   */
+  private void verifyTableSse(Configuration conf, TableDescription td) {
+    SSEDescription sseDescription = td.getSSEDescription();
+    if (conf.getBoolean(S3GUARD_DDB_TABLE_SSE_ENABLED, false)) {
+      assertNotNull(sseDescription);
+      assertEquals("ENABLED", sseDescription.getStatus());
+      assertEquals("KMS", sseDescription.getSSEType());
+      // We do not test key ARN is the same as configured value,
+      // because in configuration, the ARN can be specified by alias.
+      assertNotNull(sseDescription.getKMSMasterKeyArn());
+    } else {
+      if (sseDescription != null) {
+        assertEquals("DISABLED", sseDescription.getStatus());
+      }
+    }
   }
 
   /**

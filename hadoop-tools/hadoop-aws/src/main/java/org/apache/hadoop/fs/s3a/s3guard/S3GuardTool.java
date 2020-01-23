@@ -73,6 +73,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.FILESYSTEM_TEMP_PATH;
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableManager.SSE_DEFAULT_MASTER_KEY;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
 
 /**
@@ -143,6 +144,8 @@ public abstract class S3GuardTool extends Configured implements Tool,
   public static final String REGION_FLAG = "region";
   public static final String READ_FLAG = "read";
   public static final String WRITE_FLAG = "write";
+  public static final String SSE_FLAG = "sse";
+  public static final String CMK_FLAG = "cmk";
   public static final String TAG_FLAG = "tag";
 
   public static final String VERBOSE = "verbose";
@@ -509,6 +512,8 @@ public abstract class S3GuardTool extends Configured implements Tool,
         "  -" + REGION_FLAG + " REGION - Service region for connections\n" +
         "  -" + READ_FLAG + " UNIT - Provisioned read throughput units\n" +
         "  -" + WRITE_FLAG + " UNIT - Provisioned write through put units\n" +
+        "  -" + SSE_FLAG + " - Enable server side encryption\n" +
+        "  -" + CMK_FLAG + " KEY - Customer managed CMK\n" +
         "  -" + TAG_FLAG + " key=value; list of tags to tag dynamo table\n" +
         "\n" +
         "  URLs for Amazon DynamoDB are of the form dynamodb://TABLE_NAME.\n" +
@@ -518,11 +523,13 @@ public abstract class S3GuardTool extends Configured implements Tool,
         + "capacities to 0";
 
     Init(Configuration conf) {
-      super(conf);
+      super(conf, SSE_FLAG);
       // read capacity.
       getCommandFormat().addOptionWithValue(READ_FLAG);
       // write capacity.
       getCommandFormat().addOptionWithValue(WRITE_FLAG);
+      // customer managed customer master key (CMK) for server side encryption
+      getCommandFormat().addOptionWithValue(CMK_FLAG);
       // tag
       getCommandFormat().addOptionWithValue(TAG_FLAG);
     }
@@ -546,13 +553,13 @@ public abstract class S3GuardTool extends Configured implements Tool,
         errorln(USAGE);
         throw e;
       }
-
-      String readCap = getCommandFormat().getOptValue(READ_FLAG);
+      CommandFormat commands = getCommandFormat();
+      String readCap = commands.getOptValue(READ_FLAG);
       if (readCap != null && !readCap.isEmpty()) {
         int readCapacity = Integer.parseInt(readCap);
         getConf().setInt(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, readCapacity);
       }
-      String writeCap = getCommandFormat().getOptValue(WRITE_FLAG);
+      String writeCap = commands.getOptValue(WRITE_FLAG);
       if (writeCap != null && !writeCap.isEmpty()) {
         int writeCapacity = Integer.parseInt(writeCap);
         getConf().setInt(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, writeCapacity);
@@ -565,7 +572,25 @@ public abstract class S3GuardTool extends Configured implements Tool,
         setConf(bucketConf);
       }
 
-      String tags = getCommandFormat().getOptValue(TAG_FLAG);
+      String cmk = commands.getOptValue(CMK_FLAG);
+      if (commands.getOpt(SSE_FLAG)) {
+        getConf().setBoolean(S3GUARD_DDB_TABLE_SSE_ENABLED, true);
+        LOG.debug("SSE flag is passed to command {}", this.getName());
+        if (!StringUtils.isEmpty(cmk)) {
+          if (SSE_DEFAULT_MASTER_KEY.equals(cmk)) {
+            LOG.warn("Ignoring default DynamoDB table KMS Master Key " +
+                "alias/aws/dynamodb in configuration");
+          } else {
+            LOG.debug("Setting customer managed CMK {}", cmk);
+            getConf().set(S3GUARD_DDB_TABLE_SSE_CMK, cmk);
+          }
+        }
+      } else if (!StringUtils.isEmpty(cmk)) {
+        throw invalidArgs("Option %s can only be used with option %s",
+            CMK_FLAG, SSE_FLAG);
+      }
+
+      String tags = commands.getOptValue(TAG_FLAG);
       if (tags != null && !tags.isEmpty()) {
         String[] stringList = tags.split(";");
         Map<String, String> tagsKV = new HashMap<>();

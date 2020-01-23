@@ -1259,6 +1259,27 @@ during the use of a S3Guarded S3A filesystem are wrapped by retry logic.
 *The best way to verify resilience is to run the entire `hadoop-aws` test suite,
 or even a real application, with throttling enabled.
 
+### Testing encrypted DynamoDB tables
+
+By default, a DynamoDB table is encrypted using AWS owned customer master key
+(CMK). You can enable server side encryption (SSE) using AWS managed CMK or
+customer managed CMK in KMS before running the S3Guard tests.
+1. To enable AWS managed CMK, set the config
+`fs.s3a.s3guard.ddb.table.sse.enabled` to true in `auth-keys.xml`.
+1. To enable customer managed CMK, you need to create a KMS key and set the
+config in `auth-keys.xml`. The value can be the key ARN or alias. Example:
+```
+  <property>
+    <name>fs.s3a.s3guard.ddb.table.sse.enabled</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>fs.s3a.s3guard.ddb.table.sse.cmk</name>
+    <value>arn:aws:kms:us-west-2:360379543683:key/071a86ff-8881-4ba0-9230-95af6d01ca01</value>
+  </property>
+```
+For more details about SSE on DynamoDB table, please see [S3Guard doc](./s3guard.html).
+
 ### Testing only: Local Metadata Store
 
 There is an in-memory Metadata Store for testing.
