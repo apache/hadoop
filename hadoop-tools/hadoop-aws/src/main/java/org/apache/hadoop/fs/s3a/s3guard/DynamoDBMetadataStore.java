@@ -1870,7 +1870,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
           throughput.getWriteCapacityUnits() == 0
               ? BILLING_MODE_PER_REQUEST
               : BILLING_MODE_PROVISIONED);
-      map.put(TABLE, desc.toString());
+      map.put("sse", desc.getSSEDescription() == null
+          ? "DISABLED"
+          : desc.getSSEDescription().toString());
       map.put(MetadataStoreCapabilities.PERSISTS_AUTHORITATIVE_BIT,
           Boolean.toString(true));
     } else {
