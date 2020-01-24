@@ -84,6 +84,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.IdentityHashStore;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.htrace.core.SpanId;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -133,6 +134,10 @@ public class DFSInputStream extends FSInputStream
   //       (it's OK to acquire this lock when the lock on <this> is held)
   protected final Object infoLock = new Object();
 
+  // refresh locatedBlocks periodically
+  private final long refreshReadBlockIntervals;
+  /** timeStamp of the last time a block location was refreshed. */
+  private long locatedBlocksTimeStamp;
   /**
    * Track the ByteBuffers that we have handed out to readers.
    *
@@ -149,6 +154,10 @@ public class DFSInputStream extends FSInputStream
     return extendedReadBuffers;
   }
 
+  private boolean isPeriodicRefreshEnabled() {
+    return (refreshReadBlockIntervals > 0L);
+  }
+
   /**
    * This variable tracks the number of failures since the start of the
    * most recent user-facing operation. That is to say, it should be reset
@@ -162,7 +171,7 @@ public class DFSInputStream extends FSInputStream
    */
   protected int failures = 0;
 
-  /* XXX Use of CocurrentHashMap is temp fix. Need to fix
+  /* XXX Use of ConcurrentHashMap is temp fix. Need to fix
    * parallel accesses to DFSInputStream (through ptreads) properly */
   private final ConcurrentHashMap<DatanodeInfo, DatanodeInfo> deadNodes =
              new ConcurrentHashMap<>();
@@ -176,6 +185,9 @@ public class DFSInputStream extends FSInputStream
   DFSInputStream(DFSClient dfsClient, String src, boolean verifyChecksum,
       LocatedBlocks locatedBlocks) throws IOException {
     this.dfsClient = dfsClient;
+    this.refreshReadBlockIntervals =
+        this.dfsClient.getRefreshReadBlkLocationsInterval();
+    setLocatedBlocksTimeStamp();
     this.verifyChecksum = verifyChecksum;
     this.src = src;
     synchronized (infoLock) {
@@ -186,8 +198,26 @@ public class DFSInputStream extends FSInputStream
   }
 
   @VisibleForTesting
-  public long getlastBlockBeingWrittenLengthForTesting() {
+  long getlastBlockBeingWrittenLengthForTesting() {
     return lastBlockBeingWrittenLength;
+  }
+
+  @VisibleForTesting
+  boolean deadNodesContain(DatanodeInfo nodeInfo) {
+    return deadNodes.containsKey(nodeInfo);
+  }
+
+  @VisibleForTesting
+  void setReadTimeStampsForTesting(long timeStamp) {
+    setLocatedBlocksTimeStamp(timeStamp);
+  }
+
+  private void setLocatedBlocksTimeStamp() {
+    setLocatedBlocksTimeStamp(Time.monotonicNow());
+  }
+
+  private void setLocatedBlocksTimeStamp(long timeStamp) {
+    this.locatedBlocksTimeStamp = timeStamp;
   }
 
   /**
@@ -234,6 +264,48 @@ public class DFSInputStream extends FSInputStream
     }
   }
 
+  /**
+   * Checks whether the block locations timestamps have expired.
+   * In the case of expired timestamp:
+   *    - clear list of deadNodes
+   *    - call openInfo(true) which will re-fetch locatedblocks
+   *    - update locatedBlocksTimeStamp
+   * @return true when the expiration feature is enabled and locatedblocks
+   *         timestamp has expired.
+   * @throws IOException
+   */
+  private boolean isLocatedBlocksExpired() {
+    if (!isPeriodicRefreshEnabled()) {
+      return false;
+    }
+    long now = Time.monotonicNow();
+    long elapsed = now - locatedBlocksTimeStamp;
+    if (elapsed < refreshReadBlockIntervals) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Update the block locations timestamps if they have expired.
+   * In the case of expired timestamp:
+   *    - clear list of deadNodes
+   *    - call openInfo(true) which will re-fetch locatedblocks
+   *    - update locatedBlocksTimeStamp
+   * @return true when the locatedblocks list is re-fetched from the namenode.
+   * @throws IOException
+   */
+  private boolean updateBlockLocationsStamp() throws IOException {
+    if (!isLocatedBlocksExpired()) {
+      return false;
+    }
+    // clear dead nodes
+    deadNodes.clear();
+    openInfo(true);
+    setLocatedBlocksTimeStamp();
+    return true;
+  }
+
   private long fetchLocatedBlocksAndGetLastBlockLength(boolean refresh)
       throws IOException {
     LocatedBlocks newInfo = locatedBlocks;
@@ -246,7 +318,8 @@ public class DFSInputStream extends FSInputStream
     }
 
     if (locatedBlocks != null) {
-      Iterator<LocatedBlock> oldIter = locatedBlocks.getLocatedBlocks().iterator();
+      Iterator<LocatedBlock> oldIter =
+          locatedBlocks.getLocatedBlocks().iterator();
       Iterator<LocatedBlock> newIter = newInfo.getLocatedBlocks().iterator();
       while (oldIter.hasNext() && newIter.hasNext()) {
         if (!oldIter.next().getBlock().equals(newIter.next().getBlock())) {
@@ -450,6 +523,7 @@ public class DFSInputStream extends FSInputStream
   private LocatedBlock fetchBlockAt(long offset, long length, boolean useCache)
       throws IOException {
     synchronized(infoLock) {
+      updateBlockLocationsStamp();
       int targetBlockIdx = locatedBlocks.findBlock(offset);
       if (targetBlockIdx < 0) { // block is not cached
         targetBlockIdx = LocatedBlocks.getInsertIndex(targetBlockIdx);
@@ -549,7 +623,6 @@ public class DFSInputStream extends FSInputStream
     if (target >= getFileLength()) {
       throw new IOException("Attempted to read past end of file");
     }
-
     // Will be getting a new BlockReader.
     closeCurrentBlockReaders();
 
@@ -563,9 +636,13 @@ public class DFSInputStream extends FSInputStream
     boolean connectFailedOnce = false;
 
     while (true) {
+      // Re-fetch the locatedBlocks from NN if the timestamp has expired.
+      updateBlockLocationsStamp();
+
       //
       // Compute desired block
       //
+
       LocatedBlock targetBlock = getBlockAt(target);
 
       // update current position
@@ -765,7 +842,10 @@ public class DFSInputStream extends FSInputStream
         try {
           // currentNode can be left as null if previous read had a checksum
           // error on the same block. See HDFS-3067
-          if (pos > blockEnd || currentNode == null) {
+          // currentNode needs to be updated if the blockLocations timestamp has
+          // expired.
+          if (pos > blockEnd || currentNode == null
+              || updateBlockLocationsStamp()) {
             currentNode = blockSeekTo(pos);
           }
           int realLen = (int) Math.min(len, (blockEnd - pos + 1L));
@@ -1504,7 +1584,7 @@ public class DFSInputStream extends FSInputStream
    * the current datanode and might connect to the same node.
    */
   private boolean seekToBlockSource(long targetPos)
-                                                 throws IOException {
+      throws IOException {
     currentNode = blockSeekTo(targetPos);
     return true;
   }
