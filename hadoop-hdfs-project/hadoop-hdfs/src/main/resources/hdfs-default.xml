@@ -3114,6 +3114,14 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.client.refresh.read-block-locations.ms</name>
+    <value>0</value>
+    <description>
+      Refreshing LocatedBlocks period. A value of 0 disables the feature.
+    </description>
+  </property>
+
 <property>
   <name>dfs.namenode.lease-recheck-interval-ms</name>
   <value>2000</value>

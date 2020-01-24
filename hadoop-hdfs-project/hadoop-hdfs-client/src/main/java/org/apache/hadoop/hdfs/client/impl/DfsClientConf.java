@@ -136,6 +136,9 @@ public class DfsClientConf {
   private final long datanodeRestartTimeout;
   private final long slowIoWarningThresholdMs;
 
+  /** wait time window before refreshing blocklocation for inputstream. */
+  private final long refreshReadBlockLocationsMS;
+
   private final ShortCircuitConf shortCircuitConf;
 
   private final long hedgedReadThresholdMillis;
@@ -256,6 +259,11 @@ public class DfsClientConf {
     slowIoWarningThresholdMs = conf.getLong(
         DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY,
         DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT);
+
+    refreshReadBlockLocationsMS = conf.getLong(
+        HdfsClientConfigKeys.DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_MS_KEY,
+        HdfsClientConfigKeys.
+            DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_MS_DEFAULT);
 
     shortCircuitConf = new ShortCircuitConf(conf);
 
@@ -616,6 +624,13 @@ public class DfsClientConf {
   public List<Class<? extends ReplicaAccessorBuilder>>
         getReplicaAccessorBuilderClasses() {
     return replicaAccessorBuilderClasses;
+  }
+
+  /**
+   * @return the replicaAccessorBuilderClasses
+   */
+  public long getRefreshReadBlockLocationsMS() {
+    return refreshReadBlockLocationsMS;
   }
 
   /**
