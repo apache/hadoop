@@ -187,6 +187,11 @@ public final class Constants {
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
   public static final int DEFAULT_SOCKET_TIMEOUT = 200000;
 
+  // milliseconds until a request is timed-out
+  public static final String REQUEST_TIMEOUT =
+      "fs.s3a.connection.request.timeout";
+  public static final int DEFAULT_REQUEST_TIMEOUT = 0;
+
   // socket send buffer to be used in Amazon client
   public static final String SOCKET_SEND_BUFFER = "fs.s3a.socket.send.buffer";
   public static final int DEFAULT_SOCKET_SEND_BUFFER = 8 * 1024;
