@@ -391,6 +391,19 @@ public class ITestS3AConfiguration {
   }
 
   @Test
+  public void testRequestTimeout() throws Exception {
+    conf = new Configuration();
+    conf.set(REQUEST_TIMEOUT, "120");
+    fs = S3ATestUtils.createTestFileSystem(conf);
+    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("Request timeout (ms)");
+    ClientConfiguration awsConf = getField(s3, ClientConfiguration.class,
+        "clientConfiguration");
+    assertEquals("Configured " + REQUEST_TIMEOUT +
+        " is different than what AWS sdk configuration uses internally",
+        120000, awsConf.getRequestTimeout());
+  }
+
+  @Test
   public void testCloseIdempotent() throws Throwable {
     conf = new Configuration();
     fs = S3ATestUtils.createTestFileSystem(conf);

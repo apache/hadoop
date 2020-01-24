@@ -1941,6 +1941,23 @@
 </property>
 
 <property>
+  <name>fs.s3a.connection.request.timeout</name>
+  <value>0</value>
+  <description>
+    Time out on HTTP requests to the AWS service; 0 means no timeout.
+    Measured in seconds; the usual time suffixes are all supported
+
+    Important: this is the maximum duration of any AWS service call,
+    including upload and copy operations. If non-zero, it must be larger
+    than the time to upload multi-megabyte blocks to S3 from the client,
+    and to rename many-GB files. Use with care.
+
+    Values that are larger than Integer.MAX_VALUE milliseconds are
+    converged to Integer.MAX_VALUE milliseconds
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.etag.checksum.enabled</name>
   <value>false</value>
   <description>
