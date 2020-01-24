@@ -139,6 +139,13 @@ class UnreliableImplementation implements UnreliableInterface {
     }
   }
 
+  public void failsWithWrappedAccessControlException()
+      throws IOException {
+    AccessControlException ace = new AccessControlException();
+    IOException ioe = new IOException(ace);
+    throw new IOException(ioe);
+  }
+
   @Override
   public String succeedsOnceThenFailsReturningString()
       throws UnreliableException, IOException, StandbyException {
