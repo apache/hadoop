@@ -1384,3 +1384,43 @@ For this reason, the number of retry events are limited.
   </description>
 </property>
 ```
+
+### <a name="aws-timeouts"></a> Tuning AWS request timeouts
+
+It is possible to configure a global timeout for AWS service calls using following property:
+
+```xml
+<property>
+  <name>fs.s3a.connection.request.timeout</name>
+  <value>0</value>
+  <description>
+    Time out on HTTP requests to the AWS service; 0 means no timeout.
+    Measured in seconds; the usual time suffixes are all supported
+
+    Important: this is the maximum duration of any AWS service call,
+    including upload and copy operations. If non-zero, it must be larger
+    than the time to upload multi-megabyte blocks to S3 from the client,
+    and to rename many-GB files. Use with care.
+
+    Values that are larger than Integer.MAX_VALUE milliseconds are
+    converged to Integer.MAX_VALUE milliseconds
+  </description>
+</property>
+```
+
+If this value is configured too low, user may encounter `SdkClientException`s due to many requests
+timing-out.
+
+```
+com.amazonaws.SdkClientException: Unable to execute HTTP request:
+  Request did not complete before the request timeout configuration.:
+  Unable to execute HTTP request: Request did not complete before the request timeout configuration.
+  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:205)
+  at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:112)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$4(Invoker.java:315)
+  at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:407)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:311)
+```
+
+When this happens, try to set `fs.s3a.connection.request.timeout` to a larger value or disable it
+completely by setting it to `0`.
