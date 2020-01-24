@@ -857,6 +857,37 @@ signon page for humans, even though it is a machine calling.
 1. The URL is wrong —it is pointing at a web page unrelated to OAuth2.0
 1. There's a proxy server in the way trying to return helpful instructions.
 
+### `java.io.IOException: The ownership on the staging directory /tmp/hadoop-yarn/staging/user1/.staging is not as expected. It is owned by <principal_id>. The directory must be owned by the submitter user1 or user1`
+
+When using [Azure Managed Identities](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview), the files/directories in ADLS Gen2 by default will be owned by the service principal object id i.e. principal ID & submitting jobs as the local OS user 'user1' results in the above exception.
+
+The fix is to mimic the ownership to the local OS user, by adding the below properties to`core-site.xml`.
+
+```xml
+<property>
+  <name>fs.azure.identity.transformer.service.principal.id</name>
+  <value>service principal object id</value>
+  <description>
+  An Azure Active Directory object ID (oid) used as the replacement for names contained
+  in the list specified by “fs.azure.identity.transformer.service.principal.substitution.list”.
+  Notice that instead of setting oid, you can also set $superuser here.
+  </description>
+</property>
+<property>
+  <name>fs.azure.identity.transformer.service.principal.substitution.list</name>
+  <value>user1</value>
+  <description>
+  A comma separated list of names to be replaced with the service principal ID specified by
+  “fs.azure.identity.transformer.service.principal.id”.  This substitution occurs
+  when setOwner, setAcl, modifyAclEntries, or removeAclEntries are invoked with identities
+  contained in the substitution list. Notice that when in non-secure cluster, asterisk symbol *
+  can be used to match all user/group.
+  </description>
+</property>
+```
+
+Once the above properties are configured, `hdfs dfs -ls abfs://container1@abfswales1.dfs.core.windows.net/` shows the ADLS Gen2 files/directories are now owned by 'user1'.
+
 ## <a name="testing"></a> Testing ABFS
 
 See the relevant section in [Testing Azure](testing_azure.html).
