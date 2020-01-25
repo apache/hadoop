@@ -202,6 +202,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
  * same region. The region may also be set explicitly by setting the config
  * parameter {@code fs.s3a.s3guard.ddb.region} to the corresponding region.
  */
+@SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DynamoDBMetadataStore implements MetadataStore,
@@ -899,19 +900,18 @@ public class DynamoDBMetadataStore implements MetadataStore,
     List<DDBPathMetadata> sortedPaths = new ArrayList<>(pathsToCreate);
     sortedPaths.sort(PathOrderComparators.TOPMOST_PM_FIRST);
     // iterate through the paths.
-    for (DDBPathMetadata meta : sortedPaths) {
-      Preconditions.checkArgument(meta != null);
-      Path path = meta.getFileStatus().getPath();
+    for (DDBPathMetadata entry : sortedPaths) {
+      Preconditions.checkArgument(entry != null);
+      Path path = entry.getFileStatus().getPath();
       LOG.debug("Adding entry {}", path);
       if (path.isRoot()) {
         // this is a root entry: do not add it.
         break;
       }
-      // create the new entry
-      DDBPathMetadata entry = new DDBPathMetadata(meta);
       // add it to the ancestor state, failing if it is already there and
       // of a different type.
       DDBPathMetadata oldEntry = ancestorState.put(path, entry);
+      boolean addAncestors = true;
       if (oldEntry != null) {
         if (!oldEntry.getFileStatus().isDirectory()
             || !entry.getFileStatus().isDirectory()) {
@@ -928,12 +928,18 @@ public class DynamoDBMetadataStore implements MetadataStore,
           // a directory is already present. Log and continue.
           LOG.debug("Directory at {} being updated with value {}",
               path, entry);
+          // and we skip the the subsequent parent scan as we've already been
+          // here
+          addAncestors = false;
         }
       }
       // add the entry to the ancestry map as an explicitly requested entry.
       ancestry.put(path, Pair.of(EntryOrigin.Requested, entry));
+      // now scan up the ancestor tree to see if there are any
+      // immediately missing entries.
       Path parent = path.getParent();
-      while (!parent.isRoot() && !ancestry.containsKey(parent)) {
+      while (addAncestors
+          && !parent.isRoot() && !ancestry.containsKey(parent)) {
         if (!ancestorState.findEntry(parent, true)) {
           // there is no entry in the ancestor state.
           // look in the store
@@ -947,6 +953,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
             md = itemToPathMetadata(item, username);
             LOG.debug("Found existing entry for parent: {}", md);
             newEntry = Pair.of(EntryOrigin.Retrieved, md);
+            // and we break, assuming that if there is an entry, its parents
+            // are valid too.
+            addAncestors = false;
           } else {
             // A directory entry was not found in the DB. Create one.
             LOG.debug("auto-create ancestor path {} for child path {}",
@@ -1439,6 +1448,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * {@link #processBatchWriteRequest(DynamoDBMetadataStore.AncestorState, PrimaryKey[], Item[])}
    * is only tried once.
    * @param meta Directory listing metadata.
+   * @param unchangedEntries unchanged child entry paths
    * @param operationState operational state for a bulk update
    * @throws IOException IO problem
    */
@@ -1446,6 +1456,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Retries.RetryTranslated
   public void put(
       final DirListingMetadata meta,
+      final List<Path> unchangedEntries,
       @Nullable final BulkOperationState operationState) throws IOException {
     LOG.debug("Saving {} dir meta for {} to table {} in region {}: {}",
         meta.isAuthoritative() ? "auth" : "nonauth",
@@ -1463,8 +1474,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
     final List<DDBPathMetadata> metasToPut = fullPathsToPut(ddbPathMeta,
         ancestorState);
 
-    // next add all children of the directory
-    metasToPut.addAll(pathMetaToDDBPathMeta(meta.getListing()));
+    // next add all changed children of the directory
+    // ones that came from the previous listing are left as-is
+    final Collection<PathMetadata> children = meta.getListing()
+        .stream()
+        .filter(e -> !unchangedEntries.contains(e.getFileStatus().getPath()))
+        .collect(Collectors.toList());
+
+    metasToPut.addAll(pathMetaToDDBPathMeta(children));
 
     // sort so highest-level entries are written to the store first.
     // if a sequence fails, no orphan entries will have been written.

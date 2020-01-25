@@ -28,6 +28,7 @@ import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -132,6 +133,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   private static DynamoDBMetadataStore ddbmsStatic;
 
   private static String testDynamoDBTableName;
+
+  private static final List<Path> UNCHANGED_ENTRIES = Collections.emptyList();
 
   /**
    * Create a path under the test path provided by
@@ -593,7 +596,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     Collection<Path> pathsToDelete = null;
     if (oldMetas != null) {
       // put all metadata of old paths and verify
-      ms.put(new DirListingMetadata(oldDir, oldMetas, false), putState);
+      ms.put(new DirListingMetadata(oldDir, oldMetas, false), UNCHANGED_ENTRIES,
+          putState);
       assertEquals("Child count",
           0, ms.listChildren(newDir).withoutTombstones().numEntries());
       Assertions.assertThat(ms.listChildren(oldDir).getListing())
@@ -960,13 +964,13 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         grandchildPath,
         new ArrayList<>(), false);
     intercept(PathIOException.class, E_INCONSISTENT_UPDATE,
-        () -> ddbms.put(grandchildListing, bulkWrite));
+        () -> ddbms.put(grandchildListing, UNCHANGED_ENTRIES, bulkWrite));
 
     // but a directory update under another path is fine
     DirListingMetadata grandchild2Listing = new DirListingMetadata(
         grandchild2Path,
         new ArrayList<>(), false);
-    ddbms.put(grandchild2Listing, bulkWrite);
+    ddbms.put(grandchild2Listing, UNCHANGED_ENTRIES, bulkWrite);
     // and it creates a new entry for its parent
     verifyInAncestor(bulkWrite, child2, true);
   }
@@ -1097,7 +1101,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     assertEquals(auth, dlm.isAuthoritative());
 
     // Test with non-authoritative listing, empty dir
-    ms.put(dlm, null);
+    ms.put(dlm, UNCHANGED_ENTRIES, null);
     final PathMetadata pmdResultEmpty = ms.get(dirToPut, true);
     if(auth){
       assertEquals(Tristate.TRUE, pmdResultEmpty.isEmptyDirectory());
@@ -1107,7 +1111,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
     // Test with non-authoritative listing, non-empty dir
     dlm.put(new PathMetadata(basicFileStatus(fileToPut, 1, false)));
-    ms.put(dlm, null);
+    ms.put(dlm, UNCHANGED_ENTRIES, null);
     final PathMetadata pmdResultNotEmpty = ms.get(dirToPut, true);
     assertEquals(Tristate.FALSE, pmdResultNotEmpty.isEmptyDirectory());
   }

@@ -53,13 +53,13 @@ import org.apache.hadoop.mapreduce.lib.input.InvalidInputException;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_ARN;
+import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeS3GuardState;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.isS3GuardTestPropertySet;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
@@ -221,13 +221,10 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     String bucketName = getTestBucketName(conf);
-    // is s3guard enabled?
-    boolean guardedTestRun = isS3GuardTestPropertySet(conf);
 
-    // in a guarded test run, except for the special case of raw,
-    // all DDB settings are left alone.
     removeBaseAndBucketOverrides(bucketName, conf,
-        METADATASTORE_AUTHORITATIVE);
+        METADATASTORE_AUTHORITATIVE,
+        AUTHORITATIVE_PATH);
     removeBucketOverrides(bucketName, conf,
         S3_METADATA_STORE_IMPL);
     if (!s3guard) {
@@ -317,8 +314,10 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     verifyS3GuardSettings(realFS, "real filesystem");
 
     // avoiding the parameterization to steer clear of accidentally creating
-    // patterns
-    basePath = path("testNoReadAccess-" + name);
+    // patterns; a timestamp is used to ensure tombstones from previous runs
+    // do not interfere
+    basePath = path("testNoReadAccess-" + name
+        + "-" + System.currentTimeMillis() / 1000);
 
     // define the paths and create them.
     describe("Creating test directories and files");
@@ -628,7 +627,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
    * Do some cleanup to see what happens with delete calls.
    * Cleanup happens in test teardown anyway; doing it here
    * just makes use of the delete calls to see how delete failures
-   * change with permissions and S3Guard stettings.
+   * change with permissions and S3Guard settings.
    */
   public void checkDeleteOperations() throws Throwable {
     describe("Testing delete operations");
