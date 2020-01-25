@@ -67,22 +67,38 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TestFileUtil {
   private static final Logger LOG = LoggerFactory.getLogger(TestFileUtil.class);
 
-  private static final File TEST_DIR = GenericTestUtils.getTestDir("fu");
+  @Rule
+  public TemporaryFolder testFolder = new TemporaryFolder();
+
   private static final String FILE = "x";
   private static final String LINK = "y";
   private static final String DIR = "dir";
-  private final File del = new File(TEST_DIR, "del");
-  private final File tmp = new File(TEST_DIR, "tmp");
-  private final File dir1 = new File(del, DIR + "1");
-  private final File dir2 = new File(del, DIR + "2");
-  private final File partitioned = new File(TEST_DIR, "partitioned");
+
+  private static final String FILE_1_NAME = "file1";
+
+  private File del;
+  private File tmp;
+  private File dir1;
+  private File dir2;
+  private File partitioned;
+
+  private File xSubDir;
+  private File xSubSubDir;
+  private File ySubDir;
+
+  private File file2;
+  private File file22;
+  private File file3;
+  private File zlink;
 
   private InetAddress inet1;
   private InetAddress inet2;
@@ -119,21 +135,34 @@ public class TestFileUtil {
    *   file: part-r-00000, contents: "foo"
    *   file: part-r-00001, contents: "bar"
    */
-  @Ignore
-  private void setupDirs() throws IOException {
-    Assert.assertFalse(del.exists());
-    Assert.assertFalse(tmp.exists());
-    Assert.assertFalse(partitioned.exists());
-    del.mkdirs();
-    tmp.mkdirs();
-    partitioned.mkdirs();
+  @Before
+  public void setup() throws IOException {
+    del = testFolder.newFolder("del");
+    tmp = testFolder.newFolder("tmp");
+    partitioned = testFolder.newFolder("partitioned");
+
+    zlink = new File(del, "zlink");
+
+    xSubDir = new File(del, "xSubDir");
+    xSubSubDir = new File(xSubDir, "xSubSubDir");
+    ySubDir = new File(del, "ySubDir");
+
+
+    file2 = new File(xSubDir, "file2");
+    file22 = new File(xSubSubDir, "file22");
+    file3 = new File(ySubDir, "file3");
+
+    dir1 = new File(del, DIR + "1");
+    dir2 = new File(del, DIR + "2");
+
+    FileUtils.forceMkdir(dir1);
+    FileUtils.forceMkdir(dir2);
+
     new File(del, FILE).createNewFile();
     File tmpFile = new File(tmp, FILE);
     tmpFile.createNewFile();
 
-    // create directories 
-    dir1.mkdirs();
-    dir2.mkdirs();
+    // create files
     new File(dir1, FILE).createNewFile();
     new File(dir2, FILE).createNewFile();
 
@@ -152,6 +181,11 @@ public class TestFileUtil {
 
     // create a cycle using symlinks. Cycles should be handled
     FileUtil.symLink(del.toString(), dir1.toString() + "/cycle");
+  }
+
+  @After
+  public void tearDown() throws IOException {
+    testFolder.delete();
   }
 
   /**
@@ -178,7 +212,6 @@ public class TestFileUtil {
 
   @Test (timeout = 30000)
   public void testListFiles() throws IOException {
-    setupDirs();
     //Test existing files case 
     File[] files = FileUtil.listFiles(partitioned);
     Assert.assertEquals(2, files.length);
@@ -205,7 +238,6 @@ public class TestFileUtil {
 
   @Test (timeout = 30000)
   public void testListAPI() throws IOException {
-    setupDirs();
     //Test existing files case 
     String[] files = FileUtil.list(partitioned);
     Assert.assertEquals("Unexpected number of pre-existing files", 2, files.length);
@@ -230,30 +262,8 @@ public class TestFileUtil {
     }
   }
 
-  @Before
-  public void before() throws IOException {
-    cleanupImpl();
-  }
-  
-  @After
-  public void tearDown() throws IOException {
-    cleanupImpl();
-  }
-  
-  private void cleanupImpl() throws IOException  {
-    FileUtil.fullyDelete(del, true);
-    Assert.assertTrue(!del.exists());
-    
-    FileUtil.fullyDelete(tmp, true);
-    Assert.assertTrue(!tmp.exists());
-    
-    FileUtil.fullyDelete(partitioned, true);
-    Assert.assertTrue(!partitioned.exists());
-  }
-
   @Test (timeout = 30000)
   public void testFullyDelete() throws IOException {
-    setupDirs();
     boolean ret = FileUtil.fullyDelete(del);
     Assert.assertTrue(ret);
     Assert.assertFalse(del.exists());
@@ -268,8 +278,6 @@ public class TestFileUtil {
    */
   @Test (timeout = 30000)
   public void testFullyDeleteSymlinks() throws IOException {
-    setupDirs();
-    
     File link = new File(del, LINK);
     Assert.assertEquals(5, del.list().length);
     // Since tmpDir is symlink to tmp, fullyDelete(tmpDir) should not
@@ -298,7 +306,6 @@ public class TestFileUtil {
    */
   @Test (timeout = 30000)
   public void testFullyDeleteDanglingSymlinks() throws IOException {
-    setupDirs();
     // delete the directory tmp to make tmpDir a dangling link to dir tmp and
     // to make y as a dangling link to file tmp/x
     boolean ret = FileUtil.fullyDelete(tmp);
@@ -325,7 +332,6 @@ public class TestFileUtil {
 
   @Test (timeout = 30000)
   public void testFullyDeleteContents() throws IOException {
-    setupDirs();
     boolean ret = FileUtil.fullyDeleteContents(del);
     Assert.assertTrue(ret);
     Assert.assertTrue(del.exists());
@@ -339,15 +345,6 @@ public class TestFileUtil {
     Assert.assertTrue(new File(tmp, FILE).exists());
   }
 
-  private final File xSubDir = new File(del, "xSubDir");
-  private final File xSubSubDir = new File(xSubDir, "xSubSubDir");
-  private final File ySubDir = new File(del, "ySubDir");
-  private static final String file1Name = "file1";
-  private final File file2 = new File(xSubDir, "file2");
-  private final File file22 = new File(xSubSubDir, "file22");
-  private final File file3 = new File(ySubDir, "file3");
-  private final File zlink = new File(del, "zlink");
-  
   /**
    * Creates a directory which can not be deleted completely.
    * 
@@ -369,36 +366,30 @@ public class TestFileUtil {
    * @throws IOException
    */
   private void setupDirsAndNonWritablePermissions() throws IOException {
-    Assert.assertFalse("The directory del should not have existed!",
-        del.exists());
-    del.mkdirs();
-    new MyFile(del, file1Name).createNewFile();
+    new MyFile(del, FILE_1_NAME).createNewFile();
 
     // "file1" is non-deletable by default, see MyFile.delete().
 
     xSubDir.mkdirs();
     file2.createNewFile();
-    
+
     xSubSubDir.mkdirs();
     file22.createNewFile();
-    
+
     revokePermissions(file22);
     revokePermissions(xSubSubDir);
-    
+
     revokePermissions(file2);
     revokePermissions(xSubDir);
-    
+
     ySubDir.mkdirs();
     file3.createNewFile();
 
-    Assert.assertFalse("The directory tmp should not have existed!",
-        tmp.exists());
-    tmp.mkdirs();
     File tmpFile = new File(tmp, FILE);
     tmpFile.createNewFile();
     FileUtil.symLink(tmpFile.toString(), zlink.toString());
   }
-  
+
   private static void grantPermissions(final File f) {
     FileUtil.setReadable(f, true);
     FileUtil.setWritable(f, true);
@@ -420,7 +411,7 @@ public class TestFileUtil {
     
     Assert.assertFalse("The return value should have been false.", ret);
     Assert.assertTrue("The file file1 should not have been deleted.",
-        new File(del, file1Name).exists());
+        new File(del, FILE_1_NAME).exists());
     
     Assert.assertEquals(
         "The directory xSubDir *should* not have been deleted.",
@@ -448,7 +439,7 @@ public class TestFileUtil {
     boolean ret = FileUtil.fullyDelete(new MyFile(del));
     validateAndSetWritablePermissions(true, ret);
   }
-  
+
   @Test (timeout = 30000)
   public void testFailFullyDeleteGrantPermissions() throws IOException {
     setupDirsAndNonWritablePermissions();
@@ -485,7 +476,7 @@ public class TestFileUtil {
     public boolean delete() {
       LOG.info("Trying to delete myFile " + getAbsolutePath());
       boolean bool = false;
-      if (getName().equals(file1Name)) {
+      if (getName().equals(FILE_1_NAME)) {
         bool = false;
       } else {
         bool = super.delete();
@@ -535,7 +526,7 @@ public class TestFileUtil {
     // this time the directories with revoked permissions *should* be deleted:
     validateAndSetWritablePermissions(false, ret);
   }
-  
+
   /**
    * Test that getDU is able to handle cycles caused due to symbolic links
    * and that directory sizes are not added to the final calculated size
@@ -543,9 +534,7 @@ public class TestFileUtil {
    */
   @Test (timeout = 30000)
   public void testGetDU() throws Exception {
-    setupDirs();
-
-    long du = FileUtil.getDU(TEST_DIR);
+    long du = FileUtil.getDU(testFolder.getRoot());
     // Only two files (in partitioned).  Each has 3 characters + system-specific
     // line separator.
     final long expected = 2 * (3 + System.getProperty("line.separator").length());
@@ -594,8 +583,6 @@ public class TestFileUtil {
   
   @Test (timeout = 30000)
   public void testUnTar() throws IOException {
-    setupDirs();
-    
     // make a simple tar:
     final File simpleTar = new File(del, FILE);
     OutputStream os = new FileOutputStream(simpleTar); 
@@ -632,7 +619,6 @@ public class TestFileUtil {
   
   @Test (timeout = 30000)
   public void testReplaceFile() throws IOException {
-    setupDirs();
     final File srcFile = new File(tmp, "src");
     
     // src exists, and target does not exist:
@@ -674,7 +660,6 @@ public class TestFileUtil {
   
   @Test (timeout = 30000)
   public void testCreateLocalTempFile() throws IOException {
-    setupDirs();
     final File baseFile = new File(tmp, "base");
     File tmp1 = FileUtil.createLocalTempFile(baseFile, "foo", false);
     File tmp2 = FileUtil.createLocalTempFile(baseFile, "foo", true);
@@ -690,8 +675,7 @@ public class TestFileUtil {
   
   @Test (timeout = 30000)
   public void testUnZip() throws IOException {
-    setupDirs();
-    // make a simple zip
+    // make sa simple zip
     final File simpleZip = new File(del, FILE);
     OutputStream os = new FileOutputStream(simpleZip); 
     ZipOutputStream tos = new ZipOutputStream(os);
@@ -727,7 +711,6 @@ public class TestFileUtil {
 
   @Test (timeout = 30000)
   public void testUnZip2() throws IOException {
-    setupDirs();
     // make a simple zip
     final File simpleZip = new File(del, FILE);
     OutputStream os = new FileOutputStream(simpleZip);
@@ -758,8 +741,6 @@ public class TestFileUtil {
    * Test method copy(FileSystem srcFS, Path src, File dst, boolean deleteSource, Configuration conf)
    */
   public void testCopy5() throws IOException {
-    setupDirs();
-    
     URI uri = tmp.toURI();
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.newInstance(uri, conf);
@@ -849,9 +830,6 @@ public class TestFileUtil {
 
   @Test (timeout = 30000)
   public void testSymlink() throws Exception {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
-
     byte[] data = "testSymLink".getBytes();
 
     File file = new File(del, FILE);
@@ -884,9 +862,6 @@ public class TestFileUtil {
    */
   @Test (timeout = 30000)
   public void testSymlinkRenameTo() throws Exception {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
-
     File file = new File(del, FILE);
     file.createNewFile();
     File link = new File(del, "_link");
@@ -916,9 +891,6 @@ public class TestFileUtil {
    */
   @Test (timeout = 30000)
   public void testSymlinkDelete() throws Exception {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
-
     File file = new File(del, FILE);
     file.createNewFile();
     File link = new File(del, "_link");
@@ -940,9 +912,6 @@ public class TestFileUtil {
    */
   @Test (timeout = 30000)
   public void testSymlinkLength() throws Exception {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
-
     byte[] data = "testSymLinkData".getBytes();
 
     File file = new File(del, FILE);
@@ -979,9 +948,6 @@ public class TestFileUtil {
    */
   @Test
   public void testSymlinkWithNullInput() throws IOException {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
-
     File file = new File(del, FILE);
     File link = new File(del, "_link");
 
@@ -999,9 +965,6 @@ public class TestFileUtil {
     // The operation should fail and returns 1
     result = FileUtil.symLink(null, link.getAbsolutePath());
     Assert.assertEquals(1, result);
-
-    file.delete();
-    link.delete();
   }
 
   /**
@@ -1012,9 +975,6 @@ public class TestFileUtil {
    */
   @Test
   public void testSymlinkFileAlreadyExists() throws IOException {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
-
     File file = new File(del, FILE);
     File link = new File(del, "_link");
 
@@ -1030,9 +990,6 @@ public class TestFileUtil {
     result1 = FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
 
     Assert.assertEquals(1, result1);
-
-    file.delete();
-    link.delete();
   }
 
   /**
@@ -1044,10 +1001,9 @@ public class TestFileUtil {
    */
   @Test
   public void testSymlinkSameFile() throws IOException {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
-
     File file = new File(del, FILE);
+
+    file.delete();
 
     // Create a symbolic link
     // The operation should succeed
@@ -1055,8 +1011,6 @@ public class TestFileUtil {
         FileUtil.symLink(file.getAbsolutePath(), file.getAbsolutePath());
 
     Assert.assertEquals(0, result);
-
-    file.delete();
   }
 
   /**
@@ -1068,8 +1022,6 @@ public class TestFileUtil {
    */
   @Test
   public void testSymlink2DifferentFile() throws IOException {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
     File file = new File(del, FILE);
     File fileSecond = new File(del, FILE + "_1");
     File link = new File(del, "_link");
@@ -1086,10 +1038,6 @@ public class TestFileUtil {
         FileUtil.symLink(fileSecond.getAbsolutePath(), link.getAbsolutePath());
 
     Assert.assertEquals(1, result);
-
-    file.delete();
-    fileSecond.delete();
-    link.delete();
   }
 
   /**
@@ -1101,8 +1049,6 @@ public class TestFileUtil {
    */
   @Test
   public void testSymlink2DifferentLinks() throws IOException {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
     File file = new File(del, FILE);
     File link = new File(del, "_link");
     File linkSecond = new File(del, "_link_1");
@@ -1119,10 +1065,6 @@ public class TestFileUtil {
         FileUtil.symLink(file.getAbsolutePath(), linkSecond.getAbsolutePath());
 
     Assert.assertEquals(0, result);
-
-    file.delete();
-    link.delete();
-    linkSecond.delete();
   }
 
   private void doUntarAndVerify(File tarFile, File untarDir) 
@@ -1199,10 +1141,6 @@ public class TestFileUtil {
 
   @Test (timeout = 30000)
   public void testCreateJarWithClassPath() throws Exception {
-    // setup test directory for files
-    Assert.assertFalse(tmp.exists());
-    Assert.assertTrue(tmp.mkdirs());
-
     // create files expected to match a wildcard
     List<File> wildcardMatches = Arrays.asList(new File(tmp, "wildcard1.jar"),
       new File(tmp, "wildcard2.jar"), new File(tmp, "wildcard3.JAR"),
@@ -1291,9 +1229,6 @@ public class TestFileUtil {
     assertTrue("no jars should be returned for a bogus path",
         jars.isEmpty());
 
-    // setup test directory for files
-    assertFalse(tmp.exists());
-    assertTrue(tmp.mkdirs());
 
     // create jar files to be returned
     File jar1 = new File(tmp, "wildcard1.jar");
@@ -1399,7 +1334,6 @@ public class TestFileUtil {
 
   @Test(timeout = 8000)
   public void testCreateSymbolicLinkUsingJava() throws IOException {
-    setupDirs();
     final File simpleTar = new File(del, FILE);
     OutputStream os = new FileOutputStream(simpleTar);
     TarArchiveOutputStream tos = new TarArchiveOutputStream(os);
@@ -1493,9 +1427,6 @@ public class TestFileUtil {
    */
   @Test
   public void testReadSymlink() throws IOException {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
-
     File file = new File(del, FILE);
     File link = new File(del, "_link");
 
@@ -1504,9 +1435,6 @@ public class TestFileUtil {
 
     String result = FileUtil.readLink(link);
     Assert.assertEquals(file.getAbsolutePath(), result);
-
-    file.delete();
-    link.delete();
   }
 
   /**
@@ -1517,9 +1445,6 @@ public class TestFileUtil {
    */
   @Test
   public void testReadSymlinkWithAFileAsInput() throws IOException {
-    Assert.assertFalse(del.exists());
-    del.mkdirs();
-
     File file = new File(del, FILE);
 
     String result = FileUtil.readLink(file);
@@ -1533,8 +1458,6 @@ public class TestFileUtil {
    */
   @Test
   public void testWriteBytesFileSystem() throws IOException {
-    setupDirs();
-
     URI uri = tmp.toURI();
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.get(uri, conf);
@@ -1555,8 +1478,6 @@ public class TestFileUtil {
    */
   @Test
   public void testWriteStringsFileSystem() throws IOException {
-    setupDirs();
-
     URI uri = tmp.toURI();
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.get(uri, conf);
@@ -1577,8 +1498,6 @@ public class TestFileUtil {
    */
   @Test
   public void testWriteStringFileSystem() throws IOException {
-    setupDirs();
-
     URI uri = tmp.toURI();
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.get(uri, conf);
@@ -1600,8 +1519,6 @@ public class TestFileUtil {
    */
   @Test
   public void testWriteStringNoCharSetFileSystem() throws IOException {
-    setupDirs();
-
     URI uri = tmp.toURI();
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.get(uri, conf);
@@ -1621,8 +1538,6 @@ public class TestFileUtil {
    */
   @Test
   public void testWriteBytesFileContext() throws IOException {
-    setupDirs();
-
     URI uri = tmp.toURI();
     Configuration conf = new Configuration();
     FileContext fc = FileContext.getFileContext(uri, conf);
@@ -1643,8 +1558,6 @@ public class TestFileUtil {
    */
   @Test
   public void testWriteStringsFileContext() throws IOException {
-    setupDirs();
-
     URI uri = tmp.toURI();
     Configuration conf = new Configuration();
     FileContext fc = FileContext.getFileContext(uri, conf);
@@ -1665,8 +1578,6 @@ public class TestFileUtil {
    */
   @Test
   public void testWriteStringFileContext() throws IOException {
-    setupDirs();
-
     URI uri = tmp.toURI();
     Configuration conf = new Configuration();
     FileContext fc = FileContext.getFileContext(uri, conf);
@@ -1688,8 +1599,6 @@ public class TestFileUtil {
    */
   @Test
   public void testWriteStringNoCharSetFileContext() throws IOException {
-    setupDirs();
-
     URI uri = tmp.toURI();
     Configuration conf = new Configuration();
     FileContext fc = FileContext.getFileContext(uri, conf);
