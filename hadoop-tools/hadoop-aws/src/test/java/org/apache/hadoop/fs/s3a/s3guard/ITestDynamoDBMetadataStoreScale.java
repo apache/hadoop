@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -377,7 +378,7 @@ public class ITestDynamoDBMetadataStoreScale
       execute("list",
           OPERATIONS_PER_THREAD,
           expectThrottling(),
-          () -> ddbms.put(children, state));
+          () -> ddbms.put(children, Collections.emptyList(), state));
     } finally {
       retryingDelete(path);
     }

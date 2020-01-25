@@ -45,8 +45,6 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.rm;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY;
@@ -56,6 +54,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUESTS;
 import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED;
+import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_RECORD_WRITES;
 import static org.apache.hadoop.fs.s3a.s3guard.AuthoritativeAuditOperation.ERROR_PATH_NOT_AUTH_IN_FS;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.authoritativeEmptyDirectoryMarker;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Authoritative.CHECK_FLAG;
@@ -139,14 +138,25 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
    */
   private AuthoritativeAuditOperation auditor;
 
+  /**
+   * Path {@code $methodAuthPath/dir}.
+   */
   private Path dir;
 
+  /**
+   * Path {@code $methodAuthPath/dir/file}.
+   */
   private Path dirFile;
 
   /**
    * List of tools to close in test teardown.
    */
   private final List<S3GuardTool> toolsToClose = new ArrayList<>();
+
+  /**
+   * The metastore of the auth filesystem.
+   */
+  private DynamoDBMetadataStore metastore;
 
   /**
    * After all tests have run, close the filesystems.
@@ -205,9 +215,10 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
           S3_METADATA_STORE_IMPL);
       unguardedFS = (S3AFileSystem) FileSystem.newInstance(uri, unguardedConf);
     }
+    metastore = (DynamoDBMetadataStore) authFS.getMetadataStore();
     auditor = new AuthoritativeAuditOperation(
         authFS.createStoreContext(),
-        (DynamoDBMetadataStore) authFS.getMetadataStore(),
+        metastore,
         true,
         true);
 
@@ -272,7 +283,6 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
   }
 
   @Test
-  @Ignore("HADOOP-16697. Needs mkdir to be authoritative")
   public void testMkDirAuth() throws Throwable {
     describe("create an empty dir and assert it is tagged as authoritative");
     authFS.mkdirs(dir);
@@ -282,10 +292,11 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
   @Test
   public void testListStatusMakesEmptyDirAuth() throws Throwable {
     describe("Verify listStatus marks an Empty dir as auth");
-    authFS.mkdirs(dir);
-    expectNonauthRecursive(dir);
+    mkNonauthDir(dir);
+    // initial dir is non-auth
+    expectNonauthNonRecursive(dir);
     authFS.listStatus(dir);
-    // dir is auth; subdir is not
+    // dir is auth;
     expectAuthRecursive(dir);
     // Next list will not go to s3
     assertListDoesNotUpdateAuth(dir);
@@ -299,12 +310,36 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
     mkAuthDir(dir);
     expectAuthRecursive(dir);
     authFS.mkdirs(subdir);
-    // dir is auth; subdir is not
-    expectAuthNonRecursive(dir);
-    expectNonauthRecursive(dir);
-    assertListDoesNotUpdateAuth(dir);
-    // Subdir list makes it auth
-    assertListUpdatesAuth(subdir);
+    // dir and subdirs are auth
+    expectAuthRecursive(dir);
+    expectAuthRecursive(subdir);
+    // now mark the dir as nonauth
+    markDirNonauth(dir);
+    expectNonauthNonRecursive(dir);
+    expectAuthRecursive(subdir);
+
+    // look at the MD & make sure that the dir and subdir are auth
+    final DirListingMetadata listing = metastore.listChildren(dir);
+    Assertions.assertThat(listing)
+        .describedAs("metadata of %s", dir)
+        .matches(d -> !d.isAuthoritative(), "is not auth");
+    Assertions.assertThat(listing.getListing())
+        .describedAs("listing of %s", dir)
+        .hasSize(1)
+        .allMatch(md -> ((DDBPathMetadata) md).isAuthoritativeDir(),
+            "is auth");
+
+    // directory list makes the dir auth and leaves the child auth
+    assertListUpdatesAuth(dir);
+
+    // and afterwards, a followup list does not write anything to DDB
+    // (as the dir is auth, its not going to go near the FS to update...)
+    expectOperationUpdatesDDB(0, () -> authFS.listStatus(dir));
+    // mark the dir nonauth again
+    markDirNonauth(dir);
+    // and only one record is written to DDB, the dir marker as auth
+    // the subdir is not overwritten
+    expectOperationUpdatesDDB(1, () -> authFS.listStatus(dir));
   }
 
   @Test
@@ -322,7 +357,6 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
    * marker is added. This must be auth.
    */
   @Test
-  @Ignore("HADOOP-16697. Needs mkdir to be authoritative")
   public void testDeleteSingleFileLeavesMarkersAlone() throws Throwable {
     describe("Deleting a file with no peers makes no changes to ancestors");
     mkAuthDir(methodAuthPath);
@@ -345,6 +379,16 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
     expectAuthRecursive(methodAuthPath);
   }
 
+  @Test
+  public void testDeleteEmptyDirLeavesParentAuth() throws Throwable {
+    describe("Deleting a directory retains the auth status "
+        + "of the parent directory");
+    mkAuthDir(dir);
+    mkAuthDir(dirFile);
+    expectAuthRecursive(dir);
+    authFS.delete(dirFile, false);
+    expectAuthRecursive(dir);
+  }
 
   /**
    * Assert the number of pruned files matches expectations.
@@ -417,50 +461,23 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
   @Test
   public void testRenameDirMarksDestAsAuth() throws Throwable {
     describe("renaming a dir must mark dest tree as auth");
-    final Path d = methodAuthPath;
-    final Path source = new Path(d, "source");
-    final Path dest = new Path(d, "dest");
+    final Path base = methodAuthPath;
+    mkAuthDir(base);
+    final Path source = new Path(base, "source");
+    final Path dest = new Path(base, "dest");
     mkAuthDir(source);
-    Path f = new Path(source, "subdir/file");
+    expectAuthRecursive(base);
+    Path subdir = new Path(source, "subdir");
+    Path f = new Path(subdir, "file");
     touchFile(f);
+    expectNonauthRecursive(base);
+    // list the source directories so everything is
+    // marked as auth
+    authFS.listStatus(source);
+    authFS.listStatus(subdir);
+    expectAuthRecursive(base);
     authFS.rename(source, dest);
-    expectNonauthRecursive(d);
-    expectAuthRecursive(dest);
-  }
-
-  @Test
-  public void testRenameWithNonEmptySubDir() throws Throwable {
-    final Path renameTestDir = methodAuthPath;
-    final Path srcDir = new Path(renameTestDir, "src1");
-    final Path srcSubDir = new Path(srcDir, "sub");
-    final Path finalDir = new Path(renameTestDir, "dest");
-    FileSystem fs = authFS;
-    rm(fs, renameTestDir, true, false);
-
-    fs.mkdirs(srcDir);
-    fs.mkdirs(finalDir);
-    writeTextFile(fs, new Path(srcDir, "source.txt"),
-        "this is the file in src dir", false);
-    writeTextFile(fs, new Path(srcSubDir, "subfile.txt"),
-        "this is the file in src/sub dir", false);
-
-    assertPathExists("not created in src dir",
-        new Path(srcDir, "source.txt"));
-    assertPathExists("not created in src/sub dir",
-        new Path(srcSubDir, "subfile.txt"));
-
-    boolean rename = fs.rename(srcDir, finalDir);
-    Assertions.assertThat(rename)
-        .describedAs("rename(%s, %s)", srcDir, finalDir)
-        .isTrue();
-
-    // POSIX rename behavior
-    assertPathExists("not renamed into dest dir",
-        new Path(finalDir, "source.txt"));
-    assertPathExists("not renamed into dest/sub dir",
-        new Path(finalDir, "sub/subfile.txt"));
-    assertPathDoesNotExist("not deleted",
-        new Path(srcDir, "source.txt"));
+    expectAuthRecursive(base);
   }
 
   @Test
@@ -538,7 +555,7 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
   @Test
   public void testAuditS3GuardTool() throws Throwable {
     describe("Test the s3guard audit CLI");
-    authFS.mkdirs(methodAuthPath);
+    mkNonauthDir(methodAuthPath);
     final String path = methodAuthPath.toString();
     // this is non-auth, so the scan is rejected
     expectExecResult(EXIT_NOT_ACCEPTABLE,
@@ -645,7 +662,8 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
   }
 
   /**
-   * Invoke an operation expecting the meta store to be updated{@code updates}
+   * Invoke an operation expecting the meta store to have its
+   * directoryMarkedAuthoritative count to be be updated {@code updates}
    * times and S3 LIST requests made {@code lists} times.
    * @param <T> Return type
    * @param updates Expected count
@@ -666,6 +684,25 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
     final T call = fn.call();
     authDirsMarked.assertDiffEquals(updates);
     listRequests.assertDiffEquals(lists);
+    return call;
+  }
+
+  /**
+   * Invoke an operation expecting {@code writes} records written to DDB.
+   * @param <T> Return type
+   * @param writes Expected count
+   * @param fn Function to invoke
+   * @return Result of the function call
+   * @throws Exception Failure
+   */
+  private <T> T expectOperationUpdatesDDB(
+      int writes,
+      Callable<T> fn)
+      throws Exception {
+    S3ATestUtils.MetricDiff writeDiff = new S3ATestUtils.MetricDiff(authFS,
+        S3GUARD_METADATASTORE_RECORD_WRITES);
+    final T call = fn.call();
+    writeDiff.assertDiffEquals(writes);
     return call;
   }
 
@@ -695,9 +732,40 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
    */
   private void mkAuthDir(Path path) throws IOException {
     authFS.mkdirs(path);
-    authFS.listStatus(path);
   }
 
+  /**
+   * Create a non-auth directory.
+   * @param path dir
+   */
+  private void mkNonauthDir(Path path) throws IOException {
+    authFS.mkdirs(path);
+    // overwrite entry with a nonauth one
+    markDirNonauth(path);
+  }
+
+  /**
+   * Mark a directory as nonauth.
+   * @param path path to the directory
+   * @throws IOException failure
+   */
+  private void markDirNonauth(final Path path) throws IOException {
+    S3Guard.putWithTtl(metastore,
+        nonAuthEmptyDirectoryMarker((S3AFileStatus) authFS.getFileStatus(path)),
+        null, null);
+  }
+
+  /**
+   * Create an empty dir marker which, when passed to the
+   * DDB metastore, is considered authoritative.
+   * @param status file status
+   * @return path metadata.
+   */
+  private PathMetadata nonAuthEmptyDirectoryMarker(
+      final S3AFileStatus status) {
+    return new DDBPathMetadata(status, Tristate.TRUE,
+        false, false, 0);
+  }
   /**
    * Performed a recursive audit of the directory
    * -require everything to be authoritative.
@@ -723,6 +791,19 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
    * @return the path returned by the exception
    */
   private Path expectNonauthRecursive(Path path) throws Exception {
+    return intercept(
+        AuthoritativeAuditOperation.NonAuthoritativeDirException.class,
+        () -> auditor.executeAudit(path, true, true))
+        .getPath();
+  }
+
+  /**
+   * Performed a recursive audit of the directory
+   * -expect a failure.
+   * @param path directory
+   * @return the path returned by the exception
+   */
+  private Path expectNonauthNonRecursive(Path path) throws Exception {
     return intercept(
         AuthoritativeAuditOperation.NonAuthoritativeDirException.class,
         () -> auditor.executeAudit(path, true, true))

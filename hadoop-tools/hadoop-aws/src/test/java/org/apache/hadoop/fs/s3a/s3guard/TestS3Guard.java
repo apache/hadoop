@@ -18,15 +18,20 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import org.assertj.core.api.Assertions;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,38 +56,180 @@ import static org.mockito.Mockito.when;
  */
 public class TestS3Guard extends Assert {
 
+  public static final String MS_FILE_1 = "s3a://bucket/dir/ms-file1";
+
+  public static final String MS_FILE_2 = "s3a://bucket/dir/ms-file2";
+
+  public static final String S3_FILE_3 = "s3a://bucket/dir/s3-file3";
+
+  public static final String S3_DIR_4 = "s3a://bucket/dir/s3-dir4";
+
+  public static final Path DIR_PATH = new Path("s3a://bucket/dir");
+
+  private MetadataStore ms;
+
+  private ITtlTimeProvider timeProvider;
+
+  @Before
+  public void setUp() throws Exception {
+    final Configuration conf = new Configuration(false);
+    ms = new LocalMetadataStore();
+    ms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
+    timeProvider = new S3Guard.TtlTimeProvider(
+        DEFAULT_METADATASTORE_METADATA_TTL);
+
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    if (ms != null) {
+       ms.destroy();
+    }
+  }
+
   /**
    * Basic test to ensure results from S3 and MetadataStore are merged
    * correctly.
    */
   @Test
-  public void testDirListingUnion() throws Exception {
-    MetadataStore ms = new LocalMetadataStore();
-
-    Path dirPath = new Path("s3a://bucket/dir");
+  public void testDirListingUnionNonauth() throws Exception {
 
     // Two files in metadata store listing
-    PathMetadata m1 = makePathMeta("s3a://bucket/dir/ms-file1", false);
-    PathMetadata m2 = makePathMeta("s3a://bucket/dir/ms-file2", false);
-    DirListingMetadata dirMeta = new DirListingMetadata(dirPath,
+    PathMetadata m1 = makePathMeta(MS_FILE_1, false);
+    PathMetadata m2 = makePathMeta(MS_FILE_2, false);
+    DirListingMetadata dirMeta = new DirListingMetadata(DIR_PATH,
         Arrays.asList(m1, m2), false);
 
-    // Two other files in s3
+    // Two other entries in s3
+    final S3AFileStatus s1Status = makeFileStatus(S3_FILE_3, false);
+    final S3AFileStatus s2Status = makeFileStatus(S3_DIR_4, true);
     List<S3AFileStatus> s3Listing = Arrays.asList(
-        makeFileStatus("s3a://bucket/dir/s3-file3", false),
-        makeFileStatus("s3a://bucket/dir/s3-file4", false)
-    );
+        s1Status,
+        s2Status);
 
-    ITtlTimeProvider timeProvider = new S3Guard.TtlTimeProvider(
-        DEFAULT_METADATASTORE_METADATA_TTL);
-    FileStatus[] result = S3Guard.dirListingUnion(ms, dirPath, s3Listing,
+    FileStatus[] result = S3Guard.dirListingUnion(ms, DIR_PATH, s3Listing,
         dirMeta, false, timeProvider);
 
     assertEquals("listing length", 4, result.length);
-    assertContainsPath(result, "s3a://bucket/dir/ms-file1");
-    assertContainsPath(result, "s3a://bucket/dir/ms-file2");
-    assertContainsPath(result, "s3a://bucket/dir/s3-file3");
-    assertContainsPath(result, "s3a://bucket/dir/s3-file4");
+    assertContainsPaths(result, MS_FILE_1, MS_FILE_2, S3_FILE_3, S3_DIR_4);
+
+    // check the MS doesn't contain the s3 entries as nonauth
+    // unions should block them
+    assertNoRecord(ms, S3_FILE_3);
+    assertNoRecord(ms, S3_DIR_4);
+
+    // for entries which do exist, when updated in S3, the metastore is updated
+    S3AFileStatus f1Status2 = new S3AFileStatus(
+        200, System.currentTimeMillis(), new Path(MS_FILE_1),
+        1, null, "tag2", "ver2");
+    FileStatus[] result2 = S3Guard.dirListingUnion(ms, DIR_PATH,
+        Arrays.asList(f1Status2),
+        dirMeta, false, timeProvider);
+    // the listing returns the new status
+    Assertions.assertThat(find(result2, MS_FILE_1))
+        .describedAs("Entry in listing results for %s", MS_FILE_1)
+        .isSameAs(f1Status2);
+    // as does a query of the MS
+    final PathMetadata updatedMD = verifyRecord(ms, MS_FILE_1);
+    Assertions.assertThat(updatedMD.getFileStatus())
+        .describedAs("Entry in metastore for %s: %s", MS_FILE_1, updatedMD)
+        .isEqualTo(f1Status2);
+  }
+
+  /**
+   * Auth mode unions are different.
+   */
+  @Test
+  public void testDirListingUnionAuth() throws Exception {
+
+    // Two files in metadata store listing
+    PathMetadata m1 = makePathMeta(MS_FILE_1, false);
+    PathMetadata m2 = makePathMeta(MS_FILE_2, false);
+    DirListingMetadata dirMeta = new DirListingMetadata(DIR_PATH,
+        Arrays.asList(m1, m2), true);
+
+    // Two other entries in s3
+    S3AFileStatus s1Status = makeFileStatus(S3_FILE_3, false);
+    S3AFileStatus s2Status = makeFileStatus(S3_DIR_4, true);
+    List<S3AFileStatus> s3Listing = Arrays.asList(
+        s1Status,
+        s2Status);
+
+    ITtlTimeProvider timeProvider = new S3Guard.TtlTimeProvider(
+        DEFAULT_METADATASTORE_METADATA_TTL);
+    FileStatus[] result = S3Guard.dirListingUnion(ms, DIR_PATH, s3Listing,
+        dirMeta, true, timeProvider);
+
+    assertEquals("listing length", 4, result.length);
+    assertContainsPaths(result, MS_FILE_1, MS_FILE_2, S3_FILE_3, S3_DIR_4);
+
+    // now verify an auth scan added the records
+    PathMetadata file3Meta = verifyRecord(ms, S3_FILE_3);
+    PathMetadata dir4Meta = verifyRecord(ms, S3_DIR_4);
+
+    // we can't check auth flag handling because local FS doesn't have one
+    // so do just check the dir status still all good.
+    Assertions.assertThat(dir4Meta)
+        .describedAs("Metastore entry for dir %s", dir4Meta)
+        .matches(m -> m.getFileStatus().isDirectory());
+
+    DirListingMetadata dirMeta2 = new DirListingMetadata(DIR_PATH,
+        Arrays.asList(m1, m2, file3Meta, dir4Meta), true);
+    // now s1 status is updated on S3
+    S3AFileStatus s1Status2 = new S3AFileStatus(
+        200, System.currentTimeMillis(), new Path(S3_FILE_3),
+        1, null, "tag2", "ver2");
+
+    // but the result of the listing contains the old entry
+    // because auth mode doesn't pick up changes in S3 which
+    // didn't go through s3guard
+    FileStatus[] result2 = S3Guard.dirListingUnion(ms, DIR_PATH,
+        Arrays.asList(s1Status2),
+        dirMeta2, true, timeProvider);
+    Assertions.assertThat(find(result2, S3_FILE_3))
+        .describedAs("Entry in listing results for %s", S3_FILE_3)
+        .isSameAs(file3Meta.getFileStatus());
+  }
+
+  /**
+   * Assert there is no record in the store.
+   * @param ms metastore
+   * @param path path
+   * @throws IOException IOError
+   */
+  private void assertNoRecord(MetadataStore ms, String path)
+      throws IOException {
+    Assertions.assertThat(lookup(ms, path))
+        .describedAs("Metastore entry for %s", path)
+        .isNull();
+  }
+
+  /**
+   * Assert there is arecord in the store, then return it.
+   * @param ms metastore
+   * @param path path
+   * @return the record.
+   * @throws IOException IO Error
+   */
+  private PathMetadata verifyRecord(MetadataStore ms, String path)
+     throws IOException {
+   final PathMetadata md = lookup(ms, path);
+   Assertions.assertThat(md)
+       .describedAs("Metastore entry for %s", path)
+       .isNotNull();
+   return md;
+  }
+
+  /**
+   * Look up a record.
+   * @param ms store
+   * @param path path
+   * @return the record or null
+   * @throws IOException IO Error
+   */
+  private PathMetadata lookup(final MetadataStore ms, final String path)
+      throws IOException {
+    return ms.get(new Path(path));
   }
 
   @Test
@@ -96,12 +243,12 @@ public class TestS3Guard extends Assert {
     when(timeProvider.getNow()).thenReturn(100L);
 
     // act
-    S3Guard.putWithTtl(ms, dlm, timeProvider, null);
+    S3Guard.putWithTtl(ms, dlm, Collections.emptyList(), timeProvider, null);
 
     // assert
     assertEquals("last update in " + dlm, 100L, dlm.getLastUpdated());
     verify(timeProvider, times(1)).getNow();
-    verify(ms, times(1)).put(dlm, null);
+    verify(ms, times(1)).put(dlm, Collections.emptyList(), null);
   }
 
   @Test
@@ -290,18 +437,32 @@ public class TestS3Guard extends Assert {
             localLogger, "FOO_BAR_LEVEL", "bucket"));
   }
 
-  void assertContainsPath(FileStatus[] statuses, String pathStr) {
-    assertTrue("listing doesn't contain " + pathStr,
-        containsPath(statuses, pathStr));
+  void assertContainsPaths(FileStatus[] statuses, String...pathStr) {
+    for (String s :pathStr) {
+      assertContainsPath(statuses, s);
+    }
   }
 
-  boolean containsPath(FileStatus[] statuses, String pathStr) {
+  void assertContainsPath(FileStatus[] statuses, String pathStr) {
+    find(statuses, pathStr);
+  }
+
+  /**
+   * Look up an entry or raise an assertion
+   * @param statuses list of statuses
+   * @param pathStr path to search
+   * @return the entry if found
+   */
+  private FileStatus find(FileStatus[] statuses, String pathStr) {
     for (FileStatus s : statuses) {
       if (s.getPath().toString().equals(pathStr)) {
-        return true;
+        return s;
       }
     }
-    return false;
+    // no match, fail meaningfully
+    Assertions.assertThat(statuses)
+        .anyMatch(s -> s.getPath().toString().equals(pathStr));
+    return null;
   }
 
   private PathMetadata makePathMeta(String pathStr, boolean isDir) {

@@ -98,5 +98,9 @@ public class BulkOperationState implements Closeable {
      * Listing update.
      */
     Listing,
+    /**
+     * Mkdir operation.
+     */
+    Mkdir,
   }
 }

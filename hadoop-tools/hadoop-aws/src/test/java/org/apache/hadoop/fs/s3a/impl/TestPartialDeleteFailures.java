@@ -310,6 +310,7 @@ public class TestPartialDeleteFailures {
 
     @Override
     public void put(final DirListingMetadata meta,
+        final List<Path> unchangedEntries,
         final BulkOperationState operationState) {
       created.add(meta.getPath());
     }

@@ -45,6 +45,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -341,13 +342,14 @@ public class LocalMetadataStore implements MetadataStore {
 
   @Override
   public synchronized void put(DirListingMetadata meta,
+      final List<Path> unchangedEntries,
       final BulkOperationState operationState) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("put dirMeta {}", meta.prettyPrint());
     }
     LocalMetadataEntry entry =
         localCache.getIfPresent(standardize(meta.getPath()));
-    if(entry == null){
+    if (entry == null) {
       localCache.put(standardize(meta.getPath()), new LocalMetadataEntry(meta));
     } else {
       entry.setDirListingMetadata(meta);
