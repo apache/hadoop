@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -113,6 +114,7 @@ public class NullMetadataStore implements MetadataStore {
 
   @Override
   public void put(DirListingMetadata meta,
+      final List<Path> unchangedEntries,
       final BulkOperationState operationState) throws IOException {
   }
 
