@@ -634,7 +634,7 @@ For instance, HDFS may raise an `InvalidPathException`.
 
     result = FSDataOutputStream
 
-A zero byte file must exist at the end of the specified path, visible to all
+A zero byte file must exist at the end of the specified path, visible to all.
 
 The updated (valid) FileSystem must contains all the parent directories of the path, as created by `mkdirs(parent(p))`.
 

@@ -13,7 +13,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License.
+ * limitations under the License
  */
 
 package org.apache.hadoop.fs.impl;
@@ -51,14 +51,14 @@ public final class StoreImplementationUtils {
 
   /**
    * Probe for an object having a capability; returns true
-   * iff the stream implements {@link StreamCapabilities} and its
+   * if the stream implements {@link StreamCapabilities} and its
    * {@code hasCapabilities()} method returns true for the capability.
    * This is a package private method intended to provided a common
    * implementation for input and output streams.
    * {@link StreamCapabilities#hasCapability(String)} call is for public use.
    * @param object object to probe.
    * @param capability capability to probe for
-   * @return true iff the object implements stream capabilities and
+   * @return true if the object implements stream capabilities and
    * declares that it supports the capability.
    */
   static boolean objectHasCapability(Object object, String capability) {
@@ -70,11 +70,11 @@ public final class StoreImplementationUtils {
 
   /**
    * Probe for an output stream having a capability; returns true
-   * iff the stream implements {@link StreamCapabilities} and its
+   * if the stream implements {@link StreamCapabilities} and its
    * {@code hasCapabilities()} method returns true for the capability.
    * @param out output stream
    * @param capability capability to probe for
-   * @return true iff the stream declares that it supports the capability.
+   * @return true if the stream declares that it supports the capability.
    */
   public static boolean hasCapability(OutputStream out, String capability) {
     return objectHasCapability(out, capability);
@@ -82,11 +82,11 @@ public final class StoreImplementationUtils {
 
   /**
    * Probe for an input stream having a capability; returns true
-   * iff the stream implements {@link StreamCapabilities} and its
+   * if the stream implements {@link StreamCapabilities} and its
    * {@code hasCapabilities()} method returns true for the capability.
    * @param out output stream
    * @param capability capability to probe for
-   * @return true iff the stream declares that it supports the capability.
+   * @return true if the stream declares that it supports the capability.
    */
   public static boolean hasCapability(InputStream out, String capability) {
     return objectHasCapability(out, capability);

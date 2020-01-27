@@ -24,7 +24,7 @@ This document covers the Output Streams within the context of the
 It uses the filesystem model defined in [A Model of a Hadoop Filesystem](model.html)
 with the notation defined in [notation](Notation.md).
 
-The target audiences are
+The target audiences are:
 1. Users of the APIs. While `java.io.OutputStream` is a standard interfaces,
 this document clarifies how it is implemented in HDFS and elsewhere.
 The Hadoop-specific interfaces `Syncable` and `StreamCapabilities` are new;
@@ -59,8 +59,6 @@ even though they are implemented as subclass of an output stream which is `Synca
 A new interface: `StreamCapabilities`. This allows callers
 to probe the exact capabilities of a stream, even transitively
 through a chain of streams.
-
-
 
 ## Output Stream Model
 
@@ -303,9 +301,7 @@ specifications of behaviour.
 
 #### Preconditions
 
-```python
-Stream.open else raise IOException
-```
+None.
 
 #### Postconditions
 
@@ -319,9 +315,23 @@ others"
 FS' = FS where data(FS', path) == buffer
 ```
 
-Some applications have been known to call `flush()` on a closed stream
-on the assumption that it is harmless. Implementations MAY choose to
-support this behaviour.
+When a stream is closed, `flush()` SHOULD downgrade to being a no-op, if it was not
+one already. This is to work with applications and libraries which can invoke
+it in exactly this way.
+
+
+*Issue*: Should `flush()` forward to `hflush()`?
+
+No. Or at least, make it optional.
+
+There's a lot of application code which assumes that `flush()` is low cost
+and should be invoked after writing every single line of output, after
+writing small 4KB blocks or similar.
+
+Forwarding this to a full flush across a distributed filesystem, or worse,
+a distant object store, is very underperformant
+
+See [HADOOP-16548](https://issues.apache.org/jira/browse/HADOOP-16548)
 
 ### <a name="close"></a>`close()`
 
@@ -372,6 +382,9 @@ may hide serious problems.
 delay in `close()` does not block the thread so long that the heartbeat times
 out.
 
+And for implementors: have a look at [HADOOP-16785](https://issues.apache.org/jira/browse/HADOOP-16785)
+to see examples of complications here.
+
 ### HDFS and `OutputStream.close()`
 
 HDFS does not immediately `sync()` the output of a written file to disk on
@@ -379,7 +392,7 @@ HDFS does not immediately `sync()` the output of a written file to disk on
 is true. This has caused [problems in some applications](https://issues.apache.org/jira/browse/ACCUMULO-1364).
 
 Applications which absolutely require the guarantee that a file has been persisted
-MUST call `Syncable.hsync()` before the file is closed.
+MUST call `Syncable.hsync()` *before* the file is closed.
 
 
 ## <a name="syncable"></a>`org.apache.hadoop.fs.Syncable`
@@ -530,7 +543,7 @@ From the javadocs of `DFSOutputStream.hsync(EnumSet<SyncFlag> syncFlags)`
 
 
 In virtual machines, the notion of "disk hardware" is really that of
-another software abstraction: there are guarantees.
+another software abstraction: there are few guarantees.
 
 
 ## <a name="streamcapabilities"></a>Interface `StreamCapabilities`
@@ -542,7 +555,6 @@ another software abstraction: there are guarantees.
 
 The `StreamCapabilities` interface exists to allow callers to dynamically
 determine the behavior of a stream.
-
 
 The reference implementation of this interface is
  `org.apache.hadoop.hdfs.DFSOutputStream`
@@ -562,7 +574,14 @@ The reference implementation of this interface is
 Where `HSYNC` and `HFLUSH` are items in the enumeration
 `org.apache.hadoop.fs.StreamCapabilities.StreamCapability`.
 
-## <a name="cansetdropbehind"></a>interface `CanSetDropBehind`
+Once a stream has been closed, th `hasCapability()` call MUST do one of
+
+* return the capabilities of the open stream.
+* return false.
+
+That is: it MUST NOT raise an exception about the file being closed;
+
+## <a name="cansetdropbehind"></a> interface `CanSetDropBehind`
 
 ```java
 @InterfaceAudience.Public
@@ -595,7 +614,7 @@ covered in this (very simplistic) filesystem model, but which are visible
 in production.
 
 
-### <a name="durability"></a>Durability
+### <a name="durability"></a> Durability
 
 1. `OutputStream.write()` MAY persist the data, synchronously or asynchronously
 1. `OutputStream.flush()` flushes data to the destination. There
@@ -618,7 +637,7 @@ Thus: `flush()` is often treated at most as a cue to flush data to the network
 buffers -but not commit to writing any data.
 It is only the `Syncable` interface which offers guarantees.
 
-### <a name="concurrency"></a>Concurrency
+### <a name="concurrency"></a> Concurrency
 
 1. The outcome of more than one process writing to the same file is undefined.
 
@@ -678,7 +697,7 @@ exists(FS''', path)
 getFileStatus(FS''', path).getLen() = len(data)
 ```
 
-HDFS does not do this except when the write crosses a block boundary; to do
+*HDFS does not do this except when the write crosses a block boundary*; to do
 otherwise would overload the Namenode. Other stores MAY copy this behavior. 
 
 As a result, while a file is being written
@@ -710,7 +729,7 @@ which starts at server-side time `t1` and completes at time `t2` with a successf
 written file, then the last modification time SHOULD be a time `t` where
 `t1 <= t <= t2`
 
-## <a name="issues"></a>Issues with the Hadoop Output Stream model.
+## <a name="issues"></a> Issues with the Hadoop Output Stream model.
 
 There are some known issues with the output stream model as offered by Hadoop,
 specifically about the guarantees about when data is written and persisted
@@ -718,7 +737,7 @@ specifically about the guarantees about when data is written and persisted
 These are where implementation aspects of HDFS and the "Local" filesystem
 do not follow the simple model of the filesystem used in this specification.
 
-### <a name="hdfs-issues"></a>HDFS
+### <a name="hdfs-issues"></a> HDFS
 
 That HDFS file metadata often lags the content of a file being written
 to is not something everyone expects, nor convenient for any program trying
@@ -751,7 +770,6 @@ empty.
 When an output stream in HDFS is closed; the newly written data is not immediately
 written to disk unless HDFS is deployed with `dfs.datanode.synconclose` set to
 true. Otherwise it is cached and written to disk later.
- 
 
 ### <a name="local-issues"></a>Local Filesystem, `file:`
 
@@ -770,7 +788,7 @@ to the stream.
 For anyone thinking "this is a violation of this specification" —they are correct.
 The local filesystem was intended for testing, rather than production use.
 
-### <a name="checksummed-fs-issues"></a>Checksummed output streams
+### <a name="checksummed-fs-issues"></a> Checksummed output streams
 
 Because  `org.apache.hadoop.fs.FSOutputSummer` and
 `org.apache.hadoop.fs.ChecksumFileSystem.ChecksumFSOutputSummer`
@@ -787,7 +805,7 @@ to close the stream more than once.
 Behaviors 1 and 2 really have to be considered bugs to fix, albeit with care.
 
 
-### <a name="object-store-issues"></a>Object Stores
+### <a name="object-store-issues"></a> Object Stores
 
 Object store streams MAY buffer the entire stream's output
 until the final `close()` operation triggers a single `PUT` of the data
@@ -861,8 +879,26 @@ is present: the act of instantiating the object, while potentially exhibiting
 create inconsistency, is atomic. Applications may be able to use that fact
 to their advantage.
 
+There is a special troublespot in AWS S3 where it caches 404 responses returned
+by the service from probes for an object existing _before the file has been created_.
+A 404 record can remain in the load balancer's cache for some time -it seems to expire
+only after a "sufficient" interval of no probes for that path.
+This has been difficult to deal with within the Hadoop S3A code itself
+(HADOOP-16490, HADOOP-16635) -and if applications make their own probes for files
+before creating them, the problem will intermittently surface.
 
-## <a name="implementors"></a>Implementors notes.
+1. If you look for an object on S3 and it is not there - The 404 MAY Be returned even
+after the object has been created.
+1. FS operations triggering such a probe include: `getFileStatus()`, `exists()`, `open()`
+and others.
+1. The S3A connector does not do a probe if a file is created through `create()` overwrite=true;
+it only makes sure that the path does not reference a directory. Applications SHOULD always
+create files with this option except when some form of exclusivity is needed on file
+creation -in which case, be aware, that with the non-atomic probe+create sequence which
+some object store connectors implement, the semantics of the creation are not sufficient
+to allow the filesystem to be used as an implicit coordination mechanism between processes.
+``
+## <a name="implementors"></a> Implementors notes.
 
 ### `StreamCapabilities`
 
@@ -875,8 +911,8 @@ they support the  `hflush` and `hsync` capabilities on streams where this is not
 
 Sometimes streams pass their data to store, but the far end may not
 sync it all the way to disk. That is not something the client can determine.
-Here: if the client code is making the hflush/hsync calls to the distributed FS,
-it SHOULD declare that it supports them.
+Here: if the client code is making the hflush/hsync passes these requests
+on to the distributed FS, it SHOULD declare that it supports them.
 
 ### Metadata updates
 
