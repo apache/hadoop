@@ -603,7 +603,7 @@ and MAY be a `RuntimeException` or subclass. For instance, HDFS may raise a `Inv
 
     result = FSDataOutputStream
 
-A zero byte file must exist at the end of the specified path, visible to all
+A zero byte file must exist at the end of the specified path, visible to all.
 
 The updated (valid) FileSystem must contains all the parent directories of the path, as created by `mkdirs(parent(p))`.
 
