@@ -22,11 +22,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
 import java.util.EnumSet;
 
-import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
@@ -373,30 +370,6 @@ public class MRApp extends MRAppMaster {
     Assert.assertEquals("TaskAttempt state is not correct (timedout)",
         finalState,
         report.getTaskAttemptState());
-  }
-
-  public void waitForState(TaskAttempt attempt,
-      TaskAttemptState...finalStates) throws Exception {
-    int timeoutSecs = 0;
-    TaskAttemptReport report = attempt.getReport();
-    List<TaskAttemptState> targetStates =  Arrays.asList(finalStates);
-    String statesValues = targetStates.stream().map(Object::toString).collect(
-        Collectors.joining(","));
-    while (!targetStates.contains(report.getTaskAttemptState()) &&
-        timeoutSecs++ < 20) {
-      System.out.println(
-          "TaskAttempt " + attempt.getID().toString() + "  State is : "
-              + report.getTaskAttemptState()
-              + " Waiting for states: " + statesValues
-              + ". curent state is : " + report.getTaskAttemptState()
-              + ".   progress : " + report.getProgress());
-      report = attempt.getReport();
-      Thread.sleep(500);
-    }
-    System.out.println("TaskAttempt State is : "
-        + report.getTaskAttemptState());
-    Assert.assertTrue("TaskAttempt state is not correct (timedout)",
-        targetStates.contains(report.getTaskAttemptState()));
   }
 
   public void waitForState(Task task, TaskState finalState) throws Exception {
