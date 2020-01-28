@@ -183,13 +183,14 @@ public class FSConfigToCSConfigArgumentHandler {
 
   private FSConfigToCSConfigConverter prepareAndGetConverter(
       CommandLine cliParser) {
-    conversionOptions.setDryRun(
-        cliParser.hasOption(CliOption.DRY_RUN.shortSwitch));
+    boolean dryRun =
+        cliParser.hasOption(CliOption.DRY_RUN.shortSwitch);
+    conversionOptions.setDryRun(dryRun);
     conversionOptions.setNoTerminalRuleCheck(
         cliParser.hasOption(CliOption.NO_TERMINAL_RULE_CHECK.shortSwitch));
 
     checkOptionPresent(cliParser, CliOption.YARN_SITE);
-    checkOutputDefined(cliParser);
+    checkOutputDefined(cliParser, dryRun);
 
     converterParams = validateInputFiles(cliParser);
     ruleHandler = new FSConfigToCSConfigRuleHandler(conversionOptions);
@@ -238,14 +239,15 @@ public class FSConfigToCSConfigArgumentHandler {
     }
   }
 
-  private static void checkOutputDefined(CommandLine cliParser) {
+  private static void checkOutputDefined(CommandLine cliParser,
+      boolean dryRun) {
     boolean hasOutputDir =
         cliParser.hasOption(CliOption.OUTPUT_DIR.shortSwitch);
 
     boolean console =
         cliParser.hasOption(CliOption.CONSOLE_MODE.shortSwitch);
 
-    if (!console && !hasOutputDir) {
+    if (!console && !hasOutputDir && !dryRun) {
       throw new PreconditionException(
          "Output directory or console mode was not defined. Please" +
           " use -h or --help to see command line switches");
