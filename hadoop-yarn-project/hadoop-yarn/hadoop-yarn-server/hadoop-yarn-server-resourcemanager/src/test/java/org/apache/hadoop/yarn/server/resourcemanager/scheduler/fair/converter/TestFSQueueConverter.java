@@ -20,6 +20,9 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.File;
 import java.io.IOException;
@@ -398,6 +401,23 @@ public class TestFSQueueConverter {
         csConfig.get(PREFIX + "root.admins.alice.ordering-policy"));
     assertEquals("root.admins.bob ordering policy", "fair",
         csConfig.get(PREFIX + "root.admins.bob.ordering-policy"));
+  }
+
+  @Test
+  public void testQueueUnsupportedMixedOrderingPolicy() throws IOException {
+    converter = builder.withDrfUsed(true).build();
+    String absolutePath =
+        new File("src/test/resources/fair-scheduler-orderingpolicy-mixed.xml")
+          .getAbsolutePath();
+    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+        FILE_PREFIX + absolutePath);
+    fs.close();
+    fs = createFairScheduler();
+    rootQueue = fs.getQueueManager().getRootQueue();
+
+    converter.convertQueueHierarchy(rootQueue);
+
+    verify(ruleHandler, times(6)).handleFairAsDrf(anyString());
   }
 
   @Test

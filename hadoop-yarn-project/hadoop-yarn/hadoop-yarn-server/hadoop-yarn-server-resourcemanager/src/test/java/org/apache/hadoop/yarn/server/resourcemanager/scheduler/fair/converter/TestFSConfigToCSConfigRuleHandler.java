@@ -25,6 +25,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.conve
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.SPECIFIED_NOT_FIRST;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.USER_MAX_APPS_DEFAULT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.USER_MAX_RUNNING_APPS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.FAIR_AS_DRF;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -86,6 +87,7 @@ public class TestFSConfigToCSConfigRuleHandler {
     rules.put(SPECIFIED_NOT_FIRST, WARNING);
     rules.put(USER_MAX_APPS_DEFAULT, WARNING);
     rules.put(USER_MAX_RUNNING_APPS, WARNING);
+    rules.put(FAIR_AS_DRF, WARNING);
 
     ruleHandler = new FSConfigToCSConfigRuleHandler(rules,
         createDefaultConversionOptions());
@@ -111,6 +113,8 @@ public class TestFSConfigToCSConfigRuleHandler {
     rules.put(SPECIFIED_NOT_FIRST, ABORT);
     rules.put(USER_MAX_APPS_DEFAULT, ABORT);
     rules.put(USER_MAX_RUNNING_APPS, ABORT);
+    rules.put(USER_MAX_RUNNING_APPS, ABORT);
+    rules.put(FAIR_AS_DRF, ABORT);
     rules.put(MAX_CHILD_QUEUE_LIMIT, "1");
 
     ruleHandler = new FSConfigToCSConfigRuleHandler(rules,
@@ -126,6 +130,7 @@ public class TestFSConfigToCSConfigRuleHandler {
     expectAbort(() -> ruleHandler.handleSpecifiedNotFirstRule());
     expectAbort(() -> ruleHandler.handleUserMaxApps());
     expectAbort(() -> ruleHandler.handleUserMaxAppsDefault());
+    expectAbort(() -> ruleHandler.handleFairAsDrf("test"));
   }
 
   @Test(expected = ConversionException.class)

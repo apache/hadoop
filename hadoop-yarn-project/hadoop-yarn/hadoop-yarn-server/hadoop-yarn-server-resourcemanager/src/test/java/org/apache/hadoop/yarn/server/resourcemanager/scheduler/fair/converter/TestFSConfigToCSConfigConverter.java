@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -60,6 +61,8 @@ import org.mockito.junit.MockitoJUnitRunner;
  */
 @RunWith(MockitoJUnitRunner.class)
 public class TestFSConfigToCSConfigConverter {
+  private static final String CLUSTER_RESOURCE_STRING =
+      "vcores=20, memory-mb=240";
   private static final Resource CLUSTER_RESOURCE =
       Resource.newInstance(16384, 16);
   private static final String FILE_PREFIX = "file:";
@@ -67,6 +70,10 @@ public class TestFSConfigToCSConfigConverter {
       prepareFileName("fair-scheduler-conversion.xml");
   private static final String FS_INVALID_PLACEMENT_RULES_XML =
       prepareFileName("fair-scheduler-invalidplacementrules.xml");
+  private static final String FS_ONLY_FAIR_POLICY_XML =
+      prepareFileName("fair-scheduler-onlyfairpolicy.xml");
+  private static final String FS_MIXED_POLICY_XML =
+      prepareFileName("fair-scheduler-orderingpolicy-mixed.xml");
 
   @Mock
   private FSConfigToCSConfigRuleHandler ruleHandler;
@@ -216,20 +223,6 @@ public class TestFSConfigToCSConfigConverter {
   }
 
   @Test
-  public void testMixedQueueOrderingPolicy() throws Exception {
-    expectedException.expect(ConversionException.class);
-    expectedException.expectMessage(
-        "DRF ordering policy cannot be used together with fifo/fair");
-    String absolutePath =
-        new File("src/test/resources/fair-scheduler-orderingpolicy-mixed.xml")
-          .getAbsolutePath();
-    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
-        FILE_PREFIX + absolutePath);
-
-    converter.convert(config);
-  }
-
-  @Test
   public void testQueueMaxChildCapacityNotSupported() throws Exception {
     expectedException.expect(UnsupportedPropertyException.class);
     expectedException.expectMessage("test");
@@ -277,7 +270,7 @@ public class TestFSConfigToCSConfigConverter {
   @Test
   public void testConvertFSConfigurationClusterResource() throws Exception {
     FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
-        .withClusterResource("vcores=20, memory-mb=240")
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
         .build();
     converter.convert(params);
     assertEquals("Resource", Resource.newInstance(240, 20),
@@ -288,7 +281,7 @@ public class TestFSConfigToCSConfigConverter {
   public void testConvertFSConfigPctModeUsedAndClusterResourceDefined()
       throws Exception {
     FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
-            .withClusterResource("vcores=20, memory-mb=240")
+            .withClusterResource(CLUSTER_RESOURCE_STRING)
             .build();
     converter.convert(params);
     assertEquals("Resource", Resource.newInstance(240, 20),
@@ -394,7 +387,7 @@ public class TestFSConfigToCSConfigConverter {
   @Test
   public void testConvertCheckOutputDir() throws Exception {
     FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
-        .withClusterResource("vcores=20, memory-mb=240")
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
         .build();
 
     converter.convert(params);
@@ -419,7 +412,7 @@ public class TestFSConfigToCSConfigConverter {
       throws Exception {
     FSConfigToCSConfigConverterParams params =
         createParamsBuilder(YARN_SITE_XML_NO_REF_TO_FS_XML)
-        .withClusterResource("vcores=20, memory-mb=240")
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
         .build();
 
     expectedException.expect(PreconditionException.class);
@@ -430,7 +423,7 @@ public class TestFSConfigToCSConfigConverter {
   @Test
   public void testInvalidFairSchedulerXml() throws Exception {
     FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
-        .withClusterResource("vcores=20, memory-mb=240")
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
         .withFairSchedulerXmlConfig(FAIR_SCHEDULER_XML_INVALID)
         .build();
 
@@ -442,7 +435,7 @@ public class TestFSConfigToCSConfigConverter {
   public void testInvalidYarnSiteXml() throws Exception {
     FSConfigToCSConfigConverterParams params =
         createParamsBuilder(YARN_SITE_XML_INVALID)
-        .withClusterResource("vcores=20, memory-mb=240")
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
         .build();
 
     expectedException.expect(RuntimeException.class);
@@ -464,7 +457,7 @@ public class TestFSConfigToCSConfigConverter {
   public void testConversionWhenInvalidPlacementRulesIgnored()
       throws Exception {
     FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
-        .withClusterResource("vcores=20, memory-mb=240")
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
         .withFairSchedulerXmlConfig(FS_INVALID_PLACEMENT_RULES_XML)
         .build();
 
@@ -477,6 +470,38 @@ public class TestFSConfigToCSConfigConverter {
     converter.convert(params);
 
     // expected: no exception
+  }
+
+  @Test
+  public void testConversionWhenOnlyFairPolicyIsUsed() throws Exception {
+    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
+        .withFairSchedulerXmlConfig(FS_ONLY_FAIR_POLICY_XML)
+        .build();
+
+    converter.convert(params);
+
+    Configuration convertedConfig = converter.getYarnSiteConfig();
+
+    assertEquals("Resource calculator class shouldn't be set", null,
+        convertedConfig.getClass(
+            CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS, null));
+  }
+
+  @Test
+  public void testConversionWhenMixedPolicyIsUsed() throws Exception {
+    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
+        .withFairSchedulerXmlConfig(FS_MIXED_POLICY_XML)
+        .build();
+
+    converter.convert(params);
+
+    Configuration convertedConfig = converter.getYarnSiteConfig();
+
+    assertEquals("Resource calculator type", DominantResourceCalculator.class,
+        convertedConfig.getClass(
+            CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS, null));
   }
 
   private Configuration getConvertedCSConfig() {
