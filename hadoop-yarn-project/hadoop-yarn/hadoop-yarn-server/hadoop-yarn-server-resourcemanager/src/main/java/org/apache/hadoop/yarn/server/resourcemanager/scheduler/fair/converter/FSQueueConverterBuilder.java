@@ -32,6 +32,7 @@ public final class FSQueueConverterBuilder {
   float queueMaxAMShareDefault;
   int queueMaxAppsDefault;
   ConversionOptions conversionOptions;
+  boolean drfUsed;
 
   private FSQueueConverterBuilder() {
   }
@@ -91,6 +92,11 @@ public final class FSQueueConverterBuilder {
   public FSQueueConverterBuilder withConversionOptions(
       ConversionOptions conversionOptions) {
     this.conversionOptions = conversionOptions;
+    return this;
+  }
+
+  public FSQueueConverterBuilder withDrfUsed(boolean drfUsed) {
+    this.drfUsed = drfUsed;
     return this;
   }
 

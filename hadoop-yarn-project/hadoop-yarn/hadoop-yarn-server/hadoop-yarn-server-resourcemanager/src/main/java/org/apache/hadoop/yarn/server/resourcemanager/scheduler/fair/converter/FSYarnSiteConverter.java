@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 
 /**
  * Converts a Fair Scheduler site configuration to Capacity Scheduler
@@ -37,7 +38,7 @@ public class FSYarnSiteConverter {
 
   @SuppressWarnings({"deprecation", "checkstyle:linelength"})
   public void convertSiteProperties(Configuration conf,
-      Configuration yarnSiteConfig) {
+      Configuration yarnSiteConfig, boolean drfUsed) {
     yarnSiteConfig.set(YarnConfiguration.RM_SCHEDULER,
         CapacityScheduler.class.getCanonicalName());
 
@@ -138,6 +139,12 @@ public class FSYarnSiteConverter {
     if (conf.getBoolean(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE,
         FairSchedulerConfiguration.DEFAULT_USER_AS_DEFAULT_QUEUE)) {
       userAsDefaultQueue = true;
+    }
+
+    if (drfUsed) {
+      yarnSiteConfig.set(
+          CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
+          DominantResourceCalculator.class.getCanonicalName());
     }
   }
 

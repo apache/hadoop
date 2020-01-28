@@ -19,7 +19,7 @@
 <allocations>
     <queue name="root">
         <weight>1.0</weight>
-        <schedulingPolicy>drf</schedulingPolicy>
+        <schedulingPolicy>fair</schedulingPolicy>
         <aclSubmitApps>alice,bob,joe,john hadoop_users</aclSubmitApps>
         <aclAdministerApps>alice,bob,joe,john hadoop_users</aclAdministerApps>
         <queue name="default">
@@ -28,7 +28,7 @@
         </queue>
         <queue name="users" type="parent">
             <weight>1.0</weight>
-            <schedulingPolicy>drf</schedulingPolicy>
+            <schedulingPolicy>fair</schedulingPolicy>
             <queue name="john">
                 <weight>1.0</weight>
                 <schedulingPolicy>fair</schedulingPolicy>
@@ -59,6 +59,7 @@
                 <aclSubmitApps>alice </aclSubmitApps>
                 <aclAdministerApps>alice </aclAdministerApps>
                 <maxAMShare>0.15</maxAMShare>
+                <reservation>memory-mb=16384, vcores=4</reservation>
             </queue>
             <queue name="bob">
                 <maxResources>memory-mb=8192, vcores=2</maxResources>
@@ -70,11 +71,15 @@
             </queue>
         </queue>
     </queue>
+    <user name="alice">
+      <maxRunningApps>30</maxRunningApps>
+    </user>
+    <userMaxAppsDefault>10</userMaxAppsDefault>
     <defaultFairSharePreemptionTimeout>23</defaultFairSharePreemptionTimeout>
     <defaultMinSharePreemptionTimeout>24</defaultMinSharePreemptionTimeout>
     <defaultFairSharePreemptionThreshold>0.12</defaultFairSharePreemptionThreshold>
     <queueMaxAppsDefault>15</queueMaxAppsDefault>
-    <defaultQueueSchedulingPolicy>drf</defaultQueueSchedulingPolicy>
+    <defaultQueueSchedulingPolicy>fair</defaultQueueSchedulingPolicy>
     <queueMaxAMShareDefault>0.16</queueMaxAMShareDefault>
     <queuePlacementPolicy>
         <rule name="nestedUserQueue" create="false">

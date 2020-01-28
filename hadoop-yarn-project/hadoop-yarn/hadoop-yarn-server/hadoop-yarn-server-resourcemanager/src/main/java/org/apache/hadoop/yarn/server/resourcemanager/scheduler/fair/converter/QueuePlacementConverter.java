@@ -82,7 +82,6 @@ class QueuePlacementConverter {
         }
         mapping.append("u:" + USER + ":").append(defaultRule.defaultQueueName);
       } else if (rule instanceof SecondaryGroupExistingPlacementRule) {
-        // TODO: wait for YARN-9840
         if (mapping.length() > 0) {
           mapping.append(";");
         }
@@ -107,10 +106,8 @@ class QueuePlacementConverter {
       mapping.append(";");
     }
     if (pr instanceof PrimaryGroupPlacementRule) {
-      // TODO: wait for YARN-9841
       mapping.append("u:" + USER + ":" + PRIMARY_GROUP + "." + USER);
     } else if (pr instanceof SecondaryGroupExistingPlacementRule) {
-      // TODO: wait for YARN-9865
       mapping.append("u:" + USER + ":" + SECONDARY_GROUP + "." + USER);
     } else if (pr instanceof DefaultPlacementRule) {
       DefaultPlacementRule defaultRule = (DefaultPlacementRule) pr;
