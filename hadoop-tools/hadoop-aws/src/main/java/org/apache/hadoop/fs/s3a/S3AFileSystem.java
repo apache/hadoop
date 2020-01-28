@@ -3794,9 +3794,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     if (source.getRestoreExpirationTime() != null) {
       ret.setRestoreExpirationTime(source.getRestoreExpirationTime());
     }
-    if (source.getSSEAlgorithm() != null) {
-      ret.setSSEAlgorithm(source.getSSEAlgorithm());
-    }
     if (source.getSSECustomerAlgorithm() != null) {
       ret.setSSECustomerAlgorithm(source.getSSECustomerAlgorithm());
     }
