@@ -1701,14 +1701,14 @@ public class DataNode extends ReconfigurableBase
     // the dataset, block scanners, etc.
     initStorage(nsInfo);
 
-    // Exclude failed disks before initializing the block pools to avoid startup
-    // failures.
-    checkDiskError();
     try {
       data.addBlockPool(nsInfo.getBlockPoolID(), getConf());
     } catch (AddBlockPoolException e) {
       handleAddBlockPoolError(e);
     }
+    // HDFS-14993: check disk after add the block pool info.
+    checkDiskError();
+
     blockScanner.enableBlockPoolId(bpos.getBlockPoolId());
     initDirectoryScanner(getConf());
     initDiskBalancer(data, getConf());
