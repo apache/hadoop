@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -728,6 +729,19 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "delegation-token.max-conf-size-bytes";
   public static final int DEFAULT_RM_DELEGATION_TOKEN_MAX_CONF_SIZE_BYTES =
       12800;
+
+  public static final String RM_DT_RENEWER_THREAD_TIMEOUT =
+      RM_PREFIX + "delegation-token-renewer.thread-timeout";
+  public static final long DEFAULT_RM_DT_RENEWER_THREAD_TIMEOUT =
+      TimeUnit.SECONDS.toMillis(60); // 60 Seconds
+  public static final String RM_DT_RENEWER_THREAD_RETRY_INTERVAL =
+      RM_PREFIX + "delegation-token-renewer.thread-retry-interval";
+  public static final long DEFAULT_RM_DT_RENEWER_THREAD_RETRY_INTERVAL =
+      TimeUnit.SECONDS.toMillis(60); // 60 Seconds
+  public static final String RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS =
+      RM_PREFIX + "delegation-token-renewer.thread-retry-max-attempts";
+  public static final int DEFAULT_RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS =
+      10;
 
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
   public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
