@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -39,9 +40,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationCo
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfigurationException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.ConfigurableResource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
-import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,6 +75,7 @@ public class FSConfigToCSConfigConverter {
   private boolean sizeBasedWeight = false;
   private boolean userAsDefaultQueue = false;
   private ConversionOptions conversionOptions;
+  private boolean drfUsed = false;
 
   private Configuration yarnSiteConfig;
   private Configuration capacitySchedulerConfig;
@@ -198,7 +201,7 @@ public class FSConfigToCSConfigConverter {
   @VisibleForTesting
   void convert(Configuration conf) throws Exception {
     System.out.println(WARNING_TEXT);
-    
+
     // initialize Fair Scheduler
     RMContext ctx = new RMContextImpl();
     PlacementManager placementManager = new PlacementManager();
@@ -207,6 +210,8 @@ public class FSConfigToCSConfigConverter {
     FairScheduler fs = new FairScheduler();
     fs.setRMContext(ctx);
     fs.init(conf);
+
+    drfUsed = isDrfUsed(fs);
 
     AllocationConfiguration allocConf = fs.getAllocationConfiguration();
     queueMaxAppsDefault = allocConf.getQueueMaxAppsDefault();
@@ -246,7 +251,7 @@ public class FSConfigToCSConfigConverter {
   private void convertYarnSiteXml(Configuration conf) {
     FSYarnSiteConverter siteConverter =
         new FSYarnSiteConverter();
-    siteConverter.convertSiteProperties(conf, yarnSiteConfig);
+    siteConverter.convertSiteProperties(conf, yarnSiteConfig, drfUsed);
 
     autoCreateChildQueues = siteConverter.isAutoCreateChildQueues();
     preemptionEnabled = siteConverter.isPreemptionEnabled();
@@ -271,6 +276,7 @@ public class FSConfigToCSConfigConverter {
         .withQueueMaxAMShareDefault(queueMaxAMShareDefault)
         .withQueueMaxAppsDefault(queueMaxAppsDefault)
         .withConversionOptions(conversionOptions)
+        .withDrfUsed(drfUsed)
         .build();
 
     queueConverter.convertQueueHierarchy(rootQueue);
@@ -286,18 +292,6 @@ public class FSConfigToCSConfigConverter {
           placementConverter.convertPlacementPolicy(placementManager,
               ruleHandler, userAsDefaultQueue);
       properties.forEach((k, v) -> capacitySchedulerConfig.set(k, v));
-    }
-
-    // Validate ordering policy
-    if (queueConverter.isDrfPolicyUsedOnQueueLevel()) {
-      if (queueConverter.isFifoOrFairSharePolicyUsed()) {
-        throw new ConversionException(
-            "DRF ordering policy cannot be used together with fifo/fair");
-      } else {
-        capacitySchedulerConfig.set(
-            CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
-            DominantResourceCalculator.class.getCanonicalName());
-      }
     }
   }
 
@@ -359,6 +353,38 @@ public class FSConfigToCSConfigConverter {
     }
   }
 
+  private boolean isDrfUsed(FairScheduler fs) {
+    FSQueue rootQueue = fs.getQueueManager().getRootQueue();
+    AllocationConfiguration allocConf = fs.getAllocationConfiguration();
+
+    String defaultPolicy = allocConf.getDefaultSchedulingPolicy().getName();
+
+    if (DominantResourceFairnessPolicy.NAME.equals(defaultPolicy)) {
+      return true;
+    } else {
+      return isDrfUsedOnQueueLevel(rootQueue);
+    }
+  }
+
+  private boolean isDrfUsedOnQueueLevel(FSQueue queue) {
+    String policy = queue.getPolicy().getName();
+    boolean usesDrf = DominantResourceFairnessPolicy.NAME.equals(policy);
+
+    if (usesDrf) {
+      return true;
+    } else {
+      List<FSQueue> children = queue.getChildQueues();
+
+      if (children != null) {
+        for (FSQueue child : children) {
+          usesDrf |= isDrfUsedOnQueueLevel(child);
+        }
+      }
+
+      return usesDrf;
+    }
+  }
+
   @VisibleForTesting
   Resource getClusterResource() {
     return clusterResource;
@@ -372,5 +398,10 @@ public class FSConfigToCSConfigConverter {
   @VisibleForTesting
   FSConfigToCSConfigRuleHandler getRuleHandler() {
     return ruleHandler;
+  }
+
+  @VisibleForTesting
+  Configuration getYarnSiteConfig() {
+    return yarnSiteConfig;
   }
 }

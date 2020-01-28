@@ -55,9 +55,7 @@ public class FSQueueConverter {
   private final float queueMaxAMShareDefault;
   private final boolean autoCreateChildQueues;
   private final int queueMaxAppsDefault;
-
-  private boolean fifoOrFairSharePolicyUsed;
-  private boolean drfPolicyUsedOnQueueLevel;
+  private final boolean drfUsed;
 
   private ConversionOptions conversionOptions;
 
@@ -72,6 +70,7 @@ public class FSQueueConverter {
     this.autoCreateChildQueues = builder.autoCreateChildQueues;
     this.queueMaxAppsDefault = builder.queueMaxAppsDefault;
     this.conversionOptions = builder.conversionOptions;
+    this.drfUsed = builder.drfUsed;
   }
 
   public void convertQueueHierarchy(FSQueue queue) {
@@ -103,14 +102,6 @@ public class FSQueueConverter {
     for (FSQueue childQueue : children) {
       convertQueueHierarchy(childQueue);
     }
-  }
-
-  public boolean isFifoOrFairSharePolicyUsed() {
-    return fifoOrFairSharePolicyUsed;
-  }
-
-  public boolean isDrfPolicyUsedOnQueueLevel() {
-    return drfPolicyUsedOnQueueLevel;
   }
 
   /**
@@ -306,20 +297,20 @@ public class FSQueueConverter {
     String policy = queue.getPolicy().getName();
 
     switch (policy) {
+    case DominantResourceFairnessPolicy.NAME:
+      capacitySchedulerConfig.set(PREFIX + queueName
+          + ".ordering-policy", FairSharePolicy.NAME);
+      break;
     case FairSharePolicy.NAME:
       capacitySchedulerConfig.set(PREFIX + queueName
           + ".ordering-policy", FairSharePolicy.NAME);
-      fifoOrFairSharePolicyUsed = true;
+      if (drfUsed) {
+        ruleHandler.handleFairAsDrf(queueName);
+      }
       break;
     case FifoPolicy.NAME:
       capacitySchedulerConfig.set(PREFIX + queueName
           + ".ordering-policy", FifoPolicy.NAME);
-      fifoOrFairSharePolicyUsed = true;
-      break;
-    case DominantResourceFairnessPolicy.NAME:
-      // DRF is not supported on a queue level,
-      // it has to be global
-      drfPolicyUsedOnQueueLevel = true;
       break;
     default:
       String msg = String.format("Unexpected ordering policy " +

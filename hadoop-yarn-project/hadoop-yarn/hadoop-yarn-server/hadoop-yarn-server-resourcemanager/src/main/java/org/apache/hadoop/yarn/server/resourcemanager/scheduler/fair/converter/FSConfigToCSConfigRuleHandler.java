@@ -73,6 +73,9 @@ public class FSConfigToCSConfigRuleHandler {
   public static final String QUEUE_AUTO_CREATE =
       "queueAutoCreate.action";
 
+  public static final String FAIR_AS_DRF =
+      "fairAsDrf.action";
+
   @VisibleForTesting
   enum RuleAction {
     WARNING,
@@ -119,6 +122,7 @@ public class FSConfigToCSConfigRuleHandler {
     setActionForProperty(SPECIFIED_NOT_FIRST);
     setActionForProperty(RESERVATION_SYSTEM);
     setActionForProperty(QUEUE_AUTO_CREATE);
+    setActionForProperty(FAIR_AS_DRF);
   }
 
   public void handleMaxCapacityPercentage(String queueName) {
@@ -179,6 +183,14 @@ public class FSConfigToCSConfigRuleHandler {
         format(
             "Placement rules: queue auto-create is not supported (type: %s)",
             placementRule));
+  }
+
+  public void handleFairAsDrf(String queueName) {
+    handle(FAIR_AS_DRF,
+        null,
+        format(
+            "Queue %s will use DRF policy instead of Fair",
+            queueName));
   }
 
   private void handle(String actionName, String fsSetting, String message) {
