@@ -82,6 +82,12 @@ public class ObserverReadProxyProvider<T>
   /** Client-side context for syncing with the NameNode server side. */
   private final AlignmentContext alignmentContext;
 
+  /** Configuration key for {@link #observerProbeRetryPeriodMs}. */
+  static final String OBSERVER_PROBE_RETRY_PERIOD_KEY =
+      "dfs.client.failover.observer.probe.retry.period";
+  /** Observer probe retry period default to 10 min. */
+  static final long OBSERVER_PROBE_RETRY_PERIOD_DEFAULT = 60 * 10 * 1000;
+
   /** The inner proxy provider used for active/standby failover. */
   private final AbstractNNFailoverProxyProvider<T> failoverProxy;
   /** List of all NameNode proxies. */
@@ -141,6 +147,21 @@ public class ObserverReadProxyProvider<T>
   private volatile ProxyInfo<T> lastProxy = null;
 
   /**
+   * In case there is no Observer node, for every read call, client will try
+   * to loop through all Standby nodes and fail eventually. Since there is no
+   * guarantee on when Observer node will be enabled. This can be very
+   * inefficient.
+   * The following value specify the period on how often to retry all Standby.
+   */
+  private long observerProbeRetryPeriodMs;
+
+  /**
+   * The previous time where zero observer were found. If there was observer,
+   * or it is initialization, this is set to 0.
+   */
+  private long lastObserverProbeTime;
+
+  /**
    * By default ObserverReadProxyProvider uses
    * {@link ConfiguredFailoverProxyProvider} for failover.
    */
@@ -158,6 +179,7 @@ public class ObserverReadProxyProvider<T>
     this.failoverProxy = failoverProxy;
     this.alignmentContext = new ClientGSIContext();
     factory.setAlignmentContext(alignmentContext);
+    this.lastObserverProbeTime = 0;
 
     // Don't bother configuring the number of retries and such on the retry
     // policy since it is mainly only used for determining whether or not an
@@ -188,6 +210,9 @@ public class ObserverReadProxyProvider<T>
         // The host of the URI is the nameservice ID
         AUTO_MSYNC_PERIOD_KEY_PREFIX + "." + uri.getHost(),
         AUTO_MSYNC_PERIOD_DEFAULT, TimeUnit.MILLISECONDS);
+    observerProbeRetryPeriodMs = conf.getTimeDuration(
+        OBSERVER_PROBE_RETRY_PERIOD_KEY,
+        OBSERVER_PROBE_RETRY_PERIOD_DEFAULT, TimeUnit.MILLISECONDS);
 
     // TODO : make this configurable or remove this variable
     if (wrappedProxy instanceof ClientProtocol) {
@@ -324,6 +349,27 @@ public class ObserverReadProxyProvider<T>
   }
 
   /**
+   * Check if client need to find an Observer proxy.
+   * If current proxy is Active then we should stick to it and postpone probing
+   * for Observers for a period of time. When this time expires the client will
+   * try to find an Observer again.
+   * *
+   * @return true if we did not reach the threshold
+   * to start looking for Observer, or false otherwise.
+   */
+  private boolean shouldFindObserver() {
+    // lastObserverProbeTime > 0 means we tried, but did not find any
+    // Observers yet
+    // If lastObserverProbeTime <= 0, previous check found observer, so
+    // we should not skip observer read.
+    if (lastObserverProbeTime > 0) {
+      return Time.monotonicNow() - lastObserverProbeTime
+          >= observerProbeRetryPeriodMs;
+    }
+    return true;
+  }
+
+  /**
    * This will call {@link ClientProtocol#msync()} on the active NameNode
    * (via the {@link #failoverProxy}) to update the state of this client, only
    * if at least {@link #autoMsyncPeriodMs} ms has elapsed since the last time
@@ -370,7 +416,7 @@ public class ObserverReadProxyProvider<T>
       lastProxy = null;
       Object retVal;
 
-      if (observerReadEnabled && isRead(method)) {
+      if (observerReadEnabled && shouldFindObserver() && isRead(method)) {
         if (!msynced) {
           // An msync() must first be performed to ensure that this client is
           // up-to-date with the active's state. This will only be done once.
@@ -454,11 +500,13 @@ public class ObserverReadProxyProvider<T>
                   + "also found {} standby, {} active, and {} unreachable. "
                   + "Falling back to active.", failedObserverCount,
               method.getName(), standbyCount, activeCount, unreachableCount);
+          lastObserverProbeTime = 0;
         } else {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Read falling back to active without observer read "
                 + "fail, is there no observer node running?");
           }
+          lastObserverProbeTime = Time.monotonicNow();
         }
       }
 
