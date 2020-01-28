@@ -1135,6 +1135,8 @@ public class HttpFSFileSystem extends FileSystem
             .owner((String) json.get(OWNER_JSON))
             .group((String) json.get(GROUP_JSON))
             .stickyBit((Boolean) json.get(ACL_STICKY_BIT_JSON));
+    final FsPermission permission = toFsPermission(json);
+    aclStatusBuilder.setPermission(permission);
     JSONArray entries = (JSONArray) json.get(ACL_ENTRIES_JSON);
     for ( Object e : entries ) {
       aclStatusBuilder.addEntry(AclEntry.parseAclEntry(e.toString(), true));

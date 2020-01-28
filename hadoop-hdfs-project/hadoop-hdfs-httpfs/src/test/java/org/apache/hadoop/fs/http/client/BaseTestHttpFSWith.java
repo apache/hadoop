@@ -946,10 +946,11 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
    * @throws Exception
    */
   private void assertSameAcls(AclStatus a, AclStatus b) throws Exception {
-    assertTrue(a.getOwner().equals(b.getOwner()));
-    assertTrue(a.getGroup().equals(b.getGroup()));
-    assertTrue(a.isStickyBit() == b.isStickyBit());
-    assertTrue(a.getEntries().size() == b.getEntries().size());
+    assertEquals(a.getOwner(), b.getOwner());
+    assertEquals(a.getGroup(), b.getGroup());
+    assertEquals(a.getPermission(), b.getPermission());
+    assertEquals(a.isStickyBit(), b.isStickyBit());
+    assertEquals(a.getEntries().size(), b.getEntries().size());
     for (AclEntry e : a.getEntries()) {
       assertTrue(b.getEntries().contains(e));
     }
