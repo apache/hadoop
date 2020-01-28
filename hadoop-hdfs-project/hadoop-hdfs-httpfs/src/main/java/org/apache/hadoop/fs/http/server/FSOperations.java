@@ -189,6 +189,8 @@ public class FSOperations {
     JSONArray entriesArray = new JSONArray();
     inner.put(HttpFSFileSystem.OWNER_JSON, aclStatus.getOwner());
     inner.put(HttpFSFileSystem.GROUP_JSON, aclStatus.getGroup());
+    inner.put(HttpFSFileSystem.PERMISSION_JSON,
+        HttpFSFileSystem.permissionToString(aclStatus.getPermission()));
     inner.put(HttpFSFileSystem.ACL_STICKY_BIT_JSON, aclStatus.isStickyBit());
     for ( AclEntry e : aclStatus.getEntries() ) {
       entriesArray.add(e.toString());
