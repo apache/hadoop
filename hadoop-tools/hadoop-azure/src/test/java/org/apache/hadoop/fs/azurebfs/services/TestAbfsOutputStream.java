@@ -24,7 +24,10 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import org.mockito.ArgumentCaptor;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 /**
  * Test useragent of abfs client.
  *
