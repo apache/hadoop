@@ -959,6 +959,30 @@
 
   <property>
     <description>
+    RM DelegationTokenRenewer thread timeout
+    </description>
+    <name>yarn.resourcemanager.delegation-token-renewer.thread-timeout</name>
+    <value>60s</value>
+  </property>
+
+  <property>
+    <description>
+    Default maximum number of retries for each RM DelegationTokenRenewer thread
+    </description>
+    <name>yarn.resourcemanager.delegation-token-renewer.thread-retry-max-attempts</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>
+    Time interval between each RM DelegationTokenRenewer thread retry attempt
+    </description>
+    <name>yarn.resourcemanager.delegation-token-renewer.thread-retry-interval</name>
+    <value>60s</value>
+  </property>
+
+  <property>
+    <description>
     Thread pool size for RMApplicationHistoryWriter.
     </description>
     <name>yarn.resourcemanager.history-writer.multi-threaded-dispatcher.pool-size</name>
