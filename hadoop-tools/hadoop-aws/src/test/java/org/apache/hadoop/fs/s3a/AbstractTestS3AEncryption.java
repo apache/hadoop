@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionTestsDisabled;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
@@ -107,10 +106,15 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     validateEncrytionSecrets(secrets);
     writeDataset(fs, src, data, data.length, 1024 * 1024, true);
     ContractTestUtils.verifyFileContents(fs, src, data);
-    Path dest = path(src.getName() + "-copy");
-    fs.rename(src, dest);
-    ContractTestUtils.verifyFileContents(fs, dest, data);
-    assertEncrypted(dest);
+    Path targetDir = path("target");
+    Path dest = new Path(targetDir, src.getName() + "-another");
+    byte[] dataTarget = dataset(1024, 'A', 'Z');
+    writeDataset(fs, dest, dataTarget, dataTarget.length, 1024*1024, true);
+    ContractTestUtils.verifyFileContents(fs, dest, dataTarget);
+    fs.rename(src, targetDir);
+    Path renamedFile = new Path(targetDir, src.getName());
+    ContractTestUtils.verifyFileContents(fs, renamedFile, data);
+    assertEncrypted(renamedFile);
   }
 
   /**
