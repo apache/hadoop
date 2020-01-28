@@ -3364,6 +3364,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @VisibleForTesting
+  public int getNonPersistentReplicas() {
+    return ramDiskReplicaTracker.numReplicasNotPersisted();
+  }
+
+  @VisibleForTesting
   public void setTimer(Timer newTimer) {
     this.timer = newTimer;
   }
