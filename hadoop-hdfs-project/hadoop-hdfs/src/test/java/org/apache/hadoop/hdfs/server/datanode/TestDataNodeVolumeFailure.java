@@ -868,4 +868,35 @@ public class TestDataNodeVolumeFailure {
       }
     }
   }
+
+  /*
+   * Verify the failed volume can be cheched during dn startup
+   */
+  @Test(timeout = 120000)
+  public void testVolumeFailureDuringStartup() throws Exception {
+    LOG.debug("Data dir: is " +  dataDir.getPath());
+
+    // fail the volume
+    data_fail = cluster.getInstanceStorageDir(1, 0);
+    failedDir = MiniDFSCluster.getFinalizedDir(data_fail,
+        cluster.getNamesystem().getBlockPoolId());
+    failedDir.setReadOnly();
+
+    // restart the dn
+    cluster.restartDataNode(1);
+    final DataNode dn = cluster.getDataNodes().get(1);
+
+    // should get the failed volume during startup
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return dn.getFSDataset() !=null &&
+            dn.getFSDataset().getVolumeFailureSummary() != null &&
+            dn.getFSDataset().getVolumeFailureSummary().
+                getFailedStorageLocations()!= null &&
+            dn.getFSDataset().getVolumeFailureSummary().
+                getFailedStorageLocations().length == 1;
+      }
+    }, 10, 30 * 1000);
+  }
 }
