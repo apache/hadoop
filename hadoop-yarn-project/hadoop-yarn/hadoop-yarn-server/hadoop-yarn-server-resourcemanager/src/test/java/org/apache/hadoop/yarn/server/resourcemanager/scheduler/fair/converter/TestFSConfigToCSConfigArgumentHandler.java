@@ -108,8 +108,19 @@ public class TestFSConfigToCSConfigArgumentHandler {
         "-o", FSConfigConverterTestCommons.OUTPUT_DIR);
   }
 
+  private static List<String> getDefaultArgumentsWithNoOutput() {
+    return Lists.newArrayList("-y", FSConfigConverterTestCommons.YARN_SITE_XML);
+  }
+
   private String[] getArgumentsAsArrayWithDefaults(String... args) {
     List<String> result = getDefaultArguments();
+    result.addAll(Arrays.asList(args));
+    return result.toArray(new String[0]);
+  }
+
+  private String[] getArgumentsAsArrayWithDefaultsNoOutput(
+      String... args) {
+    List<String> result = getDefaultArgumentsWithNoOutput();
     result.addAll(Arrays.asList(args));
     return result.toArray(new String[0]);
   }
@@ -426,9 +437,9 @@ public class TestFSConfigToCSConfigArgumentHandler {
       String expectedErrorMessage) throws Exception {
     setupFSConfigConversionFiles(true);
 
-    String[] args = getArgumentsAsArrayWithDefaults("-f",
+    String[] args = getArgumentsAsArrayWithDefaultsNoOutput("-f",
         FSConfigConverterTestCommons.FS_ALLOC_FILE,
-        "-r", FSConfigConverterTestCommons.CONVERSION_RULES_FILE, "-p",
+        "-r", FSConfigConverterTestCommons.CONVERSION_RULES_FILE,
         "-d");
     FSConfigToCSConfigArgumentHandler argumentHandler =
         new FSConfigToCSConfigArgumentHandler(conversionOptions);
