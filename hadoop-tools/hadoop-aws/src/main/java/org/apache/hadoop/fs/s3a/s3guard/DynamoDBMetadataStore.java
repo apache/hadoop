@@ -430,11 +430,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY, bucket);
     initDataAccessRetries(conf);
 
-    // set up a full retry policy
-    invoker = new Invoker(new S3GuardDataAccessRetryPolicy(conf),
-        this::retryEvent
-    );
-
     this.ttlTimeProvider = ttlTp;
 
     tableHandler = new DynamoDBMetadataStoreTableManager(
@@ -816,34 +811,25 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public DirListingMetadata listChildren(final Path path) throws IOException {
     checkPath(path);
     LOG.debug("Listing table {} in region {}: {}", tableName, region, path);
-
+    final QuerySpec spec = new QuerySpec()
+        .withHashKey(pathToParentKeyAttribute(path))
+        .withConsistentRead(true); // strictly consistent read
+    final List<PathMetadata> metas = new ArrayList<>();
     // find the children in the table
-    return readOp.retry(
+    final ItemCollection<QueryOutcome> items = scanOp.retry(
         "listChildren",
         path.toString(),
         true,
-        () -> {
-          final QuerySpec spec = new QuerySpec()
-              .withHashKey(pathToParentKeyAttribute(path))
-              .withConsistentRead(true); // strictly consistent read
-          final ItemCollection<QueryOutcome> items = table.query(spec);
-
-          final List<PathMetadata> metas = new ArrayList<>();
-          for (Item item : items) {
-            DDBPathMetadata meta = itemToPathMetadata(item, username);
-            metas.add(meta);
-          }
-
-          // Minor race condition here - if the path is deleted between
-          // getting the list of items and the directory metadata we might
-          // get a null in DDBPathMetadata.
-          DDBPathMetadata dirPathMeta = get(path);
-
-          final DirListingMetadata dirListing =
-              getDirListingMetadataFromDirMetaAndList(path, metas,
-                  dirPathMeta);
-          return dirListing;
-        });
+        () -> table.query(spec));
+    // now wrap the result with retry logic
+    for (Item item : wrapWithRetries(items)) {
+      metas.add(itemToPathMetadata(item, username));
+    }
+    // Minor race condition here - if the path is deleted between
+    // getting the list of items and the directory metadata we might
+    // get a null in DDBPathMetadata.
+    return getDirListingMetadataFromDirMetaAndList(path, metas,
+        get(path));
   }
 
   DirListingMetadata getDirListingMetadataFromDirMetaAndList(Path path,
@@ -2085,11 +2071,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
     return batchWriteCapacityExceededEvents.get();
   }
 
-  @VisibleForTesting
-  public Invoker getInvoker() {
-    return invoker;
-  }
-
   /**
    * Record the number of records written.
    * @param count count of records.
@@ -2522,9 +2503,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @param source source iterator
    * @return a retrying iterator.
    */
-  public Iterator<DDBPathMetadata> wrapWithRetries(
-      final Iterator<DDBPathMetadata> source) {
-    return new RetryingDDBPathMetadataIterator(source);
+  <T> Iterator<T> wrapWithRetries(
+      final Iterator<T> source) {
+    return new RetryingIterator<>(source);
   }
 
   /**
@@ -2533,30 +2514,32 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @param source source iterator
    * @return a retrying iterator.
    */
-  public Iterable<DDBPathMetadata> wrapWithRetries(
-      final Iterable<DDBPathMetadata> source) {
-    return new RetryingDDBPathMetadataCollection(source);
+  <T> Iterable<T> wrapWithRetries(
+      final Iterable<T> source) {
+    return new RetryingCollection<>(source);
   }
 
   /**
-   * A collection which wraps the result of a query or scan.
+   * A collection which wraps the result of a query or scan
+   * with retries; the {@link #scanThrottleEvents} count is
+   * then updated.
    * Important: iterate through this only once; the outcome
    * of repeating an iteration is "undefined"
    * @param <T> type of outcome.
    */
-  private final class RetryingDDBPathMetadataCollection
-      implements Iterable<DDBPathMetadata> {
+  private final class RetryingCollection<T>
+      implements Iterable<T> {
 
-    private final Iterable<DDBPathMetadata> source;
+    private final Iterable<T> source;
 
-    private RetryingDDBPathMetadataCollection(
-        final Iterable<DDBPathMetadata> source) {
+    private RetryingCollection(
+        final Iterable<T> source) {
       this.source = source;
     }
 
 
     @Override
-    public Iterator<DDBPathMetadata> iterator() {
+    public Iterator<T> iterator() {
       return wrapWithRetries(source.iterator());
     }
   }
@@ -2565,16 +2548,20 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * An iterator which wraps a non-retrying iterator of scan results
    * (i.e {@code S3GuardTableAccess.DDBPathMetadataIterator}.
    */
-  private final class RetryingDDBPathMetadataIterator implements
-      Iterator<DDBPathMetadata> {
+  private final class RetryingIterator<T> implements
+      Iterator<T> {
 
-    private final Iterator<DDBPathMetadata> source;
+    private final Iterator<T> source;
 
-    private RetryingDDBPathMetadataIterator(
-        final Iterator<DDBPathMetadata> source) {
+    private RetryingIterator(
+        final Iterator<T> source) {
       this.source = source;
     }
 
+    /**
+     * {@inheritDoc}.
+     * @throws WrappedIOException for IO failure, including throttling.
+     */
     @Override
     @Retries.RetryTranslated
     public boolean hasNext() {
@@ -2589,8 +2576,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
       }
     }
 
+    /**
+     * {@inheritDoc}.
+     * @throws WrappedIOException for IO failure, including throttling.
+     */
     @Override
-    public DDBPathMetadata next() {
+    @Retries.RetryTranslated
+    public T next() {
       try {
         return scanOp.retry(
             "Scan Dynamo",
