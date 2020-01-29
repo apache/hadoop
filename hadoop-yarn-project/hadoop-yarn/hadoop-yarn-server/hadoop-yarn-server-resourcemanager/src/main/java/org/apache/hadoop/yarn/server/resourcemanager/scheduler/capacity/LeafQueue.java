@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
@@ -131,10 +130,6 @@ public class LeafQueue extends AbstractCSQueue {
 
   List<AppPriorityACLGroup> priorityAcls =
       new ArrayList<AppPriorityACLGroup>();
-
-  // -1 indicates lifetime is disabled
-  private volatile long maxApplicationLifetime = -1;
-  private volatile long defaultApplicationLifetime = -1;
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public LeafQueue(CapacitySchedulerContext cs,
@@ -261,19 +256,6 @@ public class LeafQueue extends AbstractCSQueue {
       defaultAppPriorityPerQueue = Priority.newInstance(
           conf.getDefaultApplicationPriorityConfPerQueue(getQueuePath()));
 
-      maxApplicationLifetime =
-          conf.getMaximumLifetimePerQueue((getQueuePath()));
-      defaultApplicationLifetime =
-          conf.getDefaultLifetimePerQueue((getQueuePath()));
-      if (maxApplicationLifetime > 0 &&
-          defaultApplicationLifetime > maxApplicationLifetime) {
-        throw new YarnRuntimeException(
-            "Default lifetime" + defaultApplicationLifetime
-                + " can't exceed maximum lifetime " + maxApplicationLifetime);
-      }
-      defaultApplicationLifetime = defaultApplicationLifetime > 0
-          ? defaultApplicationLifetime : maxApplicationLifetime;
-
       // Validate leaf queue's user's weights.
       int queueUL = Math.min(100, conf.getUserLimit(getQueuePath()));
       for (Entry<String, Float> e : getUserWeights().entrySet()) {
@@ -334,9 +316,9 @@ public class LeafQueue extends AbstractCSQueue {
               + reservationsContinueLooking + "\n" + "preemptionDisabled = "
               + getPreemptionDisabled() + "\n" + "defaultAppPriorityPerQueue = "
               + defaultAppPriorityPerQueue + "\npriority = " + priority
-              + "\nmaxLifetime = " + maxApplicationLifetime + " seconds"
-              + "\ndefaultLifetime = "
-              + defaultApplicationLifetime + " seconds");
+              + "\nmaxLifetime = " + getMaximumApplicationLifetime()
+              + " seconds" + "\ndefaultLifetime = "
+              + getDefaultApplicationLifetime() + " seconds");
     } finally {
       writeLock.unlock();
     }
@@ -2214,13 +2196,5 @@ public class LeafQueue extends AbstractCSQueue {
     CachedUserLimit(Resource userLimit) {
       this.userLimit = userLimit;
     }
-  }
-
-  public long getMaximumApplicationLifetime() {
-    return maxApplicationLifetime;
-  }
-
-  public long getDefaultApplicationLifetime() {
-    return defaultApplicationLifetime;
   }
 }
