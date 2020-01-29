@@ -21,7 +21,7 @@ STEP 1: Copy all configuration files (under sample-conf) to $HADOOP_ROOT/etc/had
 STEP 2: Go to the $HADOOP_ROOT/share/hadoop/tools/sls directory, and run the simulator 
 using the sample rumen trace (under sample-data).
 
-bin/slsrun.sh —-input-rumen=sample-data/2jobs2min-rumen-jh.json —-output-dir=sample-output
+bin/slsrun.sh --input-rumen=sample-data/2jobs2min-rumen-jh.json --output-dir=sample-output
 
 The simulator will start to run, and you can track the running progress 
 using its web portal (http://$HOST:10001/simulate, where $HOST is the place 
