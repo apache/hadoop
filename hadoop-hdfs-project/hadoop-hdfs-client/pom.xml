@@ -163,6 +163,12 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
               <skip>false</skip>
             </configuration>
           </execution>
+          <execution>
+            <id>replace-test-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>

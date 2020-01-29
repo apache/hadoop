@@ -68,6 +68,12 @@
               <skip>false</skip>
             </configuration>
           </execution>
+          <execution>
+            <id>replace-test-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
