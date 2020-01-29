@@ -47,6 +47,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.impl.WrappedIOException;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -54,7 +55,6 @@ import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.scale.AbstractITestS3AMetadataStoreScale;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.DurationInfo;
 
@@ -180,17 +180,29 @@ public class ITestDynamoDBMetadataStoreScale
     if (ddbms != null) {
       S3GuardTableAccess tableAccess = new S3GuardTableAccess(ddbms);
       ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
+      final String path = "/test/";
       builder.withCondition(
-          ExpressionSpecBuilder.S(PARENT).beginsWith("/test/"));
-
-      Iterable<DDBPathMetadata> entries = tableAccess.scanMetadata(builder);
+          ExpressionSpecBuilder.S(PARENT).beginsWith(path));
+      Iterable<DDBPathMetadata> entries =
+          ddbms.wrapWithRetries(tableAccess.scanMetadata(builder));
       List<Path> list = new ArrayList<>();
-      entries.iterator().forEachRemaining(e -> {
-        Path p = e.getFileStatus().getPath();
-        LOG.info("Deleting {}", p);
-        list.add(p);
-      });
-      tableAccess.delete(list);
+      try {
+        entries.iterator().forEachRemaining(e -> {
+          Path p = e.getFileStatus().getPath();
+          LOG.info("Deleting {}", p);
+          list.add(p);
+        });
+      } catch (WrappedIOException e) {
+        // the iterator may have overloaded; swallow if so.
+        if (!(e.getCause() instanceof AWSServiceThrottledException)) {
+          throw e;
+        }
+      }
+      ddbms.getWriteOperationInvoker()
+          .retry("delete",
+              path,
+              true,
+              () -> tableAccess.delete(list));
     }
     IOUtils.cleanupWithLogger(LOG, ddbms);
     super.teardown();
@@ -198,6 +210,25 @@ public class ITestDynamoDBMetadataStoreScale
 
   private boolean expectThrottling() {
     return !isOverProvisionedForTest && !isOnDemandTable;
+  }
+
+  /**
+   * The subclass expects the superclass to be throttled; sometimes it is.
+   */
+  @Test
+  @Override
+  public void test_010_Put() throws Throwable {
+    ThrottleTracker tracker = new ThrottleTracker(ddbms);
+    try {
+      // if this doesn't throttle, all is well.
+      super.test_010_Put();
+    } catch (AWSServiceThrottledException ex) {
+      // if the service was throttled, all is good.
+      // log and continue
+      LOG.warn("DDB connection was throttled", ex);
+    } finally {
+      LOG.info("Statistics {}", tracker);
+    }
   }
 
   /**
@@ -284,8 +315,7 @@ public class ITestDynamoDBMetadataStoreScale
             }
           });
       if (expectThrottling()) {
-        assertNotEquals("No batch retries in " + result,
-            0, result.getBatchThrottles());
+        result.assertThrottlingDetected();
       }
     } finally {
       describe("Cleaning up table %s", tableName);
