@@ -1234,7 +1234,6 @@ public final class S3AUtils {
     initConnectionSettings(conf, awsConf);
     initProxySupport(conf, bucket, awsConf);
     initUserAgent(conf, awsConf);
-    awsConf.setUseThrottleRetries(false);
     if (StringUtils.isNotEmpty(awsServiceIdentifier)) {
       String configKey = null;
       switch (awsServiceIdentifier) {

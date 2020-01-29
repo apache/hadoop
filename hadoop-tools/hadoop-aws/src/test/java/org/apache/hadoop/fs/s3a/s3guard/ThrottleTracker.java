@@ -42,11 +42,15 @@ class ThrottleTracker {
 
   private long batchWriteThrottleCountOrig = 0;
 
+  private long scanThrottleCountOrig;
+
   private long readThrottles;
 
   private long writeThrottles;
 
   private long batchThrottles;
+
+  private long scanThrottles;
 
   ThrottleTracker(final DynamoDBMetadataStore ddbms) {
     this.ddbms = ddbms;
@@ -65,6 +69,9 @@ class ThrottleTracker {
 
     batchWriteThrottleCountOrig
         = ddbms.getBatchWriteCapacityExceededCount();
+
+    scanThrottleCountOrig
+        = ddbms.getScanThrottleEventCount();
   }
 
   /**
@@ -78,6 +85,8 @@ class ThrottleTracker {
         - writeThrottleEventOrig);
     setBatchThrottles(ddbms.getBatchWriteCapacityExceededCount()
         - batchWriteThrottleCountOrig);
+    setScanThrottles(ddbms.getScanThrottleEventCount()
+        - scanThrottleCountOrig);
     return isThrottlingDetected();
   }
 
@@ -85,9 +94,11 @@ class ThrottleTracker {
   public String toString() {
     return String.format(
         "Tracker with read throttle events = %d;"
-            + " write events = %d;"
-            + " batch throttles = %d",
-        getReadThrottles(), getWriteThrottles(), getBatchThrottles());
+            + " write throttles = %d;"
+            + " batch throttles = %d;"
+            + " scan throttles = %d",
+        getReadThrottles(), getWriteThrottles(), getBatchThrottles(),
+        getScanThrottles());
   }
 
   /**
@@ -101,11 +112,13 @@ class ThrottleTracker {
 
   /**
    * Has there been any throttling on an operation?
-   * @return true iff read, write or batch operations were throttled.
+   * @return true if any operations were throttled.
    */
   public boolean isThrottlingDetected() {
-    return getReadThrottles() > 0 || getWriteThrottles()
-        > 0 || getBatchThrottles() > 0;
+    return getReadThrottles() > 0
+        || getWriteThrottles() > 0
+        || getBatchThrottles() > 0
+        || getScanThrottles() > 0;
   }
 
   public long getReadThrottles() {
@@ -130,5 +143,13 @@ class ThrottleTracker {
 
   public void setBatchThrottles(long batchThrottles) {
     this.batchThrottles = batchThrottles;
+  }
+
+  public long getScanThrottles() {
+    return scanThrottles;
+  }
+
+  public void setScanThrottles(final long scanThrottles) {
+    this.scanThrottles = scanThrottles;
   }
 }

@@ -57,6 +57,11 @@ public class DefaultS3ClientFactory extends Configured
     Configuration conf = getConf();
     final ClientConfiguration awsConf = S3AUtils
         .createAwsConf(getConf(), bucket, Constants.AWS_SERVICE_IDENTIFIER_S3);
+
+    // throttling is explicitly disabled on the S3 client so that
+    // all failures are collected
+    awsConf.setUseThrottleRetries(false);
+
     if (!StringUtils.isEmpty(userAgentSuffix)) {
       awsConf.setUserAgentSuffix(userAgentSuffix);
     }
