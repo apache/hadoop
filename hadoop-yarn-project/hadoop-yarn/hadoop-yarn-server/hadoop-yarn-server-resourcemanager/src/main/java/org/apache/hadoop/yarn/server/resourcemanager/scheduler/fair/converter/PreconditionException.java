@@ -30,6 +30,10 @@ public class PreconditionException extends RuntimeException {
     super(message);
   }
 
+  public PreconditionException(String message, Throwable cause) {
+    super(message, cause);
+  }
+
   public PreconditionException(String message, MissingArgumentException ex) {
     super(message, ex);
   }

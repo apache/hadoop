@@ -34,6 +34,8 @@ class QueuePlacementConverter {
   private static final String PRIMARY_GROUP = "%primary_group";
   private static final String SECONDARY_GROUP = "%secondary_group";
 
+  private static final String RULE_SEPARATOR = ",";
+
   Map<String, String> convertPlacementPolicy(PlacementManager placementManager,
       FSConfigToCSConfigRuleHandler ruleHandler, boolean userAsDefaultQueue) {
     StringBuilder mapping = new StringBuilder();
@@ -59,7 +61,7 @@ class QueuePlacementConverter {
         } else {
           if (!userAsDefaultQueue) {
             if (mapping.length() > 0) {
-              mapping.append(";");
+              mapping.append(RULE_SEPARATOR);
             }
             mapping.append("u:" + USER + ":" + USER);
           }
@@ -72,18 +74,18 @@ class QueuePlacementConverter {
             "yarn.scheduler.capacity.queue-mappings-override.enable", "false");
       } else if (rule instanceof PrimaryGroupPlacementRule) {
         if (mapping.length() > 0) {
-          mapping.append(";");
+          mapping.append(RULE_SEPARATOR);
         }
         mapping.append("u:" + USER + ":" + PRIMARY_GROUP);
       } else if (rule instanceof DefaultPlacementRule) {
         DefaultPlacementRule defaultRule = (DefaultPlacementRule) rule;
         if (mapping.length() > 0) {
-          mapping.append(";");
+          mapping.append(RULE_SEPARATOR);
         }
         mapping.append("u:" + USER + ":").append(defaultRule.defaultQueueName);
       } else if (rule instanceof SecondaryGroupExistingPlacementRule) {
         if (mapping.length() > 0) {
-          mapping.append(";");
+          mapping.append(RULE_SEPARATOR);
         }
         mapping.append("u:" + USER + ":" + SECONDARY_GROUP);
       } else if (!(rule instanceof RejectPlacementRule)) {
@@ -103,7 +105,7 @@ class QueuePlacementConverter {
       UserPlacementRule userRule) {
     PlacementRule pr = userRule.getParentRule();
     if (mapping.length() > 0) {
-      mapping.append(";");
+      mapping.append(RULE_SEPARATOR);
     }
     if (pr instanceof PrimaryGroupPlacementRule) {
       mapping.append("u:" + USER + ":" + PRIMARY_GROUP + "." + USER);
