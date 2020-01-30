@@ -224,7 +224,7 @@ public class TestQueuePlacementConverter {
     Map<String, String> properties = convert(false);
 
     verifyMapping(properties,
-        "u:%user:%user;u:%user:%primary_group;u:%user:%secondary_group");
+        "u:%user:%user,u:%user:%primary_group,u:%user:%secondary_group");
     verifyZeroInteractions(ruleHandler);
   }
 

@@ -334,7 +334,6 @@ public class TestFSQueueConverter {
 
   @Test
   public void testQueueAutoCreateChildQueue() {
-    config.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS, true);
     converter = builder
         .withCapacitySchedulerConfig(csConfig)
         .withAutoCreateChildQueues(true)
@@ -343,6 +342,19 @@ public class TestFSQueueConverter {
     converter.convertQueueHierarchy(rootQueue);
 
     assertTrueForQueues(ALL_QUEUES, ".auto-create-child-queue.enabled",
+        csConfig);
+  }
+
+  @Test
+  public void testQueueWithNoAutoCreateChildQueue() {
+    converter = builder
+        .withCapacitySchedulerConfig(csConfig)
+        .withAutoCreateChildQueues(false)
+        .build();
+
+    converter.convertQueueHierarchy(rootQueue);
+
+    assertNoValueForQueues(ALL_QUEUES, ".auto-create-child-queue.enabled",
         csConfig);
   }
 

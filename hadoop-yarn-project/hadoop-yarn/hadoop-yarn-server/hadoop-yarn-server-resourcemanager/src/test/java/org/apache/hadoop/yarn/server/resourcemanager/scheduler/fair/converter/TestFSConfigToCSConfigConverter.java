@@ -27,6 +27,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.conve
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.USER_MAX_RUNNING_APPS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.RuleAction.ABORT;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -74,6 +75,9 @@ public class TestFSConfigToCSConfigConverter {
       prepareFileName("fair-scheduler-onlyfairpolicy.xml");
   private static final String FS_MIXED_POLICY_XML =
       prepareFileName("fair-scheduler-orderingpolicy-mixed.xml");
+  private static final String FS_NO_PLACEMENT_RULES_XML =
+      prepareFileName("fair-scheduler-noplacementrules.xml");
+
 
   @Mock
   private FSConfigToCSConfigRuleHandler ruleHandler;
@@ -502,6 +506,112 @@ public class TestFSConfigToCSConfigConverter {
     assertEquals("Resource calculator type", DominantResourceCalculator.class,
         convertedConfig.getClass(
             CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS, null));
+  }
+
+  @SuppressWarnings("checkstyle:linelength")
+  public void testUserAsDefaultQueueWithPlacementRules() throws Exception {
+    config = new Configuration(false);
+    config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
+    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+        FAIR_SCHEDULER_XML);
+
+    converter.convert(config);
+
+    Configuration convertedConf = getConvertedCSConfig();
+
+    String expectedMappingRules =
+        "u:%user:root.admins.devs.%user,u:%user:root.users.%user,u:%user:root.default";
+    String mappingRules =
+        convertedConf.get(CapacitySchedulerConfiguration.QUEUE_MAPPING);
+    assertEquals("Mapping rules", expectedMappingRules, mappingRules);
+  }
+
+  @Test
+  public void testUserAsDefaultQueueTrueWithoutPlacementRules()
+      throws Exception {
+    testUserAsDefaultQueueWithoutPlacementRules(true);
+  }
+
+  @Test
+  public void testUserAsDefaultQueueFalseWithoutPlacementRules()
+      throws Exception {
+    testUserAsDefaultQueueWithoutPlacementRules(false);
+  }
+
+  private void testUserAsDefaultQueueWithoutPlacementRules(boolean
+      userAsDefaultQueue) throws Exception {
+    config = new Configuration(false);
+    config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
+    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+        FS_NO_PLACEMENT_RULES_XML);
+    config.setBoolean(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE,
+        userAsDefaultQueue);
+
+    converter.convert(config);
+
+    Configuration convertedConf = getConvertedCSConfig();
+    String mappingRules =
+        convertedConf.get(CapacitySchedulerConfiguration.QUEUE_MAPPING);
+
+    if (userAsDefaultQueue) {
+      assertEquals("Mapping rules", "u:%user:%user", mappingRules);
+    } else {
+      assertEquals("Mapping rules", "u:%user:root.default", mappingRules);
+    }
+  }
+
+  @Test
+  public void testAutoCreateChildQueuesWithPlacementRules() throws Exception {
+    config = new Configuration(false);
+    config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
+    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+        FAIR_SCHEDULER_XML);
+    config.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS,
+        true);
+
+    converter.convert(config);
+
+    Configuration convertedConf = getConvertedCSConfig();
+    String property =
+        "yarn.scheduler.capacity.root.auto-create-child-queue.enabled";
+    assertNull("Auto-create queue shouldn't be set",
+        convertedConf.get(property));
+  }
+
+  @Test
+  public void testAutoCreateChildQueuesTrueWithoutPlacementRules()
+      throws Exception {
+    testAutoCreateChildQueuesWithoutPlacementRules(true);
+  }
+
+  @Test
+  public void testAutoCreateChildQueuesFalseWithoutPlacementRules()
+      throws Exception {
+    testAutoCreateChildQueuesWithoutPlacementRules(false);
+  }
+
+  private void testAutoCreateChildQueuesWithoutPlacementRules(
+      boolean allowUndeclaredPools) throws Exception {
+    config = new Configuration(false);
+    config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
+    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+        FS_NO_PLACEMENT_RULES_XML);
+    config.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS,
+        allowUndeclaredPools);
+
+    converter.convert(config);
+
+    Configuration convertedConf = getConvertedCSConfig();
+    String property =
+        "yarn.scheduler.capacity.root.auto-create-child-queue.enabled";
+
+    if (allowUndeclaredPools) {
+      assertEquals("Auto-create queue wasn't enabled", true,
+          convertedConf.getBoolean(property, false));
+    } else {
+      assertNull("Auto-create queue shouldn't be set",
+          convertedConf.get(property));
+    }
   }
 
   private Configuration getConvertedCSConfig() {
