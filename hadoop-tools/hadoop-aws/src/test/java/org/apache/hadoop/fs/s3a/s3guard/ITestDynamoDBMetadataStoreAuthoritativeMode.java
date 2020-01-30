@@ -21,7 +21,9 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -300,6 +302,90 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
     expectAuthRecursive(dir);
     // Next list will not go to s3
     assertListDoesNotUpdateAuth(dir);
+  }
+
+  @Test
+  public void testListFilesRecursiveWhenAllListingsAreAuthoritative()
+      throws Exception {
+    describe("listFiles does not make further calls to the fs when"
+        + "all nested directory listings are authoritative");
+    Set<Path> originalFiles = new HashSet<>();
+
+    Path parentDir = dir;
+    Path parentFile = dirFile;
+    Path nestedDir1 = new Path(dir, "nested1");
+    Path nestedFile1 = new Path(nestedDir1, "nestedFile1");
+    Path nestedDir2 = new Path(nestedDir1, "nested2/");
+    Path nestedFile2 = new Path(nestedDir2, "nestedFile2");
+
+    originalFiles.add(parentFile);
+    originalFiles.add(nestedFile1);
+    originalFiles.add(nestedFile2);
+
+    mkAuthDir(parentDir);
+    mkAuthDir(nestedDir1);
+    mkAuthDir(nestedDir2);
+    touchFile(parentFile);
+    touchFile(nestedFile1);
+    touchFile(nestedFile2);
+
+    S3ATestUtils.MetricDiff objListRequests =
+        new S3ATestUtils.MetricDiff(authFS, OBJECT_LIST_REQUESTS);
+
+    RemoteIterator<LocatedFileStatus> statusIterator =
+        authFS.listFiles(dir, true);
+
+    List<Path> pathsFromStatusIterator = toPaths(statusIterator);
+
+    Assertions.assertThat(pathsFromStatusIterator)
+        .as("listFiles should return all the items in actual"
+            + "S3 directory and nothing more")
+        .hasSameElementsAs(originalFiles)
+        .hasSameSizeAs(originalFiles);
+
+    objListRequests.assertDiffEquals("There must not be any OBJECT_LIST "
+        + "requests as all directory listings are authoritative", 0);
+  }
+
+  @Test
+  public void testListFilesRecursiveWhenSomePathsAreNotAuthoritative()
+      throws Exception {
+    describe("listFiles correctly constructs recursive listing"
+        + "when authoritative and non-authoritative paths are mixed");
+    List<Path> originalFiles = new ArrayList<>();
+    Path parentDir = dir;
+    Path parentFile = dirFile;
+    Path nestedDir1 = new Path(dir, "nested1");
+    Path nestedFile1 = new Path(nestedDir1, "nestedFile1");
+    Path nestedDir2 = new Path(nestedDir1, "nested2/");
+    Path nestedFile2 = new Path(nestedDir2, "nestedFile2");
+
+    originalFiles.add(parentFile);
+    originalFiles.add(nestedFile1);
+    originalFiles.add(nestedFile2);
+
+    mkAuthDir(parentDir);
+    mkNonauthDir(nestedDir1);
+    mkAuthDir(nestedDir2);
+    touchFile(parentFile);
+    touchFile(nestedFile1);
+    touchFile(nestedFile2);
+
+    S3ATestUtils.MetricDiff objListRequests =
+        new S3ATestUtils.MetricDiff(authFS, OBJECT_LIST_REQUESTS);
+
+    RemoteIterator<LocatedFileStatus> statusIterator =
+        authFS.listFiles(dir, true);
+
+    List<Path> pathsFromStatusIterator = toPaths(statusIterator);
+
+    Assertions.assertThat(pathsFromStatusIterator)
+        .as("listFiles should return all the items in actual"
+            + "S3 directory and nothing more")
+        .hasSameElementsAs(originalFiles)
+        .hasSameSizeAs(originalFiles);
+    objListRequests.assertDiffEquals("Only 1 OBJECT_LIST call is expected"
+        + "as a nested directory listing is not authoritative", 1);
   }
 
   @Test
@@ -704,6 +790,24 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
     final T call = fn.call();
     writeDiff.assertDiffEquals(writes);
     return call;
+  }
+
+  /**
+   * Creates a Path array from all items retrieved from
+   * {@link RemoteIterator<LocatedFileStatus>}.
+   *
+   * @param remoteIterator iterator
+   * @return a list of Paths
+   * @throws IOException
+   */
+  private List<Path> toPaths(RemoteIterator<LocatedFileStatus> remoteIterator)
+      throws IOException {
+    List<Path> list = new ArrayList<>();
+    while (remoteIterator.hasNext()) {
+      LocatedFileStatus fileStatus = remoteIterator.next();
+      list.add(fileStatus.getPath());
+    }
+    return list;
   }
 
   /**
