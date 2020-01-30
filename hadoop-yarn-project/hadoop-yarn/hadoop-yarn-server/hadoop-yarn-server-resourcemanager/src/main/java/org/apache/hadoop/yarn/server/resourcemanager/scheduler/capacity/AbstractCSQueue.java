@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.QueueStatistics;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AccessRequest;
@@ -104,6 +105,15 @@ public abstract class AbstractCSQueue implements CSQueue {
   // Track capacities like used-capcity/abs-used-capacity/capacity/abs-capacity,
   // etc.
   QueueCapacities queueCapacities;
+
+  // -1 indicates lifetime is disabled
+  private volatile long maxApplicationLifetime = -1;
+
+  private volatile long defaultApplicationLifetime = -1;
+
+  // Indicates if this queue's default lifetime was set by a config property,
+  // either at this level or anywhere in the queue's hierarchy.
+  private volatile boolean defaultAppLifetimeWasSpecifiedInConfig = false;
 
   private final RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
@@ -349,6 +359,20 @@ public abstract class AbstractCSQueue implements CSQueue {
           getQueuePath());
 
       this.userWeights = getUserWeightsFromHierarchy();
+
+      maxApplicationLifetime =
+          getInheritedMaxAppLifetime(this, csContext.getConfiguration());
+      defaultApplicationLifetime =
+          getInheritedDefaultAppLifetime(this, csContext.getConfiguration(),
+              maxApplicationLifetime);
+      if (maxApplicationLifetime > 0 &&
+          defaultApplicationLifetime > maxApplicationLifetime) {
+        throw new YarnRuntimeException(
+            "Default lifetime " + defaultApplicationLifetime
+                + " can't exceed maximum lifetime " + maxApplicationLifetime);
+      }
+      defaultApplicationLifetime = defaultApplicationLifetime > 0
+          ? defaultApplicationLifetime : maxApplicationLifetime;
     } finally {
       writeLock.unlock();
     }
@@ -609,6 +633,68 @@ public abstract class AbstractCSQueue implements CSQueue {
     // this level.
     return csConf.getPreemptionDisabled(q.getQueuePath(),
                                         parentQ.getPreemptionDisabled());
+  }
+
+  private long getInheritedMaxAppLifetime(CSQueue q,
+      CapacitySchedulerConfiguration conf) {
+    CSQueue parentQ = q.getParent();
+    long maxAppLifetime = conf.getMaximumLifetimePerQueue(q.getQueuePath());
+
+    // If q is the root queue, then get max app lifetime from conf.
+    if (parentQ == null) {
+      return maxAppLifetime;
+    }
+
+    // If this is not the root queue, get this queue's max app lifetime
+    // from the conf. The parent's max app lifetime will be used if it's
+    // not set for this queue.
+    // A value of 0 will override the parent's value and means no max lifetime.
+    // A negative value means that the parent's max should be used.
+    long parentsMaxAppLifetime = getParent().getMaximumApplicationLifetime();
+    return (maxAppLifetime >= 0) ? maxAppLifetime : parentsMaxAppLifetime;
+  }
+
+  private long getInheritedDefaultAppLifetime(CSQueue q,
+      CapacitySchedulerConfiguration conf, long myMaxAppLifetime) {
+    CSQueue parentQ = q.getParent();
+    long defaultAppLifetime = conf.getDefaultLifetimePerQueue(getQueuePath());
+    defaultAppLifetimeWasSpecifiedInConfig =
+        (defaultAppLifetime >= 0
+        || (parentQ != null &&
+            parentQ.getDefaultAppLifetimeWasSpecifiedInConfig()));
+
+    // If q is the root queue, then get default app lifetime from conf.
+    if (parentQ == null) {
+      return defaultAppLifetime;
+    }
+
+    // If this is not the root queue, get the parent's default app lifetime. The
+    // parent's default app lifetime will be used if not set for this queue.
+    long parentsDefaultAppLifetime =
+        getParent().getDefaultApplicationLifetime();
+
+    // Negative value indicates default lifetime was not set at this level.
+    // If default lifetime was not set at this level, calculate it based on
+    // parent's default lifetime or current queue's max lifetime.
+    if (defaultAppLifetime < 0) {
+      // If default lifetime was not set at this level but was set somewhere in
+      // the parent's hierarchy, set default lifetime to parent queue's default
+      // only if parent queue's lifetime is less than current queueu's max
+      // lifetime. Otherwise, use current queue's max lifetime value for its
+      // default lifetime.
+      if (defaultAppLifetimeWasSpecifiedInConfig) {
+        if (parentsDefaultAppLifetime <= myMaxAppLifetime) {
+          defaultAppLifetime = parentsDefaultAppLifetime;
+        } else {
+          defaultAppLifetime = myMaxAppLifetime;
+        }
+      } else {
+        // Default app lifetime value was not set anywhere in this queue's
+        // hierarchy. Use current queue's max lifetime as its default.
+        defaultAppLifetime = myMaxAppLifetime;
+      }
+    } // else if >= 0, default lifetime was set at this level. Just use it.
+    return defaultAppLifetime;
   }
 
   /**
@@ -1045,5 +1131,17 @@ public abstract class AbstractCSQueue implements CSQueue {
   @Override
   public Map<String, Float> getUserWeights() {
     return userWeights;
+  }
+
+  public long getMaximumApplicationLifetime() {
+    return maxApplicationLifetime;
+  }
+
+  public long getDefaultApplicationLifetime() {
+    return defaultApplicationLifetime;
+  }
+
+  public boolean getDefaultAppLifetimeWasSpecifiedInConfig() {
+    return defaultAppLifetimeWasSpecifiedInConfig;
   }
 }
