@@ -271,11 +271,12 @@ public class FileIoProvider {
   public void transferToSocketFully(
       @Nullable FsVolumeSpi volume, SocketOutputStream sockOut,
       FileChannel fileCh, long position, int count,
-      LongWritable waitTime, LongWritable transferTime) throws IOException {
+      LongWritable waitTime, LongWritable transferTime,
+      FileInputStream fileInputStream) throws IOException {
     final long begin = profilingEventHook.beforeFileIo(volume, TRANSFER, count);
     try {
       faultInjectorEventHook.beforeFileIo(volume, TRANSFER, count);
-      sockOut.transferToFully(fileCh, position, count,
+      sockOut.transferToFully(fileInputStream, fileCh, position, count,
           waitTime, transferTime);
       profilingEventHook.afterFileIo(volume, TRANSFER, begin, count);
     } catch (Exception e) {

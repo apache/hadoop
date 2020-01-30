@@ -27,6 +27,7 @@ import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -48,6 +49,9 @@ import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_NATIVEIO_TRANSMITFILE_WINDOWS_ENABLE;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_NATIVEIO_TRANSMITFILE_WINDOWS_ENABLE_DEFAULT;
 
 /**
  * JNI wrappers for various native IO-related calls not available in Java.
@@ -330,21 +334,10 @@ public class NativeIO {
     static {
       if (NativeCodeLoader.isNativeCodeLoaded()) {
         try {
-          Configuration conf = new Configuration();
-          workaroundNonThreadSafePasswdCalls = conf.getBoolean(
-            WORKAROUND_NON_THREADSAFE_CALLS_KEY,
-            WORKAROUND_NON_THREADSAFE_CALLS_DEFAULT);
-
           initNative();
           nativeLoaded = true;
 
-          cacheTimeout = conf.getLong(
-            CommonConfigurationKeys.HADOOP_SECURITY_UID_NAME_CACHE_TIMEOUT_KEY,
-            CommonConfigurationKeys.HADOOP_SECURITY_UID_NAME_CACHE_TIMEOUT_DEFAULT) *
-            1000;
-          LOG.debug("Initialized cache for IDs to User/Group mapping with a " +
-            " cache timeout of " + cacheTimeout/1000 + " seconds.");
-
+          setConf(new Configuration());
         } catch (Throwable t) {
           // This can happen if the user has an older version of libhadoop.so
           // installed - in this case we can continue without native IO
@@ -352,6 +345,19 @@ public class NativeIO {
           PerformanceAdvisory.LOG.debug("Unable to initialize NativeIO libraries", t);
         }
       }
+    }
+
+    public static void setConf(Configuration conf) {
+      workaroundNonThreadSafePasswdCalls = conf.getBoolean(
+          WORKAROUND_NON_THREADSAFE_CALLS_KEY,
+          WORKAROUND_NON_THREADSAFE_CALLS_DEFAULT);
+
+      cacheTimeout = conf.getLong(
+          CommonConfigurationKeys.HADOOP_SECURITY_UID_NAME_CACHE_TIMEOUT_KEY,
+          CommonConfigurationKeys.HADOOP_SECURITY_UID_NAME_CACHE_TIMEOUT_DEFAULT) *
+          1000;
+      LOG.debug("Initialized cache for IDs to User/Group mapping with a " +
+          " cache timeout of " + cacheTimeout/1000 + " seconds.");
     }
 
     /**
@@ -693,6 +699,12 @@ public class NativeIO {
     public static final long FILE_ATTRIBUTE_NORMAL = 0x00000080L;
 
     /**
+     * Controls whether TransmitFile is used for sending file data
+     * over sockets.
+     */
+    private static boolean transmitFileEnabled = false;
+
+    /**
      * Create a directory with permissions set to the specified mode.  By setting
      * permissions at creation time, we avoid issues related to the user lacking
      * WRITE_DAC rights on subsequent chmod calls.  One example where this can
@@ -806,11 +818,29 @@ public class NativeIO {
      */
     public static native void extendWorkingSetSize(long delta) throws IOException;
 
+    /**
+     * Calls the Windows TransmitFile method for transferring file data over
+     * sockets.
+     * https://docs.microsoft.com/en-us/windows/win32/api/mswsock/nf-mswsock-transmitfile
+     * @param src file descriptor of a file that's to be transmitted
+     * @param position position in the src file to start the transfer from
+     * @param count number of bytes to write to the destination socket
+     * @param dst descriptor of a connected socket to transfer the data to
+     * @return number of bytes transmitted from src to dst
+     * @throws IOException with the winsock error code, check the documentation
+     *                     for details
+     */
+    private static native long transmitFile(
+        FileDescriptor src, long position, long count, FileDescriptor dst)
+        throws IOException;
+
     static {
       if (NativeCodeLoader.isNativeCodeLoaded()) {
         try {
           initNative();
           nativeLoaded = true;
+
+          setConf(new Configuration());
         } catch (Throwable t) {
           // This can happen if the user has an older version of libhadoop.so
           // installed - in this case we can continue without native IO
@@ -818,6 +848,12 @@ public class NativeIO {
           PerformanceAdvisory.LOG.debug("Unable to initialize NativeIO libraries", t);
         }
       }
+    }
+
+    public static void setConf(Configuration conf) {
+      transmitFileEnabled = conf.getBoolean(
+          HADOOP_NATIVEIO_TRANSMITFILE_WINDOWS_ENABLE,
+          HADOOP_NATIVEIO_TRANSMITFILE_WINDOWS_ENABLE_DEFAULT);
     }
   }
 
@@ -837,6 +873,15 @@ public class NativeIO {
         PerformanceAdvisory.LOG.debug("Unable to initialize NativeIO libraries", t);
       }
     }
+  }
+
+  /**
+   * Set the configuration to be used by this object.
+   * @param conf configuration to be used
+   */
+  public static void setConf(Configuration conf) {
+    POSIX.setConf(conf);
+    Windows.setConf(conf);
   }
 
   /**
@@ -1132,4 +1177,34 @@ public class NativeIO {
 
   private static native void copyFileUnbuffered0(String src, String dst)
       throws NativeIOException;
+
+  /**
+   * Transfers data from the provided source file to the destination
+   * socket, returns the number of bytes transferred.
+   *
+   * @param fileCh FileChannel to transfer the data from
+   * @param inputFD file descriptor of the file to read from
+   * @param targetCh target channel to transfer the data to
+   * @param position position in the src file to start the transfer from
+   * @param count number of bytes to write to the destination socket
+   * @return number of bytes transferred from the source to destination
+   * @throws IOException if any issue is encountered during transfer
+   */
+  public static long transferTo(
+      FileChannel fileCh, FileDescriptor inputFD, WritableByteChannel targetCh,
+      FileDescriptor targetFD, long position, int count)
+      throws IOException {
+    long nTransfered;
+
+    if (Shell.WINDOWS && Windows.transmitFileEnabled) {
+      if (position + count > fileCh.size()) {
+        count = (int) (fileCh.size() - position);
+      }
+      nTransfered = Windows.transmitFile(inputFD, position, count, targetFD);
+    } else {
+      nTransfered = fileCh.transferTo(position, count, targetCh);
+    }
+
+    return nTransfered;
+  }
 }
