@@ -29,7 +29,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -811,6 +810,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public DirListingMetadata listChildren(final Path path) throws IOException {
     checkPath(path);
     LOG.debug("Listing table {} in region {}: {}", tableName, region, path);
+
     final QuerySpec spec = new QuerySpec()
         .withHashKey(pathToParentKeyAttribute(path))
         .withConsistentRead(true); // strictly consistent read
@@ -822,9 +822,15 @@ public class DynamoDBMetadataStore implements MetadataStore,
         true,
         () -> table.query(spec));
     // now wrap the result with retry logic
-    for (Item item : wrapWithRetries(items)) {
-      metas.add(itemToPathMetadata(item, username));
+    try {
+      for (Item item : wrapWithRetries(items)) {
+        metas.add(itemToPathMetadata(item, username));
+      }
+    } catch (WrappedIOException e) {
+      // failure in the iterators; unwrap.
+      throw e.getCause();
     }
+
     // Minor race condition here - if the path is deleted between
     // getting the list of items and the directory metadata we might
     // get a null in DDBPathMetadata.
@@ -2072,6 +2078,26 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
+   * Get the operation invoker for write operations.
+   * @return an invoker for retrying mutating operations on a store.
+   */
+  public Invoker getWriteOperationInvoker() {
+    return writeOp;
+  }
+
+  /**
+   * Wrap an iterator returned from any scan with a retrying one.
+   * This includes throttle handling.
+   * Retries will update the relevant counters/metrics for scan operations.
+   * @param source source iterator
+   * @return a retrying iterator.
+   */
+  public <T> Iterable<T> wrapWithRetries(
+      final Iterable<T> source) {
+    return new RetryingCollection<>(scanOp, source);
+  }
+
+  /**
    * Record the number of records written.
    * @param count count of records.
    */
@@ -2488,111 +2514,4 @@ public class DynamoDBMetadataStore implements MetadataStore,
     Preconditions.checkNotNull(tableHandler, "Not initialized");
     return tableHandler;
   }
-
-  /**
-   * Get the operation invoker for write operations.
-   * @return an invoker for retrying mutating operations on a store.
-   */
-  Invoker getWriteOperationInvoker() {
-    return writeOp;
-  }
-
-  /**
-   * Wrap an iterator returned from any scan with a retrying one.
-   * This includes throttle handling.
-   * @param source source iterator
-   * @return a retrying iterator.
-   */
-  <T> Iterator<T> wrapWithRetries(
-      final Iterator<T> source) {
-    return new RetryingIterator<>(source);
-  }
-
-  /**
-   * Wrap an iterator returned from any scan with a retrying one.
-   * This includes throttle handling.
-   * @param source source iterator
-   * @return a retrying iterator.
-   */
-  <T> Iterable<T> wrapWithRetries(
-      final Iterable<T> source) {
-    return new RetryingCollection<>(source);
-  }
-
-  /**
-   * A collection which wraps the result of a query or scan
-   * with retries; the {@link #scanThrottleEvents} count is
-   * then updated.
-   * Important: iterate through this only once; the outcome
-   * of repeating an iteration is "undefined"
-   * @param <T> type of outcome.
-   */
-  private final class RetryingCollection<T>
-      implements Iterable<T> {
-
-    private final Iterable<T> source;
-
-    private RetryingCollection(
-        final Iterable<T> source) {
-      this.source = source;
-    }
-
-
-    @Override
-    public Iterator<T> iterator() {
-      return wrapWithRetries(source.iterator());
-    }
-  }
-
-  /**
-   * An iterator which wraps a non-retrying iterator of scan results
-   * (i.e {@code S3GuardTableAccess.DDBPathMetadataIterator}.
-   */
-  private final class RetryingIterator<T> implements
-      Iterator<T> {
-
-    private final Iterator<T> source;
-
-    private RetryingIterator(
-        final Iterator<T> source) {
-      this.source = source;
-    }
-
-    /**
-     * {@inheritDoc}.
-     * @throws WrappedIOException for IO failure, including throttling.
-     */
-    @Override
-    @Retries.RetryTranslated
-    public boolean hasNext() {
-      try {
-        return scanOp.retry(
-            "Scan Dynamo",
-            null,
-            true,
-            source::hasNext);
-      } catch (IOException e) {
-        throw new WrappedIOException(e);
-      }
-    }
-
-    /**
-     * {@inheritDoc}.
-     * @throws WrappedIOException for IO failure, including throttling.
-     */
-    @Override
-    @Retries.RetryTranslated
-    public T next() {
-      try {
-        return scanOp.retry(
-            "Scan Dynamo",
-            null,
-            true,
-            source::next);
-      } catch (IOException e) {
-        throw new WrappedIOException(e);
-      }
-    }
-  }
-
 }

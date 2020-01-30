@@ -1706,13 +1706,12 @@
 
 <property>
   <name>fs.s3a.retry.throttle.interval</name>
-  <value>5000s</value>
+  <value>500ms</value>
   <description>
     Initial between retry attempts on throttled requests, +/- 50%. chosen at random.
     i.e. for an intial value of 3000ms, the initial delay would be in the range 1500ms to 4500ms.
     Backoffs are exponential; again randomness is used to avoid the thundering heard problem.
-    Given that throttling in S3 is per-second, very short delays will not initial spread
-    out work and so continue to create the problem.
+    500ms is the default value used by the AWS S3 Retry policy.
   </description>
 </property>
 

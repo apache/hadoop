@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Something to track throttles in DynamoDB metastores.
@@ -34,13 +35,15 @@ import org.junit.Assert;
  */
 class ThrottleTracker {
 
+  private static final Logger LOG = LoggerFactory.getLogger(
+      ThrottleTracker.class);
   private final DynamoDBMetadataStore ddbms;
 
-  private long writeThrottleEventOrig = 0;
+  private long writeThrottleEventOrig;
 
-  private long readThrottleEventOrig = 0;
+  private long readThrottleEventOrig;
 
-  private long batchWriteThrottleCountOrig = 0;
+  private long batchWriteThrottleCountOrig;
 
   private long scanThrottleCountOrig;
 
@@ -102,12 +105,15 @@ class ThrottleTracker {
   }
 
   /**
-   * Assert that throttling has been detected.
+   * Check that throttling was detected; Warn if not.
+   * @return true if throttling took place.
    */
-  public void assertThrottlingDetected() {
-    Assert.assertTrue("No throttling detected in " + this +
-            " against " + ddbms.toString(),
-        isThrottlingDetected());
+  public boolean probeThrottlingDetected() {
+    if (!isThrottlingDetected()) {
+      LOG.warn("No throttling detected in {} against {}", this, ddbms.toString());
+      return false;
+    }
+    return true;
   }
 
   /**

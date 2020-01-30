@@ -172,11 +172,14 @@ public class PurgeS3GuardDynamoTable
             new DurationInfo(LOG,
                 "deleting %s entries from %s",
                 count, ddbms.toString());
-        ddbms.getWriteOperationInvoker()
-            .retry("delete",
-                prefix,
-                true,
-                () -> tableAccess.delete(list));
+        // sending this in one by one for more efficient retries
+        for (Path path: list) {
+          ddbms.getWriteOperationInvoker()
+              .retry("delete",
+                  prefix,
+                  true,
+                  () -> tableAccess.delete(path));
+        }
 
         duration.close();
         long durationMillis = duration.value();

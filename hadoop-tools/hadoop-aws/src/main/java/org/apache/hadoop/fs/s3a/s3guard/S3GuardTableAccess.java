@@ -45,6 +45,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.C
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.PARENT;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.TABLE_VERSION;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.itemToPathMetadata;
+import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.pathToKey;
 
 /**
  * Package-scoped accessor to table state in S3Guard.
@@ -143,6 +144,11 @@ class S3GuardTableAccess {
         .forEach(table::deleteItem);
   }
 
+  @Retries.OnceRaw
+  void delete(Path path) {
+    table.deleteItem(pathToKey(path));
+  }
+
   /**
    * A collection which wraps the result of a query or scan.
    * Important: iterate through this only once; the outcome
@@ -198,11 +204,13 @@ class S3GuardTableAccess {
     }
 
     @Override
+    @Retries.OnceRaw
     public boolean hasNext() {
       return it.hasNext();
     }
 
     @Override
+    @Retries.OnceRaw
     public DDBPathMetadata next() {
       Item item = it.next();
       Pair<String, String> key = primaryKey(item);

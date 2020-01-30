@@ -739,12 +739,12 @@ public final class Constants {
    * Interval between retry attempts on throttled requests: {@value}.
    */
   public static final String RETRY_THROTTLE_INTERVAL =
-      "fs.s3a.retry.throttle.interval";
+        "fs.s3a.retry.throttle.interval";
 
   /**
    * Default throttled retry interval: {@value}.
    */
-  public static final String RETRY_THROTTLE_INTERVAL_DEFAULT = "5000ms";
+  public static final String RETRY_THROTTLE_INTERVAL_DEFAULT = "500ms";
 
   /**
    * Should etags be exposed as checksums?
