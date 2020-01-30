@@ -3350,6 +3350,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         handleStartElement();
         break;
       case XMLStreamConstants.CHARACTERS:
+      case XMLStreamConstants.CDATA:
         if (parseToken) {
           char[] text = reader.getTextCharacters();
           token.append(text, reader.getTextStart(), reader.getTextLength());

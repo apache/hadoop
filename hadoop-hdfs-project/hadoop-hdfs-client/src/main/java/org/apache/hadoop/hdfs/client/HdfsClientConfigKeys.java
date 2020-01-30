@@ -191,6 +191,11 @@ public interface HdfsClientConfigKeys {
   long DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_SUSPECT_NODE_INTERVAL_MS_DEFAULT =
       300; // 300ms
 
+  // refreshing LocatedBlocks period. A value of 0 disables the feature.
+  String  DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_MS_KEY =
+      "dfs.client.refresh.read-block-locations.ms";
+  long DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_MS_DEFAULT = 0L;
+
   String  DFS_DATANODE_KERBEROS_PRINCIPAL_KEY =
       "dfs.datanode.kerberos.principal";
   String  DFS_DATANODE_READAHEAD_BYTES_KEY = "dfs.datanode.readahead.bytes";

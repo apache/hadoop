@@ -57,6 +57,8 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 
 /**
@@ -313,14 +315,40 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
     } catch (InterruptedException ie) {
       throw (IOException) new InterruptedIOException().initCause(ie);
     }
-    if (resp == null || resp.getStatusInfo()
-        .getStatusCode() != ClientResponse.Status.OK.getStatusCode()) {
-      String msg =
-          "Response from the timeline server is " + ((resp == null) ? "null"
-              : "not successful," + " HTTP error code: " + resp.getStatus()
-                  + ", Server response:\n" + resp.getEntity(String.class));
+
+    //Close ClientResponse's input stream as we are done posting objects.
+    //ClientResponse#getEntity closes the input stream upon failure in
+    //processing HTTP response.
+    if (resp == null) {
+      String msg = "Error getting HTTP response from the timeline server.";
       LOG.error(msg);
       throw new YarnException(msg);
+    } else if (resp.getStatusInfo().getStatusCode()
+            == ClientResponse.Status.OK.getStatusCode()) {
+      try {
+        resp.close();
+      } catch(ClientHandlerException che) {
+        LOG.warn("Error closing the HTTP response's inputstream. ", che);
+      }
+    } else {
+      String msg = "";
+      try {
+        String stringType = resp.getEntity(String.class);
+        msg = "Server response:\n" + stringType;
+      } catch (ClientHandlerException | UniformInterfaceException chuie) {
+        msg = "Error getting entity from the HTTP response."
+                + chuie.getLocalizedMessage();
+      } catch (Throwable t) {
+        msg = "Error getting entity from the HTTP response."
+                + t.getLocalizedMessage();
+      } finally {
+        msg = "Response from the timeline server is not successful"
+                  + ", HTTP error code: " + resp.getStatus()
+                  + ", "
+                  + msg;
+        LOG.error(msg);
+        throw new YarnException(msg);
+      }
     }
   }
 

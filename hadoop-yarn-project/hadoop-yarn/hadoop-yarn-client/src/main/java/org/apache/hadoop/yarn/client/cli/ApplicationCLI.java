@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.Times;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -545,9 +546,7 @@ public class ApplicationCLI extends YarnCLI {
       throw e;
     }
 
-    if (appReport.getYarnApplicationState() == YarnApplicationState.FINISHED
-        || appReport.getYarnApplicationState() == YarnApplicationState.KILLED
-        || appReport.getYarnApplicationState() == YarnApplicationState.FAILED) {
+    if (Apps.isApplicationFinalState(appReport.getYarnApplicationState())) {
       sysout.println("Application " + applicationId + " has already finished ");
     } else {
       sysout.println("Killing application " + applicationId);
@@ -562,9 +561,7 @@ public class ApplicationCLI extends YarnCLI {
       throws YarnException, IOException {
     ApplicationId appId = ApplicationId.fromString(applicationId);
     ApplicationReport appReport = client.getApplicationReport(appId);
-    if (appReport.getYarnApplicationState() == YarnApplicationState.FINISHED
-        || appReport.getYarnApplicationState() == YarnApplicationState.KILLED
-        || appReport.getYarnApplicationState() == YarnApplicationState.FAILED) {
+    if (Apps.isApplicationFinalState(appReport.getYarnApplicationState())) {
       sysout.println("Application " + applicationId + " has already finished ");
     } else {
       sysout.println("Moving application " + applicationId + " to queue " + queue);

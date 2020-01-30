@@ -75,10 +75,13 @@ import org.apache.hadoop.mapreduce.v2.hs.webapp.HsWebApp;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -150,9 +153,14 @@ public class HistoryClientService extends AbstractService {
   }
 
   @VisibleForTesting
-  protected void initializeWebApp(Configuration conf) {
+  protected void initializeWebApp(Configuration conf) throws IOException {
     webApp = new HsWebApp(history);
+
+    setupFilters(conf);
+
     InetSocketAddress bindAddress = MRWebAppUtil.getJHSWebBindAddress(conf);
+    ApplicationClientProtocol appClientProtocol =
+        ClientRMProxy.createRMProxy(conf, ApplicationClientProtocol.class);
     // NOTE: there should be a .at(InetSocketAddress)
     WebApps
         .$for("jobhistory", HistoryClientService.class, this, "ws")
@@ -163,6 +171,7 @@ public class HistoryClientService extends AbstractService {
             JHAdminConfig.MR_WEBAPP_SPNEGO_USER_NAME_KEY)
         .withCSRFProtection(JHAdminConfig.MR_HISTORY_CSRF_PREFIX)
         .withXFSProtection(JHAdminConfig.MR_HISTORY_XFS_PREFIX)
+        .withAppClientProtocol(appClientProtocol)
         .at(NetUtils.getHostPortString(bindAddress)).start(webApp);
     
     String connectHost = MRWebAppUtil.getJHSWebappURLWithoutScheme(conf).split(":")[0];
@@ -189,6 +198,17 @@ public class HistoryClientService extends AbstractService {
   @Private
   public InetSocketAddress getBindAddress() {
     return this.bindAddress;
+  }
+
+  private void setupFilters(Configuration conf) {
+    boolean enableCorsFilter =
+        conf.getBoolean(JHAdminConfig.MR_HISTORY_ENABLE_CORS_FILTER,
+            JHAdminConfig.DEFAULT_MR_HISTORY_ENABLE_CORS_FILTER);
+
+    if (enableCorsFilter) {
+      conf.setBoolean(HttpCrossOriginFilterInitializer.PREFIX
+          + HttpCrossOriginFilterInitializer.ENABLED_SUFFIX, true);
+    }
   }
 
   private class HSClientProtocolHandler implements HSClientProtocol {

@@ -61,6 +61,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class TestFsVolumeList {
@@ -209,7 +211,7 @@ public class TestFsVolumeList {
     /*
      * Lets have the example.
      * Capacity - 1000
-     * Reserved - 100
+     * Reserved - 100G
      * DfsUsed  - 200
      * Actual Non-DfsUsed - 300 -->(expected)
      * ReservedForReplicas - 50
@@ -402,5 +404,52 @@ public class TestFsVolumeList {
           "Thread pool instance should be same in all the BlockPoolSlice",
           threadPool1, threadPool2);
     }
+  }
+
+  @Test
+  public void testGetCachedVolumeCapacity() throws IOException {
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_KEY,
+        DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_DEFAULT);
+
+    long capacity = 4000L;
+    DF usage = mock(DF.class);
+    when(usage.getCapacity()).thenReturn(capacity);
+
+    FsVolumeImpl volumeChanged = new FsVolumeImplBuilder()
+        .setConf(conf)
+        .setDataset(dataset)
+        .setStorageID("storage-id")
+        .setStorageDirectory(new StorageDirectory(StorageLocation.parse(
+            "[RAM_DISK]volume-changed")))
+        .setUsage(usage)
+        .build();
+
+    int callTimes = 5;
+    for(int i = 0; i < callTimes; i++) {
+      assertEquals(capacity, volumeChanged.getCapacity());
+    }
+
+    verify(usage, times(callTimes)).getCapacity();
+
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_KEY, true);
+    FsVolumeImpl volumeFixed = new FsVolumeImplBuilder()
+        .setConf(conf)
+        .setDataset(dataset)
+        .setStorageID("storage-id")
+        .setStorageDirectory(new StorageDirectory(StorageLocation.parse(
+            "[RAM_DISK]volume-fixed")))
+        .setUsage(usage)
+        .build();
+
+    for(int i = 0; i < callTimes; i++) {
+      assertEquals(capacity, volumeFixed.getCapacity());
+    }
+
+    // reuse the capacity for fixed sized volume, only call one time
+    // getCapacity of DF
+    verify(usage, times(callTimes+1)).getCapacity();
+
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_KEY,
+        DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_DEFAULT);
   }
 }

@@ -224,10 +224,10 @@ Observer NameNode, which transition it to the standby state.
 
 **NOTE**: the feature for Observer NameNode to participate in failover
 is not implemented yet. Therefore, as described in the next section, you
-should only use **transitionToObserver** to bring up an observer and put
-it outside the ZooKeeper controlled failover group. You should not use
-**transitionToStandby** since the host for the Observer NameNode cannot
-have ZKFC running.
+should only use **transitionToObserver** to bring up an observer. ZKFC
+could be turned on the Observer NameNode, but it doesn't do anything when
+the NameNode is in Observer state. ZKFC will participate in the election of
+Active after the NameNode is transitioned to standby state.
 
 ### Deployment details
 
@@ -240,9 +240,11 @@ on the intensity of read requests and HA requirements.
 
 Note that currently Observer NameNode doesn't integrate fully when
 automatic failover is enabled. If the
-**dfs.ha.automatic-failover.enabled** is turned on, you'll also need to
-disable ZKFC on the namenode for observer. In addition to that, you'll
-also need to add **forcemanual** flag to the **transitionToObserver**
+**dfs.ha.automatic-failover.enabled** is turned on, the only benefit for
+running ZKFC on Observer NameNode is that it will automatically join election
+of Active after you transition the NameNode to Standby. If this is not desired,
+you can disable ZKFC on the Observer NameNode. In addition to that, you'll also
+need to add **forcemanual** flag to the **transitionToObserver**
 command:
 
     haadmin -transitionToObserver -forcemanual

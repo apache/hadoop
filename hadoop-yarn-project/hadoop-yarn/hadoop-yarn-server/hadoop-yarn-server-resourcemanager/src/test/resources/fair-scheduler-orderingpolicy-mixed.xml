@@ -31,7 +31,7 @@
             <schedulingPolicy>drf</schedulingPolicy>
             <queue name="john">
                 <weight>1.0</weight>
-                <schedulingPolicy>drf</schedulingPolicy>
+                <schedulingPolicy>fair</schedulingPolicy>
                 <aclSubmitApps>john </aclSubmitApps>
                 <aclAdministerApps>john </aclAdministerApps>
                 <maxContainerAllocation>vcores=2,memory-mb=8192</maxContainerAllocation>
@@ -40,7 +40,7 @@
                 <maxResources>memory-mb=50.0%, vcores=50.0%</maxResources>
                 <weight>3.0</weight>
                 <allowPreemptionFrom>false</allowPreemptionFrom>
-                <schedulingPolicy>drf</schedulingPolicy>
+                <schedulingPolicy>fair</schedulingPolicy>
                 <aclSubmitApps>joe </aclSubmitApps>
                 <aclAdministerApps>joe </aclAdministerApps>
             </queue>
@@ -55,7 +55,7 @@
                 <maxRunningApps>2</maxRunningApps>
                 <weight>3.0</weight>
                 <allowPreemptionFrom>false</allowPreemptionFrom>
-                <schedulingPolicy>drf</schedulingPolicy>
+                <schedulingPolicy>fair</schedulingPolicy>
                 <aclSubmitApps>alice </aclSubmitApps>
                 <aclAdministerApps>alice </aclAdministerApps>
                 <maxAMShare>0.15</maxAMShare>
@@ -63,7 +63,7 @@
             <queue name="bob">
                 <maxResources>memory-mb=8192, vcores=2</maxResources>
                 <weight>1.0</weight>
-                <schedulingPolicy>drf</schedulingPolicy>
+                <schedulingPolicy>fair</schedulingPolicy>
                 <aclSubmitApps>bob </aclSubmitApps>
                 <aclAdministerApps>bob </aclAdministerApps>
                 <maxAMShare>-1.0</maxAMShare>

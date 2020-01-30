@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.placement
@@ -70,7 +72,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -171,11 +172,25 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       // submit an app
 
-      RMApp app1 = mockRM.submitApp(GB, "test-auto-queue-creation-1", USER0,
-          null, USER0);
+      MockRMAppSubmissionData data1 =
+          MockRMAppSubmissionData.Builder.createWithMemory(GB, mockRM)
+              .withAppName("test-auto-queue-creation-1")
+              .withUser(USER0)
+              .withAcls(null)
+              .withQueue(USER0)
+              .withUnmanagedAM(false)
+              .build();
+      RMApp app1 = MockRMAppSubmitter.submit(mockRM, data1);
 
-      RMApp app2 = mockRM.submitApp(GB, "test-auto-queue-creation-2", USER1,
-          null, USER1);
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(GB, mockRM)
+              .withAppName("test-auto-queue-creation-2")
+              .withUser(USER1)
+              .withAcls(null)
+              .withQueue(USER1)
+              .withUnmanagedAM(false)
+              .build();
+      RMApp app2 = MockRMAppSubmitter.submit(mockRM, data);
       // check preconditions
       List<ApplicationAttemptId> appsInC = cs.getAppsInQueue(PARENT_QUEUE);
       assertEquals(2, appsInC.size());
@@ -350,8 +365,14 @@ public class TestCapacitySchedulerAutoQueueCreation
 
     // submit an app under a different queue name which does not exist
     // and queue mapping does not exist for this user
-    RMApp app = mockRM.submitApp(GB, "app", INVALID_USER, null, INVALID_USER,
-        false);
+    RMApp app = MockRMAppSubmitter.submit(mockRM,
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, mockRM)
+            .withAppName("app")
+            .withUser(INVALID_USER)
+            .withAcls(null)
+            .withQueue(INVALID_USER)
+            .withWaitForAppAcceptedState(false)
+            .build());
     mockRM.drainEvents();
     mockRM.waitForState(app.getApplicationId(), RMAppState.FAILED);
     assertEquals(RMAppState.FAILED, app.getState());

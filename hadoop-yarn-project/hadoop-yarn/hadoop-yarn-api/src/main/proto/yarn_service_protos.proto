@@ -206,6 +206,7 @@ message GetApplicationsRequestProto {
   optional int64 finish_end = 9;
   repeated string applicationTags = 10;
   optional ApplicationsRequestScopeProto scope = 11 [default = ALL];
+  optional string name = 12;
 }
 
 message GetApplicationsResponseProto {

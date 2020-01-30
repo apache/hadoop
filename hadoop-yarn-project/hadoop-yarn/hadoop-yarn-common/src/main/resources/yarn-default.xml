@@ -959,6 +959,30 @@
 
   <property>
     <description>
+    RM DelegationTokenRenewer thread timeout
+    </description>
+    <name>yarn.resourcemanager.delegation-token-renewer.thread-timeout</name>
+    <value>60s</value>
+  </property>
+
+  <property>
+    <description>
+    Default maximum number of retries for each RM DelegationTokenRenewer thread
+    </description>
+    <name>yarn.resourcemanager.delegation-token-renewer.thread-retry-max-attempts</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>
+    Time interval between each RM DelegationTokenRenewer thread retry attempt
+    </description>
+    <name>yarn.resourcemanager.delegation-token-renewer.thread-retry-interval</name>
+    <value>60s</value>
+  </property>
+
+  <property>
+    <description>
     Thread pool size for RMApplicationHistoryWriter.
     </description>
     <name>yarn.resourcemanager.history-writer.multi-threaded-dispatcher.pool-size</name>
@@ -1617,27 +1641,21 @@
   </property>
 
   <property>
-    <description>Frequency of running node health script.</description>
-    <name>yarn.nodemanager.health-checker.interval-ms</name>
-    <value>600000</value>
+    <description>The nodemanager health check scripts to run.</description>
+    <name>yarn.nodemanager.health-checker.scripts</name>
+    <value>script</value>
   </property>
 
   <property>
-    <description>Script time out period.</description>
-    <name>yarn.nodemanager.health-checker.script.timeout-ms</name>
+    <description>Health check script time out period.</description>
+    <name>yarn.nodemanager.health-checker.timeout-ms</name>
     <value>1200000</value>
   </property>
 
   <property>
-    <description>The health check script to run.</description>
-    <name>yarn.nodemanager.health-checker.script.path</name>
-    <value></value>
-  </property>
-
-  <property>
-    <description>The arguments to pass to the health check script.</description>
-    <name>yarn.nodemanager.health-checker.script.opts</name>
-    <value></value>
+    <description>Frequency of running node health scripts.</description>
+    <name>yarn.nodemanager.health-checker.interval-ms</name>
+    <value>600000</value>
   </property>
 
   <property>
@@ -4492,5 +4510,11 @@
     </description>
     <name>yarn.workflow-id.tag-prefix</name>
     <value>workflowid:</value>
+  </property>
+
+  <property>
+    <description>Whether or not to allow application submissions via REST. Default is true.</description>
+    <name>yarn.webapp.enable-rest-app-submissions</name>
+    <value>true</value>
   </property>
 </configuration>

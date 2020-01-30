@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -210,11 +211,9 @@ public class ITestDynamoDBMetadataStoreScale
       // if this doesn't throttle, all is well.
       super.test_020_Moves();
     } catch (AWSServiceThrottledException ex) {
-      // if the service was throttled, we expect the exception text
-      GenericTestUtils.assertExceptionContains(
-          DynamoDBMetadataStore.HINT_DDB_IOPS_TOO_LOW,
-          ex,
-          "Expected throttling message");
+      // if the service was throttled, all is good.
+      // log and continue
+      LOG.warn("DDB connection was throttled", ex);
     } finally {
       LOG.info("Statistics {}", tracker);
     }
@@ -379,7 +378,7 @@ public class ITestDynamoDBMetadataStoreScale
       execute("list",
           OPERATIONS_PER_THREAD,
           expectThrottling(),
-          () -> ddbms.put(children, state));
+          () -> ddbms.put(children, Collections.emptyList(), state));
     } finally {
       retryingDelete(path);
     }

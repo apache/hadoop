@@ -438,12 +438,15 @@ Usage:
           [-ls [-d] <path>]
           [-getDestination <path>]
           [-setQuota <path> -nsQuota <nsQuota> -ssQuota <quota in bytes or quota size string>]
+          [-setStorageTypeQuota <path> -storageType <storage type> <quota in bytes or quota size string>]
           [-clrQuota <path>]
+          [-clrStorageTypeQuota <path>]
           [-safemode enter | leave | get]
           [-nameservice disable | enable <nameservice>]
           [-getDisabledNameservices]
           [-refresh]
           [-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]
+          [-refreshSuperUserGroupsConfiguration]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -453,12 +456,15 @@ Usage:
 | `-ls` `[-d]` *path* | List mount points under specified path. Specify -d parameter to get detailed listing.|
 | `-getDestination` *path* | Get the subcluster where a file is or should be created. |
 | `-setQuota` *path* `-nsQuota` *nsQuota* `-ssQuota` *ssQuota* | Set quota for specified path. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html) for the quota detail. |
+| `-setStorageTypeQuota` *path* `-storageType` *storageType* *stQuota* | Set storage type quota for specified path. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html) for the quota detail. |
 | `-clrQuota` *path* | Clear quota of given mount point. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html) for the quota detail. |
+| `-clrStorageTypeQuota` *path* | Clear storage type quota of given mount point. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html) for the quota detail. |
 | `-safemode` `enter` `leave` `get` | Manually set the Router entering or leaving safe mode. The option *get* will be used for verifying if the Router is in safe mode state. |
 | `-nameservice` `disable` `enable` *nameservice* | Disable/enable  a name service from the federation. If disabled, requests will not go to that name service. |
 | `-getDisabledNameservices` | Get the name services that are disabled in the federation. |
 | `-refresh` | Update mount table cache of the connected router. |
 | `refreshRouterArgs` \<host:ipc\_port\> \<key\> [arg1..argn] | To trigger a runtime-refresh of the resource specified by \<key\> on \<host:ipc\_port\>. For example, to enable white list checking, we just need to send a refresh command other than restart the router server. |
+| `-refreshSuperUserGroupsConfiguration` | Refresh superuser proxy groups mappings on Router. |
 
 The commands for managing Router-based federation. See [Mount table management](../hadoop-hdfs-rbf/HDFSRouterFederation.html#Mount_table_management) for more info.
 

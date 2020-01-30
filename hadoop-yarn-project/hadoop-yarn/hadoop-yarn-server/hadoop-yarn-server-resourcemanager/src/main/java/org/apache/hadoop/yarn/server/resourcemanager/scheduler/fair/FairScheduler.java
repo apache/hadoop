@@ -215,6 +215,7 @@ public class FairScheduler extends
   Resource reservationThreshold;
 
   private boolean migration;
+  private boolean noTerminalRuleCheck;
 
   public FairScheduler() {
     super(FairScheduler.class.getName());
@@ -479,27 +480,39 @@ public class FairScheduler extends
     writeLock.lock();
     try {
       // Assign the app to the queue creating and prevent queue delete.
+      // This will re-create the queue on restore, however this could fail if
+      // the config was changed.
       FSLeafQueue queue = queueMgr.getLeafQueue(queueName, true,
           applicationId);
       if (queue == null) {
-        rejectApplicationWithMessage(applicationId,
-            queueName + " is not a leaf queue");
-        return;
+        if (!isAppRecovering) {
+          rejectApplicationWithMessage(applicationId,
+              queueName + " is not a leaf queue");
+          return;
+        }
+        // app is recovering we do not want to fail the app now as it was there
+        // before we started the recovery. Add it to the recovery queue:
+        // dynamic queue directly under root, no ACL needed (auto clean up)
+        queueName = "root.recovery";
+        queue = queueMgr.getLeafQueue(queueName, true, applicationId);
       }
 
-      // Enforce ACLs: 2nd check, there could be a time laps between the app
-      // creation in the RMAppManager and getting here. That means we could
-      // have a configuration change (prevent race condition)
-      UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(
-          user);
-
-      if (!queue.hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi) &&
-          !queue.hasAccess(QueueACL.ADMINISTER_QUEUE, userUgi)) {
-        String msg = "User " + user + " does not have permission to submit " +
-            applicationId + " to queue " + queueName;
-        rejectApplicationWithMessage(applicationId, msg);
-        queue.removeAssignedApp(applicationId);
-        return;
+      // Skip ACL check for recovering applications: they have been accepted
+      // in the queue already recovery should not break that.
+      if (!isAppRecovering) {
+        // Enforce ACLs: 2nd check, there could be a time laps between the app
+        // creation in the RMAppManager and getting here. That means we could
+        // have a configuration change (prevent race condition)
+        UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(
+            user);
+        if (!queue.hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi) &&
+            !queue.hasAccess(QueueACL.ADMINISTER_QUEUE, userUgi)) {
+          String msg = "User " + user + " does not have permission to submit "
+              + applicationId + " to queue " + queueName;
+          rejectApplicationWithMessage(applicationId, msg);
+          queue.removeAssignedApp(applicationId);
+          return;
+        }
       }
 
       RMApp rmApp = rmContext.getRMApps().get(applicationId);
@@ -510,7 +523,11 @@ public class FairScheduler extends
             " to set queue name on");
       }
 
-      if (rmApp != null && rmApp.getAMResourceRequests() != null) {
+      // when recovering the NMs might not have registered and we could have
+      // no resources in the queue, the app is already running and has thus
+      // passed all these checks, skip them now.
+      if (!isAppRecovering && rmApp != null &&
+          rmApp.getAMResourceRequests() != null) {
         // Resources.fitsIn would always return false when queueMaxShare is 0
         // for any resource, but only using Resources.fitsIn is not enough
         // is it would return false for such cases when the requested
@@ -1502,6 +1519,10 @@ public class FairScheduler extends
   public void serviceInit(Configuration conf) throws Exception {
     migration =
         conf.getBoolean(FairSchedulerConfiguration.MIGRATION_MODE, false);
+    noTerminalRuleCheck = migration &&
+        conf.getBoolean(FairSchedulerConfiguration.NO_TERMINAL_RULE_CHECK,
+            false);
+
     initScheduler(conf);
     super.serviceInit(conf);
 
@@ -2000,5 +2021,9 @@ public class FairScheduler extends
       throws YarnException {
     throw new YarnException(
         "Update application priority is not supported in Fair Scheduler");
+  }
+
+  public boolean isNoTerminalRuleCheck() {
+    return noTerminalRuleCheck;
   }
 }

@@ -65,6 +65,7 @@ import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -76,6 +77,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -652,6 +654,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         }
       } catch (FileNotFoundException fne) {
         // Ignore if the file is not found
+      } catch (IOException ioe) {
+        if (RouterRpcClient.isUnavailableException(ioe)) {
+          LOG.debug("Ignore unavailable exception: {}", ioe);
+        } else {
+          throw ioe;
+        }
       }
     }
     return createLocation;
@@ -827,6 +835,13 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     return clientProto.getListing(src, startAfter, needLocation);
   }
 
+  @Override
+  public BatchedDirectoryListing getBatchedListing(
+      String[] srcs, byte[] startAfter, boolean needLocation)
+      throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
   @Override // ClientProtocol
   public HdfsFileStatus getFileInfo(String src) throws IOException {
     return clientProto.getFileInfo(src);
@@ -886,7 +901,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       DatanodeInfo[] result = entry.getValue();
       for (DatanodeInfo node : result) {
         String nodeId = node.getXferAddr();
-        if (!datanodesMap.containsKey(nodeId)) {
+        DatanodeInfo dn = datanodesMap.get(nodeId);
+        if (dn == null || node.getLastUpdate() > dn.getLastUpdate()) {
           // Add the subcluster as a suffix to the network location
           node.setNetworkLocation(
               NodeBase.PATH_SEPARATOR_STR + ns.getNameserviceId() +
@@ -1294,6 +1310,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     clientProto.unsetErasureCodingPolicy(src);
   }
 
+  @Override
+  public ECTopologyVerifierResult getECTopologyResultForPolicies(
+      String... policyNames) throws IOException {
+    return clientProto.getECTopologyResultForPolicies(policyNames);
+  }
+
   @Override // ClientProtocol
   public ECBlockGroupStats getECBlockGroupStats() throws IOException {
     return clientProto.getECBlockGroupStats();
@@ -1518,6 +1540,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
           if (quotaUsage != null) {
             quotaUsage.verifyNamespaceQuota();
             quotaUsage.verifyStoragespaceQuota();
+            quotaUsage.verifyQuotaByStorageType();
           }
         }
       }

@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
@@ -200,6 +201,38 @@ public class TestSchedConfCLI extends JerseyTestBase {
     config.setMaximumCapacity(a, 100f);
   }
 
+  private void cleanUp() throws Exception {
+    if (rm != null) {
+      rm.stop();
+    }
+    CONF_FILE.delete();
+    if (CONF_FILE.exists()) {
+      throw new RuntimeException("Failed to delete configuration file");
+    }
+    if (OLD_CONF_FILE.exists()) {
+      if (!OLD_CONF_FILE.renameTo(CONF_FILE)) {
+        throw new RuntimeException("Failed to re-copy old" +
+            " configuration file");
+      }
+    }
+    super.tearDown();
+  }
+
+  @Test(timeout = 10000)
+  public void testGetSchedulerConf() throws Exception {
+    try {
+      super.setUp();
+      GuiceServletConfig.setInjector(
+          Guice.createInjector(new WebServletModule()));
+      int exitCode = cli.getSchedulerConf("", resource());
+      assertEquals("SchedConfCLI failed to run", 0, exitCode);
+      assertTrue("Failed to get scheduler configuration",
+          sysOutStream.toString().contains("testqueue"));
+    } finally {
+      cleanUp();
+    }
+  }
+
   @Test(timeout = 10000)
   public void testFormatSchedulerConf() throws Exception {
     try {
@@ -215,10 +248,10 @@ public class TestSchedConfCLI extends JerseyTestBase {
       globalUpdates.put("schedKey1", "schedVal1");
       schedUpdateInfo.setGlobalParams(globalUpdates);
 
-      provider.logAndApplyMutation(UserGroupInformation.getCurrentUser(),
-          schedUpdateInfo);
+      LogMutation log = provider.logAndApplyMutation(
+          UserGroupInformation.getCurrentUser(), schedUpdateInfo);
       rm.getRMContext().getRMAdminService().refreshQueues();
-      provider.confirmPendingMutation(true);
+      provider.confirmPendingMutation(log, true);
 
       Configuration schedulerConf = provider.getConfiguration();
       assertEquals("schedVal1", schedulerConf.get("schedKey1"));
@@ -229,17 +262,7 @@ public class TestSchedConfCLI extends JerseyTestBase {
       schedulerConf = provider.getConfiguration();
       assertNull(schedulerConf.get("schedKey1"));
     } finally {
-      if (rm != null) {
-        rm.stop();
-      }
-      CONF_FILE.delete();
-      if (OLD_CONF_FILE.exists()) {
-        if (!OLD_CONF_FILE.renameTo(CONF_FILE)) {
-          throw new RuntimeException("Failed to re-copy old" +
-              " configuration file");
-        }
-      }
-      super.tearDown();
+      cleanUp();
     }
   }
 

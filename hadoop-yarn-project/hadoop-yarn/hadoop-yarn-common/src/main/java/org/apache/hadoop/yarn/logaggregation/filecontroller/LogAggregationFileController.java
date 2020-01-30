@@ -99,11 +99,6 @@ public abstract class LogAggregationFileController {
   protected static final FsPermission APP_LOG_FILE_UMASK = FsPermission
       .createImmutable((short) (0640 ^ 0777));
 
-  // This is temporary solution. The configuration will be deleted once we have
-  // the FileSystem API to check whether append operation is supported or not.
-  public static final String LOG_AGGREGATION_FS_SUPPORT_APPEND
-      = YarnConfiguration.YARN_PREFIX+ "log-aggregation.fs-support-append";
-
   protected Configuration conf;
   protected Path remoteRootLogDir;
   protected String remoteRootLogDirSuffix;

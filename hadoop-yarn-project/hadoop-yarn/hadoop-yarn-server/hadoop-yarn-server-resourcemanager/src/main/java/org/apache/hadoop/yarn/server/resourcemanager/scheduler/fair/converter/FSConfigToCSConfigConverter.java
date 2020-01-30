@@ -23,27 +23,40 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.Map;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AccessType;
+import org.apache.hadoop.yarn.security.ConfiguredYarnAuthorizer;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfigurationException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationFileLoaderService;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.ConfigurableResource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
-import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocation.AllocationFileParser;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -64,7 +77,6 @@ public class FSConfigToCSConfigConverter {
   public static final String WARNING_TEXT =
       "WARNING: This feature is experimental and not intended " +
           "for production use!";
-  
 
   private Resource clusterResource;
   private boolean preemptionEnabled = false;
@@ -73,8 +85,10 @@ public class FSConfigToCSConfigConverter {
   private boolean autoCreateChildQueues = false;
   private boolean sizeBasedWeight = false;
   private boolean userAsDefaultQueue = false;
+  private ConversionOptions conversionOptions;
+  private boolean drfUsed = false;
 
-  private Configuration yarnSiteConfig;
+  private Configuration convertedYarnSiteConfig;
   private Configuration capacitySchedulerConfig;
   private FSConfigToCSConfigRuleHandler ruleHandler;
 
@@ -83,8 +97,9 @@ public class FSConfigToCSConfigConverter {
   private boolean consoleMode = false;
 
   public FSConfigToCSConfigConverter(FSConfigToCSConfigRuleHandler
-      ruleHandler) {
+      ruleHandler, ConversionOptions conversionOptions) {
     this.ruleHandler = ruleHandler;
+    this.conversionOptions = conversionOptions;
     this.yarnSiteOutputStream = System.out;
     this.capacitySchedulerOutputStream = System.out;
   }
@@ -94,11 +109,11 @@ public class FSConfigToCSConfigConverter {
     validateParams(params);
     prepareOutputFiles(params.getOutputDirectory(), params.isConsole());
     loadConversionRules(params.getConversionRulesConfig());
-    Configuration conf = createConfiguration(params);
-    handleFairSchedulerConfig(params, conf);
+    Configuration inputYarnSiteConfig = getInputYarnSiteConfig(params);
+    handleFairSchedulerConfig(params, inputYarnSiteConfig);
 
     this.clusterResource = getClusterResource(params);
-    convert(conf);
+    convert(inputYarnSiteConfig);
   }
 
   private void prepareOutputFiles(String outputDirectory, boolean console)
@@ -158,11 +173,10 @@ public class FSConfigToCSConfigConverter {
     }
   }
 
-  private Configuration createConfiguration(
+  private Configuration getInputYarnSiteConfig(
       FSConfigToCSConfigConverterParams params) {
     Configuration conf = new YarnConfiguration();
     conf.addResource(new Path(params.getYarnSiteXmlConfig()));
-    conf.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
     return conf;
   }
 
@@ -193,29 +207,42 @@ public class FSConfigToCSConfigConverter {
   }
 
   @VisibleForTesting
-  void convert(Configuration conf) throws Exception {
+  void convert(Configuration inputYarnSiteConfig) throws Exception {
     System.out.println(WARNING_TEXT);
-    
+
     // initialize Fair Scheduler
     RMContext ctx = new RMContextImpl();
     PlacementManager placementManager = new PlacementManager();
     ctx.setQueuePlacementManager(placementManager);
 
+    // Prepare a separate config for the FS instance
+    // to force the use of ConfiguredYarnAuthorizer, otherwise
+    // it might use that of Ranger
+    Configuration fsConfig = new Configuration(inputYarnSiteConfig);
+    fsConfig.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
+    fsConfig.setBoolean(FairSchedulerConfiguration.NO_TERMINAL_RULE_CHECK,
+        conversionOptions.isNoRuleTerminalCheck());
+    fsConfig.setClass(YarnConfiguration.YARN_AUTHORIZATION_PROVIDER,
+        ConfiguredYarnAuthorizer.class, YarnAuthorizationProvider.class);
     FairScheduler fs = new FairScheduler();
     fs.setRMContext(ctx);
-    fs.init(conf);
+    fs.init(fsConfig);
+    boolean havePlacementPolicies =
+        checkPlacementPoliciesPresent(fs, inputYarnSiteConfig);
+
+    drfUsed = isDrfUsed(fs);
 
     AllocationConfiguration allocConf = fs.getAllocationConfiguration();
     queueMaxAppsDefault = allocConf.getQueueMaxAppsDefault();
     queueMaxAMShareDefault = allocConf.getQueueMaxAMShareDefault();
 
-    yarnSiteConfig = new Configuration(false);
+    convertedYarnSiteConfig = new Configuration(false);
     capacitySchedulerConfig = new Configuration(false);
 
     checkUserMaxApps(allocConf);
     checkUserMaxAppsDefault(allocConf);
 
-    convertYarnSiteXml(conf);
+    convertYarnSiteXml(inputYarnSiteConfig, havePlacementPolicies);
     convertCapacitySchedulerXml(fs);
 
     if (consoleMode) {
@@ -227,7 +254,7 @@ public class FSConfigToCSConfigConverter {
       System.out.println();
       System.out.println("======= " + YARN_SITE_XML + " =======");
     }
-    yarnSiteConfig.writeXml(yarnSiteOutputStream);
+    convertedYarnSiteConfig.writeXml(yarnSiteOutputStream);
   }
 
   @VisibleForTesting
@@ -240,31 +267,43 @@ public class FSConfigToCSConfigConverter {
     this.capacitySchedulerOutputStream = out;
   }
 
-  private void convertYarnSiteXml(Configuration conf) {
+  private void convertYarnSiteXml(Configuration inputYarnSiteConfig,
+      boolean havePlacementPolicies) {
     FSYarnSiteConverter siteConverter =
         new FSYarnSiteConverter();
-    siteConverter.convertSiteProperties(conf, yarnSiteConfig);
+    siteConverter.convertSiteProperties(inputYarnSiteConfig,
+        convertedYarnSiteConfig, drfUsed);
 
-    autoCreateChildQueues = siteConverter.isAutoCreateChildQueues();
+    // See docs: "allow-undeclared-pools" and "user-as-default-queue" are
+    // ignored if we have placement rules
+    autoCreateChildQueues =
+        !havePlacementPolicies && siteConverter.isAutoCreateChildQueues();
+    userAsDefaultQueue =
+        !havePlacementPolicies && siteConverter.isUserAsDefaultQueue();
     preemptionEnabled = siteConverter.isPreemptionEnabled();
     sizeBasedWeight = siteConverter.isSizeBasedWeight();
-    userAsDefaultQueue = siteConverter.isUserAsDefaultQueue();
 
-    checkReservationSystem(conf);
+    checkReservationSystem(inputYarnSiteConfig);
   }
 
   private void convertCapacitySchedulerXml(FairScheduler fs) {
     FSParentQueue rootQueue = fs.getQueueManager().getRootQueue();
     emitDefaultMaxApplications();
     emitDefaultMaxAMShare();
-    FSQueueConverter queueConverter = new FSQueueConverter(ruleHandler,
-        capacitySchedulerConfig,
-        preemptionEnabled,
-        sizeBasedWeight,
-        autoCreateChildQueues,
-        clusterResource,
-        queueMaxAMShareDefault,
-        queueMaxAppsDefault);
+
+    FSQueueConverter queueConverter = FSQueueConverterBuilder.create()
+        .withRuleHandler(ruleHandler)
+        .withCapacitySchedulerConfig(capacitySchedulerConfig)
+        .withPreemptionEnabled(preemptionEnabled)
+        .withSizeBasedWeight(sizeBasedWeight)
+        .withAutoCreateChildQueues(autoCreateChildQueues)
+        .withClusterResource(clusterResource)
+        .withQueueMaxAMShareDefault(queueMaxAMShareDefault)
+        .withQueueMaxAppsDefault(queueMaxAppsDefault)
+        .withConversionOptions(conversionOptions)
+        .withDrfUsed(drfUsed)
+        .build();
+
     queueConverter.convertQueueHierarchy(rootQueue);
     emitACLs(fs);
 
@@ -278,18 +317,6 @@ public class FSConfigToCSConfigConverter {
           placementConverter.convertPlacementPolicy(placementManager,
               ruleHandler, userAsDefaultQueue);
       properties.forEach((k, v) -> capacitySchedulerConfig.set(k, v));
-    }
-
-    // Validate ordering policy
-    if (queueConverter.isDrfPolicyUsedOnQueueLevel()) {
-      if (queueConverter.isFifoOrFairSharePolicyUsed()) {
-        throw new ConversionException(
-            "DRF ordering policy cannot be used together with fifo/fair");
-      } else {
-        capacitySchedulerConfig.set(
-            CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
-            DominantResourceCalculator.class.getCanonicalName());
-      }
     }
   }
 
@@ -351,6 +378,38 @@ public class FSConfigToCSConfigConverter {
     }
   }
 
+  private boolean isDrfUsed(FairScheduler fs) {
+    FSQueue rootQueue = fs.getQueueManager().getRootQueue();
+    AllocationConfiguration allocConf = fs.getAllocationConfiguration();
+
+    String defaultPolicy = allocConf.getDefaultSchedulingPolicy().getName();
+
+    if (DominantResourceFairnessPolicy.NAME.equals(defaultPolicy)) {
+      return true;
+    } else {
+      return isDrfUsedOnQueueLevel(rootQueue);
+    }
+  }
+
+  private boolean isDrfUsedOnQueueLevel(FSQueue queue) {
+    String policy = queue.getPolicy().getName();
+    boolean usesDrf = DominantResourceFairnessPolicy.NAME.equals(policy);
+
+    if (usesDrf) {
+      return true;
+    } else {
+      List<FSQueue> children = queue.getChildQueues();
+
+      if (children != null) {
+        for (FSQueue child : children) {
+          usesDrf |= isDrfUsedOnQueueLevel(child);
+        }
+      }
+
+      return usesDrf;
+    }
+  }
+
   @VisibleForTesting
   Resource getClusterResource() {
     return clusterResource;
@@ -364,5 +423,50 @@ public class FSConfigToCSConfigConverter {
   @VisibleForTesting
   FSConfigToCSConfigRuleHandler getRuleHandler() {
     return ruleHandler;
+  }
+
+  @VisibleForTesting
+  Configuration getYarnSiteConfig() {
+    return convertedYarnSiteConfig;
+  }
+
+  /*
+   * Determines whether <queuePlacementPolicy> is present
+   * in the allocation file or not.
+   *
+   * Note that placementManager.getPlacementRules.size()
+   * doesn't work - by default, "allow-undeclared-pools" and
+   * "user-as-default-queue" are translated to policies internally
+   * inside QueuePlacementPolicy.fromConfiguration().
+   *
+   */
+  private boolean checkPlacementPoliciesPresent(FairScheduler scheduler,
+      Configuration inputYarnSiteConfig)
+      throws RuntimeException {
+
+    try (AllocationFileLoaderService loader =
+        new AllocationFileLoaderService(scheduler)){
+
+      Path allocFilePath = loader.getAllocationFile(inputYarnSiteConfig);
+      FileSystem fs = allocFilePath.getFileSystem(inputYarnSiteConfig);
+
+      DocumentBuilderFactory docBuilderFactory =
+          DocumentBuilderFactory.newInstance();
+      DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
+      Document doc = builder.parse(fs.open(allocFilePath));
+      Element root = doc.getDocumentElement();
+
+      NodeList elements = root.getChildNodes();
+
+      AllocationFileParser allocationFileParser =
+          new AllocationFileParser(elements);
+      allocationFileParser.parse();
+      docBuilderFactory.setIgnoringComments(true);
+
+      return
+          allocationFileParser.getQueuePlacementPolicy().isPresent();
+    } catch (Exception e) {
+      throw new PreconditionException("Unable to parse allocation file", e);
+    }
   }
 }

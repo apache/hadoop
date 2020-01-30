@@ -30,6 +30,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
@@ -86,6 +88,9 @@ public class RouterQuotaUpdateService extends PeriodicService {
         RouterQuotaUsage oldQuota = entry.getQuota();
         long nsQuota = oldQuota.getQuota();
         long ssQuota = oldQuota.getSpaceQuota();
+        long[] typeQuota = new long[StorageType.values().length];
+        Quota.eachByStorageType(
+            t -> typeQuota[t.ordinal()] = oldQuota.getTypeQuota(t));
 
         QuotaUsage currentQuotaUsage = null;
 
@@ -95,11 +100,12 @@ public class RouterQuotaUpdateService extends PeriodicService {
         // For other mount entry get current quota usage
         HdfsFileStatus ret = this.rpcServer.getFileInfo(src);
         if (ret == null || ret.getModificationTime() == 0) {
-          currentQuotaUsage = new RouterQuotaUsage.Builder()
-              .fileAndDirectoryCount(0)
-              .quota(nsQuota)
-              .spaceConsumed(0)
-              .spaceQuota(ssQuota).build();
+          long[] zeroConsume = new long[StorageType.values().length];
+          currentQuotaUsage =
+              new RouterQuotaUsage.Builder().fileAndDirectoryCount(0)
+                  .quota(nsQuota).spaceConsumed(0).spaceQuota(ssQuota)
+                  .typeConsumed(zeroConsume)
+                  .typeQuota(typeQuota).build();
         } else {
           // Call RouterRpcServer#getQuotaUsage for getting current quota usage.
           // If any exception occurs catch it and proceed with other entries.
@@ -146,6 +152,16 @@ public class RouterQuotaUpdateService extends PeriodicService {
           location.getSrc(), location, remoteQuota.getQuota(),
           remoteQuota.getSpaceQuota(), gQuota.getQuota(),
           gQuota.getSpaceQuota());
+    }
+    for (StorageType t : StorageType.values()) {
+      if (remoteQuota.getTypeQuota(t) != gQuota.getTypeQuota(t)) {
+        this.rpcServer.getQuotaModule()
+            .setQuotaInternal(location.getSrc(), Arrays.asList(location),
+                HdfsConstants.QUOTA_DONT_SET, gQuota.getTypeQuota(t), t);
+        LOG.info("[Fix Quota] src={} dst={} type={} oldQuota={} newQuota={}",
+            location.getSrc(), location, t, remoteQuota.getTypeQuota(t),
+            gQuota.getTypeQuota(t));
+      }
     }
   }
 
@@ -234,11 +250,15 @@ public class RouterQuotaUpdateService extends PeriodicService {
    */
   private RouterQuotaUsage generateNewQuota(RouterQuotaUsage oldQuota,
       QuotaUsage currentQuotaUsage) {
-    RouterQuotaUsage newQuota = new RouterQuotaUsage.Builder()
+    RouterQuotaUsage.Builder newQuotaBuilder = new RouterQuotaUsage.Builder()
         .fileAndDirectoryCount(currentQuotaUsage.getFileAndDirectoryCount())
         .quota(oldQuota.getQuota())
         .spaceConsumed(currentQuotaUsage.getSpaceConsumed())
-        .spaceQuota(oldQuota.getSpaceQuota()).build();
-    return newQuota;
+        .spaceQuota(oldQuota.getSpaceQuota());
+    Quota.eachByStorageType(t -> {
+      newQuotaBuilder.typeQuota(t, oldQuota.getTypeQuota(t));
+      newQuotaBuilder.typeConsumed(t, currentQuotaUsage.getTypeConsumed(t));
+    });
+    return newQuotaBuilder.build();
   }
 }

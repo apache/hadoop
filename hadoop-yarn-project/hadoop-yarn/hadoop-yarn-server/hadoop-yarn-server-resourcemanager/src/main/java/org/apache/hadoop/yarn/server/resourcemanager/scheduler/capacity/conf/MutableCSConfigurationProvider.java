@@ -128,17 +128,36 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   }
 
   @Override
-  public void logAndApplyMutation(UserGroupInformation user,
+  public LogMutation logAndApplyMutation(UserGroupInformation user,
       SchedConfUpdateInfo confUpdate) throws Exception {
     oldConf = new Configuration(schedConf);
-    Map<String, String> kvUpdate = constructKeyValueConfUpdate(confUpdate);
+    CapacitySchedulerConfiguration proposedConf =
+            new CapacitySchedulerConfiguration(schedConf, false);
+    Map<String, String> kvUpdate
+            = constructKeyValueConfUpdate(proposedConf, confUpdate);
     LogMutation log = new LogMutation(kvUpdate, user.getShortUserName());
     confStore.logMutation(log);
+    applyMutation(proposedConf, kvUpdate);
+    schedConf = proposedConf;
+    return log;
+  }
+
+  public Configuration applyChanges(Configuration oldConfiguration,
+                           SchedConfUpdateInfo confUpdate) throws IOException {
+    CapacitySchedulerConfiguration proposedConf =
+            new CapacitySchedulerConfiguration(oldConfiguration, false);
+    Map<String, String> kvUpdate
+            = constructKeyValueConfUpdate(proposedConf, confUpdate);
+    applyMutation(proposedConf, kvUpdate);
+    return proposedConf;
+  }
+
+  private void applyMutation(Configuration conf, Map<String, String> kvUpdate) {
     for (Map.Entry<String, String> kv : kvUpdate.entrySet()) {
       if (kv.getValue() == null) {
-        schedConf.unset(kv.getKey());
+        conf.unset(kv.getKey());
       } else {
-        schedConf.set(kv.getKey(), kv.getValue());
+        conf.set(kv.getKey(), kv.getValue());
       }
     }
   }
@@ -184,10 +203,11 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   }
 
   @Override
-  public void confirmPendingMutation(boolean isValid) throws Exception {
+  public void confirmPendingMutation(LogMutation pendingMutation,
+      boolean isValid) throws Exception {
     formatLock.readLock().lock();
     try {
-      confStore.confirmMutation(isValid);
+      confStore.confirmMutation(pendingMutation, isValid);
       if (!isValid) {
         schedConf = oldConf;
       }
@@ -215,9 +235,9 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   }
 
   private Map<String, String> constructKeyValueConfUpdate(
+      CapacitySchedulerConfiguration proposedConf,
       SchedConfUpdateInfo mutationInfo) throws IOException {
-    CapacitySchedulerConfiguration proposedConf =
-        new CapacitySchedulerConfiguration(schedConf, false);
+
     Map<String, String> confUpdate = new HashMap<>();
     for (String queueToRemove : mutationInfo.getRemoveQueueInfo()) {
       removeQueue(queueToRemove, proposedConf, confUpdate);

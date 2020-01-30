@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.base.Preconditions;
 import com.google.common.cache.CacheBuilder;
@@ -84,6 +83,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -207,6 +207,7 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ChunkedArrayList;
@@ -232,33 +233,8 @@ public class PBHelperClient {
   private static final FsAction[] FSACTION_VALUES =
       FsAction.values();
 
-  /**
-   * Map used to cache fixed strings to ByteStrings. Since there is no
-   * automatic expiration policy, only use this for strings from a fixed, small
-   * set.
-   * <p/>
-   * This map should not be accessed directly. Used the getFixedByteString
-   * methods instead.
-   */
-  private static ConcurrentHashMap<Object, ByteString> fixedByteStringCache =
-      new ConcurrentHashMap<>();
-
-  private static ByteString getFixedByteString(Text key) {
-    ByteString value = fixedByteStringCache.get(key);
-    if (value == null) {
-      value = ByteString.copyFromUtf8(key.toString());
-      fixedByteStringCache.put(new Text(key.copyBytes()), value);
-    }
-    return value;
-  }
-
   private static ByteString getFixedByteString(String key) {
-    ByteString value = fixedByteStringCache.get(key);
-    if (value == null) {
-      value = ByteString.copyFromUtf8(key);
-      fixedByteStringCache.put(key, value);
-    }
-    return value;
+    return ProtobufHelper.getFixedByteString(key);
   }
 
   /**
@@ -281,7 +257,7 @@ public class PBHelperClient {
 
   public static ByteString getByteString(byte[] bytes) {
     // return singleton to reduce object allocation
-    return (bytes.length == 0) ? ByteString.EMPTY : ByteString.copyFrom(bytes);
+    return ProtobufHelper.getByteString(bytes);
   }
 
   public static ShmId convert(ShortCircuitShmIdProto shmId) {
@@ -349,12 +325,7 @@ public class PBHelperClient {
   }
 
   public static TokenProto convert(Token<?> tok) {
-    TokenProto.Builder builder = TokenProto.newBuilder().
-        setIdentifier(getByteString(tok.getIdentifier())).
-        setPassword(getByteString(tok.getPassword())).
-        setKindBytes(getFixedByteString(tok.getKind())).
-        setServiceBytes(getFixedByteString(tok.getService()));
-    return builder.build();
+    return ProtobufHelper.protoFromToken(tok);
   }
 
   public static ShortCircuitShmIdProto convert(ShmId shmId) {
@@ -832,11 +803,8 @@ public class PBHelperClient {
 
   public static Token<BlockTokenIdentifier> convert(
       TokenProto blockToken) {
-    Token<BlockTokenIdentifier> token =
-        new Token<>(blockToken.getIdentifier()
-        .toByteArray(), blockToken.getPassword().toByteArray(), new Text(
-        blockToken.getKind()), new Text(blockToken.getService()));
-    return token;
+    return (Token<BlockTokenIdentifier>) ProtobufHelper
+        .tokenFromProto(blockToken);
   }
 
   // DatanodeId
@@ -2059,6 +2027,18 @@ public class PBHelperClient {
     HdfsFileStatus[] result = new HdfsFileStatus[len];
     for (int i = 0; i < len; ++i) {
       result[i] = convert(fs[i]);
+    }
+    return result;
+  }
+
+  public static List<HdfsFileStatus> convertHdfsFileStatus(
+      List<HdfsFileStatusProto> fs) {
+    if (fs == null) {
+      return null;
+    }
+    List<HdfsFileStatus> result = Lists.newArrayListWithCapacity(fs.size());
+    for (HdfsFileStatusProto proto : fs) {
+      result.add(convert(proto));
     }
     return result;
   }
@@ -3336,6 +3316,21 @@ public class PBHelperClient {
     for (DatanodeInfo datanodeInfo : datanodeInfos) {
       builder.addDatanodes(PBHelperClient.convert(datanodeInfo));
     }
+    return builder.build();
+  }
+
+  public static ECTopologyVerifierResult convertECTopologyVerifierResultProto(
+      HdfsProtos.ECTopologyVerifierResultProto resp) {
+    return new ECTopologyVerifierResult(resp.getIsSupported(),
+        resp.getResultMessage());
+  }
+
+  public static HdfsProtos.ECTopologyVerifierResultProto convertECTopologyVerifierResult(
+      ECTopologyVerifierResult resp) {
+    final HdfsProtos.ECTopologyVerifierResultProto.Builder builder =
+        HdfsProtos.ECTopologyVerifierResultProto.newBuilder()
+            .setIsSupported(resp.isSupported())
+            .setResultMessage(resp.getResultMessage());
     return builder.build();
   }
 

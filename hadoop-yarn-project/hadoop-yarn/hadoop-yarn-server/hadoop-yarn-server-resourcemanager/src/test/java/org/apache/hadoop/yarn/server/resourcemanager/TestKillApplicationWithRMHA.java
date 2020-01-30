@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -62,12 +63,24 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
     nm1.registerNode();
 
     // Submit the application
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+        .withAppName("")
+        .withUser(UserGroupInformation
+            .getCurrentUser().getShortUserName())
+        .withAcls(null)
+        .withUnmanagedAM(false)
+        .withQueue(null)
+        .withMaxAppAttempts(configuration.getInt(
+            YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS))
+        .withCredentials(null)
+        .withAppType(null)
+        .withWaitForAppAcceptedState(false)
+        .withKeepContainers(false)
+        .build();
     RMApp app0 =
-        rm1.submitApp(200, "", UserGroupInformation
-            .getCurrentUser().getShortUserName(), null, false, null,
-            configuration.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-                YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null,
-            false, false);
+        MockRMAppSubmitter.submit(rm1, data);
 
     // failover and kill application
     // When FailOver happens, the state of this application is NEW,
@@ -93,7 +106,7 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
     nm1.registerNode();
 
     // create app and launch the AM
-    RMApp app0 = rm1.submitApp(200);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am0 = launchAM(app0, rm1, nm1);
 
     // failover and kill application
@@ -116,7 +129,7 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
     nm1.registerNode();
 
     // create app and launch the AM
-    RMApp app0 = rm1.submitApp(200);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am0 = launchAM(app0, rm1, nm1);
 
     // kill the app.
@@ -147,7 +160,7 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
     nm1.registerNode();
 
     // create app and launch the AM
-    RMApp app0 = rm1.submitApp(200);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am0 = launchAM(app0, rm1, nm1);
 
     // ensure that the app is in running state

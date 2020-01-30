@@ -28,16 +28,21 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.junit.Before;
 import org.junit.Test;
+import org.iq80.leveldb.DB;
+import org.iq80.leveldb.DBIterator;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 
 /**
@@ -99,7 +104,7 @@ public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
     YarnConfigurationStore.LogMutation mutation =
         new YarnConfigurationStore.LogMutation(update, TEST_USER);
     confStore.logMutation(mutation);
-    confStore.confirmMutation(true);
+    confStore.confirmMutation(mutation, true);
     assertEquals("val", confStore.retrieve().get("key"));
     confStore.close();
 
@@ -109,6 +114,33 @@ public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
     // Should ignore passed-in scheduler configuration.
     confStore.initialize(conf, schedConf, rmContext);
     assertEquals("val", confStore.retrieve().get("key"));
+    confStore.close();
+  }
+
+  @Test
+  public void testDisableAuditLogs() throws Exception {
+    conf.setLong(YarnConfiguration.RM_SCHEDCONF_MAX_LOGS, 0);
+    confStore.initialize(conf, schedConf, rmContext);
+
+    Map<String, String> update = new HashMap<>();
+    update.put("key1", "val1");
+    YarnConfigurationStore.LogMutation mutation =
+        new YarnConfigurationStore.LogMutation(update, TEST_USER);
+    confStore.logMutation(mutation);
+
+    boolean logKeyPresent = false;
+    DB db = ((LeveldbConfigurationStore) confStore).getDB();
+    DBIterator itr = db.iterator();
+    itr.seekToFirst();
+    while (itr.hasNext()) {
+      Map.Entry<byte[], byte[]> entry = itr.next();
+      String key = new String(entry.getKey(), StandardCharsets.UTF_8);
+      if (key.equals("log")) {
+        logKeyPresent = true;
+        break;
+      }
+    }
+    assertFalse("Audit Log is not disabled", logKeyPresent);
     confStore.close();
   }
 
@@ -128,7 +160,7 @@ public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
     logs = ((LeveldbConfigurationStore) confStore).getLogs();
     assertEquals(1, logs.size());
     assertEquals("val1", logs.get(0).getUpdates().get("key1"));
-    confStore.confirmMutation(true);
+    confStore.confirmMutation(mutation, true);
     assertEquals(1, logs.size());
     assertEquals("val1", logs.get(0).getUpdates().get("key1"));
 
@@ -140,7 +172,7 @@ public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
     assertEquals(2, logs.size());
     assertEquals("val1", logs.get(0).getUpdates().get("key1"));
     assertEquals("val2", logs.get(1).getUpdates().get("key2"));
-    confStore.confirmMutation(true);
+    confStore.confirmMutation(mutation, true);
     assertEquals(2, logs.size());
     assertEquals("val1", logs.get(0).getUpdates().get("key1"));
     assertEquals("val2", logs.get(1).getUpdates().get("key2"));
@@ -154,7 +186,7 @@ public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
     assertEquals(2, logs.size());
     assertEquals("val2", logs.get(0).getUpdates().get("key2"));
     assertEquals("val3", logs.get(1).getUpdates().get("key3"));
-    confStore.confirmMutation(true);
+    confStore.confirmMutation(mutation, true);
     assertEquals(2, logs.size());
     assertEquals("val2", logs.get(0).getUpdates().get("key2"));
     assertEquals("val3", logs.get(1).getUpdates().get("key3"));
@@ -180,16 +212,17 @@ public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
         rm1.getResourceScheduler()).getMutableConfProvider();
     UserGroupInformation user = UserGroupInformation
         .createUserForTesting(TEST_USER, new String[0]);
-    confProvider.logAndApplyMutation(user, schedConfUpdateInfo);
+    LogMutation log = confProvider.logAndApplyMutation(user,
+        schedConfUpdateInfo);
     rm1.getResourceScheduler().reinitialize(conf, rm1.getRMContext());
     assertEquals("val", ((MutableConfScheduler) rm1.getResourceScheduler())
         .getConfiguration().get("key"));
-    confProvider.confirmPendingMutation(true);
+    confProvider.confirmPendingMutation(log, true);
     assertEquals("val", ((MutableCSConfigurationProvider) confProvider)
         .getConfStore().retrieve().get("key"));
     // Next update is not persisted, it should not be recovered
     schedConfUpdateInfo.getGlobalParams().put("key", "badVal");
-    confProvider.logAndApplyMutation(user, schedConfUpdateInfo);
+    log = confProvider.logAndApplyMutation(user, schedConfUpdateInfo);
     rm1.close();
 
     // Start RM2 and verifies it starts with updated configuration

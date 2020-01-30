@@ -929,7 +929,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     boolean applicationTagBasedPlacementEnabled = conf
         .getBoolean(YarnConfiguration.APPLICATION_TAG_BASED_PLACEMENT_ENABLED,
         YarnConfiguration.DEFAULT_APPLICATION_TAG_BASED_PLACEMENT_ENABLED);
-
     String usernameUsedForPlacement = user;
     if (!applicationTagBasedPlacementEnabled) {
       return usernameUsedForPlacement;
@@ -946,11 +945,16 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     if (userNameFromAppTag != null) {
       LOG.debug("Found 'userid' '{}' in application tag", userNameFromAppTag);
       UserGroupInformation callerUGI = UserGroupInformation
-              .createRemoteUser(userNameFromAppTag);
+              .createRemoteUser(user);
       // check if the actual user has rights to submit application to the
       // user's queue from the application tag
-      String queue = placementManager
-              .placeApplication(context, usernameUsedForPlacement).getQueue();
+      ApplicationPlacementContext appPlacementContext = placementManager
+              .placeApplication(context, userNameFromAppTag);
+      if (appPlacementContext == null) {
+        LOG.warn("No rule was found for user '{}'", userNameFromAppTag);
+        return usernameUsedForPlacement;
+      }
+      String queue = appPlacementContext.getQueue();
       if (callerUGI != null && scheduler
               .checkAccess(callerUGI, QueueACL.SUBMIT_APPLICATIONS, queue)) {
         usernameUsedForPlacement = userNameFromAppTag;

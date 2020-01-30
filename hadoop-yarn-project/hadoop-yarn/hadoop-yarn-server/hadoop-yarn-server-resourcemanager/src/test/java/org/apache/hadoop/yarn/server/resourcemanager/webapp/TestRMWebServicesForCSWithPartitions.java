@@ -50,6 +50,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -277,7 +279,14 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     nm2.registerNode();
 
     try {
-      RMApp app1 = rm.submitApp(1024, "app1", "user1", null, QUEUE_B, LABEL_LX);
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue(QUEUE_B)
+              .withAmLabel(LABEL_LX)
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
       am1.allocate(Arrays.asList(
           ResourceRequest.newBuilder().priority(Priority.UNDEFINED)

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -124,6 +125,10 @@ public class TestHarFileSystem {
     public FileStatus[] listStatusBatch(Path f, byte[] token);
     public FileStatus[] listStatus(Path[] files);
     public FileStatus[] listStatus(Path[] files, PathFilter filter);
+    public RemoteIterator<PartialListing<LocatedFileStatus>> batchedListLocatedStatusIterator(
+        final List<Path> paths) throws IOException;
+    public RemoteIterator<PartialListing<FileStatus>> batchedListStatusIterator(
+        final List<Path> paths) throws IOException;
     public FileStatus[] globStatus(Path pathPattern);
     public FileStatus[] globStatus(Path pathPattern, PathFilter filter);
 
@@ -242,15 +247,11 @@ public class TestHarFileSystem {
 
     CompletableFuture<FSDataInputStream> openFileWithOptions(
         PathHandle pathHandle,
-        Set<String> mandatoryKeys,
-        Configuration options,
-        int bufferSize) throws IOException;
+        OpenFileParameters parameters) throws IOException;
 
     CompletableFuture<FSDataInputStream> openFileWithOptions(
         Path path,
-        Set<String> mandatoryKeys,
-        Configuration options,
-        int bufferSize) throws IOException;
+        OpenFileParameters parameters) throws IOException;
   }
 
   @Test

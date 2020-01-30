@@ -27,6 +27,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.conve
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.USER_MAX_RUNNING_APPS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.RuleAction.ABORT;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -38,10 +39,12 @@ import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -59,14 +62,28 @@ import org.mockito.junit.MockitoJUnitRunner;
  */
 @RunWith(MockitoJUnitRunner.class)
 public class TestFSConfigToCSConfigConverter {
+  private static final String CLUSTER_RESOURCE_STRING =
+      "vcores=20, memory-mb=240";
   private static final Resource CLUSTER_RESOURCE =
       Resource.newInstance(16384, 16);
   private static final String FILE_PREFIX = "file:";
   private static final String FAIR_SCHEDULER_XML =
       prepareFileName("fair-scheduler-conversion.xml");
+  private static final String FS_INVALID_PLACEMENT_RULES_XML =
+      prepareFileName("fair-scheduler-invalidplacementrules.xml");
+  private static final String FS_ONLY_FAIR_POLICY_XML =
+      prepareFileName("fair-scheduler-onlyfairpolicy.xml");
+  private static final String FS_MIXED_POLICY_XML =
+      prepareFileName("fair-scheduler-orderingpolicy-mixed.xml");
+  private static final String FS_NO_PLACEMENT_RULES_XML =
+      prepareFileName("fair-scheduler-noplacementrules.xml");
+
 
   @Mock
   private FSConfigToCSConfigRuleHandler ruleHandler;
+
+  @Mock
+  private DryRunResultHolder dryRunResultHolder;
 
   private FSConfigToCSConfigConverter converter;
   private Configuration config;
@@ -93,6 +110,10 @@ public class TestFSConfigToCSConfigConverter {
       new File("src/test/resources/conversion-rules.properties")
         .getAbsolutePath();
 
+  private ConversionOptions createDefaultConversionOptions() {
+    return new ConversionOptions(new DryRunResultHolder(), false);
+  }
+
   @Before
   public void setup() throws IOException {
     config = new Configuration(false);
@@ -109,7 +130,8 @@ public class TestFSConfigToCSConfigConverter {
   }
 
   private void createConverter() {
-    converter = new FSConfigToCSConfigConverter(ruleHandler);
+    converter = new FSConfigToCSConfigConverter(ruleHandler,
+        createDefaultConversionOptions());
     converter.setClusterResource(CLUSTER_RESOURCE);
     ByteArrayOutputStream yarnSiteOut = new ByteArrayOutputStream();
     csConfigOut = new ByteArrayOutputStream();
@@ -205,20 +227,6 @@ public class TestFSConfigToCSConfigConverter {
   }
 
   @Test
-  public void testMixedQueueOrderingPolicy() throws Exception {
-    expectedException.expect(ConversionException.class);
-    expectedException.expectMessage(
-        "DRF ordering policy cannot be used together with fifo/fair");
-    String absolutePath =
-        new File("src/test/resources/fair-scheduler-orderingpolicy-mixed.xml")
-          .getAbsolutePath();
-    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
-        FILE_PREFIX + absolutePath);
-
-    converter.convert(config);
-  }
-
-  @Test
   public void testQueueMaxChildCapacityNotSupported() throws Exception {
     expectedException.expect(UnsupportedPropertyException.class);
     expectedException.expectMessage("test");
@@ -266,7 +274,7 @@ public class TestFSConfigToCSConfigConverter {
   @Test
   public void testConvertFSConfigurationClusterResource() throws Exception {
     FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
-        .withClusterResource("vcores=20, memory-mb=240")
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
         .build();
     converter.convert(params);
     assertEquals("Resource", Resource.newInstance(240, 20),
@@ -277,7 +285,7 @@ public class TestFSConfigToCSConfigConverter {
   public void testConvertFSConfigPctModeUsedAndClusterResourceDefined()
       throws Exception {
     FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
-            .withClusterResource("vcores=20, memory-mb=240")
+            .withClusterResource(CLUSTER_RESOURCE_STRING)
             .build();
     converter.convert(params);
     assertEquals("Resource", Resource.newInstance(240, 20),
@@ -325,7 +333,8 @@ public class TestFSConfigToCSConfigConverter {
 
   @Test
   public void testConvertFSConfigurationRulesFile() throws Exception {
-    ruleHandler = new FSConfigToCSConfigRuleHandler();
+    ruleHandler = new FSConfigToCSConfigRuleHandler(
+        createDefaultConversionOptions());
     createConverter();
 
     FSConfigToCSConfigConverterParams params =
@@ -382,7 +391,7 @@ public class TestFSConfigToCSConfigConverter {
   @Test
   public void testConvertCheckOutputDir() throws Exception {
     FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
-        .withClusterResource("vcores=20, memory-mb=240")
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
         .build();
 
     converter.convert(params);
@@ -407,7 +416,7 @@ public class TestFSConfigToCSConfigConverter {
       throws Exception {
     FSConfigToCSConfigConverterParams params =
         createParamsBuilder(YARN_SITE_XML_NO_REF_TO_FS_XML)
-        .withClusterResource("vcores=20, memory-mb=240")
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
         .build();
 
     expectedException.expect(PreconditionException.class);
@@ -418,7 +427,7 @@ public class TestFSConfigToCSConfigConverter {
   @Test
   public void testInvalidFairSchedulerXml() throws Exception {
     FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
-        .withClusterResource("vcores=20, memory-mb=240")
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
         .withFairSchedulerXmlConfig(FAIR_SCHEDULER_XML_INVALID)
         .build();
 
@@ -430,11 +439,179 @@ public class TestFSConfigToCSConfigConverter {
   public void testInvalidYarnSiteXml() throws Exception {
     FSConfigToCSConfigConverterParams params =
         createParamsBuilder(YARN_SITE_XML_INVALID)
-        .withClusterResource("vcores=20, memory-mb=240")
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
         .build();
 
     expectedException.expect(RuntimeException.class);
     converter.convert(params);
+  }
+
+  @Test
+  public void testConversionWithInvalidPlacementRules() throws Exception {
+    config = new Configuration(false);
+    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+        FS_INVALID_PLACEMENT_RULES_XML);
+    config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
+    expectedException.expect(ServiceStateException.class);
+
+    converter.convert(config);
+  }
+
+  @Test
+  public void testConversionWhenInvalidPlacementRulesIgnored()
+      throws Exception {
+    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
+        .withFairSchedulerXmlConfig(FS_INVALID_PLACEMENT_RULES_XML)
+        .build();
+
+    ConversionOptions conversionOptions = createDefaultConversionOptions();
+    conversionOptions.setNoTerminalRuleCheck(true);
+
+    converter = new FSConfigToCSConfigConverter(ruleHandler,
+        conversionOptions);
+
+    converter.convert(params);
+
+    // expected: no exception
+  }
+
+  @Test
+  public void testConversionWhenOnlyFairPolicyIsUsed() throws Exception {
+    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
+        .withFairSchedulerXmlConfig(FS_ONLY_FAIR_POLICY_XML)
+        .build();
+
+    converter.convert(params);
+
+    Configuration convertedConfig = converter.getYarnSiteConfig();
+
+    assertEquals("Resource calculator class shouldn't be set", null,
+        convertedConfig.getClass(
+            CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS, null));
+  }
+
+  @Test
+  public void testConversionWhenMixedPolicyIsUsed() throws Exception {
+    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
+        .withFairSchedulerXmlConfig(FS_MIXED_POLICY_XML)
+        .build();
+
+    converter.convert(params);
+
+    Configuration convertedConfig = converter.getYarnSiteConfig();
+
+    assertEquals("Resource calculator type", DominantResourceCalculator.class,
+        convertedConfig.getClass(
+            CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS, null));
+  }
+
+  @SuppressWarnings("checkstyle:linelength")
+  public void testUserAsDefaultQueueWithPlacementRules() throws Exception {
+    config = new Configuration(false);
+    config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
+    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+        FAIR_SCHEDULER_XML);
+
+    converter.convert(config);
+
+    Configuration convertedConf = getConvertedCSConfig();
+
+    String expectedMappingRules =
+        "u:%user:root.admins.devs.%user,u:%user:root.users.%user,u:%user:root.default";
+    String mappingRules =
+        convertedConf.get(CapacitySchedulerConfiguration.QUEUE_MAPPING);
+    assertEquals("Mapping rules", expectedMappingRules, mappingRules);
+  }
+
+  @Test
+  public void testUserAsDefaultQueueTrueWithoutPlacementRules()
+      throws Exception {
+    testUserAsDefaultQueueWithoutPlacementRules(true);
+  }
+
+  @Test
+  public void testUserAsDefaultQueueFalseWithoutPlacementRules()
+      throws Exception {
+    testUserAsDefaultQueueWithoutPlacementRules(false);
+  }
+
+  private void testUserAsDefaultQueueWithoutPlacementRules(boolean
+      userAsDefaultQueue) throws Exception {
+    config = new Configuration(false);
+    config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
+    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+        FS_NO_PLACEMENT_RULES_XML);
+    config.setBoolean(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE,
+        userAsDefaultQueue);
+
+    converter.convert(config);
+
+    Configuration convertedConf = getConvertedCSConfig();
+    String mappingRules =
+        convertedConf.get(CapacitySchedulerConfiguration.QUEUE_MAPPING);
+
+    if (userAsDefaultQueue) {
+      assertEquals("Mapping rules", "u:%user:%user", mappingRules);
+    } else {
+      assertEquals("Mapping rules", "u:%user:root.default", mappingRules);
+    }
+  }
+
+  @Test
+  public void testAutoCreateChildQueuesWithPlacementRules() throws Exception {
+    config = new Configuration(false);
+    config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
+    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+        FAIR_SCHEDULER_XML);
+    config.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS,
+        true);
+
+    converter.convert(config);
+
+    Configuration convertedConf = getConvertedCSConfig();
+    String property =
+        "yarn.scheduler.capacity.root.auto-create-child-queue.enabled";
+    assertNull("Auto-create queue shouldn't be set",
+        convertedConf.get(property));
+  }
+
+  @Test
+  public void testAutoCreateChildQueuesTrueWithoutPlacementRules()
+      throws Exception {
+    testAutoCreateChildQueuesWithoutPlacementRules(true);
+  }
+
+  @Test
+  public void testAutoCreateChildQueuesFalseWithoutPlacementRules()
+      throws Exception {
+    testAutoCreateChildQueuesWithoutPlacementRules(false);
+  }
+
+  private void testAutoCreateChildQueuesWithoutPlacementRules(
+      boolean allowUndeclaredPools) throws Exception {
+    config = new Configuration(false);
+    config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
+    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+        FS_NO_PLACEMENT_RULES_XML);
+    config.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS,
+        allowUndeclaredPools);
+
+    converter.convert(config);
+
+    Configuration convertedConf = getConvertedCSConfig();
+    String property =
+        "yarn.scheduler.capacity.root.auto-create-child-queue.enabled";
+
+    if (allowUndeclaredPools) {
+      assertEquals("Auto-create queue wasn't enabled", true,
+          convertedConf.getBoolean(property, false));
+    } else {
+      assertNull("Auto-create queue shouldn't be set",
+          convertedConf.get(property));
+    }
   }
 
   private Configuration getConvertedCSConfig() {

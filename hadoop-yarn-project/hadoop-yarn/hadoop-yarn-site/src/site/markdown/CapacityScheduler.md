@@ -54,7 +54,7 @@ The `CapacityScheduler` supports the following features:
 
 * **Operability**
 
-    * Runtime Configuration - The queue definitions and properties such as capacity, ACLs can be changed, at runtime, by administrators in a secure manner to minimize disruption to users. Also, a console is provided for users and administrators to view current allocation of resources to various queues in the system. Administrators can *add additional queues* at runtime, but queues cannot be *deleted* at runtime unless the queue is STOPPED and nhas no pending/running apps.
+    * Runtime Configuration - The queue definitions and properties such as capacity, ACLs can be changed, at runtime, by administrators in a secure manner to minimize disruption to users. Also, a console is provided for users and administrators to view current allocation of resources to various queues in the system. Administrators can *add additional queues* at runtime, but queues cannot be *deleted* at runtime unless the queue is STOPPED and has no pending/running apps.
 
     * Drain applications - Administrators can *stop* queues at runtime to ensure that while existing applications run to completion, no new applications can be submitted. If a queue is in `STOPPED` state, new applications cannot be submitted to *itself* or *any of its child queues*. Existing applications continue to completion, thus the queue can be *drained* gracefully. Administrators can also *start* the stopped queues.
 
@@ -167,20 +167,56 @@ Configuration
 
 Example:
 
-```
+Below example covers single mapping separately. In case of multiple mappings with comma separated values, evaluation would be from left to right, and the first valid mapping will be used. Below example order has been documented based on actual order of execution at runtime in case of multiple mappings.
+``` 
  <property>
-   <name>yarn.scheduler.capacity.queue-mappings</name>
-   <value>u:user1:queue1,g:group1:queue2,u:%user:%user,u:user2:%primary_group,u:user3:%secondary_group,u:%user:%primary_group.%user,u:%user:%secondary_group.%user</value>
-   <description>
-     Here, <user1> is mapped to <queue1>, <group1> is mapped to <queue2>, 
-     maps users to queues with the same name as user, <user2> is mapped 
-     to queue name same as <primary group>, maps users to queue with the
-     same name as user but parent queue name should be same as <primary group>
-     of the user, maps users to queue with the same name as user but parent
-     queue name should be same as any <secondary group> of the user
-     respectively. The mappings will be evaluated from left to
-     right, and the first valid mapping will be used.
-   </description>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:%user:%primary_group.%user</value>
+    <description>Maps users to queue with the same name as user but
+    parent queue name should be same as primary group of the user</description>
+ </property>
+ ...
+ <property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:%user:%secondary_group.%user</value>
+    <description>Maps users to queue with the same name as user but
+    parent queue name should be same as any secondary group of the user</description>
+ </property>
+ ...
+ <property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:%user:%user</value>
+    <description>Maps users to queues with the same name as user</description>
+ </property>
+ ...
+ <property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:user2:%primary_group</value>
+    <description>user2 is mapped to queue name same as primary group</description>
+ </property>
+ ...
+ <property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:user3:%secondary_group</value>
+    <description>user3 is mapped to queue name same as secondary group</description>
+ </property>
+ ...
+ <property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:user1:queue1</value>
+    <description>user1 is mapped to queue1</description>
+ </property>
+ ...
+ <property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>g:group1:queue2</value>
+    <description>group1 is mapped to queue2</description>
+ </property>
+ ...
+ <property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:user1:queue1,u:user2:queue2</value>
+    <description>Here, <user1> is mapped to <queue1>, <user2> is mapped to <queue2> respectively</description>
  </property>
 
   <property>
@@ -200,8 +236,8 @@ Example:
 
 | Property | Description |
 |:---- |:---- |
-| `yarn.scheduler.capacity.<queue-path>.maximum-application-lifetime` | Maximum lifetime of an application which is submitted to a queue in seconds. Any value less than or equal to zero will be considered as disabled. This will be a hard time limit for all applications in this queue. If positive value is configured then any application submitted to this queue will be killed after exceeds the configured lifetime. User can also specify lifetime per application basis in application submission context. But user lifetime will be overridden if it exceeds queue maximum lifetime. It is point-in-time configuration. Note : Configuring too low value will result in killing application sooner. This feature is applicable only for leaf queue. |
-| `yarn.scheduler.capacity.root.<queue-path>.default-application-lifetime` | Default lifetime of an application which is submitted to a queue in seconds. Any value less than or equal to zero will be considered as disabled. If the user has not submitted application with lifetime value then this value will be taken. It is point-in-time configuration. Note : Default lifetime can't exceed maximum lifetime. This feature is applicable only for leaf queue.|
+| `yarn.scheduler.capacity.<queue-path>.maximum-application-lifetime` | Maximum lifetime (in seconds) of an application which is submitted to a queue. Any value less than or equal to zero will be considered as disabled. The default is -1. If positive value is configured then any application submitted to this queue will be killed after it exceeds the configured lifetime. User can also specify lifetime per application in application submission context. However, user lifetime will be overridden if it exceeds queue maximum lifetime. It is point-in-time configuration. Note: This feature can be set at any level in the queue hierarchy. Child queues will inherit their parent's value unless overridden at the child level. A value of 0 means no max lifetime and will override a parent's max lifetime. If this property is not set or is set to a negative number, then this queue's max lifetime value will be inherited from it's parent.|
+| `yarn.scheduler.capacity.root.<queue-path>.default-application-lifetime` | Default lifetime (in seconds) of an application which is submitted to a queue. Any value less than or equal to zero will be considered as disabled. If the user has not submitted application with lifetime value then this value will be taken. It is point-in-time configuration. This feature can be set at any level in the queue hierarchy. Child queues will inherit their parent's value unless overridden at the child level. If set to less than or equal to 0, the queue's max value must also be unlimited. Default lifetime can't exceed maximum lifetime. |
 
 
 ###Setup for application priority.

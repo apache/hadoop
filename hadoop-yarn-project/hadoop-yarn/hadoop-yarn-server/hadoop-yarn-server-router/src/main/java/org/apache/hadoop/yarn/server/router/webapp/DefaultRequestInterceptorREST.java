@@ -172,7 +172,7 @@ public class DefaultRequestInterceptorREST
       Set<String> statesQuery, String finalStatusQuery, String userQuery,
       String queueQuery, String count, String startedBegin, String startedEnd,
       String finishBegin, String finishEnd, Set<String> applicationTypes,
-      Set<String> applicationTags, Set<String> unselectedFields) {
+      Set<String> applicationTags, String name, Set<String> unselectedFields) {
     // all the params are specified inside hsr
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         AppsInfo.class, HTTPMethods.GET,

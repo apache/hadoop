@@ -222,12 +222,6 @@ public final class LogWebServiceUtils {
     return appState == YarnApplicationState.RUNNING;
   }
 
-  public static boolean isFinishedState(YarnApplicationState appState) {
-    return appState == YarnApplicationState.FINISHED
-        || appState == YarnApplicationState.FAILED
-        || appState == YarnApplicationState.KILLED;
-  }
-
   protected static UserGroupInformation getUser(HttpServletRequest req) {
     String remoteUser = req.getRemoteUser();
     UserGroupInformation callerUGI = null;
