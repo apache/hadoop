@@ -36,6 +36,8 @@ import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -240,6 +242,30 @@ public final class S3Guard {
     } else {
       return metastore.initiateBulkWrite(operation, path);
     }
+  }
+
+  /**
+   * Convert the data of an iterator of {@link S3AFileStatus} to
+   * an array. Given tombstones are filtered out. If the iterator
+   * does return any item, an empty array is returned.
+   * @param iterator a non-null iterator
+   * @param tombstones
+   * @return a possibly-empty array of file status entries
+   * @throws IOException
+   */
+  public static S3AFileStatus[] iteratorToStatuses(
+      RemoteIterator<S3AFileStatus> iterator, Set<Path> tombstones)
+      throws IOException {
+    List<FileStatus> statuses = new ArrayList<>();
+
+    while (iterator.hasNext()) {
+      S3AFileStatus status = iterator.next();
+      if (!tombstones.contains(status.getPath())) {
+        statuses.add(status);
+      }
+    }
+
+    return statuses.toArray(new S3AFileStatus[0]);
   }
 
   /**

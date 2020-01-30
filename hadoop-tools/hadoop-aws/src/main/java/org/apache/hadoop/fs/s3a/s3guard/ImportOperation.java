@@ -146,7 +146,7 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
       long countOfFilesWritten = 0;
       long countOfDirsWritten = 0;
       RemoteIterator<S3ALocatedFileStatus> it = getFilesystem()
-          .listFilesAndEmptyDirectories(basePath, true);
+          .listFilesAndEmptyDirectoriesForceNonAuth(basePath, true);
       while (it.hasNext()) {
         S3ALocatedFileStatus located = it.next();
         S3AFileStatus child;

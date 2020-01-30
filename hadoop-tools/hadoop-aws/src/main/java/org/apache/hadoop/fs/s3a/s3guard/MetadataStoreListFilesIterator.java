@@ -92,6 +92,7 @@ public class MetadataStoreListFilesIterator implements
   private final boolean allowAuthoritative;
   private final MetadataStore metadataStore;
   private final Set<Path> tombstones = new HashSet<>();
+  private final boolean recursivelyAuthoritative;
   private Iterator<S3AFileStatus> leafNodesIterator = null;
 
   public MetadataStoreListFilesIterator(MetadataStore ms, PathMetadata meta,
@@ -99,24 +100,48 @@ public class MetadataStoreListFilesIterator implements
     Preconditions.checkNotNull(ms);
     this.metadataStore = ms;
     this.allowAuthoritative = allowAuthoritative;
-    prefetch(meta);
+    this.recursivelyAuthoritative = prefetch(meta);
   }
 
-  private void prefetch(PathMetadata meta) throws IOException {
+  /**
+   * Walks the listing tree, starting from given metadata path. All
+   * encountered files and empty directories are added to
+   * {@link leafNodesIterator} unless a directory seems to be empty
+   * and at least one of the following conditions hold:
+   * <ul>
+   *   <li>
+   *     The directory listing is not marked authoritative
+   *   </li>
+   *   <li>
+   *     Authoritative mode is not allowed
+   *   </li>
+   * </ul>
+   * @param meta starting point for tree walk
+   * @return {@code true} if all encountered directory listings
+   *          are marked as authoritative
+   * @throws IOException
+   */
+  private boolean prefetch(PathMetadata meta) throws IOException {
     final Queue<PathMetadata> queue = new LinkedList<>();
     final Collection<S3AFileStatus> leafNodes = new ArrayList<>();
 
+    boolean allListingsAuthoritative = true;
     if (meta != null) {
       final Path path = meta.getFileStatus().getPath();
       if (path.isRoot()) {
         DirListingMetadata rootListing = metadataStore.listChildren(path);
         if (rootListing != null) {
+          if (!rootListing.isAuthoritative()) {
+            allListingsAuthoritative = false;
+          }
           tombstones.addAll(rootListing.listTombstones());
           queue.addAll(rootListing.withoutTombstones().getListing());
         }
       } else {
         queue.add(meta);
       }
+    } else {
+      allListingsAuthoritative = false;
     }
 
     while(!queue.isEmpty()) {
@@ -131,6 +156,9 @@ public class MetadataStoreListFilesIterator implements
         final Path path = nextStatus.getPath();
         DirListingMetadata children = metadataStore.listChildren(path);
         if (children != null) {
+          if (!children.isAuthoritative()) {
+            allListingsAuthoritative = false;
+          }
           tombstones.addAll(children.listTombstones());
           Collection<PathMetadata> liveChildren =
               children.withoutTombstones().getListing();
@@ -142,6 +170,9 @@ public class MetadataStoreListFilesIterator implements
           } else if (allowAuthoritative && children.isAuthoritative()) {
             leafNodes.add(nextStatus);
           }
+        } else {
+          // we do not have a listing, so directory definitely non-authoritative
+          allListingsAuthoritative = false;
         }
       }
       // Directories that *might* be empty are ignored for now, since we
@@ -151,6 +182,7 @@ public class MetadataStoreListFilesIterator implements
       // The only other possibility is a symlink, which is unsupported on S3A.
     }
     leafNodesIterator = leafNodes.iterator();
+    return allListingsAuthoritative;
   }
 
   @Override
@@ -161,6 +193,10 @@ public class MetadataStoreListFilesIterator implements
   @Override
   public S3AFileStatus next() {
     return leafNodesIterator.next();
+  }
+
+  public boolean isRecursivelyAuthoritative() {
+    return recursivelyAuthoritative;
   }
 
   public Set<Path> listTombstones() {
