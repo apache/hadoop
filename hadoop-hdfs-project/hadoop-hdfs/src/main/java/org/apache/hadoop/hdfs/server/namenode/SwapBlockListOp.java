@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -55,7 +54,7 @@ public final class SwapBlockListOp {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.swapBlockList: "
           + srcIIP.getPath() + " and " + dstIIP.getPath());
     }
-    SwapBlockListResult result = null;
+    SwapBlockListResult result;
     fsd.writeLock();
     try {
       result = swapBlockList(fsd, srcIIP, dstIIP, genTimestamp);
@@ -83,8 +82,8 @@ public final class SwapBlockListOp {
           " and destination " + dst + " are the same");
     }
 
-    INodeFile srcINodeFile = (INodeFile) srcIIP.getLastINode();
-    INodeFile dstINodeFile = (INodeFile) dstIIP.getLastINode();
+    INodeFile srcINodeFile = srcIIP.getLastINode().asFile();
+    INodeFile dstINodeFile = dstIIP.getLastINode().asFile();
 
     String errorPrefix = "DIR* FSDirectory.swapBlockList: ";
     String error = "Swap Block List destination file ";
@@ -130,15 +129,10 @@ public final class SwapBlockListOp {
 
     String errorPrefix = "DIR* FSDirectory.swapBlockList: ";
     String error = "Swap Block List input ";
+
+    FSDirectory.resolveLastINode(srcIIP);
+
     final INode srcInode = srcIIP.getLastINode();
-
-    // Check if INode is null.
-    if (srcInode == null) {
-      error  += srcIIP.getPath() + " is not found.";
-      NameNode.stateChangeLog.warn(errorPrefix + error);
-      throw new FileNotFoundException(error);
-    }
-
     // Check if INode is a file and NOT a directory.
     if (!srcInode.isFile()) {
       error  += srcIIP.getPath() + " is not a file.";

@@ -32,8 +32,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile.HeaderFormat;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -98,78 +98,50 @@ public class TestSwapBlockList {
   public void testInputValidation() throws Exception {
 
     // Source file not found.
-    try {
-      fsn.swapBlockList("/TestSwapBlockList/dir1/fileXYZ",
-          "/TestSwapBlockList/dir1/dir11/file3", 0L);
-      Assert.fail();
-    } catch (IOException ioEx) {
-      Assert.assertTrue(ioEx instanceof FileNotFoundException);
-      Assert.assertTrue(
-          ioEx.getMessage().contains("/TestSwapBlockList/dir1/fileXYZ"));
-    }
+    LambdaTestUtils.intercept(FileNotFoundException.class,
+        "/TestSwapBlockList/dir1/fileXYZ", () -> fsn.swapBlockList(
+            "/TestSwapBlockList/dir1/fileXYZ", "/TestSwapBlockList/dir1/dir11" +
+                "/file3", 0L));
 
     // Destination file not found.
-    try {
-      fsn.swapBlockList("/TestSwapBlockList/dir1/file1",
-          "/TestSwapBlockList/dir1/dir11/fileXYZ", 0L);
-      Assert.fail();
-    } catch (IOException ioEx) {
-      Assert.assertTrue(ioEx instanceof FileNotFoundException);
-      Assert.assertTrue(
-          ioEx.getMessage().contains("/TestSwapBlockList/dir1/dir11/fileXYZ"));
-    }
+    LambdaTestUtils.intercept(FileNotFoundException.class,
+        "/TestSwapBlockList/dir1/dir11/fileXYZ",
+        () -> fsn.swapBlockList("/TestSwapBlockList/dir1/file1",
+            "/TestSwapBlockList/dir1/dir11/fileXYZ", 0L));
 
     // Source is Directory, not a file.
-    try {
-      fsn.swapBlockList("/TestSwapBlockList/dir1",
-          "/TestSwapBlockList/dir1/dir11/file3", 0L);
-      Assert.fail();
-    } catch (IOException ioEx) {
-      Assert.assertTrue(
-          ioEx.getMessage().contains("/TestSwapBlockList/dir1 is not a file."));
-    }
+    LambdaTestUtils.intercept(IOException.class,
+        "/TestSwapBlockList/dir1 is not a file.",
+        () -> fsn.swapBlockList("/TestSwapBlockList/dir1",
+            "/TestSwapBlockList/dir1/dir11/file3", 0L));
 
     String sourceFile = "/TestSwapBlockList/dir1/file1";
-    String dstFile = "/TestSwapBlockList/dir1/dir11/file3";
+    String dstFile1 = "/TestSwapBlockList/dir1/dir11/file3";
 
     // Destination file is under construction.
-    INodeFile dstInodeFile =
-        (INodeFile) fsdir.resolvePath(fsdir.getPermissionChecker(),
-        dstFile, FSDirectory.DirOp.WRITE).getLastINode();
+    INodeFile dstInodeFile = fsdir.resolvePath(fsdir.getPermissionChecker(),
+        dstFile1, FSDirectory.DirOp.WRITE).getLastINode().asFile();
     dstInodeFile.toUnderConstruction("TestClient", "TestClientMachine");
-    try {
-      fsn.swapBlockList(sourceFile, dstFile, 0L);
-      Assert.fail();
-    } catch (IOException ioEx) {
-      Assert.assertTrue(
-          ioEx.getMessage().contains(dstFile + " is under construction."));
-    }
+    LambdaTestUtils.intercept(IOException.class,
+        dstFile1 + " is under construction.",
+        () -> fsn.swapBlockList(sourceFile, dstFile1, 0L));
 
     // Check if parent directory is in snapshot.
     SnapshotTestHelper.createSnapshot(hdfs, subDir2, "s0");
-    dstFile = "/TestSwapBlockList/dir2/file4";
-    try {
-      fsn.swapBlockList(sourceFile, dstFile, 0L);
-      Assert.fail();
-    } catch (IOException ioEx) {
-      Assert.assertTrue(
-          ioEx.getMessage().contains(dstFile + " is in a snapshot directory."));
-    }
+    String dstFile2 = "/TestSwapBlockList/dir2/file4";
+    LambdaTestUtils.intercept(IOException.class,
+        dstFile2 + " is in a snapshot directory",
+        () -> fsn.swapBlockList(sourceFile, dstFile2, 0L));
 
     // Check if gen timestamp validation works.
-    dstFile = "/TestSwapBlockList/dir1/file2";
+    String dstFile3 = "/TestSwapBlockList/dir1/file2";
     dstInodeFile = (INodeFile) fsdir.resolvePath(fsdir.getPermissionChecker(),
-            dstFile, FSDirectory.DirOp.WRITE).getLastINode();
+        dstFile3, FSDirectory.DirOp.WRITE).getLastINode();
     long genStamp = dstInodeFile.getLastBlock().getGenerationStamp();
     dstInodeFile.getLastBlock().setGenerationStamp(genStamp + 1);
-    try {
-      fsn.swapBlockList(sourceFile, dstFile, genStamp);
-      Assert.fail();
-    } catch (IOException ioEx) {
-      Assert.assertTrue(
-          ioEx.getMessage().contains(dstFile +
-              " has last block with different gen timestamp."));
-    }
+    LambdaTestUtils.intercept(IOException.class,
+        dstFile3 + " has last block with different gen timestamp.",
+        () -> fsn.swapBlockList(sourceFile, dstFile3, genStamp));
   }
 
   @Test

@@ -2674,7 +2674,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     if (stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.swapBlockList: {} and {}", src, dst);
     }
-    namesystem.checkOperation(OperationCategory.WRITE);
     return namesystem.swapBlockList(src, dst, maxTimestamp);
   }
 
