@@ -1013,7 +1013,7 @@ public class TestNativeIO {
 
     SocketServer() throws Exception {
       this.server = new ServerSocket(0, 1, InetAddress.getLocalHost());
-      listenerThread = new ListenerThread();
+      this.listenerThread = new ListenerThread();
     }
 
     public void start() {
