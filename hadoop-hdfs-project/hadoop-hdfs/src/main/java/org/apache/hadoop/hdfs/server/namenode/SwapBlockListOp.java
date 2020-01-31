@@ -130,9 +130,8 @@ public final class SwapBlockListOp {
     String errorPrefix = "DIR* FSDirectory.swapBlockList: ";
     String error = "Swap Block List input ";
 
-    FSDirectory.resolveLastINode(srcIIP);
+    INode srcInode = FSDirectory.resolveLastINode(srcIIP);
 
-    final INode srcInode = srcIIP.getLastINode();
     // Check if INode is a file and NOT a directory.
     if (!srcInode.isFile()) {
       error  += srcIIP.getPath() + " is not a file.";
