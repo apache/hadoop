@@ -955,7 +955,7 @@ public class TestNativeIO {
       channel = raSrcFile.getChannel();
       FileDescriptor srcFD = raSrcFile.getFD();
 
-      byte srcBytes[] = writeRandomBytes(channel, size);
+      byte[] srcBytes = writeRandomBytes(channel, size);
 
       // 1. Test whole file
       testTransferToRange(server, channel, srcBytes, srcFD, 0, size);
@@ -976,7 +976,7 @@ public class TestNativeIO {
   private byte[] writeRandomBytes(FileChannel fileChannel, int size)
       throws IOException {
     Random rb = new Random();
-    byte randomBytes[] = new byte[size];
+    byte[] randomBytes = new byte[size];
     rb.nextBytes(randomBytes);
     ByteBuffer randomBytesBuf = ByteBuffer.wrap(randomBytes);
     fileChannel.write(randomBytesBuf);
@@ -1027,7 +1027,7 @@ public class TestNativeIO {
 
     class ListenerThread extends Thread {
 
-      byte[] bytesWritten = null;
+      private byte[] bytesWritten = null;
 
       @Override
       public void run() {
