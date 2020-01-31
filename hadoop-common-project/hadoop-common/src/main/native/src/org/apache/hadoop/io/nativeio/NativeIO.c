@@ -1367,6 +1367,12 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024Windows_transmitFile(
   JNIEnv *env, jobject jObject, jobject srcFD, jlong position, jlong count,
   jobject dstFD)
 {
+#ifdef UNIX
+  THROW(env, "java/io/IOException",
+    "The function extendWorkingSetSize(delta) is not supported on Unix");
+#endif
+
+#ifdef WINDOWS
     jclass clazz;
 
     HANDLE src;
@@ -1403,6 +1409,7 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024Windows_transmitFile(
         throw_ioe(env, WSAGetLastError());
     }
     return numberOfBytesToWrite;
+#endif
 }
 
 JNIEXPORT void JNICALL 
