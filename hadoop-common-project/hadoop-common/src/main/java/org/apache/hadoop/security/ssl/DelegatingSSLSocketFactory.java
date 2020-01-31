@@ -167,6 +167,15 @@ public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
         LOG.debug("Failed to load OpenSSL. Falling back to the JSSE default.");
         ctx = SSLContext.getDefault();
         channelMode = SSLChannelMode.Default_JSSE;
+      } catch (Exception e) {
+        // other problems, such as mismatch between the native libraries and
+        // wildfly JARReal. Do warn here and then fall back.
+        LOG.warn("Failed to load OpenSSL. Falling back to the JSSE default: {}",
+            e.toString());
+        // with the full stack trace at debug level
+        LOG.debug("Problem in wildfly/openssl", e);
+        ctx = SSLContext.getDefault();
+        channelMode = SSLChannelMode.Default_JSSE;
       }
       break;
     case OpenSSL:
