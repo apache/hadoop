@@ -17,18 +17,19 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.manager;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.nio.ByteBuffer;
+
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.LocalityMulticastAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
-import org.apache.hadoop.yarn.server.federation.policies.router.WeightedRandomRouterPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.router.LocalityRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 
-import java.nio.ByteBuffer;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Policy that allows operator to configure "weights" for routing. This picks a
- * {@link WeightedRandomRouterPolicy} for the router and a {@link
+ * {@link LocalityRouterPolicy} for the router and a {@link
  * LocalityMulticastAMRMProxyPolicy} for the amrmproxy as they are designed to
  * work together.
  */
@@ -40,7 +41,7 @@ public class WeightedLocalityPolicyManager
   public WeightedLocalityPolicyManager() {
     //this structurally hard-codes two compatible policies for Router and
     // AMRMProxy.
-    routerFederationPolicy =  WeightedRandomRouterPolicy.class;
+    routerFederationPolicy =  LocalityRouterPolicy.class;
     amrmProxyFederationPolicy = LocalityMulticastAMRMProxyPolicy.class;
     weightedPolicyInfo = new WeightedPolicyInfo();
   }
