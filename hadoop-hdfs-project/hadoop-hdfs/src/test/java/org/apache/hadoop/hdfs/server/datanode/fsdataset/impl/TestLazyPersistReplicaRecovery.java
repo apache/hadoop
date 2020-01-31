@@ -18,7 +18,15 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.BlockReportOptions;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
@@ -27,6 +35,7 @@ import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.fs.StorageType.DEFAULT;
 import static org.apache.hadoop.fs.StorageType.RAM_DISK;
+import static org.junit.Assert.assertTrue;
 
 public class TestLazyPersistReplicaRecovery extends LazyPersistTestCase {
   @Test
@@ -34,6 +43,10 @@ public class TestLazyPersistReplicaRecovery extends LazyPersistTestCase {
       throws IOException, InterruptedException, TimeoutException {
 
     getClusterBuilder().build();
+    FSNamesystem fsn = cluster.getNamesystem();
+    final DataNode dn = cluster.getDataNodes().get(0);
+    DatanodeDescriptor dnd =
+        NameNodeAdapter.getDatanode(fsn, dn.getDatanodeId());
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
 
@@ -42,14 +55,21 @@ public class TestLazyPersistReplicaRecovery extends LazyPersistTestCase {
 
     // Sleep for a short time to allow the lazy writer thread to do its job.
     // However the block replica should not be evicted from RAM_DISK yet.
-    Thread.sleep(3 * LAZY_WRITER_INTERVAL_SEC * 1000);
+    final FsDatasetImpl fsDImpl =
+        (FsDatasetImpl) DataNodeTestUtils.getFSDataset(dn);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return fsDImpl.getNonPersistentReplicas() == 0;
+      }
+    }, 10, 3 * LAZY_WRITER_INTERVAL_SEC * 1000);
     ensureFileReplicasOnStorageType(path1, RAM_DISK);
 
     LOG.info("Restarting the DataNode");
-    cluster.restartDataNode(0, true);
-    cluster.waitActive();
-    triggerBlockReport();
-
+    assertTrue("DN did not restart properly",
+        cluster.restartDataNode(0, true));
+    // wait for blockreport
+    waitForBlockReport(dn, dnd);
     // Ensure that the replica is now on persistent storage.
     ensureFileReplicasOnStorageType(path1, DEFAULT);
   }
@@ -72,5 +92,25 @@ public class TestLazyPersistReplicaRecovery extends LazyPersistTestCase {
 
     // Ensure that the replica is still on transient storage.
     ensureFileReplicasOnStorageType(path1, RAM_DISK);
+  }
+
+  private boolean waitForBlockReport(final DataNode dn,
+      final DatanodeDescriptor dnd) throws IOException, InterruptedException {
+    final DatanodeStorageInfo storage = dnd.getStorageInfos()[0];
+    final long lastCount = storage.getBlockReportCount();
+    dn.triggerBlockReport(
+        new BlockReportOptions.Factory().setIncremental(false).build());
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return lastCount != storage.getBlockReportCount();
+        }
+      }, 10, 10000);
+    } catch (TimeoutException te) {
+      LOG.error("Timeout waiting for block report for datanode: " + dnd);
+      return false;
+    }
+    return true;
   }
 }
