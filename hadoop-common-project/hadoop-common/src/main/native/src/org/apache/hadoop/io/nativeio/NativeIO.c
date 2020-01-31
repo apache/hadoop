@@ -1369,7 +1369,7 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024Windows_transmitFile(
 {
 #ifdef UNIX
   THROW(env, "java/io/IOException",
-    "The function extendWorkingSetSize(delta) is not supported on Unix");
+    "The function transmitFile is not supported on Unix");
 #endif
 
 #ifdef WINDOWS
