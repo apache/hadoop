@@ -102,7 +102,7 @@ Usage:
 | `-list-corruptfileblocks` | Print out list of missing blocks and files they belong to. |
 | `-move` | Move corrupted files to /lost+found. |
 | `-openforwrite` | Print out files opened for write. |
-| `-showprogress` | Print out dots for progress in output. Default is OFF (no progress). |
+| `-showprogress` | Deprecated. A dot is print every 100 files processed with or without this switch. |
 | `-storagepolicies` | Print out storage policy summary for the blocks. |
 | `-maintenance` | Print out maintenance state node details. |
 | `-blockId` | Print out information about the block. |
