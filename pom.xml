@@ -552,6 +552,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <exclude>licenses-binary/**</exclude>
             <exclude>dev-support/docker/pkg-resolver/packages.json</exclude>
             <exclude>dev-support/docker/pkg-resolver/platforms.json</exclude>
+            <exclude>**/target/**</exclude>
          </excludes>
        </configuration>
       </plugin>
