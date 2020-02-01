@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,9 +18,13 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.impl.AsyncReaderUtils;
 
 /**
  * Stream that permits positional reading.
@@ -85,4 +89,37 @@ public interface PositionedReadable {
    * the read operation completed
    */
   void readFully(long position, byte[] buffer) throws IOException;
+
+  /**
+   * What is the smallest reasonable seek?
+   * @return the minimum number of bytes
+   */
+  default int minimumReasonableSeek() {
+    return 4 * 1024;
+  }
+
+  /**
+   * What is the largest size that we should group ranges together as?
+   * @return the number of bytes to read at once
+   */
+  default int maximumReadSize() {
+    return 1024 * 1024;
+  }
+
+  /**
+   * Read fully a list of file ranges asynchronously from this file.
+   * The default iterates through the ranges to read each synchronously, but
+   * the intent is that FSDataInputStream subclasses can make more efficient
+   * readers.
+   * As a result of the call, each range will have FileRange.setData(CompletableFuture)
+   * called with a future that when complete will have a ByteBuffer with the
+   * data from the file's range.
+   * @param ranges the byte ranges to read
+   * @param allocate the function to allocate ByteBuffer
+   */
+  default void readAsync(List<? extends FileRange> ranges,
+                         IntFunction<ByteBuffer> allocate) {
+    AsyncReaderUtils.readAsync(this, ranges, allocate,  minimumReasonableSeek(),
+        maximumReadSize());
+  }
 }
