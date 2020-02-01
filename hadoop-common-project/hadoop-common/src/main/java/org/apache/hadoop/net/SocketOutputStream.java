@@ -261,7 +261,8 @@ public class SocketOutputStream extends OutputStream
 
   /**
    * Call
-   * {@link #transferToFully(FileInputStream, FileChannel, long, int, LongWritable, LongWritable)}
+   * {@link #transferToFully(FileInputStream, FileChannel, long, int,
+   *                         LongWritable, LongWritable)}
    * with null <code>waitForWritableTime</code> and <code>transferToTime</code>
    */
   public void transferToFully(

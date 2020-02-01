@@ -354,8 +354,8 @@ public class NativeIO {
 
       cacheTimeout = conf.getLong(
           CommonConfigurationKeys.HADOOP_SECURITY_UID_NAME_CACHE_TIMEOUT_KEY,
-          CommonConfigurationKeys.HADOOP_SECURITY_UID_NAME_CACHE_TIMEOUT_DEFAULT) *
-          1000;
+          CommonConfigurationKeys.HADOOP_SECURITY_UID_NAME_CACHE_TIMEOUT_DEFAULT
+      ) * 1000;
       LOG.debug("Initialized cache for IDs to User/Group mapping with a " +
           " cache timeout of " + cacheTimeout/1000 + " seconds.");
     }
