@@ -1600,7 +1600,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // DatanodeProtocol
   public DatanodeCommand blockReport(final DatanodeRegistration nodeReg,
-        String poolId, final StorageBlockReport[] reports,
+        String poolId, final StorageBlockRepgetCurrentEditLogTxidort[] reports,
         final BlockReportContext context) throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);

@@ -111,7 +111,8 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     if (attributeProvider == null) {
       // If attribute provider is null, use FSPermissionChecker default
       // implementation to authorize, which supports authorization with context.
-      authorizeWithContext1 = true;
+      authorizeWithContext1 = false;
+      LOG.info("Fallback to the old authorization provider API");
     } else {
       ace = attributeProvider.getExternalAccessControlEnforcer(this);
       // if the runtime external authorization provider doesn't support
@@ -121,8 +122,10 @@ public class FSPermissionChecker implements AccessControlEnforcer {
         Class<?> clazz = ace.getClass();
         clazz.getDeclaredMethod("checkPermissionWithContext", cArg);
         authorizeWithContext1 = true;
+        LOG.info("Use the new authorization provider API");
       } catch (NoSuchMethodException e) {
         authorizeWithContext1 = false;
+        LOG.info("Fallback to the old authorization provider API because the expected method is not found.");
       }
     }
 
@@ -229,7 +232,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     String opType;
     if (this.authorizeWithContext && (opType = operationType.get()) != null) {
       enforcer.checkPermissionWithContext(
-          new INodeAttributeProvider.AuthorizationWithOperationName(
+          new INodeAttributeProvider.AuthorizationContext(
               fsOwner, supergroup, callerUgi, inodeAttrs, inodes,
               components, snapshotId, path, ancestorIndex, doCheckOwner,
               ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir,
@@ -262,7 +265,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
       String opType;
       if (this.authorizeWithContext && (opType = operationType.get()) != null) {
         enforcer.checkPermissionWithContext(
-            new INodeAttributeProvider.AuthorizationWithOperationName(fsOwner,
+            new INodeAttributeProvider.AuthorizationContext(fsOwner,
             supergroup, callerUgi, iNodeAttr,
             // single inode attr in the array
             new INode[] { inode }, // single inode in the array
