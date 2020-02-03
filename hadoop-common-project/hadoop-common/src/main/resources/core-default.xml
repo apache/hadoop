@@ -1706,7 +1706,7 @@
 
 <property>
   <name>fs.s3a.retry.throttle.interval</name>
-  <value>500ms</value>
+  <value>100ms</value>
   <description>
     Initial between retry attempts on throttled requests, +/- 50%. chosen at random.
     i.e. for an intial value of 3000ms, the initial delay would be in the range 1500ms to 4500ms.

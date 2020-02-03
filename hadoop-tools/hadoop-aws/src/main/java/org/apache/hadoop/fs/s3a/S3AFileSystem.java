@@ -1950,6 +1950,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 deleteRequest.getKeys().size())) {
       return invoker.retryUntranslated("delete",
           DELETE_CONSIDERED_IDEMPOTENT,
+          (text, e, r, i) -> {
+            // error triggering retry
+            operationRetried(e);
+
+          },
           () -> {
             incrementStatistic(OBJECT_DELETE_REQUESTS, 1);
             return s3.deleteObjects(deleteRequest);
