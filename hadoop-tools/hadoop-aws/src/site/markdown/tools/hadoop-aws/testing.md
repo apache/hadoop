@@ -464,6 +464,21 @@ Otherwise, set a large timeout in `fs.s3a.scale.test.timeout`
 The tests are executed in an order to only clean up created files after
 the end of all the tests. If the tests are interrupted, the test data will remain.
 
+## <a name="alternate_s3"></a> Load tests.
+There are a few tests which are designed to overload AWS services with more
+requests per second than an AWS account is permitted.
+
+The operation of these test maybe observable to other users of the same
+account -especially if they are working in the AWS region to which the
+tests are targeted.
+
+There may also run up larger bills.
+
+These tests all have the prefix `ILoadTest` 
+
+They do not run automatically: they must be explicitly run from the command line or an IDE.
+
+Look in the source for these and reads the Java docs before executing.
 
 ## <a name="alternate_s3"></a> Testing against non AWS S3 endpoints.
 
@@ -1467,6 +1482,7 @@ Then see if complete successfully in roughly the same time once the upgrade is a
 to AWS services.
 * Try and get other people, especially anyone with their own endpoints,
   apps or different deployment environments, to run their own tests.
+* Run the load tests, especially `ILoadTestS3ABulkDeleteThrottling`.
 
 ### Dealing with Deprecated APIs and New Features
 

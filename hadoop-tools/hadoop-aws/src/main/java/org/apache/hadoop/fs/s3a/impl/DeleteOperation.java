@@ -200,7 +200,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
     this.callbacks = callbacks;
     checkArgument(pageSize > 0
             && pageSize <= InternalConstants.MAX_ENTRIES_TO_DELETE,
-        "page size out of range: %d", pageSize);
+        "page size out of range: %s", pageSize);
     this.pageSize = pageSize;
     metadataStore = context.getMetadataStore();
     executor = context.createThrottledExecutor(1);

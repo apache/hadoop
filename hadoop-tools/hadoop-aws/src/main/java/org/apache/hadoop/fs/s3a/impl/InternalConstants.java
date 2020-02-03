@@ -85,4 +85,8 @@ public final class InternalConstants {
 
   /** 404 error code. */
   public static final int SC_404 = 404;
+
+  /* Name of the log for throttling events. */
+  public static final String THROTTLE_LOG_NAME =
+      "org.apache.hadoop.fs.s3a.throttled";
 }

@@ -107,6 +107,7 @@ import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
+import org.apache.hadoop.fs.s3a.impl.RetryCallbackHandler;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
@@ -170,6 +171,7 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_ALLOW_SSE_KMS
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3Operations;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.TokenIssuingPolicy.NoTokensAvailable;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDelegationTokenBinding;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.MAX_ENTRIES_TO_DELETE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
@@ -1388,7 +1390,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         createStoreContext(),
         src, srcKey, p.getLeft(),
         dst, dstKey, p.getRight(),
-        operationCallbacks);
+        operationCallbacks,
+        intOption(getConf(), BULK_DELETE_PAGE_SIZE,
+            BULK_DELETE_PAGE_SIZE_DEFAULT, 0));
     return renameOperation.execute();
   }
 
@@ -1945,6 +1949,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private DeleteObjectsResult deleteObjects(DeleteObjectsRequest deleteRequest)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
     incrementWriteOperations();
+    RetryCallbackHandler retryHandler =
+        new RetryCallbackHandler(createStoreContext());
     try(DurationInfo ignored =
             new DurationInfo(LOG, false, "DELETE %d keys",
                 deleteRequest.getKeys().size())) {
@@ -1952,8 +1958,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           DELETE_CONSIDERED_IDEMPOTENT,
           (text, e, r, i) -> {
             // error triggering retry
-            operationRetried(e);
-
+            retryHandler.bulkDeleteRetried(deleteRequest, e);
           },
           () -> {
             incrementStatistic(OBJECT_DELETE_REQUESTS, 1);
@@ -2372,7 +2377,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           innerGetFileStatus(f, true, StatusProbeEnum.ALL),
           recursive,
           operationCallbacks,
-          InternalConstants.MAX_ENTRIES_TO_DELETE);
+          intOption(getConf(), BULK_DELETE_PAGE_SIZE,
+              BULK_DELETE_PAGE_SIZE_DEFAULT, 0));
       boolean outcome = deleteOperation.execute();
       if (outcome) {
         try {

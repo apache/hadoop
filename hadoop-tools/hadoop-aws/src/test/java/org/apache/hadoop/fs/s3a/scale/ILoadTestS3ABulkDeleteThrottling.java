@@ -22,30 +22,42 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.Assume;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.impl.FunctionsRaisingIOE;
 import org.apache.hadoop.fs.impl.WrappedIOException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.auth.delegation.Csvout;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_INTERNAL_THROTTLING;
+import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.MAX_ENTRIES_TO_DELETE;
 
 /**
  * Test some scalable operations related to file renaming and deletion.
@@ -53,8 +65,11 @@ import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
  * whereas that was designed to overload an STS endpoint, this just
  * tries to overload a single S3 shard with too many bulk IO requests
  * -and so see what happens.
+ * Note: UA field includes the configuration tested for the benefit
+ *
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@RunWith(Parameterized.class)
 public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
 
   private static final Logger LOG =
@@ -62,19 +77,83 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
 
   protected static final int THREADS = 20;
 
-  private static boolean previousTestThrottled;
+  public static final int SMALL = BULK_DELETE_PAGE_SIZE_DEFAULT;
+  public static final int SMALL_REQS = 100;
+
+  public static final int MAXIMUM = MAX_ENTRIES_TO_DELETE;
+  public static final int MAXIMUM_REQS = 20;
+
+  // shared across test cases.
+  private static boolean testWasThrottled;
 
   private final ExecutorService executor =
       HadoopExecutors.newFixedThreadPool(
           THREADS,
           new ThreadFactoryBuilder()
-              .setNameFormat(" #%d")
+              .setNameFormat("#%d")
               .build());
 
   private final CompletionService<Outcome>
       completionService = new ExecutorCompletionService<>(executor);
 
   private File dataDir;
+
+  private final boolean throttle;
+  private final int pageSize;
+  private final int requests;
+
+  /**
+   * Test array for parameterized test runs.
+   * <ul>
+   *   <li>AWS client throttle on/off</li>
+   *   <li>Page size</li>
+   * </ul>
+   *
+   * @return a list of parameter tuples.
+   */
+  @Parameterized.Parameters(name = "bulk-delete-client-retry={0}-requests={2}-size={1}")
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {false, SMALL, SMALL_REQS},
+        {false, MAXIMUM, MAXIMUM_REQS},
+        {true, SMALL, SMALL_REQS},
+        {true, MAXIMUM, MAXIMUM_REQS},
+    });
+  }
+
+  /**
+   * Parameterized constructor.
+   * @param throttle AWS client throttle on/off
+   * @param pageSize Page size
+   * @param requests request count;
+   */
+  public ILoadTestS3ABulkDeleteThrottling(
+      final boolean throttle,
+      final int pageSize,
+      final int requests) {
+    this.throttle = throttle;
+    Preconditions.checkArgument(pageSize > 0,
+        "page size too low %s", pageSize);
+
+    this.pageSize = pageSize;
+    this.requests = requests;
+  }
+
+  @Override
+  protected Configuration createScaleConfiguration() {
+    Configuration conf = super.createScaleConfiguration();
+    S3ATestUtils.removeBaseAndBucketOverrides(conf,
+        AWS_INTERNAL_THROTTLING,
+        BULK_DELETE_PAGE_SIZE,
+        USER_AGENT_PREFIX);
+    conf.setBoolean(AWS_INTERNAL_THROTTLING, throttle);
+    conf.setInt(BULK_DELETE_PAGE_SIZE, pageSize);
+    conf.set(USER_AGENT_PREFIX,
+        String.format("ILoadTestS3ABulkDeleteThrottling-%s-%04d",
+            throttle, pageSize));
+    S3ATestUtils.disableFilesystemCaching(conf);
+    return conf;
+  }
 
   @Override
   public void setup() throws Exception {
@@ -86,45 +165,54 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
   }
 
   @Test
-  public void test_010_DeleteThrottlingSmall() throws Throwable {
-    describe("test how S3 reacts to massive multipart deletion requests");
-    maybeSleep();
-    final File results = deleteFiles(100, 200);
-    LOG.info("Test run completed against {}:\n see {}", getFileSystem(),
-        results);
+  public void test_010_Reset() throws Throwable {
+    testWasThrottled = false;
+    final Path p = path("p");
+
+    final S3AFileSystem fs = getFileSystem();
+    ContractTestUtils.touch(fs, p );
+    fs.delete(p, false);
   }
 
   @Test
-  public void test_011_sleep() throws Throwable {
-    maybeSleep();
-  }
-
-  @Test
-  public void test_020_DeleteThrottlingBigFiles() throws Throwable {
+  public void test_020_DeleteThrottling() throws Throwable {
     describe("test how S3 reacts to massive multipart deletion requests");
-    final File results = deleteFiles(20, 1000);
+    final File results = deleteFiles(requests, pageSize);
     LOG.info("Test run completed against {}:\n see {}", getFileSystem(),
         results);
-    previousTestThrottled = true;
-  }
-
-  private void maybeSleep() throws InterruptedException {
-    if (previousTestThrottled) {
-      LOG.info("Sleeping briefly to let store recover");
-      Thread.sleep(30_000);
-      previousTestThrottled = false;
+    if (testWasThrottled) {
+      LOG.warn("Test was throttled");
+    } else {
+      LOG.info("No throttling recorded in filesystem");
     }
   }
+
+
+  @Test
+  public void test_030_Sleep() throws Throwable {
+    maybeSleep();
+  }
+
+  private void maybeSleep() throws InterruptedException, IOException {
+    if (testWasThrottled) {
+      LOG.info("Sleeping briefly to let store recover");
+      Thread.sleep(30_000);
+      getFileSystem().delete(path("recovery"), true);
+      testWasThrottled = false;
+    }
+  }
+
   /**
-   * Fetch requests.
+   * delete files.
    * @param requests number of requests.
    * @throws Exception failure
-   * @return
+   * @return CSV filename
    */
   private File deleteFiles(final int requests, final int entries)
       throws Exception {
     File csvFile = new File(dataDir,
-        String.format("delete-%03d-%04d.csv", requests, entries));
+        String.format("delete-%03d-%04d-%s.csv",
+            requests, entries, throttle));
     describe("Issuing %d requests of size %d, saving log to %s",
         requests, entries, csvFile);
     Path basePath = path("testDeleteObjectThrottling");
@@ -136,10 +224,8 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
     Csvout csvout = new Csvout(out, "\t", "\n");
     Outcome.writeSchema(csvout);
 
-
     final ContractTestUtils.NanoTimer jobTimer =
         new ContractTestUtils.NanoTimer();
-
 
     for (int i = 0; i < requests; i++) {
       final int id = i;
