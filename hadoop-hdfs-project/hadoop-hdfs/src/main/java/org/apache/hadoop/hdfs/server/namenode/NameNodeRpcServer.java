@@ -1900,17 +1900,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     return clientMachine;
   }
 
-  /**
-   * Return the QOP of the client that the current handler thread
-   * is handling. Assuming the negotiation is done at this point,
-   * otherwise returns null.
-   *
-   * @return the established QOP of this client.
-   */
-  public static String getEstablishedClientQOP() {
-    return Server.getEstablishedQOP();
-  }
-
   @Override
   public DataEncryptionKey getDataEncryptionKey() throws IOException {
     checkNNStartup();
