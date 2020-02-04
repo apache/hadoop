@@ -1088,6 +1088,8 @@ public class TestAppManager extends AppManagerTestBase{
         new RMAppMetrics(Resource.newInstance(1234, 56),
             10, 1, resourceSecondsMap, new HashMap<>());
     when(app.getRMAppMetrics()).thenReturn(metrics);
+    when(app.getDiagnostics()).thenReturn(new StringBuilder(
+        "Multiline\n\n\r\rDiagnostics=Diagn,ostic"));
 
     RMAppManager.ApplicationSummary.SummaryBuilder summary =
         new RMAppManager.ApplicationSummary().createAppSummary(app);
@@ -1110,6 +1112,8 @@ public class TestAppManager extends AppManagerTestBase{
     assertTrue(msg.contains("applicationType=MAPREDUCE"));
     assertTrue(msg.contains("applicationTags=tag1\\,tag2"));
     assertTrue(msg.contains("applicationNodeLabel=test"));
+    assertTrue(msg.contains("diagnostics=Multiline" + escaped
+        + "Diagnostics\\=Diagn\\,ostic"));
   }
 
   @Test
