@@ -171,8 +171,11 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_ALLOW_SSE_KMS
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3Operations;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.TokenIssuingPolicy.NoTokensAvailable;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDelegationTokenBinding;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.MAX_ENTRIES_TO_DELETE;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.X_DIRECTORY;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
@@ -280,6 +283,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private final S3AFileSystem.OperationCallbacksImpl
       operationCallbacks = new OperationCallbacksImpl();
+
+  /**
+   * Should directory marker use be optimized?
+   */
+  private boolean optimizeDirectoryOperations;
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -442,6 +450,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
 
       initMultipartUploads(conf);
+      optimizeDirectoryOperations = conf.getBoolean(
+          EXPERIMENTAL_OPTIMIZED_DIRECTORY_OPERATIONS, false);
+      if (optimizeDirectoryOperations) {
+        LOG.info("Using experimental optimized directory operations");
+      }
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       stopAllServices();
@@ -1487,8 +1500,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       Path destParent = destCreated.getParent();
       if (!sourceRenamed.getParent().equals(destParent)) {
         LOG.debug("source & dest parents are different; fix up dir markers");
-        deleteUnnecessaryFakeDirectories(destParent);
-        maybeCreateFakeParentDirectory(sourceRenamed);
+        // kick off an async delete
+        List<CompletableFuture<Void>> ops = new ArrayList<>(2);
+        ops.add(submit(
+            boundedThreadPool,
+            () -> {
+              deleteUnnecessaryFakeDirectories(destParent, false);
+              return null;
+            }));
+        ops.add(submit(
+            boundedThreadPool,
+            () -> {
+              maybeCreateFakeParentDirectory(sourceRenamed);;
+              return null;
+            }));
+        waitForCompletion(ops);
       }
     }
 
@@ -2372,13 +2398,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public boolean delete(Path f, boolean recursive) throws IOException {
     try {
       entryPoint(INVOCATION_DELETE);
+      final int pageSize = intOption(getConf(), BULK_DELETE_PAGE_SIZE,
+          BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
       DeleteOperation deleteOperation = new DeleteOperation(
           createStoreContext(),
           innerGetFileStatus(f, true, StatusProbeEnum.ALL),
           recursive,
           operationCallbacks,
-          intOption(getConf(), BULK_DELETE_PAGE_SIZE,
-              BULK_DELETE_PAGE_SIZE_DEFAULT, 0));
+          pageSize);
       boolean outcome = deleteOperation.execute();
       if (outcome) {
         try {
@@ -2859,7 +2886,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   S3AFileStatus s3GetFileStatus(final Path path,
       final String key,
       final Set<StatusProbeEnum> probes,
-      final Set<Path> tombstones) throws IOException {
+      @Nullable Set<Path> tombstones) throws IOException {
     if (!key.isEmpty()) {
       if (probes.contains(StatusProbeEnum.Head) && !key.endsWith("/")) {
         try {
@@ -3514,14 +3541,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Perform post-write actions.
-   * Calls {@link #deleteUnnecessaryFakeDirectories(Path)} and then
+   * Calls {@link #deleteUnnecessaryFakeDirectories(Path, boolean)} and then
    * updates any metastore.
    * This operation MUST be called after any PUT/multipart PUT completes
    * successfully.
    *
    * The operations actions include
    * <ol>
-   *   <li>Calling {@link #deleteUnnecessaryFakeDirectories(Path)}</li>
+   *   <li>Calling {@link #deleteUnnecessaryFakeDirectories(Path, boolean)}</li>
    *   <li>Updating any metadata store with details on the newly created
    *   object.</li>
    * </ol>
@@ -3544,7 +3571,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         key, length, eTag, versionId);
     Path p = keyToQualifiedPath(key);
     Preconditions.checkArgument(length >= 0, "content length is negative");
-    deleteUnnecessaryFakeDirectories(p.getParent());
+    final boolean isDir = objectRepresentsDirectory(key, length);
+    // kick off an async delete
+    final CompletableFuture<?> deletion = submit(
+        boundedThreadPool,
+        () -> {
+          deleteUnnecessaryFakeDirectories(p.getParent(), isDir);
+          return null;
+        });
     // this is only set if there is a metastore to update and the
     // operationState parameter passed in was null.
     BulkOperationState stateToClose = null;
@@ -3563,7 +3597,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           activeState = stateToClose;
         }
         S3Guard.addAncestors(metadataStore, p, ttlTimeProvider, activeState);
-        final boolean isDir = objectRepresentsDirectory(key, length);
         S3AFileStatus status = createUploadFileStatus(p,
             isDir, length,
             getDefaultBlockSize(p), username, eTag, versionId);
@@ -3586,6 +3619,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               activeState);
         }
       }
+      // and catch up with any delete operation.
+      waitForCompletionIgnoringExceptions(deletion);
     } catch (IOException e) {
       if (failOnMetadataWriteError) {
         throw new MetadataPersistenceException(p.toString(), e);
@@ -3604,16 +3639,45 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Delete mock parent directories which are no longer needed.
    * Retry policy: retrying; exceptions swallowed.
    * @param path path
+   * @param isMkDirOperation is this for a mkdir call?
    */
   @Retries.RetryExceptionsSwallowed
-  private void deleteUnnecessaryFakeDirectories(Path path) {
+  private void deleteUnnecessaryFakeDirectories(Path path,
+      final boolean isMkDirOperation) {
     List<DeleteObjectsRequest.KeyVersion> keysToRemove = new ArrayList<>();
-    while (!path.isRoot()) {
-      String key = pathToKey(path);
-      key = (key.endsWith("/")) ? key : (key + "/");
-      LOG.trace("To delete unnecessary fake directory {} for {}", key, path);
-      keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key));
-      path = path.getParent();
+    boolean deleteWholeTree = false;
+    if (optimizeDirectoryOperations && !isMkDirOperation) {
+      // this is a file creation/commit
+      // Assume that the parent directory exists either explicitly as a marker
+      // on implicitly (peer entries)
+      // only look for the dir marker in S3 -we don't care about DDB.
+      try {
+        String key = pathToKey(path);
+        s3GetFileStatus(path, key, StatusProbeEnum.DIR_MARKER_ONLY, null);
+        // here an entry exists.
+        LOG.debug("Removing marker {}", key);
+        keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key));
+      } catch (FileNotFoundException e) {
+        // no entry. Nothing to delete.
+      } catch (IOException e) {
+        instrumentation.errorIgnored();
+        LOG.debug("Ignored when looking at directory marker {}", path, e);
+        // for now, fall back to a full delete.
+        deleteWholeTree = true;
+      }
+    } else {
+      deleteWholeTree = true;
+    }
+    if (deleteWholeTree) {
+      // traditional delete creates a delete request for
+      // all parents.
+      while (!path.isRoot()) {
+        String key = pathToKey(path);
+        key = (key.endsWith("/")) ? key : (key + "/");
+        LOG.trace("To delete unnecessary fake directory {} for {}", key, path);
+        keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key));
+        path = path.getParent();
+      }
     }
     try {
       removeKeys(keysToRemove, true, null);
@@ -3661,8 +3725,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
     };
 
+    final ObjectMetadata metadata = newObjectMetadata(0L);
+    metadata.setContentType(X_DIRECTORY);
     PutObjectRequest putObjectRequest = newPutObjectRequest(objectName,
-        newObjectMetadata(0L),
+        metadata,
         im);
     invoker.retry("PUT 0-byte object ", objectName,
          true,
@@ -3778,8 +3844,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     if (committerIntegration != null) {
       sb.append(", magicCommitter=").append(isMagicCommitEnabled());
     }
-    sb.append(", boundedExecutor=").append(boundedThreadPool);
-    sb.append(", unboundedExecutor=").append(unboundedThreadPool);
+    sb.append(", optimizeDirMarkers=").append(optimizeDirectoryOperations);
     sb.append(", credentials=").append(credentials);
     sb.append(", delegation tokens=")
         .append(delegationTokens.map(Objects::toString).orElse("disabled"));

@@ -32,6 +32,7 @@ import java.util.concurrent.ExecutorService;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -52,7 +53,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.Csvout;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
-import static org.apache.hadoop.fs.s3a.Constants.AWS_INTERNAL_THROTTLING;
+import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
@@ -66,7 +67,7 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.MAX_ENTRIES_TO_DEL
  * tries to overload a single S3 shard with too many bulk IO requests
  * -and so see what happens.
  * Note: UA field includes the configuration tested for the benefit
- *
+ * of anyone looking through the server logs.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(Parameterized.class)
@@ -75,15 +76,17 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(ILoadTestS3ABulkDeleteThrottling.class);
 
-  protected static final int THREADS = 20;
+  protected static final int THREADS = 40;
+  public static final int TOTAL_KEYS = 15000;
 
   public static final int SMALL = BULK_DELETE_PAGE_SIZE_DEFAULT;
-  public static final int SMALL_REQS = 100;
+  public static final int SMALL_REQS = TOTAL_KEYS / SMALL;
 
   public static final int MAXIMUM = MAX_ENTRIES_TO_DELETE;
-  public static final int MAXIMUM_REQS = 20;
+  public static final int MAXIMUM_REQS = TOTAL_KEYS / MAXIMUM;
 
   // shared across test cases.
+  @SuppressWarnings("StaticNonFinalField")
   private static boolean testWasThrottled;
 
   private final ExecutorService executor =
@@ -142,36 +145,44 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
   @Override
   protected Configuration createScaleConfiguration() {
     Configuration conf = super.createScaleConfiguration();
-    S3ATestUtils.removeBaseAndBucketOverrides(conf,
-        AWS_INTERNAL_THROTTLING,
-        BULK_DELETE_PAGE_SIZE,
-        USER_AGENT_PREFIX);
-    conf.setBoolean(AWS_INTERNAL_THROTTLING, throttle);
-    conf.setInt(BULK_DELETE_PAGE_SIZE, pageSize);
-    conf.set(USER_AGENT_PREFIX,
-        String.format("ILoadTestS3ABulkDeleteThrottling-%s-%04d",
-            throttle, pageSize));
     S3ATestUtils.disableFilesystemCaching(conf);
     return conf;
   }
 
   @Override
   public void setup() throws Exception {
+    final Configuration conf = getConf();
+    S3ATestUtils.removeBaseAndBucketOverrides(conf,
+        EXPERIMENTAL_AWS_INTERNAL_THROTTLING,
+        BULK_DELETE_PAGE_SIZE,
+        USER_AGENT_PREFIX);
+    conf.setBoolean(EXPERIMENTAL_AWS_INTERNAL_THROTTLING, throttle);
+    Assertions.assertThat(pageSize)
+        .describedAs("page size")
+        .isGreaterThan(0);
+    conf.setInt(BULK_DELETE_PAGE_SIZE, pageSize);
+    conf.set(USER_AGENT_PREFIX,
+        String.format("ILoadTestS3ABulkDeleteThrottling-%s-%04d",
+            throttle, pageSize));
+
     super.setup();
     Assume.assumeTrue("multipart delete disabled",
-        getConf().getBoolean(ENABLE_MULTI_DELETE, true));
+        conf.getBoolean(ENABLE_MULTI_DELETE, true));
     dataDir = GenericTestUtils.getTestDir("throttling");
     dataDir.mkdirs();
+    final String size = getFileSystem().getConf().get(BULK_DELETE_PAGE_SIZE);
+    Assertions.assertThat(size)
+        .describedAs("page size")
+        .isNotEmpty();
+    Assertions.assertThat(getFileSystem().getConf()
+        .getInt(BULK_DELETE_PAGE_SIZE, -1))
+        .isEqualTo(pageSize);
+
   }
 
   @Test
   public void test_010_Reset() throws Throwable {
     testWasThrottled = false;
-    final Path p = path("p");
-
-    final S3AFileSystem fs = getFileSystem();
-    ContractTestUtils.touch(fs, p );
-    fs.delete(p, false);
   }
 
   @Test

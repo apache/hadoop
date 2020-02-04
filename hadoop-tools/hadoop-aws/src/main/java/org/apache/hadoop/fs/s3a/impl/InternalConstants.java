@@ -86,7 +86,11 @@ public final class InternalConstants {
   /** 404 error code. */
   public static final int SC_404 = 404;
 
-  /* Name of the log for throttling events. */
+  /** Name of the log for throttling events. Value: {@value}. */
   public static final String THROTTLE_LOG_NAME =
       "org.apache.hadoop.fs.s3a.throttled";
+
+  /** Directory marker attribute: see HADOOP-16613. Value: {@value}. */
+  public static final String X_DIRECTORY =
+      "application/x-directory";
 }

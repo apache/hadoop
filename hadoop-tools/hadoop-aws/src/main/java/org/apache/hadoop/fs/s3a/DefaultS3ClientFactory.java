@@ -34,7 +34,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 
-import static org.apache.hadoop.fs.s3a.Constants.AWS_INTERNAL_THROTTLING;
+import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 
@@ -62,7 +62,7 @@ public class DefaultS3ClientFactory extends Configured
     // throttling is explicitly disabled on the S3 client so that
     // all failures are collected
     awsConf.setUseThrottleRetries(
-        conf.getBoolean(AWS_INTERNAL_THROTTLING, true));
+        conf.getBoolean(EXPERIMENTAL_AWS_INTERNAL_THROTTLING, true));
 
     if (!StringUtils.isEmpty(userAgentSuffix)) {
       awsConf.setUserAgentSuffix(userAgentSuffix);

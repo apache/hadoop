@@ -479,7 +479,9 @@ public class WriteOperationHelper {
 
   /**
    * Revert a commit by deleting the file.
-   * Relies on retry code in filesystem
+   * No attempt is made to create/rebuild the parent directory, on the
+   * assumption that reverting is part of a more complex sequence.
+   * Relies on retry code in filesystem.
    * @throws IOException on problems
    * @param destKey destination key
    * @param operationState operational state for a bulk update
@@ -492,7 +494,6 @@ public class WriteOperationHelper {
           Path destPath = owner.keyToQualifiedPath(destKey);
           owner.deleteObjectAtPath(destPath,
               destKey, true, operationState);
-          owner.maybeCreateFakeParentDirectory(destPath);
         }
     );
   }

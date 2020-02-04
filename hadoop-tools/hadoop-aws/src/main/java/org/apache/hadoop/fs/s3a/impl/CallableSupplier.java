@@ -123,4 +123,18 @@ public final class CallableSupplier<T> implements Supplier {
     }
   }
 
+  /**
+   * Wait for a single of future to complete, ignoring exceptions raised.
+   * @param future future to wait for.
+   */
+  public static <T> void waitForCompletionIgnoringExceptions(
+      final CompletableFuture<T> future) {
+    try (DurationInfo ignore =
+            new DurationInfo(LOG, false, "Waiting for task completion")) {
+      future.join();
+    } catch (Exception e) {
+      LOG.debug("Ignoring exception raised in task completion: ");
+    }
+  }
+
 }
