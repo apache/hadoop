@@ -272,7 +272,7 @@ public class BlockTokenSecretManager extends
     BlockTokenIdentifier id = new BlockTokenIdentifier(userId, block
         .getBlockPoolId(), block.getBlockId(), modes);
     if (shouldWrapQOP) {
-      String qop = Server.getEstablishedQOP();
+      String qop = Server.getAuxiliaryPortEstablishedQOP();
       if (qop != null) {
         id.setHandshakeMsg(qop.getBytes(Charsets.UTF_8));
       }
