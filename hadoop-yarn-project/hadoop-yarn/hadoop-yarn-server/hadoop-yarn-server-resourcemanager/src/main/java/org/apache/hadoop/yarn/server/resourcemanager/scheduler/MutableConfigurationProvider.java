@@ -52,6 +52,16 @@ public interface MutableConfigurationProvider {
       confUpdate) throws Exception;
 
   /**
+   * Apply the changes on top of the actual configuration.
+   * @param oldConfiguration actual configuration
+   * @param confUpdate changelist
+   * @return new configuration with the applied changed
+   * @throws IOException if the merge failed
+   */
+  Configuration applyChanges(Configuration oldConfiguration,
+                             SchedConfUpdateInfo confUpdate) throws IOException;
+
+  /**
    * Confirm last logged mutation.
    * @param isValid if the last logged mutation is applied to scheduler
    *                properly.

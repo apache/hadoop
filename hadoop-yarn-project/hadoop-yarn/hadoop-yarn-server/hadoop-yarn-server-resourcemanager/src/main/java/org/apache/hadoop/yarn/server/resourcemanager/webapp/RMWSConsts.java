@@ -57,6 +57,12 @@ public final class RMWSConsts {
   /** Path for {@code RMWebServiceProtocol#dumpSchedulerLogs}. */
   public static final String SCHEDULER_LOGS = "/scheduler/logs";
 
+  /**
+   * Path for {@code RMWebServiceProtocol#validateAndGetSchedulerConfiguration}.
+   */
+  public static final String SCHEDULER_CONF_VALIDATE
+          = "/scheduler-conf/validate";
+
   /** Path for {@code RMWebServiceProtocol#getNodes}. */
   public static final String NODES = "/nodes";
 
