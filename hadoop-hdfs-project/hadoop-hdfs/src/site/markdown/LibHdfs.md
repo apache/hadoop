@@ -61,7 +61,8 @@ See the CMake file for `test_libhdfs_ops.c` in the libhdfs source directory (`ha
 Common Problems
 ---------------
 
-The most common problem is the `CLASSPATH` is not set properly when calling a program that uses libhdfs. Make sure you set it to all the Hadoop jars needed to run Hadoop itself as well as the right configuration directory containing `hdfs-site.xml`. It is not valid to use wildcard syntax for specifying multiple jars. It may be useful to run `hadoop classpath --glob` or `hadoop classpath --jar <path`\> to generate the correct classpath for your deployment. See [Hadoop Commands Reference](../hadoop-common/CommandsManual.html#classpath) for more information on this command.
+The most common problem is the `CLASSPATH` is not set properly when calling a program that uses libhdfs. Make sure you set it to all the Hadoop jars needed to run Hadoop itself as well as the right configuration directory containing `hdfs-site.xml`.
+Wildcard entries in the `CLASSPATH` are now supported by libhdfs.
 
 Thread Safe
 -----------
