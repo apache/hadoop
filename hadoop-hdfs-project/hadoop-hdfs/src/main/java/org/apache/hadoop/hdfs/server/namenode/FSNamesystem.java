@@ -112,6 +112,7 @@ import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.server.common.ECTopologyVerifier;
+import org.apache.hadoop.hdfs.server.namenode.SwapBlockListOp.SwapBlockListResult;
 import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksMBean;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
@@ -8497,6 +8498,36 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         getEffectiveLayoutVersion())) {
       throw new UnsupportedActionException(operationName + " not supported.");
     }
+  }
+
+  /**
+   * Namesystem API to swap block list between source and destination files.
+   *
+   * @param src source file.
+   * @param dst destination file.
+   * @throws IOException on Error.
+   */
+  boolean swapBlockList(final String src, final String dst, long genTimestamp)
+      throws IOException {
+    final String operationName = "swapBlockList";
+    checkOperation(OperationCategory.WRITE);
+    final FSPermissionChecker pc = getPermissionChecker();
+    SwapBlockListResult res = null;
+    try {
+      writeLock();
+      try {
+        checkOperation(OperationCategory.WRITE);
+        checkNameNodeSafeMode("Cannot swap block list." + src + ", " + dst);
+        res = SwapBlockListOp.swapBlocks(dir, pc, src, dst, genTimestamp);
+      } finally {
+        writeUnlock(operationName);
+      }
+    } catch (AccessControlException e) {
+      logAuditEvent(false, operationName, src, dst, null);
+      throw e;
+    }
+    logAuditEvent(true, operationName, src, dst, res.getDstFileAuditStat());
+    return res.isSuccess();
   }
 }
 

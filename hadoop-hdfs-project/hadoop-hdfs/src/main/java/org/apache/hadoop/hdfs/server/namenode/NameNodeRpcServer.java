@@ -2667,4 +2667,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
     return namesystem.getBlockManager().getSPSManager().getNextPathId();
   }
+
+  public boolean swapBlockList(String src, String dst, long maxTimestamp)
+      throws IOException {
+    checkNNStartup();
+    if (stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.swapBlockList: {} and {}", src, dst);
+    }
+    return namesystem.swapBlockList(src, dst, maxTimestamp);
+  }
+
 }
