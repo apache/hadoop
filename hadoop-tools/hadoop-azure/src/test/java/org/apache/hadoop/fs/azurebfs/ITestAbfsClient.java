@@ -43,7 +43,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     super();
   }
 
-  @Ignore("HADOOP-16845: ITestAbfsClient.testContinuationTokenHavingEqualSign failing")
+  @Ignore("HADOOP-16845: Server side raw query consumption will lead to "
+      + "ignoring invalid continuation token.")
   @Test
   public void testContinuationTokenHavingEqualSign() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
