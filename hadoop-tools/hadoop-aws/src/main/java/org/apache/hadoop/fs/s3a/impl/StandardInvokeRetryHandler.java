@@ -41,11 +41,11 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.THROTTLE_LOG_NAME;
  * This is intended to be pulled out for all operations, but for now it is only
  * used in delete objects.
  */
-public class RetryCallbackHandler extends AbstractStoreOperation {
+public class StandardInvokeRetryHandler extends AbstractStoreOperation {
 
 
   private static final Logger LOG = LoggerFactory.getLogger(
-      RetryCallbackHandler.class);
+      StandardInvokeRetryHandler.class);
 
   private static final Logger THROTTLE_LOG = LoggerFactory.getLogger(
       THROTTLE_LOG_NAME);
@@ -54,7 +54,7 @@ public class RetryCallbackHandler extends AbstractStoreOperation {
 
   private final S3AStorageStatistics storageStatistics;
 
-  public RetryCallbackHandler(final StoreContext storeContext) {
+  public StandardInvokeRetryHandler(final StoreContext storeContext) {
     super(storeContext);
     instrumentation = storeContext.getInstrumentation();
     storageStatistics = storeContext.getStorageStatistics();

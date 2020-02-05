@@ -107,7 +107,7 @@ import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
-import org.apache.hadoop.fs.s3a.impl.RetryCallbackHandler;
+import org.apache.hadoop.fs.s3a.impl.StandardInvokeRetryHandler;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
@@ -277,6 +277,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private SignerManager signerManager;
 
   private ITtlTimeProvider ttlTimeProvider;
+
+  /**
+   * Page size for deletions.
+   */
+  private int pageSize;
 
   /**
    * Specific operations used by rename and delete operations.
@@ -450,6 +455,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
 
       initMultipartUploads(conf);
+
+      pageSize = intOption(getConf(), BULK_DELETE_PAGE_SIZE,
+          BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
       optimizeDirectoryOperations = conf.getBoolean(
           EXPERIMENTAL_OPTIMIZED_DIRECTORY_OPERATIONS, false);
       if (optimizeDirectoryOperations) {
@@ -1404,8 +1412,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         src, srcKey, p.getLeft(),
         dst, dstKey, p.getRight(),
         operationCallbacks,
-        intOption(getConf(), BULK_DELETE_PAGE_SIZE,
-            BULK_DELETE_PAGE_SIZE_DEFAULT, 0));
+        pageSize);
     return renameOperation.execute();
   }
 
@@ -1511,7 +1518,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         ops.add(submit(
             boundedThreadPool,
             () -> {
-              maybeCreateFakeParentDirectory(sourceRenamed);;
+              maybeCreateFakeParentDirectory(sourceRenamed);
               return null;
             }));
         waitForCompletion(ops);
@@ -1975,8 +1982,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private DeleteObjectsResult deleteObjects(DeleteObjectsRequest deleteRequest)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
     incrementWriteOperations();
-    RetryCallbackHandler retryHandler =
-        new RetryCallbackHandler(createStoreContext());
+    StandardInvokeRetryHandler retryHandler =
+        new StandardInvokeRetryHandler(createStoreContext());
     try(DurationInfo ignored =
             new DurationInfo(LOG, false, "DELETE %d keys",
                 deleteRequest.getKeys().size())) {
@@ -2398,8 +2405,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public boolean delete(Path f, boolean recursive) throws IOException {
     try {
       entryPoint(INVOCATION_DELETE);
-      final int pageSize = intOption(getConf(), BULK_DELETE_PAGE_SIZE,
-          BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
       DeleteOperation deleteOperation = new DeleteOperation(
           createStoreContext(),
           innerGetFileStatus(f, true, StatusProbeEnum.ALL),
@@ -3548,7 +3553,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    *
    * The operations actions include
    * <ol>
-   *   <li>Calling {@link #deleteUnnecessaryFakeDirectories(Path, boolean)}</li>
+   *   <li>Calling
+   *   {@link #deleteUnnecessaryFakeDirectories(Path, boolean)}</li>
    *   <li>Updating any metadata store with details on the newly created
    *   object.</li>
    * </ol>
@@ -3663,6 +3669,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         instrumentation.errorIgnored();
         LOG.debug("Ignored when looking at directory marker {}", path, e);
         // for now, fall back to a full delete.
+        // if the failure was permissions or network this will probably fail
+        // too...
         deleteWholeTree = true;
       }
     } else {
@@ -3942,25 +3950,40 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Override superclass so as to add statistic collection.
+   * An optimized check which only looks for directory markers.
    * {@inheritDoc}
    */
   @Override
   @SuppressWarnings("deprecation")
   public boolean isDirectory(Path f) throws IOException {
     entryPoint(INVOCATION_IS_DIRECTORY);
-    return super.isDirectory(f);
+    try {
+      // against S3Guard, a full query;
+      // against S3 a HEAD + "/" then a LIST.
+      return innerGetFileStatus(f, false,
+          StatusProbeEnum.DIRECTORIES).isDirectory();
+    } catch (FileNotFoundException e) {
+      return false;
+    }
   }
 
   /**
-   * Override superclass so as to add statistic collection.
+   * Override superclass so as to only poll for a file.
+   * Warning: may leave a 404 in the S3 load balancer cache.
    * {@inheritDoc}
    */
   @Override
   @SuppressWarnings("deprecation")
   public boolean isFile(Path f) throws IOException {
     entryPoint(INVOCATION_IS_FILE);
-    return super.isFile(f);
+    try {
+      // against S3Guard, a full query; against S3 only a HEAD.
+      return innerGetFileStatus(f, false,
+          StatusProbeEnum.HEAD_ONLY).isFile();
+    } catch (FileNotFoundException e) {
+      // no file or there is a directory there.
+      return false;
+    }
   }
 
   /**

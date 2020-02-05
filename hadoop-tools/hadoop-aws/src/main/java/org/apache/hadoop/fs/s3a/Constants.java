@@ -186,7 +186,6 @@ public final class Constants {
    */
   public static final int DEFAULT_MAX_ERROR_RETRIES = 10;
 
-
   /**
    * Experimental/Unstable feature: should the AWS client library retry
    * throttle responses before escalating to the S3A code: {@value}.
@@ -213,7 +212,7 @@ public final class Constants {
    * The goals are better performance as well as fewer tombstone markers
    * being created on versioned buckets.
    */
-   @InterfaceStability.Unstable
+  @InterfaceStability.Unstable
   public static final String EXPERIMENTAL_OPTIMIZED_DIRECTORY_OPERATIONS =
       "fs.s3a.experimental.optimized.directory.operations";
 
@@ -805,7 +804,7 @@ public final class Constants {
    * Interval between retry attempts on throttled requests: {@value}.
    */
   public static final String RETRY_THROTTLE_INTERVAL =
-        "fs.s3a.retry.throttle.interval";
+      "fs.s3a.retry.throttle.interval";
 
   /**
    * Default throttled retry interval: {@value}.

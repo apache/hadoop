@@ -45,6 +45,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.maybeAwaitCompletion;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 
@@ -186,7 +187,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
    * @param status  pre-fetched source status
    * @param recursive recursive delete?
    * @param callbacks callback provider
-   * @param pageSize number of entries in a page
+   * @param pageSize size of delete pages
    */
   public DeleteOperation(final StoreContext context,
       final S3AFileStatus status,
@@ -557,22 +558,5 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
     }
   }
 
-  /**
-   * Block awaiting completion for any non-null future passed in;
-   * No-op if a null arg was supplied.
-   * @param future future
-   * @throws IOException if one of the called futures raised an IOE.
-   * @throws RuntimeException if one of the futures raised one.
-   */
-  private void maybeAwaitCompletion(
-      @Nullable final CompletableFuture<Void> future)
-      throws IOException {
-    if (future != null) {
-      try (DurationInfo ignored =
-               new DurationInfo(LOG, false, "delete completion")) {
-        waitForCompletion(future);
-      }
-    }
-  }
 
 }

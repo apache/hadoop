@@ -204,9 +204,7 @@ public abstract class AbstractContractRenameTest extends
     assertPathExists("not created in src/sub dir",
         new Path(srcSubDir, "subfile.txt"));
 
-    boolean rename = fs.rename(srcDir, finalDir);
-    assertTrue("rename(" + srcDir + ", " + finalDir + ") failed",
-        rename);
+    rename(srcDir, finalDir);
 
     // Accept both POSIX rename behavior and CLI rename behavior
     if (renameRemoveEmptyDest) {
