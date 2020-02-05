@@ -154,6 +154,8 @@ public class ITestAzureBlobFileSystemCheckAccess
     Assume.assumeFalse(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is true",
         getConfiguration()
             .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, true));
+    Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
+            isCheckAccessEnabled);
     setTestUserFs();
     testUserFs.access(new Path("/"), FsAction.READ);
   }
