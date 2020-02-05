@@ -93,7 +93,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
   protected FSPermissionChecker(String fsOwner, String supergroup,
       UserGroupInformation callerUgi,
       INodeAttributeProvider attributeProvider) {
-    boolean authorizeWithContext1;
+    boolean useNewAuthorizationWithContextAPI;
     this.fsOwner = fsOwner;
     this.supergroup = supergroup;
     this.callerUgi = callerUgi;
@@ -111,8 +111,9 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     if (attributeProvider == null) {
       // If attribute provider is null, use FSPermissionChecker default
       // implementation to authorize, which supports authorization with context.
-      authorizeWithContext1 = false;
-      LOG.info("Fallback to the old authorization provider API");
+      useNewAuthorizationWithContextAPI = true;
+      LOG.info("Default authorization provider supports the new authorization" +
+          " provider API");
     } else {
       ace = attributeProvider.getExternalAccessControlEnforcer(this);
       // if the runtime external authorization provider doesn't support
@@ -121,15 +122,16 @@ public class FSPermissionChecker implements AccessControlEnforcer {
       try {
         Class<?> clazz = ace.getClass();
         clazz.getDeclaredMethod("checkPermissionWithContext", cArg);
-        authorizeWithContext1 = true;
+        useNewAuthorizationWithContextAPI = true;
         LOG.info("Use the new authorization provider API");
       } catch (NoSuchMethodException e) {
-        authorizeWithContext1 = false;
-        LOG.info("Fallback to the old authorization provider API because the expected method is not found.");
+        useNewAuthorizationWithContextAPI = false;
+        LOG.info("Fallback to the old authorization provider API because " +
+            "the expected method is not found.");
       }
     }
 
-    authorizeWithContext = authorizeWithContext1;
+    authorizeWithContext = useNewAuthorizationWithContextAPI;
   }
 
   public static void setOperationType(String opType) {

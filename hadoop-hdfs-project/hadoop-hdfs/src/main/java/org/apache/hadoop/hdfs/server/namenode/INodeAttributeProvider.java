@@ -48,6 +48,7 @@ public abstract class INodeAttributeProvider {
     public FsAction subAccess;
     public boolean ignoreEmptyDir;
     public String operationName;
+    public CallerContext callerContext;
 
     public AuthorizationContext(
         String fsOwner,
@@ -98,44 +99,15 @@ public abstract class INodeAttributeProvider {
         FsAction access,
         FsAction subAccess,
         boolean ignoreEmptyDir,
-        String operationName) {
-      this(fsOwner, supergroup, callerUgi, inodeAttrs, inodes,
-          pathByNameArr, snapshotId, path, ancestorIndex, doCheckOwner,
-          ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
-      this.operationName = operationName;
-    }
-  }
-
-  /*public static class AuthorizationWithOperationName extends
-      AuthorizationContext {
-    String operationName;
-    CallerContext callerContext;
-
-    public AuthorizationWithOperationName(
-        String fsOwner,
-        String supergroup,
-        UserGroupInformation callerUgi,
-        INodeAttributes[] inodeAttrs,
-        INode[] inodes,
-        byte[][] pathByNameArr,
-        int snapshotId,
-        String path,
-        int ancestorIndex,
-        boolean doCheckOwner,
-        FsAction ancestorAccess,
-        FsAction parentAccess,
-        FsAction access,
-        FsAction subAccess,
-        boolean ignoreEmptyDir,
         String operationName,
         CallerContext callerContext) {
-      super(fsOwner, supergroup, callerUgi, inodeAttrs, inodes,
+      this(fsOwner, supergroup, callerUgi, inodeAttrs, inodes,
           pathByNameArr, snapshotId, path, ancestorIndex, doCheckOwner,
           ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
       this.operationName = operationName;
       this.callerContext = callerContext;
     }
-  }*/
+  }
 
   /**
    * The AccessControlEnforcer allows implementations to override the
