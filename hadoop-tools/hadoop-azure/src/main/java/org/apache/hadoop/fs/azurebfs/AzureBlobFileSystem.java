@@ -946,7 +946,7 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public void access(final Path path, final FsAction mode) throws IOException {
     LOG.debug("AzureBlobFileSystem.access path : {}, mode : {}", path, mode);
-    Path qualifiedPath = makeQualified(path);
+    Path qualifiedPath = path == null ? null : makeQualified(path);
     try {
       this.abfsStore.access(qualifiedPath, mode);
     } catch (AzureBlobFileSystemException ex) {
