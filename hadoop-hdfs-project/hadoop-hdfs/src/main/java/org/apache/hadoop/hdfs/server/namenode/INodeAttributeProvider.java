@@ -50,6 +50,115 @@ public abstract class INodeAttributeProvider {
     public String operationName;
     public CallerContext callerContext;
 
+    public static class Builder {
+      public String fsOwner;
+      public String supergroup;
+      public UserGroupInformation callerUgi;
+      public INodeAttributes[] inodeAttrs;
+      public INode[] inodes;
+      public byte[][] pathByNameArr;
+      public int snapshotId;
+      public String path;
+      public int ancestorIndex;
+      public boolean doCheckOwner;
+      public FsAction ancestorAccess;
+      public FsAction parentAccess;
+      public FsAction access;
+      public FsAction subAccess;
+      public boolean ignoreEmptyDir;
+      public String operationName;
+      public CallerContext callerContext;
+
+      public AuthorizationContext build() {
+        return new AuthorizationContext(this);
+      }
+
+      public Builder fsOwner(String val) {
+        this.fsOwner = val;
+        return this;
+      }
+
+      public Builder supergroup(String val) {
+        this.supergroup = val;
+        return this;
+      }
+
+      public Builder callerUgi(UserGroupInformation val) {
+        this.callerUgi = val;
+        return this;
+      }
+
+      public Builder inodeAttrs(INodeAttributes[] val) {
+        this.inodeAttrs = val;
+        return this;
+      }
+
+      public Builder inodes(INode[] val) {
+        this.inodes = val;
+        return this;
+      }
+
+      public Builder pathByNameArr(byte[][] val) {
+        this.pathByNameArr = val;
+        return this;
+      }
+
+      public Builder snapshotId(int val) {
+        this.snapshotId = val;
+        return this;
+      }
+
+      public Builder path(String val) {
+        this.path = val;
+        return this;
+      }
+
+      public Builder ancestorIndex(int val) {
+        this.ancestorIndex = val;
+        return this;
+      }
+
+      public Builder doCheckOwner(boolean val) {
+        this.doCheckOwner = val;
+        return this;
+      }
+
+      public Builder ancestorAccess(FsAction val) {
+        this.ancestorAccess = val;
+        return this;
+      }
+
+      public Builder parentAccess(FsAction val) {
+        this.parentAccess = val;
+        return this;
+      }
+
+      public Builder access(FsAction val) {
+        this.access = val;
+        return this;
+      }
+
+      public Builder subAccess(FsAction val) {
+        this.subAccess = val;
+        return this;
+      }
+
+      public Builder ignoreEmptyDir(boolean val) {
+        this.ignoreEmptyDir = val;
+        return this;
+      }
+
+      public Builder operationName(String val) {
+        this.operationName = val;
+        return this;
+      }
+
+      public Builder callerContext(CallerContext val) {
+        this.callerContext = val;
+        return this;
+      }
+    }
+
     public AuthorizationContext(
         String fsOwner,
         String supergroup,
@@ -106,6 +215,16 @@ public abstract class INodeAttributeProvider {
           ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
       this.operationName = operationName;
       this.callerContext = callerContext;
+    }
+
+    public AuthorizationContext(Builder builder) {
+      this(builder.fsOwner, builder.supergroup, builder.callerUgi,
+          builder.inodeAttrs, builder.inodes, builder.pathByNameArr,
+          builder.snapshotId, builder.path, builder.ancestorIndex,
+          builder.doCheckOwner, builder.ancestorAccess, builder.parentAccess,
+          builder.access, builder.subAccess, builder.ignoreEmptyDir);
+      this.operationName = builder.operationName;
+      this.callerContext = builder.callerContext;
     }
   }
 

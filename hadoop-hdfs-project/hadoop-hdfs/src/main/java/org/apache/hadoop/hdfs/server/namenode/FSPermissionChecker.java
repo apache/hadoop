@@ -233,12 +233,26 @@ public class FSPermissionChecker implements AccessControlEnforcer {
 
     String opType;
     if (this.authorizeWithContext && (opType = operationType.get()) != null) {
-      enforcer.checkPermissionWithContext(
-          new INodeAttributeProvider.AuthorizationContext(
-              fsOwner, supergroup, callerUgi, inodeAttrs, inodes,
-              components, snapshotId, path, ancestorIndex, doCheckOwner,
-              ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir,
-              opType, CallerContext.getCurrent()));
+      INodeAttributeProvider.AuthorizationContext.Builder builder =
+          new INodeAttributeProvider.AuthorizationContext.Builder();
+      builder.fsOwner(fsOwner).
+          supergroup(supergroup).
+          callerUgi(callerUgi).
+          inodeAttrs(inodeAttrs).
+          inodes(inodes).
+          pathByNameArr(components).
+          snapshotId(snapshotId).
+          path(path).
+          ancestorIndex(ancestorIndex).
+          doCheckOwner(doCheckOwner).
+          ancestorAccess(ancestorAccess).
+          parentAccess(parentAccess).
+          access(access).
+          subAccess(subAccess).
+          ignoreEmptyDir(ignoreEmptyDir).
+          operationName(opType).
+          callerContext(CallerContext.getCurrent());
+      enforcer.checkPermissionWithContext(builder.build());
     } else {
       enforcer.checkPermission(fsOwner, supergroup, callerUgi, inodeAttrs,
           inodes, components, snapshotId, path, ancestorIndex, doCheckOwner,
@@ -266,18 +280,30 @@ public class FSPermissionChecker implements AccessControlEnforcer {
       AccessControlEnforcer enforcer = getAccessControlEnforcer();
       String opType;
       if (this.authorizeWithContext && (opType = operationType.get()) != null) {
-        enforcer.checkPermissionWithContext(
-            new INodeAttributeProvider.AuthorizationContext(fsOwner,
-            supergroup, callerUgi, iNodeAttr,
-            // single inode attr in the array
-            new INode[] { inode }, // single inode in the array
-            pathComponents, snapshotId, null, -1,
-            // this will skip checkTraverse() because
-            // not checking ancestor here
-            false, null, null, access,
-            // the target access to be checked against the inode
-            null, // passing null sub access avoids checking children
-            false, opType, CallerContext.getCurrent()));
+        INodeAttributeProvider.AuthorizationContext.Builder builder =
+            new INodeAttributeProvider.AuthorizationContext.Builder();
+        builder.fsOwner(fsOwner).
+            supergroup(supergroup).
+            callerUgi(callerUgi).
+            inodeAttrs(iNodeAttr). // single inode attr in the array
+            inodes(new INode[] { inode }). // single inode attr in the array
+            pathByNameArr(pathComponents).
+            snapshotId(snapshotId).
+            path(null).
+            ancestorIndex(-1).     // this will skip checkTraverse()
+                                   // because not checking ancestor here
+            doCheckOwner(false).
+            ancestorAccess(null).
+            parentAccess(null).
+            access(access).        // the target access to be checked against
+                                   // the inode
+            subAccess(null).       // passing null sub access avoids checking
+                                   // children
+            ignoreEmptyDir(false).
+            operationName(opType).
+            callerContext(CallerContext.getCurrent());
+
+        enforcer.checkPermissionWithContext(builder.build());
       } else {
         enforcer.checkPermission(
             fsOwner, supergroup, callerUgi,
@@ -345,7 +371,8 @@ public class FSPermissionChecker implements AccessControlEnforcer {
   public void checkPermissionWithContext(
       INodeAttributeProvider.AuthorizationContext authzContext)
       throws AccessControlException {
-    // The default authorization provider does not use the additional context.
+    // The default authorization provider does not use the additional context
+    // parameters including operationName and callerContext.
     this.checkPermission(authzContext.fsOwner, authzContext.supergroup,
         authzContext.callerUgi, authzContext.inodeAttrs, authzContext.inodes,
         authzContext.pathByNameArr, authzContext.snapshotId, authzContext.path,
