@@ -1330,9 +1330,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("rename: destination path {} not found", dst);
       // Parent must exist
       Path parent = dst.getParent();
-      if (!pathToKey(parent).isEmpty()) {
+      // if the dest is neither root nor sharing the same parent as the source,
+      // make sure it exists and is not a file
+      if (!pathToKey(parent).isEmpty()
+        && !parent.equals(src.getParent())) {
         try {
-          S3AFileStatus dstParentStatus = innerGetFileStatus(dst.getParent(),
+          S3AFileStatus dstParentStatus = innerGetFileStatus(parent,
               false, StatusProbeEnum.ALL);
           if (!dstParentStatus.isDirectory()) {
             throw new RenameFailedException(src, dst,
@@ -1340,7 +1343,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           }
         } catch (FileNotFoundException e2) {
           throw new RenameFailedException(src, dst,
-              "destination has no parent ");
+              "destination has no parent");
         }
       }
     }
