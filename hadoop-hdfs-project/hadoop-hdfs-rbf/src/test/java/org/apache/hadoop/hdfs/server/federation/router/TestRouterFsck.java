@@ -1,9 +1,19 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
@@ -15,47 +25,26 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
-import org.apache.hadoop.util.Time;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-
-import static org.junit.Assert.assertTrue;
 
 /**
- * Test a router end-to-end including the MountTable.
+ * End-to-end tests for fsck via DFSRouter
  */
 public class TestRouterFsck {
 
   private static StateStoreDFSCluster cluster;
-  private static MiniRouterDFSCluster.NamenodeContext nnContext0;
-  private static MiniRouterDFSCluster.NamenodeContext nnContext1;
   private static MiniRouterDFSCluster.RouterContext routerContext;
   private static MountTableResolver mountTable;
-  private static ClientProtocol routerProtocol;
-  private static long startTime;
-  private static FileSystem nnFs0;
-  private static FileSystem nnFs1;
   private static FileSystem routerFs;
   private static InetSocketAddress webAddress;
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
-    startTime = Time.now();
-
     // Build and start a federated cluster
     cluster = new StateStoreDFSCluster(false, 2);
     Configuration conf = new RouterConfigBuilder()
@@ -70,14 +59,9 @@ public class TestRouterFsck {
     cluster.waitClusterUp();
 
     // Get the end points
-    nnContext0 = cluster.getNamenode("ns0", null);
-    nnContext1 = cluster.getNamenode("ns1", null);
-    nnFs0 = nnContext0.getFileSystem();
-    nnFs1 = nnContext1.getFileSystem();
     routerContext = cluster.getRandomRouter();
     routerFs = routerContext.getFileSystem();
     Router router = routerContext.getRouter();
-    routerProtocol = routerContext.getClient().getNamenode();
     mountTable = (MountTableResolver) router.getSubclusterResolver();
     webAddress = router.getHttpServerAddress();
     Assert.assertNotNull(webAddress);
@@ -123,21 +107,33 @@ public class TestRouterFsck {
   public void testFsck() throws Exception {
     MountTable addEntry = MountTable.newInstance("/testdir",
         Collections.singletonMap("ns0", "/testdir"));
-    assertTrue(addMountTable(addEntry));
+    Assert.assertTrue(addMountTable(addEntry));
     addEntry = MountTable.newInstance("/testdir2",
         Collections.singletonMap("ns1", "/testdir2"));
-    assertTrue(addMountTable(addEntry));
-
+    Assert.assertTrue(addMountTable(addEntry));
+    // create 1 file on ns0
     routerFs.createNewFile(new Path("/testdir/testfile"));
+    // create 3 files on ns1
     routerFs.createNewFile(new Path("/testdir2/testfile2"));
+    routerFs.createNewFile(new Path("/testdir2/testfile3"));
+    routerFs.createNewFile(new Path("/testdir2/testfile4"));
 
     try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+      // TODO: support https
       HttpGet httpGet = new HttpGet(
-          "http://" + webAddress.getHostName() + ":" + webAddress.getPort() + "/fsck");
+          "http://" + webAddress.getHostName() +
+              ":" + webAddress.getPort() + "/fsck");
       try (CloseableHttpResponse httpResponse = httpClient.execute(httpGet)) {
-        Assert.assertEquals(HttpStatus.SC_OK, httpResponse.getStatusLine().getStatusCode());
-        String out = EntityUtils.toString(httpResponse.getEntity(), StandardCharsets.UTF_8);
+        Assert.assertEquals(HttpStatus.SC_OK,
+            httpResponse.getStatusLine().getStatusCode());
+        String out = EntityUtils.toString(
+            httpResponse.getEntity(), StandardCharsets.UTF_8);
         System.out.println(out);
+        Assert.assertTrue(out.contains("Federated FSCK started"));
+        // assert 1 file exists in a cluster and 3 files exist in another cluster
+        Assert.assertTrue(out.contains("Total files:\t1"));
+        Assert.assertTrue(out.contains("Total files:\t3"));
+        Assert.assertTrue(out.contains("Federated FSCK ended"));
       }
     }
   }
