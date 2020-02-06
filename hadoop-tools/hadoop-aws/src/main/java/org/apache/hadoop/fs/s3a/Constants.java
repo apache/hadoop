@@ -202,20 +202,6 @@ public final class Constants {
   public static final String EXPERIMENTAL_AWS_INTERNAL_THROTTLING =
       "fs.s3a.experimental.aws.internal.throttling";
 
-  /**
-   * Experimental/Unstable feature: should empty directory marker
-   * operations be optimized? Value {@value}.
-   * Default: false.
-   *
-   * This is an experimental feature for reducing operations related
-   * to looking for/deleting fake directory markers.
-   * The goals are better performance as well as fewer tombstone markers
-   * being created on versioned buckets.
-   */
-  @InterfaceStability.Unstable
-  public static final String EXPERIMENTAL_OPTIMIZED_DIRECTORY_OPERATIONS =
-      "fs.s3a.experimental.optimized.directory.operations";
-
   // seconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT =
       "fs.s3a.connection.establish.timeout";
