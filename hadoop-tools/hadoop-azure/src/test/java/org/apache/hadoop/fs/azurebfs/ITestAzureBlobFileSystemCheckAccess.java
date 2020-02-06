@@ -69,7 +69,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   private void setTestUserFs() throws Exception {
-    if(this.testUserFs != null) {
+    if (this.testUserFs != null) {
       return;
     }
     String orgClientId = getConfiguration().get(FS_AZURE_BLOB_FS_CLIENT_ID);
@@ -93,7 +93,7 @@ public class ITestAzureBlobFileSystemCheckAccess
     this.testUserFs = fs;
   }
 
-  @Test
+  @Test(expected = IllegalArgumentException.class)
   public void testCheckAccessWithNullPath() throws IOException {
     assumeHNSAndCheckAccessEnabled();
     superUserFs.access(null, FsAction.READ);
