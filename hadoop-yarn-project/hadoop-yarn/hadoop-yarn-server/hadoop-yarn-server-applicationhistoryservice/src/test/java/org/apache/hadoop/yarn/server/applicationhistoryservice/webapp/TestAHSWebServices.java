@@ -33,6 +33,7 @@ import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -554,11 +555,13 @@ public class TestAHSWebServices extends JerseyTestBase {
     ContainerId containerId100 = ContainerId.newContainerId(appAttemptId, 100);
 
     TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
-        rootLogDir, containerId1, nodeId, fileName, user,
-        ("Hello." + containerId1), true);
+        rootLogDir, appId, Collections.singletonMap(containerId1,
+            "Hello." + containerId1),
+        nodeId, fileName, user, true);
     TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
-        rootLogDir, containerId100, nodeId2, fileName, user,
-        ("Hello." + containerId100), false);
+        rootLogDir, appId, Collections.singletonMap(containerId100,
+            "Hello." + containerId100),
+        nodeId2, fileName, user, false);
     // test whether we can find container log from remote diretory if
     // the containerInfo for this container could be fetched from AHS.
     WebResource r = resource();
@@ -613,8 +616,10 @@ public class TestAHSWebServices extends JerseyTestBase {
         appAttemptId100, 1);
 
     TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
-        rootLogDir, containerId1ForApp100, nodeId, fileName, user,
-        ("Hello." + containerId1ForApp100), true);
+        rootLogDir, appId100,
+        Collections.singletonMap(containerId1ForApp100,
+            "Hello." + containerId1ForApp100),
+        nodeId, fileName, user, true);
     r = resource();
     response = r.path("ws").path("v1")
         .path("applicationhistory").path("containerlogs")
@@ -767,7 +772,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     String content = "Hello." + containerId1000;
     NodeId nodeId = NodeId.newInstance("test host", 100);
     TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
-        rootLogDir, containerId1000, nodeId, fileName, user, content, true);
+        rootLogDir, appId, Collections.singletonMap(containerId1000, content),
+        nodeId, fileName, user, true);
     r = resource();
     ClientResponse response = r.path("ws").path("v1")
         .path("applicationhistory").path("containerlogs")
@@ -806,7 +812,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     String content1 = "Hello." + containerId1;
     NodeId nodeId1 = NodeId.fromString(NM_ID);
     TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
-        rootLogDir, containerId1, nodeId1, fileName, user, content1, true);
+        rootLogDir, appId, Collections.singletonMap(containerId1, content1),
+        nodeId1, fileName, user, true);
     response = r.path("ws").path("v1")
         .path("applicationhistory").path("containers")
         .path(containerId1.toString()).path("logs").path(fileName)
@@ -866,7 +873,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     String content = "Hello." + containerId1000;
     NodeId nodeId = NodeId.newInstance("test host", 100);
     TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
-        rootLogDir, containerId1000, nodeId, fileName, user, content, true);
+        rootLogDir, appId, Collections.singletonMap(containerId1000, content),
+        nodeId, fileName, user, true);
     ClientResponse response = r.path("ws").path("v1")
         .path("applicationhistory").path("containers")
         .path(containerId1000.toString()).path("logs")
@@ -932,7 +940,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     String content = "Hello." + containerId1;
     NodeId nodeId = NodeId.newInstance("test host", 100);
     TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
-        rootLogDir, containerId1, nodeId, fileName, user, content, true);
+        rootLogDir, appId, Collections.singletonMap(containerId1, content),
+        nodeId, fileName, user, true);
 
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1")
