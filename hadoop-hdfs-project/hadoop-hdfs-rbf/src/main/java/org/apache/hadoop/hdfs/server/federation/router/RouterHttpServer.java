@@ -19,14 +19,14 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.net.InetSocketAddress;
 
+import javax.servlet.ServletContext;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.service.AbstractService;
-
-import javax.servlet.ServletContext;
 
 /**
  * Web interface for the {@link Router}. It exposes the Web UI and the WebHDFS
@@ -118,10 +118,14 @@ public class RouterHttpServer extends AbstractService {
 
   private static void setupServlets(
       HttpServer2 httpServer, Configuration conf) {
-    // TODO Add servlets for FSCK, etc
+    // TODO: Add more required servlets
     httpServer.addInternalServlet(IsRouterActiveServlet.SERVLET_NAME,
         IsRouterActiveServlet.PATH_SPEC,
         IsRouterActiveServlet.class);
+    httpServer.addInternalServlet(RouterFsckServlet.SERVLET_NAME,
+        RouterFsckServlet.PATH_SPEC,
+        RouterFsckServlet.class,
+        true);
   }
 
   public InetSocketAddress getHttpAddress() {
