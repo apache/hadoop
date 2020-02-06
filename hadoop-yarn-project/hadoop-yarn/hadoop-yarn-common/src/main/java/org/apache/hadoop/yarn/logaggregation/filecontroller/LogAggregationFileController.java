@@ -49,7 +49,9 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -593,5 +595,19 @@ public abstract class LogAggregationFileController {
 
   public boolean isFsSupportsChmod() {
     return fsSupportsChmod;
+  }
+
+  protected boolean belongsToAppAttempt(ApplicationAttemptId appAttemptId,
+      String containerIdStr) {
+    ContainerId containerId = null;
+    try {
+      containerId = ContainerId.fromString(containerIdStr);
+    } catch (IllegalArgumentException exc) {
+      LOG.warn("Could not parse container id from aggregated log.", exc);
+    }
+    if (containerId != null && containerId.getApplicationAttemptId() != null) {
+      return containerId.getApplicationAttemptId().equals(appAttemptId);
+    }
+    return false;
   }
 }
