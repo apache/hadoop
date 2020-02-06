@@ -813,6 +813,31 @@ sequential one afterwards. The IO heavy ones must also be subclasses of
 
 This is invaluable for debugging test failures.
 
+How to set test options in your hadoop configuration rather
+than on the maven command line:
+
+As an example let's assume you want to run S3Guard integration tests using IDE.
+Please add the following properties in
+`hadoop-tools/hadoop-aws/src/test/resources/auth-keys.xml` file.
+ Local configuration is stored in auth-keys.xml. The changes to this file won't be committed,
+ so it's safe to store local config here.
+```xml
+<property>
+  <name>fs.s3a.s3guard.test.enabled</name>
+  <value>true</value>
+</property>
+```
+
+```xml
+<property>
+  <name>fs.s3a.s3guard.test.implementation</name>
+  <value>dynamo</value>
+</property>
+```
+
+Warning : Although this is easier for IDE debugging setups, once you do this,
+you cannot change configurations on the mvn command line, such as testing without s3guard.
+
 ### Keeping AWS Costs down
 
 Most of the base S3 tests are designed to use public AWS data
