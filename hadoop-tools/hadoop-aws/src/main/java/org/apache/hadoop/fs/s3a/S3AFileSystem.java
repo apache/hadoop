@@ -172,8 +172,10 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3Operations;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.TokenIssuingPolicy.NoTokensAvailable;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDelegationTokenBinding;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.X_DIRECTORY;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
@@ -286,6 +288,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private final S3AFileSystem.OperationCallbacksImpl
       operationCallbacks = new OperationCallbacksImpl();
+
+  /**
+   * Should directory marker use be optimized?
+   */
+  private boolean optimizeDirectoryOperations;
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -411,7 +418,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       // instantiate S3 Select support
       selectBinding = new SelectBinding(writeHelper);
-
+      optimizeDirectoryOperations = conf.getBoolean(
+          EXPERIMENTAL_OPTIMIZED_DIRECTORY_OPERATIONS, false);
+      if (optimizeDirectoryOperations) {
+        LOG.info("Using experimental optimized directory operations");
+      }
       boolean blockUploadEnabled = conf.getBoolean(FAST_UPLOAD, true);
 
       if (!blockUploadEnabled) {
@@ -1495,8 +1506,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       Path destParent = destCreated.getParent();
       if (!sourceRenamed.getParent().equals(destParent)) {
         LOG.debug("source & dest parents are different; fix up dir markers");
-        deleteUnnecessaryFakeDirectories(destParent);
-        maybeCreateFakeParentDirectory(sourceRenamed);
+        // kick off an async delete
+        List<CompletableFuture<Void>> ops = new ArrayList<>(2);
+        ops.add(submit(
+            unboundedThreadPool,
+            () -> {
+              deleteUnnecessaryFakeDirectories(destParent, false);
+              return null;
+            }));
+        ops.add(submit(
+            unboundedThreadPool,
+            () -> {
+              maybeCreateFakeParentDirectory(sourceRenamed);
+              return null;
+            }));
+        waitForCompletion(ops);
       }
     }
 
@@ -3564,7 +3588,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     final CompletableFuture<?> deletion = submit(
         unboundedThreadPool,
         () -> {
-          deleteUnnecessaryFakeDirectories(p.getParent());
+          deleteUnnecessaryFakeDirectories(p.getParent(), isDir);
           return null;
         });
     // this is only set if there is a metastore to update and the
@@ -3629,18 +3653,50 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Delete mock parent directories which are no longer needed.
    * Retry policy: retrying; exceptions swallowed.
    * @param path path
+   * @param isMkDirOperation is this for a mkdir call?
    */
   @Retries.RetryExceptionsSwallowed
-  private void deleteUnnecessaryFakeDirectories(Path path) {
+  private void deleteUnnecessaryFakeDirectories(Path path,
+      final boolean isMkDirOperation) {
     List<DeleteObjectsRequest.KeyVersion> keysToRemove = new ArrayList<>();
-    while (!path.isRoot()) {
-      String key = pathToKey(path);
-      key = (key.endsWith("/")) ? key : (key + "/");
-      LOG.trace("To delete unnecessary fake directory {} for {}", key, path);
-      keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key));
-      path = path.getParent();
+    boolean deleteWholeTree = false;
+    if (optimizeDirectoryOperations && !isMkDirOperation) {
+      // this is a file creation/commit
+      // Assume that the parent directory exists either explicitly as a marker
+      // on implicitly (peer entries)
+      // only look for the dir marker in S3 -we don't care about DDB.
+      try {
+        String key = pathToKey(path);
+        s3GetFileStatus(path, key, StatusProbeEnum.DIR_MARKER_ONLY, null);
+        // here an entry exists.
+        LOG.debug("Removing marker {}", key);
+        keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key));
+      } catch (FileNotFoundException e) {
+        // no entry. Nothing to delete.
+      } catch (IOException e) {
+        instrumentation.errorIgnored();
+        LOG.debug("Ignored when looking at directory marker {}", path, e);
+        // for now, fall back to a full delete.
+        // if the failure was permissions or network this will probably fail
+        // too...
+        deleteWholeTree = true;
+      }
+    } else {
+      deleteWholeTree = true;
+    }
+    if (deleteWholeTree) {
+      // traditional delete creates a delete request for
+      // all parents.
+      while (!path.isRoot()) {
+        String key = pathToKey(path);
+        key = (key.endsWith("/")) ? key : (key + "/");
+        LOG.trace("To delete unnecessary fake directory {} for {}", key, path);
+        keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key));
+        path = path.getParent();
+      }
     }
     try {
+      // TODO: when size ==1, use DELETE instead
       removeKeys(keysToRemove, true, null);
     } catch(AmazonClientException | IOException e) {
       instrumentation.errorIgnored();
@@ -3686,8 +3742,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
     };
 
+    final ObjectMetadata metadata = newObjectMetadata(0L);
+    metadata.setContentType(X_DIRECTORY);
     PutObjectRequest putObjectRequest = newPutObjectRequest(objectName,
-        newObjectMetadata(0L),
+        metadata,
         im);
     invoker.retry("PUT 0-byte object ", objectName,
          true,
@@ -3803,8 +3861,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     if (committerIntegration != null) {
       sb.append(", magicCommitter=").append(isMagicCommitEnabled());
     }
-    sb.append(", boundedExecutor=").append(boundedThreadPool);
-    sb.append(", unboundedExecutor=").append(unboundedThreadPool);
+    sb.append(", optimizeDirMarkers=").append(optimizeDirectoryOperations);
     sb.append(", credentials=").append(credentials);
     sb.append(", delegation tokens=")
         .append(delegationTokens.map(Objects::toString).orElse("disabled"));
@@ -3902,25 +3959,40 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Override superclass so as to add statistic collection.
+   * An optimized check which only looks for directory markers.
    * {@inheritDoc}
    */
   @Override
   @SuppressWarnings("deprecation")
   public boolean isDirectory(Path f) throws IOException {
     entryPoint(INVOCATION_IS_DIRECTORY);
-    return super.isDirectory(f);
+    try {
+      // against S3Guard, a full query;
+      // against S3 a HEAD + "/" then a LIST.
+      return innerGetFileStatus(f, false,
+          StatusProbeEnum.DIRECTORIES).isDirectory();
+    } catch (FileNotFoundException e) {
+      return false;
+    }
   }
 
   /**
-   * Override superclass so as to add statistic collection.
+   * Override superclass so as to only poll for a file.
+   * Warning: may leave a 404 in the S3 load balancer cache.
    * {@inheritDoc}
    */
   @Override
   @SuppressWarnings("deprecation")
   public boolean isFile(Path f) throws IOException {
     entryPoint(INVOCATION_IS_FILE);
-    return super.isFile(f);
+    try {
+      // against S3Guard, a full query; against S3 only a HEAD.
+      return innerGetFileStatus(f, false,
+          StatusProbeEnum.HEAD_ONLY).isFile();
+    } catch (FileNotFoundException e) {
+      // no file or there is a directory there.
+      return false;
+    }
   }
 
   /**
