@@ -71,6 +71,7 @@ import org.apache.hadoop.io.file.tfile.SimpleBufferedOutputStream;
 import org.apache.hadoop.io.file.tfile.Compression.Algorithm;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
@@ -619,8 +620,9 @@ public class LogAggregationIndexedFileController
     String nodeId = logRequest.getNodeId();
     ApplicationId appId = logRequest.getAppId();
     String appOwner = logRequest.getAppOwner();
-    boolean getAllContainers = (containerIdStr == null ||
-        containerIdStr.isEmpty());
+    ApplicationAttemptId appAttemptId = logRequest.getAppAttemptId();
+    boolean getAllContainers = ((containerIdStr == null ||
+        containerIdStr.isEmpty()) && appAttemptId != null);
     String nodeIdStr = (nodeId == null || nodeId.isEmpty()) ? null
         : LogAggregationUtils.getNodeString(nodeId);
     RemoteIterator<FileStatus> nodeFiles = LogAggregationUtils
@@ -664,8 +666,12 @@ public class LogAggregationIndexedFileController
         if (getAllContainers) {
           for (Entry<String, List<IndexedFileLogMeta>> log : logMeta
               .getLogMetas().entrySet()) {
+            String currentContainerIdStr = log.getKey();
+            if (!belongsToAppAttempt(appAttemptId, currentContainerIdStr)) {
+              continue;
+            }
             ContainerLogMeta meta = new ContainerLogMeta(
-                log.getKey().toString(), curNodeId);
+                log.getKey(), curNodeId);
             for (IndexedFileLogMeta aMeta : log.getValue()) {
               meta.addLogMeta(aMeta.getFileName(), Long.toString(
                   aMeta.getFileSize()),

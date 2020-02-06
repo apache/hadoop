@@ -356,7 +356,7 @@ public class LogsCLI extends Configured implements Tool {
     }
 
 
-    ContainerLogsRequest request = new ContainerLogsRequest(appId,
+    ContainerLogsRequest request = new ContainerLogsRequest(appId, null,
         Apps.isApplicationFinalState(appState), appOwner, nodeAddress,
         null, containerIdStr, localDir, logs, bytes, null);
 

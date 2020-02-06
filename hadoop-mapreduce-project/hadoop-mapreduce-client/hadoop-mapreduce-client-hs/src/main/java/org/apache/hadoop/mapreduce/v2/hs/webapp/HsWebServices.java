@@ -69,6 +69,7 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.webapp.WrappedLogMetaRequest;
 import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
 import org.apache.hadoop.yarn.server.webapp.LogServlet;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
@@ -83,7 +84,7 @@ import com.google.inject.Inject;
 public class HsWebServices extends WebServices {
   private final HistoryContext ctx;
   private WebApp webapp;
-  private final LogServlet logServlet;
+  private LogServlet logServlet;
 
   private @Context HttpServletResponse response;
   @Context UriInfo uriInfo;
@@ -423,17 +424,38 @@ public class HsWebServices extends WebServices {
   }
 
   @GET
+  @Path("/aggregatedlogs")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
+  public Response getAggregatedLogsMeta(@Context HttpServletRequest hsr,
+      @QueryParam(YarnWebServiceParams.APP_ID) String appIdStr,
+      @QueryParam(YarnWebServiceParams.APPATTEMPT_ID) String appAttemptIdStr,
+      @QueryParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr,
+      @QueryParam(YarnWebServiceParams.NM_ID) String nmId,
+      @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
+      @DefaultValue("false") boolean redirectedFromNode) {
+    init();
+    return logServlet.getLogsInfo(hsr, appIdStr, appAttemptIdStr,
+        containerIdStr, nmId, redirectedFromNode);
+  }
+
+  @GET
   @Path("/containers/{containerid}/logs")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @InterfaceAudience.Public
   @InterfaceStability.Unstable
-  public Response getLogs(@Context HttpServletRequest hsr,
+  public Response getContainerLogs(@Context HttpServletRequest hsr,
       @PathParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr,
       @QueryParam(YarnWebServiceParams.NM_ID) String nmId,
       @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
       @DefaultValue("false") boolean redirectedFromNode) {
     init();
-    return logServlet.getContainerLogsInfo(hsr, containerIdStr, nmId,
+
+    WrappedLogMetaRequest.Builder logMetaRequestBuilder =
+        LogServlet.createRequestFromContainerId(containerIdStr);
+
+    return logServlet.getContainerLogsInfo(hsr, logMetaRequestBuilder, nmId,
         redirectedFromNode, null);
   }
 
@@ -442,7 +464,7 @@ public class HsWebServices extends WebServices {
   @Produces({ MediaType.TEXT_PLAIN + "; " + JettyUtils.UTF_8 })
   @InterfaceAudience.Public
   @InterfaceStability.Unstable
-  public Response getLogs(@Context HttpServletRequest req,
+  public Response getContainerLogFile(@Context HttpServletRequest req,
       @PathParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr,
       @PathParam(YarnWebServiceParams.CONTAINER_LOG_FILE_NAME)
           String filename,
@@ -456,5 +478,15 @@ public class HsWebServices extends WebServices {
     init();
     return logServlet.getLogFile(req, containerIdStr, filename, format, size,
         nmId, redirectedFromNode, null);
+  }
+
+  @VisibleForTesting
+  LogServlet getLogServlet() {
+    return this.logServlet;
+  }
+
+  @VisibleForTesting
+  void setLogServlet(LogServlet logServlet) {
+    this.logServlet = logServlet;
   }
 }

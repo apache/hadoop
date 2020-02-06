@@ -151,7 +151,11 @@ public class LogWebService implements AppInfoProvider {
       @DefaultValue("false") boolean redirectedFromNode,
       @QueryParam(YarnWebServiceParams.CLUSTER_ID) String clusterId) {
     initForReadableEndpoints(res);
-    return logServlet.getContainerLogsInfo(req, containerIdStr, nmId,
+
+    WrappedLogMetaRequest.Builder logMetaRequestBuilder =
+        LogServlet.createRequestFromContainerId(containerIdStr);
+
+    return logServlet.getContainerLogsInfo(req, logMetaRequestBuilder, nmId,
         redirectedFromNode, clusterId);
   }
 
