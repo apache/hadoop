@@ -136,6 +136,10 @@ public class RouterHttpServer extends AbstractService {
     return this.httpsAddress;
   }
 
+  static Configuration getConfFromContext(ServletContext context) {
+    return (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
+  }
+
   public static Router getRouterFromContext(ServletContext context) {
     return (Router)context.getAttribute(NAMENODE_ATTRIBUTE_KEY);
   }

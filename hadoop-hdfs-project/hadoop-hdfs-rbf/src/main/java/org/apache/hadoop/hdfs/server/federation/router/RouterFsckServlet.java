@@ -51,9 +51,9 @@ public class RouterFsckServlet extends HttpServlet {
     final Map<String,String[]> pmap = request.getParameterMap();
     final PrintWriter out = response.getWriter();
     final InetAddress remoteAddress =
-      InetAddress.getByName(request.getRemoteAddr());
+        InetAddress.getByName(request.getRemoteAddr());
     final ServletContext context = getServletContext();
-
+    final Configuration conf = RouterHttpServer.getConfFromContext(context);
     final UserGroupInformation ugi = getUGI(request, conf);
     try {
       ugi.doAs((PrivilegedExceptionAction<Object>) () -> {
