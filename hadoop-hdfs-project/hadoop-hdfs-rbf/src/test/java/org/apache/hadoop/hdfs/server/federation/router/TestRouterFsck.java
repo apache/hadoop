@@ -137,8 +137,7 @@ public class TestRouterFsck {
 
     try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
       // TODO: support https
-      HttpGet httpGet = new HttpGet(
-          "http://" + webAddress.getHostName() +
+      HttpGet httpGet = new HttpGet("http://" + webAddress.getHostName() +
               ":" + webAddress.getPort() + "/fsck");
       try (CloseableHttpResponse httpResponse = httpClient.execute(httpGet)) {
         Assert.assertEquals(HttpStatus.SC_OK,
@@ -150,6 +149,22 @@ public class TestRouterFsck {
         // assert 1 file exists in a cluster and 3 files exist in another cluster
         Assert.assertTrue(out.contains("Total files:\t1"));
         Assert.assertTrue(out.contains("Total files:\t3"));
+        Assert.assertTrue(out.contains("Federated FSCK ended"));
+      }
+
+      // check if the argument is passed correctly
+      httpGet = new HttpGet("http://" + webAddress.getHostName() +
+              ":" + webAddress.getPort() + "/fsck?path=/testdir");
+      try (CloseableHttpResponse httpResponse = httpClient.execute(httpGet)) {
+        Assert.assertEquals(HttpStatus.SC_OK,
+            httpResponse.getStatusLine().getStatusCode());
+        String out = EntityUtils.toString(
+            httpResponse.getEntity(), StandardCharsets.UTF_8);
+        System.out.println(out);
+        Assert.assertTrue(out.contains("Federated FSCK started"));
+        Assert.assertTrue(out.contains("Total files:\t1"));
+        // ns1 does not have files under /testdir
+        Assert.assertFalse(out.contains("Total files:\t3"));
         Assert.assertTrue(out.contains("Federated FSCK ended"));
       }
     }
