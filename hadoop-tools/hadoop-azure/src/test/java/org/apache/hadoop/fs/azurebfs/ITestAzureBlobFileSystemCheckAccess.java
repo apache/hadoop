@@ -95,7 +95,6 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test(expected = IllegalArgumentException.class)
   public void testCheckAccessWithNullPath() throws IOException {
-    assumeHNSAndCheckAccessEnabled();
     superUserFs.access(null, FsAction.READ);
   }
 
@@ -125,7 +124,6 @@ public class ITestAzureBlobFileSystemCheckAccess
     FileSystem fs = FileSystem.newInstance(conf);
     Path testFilePath = setupTestDirectoryAndUserAccess("/test1.txt",
         FsAction.NONE);
-    fs.access(null, FsAction.READ);
     fs.access(testFilePath, FsAction.EXECUTE);
     fs.access(testFilePath, FsAction.READ);
     fs.access(testFilePath, FsAction.WRITE);

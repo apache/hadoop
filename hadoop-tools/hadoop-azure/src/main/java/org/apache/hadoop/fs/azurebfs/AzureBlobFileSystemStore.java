@@ -1098,7 +1098,6 @@ public class AzureBlobFileSystemStore implements Closeable {
           + " used is not namespace enabled");
       return;
     }
-    Preconditions.checkArgument(path != null);
     try (AbfsPerfInfo perfInfo = startTracking("access", "checkAccess")) {
       String relativePath =
           AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true);
