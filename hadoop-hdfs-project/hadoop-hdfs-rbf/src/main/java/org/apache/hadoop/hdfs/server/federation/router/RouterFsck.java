@@ -96,12 +96,12 @@ public class RouterFsck {
         }
       }
 
-      out.println("FSCK ended at " + new Date() + " in "
+      out.println("Federated FSCK ended at " + new Date() + " in "
           + (Time.monotonicNow() - startTime + " milliseconds"));
     } catch (Exception e) {
       String errMsg = "Fsck " + e.getMessage();
       LOG.warn(errMsg, e);
-      out.println("FSCK ended at " + new Date() + " in "
+      out.println("Federated FSCK ended at " + new Date() + " in "
           + (Time.monotonicNow() - startTime + " milliseconds"));
       out.println(e.getMessage());
       out.print("\n\n" + errMsg);
