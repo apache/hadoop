@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.List;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -35,14 +36,20 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
+import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
+import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamenodeRegistrationsRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamenodeRegistrationsResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -67,6 +74,7 @@ public class TestRouterFsck {
   private static MountTableResolver mountTable;
   private static FileSystem routerFs;
   private static InetSocketAddress webAddress;
+  private static List<MembershipState> memberships;
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
@@ -90,6 +98,16 @@ public class TestRouterFsck {
     mountTable = (MountTableResolver) router.getSubclusterResolver();
     webAddress = router.getHttpServerAddress();
     assertNotNull(webAddress);
+
+    StateStoreService stateStore = routerContext.getRouter().getStateStore();
+    MembershipStore membership =
+        stateStore.getRegisteredRecordStore(MembershipStore.class);
+    GetNamenodeRegistrationsRequest request =
+        GetNamenodeRegistrationsRequest.newInstance();
+    GetNamenodeRegistrationsResponse response =
+        membership.getNamenodeRegistrations(request);
+    memberships = response.getNamenodeMemberships();
+    Collections.sort(memberships);
   }
 
   @AfterClass
@@ -158,6 +176,14 @@ public class TestRouterFsck {
         assertTrue(out.contains("Total files:\t1"));
         assertTrue(out.contains("Total files:\t3"));
         assertTrue(out.contains("Federated FSCK ended"));
+        int nnCount = 0;
+        for (MembershipState nn : memberships) {
+          if (nn.getState() == FederationNamenodeServiceState.ACTIVE) {
+            assertTrue(out.contains("Checking " + nn + " at " + nn.getWebAddress() + "\n"));
+            nnCount++;
+          }
+        }
+        assertEquals(2, nnCount);
       }
 
       // check if the argument is passed correctly
@@ -174,6 +200,14 @@ public class TestRouterFsck {
         // ns1 does not have files under /testdir
         assertFalse(out.contains("Total files:\t3"));
         assertTrue(out.contains("Federated FSCK ended"));
+        int nnCount = 0;
+        for (MembershipState nn : memberships) {
+          if (nn.getState() == FederationNamenodeServiceState.ACTIVE) {
+            assertTrue(out.contains("Checking " + nn + " at " + nn.getWebAddress() + "\n"));
+            nnCount++;
+          }
+        }
+        assertEquals(2, nnCount);
       }
     }
   }
