@@ -98,7 +98,7 @@ import org.apache.hadoop.yarn.server.api.ContainerType;
 
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * Utils to convert enum protos to corresponding java enums and vice versa.

@@ -56,7 +56,7 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 
 @InterfaceAudience.Private
 public class DFSZKFailoverController extends ZKFailoverController {

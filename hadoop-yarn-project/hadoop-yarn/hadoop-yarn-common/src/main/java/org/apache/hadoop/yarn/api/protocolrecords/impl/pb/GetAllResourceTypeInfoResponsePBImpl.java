@@ -27,7 +27,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceTypeInfoProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAllResourceTypeInfoResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAllResourceTypeInfoResponseProtoOrBuilder;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 import java.util.ArrayList;
 import java.util.Iterator;

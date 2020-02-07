@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.security;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 import java.io.BufferedInputStream;
 import java.io.DataInput;

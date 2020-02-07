@@ -34,6 +34,8 @@
     <release-year>2020</release-year>
 
     <failIfNoTests>false</failIfNoTests>
+    <!--Whether to proceed to next module if any test failures exist-->
+    <ignoreTestFailure>true</ignoreTestFailure>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     <jetty.version>9.4.20.v20190813</jetty.version>
     <test.exclude>_</test.exclude>
@@ -83,10 +85,15 @@
     <!-- com.google.re2j version -->
     <re2j.version>1.1</re2j.version>
 
-    <!-- ProtocolBuffer version, used to verify the protoc version and -->
-    <!-- define the protobuf JAR version                               -->
-    <protobuf.version>3.7.1</protobuf.version>
+    <!--Protobuf version for backward compatibility-->
+    <protobuf.version>2.5.0</protobuf.version>
+    <!-- ProtocolBuffer version, actually used in Hadoop -->
+    <hadoop.protobuf.version>3.7.1</hadoop.protobuf.version>
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
+
+    <hadoop-thirdparty-protobuf.version>1.0.0-SNAPSHOT</hadoop-thirdparty-protobuf.version>
+    <hadoop-thirdparty-shaded-prefix>org.apache.hadoop.thirdparty</hadoop-thirdparty-shaded-prefix>
+    <hadoop-thirdparty-shaded-protobuf-prefix>${hadoop-thirdparty-shaded-prefix}.protobuf</hadoop-thirdparty-shaded-protobuf-prefix>
 
     <zookeeper.version>3.5.6</zookeeper.version>
     <curator.version>4.2.0</curator.version>
@@ -137,6 +144,8 @@
 
     <!-- Maven protoc compiler -->
     <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
+    <maven-replacer-plugin.version>1.5.3</maven-replacer-plugin.version>
+
     <protobuf-compile.version>3.5.1</protobuf-compile.version>
     <grpc.version>1.10.0</grpc.version>
     <os-maven-plugin.version>1.5.0.Final</os-maven-plugin.version>
@@ -216,6 +225,11 @@
         <groupId>jdiff</groupId>
         <artifactId>jdiff</artifactId>
         <version>${jdiff.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop.thirdparty</groupId>
+        <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+        <version>${hadoop-thirdparty-protobuf.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -1844,7 +1858,7 @@
           <extensions>true</extensions>
           <configuration>
             <protocArtifact>
-              com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}
+              com.google.protobuf:protoc:${hadoop.protobuf.version}:exe:${os.detected.classifier}
             </protocArtifact>
             <attachProtoSources>false</attachProtoSources>
           </configuration>
@@ -1874,6 +1888,94 @@
                 <outputDirectory>${project.build.directory}/generated-test-sources/java</outputDirectory>
                 <clearOutputDirectory>false</clearOutputDirectory>
                 <skip>true</skip>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+        <!-- Modify the generated source to use our shaded protobuf -->
+        <plugin>
+          <groupId>com.google.code.maven-replacer-plugin</groupId>
+          <artifactId>replacer</artifactId>
+          <version>${maven-replacer-plugin.version}</version>
+          <executions>
+            <execution>
+              <id>replace-generated-sources</id>
+              <phase>process-sources</phase>
+              <goals>
+                <goal>replace</goal>
+              </goals>
+              <configuration>
+                <skip>true</skip>
+                <basedir>${project.build.directory}/generated-sources</basedir>
+                <includes>
+                  <include>**/*.java</include>
+                </includes>
+                <replacements>
+                  <replacement>
+                    <token>([^\.])com.google.protobuf</token>
+                    <value>$1${hadoop-thirdparty-shaded-protobuf-prefix}</value>
+                  </replacement>
+                </replacements>
+              </configuration>
+            </execution>
+            <execution>
+              <id>replace-generated-test-sources</id>
+              <phase>process-test-resources</phase>
+              <goals>
+                <goal>replace</goal>
+              </goals>
+              <configuration>
+                <skip>true</skip>
+                <basedir>${project.build.directory}/generated-test-sources</basedir>
+                <includes>
+                  <include>**/*.java</include>
+                </includes>
+                <replacements>
+                  <replacement>
+                    <token>([^\.])com.google.protobuf</token>
+                    <value>$1${hadoop-thirdparty-shaded-protobuf-prefix}</value>
+                  </replacement>
+                </replacements>
+              </configuration>
+            </execution>
+            <execution>
+              <id>replace-sources</id>
+              <phase>process-sources</phase>
+              <goals>
+                <goal>replace</goal>
+              </goals>
+              <configuration>
+                <skip>true</skip>
+                <basedir>${basedir}/src/main/java</basedir>
+                <includes>
+                  <include>**/*.java</include>
+                </includes>
+                <replacements>
+                  <replacement>
+                    <token>([^\.])com.google.protobuf</token>
+                    <value>$1${hadoop-thirdparty-shaded-protobuf-prefix}</value>
+                  </replacement>
+                </replacements>
+              </configuration>
+            </execution>
+            <execution>
+              <id>replace-test-sources</id>
+              <phase>process-test-sources</phase>
+              <goals>
+                <goal>replace</goal>
+              </goals>
+              <configuration>
+                <skip>true</skip>
+                <basedir>${basedir}/src/test/java</basedir>
+                <includes>
+                  <include>**/*.java</include>
+                </includes>
+                <replacements>
+                  <replacement>
+                    <token>([^\.])com.google.protobuf</token>
+                    <value>$1${hadoop-thirdparty-shaded-protobuf-prefix}</value>
+                  </replacement>
+                </replacements>
               </configuration>
             </execution>
           </executions>
@@ -1928,6 +2030,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
+          <testFailureIgnore>${ignoreTestFailure}</testFailureIgnore>
           <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>${surefire.fork.timeout}</forkedProcessTimeoutInSeconds>
           <argLine>${maven-surefire-plugin.argLine}</argLine>

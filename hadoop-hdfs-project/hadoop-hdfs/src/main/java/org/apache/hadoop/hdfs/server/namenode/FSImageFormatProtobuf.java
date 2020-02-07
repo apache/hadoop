@@ -78,7 +78,7 @@ import org.apache.hadoop.util.Time;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.protobuf.CodedOutputStream;
+import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
 
 /**
  * Utility class to read / write fsimage in protobuf format.
@@ -1016,7 +1016,7 @@ public final class FSImageFormatProtobuf {
   }
 
   private static int getOndiskTrunkSize(
-      com.google.protobuf.GeneratedMessageV3 s) {
+      org.apache.hadoop.thirdparty.protobuf.GeneratedMessageV3 s) {
     return CodedOutputStream.computeUInt32SizeNoTag(s.getSerializedSize())
         + s.getSerializedSize();
   }

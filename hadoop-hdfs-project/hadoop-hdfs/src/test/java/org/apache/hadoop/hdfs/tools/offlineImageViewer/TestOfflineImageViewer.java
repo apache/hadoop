@@ -137,7 +137,7 @@ import org.xml.sax.helpers.DefaultHandler;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 public class TestOfflineImageViewer {
   private static final Logger LOG =
