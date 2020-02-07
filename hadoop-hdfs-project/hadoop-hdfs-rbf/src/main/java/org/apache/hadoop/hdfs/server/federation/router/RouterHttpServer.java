@@ -118,7 +118,6 @@ public class RouterHttpServer extends AbstractService {
 
   private static void setupServlets(
       HttpServer2 httpServer, Configuration conf) {
-    // TODO: Add more required servlets
     httpServer.addInternalServlet(IsRouterActiveServlet.SERVLET_NAME,
         IsRouterActiveServlet.PATH_SPEC,
         IsRouterActiveServlet.class);

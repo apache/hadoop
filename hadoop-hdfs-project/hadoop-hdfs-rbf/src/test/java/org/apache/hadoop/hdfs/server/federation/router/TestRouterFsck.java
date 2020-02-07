@@ -24,9 +24,10 @@ import java.util.Collections;
 
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -49,10 +50,17 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 /**
  * End-to-end tests for fsck via DFSRouter
  */
 public class TestRouterFsck {
+
+  public static final Logger LOG = LoggerFactory.getLogger(TestRouterFsck.class);
 
   private static StateStoreDFSCluster cluster;
   private static MiniRouterDFSCluster.RouterContext routerContext;
@@ -81,7 +89,7 @@ public class TestRouterFsck {
     Router router = routerContext.getRouter();
     mountTable = (MountTableResolver) router.getSubclusterResolver();
     webAddress = router.getHttpServerAddress();
-    Assert.assertNotNull(webAddress);
+    assertNotNull(webAddress);
   }
 
   @AfterClass
@@ -124,10 +132,10 @@ public class TestRouterFsck {
   public void testFsck() throws Exception {
     MountTable addEntry = MountTable.newInstance("/testdir",
         Collections.singletonMap("ns0", "/testdir"));
-    Assert.assertTrue(addMountTable(addEntry));
+    assertTrue(addMountTable(addEntry));
     addEntry = MountTable.newInstance("/testdir2",
         Collections.singletonMap("ns1", "/testdir2"));
-    Assert.assertTrue(addMountTable(addEntry));
+    assertTrue(addMountTable(addEntry));
     // create 1 file on ns0
     routerFs.createNewFile(new Path("/testdir/testfile"));
     // create 3 files on ns1
@@ -140,32 +148,32 @@ public class TestRouterFsck {
       HttpGet httpGet = new HttpGet("http://" + webAddress.getHostName() +
               ":" + webAddress.getPort() + "/fsck");
       try (CloseableHttpResponse httpResponse = httpClient.execute(httpGet)) {
-        Assert.assertEquals(HttpStatus.SC_OK,
+        assertEquals(HttpStatus.SC_OK,
             httpResponse.getStatusLine().getStatusCode());
         String out = EntityUtils.toString(
             httpResponse.getEntity(), StandardCharsets.UTF_8);
-        System.out.println(out);
-        Assert.assertTrue(out.contains("Federated FSCK started"));
+        LOG.info(out);
+        assertTrue(out.contains("Federated FSCK started"));
         // assert 1 file exists in a cluster and 3 files exist in another cluster
-        Assert.assertTrue(out.contains("Total files:\t1"));
-        Assert.assertTrue(out.contains("Total files:\t3"));
-        Assert.assertTrue(out.contains("Federated FSCK ended"));
+        assertTrue(out.contains("Total files:\t1"));
+        assertTrue(out.contains("Total files:\t3"));
+        assertTrue(out.contains("Federated FSCK ended"));
       }
 
       // check if the argument is passed correctly
       httpGet = new HttpGet("http://" + webAddress.getHostName() +
               ":" + webAddress.getPort() + "/fsck?path=/testdir");
       try (CloseableHttpResponse httpResponse = httpClient.execute(httpGet)) {
-        Assert.assertEquals(HttpStatus.SC_OK,
+        assertEquals(HttpStatus.SC_OK,
             httpResponse.getStatusLine().getStatusCode());
         String out = EntityUtils.toString(
             httpResponse.getEntity(), StandardCharsets.UTF_8);
-        System.out.println(out);
-        Assert.assertTrue(out.contains("Federated FSCK started"));
-        Assert.assertTrue(out.contains("Total files:\t1"));
+        LOG.info(out);
+        assertTrue(out.contains("Federated FSCK started"));
+        assertTrue(out.contains("Total files:\t1"));
         // ns1 does not have files under /testdir
-        Assert.assertFalse(out.contains("Total files:\t3"));
-        Assert.assertTrue(out.contains("Federated FSCK ended"));
+        assertFalse(out.contains("Total files:\t3"));
+        assertTrue(out.contains("Federated FSCK ended"));
       }
     }
   }
