@@ -183,7 +183,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     initializeClient(uri, fileSystemName, accountName, useHttps);
     this.identityTransformer = new IdentityTransformer(abfsConfiguration.getRawConfiguration());
     LOG.trace("IdentityTransformer init complete");
-    // Extract the directories that should contain page blobs
+    // Extract the directories that should contain append blobs
     String appendBlobDirs = abfsConfiguration.getAppendBlobDirs();
     if (appendBlobDirs.trim().isEmpty()) {
       this.appendBlobDirSet = new HashSet<String>();

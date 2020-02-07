@@ -97,6 +97,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.supportFlush = supportFlush;
     this.disableOutputStreamFlush = disableOutputStreamFlush;
     this.supportAppendWithFlush = supportAppendWithFlush;
+    this.appendBlob = appendBlob;
     this.lastError = null;
     this.lastFlushOffset = 0;
     this.bufferSize = bufferSize;
@@ -104,12 +105,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.bufferIndex = 0;
     this.writeOperations = new ConcurrentLinkedDeque<>();
 
-    if (appendBlob) {
-      this.maxConcurrentRequestCount = 1;
-    } else {
-      this.maxConcurrentRequestCount = 4 * Runtime.getRuntime().availableProcessors();
-    }
-
+    this.maxConcurrentRequestCount = 4 * Runtime.getRuntime().availableProcessors();
     this.threadExecutor
         = new ThreadPoolExecutor(maxConcurrentRequestCount,
         maxConcurrentRequestCount,
@@ -299,6 +295,12 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     final long offset = position;
     position += bytesLength;
 
+    if (this.appendBlob) {
+        client.append(path, offset, bytes, 0,
+            bytesLength, flush, isClose);
+        return;
+    }
+
     if (threadExecutor.getQueue().size() >= maxConcurrentRequestCount * 2) {
       waitForTaskToComplete();
     }
@@ -324,7 +326,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
         return null;
       }
-    });
+    }
+    );
 
     writeOperations.add(new WriteOperation(job, offset, bytesLength, flush));
 
