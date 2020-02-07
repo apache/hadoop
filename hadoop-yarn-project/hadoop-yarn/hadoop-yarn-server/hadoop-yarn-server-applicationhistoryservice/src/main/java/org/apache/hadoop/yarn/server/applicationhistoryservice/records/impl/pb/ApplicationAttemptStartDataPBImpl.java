@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationAttemptStartData;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 public class ApplicationAttemptStartDataPBImpl extends
     ApplicationAttemptStartData {

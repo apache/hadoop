@@ -128,6 +128,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
+          <testFailureIgnore>${ignoreTestFailure}</testFailureIgnore>
           <forkCount>1</forkCount>
           <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>

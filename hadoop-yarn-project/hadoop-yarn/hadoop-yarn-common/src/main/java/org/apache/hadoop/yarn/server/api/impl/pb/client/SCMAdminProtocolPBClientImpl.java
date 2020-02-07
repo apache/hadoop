@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos;
 
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class SCMAdminProtocolPBClientImpl implements SCMAdminProtocol,
     Closeable {

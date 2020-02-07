@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb;
 
-import com.google.protobuf.Message;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshSuperUserGroupsConfigurationRequestProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshSuperUserGroupsConfigurationRequestProtoOrBuilder;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshSuperUserGroupsConfigurationRequestProto.Builder;

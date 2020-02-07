@@ -23,7 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicies.MultipleLinearRandomRetry;
 import org.apache.hadoop.ipc.RemoteException;
 
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.YarnClusterMetricsProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterMetricsResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterMetricsResponseProtoOrBuilder;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable

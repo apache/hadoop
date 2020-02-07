@@ -96,6 +96,18 @@
           <effort>Max</effort>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <executions>
+          <execution>
+            <id>replace-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 

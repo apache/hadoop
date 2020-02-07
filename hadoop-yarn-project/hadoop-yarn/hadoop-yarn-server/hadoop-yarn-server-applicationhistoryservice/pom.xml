@@ -231,6 +231,30 @@
         </executions>
       </plugin>
       <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <executions>
+          <execution>
+            <id>replace-generated-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-test-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
           <execution>

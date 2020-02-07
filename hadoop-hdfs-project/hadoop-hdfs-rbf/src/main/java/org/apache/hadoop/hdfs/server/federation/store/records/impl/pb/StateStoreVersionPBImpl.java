@@ -25,7 +25,7 @@ import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProt
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.FederationProtocolPBTranslator;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
 
-import com.google.protobuf.Message;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 
 /**
  * Protobuf implementation of the StateStoreVersion record.

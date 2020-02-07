@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.Refre
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshNodesRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable
