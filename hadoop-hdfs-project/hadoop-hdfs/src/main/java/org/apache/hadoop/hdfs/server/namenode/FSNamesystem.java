@@ -101,7 +101,7 @@ import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.OBSERVER;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 
 import com.google.common.collect.Maps;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsPartialListing;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;

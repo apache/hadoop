@@ -32,8 +32,8 @@ import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.Refr
 import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshLogRetentionSettingsRequestProto;
 import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshLogRetentionSettingsResponseProto;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 @Private
 public class HSAdminRefreshProtocolServerSideTranslatorPB implements

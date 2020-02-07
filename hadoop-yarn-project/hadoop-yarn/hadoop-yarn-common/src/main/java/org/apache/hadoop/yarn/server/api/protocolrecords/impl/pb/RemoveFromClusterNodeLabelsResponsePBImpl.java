@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RemoveFromClusterNodeLabelsResponseProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsResponse;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 public class RemoveFromClusterNodeLabelsResponsePBImpl extends
     RemoveFromClusterNodeLabelsResponse {

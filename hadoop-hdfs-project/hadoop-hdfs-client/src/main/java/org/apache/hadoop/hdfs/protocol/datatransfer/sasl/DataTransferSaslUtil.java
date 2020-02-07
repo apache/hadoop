@@ -61,7 +61,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.net.InetAddresses;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * Utility methods implementing SASL negotiation for DataTransferProtocol.

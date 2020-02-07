@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsRequestProt
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable

@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerSt
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.impl.pb.LocalizerHeartbeatResponsePBImpl;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.impl.pb.LocalizerStatusPBImpl;
 
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class LocalizationProtocolPBClientImpl implements LocalizationProtocol,
     Closeable {

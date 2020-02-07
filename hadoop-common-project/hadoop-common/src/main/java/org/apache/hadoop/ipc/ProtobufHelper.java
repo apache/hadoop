@@ -26,8 +26,8 @@ import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 /**
  * Helper methods for protobuf related RPC implementation

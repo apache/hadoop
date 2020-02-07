@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.yarn.security;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;

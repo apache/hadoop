@@ -40,6 +40,10 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-annotations</artifactId>
       <scope>compile</scope>
@@ -391,6 +395,36 @@
           <execution>
             <id>src-test-compile-protoc</id>
             <configuration><skip>false</skip></configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <executions>
+          <execution>
+            <id>replace-generated-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-generated-test-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-test-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -856,6 +890,7 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
+              <testFailureIgnore>${ignoreTestFailure}</testFailureIgnore>
               <forkCount>${testsThreadCount}</forkCount>
               <reuseForks>false</reuseForks>
               <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
