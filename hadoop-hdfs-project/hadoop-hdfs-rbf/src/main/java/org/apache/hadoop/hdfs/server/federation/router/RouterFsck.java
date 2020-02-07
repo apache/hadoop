@@ -25,6 +25,7 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -125,7 +126,7 @@ public class RouterFsck {
     // Connect to the Namenode and output
     final URLConnection conn = url.openConnection();
     try (InputStream is = conn.getInputStream();
-         InputStreamReader isr = new InputStreamReader(is);
+         InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8);
          BufferedReader br = new BufferedReader(isr)) {
       String line;
       while ((line = br.readLine()) != null) {
