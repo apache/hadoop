@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -27,11 +32,13 @@ import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TestPreemptionForQueueWithPriorities
     extends ProportionalCapacityPreemptionPolicyMockFramework {
   @Before
   public void setup() {
+    rc = new DefaultResourceCalculator();
     super.setup();
     policy = new ProportionalCapacityPreemptionPolicy(rmContext, cs, mClock);
   }
@@ -314,8 +321,8 @@ public class TestPreemptionForQueueWithPriorities
      *   - a2 (capacity=60), p=1
      * - b (capacity=30), p=1
      *   - b1 (capacity=50), p=1
-     *   - b1 (capacity=50), p=2
-     * - c (capacity=40), p=2
+     *   - b2 (capacity=50), p=2
+     * - c (capacity=40), p=1
      * </pre>
      */
     String labelsConfig = "=100,true"; // default partition
@@ -323,11 +330,11 @@ public class TestPreemptionForQueueWithPriorities
     String queuesConfig =
         // guaranteed,max,used,pending
         "root(=[100 100 100 100]);" + //root
-            "-a(=[30 100 40 50]){priority=1};" + // a
+            "-a(=[29 100 40 50]){priority=1};" + // a
             "--a1(=[12 100 20 50]){priority=1};" + // a1
-            "--a2(=[18 100 20 50]){priority=1};" + // a2
-            "-b(=[30 100 59 50]){priority=1};" + // b
-            "--b1(=[15 100 30 50]){priority=1};" + // b1
+            "--a2(=[17 100 20 50]){priority=1};" + // a2
+            "-b(=[31 100 59 50]){priority=1};" + // b
+            "--b1(=[16 100 30 50]){priority=1};" + // b1
             "--b2(=[15 100 29 50]){priority=2};" + // b2
             "-c(=[40 100 1 30]){priority=1}";   // c
     String appsConfig =
@@ -336,7 +343,7 @@ public class TestPreemptionForQueueWithPriorities
             "a2\t(1,1,n1,,20,false);" + // app2 in a2
             "b1\t(1,1,n1,,30,false);" + // app3 in b1
             "b2\t(1,1,n1,,29,false);" + // app4 in b2
-            "c\t(1,1,n1,,29,false)"; // app5 in c
+            "c\t(1,1,n1,,1,false)"; // app5 in c
 
 
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
@@ -344,18 +351,70 @@ public class TestPreemptionForQueueWithPriorities
 
     // Preemption should first divide capacities between a / b, and b2 should
     // get less preemption than b1 (because b2 has higher priority)
-    verify(mDisp, times(5)).handle(argThat(
+    verify(mDisp, times(6)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, never()).handle(argThat(
+    verify(mDisp, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
-    verify(mDisp, times(15)).handle(argThat(
+    verify(mDisp, times(13)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
-    verify(mDisp, times(9)).handle(argThat(
+    verify(mDisp, times(10)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
   }
 
+  @Test
+  public void test3ResourceTypesInterQueuePreemption() throws IOException {
+    rc = new DominantResourceCalculator();
+    when(cs.getResourceCalculator()).thenReturn(rc);
+
+    // Initialize resource map
+    String RESOURCE_1 = "res1";
+    riMap.put(RESOURCE_1, ResourceInformation.newInstance(RESOURCE_1, "", 0,
+        ResourceTypes.COUNTABLE, 0, Integer.MAX_VALUE));
+
+    ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
+
+    /**
+     * Queue structure is:
+     *
+     * <pre>
+     *              root
+     *           /  \  \
+     *          a    b  c
+     * </pre>
+     *  A / B / C have 33.3 / 33.3 / 33.4 resources
+     *  Total cluster resource have mem=30, cpu=18, GPU=6
+     *  A uses mem=6, cpu=3, GPU=3
+     *  B uses mem=6, cpu=3, GPU=3
+     *  C is asking mem=1,cpu=1,GPU=1
+     *
+     *  We expect it can preempt from one of the jobs
+     */
+    String labelsConfig =
+        "=30:18:6,true;";
+    String nodesConfig =
+        "n1= res=30:18:6;"; // n1 is default partition
+    String queuesConfig =
+        // guaranteed,max,used,pending
+        "root(=[30:18:6 30:18:6 12:12:6 1:1:1]){priority=1};" + //root
+            "-a(=[10:6:2 10:6:2 6:6:3 0:0:0]){priority=1};" + // a
+            "-b(=[10:6:2 10:6:2 6:6:3 0:0:0]){priority=1};" + // b
+            "-c(=[10:6:2 10:6:2 0:0:0 1:1:1]){priority=2}"; // c
+    String appsConfig=
+        //queueName\t(priority,resource,host,expression,#repeat,reserved)
+        "a\t" // app1 in a1
+            + "(1,2:2:1,n1,,3,false);" +
+            "b\t" // app2 in b2
+            + "(1,2:2:1,n1,,3,false)";
+
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
+    policy.editSchedule();
+
+    verify(mDisp, times(1)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(1))));
+  }
 }

@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -60,6 +61,8 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.mockito.ArgumentMatcher;
@@ -106,10 +109,32 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
   EventHandler<SchedulerEvent> mDisp = null;
   ProportionalCapacityPreemptionPolicy policy = null;
   Resource clusterResource = null;
+  // Initialize resource map
+  Map<String, ResourceInformation> riMap = new HashMap<>();
+
+  private void resetResourceInformationMap() {
+    // Initialize mandatory resources
+    ResourceInformation memory = ResourceInformation.newInstance(
+        ResourceInformation.MEMORY_MB.getName(),
+        ResourceInformation.MEMORY_MB.getUnits(),
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
+    ResourceInformation vcores = ResourceInformation.newInstance(
+        ResourceInformation.VCORES.getName(),
+        ResourceInformation.VCORES.getUnits(),
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
+    riMap.put(ResourceInformation.MEMORY_URI, memory);
+    riMap.put(ResourceInformation.VCORES_URI, vcores);
+
+    ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
+  }
 
   @SuppressWarnings("unchecked")
   @Before
   public void setup() {
+    resetResourceInformationMap();
+
     org.apache.log4j.Logger.getRootLogger().setLevel(
         org.apache.log4j.Level.DEBUG);
 
@@ -144,6 +169,12 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
     partitionToResource = new HashMap<>();
     nodeIdToSchedulerNodes = new HashMap<>();
     nameToCSQueues = new HashMap<>();
+    clusterResource = Resource.newInstance(0, 0);
+  }
+
+  @After
+  public void cleanup() {
+    resetResourceInformationMap();
   }
 
   public void buildEnv(String labelsConfig, String nodesConfig,

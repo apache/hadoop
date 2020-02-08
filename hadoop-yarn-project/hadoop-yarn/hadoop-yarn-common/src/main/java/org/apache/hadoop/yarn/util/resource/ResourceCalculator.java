@@ -242,10 +242,19 @@ public abstract class ResourceCalculator {
 
   /**
    * Check if resource has any major resource types (which are all NodeManagers
-   * included) a zero value.
+   * included) a zero value or negative value.
    *
    * @param resource resource
    * @return returns true if any resource is zero.
    */
-  public abstract boolean isAnyMajorResourceZero(Resource resource);
+  public abstract boolean isAnyMajorResourceZeroOrNegative(Resource resource);
+
+  /**
+   * Check if resource has any major resource types (which are all NodeManagers
+   * included) has a >0 value.
+   *
+   * @param resource resource
+   * @return returns true if any resource is >0
+   */
+  public abstract boolean isAnyMajorResourceAboveZero(Resource resource);
 }

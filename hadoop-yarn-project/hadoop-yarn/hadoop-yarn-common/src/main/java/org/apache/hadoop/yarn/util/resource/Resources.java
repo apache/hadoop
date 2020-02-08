@@ -553,9 +553,4 @@ public class Resources {
     }
     return ret;
   }
-
-  public static boolean isAnyMajorResourceZero(ResourceCalculator rc,
-      Resource resource) {
-    return rc.isAnyMajorResourceZero(resource);
-  }
 }

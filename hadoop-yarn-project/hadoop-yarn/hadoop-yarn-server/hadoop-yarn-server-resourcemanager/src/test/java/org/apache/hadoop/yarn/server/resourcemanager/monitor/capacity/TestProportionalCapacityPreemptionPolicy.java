@@ -936,8 +936,8 @@ public class TestProportionalCapacityPreemptionPolicy {
         true);
     policy.editSchedule();
 
-    // 5 containers will be preempted here
-    verify(mDisp, times(5)).handle(argThat(new IsPreemptionRequestFor(appA)));
+    // 4 containers will be preempted here
+    verify(mDisp, times(4)).handle(argThat(new IsPreemptionRequestFor(appA)));
   }
 
   @Test
