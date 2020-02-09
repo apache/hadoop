@@ -122,18 +122,20 @@ public final class CapacitySchedulerConfigValidator {
         String queueName = e.getKey();
         CSQueue oldQueue = e.getValue();
         CSQueue newQueue = newQueues.get(queueName);
-        if (null == newQueue) {
-          // old queue doesn't exist in the new XML
-          String configPrefix = newConf.getQueuePrefix(
-                  oldQueue.getQueuePath());
-          QueueState newQueueState = null;
+        String configPrefix = newConf.getQueuePrefix(
+            oldQueue.getQueuePath());
+        String state = newConf.get(configPrefix + "state");
+        QueueState newQueueState = null;
+        if (state != null) {
           try {
-            newQueueState = QueueState.valueOf(
-                    newConf.get(configPrefix + "state"));
+            newQueueState = QueueState.valueOf(state);
           } catch (Exception ex) {
             LOG.warn("Not a valid queue state for queue "
-                    + oldQueue.getQueuePath());
+                + oldQueue.getQueuePath());
           }
+        }
+        if (null == newQueue) {
+          // old queue doesn't exist in the new XML
           if (oldQueue.getState() == QueueState.STOPPED ||
                   newQueueState == QueueState.STOPPED) {
             LOG.info("Deleting Queue " + queueName + ", as it is not"
@@ -169,7 +171,8 @@ public final class CapacitySchedulerConfigValidator {
                           + " is set to true");
         } else if (oldQueue instanceof LeafQueue
                 && newQueue instanceof ParentQueue) {
-          if (oldQueue.getState() == QueueState.STOPPED) {
+          if (oldQueue.getState() == QueueState.STOPPED ||
+              newQueueState == QueueState.STOPPED) {
             LOG.info("Converting the leaf queue: " + oldQueue.getQueuePath()
                     + " to parent queue.");
           } else{
