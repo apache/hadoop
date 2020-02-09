@@ -370,9 +370,9 @@ public class DataNodeMetrics {
       remoteBytesRead.incr(size);
     }
   }
-  
-  public void incrVolumeFailures() {
-    volumeFailures.incr();
+
+  public void incrVolumeFailures(int size) {
+    volumeFailures.incr(size);
   }
 
   public void incrDatanodeNetworkErrors() {
