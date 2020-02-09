@@ -2192,7 +2192,7 @@ public class DataNode extends ReconfigurableBase
         });
   }
 
-  private void handleDiskError(String failedVolumes) {
+  private void handleDiskError(String failedVolumes, int failedNumber) {
     final boolean hasEnoughResources = data.hasEnoughResource();
     LOG.warn("DataNode.handleDiskError on: " +
         "[{}] Keep Running: {}", failedVolumes, hasEnoughResources);
@@ -2201,7 +2201,7 @@ public class DataNode extends ReconfigurableBase
     // shutdown the DN completely.
     int dpError = hasEnoughResources ? DatanodeProtocol.DISK_ERROR  
                                      : DatanodeProtocol.FATAL_DISK_ERROR;  
-    metrics.incrVolumeFailures();
+    metrics.incrVolumeFailures(failedNumber);
 
     //inform NameNodes
     for(BPOfferService bpos: blockPoolManager.getAllNamenodeThreads()) {
@@ -3408,8 +3408,8 @@ public class DataNode extends ReconfigurableBase
     }
 
     data.handleVolumeFailures(unhealthyVolumes);
-    Set<StorageLocation> unhealthyLocations = new HashSet<>(
-        unhealthyVolumes.size());
+    int failedNumber = unhealthyVolumes.size();
+    Set<StorageLocation> unhealthyLocations = new HashSet<>(failedNumber);
 
     StringBuilder sb = new StringBuilder("DataNode failed volumes:");
     for (FsVolumeSpi vol : unhealthyVolumes) {
@@ -3424,8 +3424,8 @@ public class DataNode extends ReconfigurableBase
       LOG.warn("Error occurred when removing unhealthy storage dirs", e);
     }
     LOG.debug("{}", sb);
-      // send blockreport regarding volume failure
-    handleDiskError(sb.toString());
+    // send blockreport regarding volume failure
+    handleDiskError(sb.toString(), failedNumber);
   }
 
   /**
