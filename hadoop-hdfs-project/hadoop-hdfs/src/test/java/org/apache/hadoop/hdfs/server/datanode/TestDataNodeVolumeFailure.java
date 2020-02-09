@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
@@ -77,6 +79,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -946,5 +949,28 @@ public class TestDataNodeVolumeFailure {
                 getFailedStorageLocations().length == 1;
       }
     }, 10, 30 * 1000);
+  }
+
+  /*
+   * Fail two volumes, and check the metrics of VolumeFailures
+   */
+  @Test
+  public void testVolumeFailureTwo() throws Exception {
+    // fail two volumes
+    data_fail = cluster.getInstanceStorageDir(1, 0);
+    failedDir = MiniDFSCluster.getFinalizedDir(data_fail,
+            cluster.getNamesystem().getBlockPoolId());
+    failedDir.setReadOnly();
+    data_fail = cluster.getInstanceStorageDir(1, 1);
+    failedDir = MiniDFSCluster.getFinalizedDir(data_fail,
+            cluster.getNamesystem().getBlockPoolId());
+    failedDir.setReadOnly();
+
+    final DataNode dn = cluster.getDataNodes().get(1);
+    dn.checkDiskError();
+
+    MetricsRecordBuilder rb = getMetrics(dn.getMetrics().name());
+    long volumeFailures = getLongCounter("VolumeFailures", rb);
+    assertEquals(2, volumeFailures);
   }
 }
