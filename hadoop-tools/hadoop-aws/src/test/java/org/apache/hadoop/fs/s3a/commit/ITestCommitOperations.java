@@ -116,7 +116,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
   public void testCreateTrackerNormalPath() throws Throwable {
     S3AFileSystem fs = getFileSystem();
     MagicCommitIntegration integration
-        = new MagicCommitIntegration(fs, true);
+        = new MagicCommitIntegration(fs.createStoreContext(), true);
     String filename = "notdelayed.txt";
     Path destFile = methodPath(filename);
     String origKey = fs.pathToKey(destFile);
@@ -133,7 +133,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
   public void testCreateTrackerMagicPath() throws Throwable {
     S3AFileSystem fs = getFileSystem();
     MagicCommitIntegration integration
-        = new MagicCommitIntegration(fs, true);
+        = new MagicCommitIntegration(fs.createStoreContext(), true);
     String filename = "delayed.txt";
     Path destFile = methodPath(filename);
     String origKey = fs.pathToKey(destFile);

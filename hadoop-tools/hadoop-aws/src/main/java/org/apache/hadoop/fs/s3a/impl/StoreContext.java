@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
@@ -115,7 +116,12 @@ public class StoreContext {
   /**
    * Source of time.
    */
-  private ITtlTimeProvider timeProvider;
+  private final ITtlTimeProvider timeProvider;
+
+  /**
+   * Factory for AWS requests.
+   */
+  private final RequestFactory requestFactory;
 
   /**
    * Instantiate.
@@ -138,7 +144,8 @@ public class StoreContext {
       final MetadataStore metadataStore,
       final boolean useListV1,
       final ContextAccessors contextAccessors,
-      final ITtlTimeProvider timeProvider) {
+      final ITtlTimeProvider timeProvider,
+      final RequestFactory requestFactory) {
     this.fsURI = fsURI;
     this.bucket = bucket;
     this.configuration = configuration;
@@ -156,6 +163,7 @@ public class StoreContext {
     this.useListV1 = useListV1;
     this.contextAccessors = contextAccessors;
     this.timeProvider = timeProvider;
+    this.requestFactory = requestFactory;
   }
 
   @Override
@@ -214,6 +222,10 @@ public class StoreContext {
 
   public boolean isUseListV1() {
     return useListV1;
+  }
+
+  public RequestFactory getRequestFactory() {
+    return requestFactory;
   }
 
   public ContextAccessors getContextAccessors() {
@@ -388,5 +400,13 @@ public class StoreContext {
     getExecutor().submit(() ->
         LambdaUtils.eval(future, call));
     return future;
+  }
+
+  /**
+   * Get a write operation helper.
+   * @return a write operation helper instance.
+   */
+  public WriteOperationHelper getWriteOperationHelper() {
+    return contextAccessors.getWriteOperationHelper();
   }
 }
