@@ -943,6 +943,7 @@ public final class S3ATestUtils {
         .setUseListV1(false)
         .setContextAccessors(accessors)
         .setTimeProvider(new S3Guard.TtlTimeProvider(conf))
+        .setRequestFactory(null)  // TODO: provide a factory?
         .build();
   }
 

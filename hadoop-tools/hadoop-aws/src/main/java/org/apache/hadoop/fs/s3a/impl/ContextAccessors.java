@@ -26,6 +26,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
+import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 
 /**
  * An interface to implement for providing accessors to
@@ -94,4 +95,10 @@ public interface ContextAccessors {
   @Retries.RetryTranslated
   ObjectMetadata getObjectMetadata(String key) throws IOException;
 
+
+  /**
+   * Get a write operation helper.
+   * @return a write operation helper instance.
+   */
+  WriteOperationHelper getWriteOperationHelper();
 }

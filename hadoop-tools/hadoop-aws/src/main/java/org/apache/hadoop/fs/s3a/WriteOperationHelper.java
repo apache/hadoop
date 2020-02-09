@@ -51,6 +51,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
@@ -116,6 +117,8 @@ public class WriteOperationHelper implements WriteOperations {
    */
   private final S3AStatisticsContext statisticsContext;
 
+  private final StoreContext context;
+
   /**
    * Constructor.
    * @param owner owner FS creating the helper
@@ -131,7 +134,8 @@ public class WriteOperationHelper implements WriteOperations {
         this::operationRetried);
     this.conf = conf;
     this.statisticsContext = statisticsContext;
-    bucket = owner.getBucket();
+    this.context = owner.createStoreContext();
+    this.bucket = owner.getBucket();
   }
 
   /**
@@ -241,11 +245,8 @@ public class WriteOperationHelper implements WriteOperations {
   public String initiateMultiPartUpload(String destKey) throws IOException {
     LOG.debug("Initiating Multipart upload to {}", destKey);
     final InitiateMultipartUploadRequest initiateMPURequest =
-        new InitiateMultipartUploadRequest(bucket,
-            destKey,
-            newObjectMetadata(-1));
-    initiateMPURequest.setCannedACL(owner.getCannedACL());
-    owner.setOptionalMultipartUploadRequestParameters(initiateMPURequest);
+        context.getRequestFactory().newMultipartUploadRequest(
+            destKey);
 
     return retry("initiate MultiPartUpload", destKey, true,
         () -> owner.initiateMultipartUpload(initiateMPURequest).getUploadId());
@@ -432,50 +433,8 @@ public class WriteOperationHelper implements WriteOperations {
       File sourceFile,
       Long offset) throws PathIOException {
     checkNotNull(uploadId);
-    // exactly one source must be set; xor verifies this
-    checkArgument((uploadStream != null) ^ (sourceFile != null),
-        "Data source");
-    checkArgument(size >= 0, "Invalid partition size %s", size);
-    checkArgument(partNumber > 0,
-        "partNumber must be between 1 and %s inclusive, but is %s",
-            DEFAULT_UPLOAD_PART_COUNT_LIMIT, partNumber);
 
-    LOG.debug("Creating part upload request for {} #{} size {}",
-        uploadId, partNumber, size);
-    long partCountLimit = longOption(conf,
-        UPLOAD_PART_COUNT_LIMIT,
-        DEFAULT_UPLOAD_PART_COUNT_LIMIT,
-        1);
-    if (partCountLimit != DEFAULT_UPLOAD_PART_COUNT_LIMIT) {
-      LOG.warn("Configuration property {} shouldn't be overridden by client",
-              UPLOAD_PART_COUNT_LIMIT);
-    }
-    final String pathErrorMsg = "Number of parts in multipart upload exceeded."
-        + " Current part count = %s, Part count limit = %s ";
-    if (partNumber > partCountLimit) {
-      throw new PathIOException(destKey,
-          String.format(pathErrorMsg, partNumber, partCountLimit));
-    }
-    UploadPartRequest request = new UploadPartRequest()
-        .withBucketName(bucket)
-        .withKey(destKey)
-        .withUploadId(uploadId)
-        .withPartNumber(partNumber)
-        .withPartSize(size);
-    if (uploadStream != null) {
-      // there's an upload stream. Bind to it.
-      request.setInputStream(uploadStream);
-    } else {
-      checkArgument(sourceFile.exists(),
-          "Source file does not exist: %s", sourceFile);
-      checkArgument(offset >= 0, "Invalid offset %s", offset);
-      long length = sourceFile.length();
-      checkArgument(offset == 0 || offset < length,
-          "Offset %s beyond length of file %s", offset, length);
-      request.setFile(sourceFile);
-      request.setFileOffset(offset);
-    }
-    return request;
+    return context.getRequestFactory().newUploadPartRequest(destKey, uploadId, partNumber, size, uploadStream, sourceFile, offset);
   }
 
   /**
@@ -631,10 +590,8 @@ public class WriteOperationHelper implements WriteOperations {
    * @return the request
    */
   public SelectObjectContentRequest newSelectRequest(Path path) {
-    SelectObjectContentRequest request = new SelectObjectContentRequest();
-    request.setBucketName(bucket);
-    request.setKey(owner.pathToKey(path));
-    return request;
+    return context.getRequestFactory().newSelectRequest(
+        context.pathToKey(path));
   }
 
   /**

@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.impl;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.io.InterruptedIOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -118,7 +119,8 @@ public final class CallableSupplier<T> implements Supplier {
             new DurationInfo(LOG, false, "Waiting for task completion")) {
       future.join();
     } catch (CancellationException e) {
-      throw new IOException(e);
+      throw (InterruptedIOException)
+          new InterruptedIOException(e.toString()).initCause(e);
     } catch (CompletionException e) {
       raiseInnerCause(e);
     }
