@@ -99,7 +99,7 @@ public class TestLazyPersistReplicaRecovery extends LazyPersistTestCase {
       GenericTestUtils
           .waitFor(() -> lastCount != storage.getBlockReportCount(), 10, 10000);
     } catch (TimeoutException te) {
-      LOG.error("Timeout waiting for block report for {}", dnd);
+      LOG.error("Timeout waiting for block report for datanode: " + dnd);
       return false;
     }
     return true;
