@@ -20,8 +20,10 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
+import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -480,6 +482,18 @@ public final class Constants {
   public static final String METADATASTORE_AUTHORITATIVE =
       "fs.s3a.metadatastore.authoritative";
   public static final boolean DEFAULT_METADATASTORE_AUTHORITATIVE = false;
+
+  /**
+   * Bucket validation parameter which can be set by client. This will be
+   * used in {@link S3AFileSystem#initialize(URI, Configuration)}
+   */
+  public static final String S3A_BUCKET_PROBE = "fs.s3a.bucket.probe";
+
+  /**
+   * Default value of bucket validation parameter. An existence of bucket
+   * will be validated using {@link S3AFileSystem#verifyBucketExistsV2()}
+   */
+  public static final int S3A_BUCKET_PROBE_DEFAULT = 2;
 
   /**
    * How long a directory listing in the MS is considered as authoritative.

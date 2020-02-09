@@ -608,3 +608,27 @@ with HADOOP-15669.
 
 Other options may be added to `fs.s3a.ssl.channel.mode` in the future as
 further SSL optimizations are made.
+
+## Tuning S3AFileSystem Initialization.
+Any client using S3AFileSystem has to initialize it by providing a S3 bucket
+and configuration.  The init method checks if the bucket provided is valid
+or not which is a slow operation leading poor performance. We can ignore
+bucket validation by configuring `fs.s3a.bucket.probe` as follows:
+
+```xml
+<property>
+  <name>fs.s3a.bucket.probe</name>
+  <value>0</value>
+  <description>
+     The value can be 0, 1 or 2(default). When set to 0, bucket existence
+     check won't be done during initialization thus making it faster.
+     Though it should be noted that if bucket is not available in S3,
+     consecutive calls like listing, put etc might fail with
+     FileNotFoundException. When set to 1, bucket existence check will
+     be done using V1 api of S3 client which doesn't verify the permissions
+     to read bucket. When set to 2, bucket existence check will
+     be done using V2 api of S3 client which doesn't verify the permissions
+     to read bucket.
+  </description>
+</property>
+```

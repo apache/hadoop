@@ -392,9 +392,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       initCannedAcls(conf);
 
       // This initiates a probe against S3 for the bucket existing.
-      // It is where all network and authentication configuration issues
-      // surface, and is potentially slow.
-      verifyBucketExists();
+      doBucketProbing();
 
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
@@ -464,6 +462,35 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Test bucket existence in S3.
+   * When value of {@link Constants#S3A_BUCKET_PROBE is set to 0 by client,
+   * bucket existence check is not done to improve performance of
+   * S3AFileSystem initialization. When set to 1 or 2, bucket existence check
+   * will be performed which is potentially slow.
+   * @throws IOException
+   */
+  @Retries.RetryTranslated
+  private void doBucketProbing() throws IOException {
+    int bucketProbe = this.getConf()
+            .getInt(S3A_BUCKET_PROBE, S3A_BUCKET_PROBE_DEFAULT);
+    Preconditions.checkArgument(bucketProbe >= 0 && bucketProbe <= 2,
+            "Value of " + S3A_BUCKET_PROBE + " should be between 0 to 2");
+    switch (bucketProbe) {
+    case 0:
+      break;
+    case 1:
+      verifyBucketExists();
+      break;
+    case 2:
+      verifyBucketExistsV2();
+      break;
+    default:
+      //This will never get executed because of above Precondition check.
+      break;
+    }
+  }
+
+  /**
    * Initialize the thread pool.
    * This must be re-invoked after replacing the S3Client during test
    * runs.
@@ -518,6 +545,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws FileNotFoundException, IOException {
     if (!invoker.retry("doesBucketExist", bucket, true,
         () -> s3.doesBucketExist(bucket))) {
+      throw new FileNotFoundException("Bucket " + bucket + " does not exist");
+    }
+  }
+
+  /**
+   * Verify that the bucket exists. This will correctly throw an exception
+   * when credentials are invalid.
+   * Retry policy: retrying, translated.
+   * @throws FileNotFoundException the bucket is absent
+   * @throws IOException any other problem talking to S3
+   */
+  @Retries.RetryTranslated
+  protected void verifyBucketExistsV2()
+          throws FileNotFoundException, IOException {
+    if (!invoker.retry("doesBucketExistV2", bucket, true,
+        () -> s3.doesBucketExistV2(bucket))) {
       throw new FileNotFoundException("Bucket " + bucket + " does not exist");
     }
   }
