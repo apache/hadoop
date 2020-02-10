@@ -76,8 +76,8 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(ILoadTestS3ABulkDeleteThrottling.class);
 
-  protected static final int THREADS = 40;
-  public static final int TOTAL_KEYS = 15000;
+  protected static final int THREADS = 20;
+  public static final int TOTAL_KEYS = 25000;
 
   public static final int SMALL = BULK_DELETE_PAGE_SIZE_DEFAULT;
   public static final int SMALL_REQS = TOTAL_KEYS / SMALL;
@@ -198,7 +198,6 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
     }
   }
 
-
   @Test
   public void test_030_Sleep() throws Throwable {
     maybeSleep();
@@ -215,17 +214,18 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
 
   /**
    * delete files.
-   * @param requests number of requests.
+   * @param requestCount number of requests.
    * @throws Exception failure
    * @return CSV filename
    */
-  private File deleteFiles(final int requests, final int entries)
+  private File deleteFiles(final int requestCount,
+      final int entries)
       throws Exception {
     File csvFile = new File(dataDir,
         String.format("delete-%03d-%04d-%s.csv",
-            requests, entries, throttle));
+            requestCount, entries, throttle));
     describe("Issuing %d requests of size %d, saving log to %s",
-        requests, entries, csvFile);
+        requestCount, entries, csvFile);
     Path basePath = path("testDeleteObjectThrottling");
     final S3AFileSystem fs = getFileSystem();
     final String base = fs.pathToKey(basePath);
@@ -238,7 +238,7 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
     final ContractTestUtils.NanoTimer jobTimer =
         new ContractTestUtils.NanoTimer();
 
-    for (int i = 0; i < requests; i++) {
+    for (int i = 0; i < requestCount; i++) {
       final int id = i;
       completionService.submit(() -> {
         final long startTime = System.currentTimeMillis();
@@ -262,7 +262,7 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
     NanoTimerStats success = new NanoTimerStats("Successful");
     NanoTimerStats throttled = new NanoTimerStats("Throttled");
     List<Outcome> throttledEvents = new ArrayList<>();
-    for (int i = 0; i < requests; i++) {
+    for (int i = 0; i < requestCount; i++) {
       Outcome outcome = completionService.take().get();
       ContractTestUtils.NanoTimer timer = outcome.timer;
       Exception ex = outcome.exception;
@@ -284,19 +284,19 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
     // now print the stats
     LOG.info("Summary file is " + csvFile);
     LOG.info("Made {} requests with {} throttle events\n: {}\n{}\n{}",
-        requests,
+        requestCount,
         throttled.getCount(),
         stats,
         throttled,
         success);
 
     double duration = jobTimer.duration();
-    double iops = requests * entries * 1.0e9 / duration;
+    double iops = requestCount * entries * 1.0e9 / duration;
     LOG.info(String.format("TPS %3f operations/second",
         iops));
     // log at debug
     if (LOG.isDebugEnabled()) {
-      throttledEvents.stream().forEach((outcome -> {
+      throttledEvents.forEach((outcome -> {
         LOG.debug("{}: duration: {}",
             outcome.id, outcome.timer.elapsedTimeMs());
       }));

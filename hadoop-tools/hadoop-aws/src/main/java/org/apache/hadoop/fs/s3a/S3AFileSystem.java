@@ -99,6 +99,7 @@ import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
+import org.apache.hadoop.fs.s3a.impl.BulkDeleteRetryHandler;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
@@ -107,7 +108,6 @@ import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
-import org.apache.hadoop.fs.s3a.impl.StandardInvokeRetryHandler;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
@@ -1961,6 +1961,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Increments the {@code OBJECT_DELETE_REQUESTS} and write
    * operation statistics.
    * Retry policy: retry untranslated; delete considered idempotent.
+   * If the request is throttled, this is logged in the throttle statistics,
+   * with the counter set to the number of keys, rather than the number of invocations
+   * of the delete operation.
+   * This is because S3 considers each key as one mutating operation on the store
+   * when updating its load counters on a specific partition of an S3 bucket.
+   * If only the request was measured, this operation would under-report.
    * @param deleteRequest keys to delete on the s3-backend
    * @return the AWS response
    * @throws MultiObjectDeleteException one or more of the keys could not
@@ -1971,15 +1977,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private DeleteObjectsResult deleteObjects(DeleteObjectsRequest deleteRequest)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
     incrementWriteOperations();
-    StandardInvokeRetryHandler retryHandler =
-        new StandardInvokeRetryHandler(createStoreContext());
+    BulkDeleteRetryHandler retryHandler =
+        new BulkDeleteRetryHandler(createStoreContext());
     try(DurationInfo ignored =
             new DurationInfo(LOG, false, "DELETE %d keys",
                 deleteRequest.getKeys().size())) {
       return invoker.retryUntranslated("delete",
           DELETE_CONSIDERED_IDEMPOTENT,
           (text, e, r, i) -> {
-            // error triggering retry
+            // handle the failure
             retryHandler.bulkDeleteRetried(deleteRequest, e);
           },
           () -> {
@@ -1987,7 +1993,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             return s3.deleteObjects(deleteRequest);
           });
     } catch (MultiObjectDeleteException e) {
-      // one or more of the operations failed.
+      // one or more of the keys could not be deleted.
+      // log and rethrow
       List<MultiObjectDeleteException.DeleteError> errors = e.getErrors();
       LOG.debug("Partial failure of delete, {} errors", errors.size(), e);
       for (MultiObjectDeleteException.DeleteError error : errors) {
