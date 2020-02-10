@@ -200,7 +200,15 @@ public final class Constants {
    */
   @InterfaceStability.Unstable
   public static final String EXPERIMENTAL_AWS_INTERNAL_THROTTLING =
-      "fs.s3a.experimental.aws.internal.throttling";
+      "fs.s3a.experimental.aws.s3.throttling";
+
+  /**
+   * Default value of {@link #EXPERIMENTAL_AWS_INTERNAL_THROTTLING},
+   * value: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final boolean EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT =
+      true;
 
   // seconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT =
