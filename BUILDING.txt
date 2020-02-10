@@ -417,6 +417,47 @@ Building command example:
 Note that the command above manually specified the openssl library and include
 path. This is necessary at least for Homebrewed OpenSSL.
 
+
+----------------------------------------------------------------------------------
+
+Building on CentOS 8
+
+----------------------------------------------------------------------------------
+
+
+* Install development tools such as GCC, autotools, OpenJDK and Maven.
+  $ sudo dnf group install 'Development Tools'
+  $ sudo dnf install java-1.8.0-openjdk-devel maven
+
+* Install Protocol Buffers v3.7.1.
+  $ git clone https://github.com/protocolbuffers/protobuf
+  $ cd protobuf
+  $ git checkout v3.7.1
+  $ autoreconf -i
+  $ ./configure --prefix=/usr/local
+  $ make
+  $ sudo make install
+  $ cd ..
+
+* Install libraries provided by CentOS 8.
+  $ sudo dnf install libtirpc-devel zlib-devel lz4-devel bzip2-devel openssl-devel cyrus-sasl-devel libpmem-devel
+
+* Install optional dependencies (snappy-devel).
+  $ sudo dnf --enablerepo=PowerTools snappy-devel
+
+* Install optional dependencies (libzstd-devel).
+  $ sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+  $ sudo dnf --enablerepo=epel install libzstd-devel
+
+* Install optional dependencies (isa-l).
+  $ sudo dnf --enablerepo=PowerTools install nasm
+  $ git clone https://github.com/intel/isa-l
+  $ cd isa-l/
+  $ ./autogen.sh
+  $ ./configure
+  $ make
+  $ sudo make install
+
 ----------------------------------------------------------------------------------
 
 Building on Windows
