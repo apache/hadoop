@@ -90,7 +90,8 @@ public class TestINodeAttributeProvider {
             && authzContext.inodes[2].getLocalName().equals("acl")) {
           this.ace.checkPermissionWithContext(authzContext);
         }
-        CALLED.add("checkPermission|" + authzContext.ancestorAccess + "|" + authzContext.parentAccess + "|" + authzContext.access);
+        CALLED.add("checkPermission|" + authzContext.ancestorAccess + "|" +
+            authzContext.parentAccess + "|" + authzContext.access);
       }
 
       public void abc() {}

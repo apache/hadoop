@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -225,6 +226,15 @@ public abstract class INodeAttributeProvider {
           builder.access, builder.subAccess, builder.ignoreEmptyDir);
       this.operationName = builder.operationName;
       this.callerContext = builder.callerContext;
+    }
+
+    @VisibleForTesting
+    @Override
+    public boolean equals(Object obj) {
+      if (!(obj instanceof AuthorizationContext)) {
+        return false;
+      }
+      return true;
     }
   }
 
