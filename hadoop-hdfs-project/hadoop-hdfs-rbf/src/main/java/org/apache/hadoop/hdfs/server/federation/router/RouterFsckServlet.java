@@ -38,17 +38,17 @@ import org.apache.hadoop.security.UserGroupInformation;
  */
 @InterfaceAudience.Private
 public class RouterFsckServlet extends HttpServlet {
-  /** for java.io.Serializable */
+  /** for java.io.Serializable. */
   private static final long serialVersionUID = 1L;
 
   public static final String SERVLET_NAME = "fsck";
   public static final String PATH_SPEC = "/fsck";
 
-  /** Handle fsck request */
+  /** Handle fsck request. */
   @Override
-  public void doGet(HttpServletRequest request, HttpServletResponse response
-      ) throws IOException {
-    final Map<String,String[]> pmap = request.getParameterMap();
+  public void doGet(HttpServletRequest request, HttpServletResponse response)
+      throws IOException {
+    final Map<String, String[]> pmap = request.getParameterMap();
     final PrintWriter out = response.getWriter();
     final InetAddress remoteAddress =
         InetAddress.getByName(request.getRemoteAddr());
@@ -67,7 +67,7 @@ public class RouterFsckServlet extends HttpServlet {
   }
 
   /**
-   * Copy from {@link org.apache.hadoop.hdfs.server.namenode.DfsServlet}
+   * Copy from {@link org.apache.hadoop.hdfs.server.namenode.DfsServlet}.
    * @param request Http request from the user
    * @param conf configuration
    * @return ugi of the requested user

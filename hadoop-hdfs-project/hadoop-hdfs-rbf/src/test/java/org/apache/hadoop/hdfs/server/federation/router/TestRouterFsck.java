@@ -63,11 +63,12 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * End-to-end tests for fsck via DFSRouter
+ * End-to-end tests for fsck via DFSRouter.
  */
 public class TestRouterFsck {
 
-  public static final Logger LOG = LoggerFactory.getLogger(TestRouterFsck.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestRouterFsck.class);
 
   private static StateStoreDFSCluster cluster;
   private static MiniRouterDFSCluster.RouterContext routerContext;
@@ -172,14 +173,16 @@ public class TestRouterFsck {
             httpResponse.getEntity(), StandardCharsets.UTF_8);
         LOG.info(out);
         assertTrue(out.contains("Federated FSCK started"));
-        // assert 1 file exists in a cluster and 3 files exist in another cluster
+        // assert 1 file exists in a cluster and 3 files exist
+        // in another cluster
         assertTrue(out.contains("Total files:\t1"));
         assertTrue(out.contains("Total files:\t3"));
         assertTrue(out.contains("Federated FSCK ended"));
         int nnCount = 0;
         for (MembershipState nn : memberships) {
           if (nn.getState() == FederationNamenodeServiceState.ACTIVE) {
-            assertTrue(out.contains("Checking " + nn + " at " + nn.getWebAddress() + "\n"));
+            assertTrue(out.contains(
+                "Checking " + nn + " at " + nn.getWebAddress() + "\n"));
             nnCount++;
           }
         }
@@ -203,7 +206,8 @@ public class TestRouterFsck {
         int nnCount = 0;
         for (MembershipState nn : memberships) {
           if (nn.getState() == FederationNamenodeServiceState.ACTIVE) {
-            assertTrue(out.contains("Checking " + nn + " at " + nn.getWebAddress() + "\n"));
+            assertTrue(out.contains(
+                "Checking " + nn + " at " + nn.getWebAddress() + "\n"));
             nnCount++;
           }
         }

@@ -126,7 +126,8 @@ public class RouterFsck {
     // Connect to the Namenode and output
     final URLConnection conn = url.openConnection();
     try (InputStream is = conn.getInputStream();
-         InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8);
+         InputStreamReader isr =
+             new InputStreamReader(is, StandardCharsets.UTF_8);
          BufferedReader br = new BufferedReader(isr)) {
       String line;
       while ((line = br.readLine()) != null) {
