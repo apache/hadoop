@@ -5745,4 +5745,12 @@
       octal or symbolic.
     </description>
   </property>
+
+  <property>
+    <name>dfs.namenode.lease-hard-limit-sec</name>
+    <value>1200</value>
+    <description>
+      Determines the namenode automatic lease recovery interval in seconds.
+    </description>
+  </property>
 </configuration>
