@@ -172,7 +172,6 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3Operations;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.TokenIssuingPolicy.NoTokensAvailable;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDelegationTokenBinding;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
-import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;

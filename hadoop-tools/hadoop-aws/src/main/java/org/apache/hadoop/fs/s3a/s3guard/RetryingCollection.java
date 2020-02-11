@@ -50,7 +50,7 @@ class RetryingCollection<T> implements Iterable<T> {
   private final String operation;
 
   /**
-   * Constructor,
+   * Constructor.
    * @param operation Operation name for invoker.retry messages.
    * @param invoker Invoker for retries.
    * @param source Source iterable.
