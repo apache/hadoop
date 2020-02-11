@@ -51,6 +51,8 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.readBytesToString;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.readDataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.toChar;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
@@ -660,8 +662,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       LOG.info("Authoritative: {} status path: {}",
           allowAuthoritative, status.getPath());
       final boolean versionedChangeDetection =
-          getFileSystem().getChangeDetectionPolicy().getSource()
-              == Source.VersionId;
+          isVersionedChangeDetection();
       if (!versionedChangeDetection) {
         expectExceptionWhenReading(testFilePath, text);
         expectExceptionWhenReadingOpenFileAPI(testFilePath, text, null);
@@ -969,14 +970,40 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       deleteFile(rawFS, testFilePath);
 
       // File status will be still readable from s3guard
-      FileStatus status = guardedFs.getFileStatus(testFilePath);
+      S3AFileStatus status = (S3AFileStatus)
+          guardedFs.getFileStatus(testFilePath);
       LOG.info("authoritative: {} status: {}", allowAuthoritative, status);
-      expectExceptionWhenReading(testFilePath, text);
-      expectExceptionWhenReadingOpenFileAPI(testFilePath, text, null);
-      expectExceptionWhenReadingOpenFileAPI(testFilePath, text, status);
+      if (isVersionedChangeDetection() && status.getVersionId() != null) {
+        // when the status entry has a version ID, then that may be used
+        // when opening the file on what is clearly a versioned store.
+        int length = text.length();
+        byte[] bytes = readOpenFileAPI(guardedFs, testFilePath, length, null);
+        Assertions.assertThat(toChar(bytes))
+            .describedAs("openFile(%s)", testFilePath)
+            .isEqualTo(text);
+        // reading the rawFS with status will also work.
+        bytes = readOpenFileAPI(rawFS, testFilePath, length, status);
+        Assertions.assertThat(toChar(bytes))
+            .describedAs("openFile(%s)", testFilePath)
+            .isEqualTo(text);
+        bytes = readDataset(guardedFs, testFilePath, length);
+        Assertions.assertThat(toChar(bytes))
+            .describedAs("open(%s)", testFilePath)
+            .isEqualTo(text);
+      } else {
+        // unversioned sequence
+        expectExceptionWhenReading(testFilePath, text);
+        expectExceptionWhenReadingOpenFileAPI(testFilePath, text, null);
+        expectExceptionWhenReadingOpenFileAPI(testFilePath, text, status);
+      }
     } finally {
       guardedFs.delete(testDirPath, true);
     }
+  }
+
+  private boolean isVersionedChangeDetection() {
+    return getFileSystem().getChangeDetectionPolicy().getSource()
+        == Source.VersionId;
   }
 
   /**
@@ -1015,6 +1042,31 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
         byte[] bytes = new byte[text.length()];
         return in.read(bytes, 0, bytes.length);
       });
+    }
+  }
+
+  /**
+   * Open and read a file with the openFile API.
+   * @param fs FS to read from
+   * @param testFilePath path of the test file
+   * @param len data length to read
+   * @param status optional status for the withFileStatus operation.
+   * @throws Exception failure
+   * @return the data
+   */
+  private byte[] readOpenFileAPI(
+      S3AFileSystem fs,
+      Path testFilePath,
+      int len,
+      FileStatus status) throws Exception {
+    FutureDataInputStreamBuilder builder = fs.openFile(testFilePath);
+    if (status != null) {
+      builder.withFileStatus(status);
+    }
+    try (FSDataInputStream in = builder.build().get()) {
+      byte[] bytes = new byte[len];
+      in.readFully(0, bytes);
+      return bytes;
     }
   }
 
