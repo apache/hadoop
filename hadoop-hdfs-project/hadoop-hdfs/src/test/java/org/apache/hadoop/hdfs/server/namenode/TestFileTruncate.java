@@ -659,7 +659,8 @@ public class TestFileTruncate {
 
     NameNodeAdapter.getLeaseManager(cluster.getNamesystem())
         .setLeasePeriod(HdfsConstants.LEASE_SOFTLIMIT_PERIOD,
-            HdfsConstants.LEASE_HARDLIMIT_PERIOD);
+            conf.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
+                DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000);
 
     checkFullFile(p, newLength, contents);
     fs.delete(p, false);
