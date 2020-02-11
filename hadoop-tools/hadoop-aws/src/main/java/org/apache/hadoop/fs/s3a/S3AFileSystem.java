@@ -1496,21 +1496,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       Path destParent = destCreated.getParent();
       if (!sourceRenamed.getParent().equals(destParent)) {
         LOG.debug("source & dest parents are different; fix up dir markers");
-        // kick off an async delete
-        List<CompletableFuture<Void>> ops = new ArrayList<>(2);
-        ops.add(submit(
-            boundedThreadPool,
-            () -> {
-              deleteUnnecessaryFakeDirectories(destParent);
-              return null;
-            }));
-        ops.add(submit(
-            boundedThreadPool,
-            () -> {
-              maybeCreateFakeParentDirectory(sourceRenamed);
-              return null;
-            }));
-        waitForCompletion(ops);
+        deleteUnnecessaryFakeDirectories(destParent);
+        maybeCreateFakeParentDirectory(sourceRenamed);
       }
     }
 
@@ -1962,10 +1949,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * operation statistics.
    * Retry policy: retry untranslated; delete considered idempotent.
    * If the request is throttled, this is logged in the throttle statistics,
-   * with the counter set to the number of keys, rather than the number of invocations
-   * of the delete operation.
-   * This is because S3 considers each key as one mutating operation on the store
-   * when updating its load counters on a specific partition of an S3 bucket.
+   * with the counter set to the number of keys, rather than the number
+   * of invocations of the delete operation.
+   * This is because S3 considers each key as one mutating operation on
+   * the store when updating its load counters on a specific partition
+   * of an S3 bucket.
    * If only the request was measured, this operation would under-report.
    * @param deleteRequest keys to delete on the s3-backend
    * @return the AWS response
@@ -3575,7 +3563,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     final boolean isDir = objectRepresentsDirectory(key, length);
     // kick off an async delete
     final CompletableFuture<?> deletion = submit(
-        boundedThreadPool,
+        unboundedThreadPool,
         () -> {
           deleteUnnecessaryFakeDirectories(p.getParent());
           return null;
@@ -3593,7 +3581,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           // information gleaned from addAncestors is preserved into the
           // subsequent put.
           stateToClose = S3Guard.initiateBulkWrite(metadataStore,
-              BulkOperationState.OperationType.Mkdir,
+              isDir
+                  ? BulkOperationState.OperationType.Mkdir
+                  : BulkOperationState.OperationType.Put,
               keyToPath(key));
           activeState = stateToClose;
         }

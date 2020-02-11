@@ -174,13 +174,12 @@ public class PurgeS3GuardDynamoTable
                 count, ddbms.toString());
         // sending this in one by one for more efficient retries
         for (Path path: list) {
-          ddbms.getWriteOperationInvoker()
+          ddbms.getInvoker()
               .retry("delete",
                   prefix,
                   true,
                   () -> tableAccess.delete(path));
         }
-
         duration.close();
         long durationMillis = duration.value();
         long timePerEntry = durationMillis / count;

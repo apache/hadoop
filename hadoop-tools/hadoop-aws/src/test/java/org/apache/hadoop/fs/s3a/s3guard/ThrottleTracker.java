@@ -110,7 +110,8 @@ class ThrottleTracker {
    */
   public boolean probeThrottlingDetected() {
     if (!isThrottlingDetected()) {
-      LOG.warn("No throttling detected in {} against {}", this, ddbms.toString());
+      LOG.warn("No throttling detected in {} against {}",
+          this, ddbms);
       return false;
     }
     return true;

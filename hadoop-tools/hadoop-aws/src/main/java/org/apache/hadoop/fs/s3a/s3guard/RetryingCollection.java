@@ -27,14 +27,12 @@ import org.apache.hadoop.fs.s3a.Retries;
 
 /**
  * A collection which wraps the result of a query or scan
- * with retries; the {@link #scanThrottleEvents} count is
- * then updated.
+ * with retries.
  * Important: iterate through this only once; the outcome
  * of repeating an iteration is "undefined"
  * @param <T> type of outcome.
  */
-class RetryingCollection<T>
-    implements Iterable<T> {
+class RetryingCollection<T> implements Iterable<T> {
 
   /**
    * Source iterable.
@@ -44,35 +42,48 @@ class RetryingCollection<T>
   /**
    * Invoker for retries.
    */
-  private Invoker invoker;
+  private final Invoker invoker;
 
+  /**
+   * Operation name for invoker.retry messages.
+   */
+  private final String operation;
+
+  /**
+   * Constructor,
+   * @param operation Operation name for invoker.retry messages.
+   * @param invoker Invoker for retries.
+   * @param source Source iterable.
+   */
   RetryingCollection(
+      final String operation,
       final Invoker invoker,
       final Iterable<T> source) {
+    this.operation = operation;
     this.source = source;
     this.invoker = invoker;
   }
 
-
+  /**
+   * Demand creates a new iterator which will retry all hasNext/next
+   * operations through the invoker supplied in the constructor.
+   * @return a new iterator.
+   */
   @Override
   public Iterator<T> iterator() {
-    return new RetryingIterator<>(invoker, source.iterator());
+    return new RetryingIterator(source.iterator());
   }
 
   /**
    * An iterator which wraps a non-retrying iterator of scan results
    * (i.e {@code S3GuardTableAccess.DDBPathMetadataIterator}.
    */
-  private static final class RetryingIterator<T> implements Iterator<T> {
+  private final class RetryingIterator implements Iterator<T> {
 
-    private final Iterator<T> source;
+    private final Iterator<T> iterator;
 
-    private Invoker scanOp;
-
-    private RetryingIterator(final Invoker scanOp,
-        final Iterator<T> source) {
-      this.source = source;
-      this.scanOp = scanOp;
+    private RetryingIterator(final Iterator<T> iterator) {
+      this.iterator = iterator;
     }
 
     /**
@@ -83,11 +94,11 @@ class RetryingCollection<T>
     @Retries.RetryTranslated
     public boolean hasNext() {
       try {
-        return scanOp.retry(
-            "Scan Dynamo",
+        return invoker.retry(
+            operation,
             null,
             true,
-            source::hasNext);
+            iterator::hasNext);
       } catch (IOException e) {
         throw new WrappedIOException(e);
       }
@@ -101,11 +112,11 @@ class RetryingCollection<T>
     @Retries.RetryTranslated
     public T next() {
       try {
-        return scanOp.retry(
+        return invoker.retry(
             "Scan Dynamo",
             null,
             true,
-            source::next);
+            iterator::next);
       } catch (IOException e) {
         throw new WrappedIOException(e);
       }

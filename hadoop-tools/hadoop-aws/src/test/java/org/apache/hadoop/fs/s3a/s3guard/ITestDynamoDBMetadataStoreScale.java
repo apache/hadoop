@@ -203,7 +203,8 @@ public class ITestDynamoDBMetadataStoreScale
 
   /**
    * Is throttling likely?
-   * @return true if the DDB table has prepaid IO and is small enough to throttle.
+   * @return true if the DDB table has prepaid IO and is small enough
+   * to throttle.
    */
   private boolean expectThrottling() {
     return !isOverProvisionedForTest && !isOnDemandTable;
@@ -378,7 +379,7 @@ public class ITestDynamoDBMetadataStoreScale
    */
   private void retryingDelete(final Path path) {
     try {
-      ddbms.getWriteOperationInvoker().retry("Delete ", path.toString(), true,
+      ddbms.getInvoker().retry("Delete ", path.toString(), true,
           () -> ddbms.delete(path, null));
     } catch (IOException e) {
       LOG.warn("Failed to delete {}: ", path, e);
@@ -437,7 +438,7 @@ public class ITestDynamoDBMetadataStoreScale
                   BulkOperationState.OperationType.Put, child)) {
         ddbms.put(new PathMetadata(makeDirStatus(base)), bulkUpdate);
         ddbms.put(new PathMetadata(makeDirStatus(child)), bulkUpdate);
-        ddbms.getWriteOperationInvoker().retry("set up directory tree",
+        ddbms.getInvoker().retry("set up directory tree",
             base.toString(),
             true,
             () -> ddbms.put(pms, bulkUpdate));
@@ -539,7 +540,7 @@ public class ITestDynamoDBMetadataStoreScale
     }
     // sending this in one by one for more efficient retries
     for (Path p : list) {
-      ddbms.getWriteOperationInvoker()
+      ddbms.getInvoker()
           .retry("delete",
               path,
               true,

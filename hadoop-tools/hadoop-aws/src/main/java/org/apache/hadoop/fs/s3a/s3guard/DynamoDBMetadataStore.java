@@ -2081,7 +2081,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * Get the operation invoker for write operations.
    * @return an invoker for retrying mutating operations on a store.
    */
-  public Invoker getWriteOperationInvoker() {
+  public Invoker getInvoker() {
     return writeOp;
   }
 
@@ -2094,7 +2094,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    */
   public <T> Iterable<T> wrapWithRetries(
       final Iterable<T> source) {
-    return new RetryingCollection<>(scanOp, source);
+    return new RetryingCollection<>("scan dynamoDB table", scanOp, source);
   }
 
   /**

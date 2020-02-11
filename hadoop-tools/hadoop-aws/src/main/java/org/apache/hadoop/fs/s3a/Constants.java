@@ -275,7 +275,7 @@ public final class Constants {
    * applications start working with the same bucket these large
    * deletes can be highly disruptive.
    */
-   public static final String BULK_DELETE_PAGE_SIZE =
+  public static final String BULK_DELETE_PAGE_SIZE =
       "fs.s3a.bulk.delete.page.size";
 
   /**

@@ -47,7 +47,6 @@ import org.apache.hadoop.util.DurationInfo;
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.maybeAwaitCompletion;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
-import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 
 /**
  * Implementation of the delete() operation.

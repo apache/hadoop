@@ -98,8 +98,12 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
   /**
    * Counter of bytes copied.
    */
+
   private final AtomicLong bytesCopied = new AtomicLong();
 
+  /**
+   * Page size for bulk deletes.
+   */
   private final int pageSize;
 
   /**
@@ -138,7 +142,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    * @param destKey destination key
    * @param destStatus destination status.
    * @param callbacks callback provider
-   * @param pageSize size of delete pages
+   * @param pageSize size of delete requests
    */
   public RenameOperation(
       final StoreContext storeContext,

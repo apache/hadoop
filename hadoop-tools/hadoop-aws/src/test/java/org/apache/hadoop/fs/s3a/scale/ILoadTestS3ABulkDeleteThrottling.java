@@ -114,7 +114,8 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
    *
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters(name = "bulk-delete-client-retry={0}-requests={2}-size={1}")
+  @Parameterized.Parameters(
+      name = "bulk-delete-aws-retry={0}-requests={2}-size={1}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {false, SMALL, SMALL_REQS},
