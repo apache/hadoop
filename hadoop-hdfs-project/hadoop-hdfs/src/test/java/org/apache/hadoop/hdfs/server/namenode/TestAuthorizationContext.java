@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.ipc.CallerContext;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,6 +25,7 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static junit.framework.TestCase.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,7 +34,8 @@ public class TestAuthorizationContext {
 
   private String fsOwner = "hdfs";
   private String superGroup = "hdfs";
-  private UserGroupInformation ugi = UserGroupInformation.createUserForTesting(fsOwner, new String[] {superGroup});
+  private UserGroupInformation ugi = UserGroupInformation.
+      createUserForTesting(fsOwner, new String[] {superGroup});
 
   private INodeAttributes[] emptyINodeAttributes = new INodeAttributes[] {};
   private INodesInPath iip = mock(INodesInPath.class);
@@ -44,69 +44,6 @@ public class TestAuthorizationContext {
   private byte[][] components = new byte[][] {};
   private String path = "";
   private int ancestorIndex = inodes.length - 2;
-
-  public static class MyAuthorizationProvider extends INodeAttributeProvider {
-    AccessControlEnforcer mockEnforcer = mock(AccessControlEnforcer.class);
-
-
-    public static class MyAccessControlEnforcer implements AccessControlEnforcer {
-      AccessControlEnforcer ace;
-
-      public MyAccessControlEnforcer(AccessControlEnforcer defaultEnforcer) {
-        this.ace = defaultEnforcer;
-
-      }
-
-      @Override
-      public void checkPermission(String fsOwner, String supergroup,
-          UserGroupInformation ugi, INodeAttributes[] inodeAttrs,
-          INode[] inodes, byte[][] pathByNameArr, int snapshotId, String path,
-          int ancestorIndex, boolean doCheckOwner, FsAction ancestorAccess,
-          FsAction parentAccess, FsAction access, FsAction subAccess,
-          boolean ignoreEmptyDir) throws AccessControlException {
-        if (ancestorIndex > 1
-            && inodes[1].getLocalName().equals("user")
-            && inodes[2].getLocalName().equals("acl")) {
-          this.ace.checkPermission(fsOwner, supergroup, ugi, inodeAttrs, inodes,
-              pathByNameArr, snapshotId, path, ancestorIndex, doCheckOwner,
-              ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
-        }
-      }
-
-      @Override
-      public void checkPermissionWithContext(
-          AuthorizationContext authzContext) throws AccessControlException {
-        if (authzContext.ancestorIndex > 1
-            && authzContext.inodes[1].getLocalName().equals("user")
-            && authzContext.inodes[2].getLocalName().equals("acl")) {
-          this.ace.checkPermissionWithContext(authzContext);
-        }
-      }
-
-      public void abc() {}
-    }
-
-    @Override
-    public void start() {
-    }
-
-    @Override
-    public void stop() {
-    }
-
-    @Override
-    public INodeAttributes getAttributes(String[] pathElements,
-        final INodeAttributes inode) {
-      return null;
-    }
-
-    @Override
-    public AccessControlEnforcer getExternalAccessControlEnforcer(
-        AccessControlEnforcer defaultEnforcer) {
-      return mockEnforcer;
-    }
-
-  }
 
   @Before
   public void setUp() throws IOException {
@@ -118,7 +55,7 @@ public class TestAuthorizationContext {
   }
 
   @Test
-  public void testBuilder() throws IOException {
+  public void testBuilder() {
     String opType = "test";
     CallerContext.setCurrent(new CallerContext.Builder(
         "TestAuthorizationContext").build());
@@ -159,9 +96,15 @@ public class TestAuthorizationContext {
 
   @Test
   public void testLegacyAPI() throws IOException {
-    MyAuthorizationProvider authzProvider = new MyAuthorizationProvider();
+    INodeAttributeProvider.AccessControlEnforcer
+        mockEnforcer = mock(INodeAttributeProvider.AccessControlEnforcer.class);
+    INodeAttributeProvider mockINodeAttributeProvider =
+        mock(INodeAttributeProvider.class);
+    when(mockINodeAttributeProvider.getExternalAccessControlEnforcer(any())).
+        thenReturn(mockEnforcer);
+
     FSPermissionChecker checker = new FSPermissionChecker(
-        fsOwner, superGroup, ugi, authzProvider);
+        fsOwner, superGroup, ugi, mockINodeAttributeProvider);
 
     // set operation type to null to force using the legacy API.
     FSPermissionChecker.setOperationType(null);
@@ -179,9 +122,7 @@ public class TestAuthorizationContext {
     checker.checkPermission(iip, true, null, null, null, null, true);
 
     INodeAttributes[] emptyINodeAttributes = new INodeAttributes[] {};
-    INodeAttributeProvider.AccessControlEnforcer enforcer =
-        authzProvider.getExternalAccessControlEnforcer(null);
-    verify(enforcer).checkPermission(fsOwner, superGroup, ugi,
+    verify(mockEnforcer).checkPermission(fsOwner, superGroup, ugi,
         emptyINodeAttributes, inodes, components, snapshotId, path,
         ancestorIndex, true, null, null, null, null, true);
   }
@@ -190,12 +131,13 @@ public class TestAuthorizationContext {
   public void testCheckPermissionWithContextAPI() throws IOException {
     INodeAttributeProvider.AccessControlEnforcer
         mockEnforcer = mock(INodeAttributeProvider.AccessControlEnforcer.class);
+    INodeAttributeProvider mockINodeAttributeProvider =
+        mock(INodeAttributeProvider.class);
+    when(mockINodeAttributeProvider.getExternalAccessControlEnforcer(any())).
+        thenReturn(mockEnforcer);
 
-    INodeAttributeProvider iNodeAttributeProvider = mock(INodeAttributeProvider.class);
-
-    MyAuthorizationProvider authzProvider = new MyAuthorizationProvider();
     FSPermissionChecker checker = new FSPermissionChecker(
-        fsOwner, superGroup, ugi, authzProvider);
+        fsOwner, superGroup, ugi, mockINodeAttributeProvider);
 
     // force it to use the new, checkPermissionWithContext API.
     String operationName = "abc";
@@ -206,8 +148,6 @@ public class TestAuthorizationContext {
         null, true);
 
     INodeAttributes[] emptyINodeAttributes = new INodeAttributes[] {};
-    INodeAttributeProvider.AccessControlEnforcer enforcer =
-        authzProvider.getExternalAccessControlEnforcer(null);
 
     INodeAttributeProvider.AuthorizationContext.Builder builder =
         new INodeAttributeProvider.AuthorizationContext.Builder();
@@ -231,6 +171,6 @@ public class TestAuthorizationContext {
     INodeAttributeProvider.AuthorizationContext context = builder.build();
     // the AuthorizationContext.equals() method is override to always return
     // true as long as it is compared with another AuthorizationContext object.
-    verify(enforcer).checkPermissionWithContext(context);
+    verify(mockEnforcer).checkPermissionWithContext(context);
   }
 }
