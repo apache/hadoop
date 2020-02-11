@@ -407,10 +407,10 @@ public class TestLeaseRecovery2 {
     Map<String, String []> u2g_map = new HashMap<String, String []>(1);
     u2g_map.put(fakeUsername, new String[] {fakeGroup});
     DFSTestUtil.updateConfWithFakeGroupMapping(conf, u2g_map);
-
+    long hardlimit = conf.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
+        DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000;
     // Reset default lease periods
-    cluster.setLeasePeriod(HdfsConstants.LEASE_SOFTLIMIT_PERIOD,
-                           HdfsConstants.LEASE_HARDLIMIT_PERIOD);
+    cluster.setLeasePeriod(HdfsConstants.LEASE_SOFTLIMIT_PERIOD, hardlimit);
     //create a file
     // create a random file name
     String filestr = "/foo" + AppendTestUtil.nextInt();

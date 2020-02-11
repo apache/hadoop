@@ -146,6 +146,7 @@ public class DfsClientConf {
   private final int stripedReadThreadpoolSize;
 
   private final boolean dataTransferTcpNoDelay;
+  private final long leaseHardLimitPeriod;
 
   public DfsClientConf(Configuration conf) {
     // The hdfsTimeout is currently the same as the ipc timeout
@@ -273,6 +274,10 @@ public class DfsClientConf {
         HdfsClientConfigKeys.StripedRead.THREADPOOL_SIZE_KEY +
         " must be greater than 0.");
     replicaAccessorBuilderClasses = loadReplicaAccessorBuilderClasses(conf);
+
+    leaseHardLimitPeriod =
+        conf.getLong(HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
+            HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000;
   }
 
   @SuppressWarnings("unchecked")
@@ -593,6 +598,13 @@ public class DfsClientConf {
    */
   public int getStripedReadThreadpoolSize() {
     return stripedReadThreadpoolSize;
+  }
+
+  /**
+   * @return the leaseHardLimitPeriod
+   */
+  public long getleaseHardLimitPeriod() {
+    return leaseHardLimitPeriod;
   }
 
   /**
