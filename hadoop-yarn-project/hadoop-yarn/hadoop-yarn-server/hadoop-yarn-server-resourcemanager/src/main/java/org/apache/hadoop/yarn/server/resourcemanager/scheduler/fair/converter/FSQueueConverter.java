@@ -294,28 +294,30 @@ public class FSQueueConverter {
    * @param queue
    */
   private void emitOrderingPolicy(String queueName, FSQueue queue) {
-    String policy = queue.getPolicy().getName();
+    if (queue instanceof FSLeafQueue) {
+      String policy = queue.getPolicy().getName();
 
-    switch (policy) {
-    case DominantResourceFairnessPolicy.NAME:
-      capacitySchedulerConfig.set(PREFIX + queueName
-          + ".ordering-policy", FairSharePolicy.NAME);
-      break;
-    case FairSharePolicy.NAME:
-      capacitySchedulerConfig.set(PREFIX + queueName
-          + ".ordering-policy", FairSharePolicy.NAME);
-      if (drfUsed) {
-        ruleHandler.handleFairAsDrf(queueName);
+      switch (policy) {
+      case DominantResourceFairnessPolicy.NAME:
+        capacitySchedulerConfig.set(PREFIX + queueName
+            + ".ordering-policy", FairSharePolicy.NAME);
+        break;
+      case FairSharePolicy.NAME:
+        capacitySchedulerConfig.set(PREFIX + queueName
+            + ".ordering-policy", FairSharePolicy.NAME);
+        if (drfUsed) {
+          ruleHandler.handleFairAsDrf(queueName);
+        }
+        break;
+      case FifoPolicy.NAME:
+        capacitySchedulerConfig.set(PREFIX + queueName
+            + ".ordering-policy", FifoPolicy.NAME);
+        break;
+      default:
+        String msg = String.format("Unexpected ordering policy " +
+            "on queue %s: %s", queue, policy);
+        conversionOptions.handleConversionError(msg);
       }
-      break;
-    case FifoPolicy.NAME:
-      capacitySchedulerConfig.set(PREFIX + queueName
-          + ".ordering-policy", FifoPolicy.NAME);
-      break;
-    default:
-      String msg = String.format("Unexpected ordering policy " +
-          "on queue %s: %s", queue, policy);
-      conversionOptions.handleConversionError(msg);
     }
   }
 
