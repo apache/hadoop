@@ -3181,6 +3181,27 @@
 </property>
 
 <property>
+  <name>dfs.datanode.lock.fair</name>
+  <value>true</value>
+  <description>If this is true, the Datanode FsDataset lock will be used in Fair
+    mode, which will help to prevent writer threads from being starved, but can
+    lower lock throughput. See java.util.concurrent.locks.ReentrantReadWriteLock
+    for more information on fair/non-fair locks.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.lock-reporting-threshold-ms</name>
+  <value>300</value>
+  <description>When thread waits to obtain a lock, or a thread holds a lock for
+    more than the threshold, a log message will be written. Note that
+    dfs.lock.suppress.warning.interval ensures a single log message is
+    emitted per interval for waiting threads and a single message for holding
+    threads to avoid excessive logging.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.startup.delay.block.deletion.sec</name>
   <value>0</value>
   <description>The delay in seconds at which we will pause the blocks deletion
