@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -53,9 +54,10 @@ import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaBuilder;
-import org.apache.hadoop.util.Timer;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
-import org.apache.hadoop.util.AutoCloseableLock;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.Timer;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectReader;
@@ -63,8 +65,6 @@ import org.codehaus.jackson.map.ObjectWriter;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.Time;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LOAD_RETRIES;
 
@@ -135,7 +135,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
     ProvidedBlockPoolSlice(String bpid, ProvidedVolumeImpl volume,
         Configuration conf) {
       this.providedVolume = volume;
-      bpVolumeMap = new ReplicaMap(new AutoCloseableLock());
+      bpVolumeMap = new ReplicaMap(new ReentrantReadWriteLock());
       Class<? extends BlockAliasMap> fmt =
           conf.getClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
               TextFileRegionAliasMap.class, BlockAliasMap.class);
