@@ -1741,4 +1741,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   @Deprecated
   public static final long    DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT =
       HdfsClientConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT;
+
+  public static final String DFS_LEASE_HARDLIMIT_KEY =
+      HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_KEY;
+  public static final long DFS_LEASE_HARDLIMIT_DEFAULT =
+      HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT;
+
 }

@@ -242,6 +242,9 @@ public interface HdfsClientConfigKeys {
   String DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS =
       "dfs.provided.aliasmap.inmemory.dnrpc-address";
 
+  String DFS_LEASE_HARDLIMIT_KEY = "dfs.namenode.lease-hard-limit-sec";
+  long DFS_LEASE_HARDLIMIT_DEFAULT = 20 * 60;
+
   /**
    * These are deprecated config keys to client code.
    */
