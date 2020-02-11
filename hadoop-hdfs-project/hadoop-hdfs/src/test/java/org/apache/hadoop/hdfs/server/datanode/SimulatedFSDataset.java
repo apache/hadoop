@@ -1578,6 +1578,12 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
+  public AutoCloseableLock acquireDatasetReadLock() {
+    // No RW lock implementation in simulated dataset currently.
+    return datasetLock.acquire();
+  }
+
+  @Override
   public Set<? extends Replica> deepCopyReplica(String bpid)
       throws IOException {
     Set<BInfo> replicas = new HashSet<>();
