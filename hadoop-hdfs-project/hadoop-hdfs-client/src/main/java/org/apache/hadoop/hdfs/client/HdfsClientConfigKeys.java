@@ -206,6 +206,9 @@ public interface HdfsClientConfigKeys {
       "dfs.namenode.snapshot.capture.openfiles";
   boolean DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES_DEFAULT = false;
 
+  String DFS_LEASE_HARDLIMIT_KEY = "dfs.namenode.lease-hard-limit-sec";
+  long DFS_LEASE_HARDLIMIT_DEFAULT = 20 * 60;
+
   /**
    * These are deprecated config keys to client code.
    */

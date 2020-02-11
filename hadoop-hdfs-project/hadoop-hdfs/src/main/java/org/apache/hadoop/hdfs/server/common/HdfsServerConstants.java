@@ -45,11 +45,10 @@ public interface HdfsServerConstants {
   int MIN_BLOCKS_FOR_WRITE = 1;
 
   /**
-   * Please see {@link HdfsConstants#LEASE_SOFTLIMIT_PERIOD} and
-   * {@link HdfsConstants#LEASE_HARDLIMIT_PERIOD} for more information.
+   * Please see {@link HdfsConstants#LEASE_SOFTLIMIT_PERIOD} 
+   * for more information.
    */
   long LEASE_SOFTLIMIT_PERIOD = HdfsConstants.LEASE_SOFTLIMIT_PERIOD;
-  long LEASE_HARDLIMIT_PERIOD = HdfsConstants.LEASE_HARDLIMIT_PERIOD;
 
   long LEASE_RECOVER_PERIOD = 10 * 1000; // in ms
   // We need to limit the length and depth of a path in the filesystem.
