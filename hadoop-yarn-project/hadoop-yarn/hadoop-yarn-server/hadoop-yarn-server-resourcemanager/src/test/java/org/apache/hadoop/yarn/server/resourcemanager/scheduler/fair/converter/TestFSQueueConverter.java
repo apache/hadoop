@@ -393,13 +393,13 @@ public class TestFSQueueConverter {
     converter.convertQueueHierarchy(rootQueue);
 
     // root
-    assertEquals("root ordering policy", "fair",
+    assertEquals("root ordering policy", null,
         csConfig.get(PREFIX + "root.ordering-policy"));
     assertEquals("root.default ordering policy", "fair",
         csConfig.get(PREFIX + "root.default.ordering-policy"));
-    assertEquals("root.admins ordering policy", "fair",
+    assertEquals("root.admins ordering policy", null,
         csConfig.get(PREFIX + "root.admins.ordering-policy"));
-    assertEquals("root.users ordering policy", "fair",
+    assertEquals("root.users ordering policy", null,
         csConfig.get(PREFIX + "root.users.ordering-policy"));
 
     // root.users
@@ -429,7 +429,7 @@ public class TestFSQueueConverter {
 
     converter.convertQueueHierarchy(rootQueue);
 
-    verify(ruleHandler, times(6)).handleFairAsDrf(anyString());
+    verify(ruleHandler, times(5)).handleFairAsDrf(anyString());
   }
 
   @Test
