@@ -175,7 +175,6 @@ public class FrameworkUploader implements Runnable {
   @VisibleForTesting
   void beginUpload() throws IOException, UploaderException {
     if (targetStream == null) {
-      validateTargetPath();
       int lastIndex = target.indexOf('#');
       targetPath =
           new Path(
@@ -478,13 +477,6 @@ public class FrameworkUploader implements Runnable {
       }
     }
     return false;
-  }
-
-  private void validateTargetPath() throws UploaderException {
-    if (!target.startsWith("hdfs:/") &&
-        !target.startsWith("file:/")) {
-      throw new UploaderException("Target path is not hdfs or local " + target);
-    }
   }
 
   @VisibleForTesting
