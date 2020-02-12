@@ -143,7 +143,6 @@
 
   <!-- see hadoop-project/pom.xml for version number declarations -->
   <dependencies>
-
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
@@ -480,7 +479,6 @@
       </activation>
       <build>
         <plugins>
-<!--
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
@@ -511,7 +509,6 @@
               </execution>
             </executions>
           </plugin>
--->
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
@@ -648,7 +645,6 @@
       </activation>
       <build>
         <plugins>
-<!--
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
@@ -679,7 +675,6 @@
               </execution>
             </executions>
           </plugin>
--->
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
