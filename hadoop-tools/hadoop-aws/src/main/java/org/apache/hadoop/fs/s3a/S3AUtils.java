@@ -249,6 +249,19 @@ public final class S3AUtils {
 
       // the object isn't there
       case 404:
+        if (UnknownStoreException.E_NO_SUCH_BUCKET.equals(
+            ase.getErrorCode())) {
+          // this is a missing bucket
+          ioe = new UnknownStoreException(path, ase);
+        } else {
+          // a normal unknown object
+          ioe = new FileNotFoundException(message);
+          ioe.initCause(ase);
+        }
+        break;
+
+      // this also surfaces sometimes and is considered to
+      // be ~ a not found exception.
       case 410:
         ioe = new FileNotFoundException(message);
         ioe.initCause(ase);

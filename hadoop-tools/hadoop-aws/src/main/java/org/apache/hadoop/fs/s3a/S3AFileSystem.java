@@ -526,15 +526,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Verify that the bucket exists. This does not check permissions,
    * not even read access.
    * Retry policy: retrying, translated.
-   * @throws FileNotFoundException the bucket is absent
+   * @throws UnknownStoreException the bucket is absent
    * @throws IOException any other problem talking to S3
    */
   @Retries.RetryTranslated
   protected void verifyBucketExists()
-      throws FileNotFoundException, IOException {
+      throws UnknownStoreException, IOException {
     if (!invoker.retry("doesBucketExist", bucket, true,
         () -> s3.doesBucketExist(bucket))) {
-      throw new FileNotFoundException("Bucket " + bucket + " does not exist");
+      throw new UnknownStoreException("Bucket " + bucket + " does not exist");
     }
   }
 
@@ -542,15 +542,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Verify that the bucket exists. This will correctly throw an exception
    * when credentials are invalid.
    * Retry policy: retrying, translated.
-   * @throws FileNotFoundException the bucket is absent
+   * @throws UnknownStoreException the bucket is absent
    * @throws IOException any other problem talking to S3
    */
   @Retries.RetryTranslated
   protected void verifyBucketExistsV2()
-          throws FileNotFoundException, IOException {
+          throws UnknownStoreException, IOException {
     if (!invoker.retry("doesBucketExistV2", bucket, true,
         () -> s3.doesBucketExistV2(bucket))) {
-      throw new FileNotFoundException("Bucket " + bucket + " does not exist");
+      throw new UnknownStoreException("Bucket " + bucket + " does not exist");
     }
   }
 
@@ -2890,7 +2890,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         } catch (AmazonServiceException e) {
           // if the response is a 404 error, it just means that there is
           // no file at that path...the remaining checks will be needed.
-          if (e.getStatusCode() != SC_404) {
+          if (e.getStatusCode() != SC_404
+              || UnknownStoreException.E_NO_SUCH_BUCKET.equals(
+                  e.getErrorCode())) {
             throw translateException("getFileStatus", path, e);
           }
         } catch (AmazonClientException e) {
@@ -2922,7 +2924,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                     meta.getVersionId());
           }
         } catch (AmazonServiceException e) {
-          if (e.getStatusCode() != SC_404) {
+          if (e.getStatusCode() != SC_404
+              || UnknownStoreException.E_NO_SUCH_BUCKET.equals(
+                  e.getErrorCode())) {
             throw translateException("getFileStatus", newKey, e);
           }
         } catch (AmazonClientException e) {
@@ -2961,7 +2965,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           return new S3AFileStatus(Tristate.TRUE, path, username);
         }
       } catch (AmazonServiceException e) {
-        if (e.getStatusCode() != SC_404) {
+        if (e.getStatusCode() != SC_404
+            || UnknownStoreException.E_NO_SUCH_BUCKET.equals(
+                e.getErrorCode())) {
           throw translateException("getFileStatus", path, e);
         }
       } catch (AmazonClientException e) {
