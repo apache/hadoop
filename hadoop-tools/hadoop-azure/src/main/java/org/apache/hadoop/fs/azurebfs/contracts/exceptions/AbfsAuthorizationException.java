@@ -16,30 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
 
 /**
- * The REST operation type (Read, Append, Other ).
+ * Exception raised on ABFS Authorization failures.
  */
-public enum AbfsRestOperationType {
-    CreateFileSystem,
-    GetFileSystemProperties,
-    SetFileSystemProperties,
-    ListPaths,
-    DeleteFileSystem,
-    CreatePath,
-    RenamePath,
-    GetAcl,
-    GetPathProperties,
-    GetPathStatus,
-    SetAcl,
-    SetOwner,
-    SetPathProperties,
-    SetPermissions,
-    Append,
-    Flush,
-    ReadFile,
-    DeletePath,
-    CheckAccess,
-    Mkdir
+public class AbfsAuthorizationException extends AzureBlobFileSystemException {
+
+  //private static final long serialVersionUID = 1L;
+
+  public AbfsAuthorizationException(String message, Exception e) {
+    super(message, e);
+  }
+
+  public AbfsAuthorizationException(String message) {
+    super(message);
+  }
 }

@@ -18,7 +18,16 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import org.apache.http.client.utils.URIBuilder;
+
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.regex.Pattern;
+
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SCHEME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SECURE_SCHEME;
 
 /**
  * Utility class to help with Abfs url transformation to blob urls.
@@ -74,5 +83,40 @@ public final class UriUtils {
   }
 
   private UriUtils() {
+  }
+
+  public static URL addSASToRequestUrl(URL requestUrl, String sasToken)
+      throws URISyntaxException, MalformedURLException {
+    URIBuilder uriBuilder = new URIBuilder(requestUrl.toURI());
+    String[] sasQueryParamKVPairs = sasToken.split("&");
+    for(String sasQueryParam : sasQueryParamKVPairs)
+    {
+      String[] queryParam = sasQueryParam.split("=");
+      String key = queryParam[0];
+      String value = queryParam[1];
+
+      uriBuilder.addParameter(key, value);
+    }
+
+    return uriBuilder.build().toURL();
+  }
+
+  public static URI getQualifiedPathURI(URL url) throws URISyntaxException {
+    int indexOfContainerNameEnd = url.getPath().indexOf("/", 1);
+    String containerName =  (indexOfContainerNameEnd == -1) ?
+        url.getPath().substring(1) :
+        url.getPath().substring(1, indexOfContainerNameEnd);
+
+    String scheme = url.toString().toLowerCase().startsWith("https") ?
+        ABFS_SECURE_SCHEME :
+        ABFS_SCHEME;
+
+    URI qualifiedPathUri = new URI(scheme,
+        containerName + "@" + url.getAuthority(),
+        ((indexOfContainerNameEnd == -1) ?
+            "" :
+            url.getPath().substring(indexOfContainerNameEnd)), null, null);
+
+    return qualifiedPathUri;
   }
 }

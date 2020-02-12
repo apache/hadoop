@@ -16,30 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.extensions;
+
+import java.net.URI;
 
 /**
- * The REST operation type (Read, Append, Other ).
+ * AuthorizationResource with action and store path URI
  */
-public enum AbfsRestOperationType {
-    CreateFileSystem,
-    GetFileSystemProperties,
-    SetFileSystemProperties,
-    ListPaths,
-    DeleteFileSystem,
-    CreatePath,
-    RenamePath,
-    GetAcl,
-    GetPathProperties,
-    GetPathStatus,
-    SetAcl,
-    SetOwner,
-    SetPathProperties,
-    SetPermissions,
-    Append,
-    Flush,
-    ReadFile,
-    DeletePath,
-    CheckAccess,
-    Mkdir
+public class AuthorizationResource {
+  public String authorizerAction;
+  public URI storePathUri;
 }

@@ -16,30 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
 
 /**
- * The REST operation type (Read, Append, Other ).
+ * Exception for all unhandled errors while communicating with authorizer
  */
-public enum AbfsRestOperationType {
-    CreateFileSystem,
-    GetFileSystemProperties,
-    SetFileSystemProperties,
-    ListPaths,
-    DeleteFileSystem,
-    CreatePath,
-    RenamePath,
-    GetAcl,
-    GetPathProperties,
-    GetPathStatus,
-    SetAcl,
-    SetOwner,
-    SetPathProperties,
-    SetPermissions,
-    Append,
-    Flush,
-    ReadFile,
-    DeletePath,
-    CheckAccess,
-    Mkdir
+public class AbfsAuthorizerUnhandledException extends AzureBlobFileSystemException {
+  public AbfsAuthorizerUnhandledException(Exception innerException) {
+    super("An unhandled Authorizer request processing exception",
+        innerException);
+  }
 }

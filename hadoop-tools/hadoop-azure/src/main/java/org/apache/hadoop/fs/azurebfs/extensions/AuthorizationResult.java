@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,24 +18,30 @@
 
 package org.apache.hadoop.fs.azurebfs.extensions;
 
-import java.io.IOException;
-
 /**
- * Exception raised on ABFS Authorization failures.
+ * AuthorizationResult will be returned by Authorizer with store path URI and
+ * supported Auth token if the AuthorizationResource is found authorized for
+ * specified action
  */
-public class AbfsAuthorizationException extends IOException {
+public class AuthorizationResult {
 
-  private static final long serialVersionUID = 1L;
+  boolean isAuthorized;
+  AuthorizationResourceResult[] authResourceResult;
 
-  public AbfsAuthorizationException(String message, Exception e) {
-    super(message, e);
+  public boolean isAuthorized() {
+    return isAuthorized;
   }
 
-  public AbfsAuthorizationException(String message) {
-    super(message);
+  public void setAuthorized(boolean authorized) {
+    isAuthorized = authorized;
   }
 
-  public AbfsAuthorizationException(Throwable e) {
-    super(e);
+  public AuthorizationResourceResult[] getAuthResourceResult() {
+    return authResourceResult;
+  }
+
+  public void setAuthResourceResult(
+      AuthorizationResourceResult[] authResourceResult) {
+    this.authResourceResult = authResourceResult;
   }
 }

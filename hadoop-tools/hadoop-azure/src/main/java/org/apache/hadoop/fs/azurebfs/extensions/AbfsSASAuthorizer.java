@@ -16,30 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.extensions;
+
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 /**
- * The REST operation type (Read, Append, Other ).
+ * Interface to support Authorizer providing SAS token
  */
-public enum AbfsRestOperationType {
-    CreateFileSystem,
-    GetFileSystemProperties,
-    SetFileSystemProperties,
-    ListPaths,
-    DeleteFileSystem,
-    CreatePath,
-    RenamePath,
-    GetAcl,
-    GetPathProperties,
-    GetPathStatus,
-    SetAcl,
-    SetOwner,
-    SetPathProperties,
-    SetPermissions,
-    Append,
-    Flush,
-    ReadFile,
-    DeletePath,
-    CheckAccess,
-    Mkdir
+public abstract class AbfsSASAuthorizer implements AbfsAuthorizer {
+
+  @Override
+  public final AuthType getAuthType() {
+    return AuthType.SAS;
+  }
 }

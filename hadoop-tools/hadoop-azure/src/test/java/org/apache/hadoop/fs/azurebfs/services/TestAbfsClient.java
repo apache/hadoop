@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.net.URL;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,7 +42,8 @@ public final class TestAbfsClient {
   private void validateUserAgent(String expectedPattern,
                                  URL baseUrl,
                                  AbfsConfiguration config,
-                                 boolean includeSSLProvider) {
+                                 boolean includeSSLProvider)
+      throws AzureBlobFileSystemException {
     AbfsClient client = new AbfsClient(baseUrl, null,
         config, null, null, null);
     String sslProviderName = null;

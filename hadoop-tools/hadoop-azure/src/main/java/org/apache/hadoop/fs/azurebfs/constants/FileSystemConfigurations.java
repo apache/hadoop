@@ -70,5 +70,9 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_ENABLE_CHECK_ACCESS = false;
   public static final boolean DEFAULT_ABFS_LATENCY_TRACK = false;
 
+  // Default time interval in seconds before SAS token expiry when new token
+  // refresh request needs to be sent.
+  public static final int DEFAULT_SAS_REFRESH_INTERVAL_BEFORE_EXPIRY = 5 * 60;
+
   private FileSystemConfigurations() {}
 }

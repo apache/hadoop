@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.fs.azurebfs.extensions;
 
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizerUnhandledException;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
+
+import java.io.IOException;
 
 /**
  * Interface to support authorization in Azure Blob File System.
@@ -31,27 +32,33 @@ import org.apache.hadoop.fs.permission.FsAction;
 @InterfaceAudience.LimitedPrivate("authorization-subsystems")
 @InterfaceStability.Unstable
 public interface AbfsAuthorizer {
-
   /**
    * Initialize authorizer for Azure Blob File System.
    *
    * @throws AbfsAuthorizationException if unable to initialize the authorizer.
    * @throws IOException network problems or similar.
-   * @throws IllegalArgumentException if the required parameters are not provided.
    */
-  void init() throws AbfsAuthorizationException, IOException;
+  void init() throws AbfsAuthorizationException, AbfsAuthorizerUnhandledException;
 
   /**
-   * Checks if the provided {@link FsAction} is allowed on the provided {@link Path}s.
+   * Get AuthType supported by Authorizer if Authorizer would be providing
+   * authentication token to ABFS server.
    *
-   * @param action the {@link FsAction} being requested on the provided {@link Path}s.
-   * @param absolutePaths The absolute paths of the storage being accessed.
-   * @return true if authorized, otherwise false.
-   * @throws AbfsAuthorizationException on authorization failure.
-   * @throws IOException network problems or similar.
-   * @throws IllegalArgumentException if the required parameters are not provided.
+   * If Authorizer is not going to provide any auth tokens, return AuthType.None
+   * @return
    */
-  boolean isAuthorized(FsAction action, Path... absolutePaths)
-      throws AbfsAuthorizationException, IOException;
+  AuthType getAuthType();
 
+  /**
+   * Checks if the provided {@link AuthorizationResource} is allowed to
+   * perform requested action.
+   *
+   * @param authorizationResource which contains the action and store path URI
+   * @return AuthorizationResult with store URI and Auth token if Authorizer
+   * is providing any.
+   * @throws AbfsAuthorizationException on authorization failure.
+   * @throws IOException network problems or similarITestAzureBlobFileSystemListStatus.
+   */
+  AuthorizationResult checkPrivileges(AuthorizationResource... authorizationResource)
+      throws AbfsAuthorizationException, AbfsAuthorizerUnhandledException;
 }
