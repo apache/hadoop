@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -69,143 +69,134 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
 
- /**
+/**
  * Configuration for Azure Blob FileSystem.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class AbfsConfiguration {
+public class AbfsConfiguration{
 
   private final Configuration rawConfig;
   private final String accountName;
   private final boolean isSecure;
-  private static final Logger LOG = LoggerFactory
-      .getLogger(AbfsConfiguration.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbfsConfiguration.class);
   private AbfsAuthorizer authorizer = null;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      AZURE_WRITE_BUFFER_SIZE, MinValue = MIN_BUFFER_SIZE, MaxValue =
-      MAX_BUFFER_SIZE, DefaultValue = DEFAULT_WRITE_BUFFER_SIZE)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_BUFFER_SIZE,
+      MinValue = MIN_BUFFER_SIZE,
+      MaxValue = MAX_BUFFER_SIZE,
+      DefaultValue = DEFAULT_WRITE_BUFFER_SIZE)
   private int writeBufferSize;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      AZURE_READ_BUFFER_SIZE, MinValue = MIN_BUFFER_SIZE, MaxValue =
-      MAX_BUFFER_SIZE, DefaultValue = DEFAULT_READ_BUFFER_SIZE)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_READ_BUFFER_SIZE,
+      MinValue = MIN_BUFFER_SIZE,
+      MaxValue = MAX_BUFFER_SIZE,
+      DefaultValue = DEFAULT_READ_BUFFER_SIZE)
   private int readBufferSize;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      AZURE_MIN_BACKOFF_INTERVAL, DefaultValue = DEFAULT_MIN_BACKOFF_INTERVAL)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MIN_BACKOFF_INTERVAL,
+      DefaultValue = DEFAULT_MIN_BACKOFF_INTERVAL)
   private int minBackoffInterval;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      AZURE_MAX_BACKOFF_INTERVAL, DefaultValue = DEFAULT_MAX_BACKOFF_INTERVAL)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MAX_BACKOFF_INTERVAL,
+      DefaultValue = DEFAULT_MAX_BACKOFF_INTERVAL)
   private int maxBackoffInterval;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      AZURE_BACKOFF_INTERVAL, DefaultValue = DEFAULT_BACKOFF_INTERVAL)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_BACKOFF_INTERVAL,
+      DefaultValue = DEFAULT_BACKOFF_INTERVAL)
   private int backoffInterval;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      AZURE_MAX_IO_RETRIES, MinValue = 0, DefaultValue =
-      DEFAULT_MAX_RETRY_ATTEMPTS)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MAX_IO_RETRIES,
+      MinValue = 0,
+      DefaultValue = DEFAULT_MAX_RETRY_ATTEMPTS)
   private int maxIoRetries;
 
-  @LongConfigurationValidatorAnnotation(ConfigurationKey =
-      AZURE_BLOCK_SIZE_PROPERTY_NAME, MinValue = 0, MaxValue =
-      MAX_AZURE_BLOCK_SIZE, DefaultValue = MAX_AZURE_BLOCK_SIZE)
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = AZURE_BLOCK_SIZE_PROPERTY_NAME,
+      MinValue = 0,
+      MaxValue = MAX_AZURE_BLOCK_SIZE,
+      DefaultValue = MAX_AZURE_BLOCK_SIZE)
   private long azureBlockSize;
 
-  @StringConfigurationValidatorAnnotation(ConfigurationKey =
-      AZURE_BLOCK_LOCATION_HOST_PROPERTY_NAME, DefaultValue =
-      AZURE_BLOCK_LOCATION_HOST_DEFAULT)
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = AZURE_BLOCK_LOCATION_HOST_PROPERTY_NAME,
+      DefaultValue = AZURE_BLOCK_LOCATION_HOST_DEFAULT)
   private String azureBlockLocationHost;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      AZURE_CONCURRENT_CONNECTION_VALUE_OUT, MinValue = 1, DefaultValue =
-      MAX_CONCURRENT_WRITE_THREADS)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CONCURRENT_CONNECTION_VALUE_OUT,
+      MinValue = 1,
+      DefaultValue = MAX_CONCURRENT_WRITE_THREADS)
   private int maxConcurrentWriteThreads;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      AZURE_CONCURRENT_CONNECTION_VALUE_IN, MinValue = 1, DefaultValue =
-      MAX_CONCURRENT_READ_THREADS)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CONCURRENT_CONNECTION_VALUE_IN,
+      MinValue = 1,
+      DefaultValue = MAX_CONCURRENT_READ_THREADS)
   private int maxConcurrentReadThreads;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
-      AZURE_TOLERATE_CONCURRENT_APPEND, DefaultValue =
-      DEFAULT_READ_TOLERATE_CONCURRENT_APPEND)
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_TOLERATE_CONCURRENT_APPEND,
+      DefaultValue = DEFAULT_READ_TOLERATE_CONCURRENT_APPEND)
   private boolean tolerateOobAppends;
 
-  @StringConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_ATOMIC_RENAME_KEY, DefaultValue =
-      DEFAULT_FS_AZURE_ATOMIC_RENAME_DIRECTORIES)
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ATOMIC_RENAME_KEY,
+      DefaultValue = DEFAULT_FS_AZURE_ATOMIC_RENAME_DIRECTORIES)
   private String azureAtomicDirs;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
-      AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, DefaultValue =
-      DEFAULT_AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION)
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
+      DefaultValue = DEFAULT_AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION)
   private boolean createRemoteFileSystemDuringInitialization;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
-      AZURE_SKIP_USER_GROUP_METADATA_DURING_INITIALIZATION, DefaultValue =
-      DEFAULT_AZURE_SKIP_USER_GROUP_METADATA_DURING_INITIALIZATION)
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_SKIP_USER_GROUP_METADATA_DURING_INITIALIZATION,
+      DefaultValue = DEFAULT_AZURE_SKIP_USER_GROUP_METADATA_DURING_INITIALIZATION)
   private boolean skipUserGroupMetadataDuringInitialization;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_READ_AHEAD_QUEUE_DEPTH, DefaultValue =
-      DEFAULT_READ_AHEAD_QUEUE_DEPTH)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_READ_AHEAD_QUEUE_DEPTH,
+      DefaultValue = DEFAULT_READ_AHEAD_QUEUE_DEPTH)
   private int readAheadQueueDepth;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_ENABLE_FLUSH, DefaultValue = DEFAULT_ENABLE_FLUSH)
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_FLUSH,
+      DefaultValue = DEFAULT_ENABLE_FLUSH)
   private boolean enableFlush;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_DISABLE_OUTPUTSTREAM_FLUSH, DefaultValue =
-      DEFAULT_DISABLE_OUTPUTSTREAM_FLUSH)
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_DISABLE_OUTPUTSTREAM_FLUSH,
+      DefaultValue = DEFAULT_DISABLE_OUTPUTSTREAM_FLUSH)
   private boolean disableOutputStreamFlush;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_ENABLE_AUTOTHROTTLING, DefaultValue =
-      DEFAULT_ENABLE_AUTOTHROTTLING)
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_AUTOTHROTTLING,
+      DefaultValue = DEFAULT_ENABLE_AUTOTHROTTLING)
   private boolean enableAutoThrottling;
 
-  @StringConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_USER_AGENT_PREFIX_KEY, DefaultValue = "")
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_USER_AGENT_PREFIX_KEY,
+      DefaultValue = "")
   private String userAgentId;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_ENABLE_DELEGATION_TOKEN, DefaultValue =
-      DEFAULT_ENABLE_DELEGATION_TOKEN)
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_DELEGATION_TOKEN,
+      DefaultValue = DEFAULT_ENABLE_DELEGATION_TOKEN)
   private boolean enableDelegationToken;
 
-  @StringConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_ABFS_AUTHORIZER, DefaultValue = "")
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_AUTHORIZER,
+      DefaultValue = "")
   private String abfsAuthorizerClass;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_ALWAYS_USE_HTTPS, DefaultValue = DEFAULT_ENABLE_HTTPS)
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ALWAYS_USE_HTTPS,
+          DefaultValue = DEFAULT_ENABLE_HTTPS)
   private boolean alwaysUseHttps;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_USE_UPN, DefaultValue = DEFAULT_USE_UPN)
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_USE_UPN,
+      DefaultValue = DEFAULT_USE_UPN)
   private boolean useUpn;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_ENABLE_CHECK_ACCESS, DefaultValue = DEFAULT_ENABLE_CHECK_ACCESS)
   private boolean isCheckAccessEnabled;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_ABFS_LATENCY_TRACK, DefaultValue = DEFAULT_ABFS_LATENCY_TRACK)
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_LATENCY_TRACK,
+          DefaultValue = DEFAULT_ABFS_LATENCY_TRACK)
   private boolean trackLatency;
 
   private Map<String, String> storageAccountKeys;
 
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
-      throws IllegalAccessException, InvalidConfigurationValueException,
-      IOException {
-    this.rawConfig = ProviderUtils
-        .excludeIncompatibleCredentialProviders(rawConfig,
-            AzureBlobFileSystem.class);
+      throws IllegalAccessException, InvalidConfigurationValueException, IOException {
+    this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
+        rawConfig, AzureBlobFileSystem.class);
     this.accountName = accountName;
     this.isSecure = getBoolean(FS_AZURE_SECURE_MODE, false);
 
@@ -213,20 +204,15 @@ public class AbfsConfiguration {
     Field[] fields = this.getClass().getDeclaredFields();
     for (Field field : fields) {
       field.setAccessible(true);
-      if (field
-          .isAnnotationPresent(IntegerConfigurationValidatorAnnotation.class)) {
+      if (field.isAnnotationPresent(IntegerConfigurationValidatorAnnotation.class)) {
         field.set(this, validateInt(field));
-      } else if (field
-          .isAnnotationPresent(LongConfigurationValidatorAnnotation.class)) {
+      } else if (field.isAnnotationPresent(LongConfigurationValidatorAnnotation.class)) {
         field.set(this, validateLong(field));
-      } else if (field
-          .isAnnotationPresent(StringConfigurationValidatorAnnotation.class)) {
+      } else if (field.isAnnotationPresent(StringConfigurationValidatorAnnotation.class)) {
         field.set(this, validateString(field));
-      } else if (field.isAnnotationPresent(
-          Base64StringConfigurationValidatorAnnotation.class)) {
+      } else if (field.isAnnotationPresent(Base64StringConfigurationValidatorAnnotation.class)) {
         field.set(this, validateBase64String(field));
-      } else if (field
-          .isAnnotationPresent(BooleanConfigurationValidatorAnnotation.class)) {
+      } else if (field.isAnnotationPresent(BooleanConfigurationValidatorAnnotation.class)) {
         field.set(this, validateBoolean(field));
       }
     }
@@ -270,8 +256,7 @@ public class AbfsConfiguration {
    * @return value if one exists, else the default value
    */
   public boolean getBoolean(String key, boolean defaultValue) {
-    return rawConfig
-        .getBoolean(accountConf(key), rawConfig.getBoolean(key, defaultValue));
+    return rawConfig.getBoolean(accountConf(key), rawConfig.getBoolean(key, defaultValue));
   }
 
   /**
@@ -282,8 +267,7 @@ public class AbfsConfiguration {
    * @return value if one exists, else the default value
    */
   public long getLong(String key, long defaultValue) {
-    return rawConfig
-        .getLong(accountConf(key), rawConfig.getLong(key, defaultValue));
+    return rawConfig.getLong(accountConf(key), rawConfig.getLong(key, defaultValue));
   }
 
   /**
@@ -312,10 +296,10 @@ public class AbfsConfiguration {
    * @param xface Interface shared by all possible values
    * @return Highest-precedence Class object that was found
    */
-  public <U> Class<? extends U> getClass(String name,
-      Class<? extends U> defaultValue, Class<U> xface) {
+  public <U> Class<? extends U> getClass(String name, Class<? extends U> defaultValue, Class<U> xface) {
     return rawConfig.getClass(accountConf(name),
-        rawConfig.getClass(name, defaultValue, xface), xface);
+        rawConfig.getClass(name, defaultValue, xface),
+        xface);
   }
 
   /**
@@ -326,8 +310,8 @@ public class AbfsConfiguration {
    * @return value in String form if one exists, else null
    */
   public <T extends Enum<T>> T getEnum(String name, T defaultValue) {
-    return rawConfig
-        .getEnum(accountConf(name), rawConfig.getEnum(name, defaultValue));
+    return rawConfig.getEnum(accountConf(name),
+        rawConfig.getEnum(name, defaultValue));
   }
 
   /**
@@ -383,7 +367,7 @@ public class AbfsConfiguration {
       }
       if (!(keyProviderObject instanceof KeyProvider)) {
         throw new KeyProviderException(keyProviderClass
-            + " specified in config is not a valid KeyProvider class.");
+                + " specified in config is not a valid KeyProvider class.");
       }
       keyProvider = (KeyProvider) keyProviderObject;
     }
@@ -481,21 +465,18 @@ public class AbfsConfiguration {
   }
 
   public DelegatingSSLSocketFactory.SSLChannelMode getPreferredSSLFactoryOption() {
-    return getEnum(FS_AZURE_SSL_CHANNEL_MODE_KEY,
-        DEFAULT_FS_AZURE_SSL_CHANNEL_MODE);
+    return getEnum(FS_AZURE_SSL_CHANNEL_MODE_KEY, DEFAULT_FS_AZURE_SSL_CHANNEL_MODE);
   }
 
   public AuthType getAuthType(String accountName) {
-    return getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME,
-        AuthType.SharedKey);
+    return getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
   }
 
   public boolean isDelegationTokenManagerEnabled() {
     return enableDelegationToken;
   }
 
-  public AbfsDelegationTokenManager getDelegationTokenManager()
-      throws IOException {
+  public AbfsDelegationTokenManager getDelegationTokenManager() throws IOException {
     return new AbfsDelegationTokenManager(getRawConfiguration());
   }
 
@@ -508,8 +489,7 @@ public class AbfsConfiguration {
   }
 
   /**
-   * Whether {@code AbfsClient} should track and send latency info back to
-   * storage servers.
+   * Whether {@code AbfsClient} should track and send latency info back to storage servers.
    *
    * @return a boolean indicating whether latency should be tracked.
    */
@@ -525,40 +505,31 @@ public class AbfsConfiguration {
     return accountName;
   }
 
-  public AccessTokenProvider getTokenProvider()
-      throws TokenAccessProviderException {
-    AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME,
-        AuthType.SharedKey);
+  public AccessTokenProvider getTokenProvider() throws TokenAccessProviderException {
+    AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
     if (authType == AuthType.OAuth) {
       try {
-        Class<? extends AccessTokenProvider> tokenProviderClass = getClass(
-            FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME, null,
-            AccessTokenProvider.class);
+        Class<? extends AccessTokenProvider> tokenProviderClass =
+                getClass(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME, null,
+                        AccessTokenProvider.class);
         AccessTokenProvider tokenProvider = null;
         if (tokenProviderClass == ClientCredsTokenProvider.class) {
-          String authEndpoint = getPasswordString(
-              FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
+          String authEndpoint = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
           String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
-          String clientSecret = getPasswordString(
-              FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET);
-          tokenProvider = new ClientCredsTokenProvider(authEndpoint, clientId,
-              clientSecret);
+          String clientSecret = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET);
+          tokenProvider = new ClientCredsTokenProvider(authEndpoint, clientId, clientSecret);
           LOG.trace("ClientCredsTokenProvider initialized");
         } else if (tokenProviderClass == UserPasswordTokenProvider.class) {
-          String authEndpoint = getPasswordString(
-              FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
+          String authEndpoint = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
           String username = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_NAME);
-          String password = getPasswordString(
-              FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD);
-          tokenProvider = new UserPasswordTokenProvider(authEndpoint, username,
-              password);
+          String password = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD);
+          tokenProvider = new UserPasswordTokenProvider(authEndpoint, username, password);
           LOG.trace("UserPasswordTokenProvider initialized");
         } else if (tokenProviderClass == MsiTokenProvider.class) {
           String authEndpoint = getTrimmedPasswordString(
               FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT,
               AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
-          String tenantGuid = getPasswordString(
-              FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
+          String tenantGuid = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
           String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
           String authority = getTrimmedPasswordString(
               FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
@@ -571,62 +542,54 @@ public class AbfsConfiguration {
           String authEndpoint = getTrimmedPasswordString(
               FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT,
               AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT);
-          String refreshToken = getPasswordString(
-              FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN);
+          String refreshToken = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN);
           String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
           tokenProvider = new RefreshTokenBasedTokenProvider(authEndpoint,
               clientId, refreshToken);
           LOG.trace("RefreshTokenBasedTokenProvider initialized");
         } else {
-          throw new IllegalArgumentException(
-              "Failed to initialize " + tokenProviderClass);
+          throw new IllegalArgumentException("Failed to initialize " + tokenProviderClass);
         }
         return tokenProvider;
-      } catch (IllegalArgumentException e) {
+      } catch(IllegalArgumentException e) {
         throw e;
       } catch (Exception e) {
-        throw new TokenAccessProviderException(
-            "Unable to load key provider class.", e);
+        throw new TokenAccessProviderException("Unable to load key provider class.", e);
       }
 
     } else if (authType == AuthType.Custom) {
       try {
         String configKey = FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
-        Class<? extends CustomTokenProviderAdaptee> customTokenProviderClass
-            = getClass(
-            configKey, null, CustomTokenProviderAdaptee.class);
+        Class<? extends CustomTokenProviderAdaptee> customTokenProviderClass =
+                getClass(configKey, null, CustomTokenProviderAdaptee.class);
         if (customTokenProviderClass == null) {
-          throw new IllegalArgumentException(String
-              .format("The configuration value for \"%s\" is invalid.",
-                  configKey));
+          throw new IllegalArgumentException(
+                  String.format("The configuration value for \"%s\" is invalid.", configKey));
         }
         CustomTokenProviderAdaptee azureTokenProvider = ReflectionUtils
-            .newInstance(customTokenProviderClass, rawConfig);
+                .newInstance(customTokenProviderClass, rawConfig);
         if (azureTokenProvider == null) {
-          throw new IllegalArgumentException(
-              "Failed to initialize " + customTokenProviderClass);
+          throw new IllegalArgumentException("Failed to initialize " + customTokenProviderClass);
         }
         LOG.trace("Initializing {}", customTokenProviderClass.getName());
         azureTokenProvider.initialize(rawConfig, accountName);
         LOG.trace("{} init complete", customTokenProviderClass.getName());
         return new CustomTokenProviderAdapter(azureTokenProvider);
-      } catch (IllegalArgumentException e) {
+      } catch(IllegalArgumentException e) {
         throw e;
       } catch (Exception e) {
-        throw new TokenAccessProviderException(
-            "Unable to load custom token provider class: " + e, e);
+        throw new TokenAccessProviderException("Unable to load custom token provider class: " + e, e);
       }
 
     } else {
-      throw new TokenAccessProviderException(String
-          .format("Invalid auth type: %s is being used, expecting OAuth",
-              authType));
+      throw new TokenAccessProviderException(String.format(
+              "Invalid auth type: %s is being used, expecting OAuth", authType));
     }
   }
 
-  public AbfsAuthorizer getAbfsAuthorizer()
-      throws AzureBlobFileSystemException {
-    if (this.authorizer != null) {
+  public AbfsAuthorizer getAbfsAuthorizer() throws AzureBlobFileSystemException {
+    if (this.authorizer != null)
+    {
       return this.authorizer;
     }
 
@@ -634,101 +597,104 @@ public class AbfsConfiguration {
 
     try {
       if (authClassName != null && !authClassName.isEmpty()) {
-        @SuppressWarnings("unchecked") Class<AbfsAuthorizer> authClass =
-            (Class<AbfsAuthorizer>) rawConfig
-            .getClassByName(authClassName);
-        this.authorizer = authClass
-            .getConstructor(new Class[] {Configuration.class})
-            .newInstance(rawConfig);
+        @SuppressWarnings("unchecked")
+        Class<AbfsAuthorizer> authClass = (Class<AbfsAuthorizer>) rawConfig.getClassByName(authClassName);
+        this.authorizer =
+            authClass.getConstructor(new Class[] {Configuration.class}).newInstance(rawConfig);
         LOG.trace("Initializing {}", authClassName);
         this.authorizer.init();
         if ((this.authorizer.getAuthType() != AuthType.SAS) && (
             this.authorizer.getAuthType() != AuthType.None)) {
-          throw new AbfsAuthorizationException("Invalid Authorizer AuthType.",
-              new IllegalArgumentException(
-                  "Authorizer AuthType set as " + this.authorizer.getAuthType()
-                      .name() + ". Valid values are SAS and None"));
+          throw new AbfsAuthorizationException(
+              "Invalid Authorizer AuthType.", new IllegalArgumentException(
+              "Authorizer AuthType set as " + this.authorizer.getAuthType().name()
+                  + ". Valid values are SAS and None"));
         }
 
         LOG.trace("{} init complete", authClassName);
       }
-    } catch (IllegalAccessException | InstantiationException | ClassNotFoundException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException | AbfsAuthorizationException e) {
-      throw new AbfsAuthorizationException(
-          "Unable to initialize " + "Authorizer", e);
+    } catch (
+        IllegalAccessException
+        | InstantiationException
+        | ClassNotFoundException
+        | IllegalArgumentException
+        | InvocationTargetException
+        | NoSuchMethodException
+        | SecurityException
+        | AbfsAuthorizationException e) {
+      throw new AbfsAuthorizationException("Unable to initialize "
+          + "Authorizer", e);
     }
     return this.authorizer;
   }
 
   void validateStorageAccountKeys() throws InvalidConfigurationValueException {
-    Base64StringConfigurationBasicValidator validator =
-        new Base64StringConfigurationBasicValidator(
+    Base64StringConfigurationBasicValidator validator = new Base64StringConfigurationBasicValidator(
         FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, "", true);
-    this.storageAccountKeys = rawConfig
-        .getValByRegex(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX);
+    this.storageAccountKeys = rawConfig.getValByRegex(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX);
 
     for (Map.Entry<String, String> account : storageAccountKeys.entrySet()) {
       validator.validate(account.getValue());
     }
   }
 
-  int validateInt(Field field)
-      throws IllegalAccessException, InvalidConfigurationValueException {
-    IntegerConfigurationValidatorAnnotation validator = field
-        .getAnnotation(IntegerConfigurationValidatorAnnotation.class);
+  int validateInt(Field field) throws IllegalAccessException, InvalidConfigurationValueException {
+    IntegerConfigurationValidatorAnnotation validator = field.getAnnotation(IntegerConfigurationValidatorAnnotation.class);
     String value = get(validator.ConfigurationKey());
 
     // validate
-    return new IntegerConfigurationBasicValidator(validator.MinValue(),
-        validator.MaxValue(), validator.DefaultValue(),
-        validator.ConfigurationKey(), validator.ThrowIfInvalid())
-        .validate(value);
+    return new IntegerConfigurationBasicValidator(
+        validator.MinValue(),
+        validator.MaxValue(),
+        validator.DefaultValue(),
+        validator.ConfigurationKey(),
+        validator.ThrowIfInvalid()).validate(value);
   }
 
-  long validateLong(Field field)
-      throws IllegalAccessException, InvalidConfigurationValueException {
-    LongConfigurationValidatorAnnotation validator = field
-        .getAnnotation(LongConfigurationValidatorAnnotation.class);
+  long validateLong(Field field) throws IllegalAccessException, InvalidConfigurationValueException {
+    LongConfigurationValidatorAnnotation validator = field.getAnnotation(LongConfigurationValidatorAnnotation.class);
     String value = rawConfig.get(validator.ConfigurationKey());
 
     // validate
-    return new LongConfigurationBasicValidator(validator.MinValue(),
-        validator.MaxValue(), validator.DefaultValue(),
-        validator.ConfigurationKey(), validator.ThrowIfInvalid())
-        .validate(value);
+    return new LongConfigurationBasicValidator(
+        validator.MinValue(),
+        validator.MaxValue(),
+        validator.DefaultValue(),
+        validator.ConfigurationKey(),
+        validator.ThrowIfInvalid()).validate(value);
   }
 
-  String validateString(Field field)
-      throws IllegalAccessException, InvalidConfigurationValueException {
-    StringConfigurationValidatorAnnotation validator = field
-        .getAnnotation(StringConfigurationValidatorAnnotation.class);
+  String validateString(Field field) throws IllegalAccessException, InvalidConfigurationValueException {
+    StringConfigurationValidatorAnnotation validator = field.getAnnotation(StringConfigurationValidatorAnnotation.class);
     String value = rawConfig.get(validator.ConfigurationKey());
 
     // validate
-    return new StringConfigurationBasicValidator(validator.ConfigurationKey(),
-        validator.DefaultValue(), validator.ThrowIfInvalid()).validate(value);
+    return new StringConfigurationBasicValidator(
+        validator.ConfigurationKey(),
+        validator.DefaultValue(),
+        validator.ThrowIfInvalid()).validate(value);
   }
 
-  String validateBase64String(Field field)
-      throws IllegalAccessException, InvalidConfigurationValueException {
-    Base64StringConfigurationValidatorAnnotation validator = field
-        .getAnnotation((Base64StringConfigurationValidatorAnnotation.class));
+  String validateBase64String(Field field) throws IllegalAccessException, InvalidConfigurationValueException {
+    Base64StringConfigurationValidatorAnnotation validator = field.getAnnotation((Base64StringConfigurationValidatorAnnotation.class));
     String value = rawConfig.get(validator.ConfigurationKey());
 
     // validate
     return new Base64StringConfigurationBasicValidator(
-        validator.ConfigurationKey(), validator.DefaultValue(),
+        validator.ConfigurationKey(),
+        validator.DefaultValue(),
         validator.ThrowIfInvalid()).validate(value);
   }
 
-  boolean validateBoolean(Field field)
-      throws IllegalAccessException, InvalidConfigurationValueException {
-    BooleanConfigurationValidatorAnnotation validator = field
-        .getAnnotation(BooleanConfigurationValidatorAnnotation.class);
+  boolean validateBoolean(Field field) throws IllegalAccessException, InvalidConfigurationValueException {
+    BooleanConfigurationValidatorAnnotation validator = field.getAnnotation(BooleanConfigurationValidatorAnnotation.class);
     String value = rawConfig.get(validator.ConfigurationKey());
 
     // validate
-    return new BooleanConfigurationBasicValidator(validator.ConfigurationKey(),
-        validator.DefaultValue(), validator.ThrowIfInvalid()).validate(value);
+    return new BooleanConfigurationBasicValidator(
+        validator.ConfigurationKey(),
+        validator.DefaultValue(),
+        validator.ThrowIfInvalid()).validate(value);
   }
 
   @VisibleForTesting
@@ -761,8 +727,8 @@ public class AbfsConfiguration {
     return abfsAuthorizerClass;
   }
 
-  private String getTrimmedPasswordString(String key, String defaultValue)
-      throws IOException {
+
+  private String getTrimmedPasswordString(String key, String defaultValue) throws IOException {
     String value = getPasswordString(key);
     if (StringUtils.isBlank(value)) {
       value = defaultValue;
