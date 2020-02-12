@@ -3369,6 +3369,28 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           copyObjectRequest.setNewObjectMetadata(dstom);
           Optional.ofNullable(srcom.getStorageClass())
               .ifPresent(copyObjectRequest::setStorageClass);
+          // KMS key patch
+          SSEAwsKeyManagementParams kmsParams = null;
+          String sourceKMSId = srcom.getSSEAwsKmsKeyId();
+          if (isNotEmpty(sourceKMSId)) {
+            // source KMS ID is propagated
+            LOG.debug("Propagating SSE-KMS settings from source {}",
+                sourceKMSId);
+            kmsParams = new SSEAwsKeyManagementParams(sourceKMSId);
+          }
+          if (S3AEncryptionMethods.SSE_KMS.equals(
+              encryptionSecrets.getEncryptionMethod())
+              && isNotEmpty(encryptionSecrets.getEncryptionKey())) {
+            // client has KMS encryption settings.
+            // and explicitly defines a key
+            // these override any of the source file
+            kmsParams = new SSEAwsKeyManagementParams(
+                encryptionSecrets.getEncryptionKey());
+          }
+          if (kmsParams != null) {
+            copyObjectRequest.setSSEAwsKeyManagementParams(
+                kmsParams);
+          }
           Copy copy = transfers.copy(copyObjectRequest);
           copy.addProgressListener(progressListener);
           CopyOutcome copyOutcome = CopyOutcome.waitForCopy(copy);
@@ -3681,6 +3703,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
     if (source.getRestoreExpirationTime() != null) {
       ret.setRestoreExpirationTime(source.getRestoreExpirationTime());
+    }
+    if (source.getSSEAlgorithm() != null) {
+      ret.setSSEAlgorithm(source.getSSEAlgorithm());
     }
     if (source.getSSECustomerAlgorithm() != null) {
       ret.setSSECustomerAlgorithm(source.getSSECustomerAlgorithm());
