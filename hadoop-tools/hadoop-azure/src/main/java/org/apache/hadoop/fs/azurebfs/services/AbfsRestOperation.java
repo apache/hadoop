@@ -18,23 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import org.apache.hadoop.fs.azurebfs.authentication.AuthorizationStatus;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
-import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
-import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResource;
-import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResult;
-import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
-import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -43,6 +26,24 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
+
+import org.apache.hadoop.fs.azurebfs.authentication.AuthorizationStatus;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
+import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
+import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResource;
+import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResult;
+import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -300,8 +301,8 @@ public class AbfsRestOperation {
     try {
       authzResult = authorizer.checkPrivileges(authorizationResource);
     } catch (Exception e) {
-      LOG.debug("checkPrivileges failed with Exception:" + e.getClass()
-          .getCanonicalName() + "-" + e.getMessage());
+      LOG.debug("checkPrivileges failed with Exception:{} - {}", e.getClass()
+          .getCanonicalName(), e.getMessage());
       e.printStackTrace();
       throw e;
     }

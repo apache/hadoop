@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
  * Defines the string literals that need to be set to authorizer as action
  */
 public class AbfsAuthorizerConstants {
-
 
   public static String RENAME_SOURCE_ACTION = "rename-source";
   public static String RENAME_DESTINATION_ACTION = "rename-destination";
@@ -82,8 +81,8 @@ public class AbfsAuthorizerConstants {
     case Mkdir:
       return MKDIR_ACTION;
     default:
-      throw new InvalidAbfsRestOperationException(new Exception("Unknown ABFS "
-          + "Rest Opertation" + opType.name()));
+      throw new InvalidAbfsRestOperationException(
+          new Exception("Unknown ABFS " + "Rest Opertation" + opType.name()));
     }
   }
 

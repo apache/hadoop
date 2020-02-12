@@ -18,26 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.authentication.AuthorizationStatus;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
-import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
-import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResource;
-import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
-import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
-import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -50,57 +30,31 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_JSON;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_OCTET_STREAM;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHECK_ACCESS;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CLIENT_VERSION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COMMA;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DEFAULT_TIMEOUT;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DIRECTORY;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILE;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILESYSTEM;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FLUSH_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH_ENCODE;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_HEAD;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JAVA_VERSION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_VERSION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.PLUS;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.PLUS_ENCODE;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SET_PROPERTIES_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.STAR;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.UTF_8;
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.authentication.AuthorizationStatus;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants;
+import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
+import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResource;
+import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
+import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
+import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
+import org.apache.hadoop.io.IOUtils;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.ACCEPT;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.ACCEPT_CHARSET;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_TYPE;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.IF_MATCH;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.IF_NONE_MATCH;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.RANGE;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.USER_AGENT;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_PROPERTIES;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_RENAME_SOURCE;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_VERSION;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_FS_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_CLOSE;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_CONTINUATION;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_DIRECTORY;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_MAXRESULTS;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_POSITION;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_RECURSIVE;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_RESOURCE;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_RETAIN_UNCOMMITTED_DATA;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_TIMEOUT;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.*;
 
 /**
  * AbfsClient.
@@ -260,34 +214,22 @@ public class AbfsClient implements Closeable {
     AuthorizationStatus listPathAuthzStatus = null;
     boolean useSASToken = (this.authorizer.getAuthType() == AuthType.SAS);
 
+    // Path which is listed will be present in the directory queryparam
+    // and not in the reqeuest url.
+    // hence need to trigger authorization now.
     if (this.authorizer != null) {
+
       String authorizerPath = relativePath;
 
-      if (relativePath.length() == 0)
-      {
+      if (relativePath.length() == 0) {
         authorizerPath = AbfsHttpConstants.ROOT_PATH;
       } else if (relativePath.charAt(0) != Path.SEPARATOR_CHAR) {
         authorizerPath = Path.SEPARATOR_CHAR + relativePath;
       }
 
-      URL pathUrl = createRequestUrl(authorizerPath, "");
-      URI qualifiedPathUri;
-      try {
-        qualifiedPathUri = UriUtils.getQualifiedPathURI(pathUrl);
-      } catch (URISyntaxException ex) {
-        throw new InvalidUriException("Invalid URL: " + pathUrl.toString());
-      }
-
-      AuthorizationResource[] authResource = new AuthorizationResource[1];
-      authResource[0] = new AuthorizationResource();
-      authResource[0].authorizerAction = AbfsAuthorizerConstants.LISTSTATUS_ACTION;
-      authResource[0].storePathUri = qualifiedPathUri;
-
-      // Exception will be thrown from fetchAuthorizationStatus if
-      // authorization status could not be fetched or user is not authorized.
-      listPathAuthzStatus = AbfsRestOperation
-          .fetchAuthorizationStatus(authorizer, authResource);
-      }
+      listPathAuthzStatus = getAuthorizationStatus(authorizerPath,
+          AbfsAuthorizerConstants.LISTSTATUS_ACTION);
+    }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
@@ -311,6 +253,27 @@ public class AbfsClient implements Closeable {
       op.execute();
       return op;
     }
+  }
+
+  private AuthorizationStatus getAuthorizationStatus(String authorizerPath,
+      String authorizerAction) throws AzureBlobFileSystemException {
+
+    URL pathUrl = createRequestUrl(authorizerPath, "");
+    URI qualifiedPathUri;
+    try {
+      qualifiedPathUri = UriUtils.getQualifiedPathURI(pathUrl);
+    } catch (URISyntaxException ex) {
+      throw new InvalidUriException("Invalid URL: " + pathUrl.toString());
+    }
+
+    AuthorizationResource[] authResource = new AuthorizationResource[1];
+    authResource[0] = new AuthorizationResource();
+    authResource[0].authorizerAction = authorizerAction;
+    authResource[0].storePathUri = qualifiedPathUri;
+
+    // Exception will be thrown from fetchAuthorizationStatus if
+    // authorization status could not be fetched or user is not authorized.
+    return AbfsRestOperation.fetchAuthorizationStatus(authorizer, authResource);
   }
 
   public AbfsRestOperation getFilesystemProperties() throws AzureBlobFileSystemException {
@@ -383,12 +346,14 @@ public class AbfsClient implements Closeable {
     String renameSource = FORWARD_SLASH + this.getFileSystem() + source;
     String sourceSasToken = null;
 
-    //final String encodedRenameSource =
-        // urlEncode(FORWARD_SLASH + this.getFileSystem() + source);
-    //requestHeaders.add(new AbfsHttpHeader(X_MS_RENAME_SOURCE,
-//        encodedRenameSource));
-
+    // Source path  will be present in the rename source header
+    // and not in the reqeuest url.
+    // hence need to trigger authorization now.
     if (this.authorizer != null) {
+      // Exception will be thrown from fetchAuthorizationStatus if
+      // authorization status could not be fetched or user is not authorized.
+      srcAuthzStatus = getAuthorizationStatus(renameSource,
+          AbfsAuthorizerConstants.RENAME_SOURCE_ACTION);
 
       URL sourceUrl = createRequestUrl(renameSource, "");
       URI qualifiedSourceUri;
@@ -398,15 +363,6 @@ public class AbfsClient implements Closeable {
         throw new InvalidUriException("Invalid URL: " + sourceUrl.toString());
       }
 
-      AuthorizationResource[] authResource = new AuthorizationResource[1];
-      authResource[0] = new AuthorizationResource();
-      authResource[0].authorizerAction = AbfsAuthorizerConstants.RENAME_SOURCE_ACTION;
-      authResource[0].storePathUri = qualifiedSourceUri;
-
-      // Exception will be thrown from fetchAuthorizationStatus if
-      // authorization status could not be fetched or user is not authorized.
-      srcAuthzStatus = AbfsRestOperation
-          .fetchAuthorizationStatus(authorizer, authResource);
       if ((this.authorizer.getAuthType() == AuthType.SAS) &&
           srcAuthzStatus.isValidSas(qualifiedSourceUri)) {
         sourceSasToken = srcAuthzStatus.getSasTokenQuery(qualifiedSourceUri);

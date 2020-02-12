@@ -24,11 +24,6 @@ import java.util.Hashtable;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriAuthorityException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
-import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
 import org.junit.After;
 import org.junit.Before;
 import org.slf4j.Logger;
@@ -38,6 +33,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriAuthorityException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
+import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
@@ -227,7 +227,7 @@ public abstract class AbstractAbfsIntegrationTest extends
               }
             });
         if (FILE_SYSTEM_NOT_FOUND.getStatusCode() != ex.getStatusCode()) {
-          LOG.warn("Deleted test filesystem may still exist: {}", abfs, ex);
+          LOG.warn("Deleted test filesystem may still exist: {} {}", abfs, ex);
         }
       }
     } catch (Exception e) {

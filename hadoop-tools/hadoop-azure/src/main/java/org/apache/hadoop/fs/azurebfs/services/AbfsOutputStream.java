@@ -18,18 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.fs.FSExceptionMessages;
-import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.fs.Syncable;
-import org.apache.hadoop.fs.azurebfs.authentication.AuthorizationStatus;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizerUnhandledException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.io.ElasticByteBufferPool;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -37,13 +25,26 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.nio.ByteBuffer;
 import java.util.Locale;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+
+import org.apache.hadoop.fs.azurebfs.authentication.AuthorizationStatus;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizerUnhandledException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.io.ElasticByteBufferPool;
+import org.apache.hadoop.fs.FSExceptionMessages;
+import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.Syncable;
 
 import static org.apache.hadoop.io.IOUtils.wrapException;
 

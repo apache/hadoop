@@ -48,8 +48,7 @@ public class AuthorizationStatus {
   public String getSasTokenQuery(URI storePathUri) {
     if (sasTokenMap.containsKey(storePathUri)) {
       SasTokenData sasTokenData = sasTokenMap.get(storePathUri);
-      if (isValidSas(sasTokenData))
-      {
+      if (isValidSas(sasTokenData)) {
         return sasTokenData.sasToken;
       }
     }
@@ -133,6 +132,7 @@ public class AuthorizationStatus {
 
   /**
    * Fetches and checks SAS token for provided Store Path URI
+   *
    * @param storepathUri
    * @return
    */

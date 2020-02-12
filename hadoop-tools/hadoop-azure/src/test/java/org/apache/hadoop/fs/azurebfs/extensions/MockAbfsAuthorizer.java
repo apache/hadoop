@@ -25,21 +25,7 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.APPEND_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.CHECKACCESS_ACTION_PREFIX_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.CREATEFILE_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.DELETE_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.EXECUTE_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.GETACL_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.GETFILESTATUS_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.LISTSTATUS_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.MKDIR_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.READ_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.RENAME_DESTINATION_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.RENAME_SOURCE_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.SETACL_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.SETOWNER_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.SETPERMISSION_ACTION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.*;
 
 /**
  * A mock Azure Blob File System Authorization Implementation

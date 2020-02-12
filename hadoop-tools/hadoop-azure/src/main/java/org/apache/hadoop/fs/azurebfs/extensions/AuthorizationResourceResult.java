@@ -24,8 +24,8 @@ import java.net.URI;
  * AuthorizationResourceResult array will be included in the
  * AuthorizationResult with results for each resource.
  */
-  public class AuthorizationResourceResult {
-    public URI storePathUri;
-    public String authorizerAction;
-    public String authToken;
-  }
+public class AuthorizationResourceResult {
+  public URI storePathUri;
+  public String authorizerAction;
+  public String authToken;
+}
