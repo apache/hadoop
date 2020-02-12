@@ -26,7 +26,6 @@ import java.nio.MappedByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -864,23 +863,13 @@ public class ShortCircuitCache implements Closeable {
       // Close and join cacheCleaner thread.
       IOUtilsClient.cleanupWithLogger(LOG, cacheCleaner);
       // Purge all replicas.
-      while (true) {
-        Object eldestKey;
-        try {
-          eldestKey = evictable.firstKey();
-        } catch (NoSuchElementException e) {
-          break;
-        }
-        purge((ShortCircuitReplica)evictable.get(eldestKey));
+      while (!evictable.isEmpty()) {
+        Object eldestKey = evictable.firstKey();
+        purge((ShortCircuitReplica) evictable.get(eldestKey));
       }
-      while (true) {
-        Object eldestKey;
-        try {
-          eldestKey = evictableMmapped.firstKey();
-        } catch (NoSuchElementException e) {
-          break;
-        }
-        purge((ShortCircuitReplica)evictableMmapped.get(eldestKey));
+      while (!evictableMmapped.isEmpty()) {
+        Object eldestKey = evictableMmapped.firstKey();
+        purge((ShortCircuitReplica) evictableMmapped.get(eldestKey));
       }
     } finally {
       lock.unlock();
