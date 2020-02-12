@@ -89,5 +89,5 @@ docker run --rm=true $DOCKER_INTERACTIVE_RUN \
   -w "/home/${USER_NAME}/hadoop" \
   -v "${HOME}/.m2:/home/${USER_NAME}/.m2${V_OPTS:-}" \
   -v "${HOME}/.gnupg:/home/${USER_NAME}/.gnupg${V_OPTS:-}" \
-  -u "${USER_NAME}" \
+  -u "${USER_ID}" \
   "hadoop-build-${USER_ID}" "$@"
