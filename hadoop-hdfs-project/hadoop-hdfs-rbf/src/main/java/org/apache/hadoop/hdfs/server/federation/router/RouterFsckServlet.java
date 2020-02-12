@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
@@ -62,7 +63,7 @@ public class RouterFsckServlet extends HttpServlet {
         return null;
       });
     } catch (InterruptedException e) {
-      response.sendError(400, e.getMessage());
+      response.sendError(HttpURLConnection.HTTP_BAD_REQUEST, e.getMessage());
     }
   }
 
