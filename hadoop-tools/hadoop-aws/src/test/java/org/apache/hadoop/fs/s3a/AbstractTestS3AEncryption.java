@@ -52,12 +52,25 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.disableFilesystemCaching(conf);
+    patchConfigurationEncryptionSettings(conf);
+    return conf;
+  }
+
+  /**
+   * This removes the encryption settings from the
+   * configuration and then sets the
+   * fs.s3a.server-side-encryption-algorithm value to
+   * be that of {@code getSSEAlgorithm()}.
+   * Called in {@code createConfiguration()}.
+   * @param conf configuration to patch.
+   */
+  protected void patchConfigurationEncryptionSettings(
+      final Configuration conf) {
     removeBaseAndBucketOverrides(conf,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY);
     conf.set(SERVER_SIDE_ENCRYPTION_ALGORITHM,
             getSSEAlgorithm().getMethod());
-    return conf;
   }
 
   private static final int[] SIZES = {
@@ -106,6 +119,9 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     validateEncrytionSecrets(secrets);
     writeDataset(fs, src, data, data.length, 1024 * 1024, true);
     ContractTestUtils.verifyFileContents(fs, src, data);
+    // this file will be encrypted
+    assertEncrypted(src);
+
     Path targetDir = path("target");
     mkdirs(targetDir);
     fs.rename(src, targetDir);
@@ -148,20 +164,40 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
    * @throws IOException on a failure
    */
   protected void assertEncrypted(Path path) throws IOException {
+    //S3 will return full arn of the key, so specify global arn in properties
+    String kmsKeyArn = this.getConfiguration().
+        getTrimmed(SERVER_SIDE_ENCRYPTION_KEY);
+    S3AEncryptionMethods algorithm = getSSEAlgorithm();
+    assertEncrypted(path, algorithm, kmsKeyArn);
+  }
+
+  public void assertEncrypted(final Path path,
+      final S3AEncryptionMethods algorithm,
+      final String kmsKeyArn)
+      throws IOException {
     ObjectMetadata md = getFileSystem().getObjectMetadata(path);
-    switch(getSSEAlgorithm()) {
+    String details = String.format(
+        "file %s with encryption algorthm %s and key %s",
+        path,
+        md.getSSEAlgorithm(),
+        md.getSSEAwsKmsKeyId());
+    switch(algorithm) {
     case SSE_C:
-      assertNull("Metadata algorithm should have been null",
+      assertNull("Metadata algorithm should have been null in "
+          + details,
           md.getSSEAlgorithm());
-      assertEquals("Wrong SSE-C algorithm", SSE_C_ALGORITHM, md.getSSECustomerAlgorithm());
+      assertEquals("Wrong SSE-C algorithm in "
+          + details,
+          SSE_C_ALGORITHM, md.getSSECustomerAlgorithm());
       String md5Key = convertKeyToMd5();
-      assertEquals("getSSECustomerKeyMd5() wrong", md5Key, md.getSSECustomerKeyMd5());
+      assertEquals("getSSECustomerKeyMd5() wrong in " + details,
+          md5Key, md.getSSECustomerKeyMd5());
       break;
     case SSE_KMS:
-      assertEquals(AWS_KMS_SSE_ALGORITHM, md.getSSEAlgorithm());
-      //S3 will return full arn of the key, so specify global arn in properties
-      assertEquals(this.getConfiguration().
-          getTrimmed(SERVER_SIDE_ENCRYPTION_KEY),
+      assertEquals("Wrong algorithm in " + details,
+          AWS_KMS_SSE_ALGORITHM, md.getSSEAlgorithm());
+      assertEquals("Wrong KMS key in " + details,
+          kmsKeyArn,
           md.getSSEAwsKmsKeyId());
       break;
     default:
