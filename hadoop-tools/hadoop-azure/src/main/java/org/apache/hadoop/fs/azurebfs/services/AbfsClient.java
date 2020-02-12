@@ -212,7 +212,8 @@ public class AbfsClient implements Closeable {
                                     final String continuation) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     AuthorizationStatus listPathAuthzStatus = null;
-    boolean useSASToken = (this.authorizer.getAuthType() == AuthType.SAS);
+    boolean useSASToken = ((this.authorizer != null)
+        && this.authorizer.getAuthType() == AuthType.SAS);
 
     // Path which is listed will be present in the directory queryparam
     // and not in the reqeuest url.

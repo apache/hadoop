@@ -140,7 +140,6 @@ public class MockAbfsAuthorizer implements AbfsAuthorizer {
           && storeFileOrFolder.equals(TEST_WRITE_THEN_READ_ONLY) && (
           writeThenReadOnly == 1)) {
         // WRITE THEN READ
-        //writeThenReadOnly = 0;
         return getAuthzResourceResultWithoutSAS(resource);
       } else if ((neededAccessPerm == accessPermissions.Write) && (
           writeOnlyPaths.contains(storeFileOrFolder) || readWritePaths
@@ -151,7 +150,6 @@ public class MockAbfsAuthorizer implements AbfsAuthorizer {
           && storeFileOrFolder.equals(TEST_WRITE_THEN_READ_ONLY) && (
           writeThenReadOnly == 0)) {
         // WRITE THEN READ
-        //writeThenReadOnly = 1;
         return getAuthzResourceResultWithoutSAS(resource);
       } else if ((neededAccessPerm == accessPermissions.ReadWrite)
           && readWritePaths.contains(storeFileOrFolder)) {

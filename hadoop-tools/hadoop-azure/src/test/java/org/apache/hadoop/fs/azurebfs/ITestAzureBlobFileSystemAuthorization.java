@@ -22,6 +22,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
+import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -74,6 +76,9 @@ public class ITestAzureBlobFileSystemAuthorization
 
   @Override
   public void setup() throws Exception {
+    boolean isHNSEnabled =
+        this.getConfiguration().getBoolean(TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
+    Assume.assumeTrue(isHNSEnabled == true);
     this.getConfiguration().setAbfsAuthorizerClass(TEST_AUTHZ_CLASS);
     loadAuthorizer();
     super.setup();
