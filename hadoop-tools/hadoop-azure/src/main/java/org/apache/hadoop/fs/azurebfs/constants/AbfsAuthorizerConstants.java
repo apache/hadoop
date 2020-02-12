@@ -26,26 +26,27 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
  */
 public class AbfsAuthorizerConstants {
 
-  public static String RENAME_SOURCE_ACTION = "rename-source";
-  public static String RENAME_DESTINATION_ACTION = "rename-destination";
+  public static final String RENAME_SOURCE_ACTION = "rename-source";
+  public static final String RENAME_DESTINATION_ACTION = "rename-destination";
 
-  public static String CONCAT_SOURCE_ACTION = "concat-source";
-  public static String CONCAT_TARGET_ACTION = "concat-target";
+  public static final String CONCAT_SOURCE_ACTION = "concat-source";
+  public static final String CONCAT_TARGET_ACTION = "concat-target";
 
-  public static String CHECKACCESS_ACTION_PREFIX_ACTION = "access-";
+  public static final String CHECKACCESS_ACTION_PREFIX_ACTION = "access-";
 
-  public static String LISTSTATUS_ACTION = "liststatus";
-  public static String DELETE_ACTION = "delete";
-  public static String CREATEFILE_ACTION = "create";
-  public static String MKDIR_ACTION = "mkdir";
-  public static String GETACL_ACTION = "getaclstatus";
-  public static String GETFILESTATUS_ACTION = "getfilestatus";
-  public static String SETACL_ACTION = "setacl"; // Modify, removeacl, setacl
-  public static String SETOWNER_ACTION = "setowner";
-  public static String SETPERMISSION_ACTION = "setpermission";
-  public static String APPEND_ACTION = "write";
-  public static String READ_ACTION = "read";
-  public static String EXECUTE_ACTION = "execute";
+  public static final String LISTSTATUS_ACTION = "liststatus";
+  public static final String DELETE_ACTION = "delete";
+  public static final String CREATEFILE_ACTION = "create";
+  public static final String MKDIR_ACTION = "mkdir";
+  public static final String GETACL_ACTION = "getaclstatus";
+  public static final String GETFILESTATUS_ACTION = "getfilestatus";
+  public static final String SETACL_ACTION = "setacl"; // Modify, removeacl,
+  // setacl
+  public static final String SETOWNER_ACTION = "setowner";
+  public static final String SETPERMISSION_ACTION = "setpermission";
+  public static final String APPEND_ACTION = "write";
+  public static final String READ_ACTION = "read";
+  public static final String EXECUTE_ACTION = "execute";
 
   /**
    * Converts AbfsRestOperation to Authorizer action

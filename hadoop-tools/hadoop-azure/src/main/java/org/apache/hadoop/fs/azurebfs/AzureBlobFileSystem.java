@@ -652,8 +652,6 @@ public class AzureBlobFileSystem extends FileSystem {
       throw new IllegalArgumentException("A valid name and value must be specified.");
     }
 
-    Path qualifiedPath = makeQualified(path);
-
     try {
       Hashtable<String, String> properties = abfsStore.getPathStatus(path);
       String xAttrName = ensureValidAttributeName(name);
@@ -686,8 +684,6 @@ public class AzureBlobFileSystem extends FileSystem {
     if (name == null || name.isEmpty()) {
       throw new IllegalArgumentException("A valid name must be specified.");
     }
-
-    Path qualifiedPath = makeQualified(path);
 
     byte[] value = null;
     try {

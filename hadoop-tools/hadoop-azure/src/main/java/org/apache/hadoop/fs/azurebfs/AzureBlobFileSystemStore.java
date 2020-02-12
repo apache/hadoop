@@ -1148,8 +1148,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     // Create cred instance based on account level Auth config if
     // - authorizer is not configured
     // - or authroizer configured will not provide SAS
-    if ((authorizer == null) ||
-        ((authorizer != null) && (authorizer.getAuthType() != AuthType.SAS))) {
+    if ((authorizer == null) || ((authorizer.getAuthType() != AuthType.SAS))) {
       switch (authType) {
       case SharedKey:
         LOG.trace("Fetching SharedKey credentials");
