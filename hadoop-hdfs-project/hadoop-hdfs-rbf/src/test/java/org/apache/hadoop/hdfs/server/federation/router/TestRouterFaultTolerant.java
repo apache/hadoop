@@ -309,7 +309,7 @@ public class TestRouterFaultTolerant {
     tasks.add(getListFailTask(router0Fs, mountPoint));
     int filesExpected = dirs0.length + results.getSuccess();
     tasks.add(getListSuccessTask(router1Fs, mountPoint, filesExpected));
-    results = collectResults("List "  + mountPoint, tasks);
+    results = collectResults("List " + mountPoint, tasks);
     assertEquals("Failed listing", 2, results.getSuccess());
 
     tasks.add(getContentSummaryFailTask(router0Fs, mountPoint));
@@ -344,17 +344,22 @@ public class TestRouterFaultTolerant {
     TaskResults results = collectResults("Create file " + dir0, tasks);
 
     LOG.info("Check files results for {}: {}", dir0, results);
-    if (faultTolerant || !DestinationOrder.FOLDER_ALL.contains(order)) {
-      assertEquals(NUM_FILES, results.getSuccess());
-      assertEquals(0, results.getFailure());
+    if (faultTolerant) {
+      assertEquals("Not enough success in " + mountPoint,
+          NUM_FILES, results.getSuccess());
+      assertEquals("Nothing should fail in " + mountPoint, 0,
+          results.getFailure());
     } else {
-      assertBothResults("check files " + dir0, NUM_FILES, results);
+      assertEquals("Nothing should succeed in " + mountPoint,
+          0, results.getSuccess());
+      assertEquals("Everything should fail in " + mountPoint,
+          NUM_FILES, results.getFailure());
     }
 
     LOG.info("Check files listing for {}", dir0);
     tasks.add(getListFailTask(router0Fs, dir0));
     tasks.add(getListSuccessTask(router1Fs, dir0, results.getSuccess()));
-    assertEquals(2, collectResults("List "  + dir0, tasks).getSuccess());
+    assertEquals(2, collectResults("List " + dir0, tasks).getSuccess());
 
     tasks.add(getContentSummaryFailTask(router0Fs, dir0));
     tasks.add(getContentSummarySuccessTask(

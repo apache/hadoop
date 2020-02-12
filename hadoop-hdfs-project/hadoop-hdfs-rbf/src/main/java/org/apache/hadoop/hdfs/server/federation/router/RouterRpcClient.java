@@ -1156,22 +1156,34 @@ public class RouterRpcClient {
     final List<RemoteResult<T, R>> results = invokeConcurrent(
         locations, method, standby, timeOutMs, clazz);
 
+    // Go over the results and exceptions
     final Map<T, R> ret = new TreeMap<>();
+    final List<IOException> thrownExceptions = new ArrayList<>();
+    IOException firstUnavailableException = null;
     for (final RemoteResult<T, R> result : results) {
-      // Response from all servers required, use this error.
-      if (requireResponse && result.hasException()) {
-        throw result.getException();
+      if (result.hasException()) {
+        IOException ioe = result.getException();
+        thrownExceptions.add(ioe);
+        // Track unavailable exceptions to throw them first
+        if (isUnavailableException(ioe)) {
+          firstUnavailableException = ioe;
+        }
       }
       if (result.hasResult()) {
         ret.put(result.getLocation(), result.getResult());
       }
     }
 
-    // Throw the exception for the first location if there are no results
-    if (ret.isEmpty()) {
-      final RemoteResult<T, R> result = results.get(0);
-      if (result.hasException()) {
-        throw result.getException();
+    // Throw exceptions if needed
+    if (!thrownExceptions.isEmpty()) {
+      // Throw if response from all servers required or no results
+      if (requireResponse || ret.isEmpty()) {
+        // Throw unavailable exceptions first
+        if (firstUnavailableException != null) {
+          throw firstUnavailableException;
+        } else {
+          throw thrownExceptions.get(0);
+        }
       }
     }
 
