@@ -50,6 +50,11 @@
     <description>The read-only landsat-pds repository isn't
         managed by s3guard</description>
   </property>
+  <property>
+    <name>fs.s3a.bucket.landsat-pds.probe</name>
+    <value>0</value>
+    <description>Let's postpone existence checks to the first IOoperation </description>
+  </property>
 
   <!-- Convenience definitions. -->
   <property>
