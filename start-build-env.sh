@@ -74,5 +74,5 @@ docker run --rm=true -t -i \
   -v "${PWD}:/home/${USER_NAME}/hadoop${V_OPTS:-}" \
   -w "/home/${USER_NAME}/hadoop" \
   -v "${HOME}/.m2:/home/${USER_NAME}/.m2${V_OPTS:-}" \
-  -u "${USER_NAME}" \
+  -u "${USER_ID}" \
   "hadoop-build-${USER_ID}"
