@@ -319,6 +319,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
           return null;
         }
         if (flush) {
+          /* Append with Flush enabled should happen
+           * when all the data which was supposed to be 
+           * appended has been sent and finished.
+           */
           while(lastTotalAppendOffset <  lastFlushOffset);
         }
         client.append(path, offset, bytes, 0,
