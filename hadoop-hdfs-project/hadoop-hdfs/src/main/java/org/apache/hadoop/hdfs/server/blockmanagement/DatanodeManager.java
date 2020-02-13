@@ -1688,8 +1688,24 @@ public class DatanodeManager {
       List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
           numReplicationTasks);
       if (pendingList != null && !pendingList.isEmpty()) {
-        cmds.add(new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blockPoolId,
-            pendingList));
+        // If the block is deleted, the block size will become
+        // BlockCommand.NO_ACK (LONG.MAX_VALUE) . This kind of block we don't
+        // need
+        // to send for replication or reconstruction
+        Iterator<BlockTargetPair> iterator = pendingList.iterator();
+        while (iterator.hasNext()) {
+          BlockTargetPair cmd = iterator.next();
+          if (cmd.block != null
+              && cmd.block.getNumBytes() == BlockCommand.NO_ACK) {
+            // block deleted
+            DatanodeStorageInfo.decrementBlocksScheduled(cmd.targets);
+            iterator.remove();
+          }
+        }
+        if (!pendingList.isEmpty()) {
+          cmds.add(new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blockPoolId,
+              pendingList));
+        }
       }
       // check pending erasure coding tasks
       List<BlockECReconstructionInfo> pendingECList = nodeinfo
