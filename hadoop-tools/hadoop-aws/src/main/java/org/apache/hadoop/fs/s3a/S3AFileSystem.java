@@ -170,6 +170,7 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_ALLOW_SSE_KMS
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3Operations;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.TokenIssuingPolicy.NoTokensAvailable;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDelegationTokenBinding;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
@@ -2890,9 +2891,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         } catch (AmazonServiceException e) {
           // if the response is a 404 error, it just means that there is
           // no file at that path...the remaining checks will be needed.
-          if (e.getStatusCode() != SC_404
-              || UnknownStoreException.E_NO_SUCH_BUCKET.equals(
-                  e.getErrorCode())) {
+          if (e.getStatusCode() != SC_404 || isUnknownBucket(e)) {
             throw translateException("getFileStatus", path, e);
           }
         } catch (AmazonClientException e) {
@@ -2924,9 +2923,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                     meta.getVersionId());
           }
         } catch (AmazonServiceException e) {
-          if (e.getStatusCode() != SC_404
-              || UnknownStoreException.E_NO_SUCH_BUCKET.equals(
-                  e.getErrorCode())) {
+          if (e.getStatusCode() != SC_404 || isUnknownBucket(e)) {
             throw translateException("getFileStatus", newKey, e);
           }
         } catch (AmazonClientException e) {
@@ -2965,9 +2962,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           return new S3AFileStatus(Tristate.TRUE, path, username);
         }
       } catch (AmazonServiceException e) {
-        if (e.getStatusCode() != SC_404
-            || UnknownStoreException.E_NO_SUCH_BUCKET.equals(
-                e.getErrorCode())) {
+        if (e.getStatusCode() != SC_404 || isUnknownBucket(e)) {
           throw translateException("getFileStatus", path, e);
         }
       } catch (AmazonClientException e) {

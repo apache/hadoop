@@ -20,10 +20,8 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
-import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
 /**
