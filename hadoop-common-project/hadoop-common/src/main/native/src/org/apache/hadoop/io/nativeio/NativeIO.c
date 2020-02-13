@@ -53,6 +53,9 @@
 #include <assert.h>
 #include <Windows.h>
 #include "winutils.h"
+#include <winsock.h>
+#pragma comment(lib, "Mswsock.lib")
+#define TF_USE_KERNEL_APC 0x20
 #endif
 
 #include "file_descriptor.h"
@@ -80,6 +83,12 @@ static jmethodID stat_ctor2;
 // the NativeIOException class and its constructor
 static jclass nioe_clazz;
 static jmethodID nioe_ctor;
+
+/* field id for jlong 'handle' in java.io.FileDescriptor used for file fds */
+static jfieldID handle_fdID;
+
+/* field id for jint 'fd' in java.io.FileDescriptor used for socket fds */
+static jfieldID fd_fdID;
 
 // the monitor used for working around non-threadsafe implementations
 // of getpwuid_r, observed on platforms including RHEL 6.0.
@@ -1338,6 +1347,68 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024Windows_extendWorkingSetSize(
   }
   // There is no need to call CloseHandle on the pseudo-handle returned from
   // GetCurrentProcess.
+#endif
+}
+
+jint
+fdval(JNIEnv *env, jobject fdo)
+{
+    return (*env)->GetIntField(env, fdo, fd_fdID);
+}
+
+jlong
+handleval(JNIEnv *env, jobject fdo)
+{
+    return (*env)->GetLongField(env, fdo, handle_fdID);
+}
+
+JNIEXPORT jlong JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_00024Windows_transmitFile(
+  JNIEnv *env, jobject jObject, jobject srcFD, jlong position, jlong count,
+  jobject dstFD)
+{
+#ifdef UNIX
+  THROW(env, "java/io/IOException",
+    "The function transmitFile is not supported on Unix");
+#endif
+
+#ifdef WINDOWS
+    jclass clazz;
+
+    HANDLE src;
+    HANDLE dst;
+    LARGE_INTEGER srcPosition;
+    DWORD numberOfBytesToWrite;
+    BOOL result;
+
+    clazz = (*env)->FindClass(env, "java/io/FileDescriptor");
+    fd_fdID = (*env)->GetFieldID(env, clazz, "fd", "I");
+    handle_fdID = (*env)->GetFieldID(env, clazz, "handle", "J");
+
+    src = (HANDLE)(handleval(env, srcFD));
+    dst = (SOCKET)(fdval(env, dstFD));
+
+    numberOfBytesToWrite = (DWORD)count;
+
+    srcPosition.QuadPart = position;
+    result = SetFilePointerEx(src, srcPosition, &srcPosition, FILE_BEGIN);
+    if (result == 0) {
+        throw_ioe(env, WSAGetLastError());
+    }
+
+    result = TransmitFile(
+        dst,
+        src,
+        numberOfBytesToWrite,
+        0,
+        NULL,
+        NULL,
+        TF_USE_KERNEL_APC
+    );
+    if (!result) {
+        throw_ioe(env, WSAGetLastError());
+    }
+    return numberOfBytesToWrite;
 #endif
 }
 

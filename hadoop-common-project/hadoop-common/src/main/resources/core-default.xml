@@ -3843,4 +3843,17 @@
       Enable Server Name Indication (SNI) host check for HTTPS enabled server.
     </description>
   </property>
+
+  <property>
+    <description>
+      Controls whether TransmitFile is used on Windows to transfer data over
+      sockets. TransmitFile transmits file data over a connected socket handle.
+      This function uses the operating system's cache manager to retrieve the
+      file data, and provides high-performance file data transfer over sockets.
+      It can help reduce CPU usage for a server that is handling high number of
+      smaller queries per second.
+    </description>
+    <name>hadoop.nativeio.transmitfile.windows.enable</name>
+    <value>false</value>
+  </property>
 </configuration>

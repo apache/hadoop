@@ -613,7 +613,7 @@ class BlockSender implements java.io.Closeable {
         LongWritable transferTime = new LongWritable();
         fileIoProvider.transferToSocketFully(
             ris.getVolumeRef().getVolume(), sockOut, fileCh, blockInPosition,
-            dataLen, waitTime, transferTime);
+            dataLen, waitTime, transferTime, (FileInputStream)ris.getDataIn());
         datanode.metrics.addSendDataPacketBlockedOnNetworkNanos(waitTime.get());
         datanode.metrics.addSendDataPacketTransferNanos(transferTime.get());
         blockInPosition += dataLen;

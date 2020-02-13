@@ -426,4 +426,13 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
       "dfs.client.ignore.namenode.default.kms.uri";
   public static final boolean
       DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI_DEFAULT = false;
+
+  /**
+   * Controls whether TransmitFile Windows method is used for transmitting data
+   * over sockets.
+   */
+  public static final String HADOOP_NATIVEIO_TRANSMITFILE_WINDOWS_ENABLE =
+      "hadoop.nativeio.transmitfile.windows.enable";
+  public static final boolean
+      HADOOP_NATIVEIO_TRANSMITFILE_WINDOWS_ENABLE_DEFAULT = false;
 }

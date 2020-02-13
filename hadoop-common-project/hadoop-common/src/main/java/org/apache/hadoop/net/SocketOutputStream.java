@@ -19,6 +19,7 @@
 package org.apache.hadoop.net;
 
 import java.io.EOFException;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
@@ -32,6 +33,8 @@ import java.nio.channels.WritableByteChannel;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.nativeio.NativeIO;
+import sun.nio.ch.SelChImpl;
 
 /**
  * This implements an output stream that can have a timeout while writing.
@@ -199,7 +202,11 @@ public class SocketOutputStream extends OutputStream
    * @throws IOException Includes any exception thrown by 
    *         {@link FileChannel#transferTo(long, long, WritableByteChannel)}. 
    */
-  public void transferToFully(FileChannel fileCh, long position, int count,
+  public void transferToFully(
+      FileInputStream fileInputStream,
+      FileChannel fileCh,
+      long position,
+      int count,
       LongWritable waitForWritableTime,
       LongWritable transferToTime) throws IOException {
     long waitTime = 0;
@@ -219,7 +226,9 @@ public class SocketOutputStream extends OutputStream
       waitForWritable();
       long wait = System.nanoTime();
 
-      int nTransfered = (int) fileCh.transferTo(position, count, getChannel());
+      int nTransfered = (int) NativeIO.transferTo(fileCh,
+          fileInputStream.getFD(), getChannel(),
+          ((SelChImpl) getChannel()).getFD(), position, count);
       
       if (nTransfered == 0) {
         //check if end of file is reached.
@@ -252,13 +261,14 @@ public class SocketOutputStream extends OutputStream
 
   /**
    * Call
-   * {@link #transferToFully(FileChannel, long, int, LongWritable, LongWritable)
-   * }
+   * {@link #transferToFully(FileInputStream, FileChannel, long, int,
+   *                         LongWritable, LongWritable)}
    * with null <code>waitForWritableTime</code> and <code>transferToTime</code>
    */
-  public void transferToFully(FileChannel fileCh, long position, int count)
-      throws IOException {
-    transferToFully(fileCh, position, count, null, null);
+  public void transferToFully(
+      FileInputStream fileInputStream, FileChannel fileCh, long position,
+      int count) throws IOException {
+    transferToFully(fileInputStream, fileCh, position, count, null, null);
   }
 
   public void setTimeout(int timeoutMs) {

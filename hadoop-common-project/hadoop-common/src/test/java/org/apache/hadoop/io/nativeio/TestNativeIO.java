@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.nativeio;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -25,6 +26,12 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.MappedByteBuffer;
@@ -55,7 +62,10 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.StatUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Time;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_NATIVEIO_TRANSMITFILE_WINDOWS_ENABLE;
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.*;
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.Stat.*;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
@@ -69,6 +79,7 @@ import static org.junit.Assert.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.nio.ch.SelChImpl;
 
 public class TestNativeIO {
   static final Logger LOG = LoggerFactory.getLogger(TestNativeIO.class);
@@ -912,6 +923,139 @@ public class TestNativeIO {
     byte[] readBuf3 = new byte[(int)length];
     IOUtils.readFully(new FileInputStream(filePath), readBuf3, 0, (int)length);
     assertArrayEquals(data, readBuf3);
+  }
+
+  @Test (timeout = 30000)
+  public void testTransferTo() throws Exception {
+    testTransferToInternal(GenericTestUtils.getMethodName());
+  }
+
+  @Test (timeout = 30000)
+  public void testTransferToTransmitFile() throws Exception {
+    assumeTrue(Shell.WINDOWS);
+    Configuration conf = new Configuration();
+    conf.setBoolean(HADOOP_NATIVEIO_TRANSMITFILE_WINDOWS_ENABLE, true);
+
+    NativeIO.setConf(conf);
+
+    testTransferToInternal(GenericTestUtils.getMethodName());
+  }
+
+  private void testTransferToInternal(String methodName) throws Exception {
+    File srcFile = new File(TEST_DIR, methodName + ".src.dat");
+    final int size = 0x2000000; // 32 MB
+    FileChannel channel = null;
+    RandomAccessFile raSrcFile = null;
+    SocketServer server = null;
+
+    try {
+      server = new SocketServer();
+      server.start();
+      raSrcFile = new RandomAccessFile(srcFile, "rw");
+      channel = raSrcFile.getChannel();
+      FileDescriptor srcFD = raSrcFile.getFD();
+
+      byte[] srcBytes = writeRandomBytes(channel, size);
+
+      // 1. Test whole file
+      testTransferToRange(server, channel, srcBytes, srcFD, 0, size);
+
+      // 2. Test different slices
+      int halfSize = size / 2;
+      testTransferToRange(server, channel, srcBytes, srcFD, 0, halfSize);
+      testTransferToRange(server, channel, srcBytes, srcFD, halfSize, size);
+      testTransferToRange(server, channel, srcBytes, srcFD, 4096, 40960);
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, channel);
+      IOUtils.cleanupWithLogger(LOG, raSrcFile);
+      IOUtils.cleanupWithLogger(LOG, server);
+      FileUtils.deleteQuietly(TEST_DIR);
+    }
+  }
+
+  private byte[] writeRandomBytes(FileChannel fileChannel, int size)
+      throws IOException {
+    Random rb = new Random();
+    byte[] randomBytes = new byte[size];
+    rb.nextBytes(randomBytes);
+    ByteBuffer randomBytesBuf = ByteBuffer.wrap(randomBytes);
+    fileChannel.write(randomBytesBuf);
+    return randomBytes;
+  }
+
+  private void testTransferToRange(
+      SocketServer server, FileChannel channel, byte[] srcBytes,
+      FileDescriptor srcFD, int position, int lengthRequested)
+      throws Exception {
+
+    SocketChannel socketChannel = SocketChannel.open();
+    InetSocketAddress serverAddr = new InetSocketAddress(
+        server.getSocketAddress(), server.getPort());
+    socketChannel.connect(serverAddr);
+
+    NativeIO.transferTo(channel, srcFD, socketChannel.socket().getChannel(),
+        ((SelChImpl) socketChannel).getFD(), position, lengthRequested);
+    socketChannel.close();
+
+    byte[] bytesWritten = server.listenerThread.getBytes();
+    assertTrue(bytesWritten.length > 0);
+
+    // Check bytes match
+    byte[] expectedBytes = Arrays.copyOfRange(srcBytes, position,
+        position + bytesWritten.length);
+
+    assertTrue(Arrays.equals(expectedBytes, bytesWritten));
+  }
+
+  private class SocketServer implements Closeable {
+    private ServerSocket server;
+    private ListenerThread listenerThread;
+
+    SocketServer() throws Exception {
+      this.server = new ServerSocket(0, 1, InetAddress.getLocalHost());
+      this.listenerThread = new ListenerThread();
+    }
+
+    public void start() {
+      listenerThread.setDaemon(true);
+      listenerThread.start();
+    }
+
+    public void close() throws IOException {
+      server.close();
+    }
+
+    class ListenerThread extends Thread {
+
+      private byte[] bytesWritten = null;
+
+      @Override
+      public void run() {
+        try {
+          while (true) {
+            Socket client = server.accept();
+            synchronized (this) {
+              bytesWritten = org.apache.commons.io.IOUtils.toByteArray(
+                  client.getInputStream());
+            }
+          }
+        } catch (Exception e) {
+          LOG.error("Exception in listener thread", e);
+        }
+      }
+
+      synchronized byte[] getBytes() {
+        return bytesWritten;
+      }
+    }
+
+    InetAddress getSocketAddress() {
+      return this.server.getInetAddress();
+    }
+
+    public int getPort() {
+      return this.server.getLocalPort();
+    }
   }
 
   private static byte[] generateSequentialBytes(int start, int length) {
