@@ -130,8 +130,10 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   private String bucket;
 
+  @SuppressWarnings("StaticNonFinalField")
   private static DynamoDBMetadataStore ddbmsStatic;
 
+  @SuppressWarnings("StaticNonFinalField")
   private static String testDynamoDBTableName;
 
   private static final List<Path> UNCHANGED_ENTRIES = Collections.emptyList();
@@ -166,13 +168,17 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
     try{
       super.setUp();
-      tableHandler = getDynamoMetadataStore().getTableHandler();
     } catch (FileNotFoundException e){
       LOG.warn("MetadataStoreTestBase setup failed. Waiting for table to be "
-          + "deleted before trying again.");
-      ddbmsStatic.getTable().waitForDelete();
+          + "deleted before trying again.", e);
+      try {
+        ddbmsStatic.getTable().waitForDelete();
+      } catch (IllegalArgumentException | InterruptedException ex) {
+        LOG.warn("When awaiting a table to be cleaned up", e);
+      }
       super.setUp();
     }
+    tableHandler = getDynamoMetadataStore().getTableHandler();
   }
 
   @BeforeClass
@@ -780,10 +786,16 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         .withTagKeys(VERSION_MARKER_TAG_NAME));
   }
 
-  private void deleteVersionMarkerItem(Table table) {
+  /**
+   * Deletes a version marker; spins briefly to await it disappearing.
+   * @param table table to delete the key
+   * @throws Exception failure
+   */
+  private void deleteVersionMarkerItem(Table table) throws Exception {
     table.deleteItem(VERSION_MARKER_PRIMARY_KEY);
-    assertNull("Version marker should be null after deleting it " +
-            "from the table.", table.getItem(VERSION_MARKER_PRIMARY_KEY));
+    eventually(30_000, 1_0, () ->
+        assertNull("Version marker should be null after deleting it " +
+            "from the table.", table.getItem(VERSION_MARKER_PRIMARY_KEY)));
   }
 
   /**
@@ -1003,7 +1015,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String tableName = getTestTableName("testDeleteTable");
     Path testPath = new Path(new Path(fsUri), "/" + tableName);
     final S3AFileSystem s3afs = getFileSystem();
-    final Configuration conf = getTableCreationConfig();
+    // patch the filesystem config as this is one read in initialize()
+    final Configuration conf =  s3afs.getConf();
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     enableOnDemand(conf);
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();

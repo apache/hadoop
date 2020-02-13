@@ -174,9 +174,41 @@ public final class Constants {
   public static final String PROXY_DOMAIN = "fs.s3a.proxy.domain";
   public static final String PROXY_WORKSTATION = "fs.s3a.proxy.workstation";
 
-  // number of times we should retry errors
+  /**
+   * Number of times the AWS client library should retry errors before
+   * escalating to the S3A code: {@value}.
+   */
   public static final String MAX_ERROR_RETRIES = "fs.s3a.attempts.maximum";
+
+  /**
+   * Default number of times the AWS client library should retry errors before
+   * escalating to the S3A code: {@value}.
+   */
   public static final int DEFAULT_MAX_ERROR_RETRIES = 10;
+
+  /**
+   * Experimental/Unstable feature: should the AWS client library retry
+   * throttle responses before escalating to the S3A code: {@value}.
+   *
+   * When set to false, the S3A connector sees all S3 throttle events,
+   * And so can update it counters and the metrics, and use its own retry
+   * policy.
+   * However, this may have adverse effects on some operations where the S3A
+   * code cannot retry as efficiently as the AWS client library.
+   *
+   * This only applies to S3 operations, not to DynamoDB or other services.
+   */
+  @InterfaceStability.Unstable
+  public static final String EXPERIMENTAL_AWS_INTERNAL_THROTTLING =
+      "fs.s3a.experimental.aws.s3.throttling";
+
+  /**
+   * Default value of {@link #EXPERIMENTAL_AWS_INTERNAL_THROTTLING},
+   * value: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final boolean EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT =
+      true;
 
   // seconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT =
@@ -224,6 +256,33 @@ public final class Constants {
   //enable multiobject-delete calls?
   public static final String ENABLE_MULTI_DELETE =
       "fs.s3a.multiobjectdelete.enable";
+
+  /**
+   * Number of objects to delete in a single multi-object delete {@value}.
+   * Max: 1000.
+   *
+   * A bigger value it means fewer POST requests when deleting a directory
+   * tree with many objects.
+   * However, as you are limited to only a a few thousand requests per
+   * second against a single partition of an S3 bucket,
+   * a large page size can easily overload the bucket and so trigger
+   * throttling.
+   *
+   * Furthermore, as the reaction to this request is being throttled
+   * is simply to retry it -it can take a while for the situation to go away.
+   * While a large value may give better numbers on tests and benchmarks
+   * where only a single operations being executed, once multiple
+   * applications start working with the same bucket these large
+   * deletes can be highly disruptive.
+   */
+  public static final String BULK_DELETE_PAGE_SIZE =
+      "fs.s3a.bulk.delete.page.size";
+
+  /**
+   * Default Number of objects to delete in a single multi-object
+   * delete: {@value}.
+   */
+  public static final int BULK_DELETE_PAGE_SIZE_DEFAULT = 250;
 
   // comma separated list of directories
   public static final String BUFFER_DIR = "fs.s3a.buffer.dir";
@@ -733,8 +792,7 @@ public final class Constants {
   /**
    * Default throttled retry limit: {@value}.
    */
-  public static final int RETRY_THROTTLE_LIMIT_DEFAULT =
-      DEFAULT_MAX_ERROR_RETRIES;
+  public static final int RETRY_THROTTLE_LIMIT_DEFAULT = 20;
 
   /**
    * Interval between retry attempts on throttled requests: {@value}.
