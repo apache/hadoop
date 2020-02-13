@@ -50,7 +50,7 @@ import org.apache.hadoop.tracing.Span;
 import org.apache.hadoop.tracing.TraceScope;
 import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.tracing.TraceUtils;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import io.opentracing.SpanContext;
 
 /** Receiver */
