@@ -83,6 +83,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplicasMap.Reason;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBlockResult;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingDataNodeMessages.ReportedBlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.PendingReconstructionBlocks.PendingBlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
@@ -1112,15 +1113,15 @@ public class BlockManager implements BlockStatsMXBean {
       DatanodeStorageInfo[] expectedStorages =
           blk.getUnderConstructionFeature().getExpectedStorageLocations();
       if (expectedStorages.length - blk.numNodes() > 0) {
-        ArrayList<DatanodeDescriptor> pendingNodes = new ArrayList<>();
+        ArrayList<DatanodeStorageInfo> pendingNodes = new ArrayList<>();
         for (DatanodeStorageInfo storage : expectedStorages) {
           DatanodeDescriptor dnd = storage.getDatanodeDescriptor();
           if (blk.findStorageInfo(dnd) == null) {
-            pendingNodes.add(dnd);
+            pendingNodes.add(storage);
           }
         }
         pendingReconstruction.increment(blk,
-            pendingNodes.toArray(new DatanodeDescriptor[pendingNodes.size()]));
+            pendingNodes.toArray(new DatanodeStorageInfo[pendingNodes.size()]));
       }
     }
   }
@@ -2170,8 +2171,7 @@ public class BlockManager implements BlockStatsMXBean {
     // Move the block-replication into a "pending" state.
     // The reason we use 'pending' is so we can retry
     // reconstructions that fail after an appropriate amount of time.
-    pendingReconstruction.increment(block,
-        DatanodeStorageInfo.toDatanodeDescriptors(targets));
+    pendingReconstruction.increment(block, targets);
     blockLog.debug("BLOCK* block {} is moved from neededReconstruction to "
         + "pendingReconstruction", block);
 
@@ -4084,7 +4084,7 @@ public class BlockManager implements BlockStatsMXBean {
     BlockInfo storedBlock = getStoredBlock(block);
     if (storedBlock != null &&
         block.getGenerationStamp() == storedBlock.getGenerationStamp()) {
-      if (pendingReconstruction.decrement(storedBlock, node)) {
+      if (pendingReconstruction.decrement(storedBlock, storageInfo)) {
         NameNode.getNameNodeMetrics().incSuccessfulReReplications();
       }
     }
@@ -4499,7 +4499,11 @@ public class BlockManager implements BlockStatsMXBean {
     addToInvalidates(block);
     removeBlockFromMap(block);
     // Remove the block from pendingReconstruction and neededReconstruction
-    pendingReconstruction.remove(block);
+    PendingBlockInfo remove = pendingReconstruction.remove(block);
+    if (remove != null) {
+      DatanodeStorageInfo.decrementBlocksScheduled(remove.getTargets()
+          .toArray(new DatanodeStorageInfo[remove.getTargets().size()]));
+    }
     neededReconstruction.remove(block, LowRedundancyBlocks.LEVEL);
     postponedMisreplicatedBlocks.remove(block);
   }
