@@ -21,9 +21,9 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.tracing.SpanReceiverInfo.ConfigurationPair;
+/*import org.apache.hadoop.tracing.SpanReceiverInfo.ConfigurationPair;
 import org.apache.htrace.core.SpanReceiver;
-import org.apache.htrace.core.TracerPool;
+import org.apache.htrace.core.TracerPool;*/
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +46,8 @@ public class TracerConfigurationManager implements TraceAdminProtocol {
 
   public synchronized SpanReceiverInfo[] listSpanReceivers()
       throws IOException {
+    return new SpanReceiverInfo[0];
+    /*
     TracerPool pool = TracerPool.getGlobalTracerPool();
     SpanReceiver[] receivers = pool.getReceivers();
     SpanReceiverInfo[] info = new SpanReceiverInfo[receivers.length];
@@ -55,10 +57,13 @@ public class TracerConfigurationManager implements TraceAdminProtocol {
           receiver.getClass().getName());
     }
     return info;
+    */
   }
 
   public synchronized long addSpanReceiver(SpanReceiverInfo info)
       throws IOException {
+    return 0;
+    /*
     StringBuilder configStringBuilder = new StringBuilder();
     String prefix = "";
     for (ConfigurationPair pair : info.configPairs) {
@@ -81,10 +86,12 @@ public class TracerConfigurationManager implements TraceAdminProtocol {
     LOG.info("Successfully added SpanReceiver " + info.getClassName() +
         " with configuration " + configStringBuilder.toString());
     return rcvr.getId();
+    */
   }
 
   public synchronized void removeSpanReceiver(long spanReceiverId)
       throws IOException {
+    /*
     SpanReceiver[] receivers =
         TracerPool.getGlobalTracerPool().getReceivers();
     for (SpanReceiver receiver : receivers) {
@@ -96,5 +103,6 @@ public class TracerConfigurationManager implements TraceAdminProtocol {
       }
     }
     throw new IOException("There is no span receiver with id " + spanReceiverId);
+    */
   }
 }

@@ -46,7 +46,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.Tracer;
 import org.eclipse.jetty.util.ajax.JSON;
 
 import javax.management.ObjectName;
@@ -180,7 +180,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
 
     if (this.tracer == null) {
       this.tracer = new Tracer.Builder("JournalNode").
-          conf(TraceUtils.wrapHadoopConf("journalnode.htrace", conf)).
+          conf(TraceUtils.wrapHadoopConfOT("journalnode.htrace", conf)).
           build();
     }
   }

@@ -98,7 +98,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.GcTimeMonitor;
 import org.apache.hadoop.util.GcTimeMonitor.Builder;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -991,7 +991,7 @@ public class NameNode extends ReconfigurableBase implements
       throws IOException {
     super(conf);
     this.tracer = new Tracer.Builder("NameNode").
-        conf(TraceUtils.wrapHadoopConf(NAMENODE_HTRACE_PREFIX, conf)).
+        conf(TraceUtils.wrapHadoopConfOT(NAMENODE_HTRACE_PREFIX, conf)).
         build();
     this.tracerConfigurationManager =
         new TracerConfigurationManager(NAMENODE_HTRACE_PREFIX, conf);
