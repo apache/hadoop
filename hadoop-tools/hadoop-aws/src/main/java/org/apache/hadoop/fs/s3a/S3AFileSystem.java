@@ -99,6 +99,7 @@ import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
+import org.apache.hadoop.fs.s3a.impl.BulkDeleteRetryHandler;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
@@ -170,6 +171,8 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_ALLOW_SSE_KMS
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3Operations;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.TokenIssuingPolicy.NoTokensAvailable;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDelegationTokenBinding;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
@@ -272,6 +275,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private SignerManager signerManager;
 
   private ITtlTimeProvider ttlTimeProvider;
+
+  /**
+   * Page size for deletions.
+   */
+  private int pageSize;
 
   /**
    * Specific operations used by rename and delete operations.
@@ -440,6 +448,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
 
       initMultipartUploads(conf);
+
+      pageSize = intOption(getConf(), BULK_DELETE_PAGE_SIZE,
+          BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       stopAllServices();
@@ -1388,7 +1399,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         createStoreContext(),
         src, srcKey, p.getLeft(),
         dst, dstKey, p.getRight(),
-        operationCallbacks);
+        operationCallbacks,
+        pageSize);
     return renameOperation.execute();
   }
 
@@ -1648,10 +1660,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param ex exception.
    */
   public void operationRetried(Exception ex) {
-    Statistic stat = isThrottleException(ex)
-        ? STORE_IO_THROTTLED
-        : IGNORED_ERRORS;
-    incrementStatistic(stat);
+    if (isThrottleException(ex)) {
+      operationThrottled(false);
+    } else {
+      incrementStatistic(IGNORED_ERRORS);
+    }
   }
 
   /**
@@ -1684,11 +1697,28 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public void metastoreOperationRetried(Exception ex,
       int retries,
       boolean idempotent) {
-    operationRetried(ex);
     incrementStatistic(S3GUARD_METADATASTORE_RETRY);
     if (isThrottleException(ex)) {
+      operationThrottled(true);
+    } else {
+      incrementStatistic(IGNORED_ERRORS);
+    }
+  }
+
+  /**
+   * Note that an operation was throttled -this will update
+   * specific counters/metrics.
+   * @param metastore was the throttling observed in the S3Guard metastore?
+   */
+  private void operationThrottled(boolean metastore) {
+    LOG.debug("Request throttled on {}", metastore ? "S3": "DynamoDB");
+    if (metastore) {
       incrementStatistic(S3GUARD_METADATASTORE_THROTTLED);
-      instrumentation.addValueToQuantiles(S3GUARD_METADATASTORE_THROTTLE_RATE, 1);
+      instrumentation.addValueToQuantiles(S3GUARD_METADATASTORE_THROTTLE_RATE,
+          1);
+    } else {
+      incrementStatistic(STORE_IO_THROTTLED);
+      instrumentation.addValueToQuantiles(STORE_IO_THROTTLE_RATE, 1);
     }
   }
 
@@ -1917,6 +1947,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Increments the {@code OBJECT_DELETE_REQUESTS} and write
    * operation statistics.
    * Retry policy: retry untranslated; delete considered idempotent.
+   * If the request is throttled, this is logged in the throttle statistics,
+   * with the counter set to the number of keys, rather than the number
+   * of invocations of the delete operation.
+   * This is because S3 considers each key as one mutating operation on
+   * the store when updating its load counters on a specific partition
+   * of an S3 bucket.
+   * If only the request was measured, this operation would under-report.
    * @param deleteRequest keys to delete on the s3-backend
    * @return the AWS response
    * @throws MultiObjectDeleteException one or more of the keys could not
@@ -1927,17 +1964,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private DeleteObjectsResult deleteObjects(DeleteObjectsRequest deleteRequest)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
     incrementWriteOperations();
+    BulkDeleteRetryHandler retryHandler =
+        new BulkDeleteRetryHandler(createStoreContext());
     try(DurationInfo ignored =
             new DurationInfo(LOG, false, "DELETE %d keys",
                 deleteRequest.getKeys().size())) {
       return invoker.retryUntranslated("delete",
           DELETE_CONSIDERED_IDEMPOTENT,
+          (text, e, r, i) -> {
+            // handle the failure
+            retryHandler.bulkDeleteRetried(deleteRequest, e);
+          },
           () -> {
             incrementStatistic(OBJECT_DELETE_REQUESTS, 1);
             return s3.deleteObjects(deleteRequest);
           });
     } catch (MultiObjectDeleteException e) {
-      // one or more of the operations failed.
+      // one or more of the keys could not be deleted.
+      // log and rethrow
       List<MultiObjectDeleteException.DeleteError> errors = e.getErrors();
       LOG.debug("Partial failure of delete, {} errors", errors.size(), e);
       for (MultiObjectDeleteException.DeleteError error : errors) {
@@ -2254,7 +2298,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @VisibleForTesting
   @Retries.RetryMixed
-  void removeKeys(
+  public void removeKeys(
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       final boolean deleteFakeDir,
       final BulkOperationState operationState)
@@ -2349,7 +2393,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           innerGetFileStatus(f, true, StatusProbeEnum.ALL),
           recursive,
           operationCallbacks,
-          InternalConstants.MAX_ENTRIES_TO_DELETE);
+          pageSize);
       boolean outcome = deleteOperation.execute();
       if (outcome) {
         try {
@@ -2830,7 +2874,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   S3AFileStatus s3GetFileStatus(final Path path,
       final String key,
       final Set<StatusProbeEnum> probes,
-      final Set<Path> tombstones) throws IOException {
+      @Nullable Set<Path> tombstones) throws IOException {
     if (!key.isEmpty()) {
       if (probes.contains(StatusProbeEnum.Head) && !key.endsWith("/")) {
         try {
@@ -3515,7 +3559,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         key, length, eTag, versionId);
     Path p = keyToQualifiedPath(key);
     Preconditions.checkArgument(length >= 0, "content length is negative");
-    deleteUnnecessaryFakeDirectories(p.getParent());
+    final boolean isDir = objectRepresentsDirectory(key, length);
+    // kick off an async delete
+    final CompletableFuture<?> deletion = submit(
+        unboundedThreadPool,
+        () -> {
+          deleteUnnecessaryFakeDirectories(p.getParent());
+          return null;
+        });
     // this is only set if there is a metastore to update and the
     // operationState parameter passed in was null.
     BulkOperationState stateToClose = null;
@@ -3529,12 +3580,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           // information gleaned from addAncestors is preserved into the
           // subsequent put.
           stateToClose = S3Guard.initiateBulkWrite(metadataStore,
-              BulkOperationState.OperationType.Mkdir,
+              isDir
+                  ? BulkOperationState.OperationType.Mkdir
+                  : BulkOperationState.OperationType.Put,
               keyToPath(key));
           activeState = stateToClose;
         }
         S3Guard.addAncestors(metadataStore, p, ttlTimeProvider, activeState);
-        final boolean isDir = objectRepresentsDirectory(key, length);
         S3AFileStatus status = createUploadFileStatus(p,
             isDir, length,
             getDefaultBlockSize(p), username, eTag, versionId);
@@ -3557,6 +3609,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               activeState);
         }
       }
+      // and catch up with any delete operation.
+      waitForCompletionIgnoringExceptions(deletion);
     } catch (IOException e) {
       if (failOnMetadataWriteError) {
         throw new MetadataPersistenceException(p.toString(), e);

@@ -464,6 +464,22 @@ Otherwise, set a large timeout in `fs.s3a.scale.test.timeout`
 The tests are executed in an order to only clean up created files after
 the end of all the tests. If the tests are interrupted, the test data will remain.
 
+## <a name="alternate_s3"></a> Load tests.
+
+Some are designed to overload AWS services with more
+requests per second than an AWS account is permitted.
+
+The operation of these test maybe observable to other users of the same
+account -especially if they are working in the AWS region to which the
+tests are targeted.
+
+There may also run up larger bills.
+
+These tests all have the prefix `ILoadTest`
+
+They do not run automatically: they must be explicitly run from the command line or an IDE.
+
+Look in the source for these and reads the Javadocs before executing.
 
 ## <a name="alternate_s3"></a> Testing against non AWS S3 endpoints.
 
@@ -1399,6 +1415,9 @@ as it may take a couple of SDK updates before it is ready.
   in `fs.s3a.assumed.role.arn` for testing assumed roles,
   and `fs.s3a.server-side-encryption.key` for encryption, for full coverage.
   If you can, scale up the scale tests.
+1. Run the `ILoadTest*` load tests from your IDE or via maven through
+      `mvn verify -Dtest=skip -Dit.test=ILoadTest\*`  ; look for regressions in performance
+      as much as failures.
 1. Create the site with `mvn site -DskipTests`; look in `target/site` for the report.
 1. Review *every single `-output.txt` file in `hadoop-tools/hadoop-aws/target/failsafe-reports`,
   paying particular attention to
@@ -1492,6 +1511,7 @@ Then see if complete successfully in roughly the same time once the upgrade is a
 to AWS services.
 * Try and get other people, especially anyone with their own endpoints,
   apps or different deployment environments, to run their own tests.
+* Run the load tests, especially `ILoadTestS3ABulkDeleteThrottling`.
 
 ### Dealing with Deprecated APIs and New Features
 

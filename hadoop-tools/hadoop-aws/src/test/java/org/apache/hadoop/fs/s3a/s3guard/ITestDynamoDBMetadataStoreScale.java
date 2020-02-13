@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import javax.annotation.Nullable;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,6 +35,7 @@ import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder;
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -47,14 +49,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.impl.WrappedIOException;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
+import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.scale.AbstractITestS3AMetadataStoreScale;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.DurationInfo;
 
@@ -62,7 +65,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.s3guard.MetadataStoreTestBase.basicFileStatus;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.PARENT;
-import static org.junit.Assume.*;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Scale test for DynamoDBMetadataStore.
@@ -90,6 +93,20 @@ public class ITestDynamoDBMetadataStoreScale
    */
   private static final long MAXIMUM_READ_CAPACITY = 10;
   private static final long MAXIMUM_WRITE_CAPACITY = 15;
+
+  /**
+   * Time in milliseconds to sleep after a test throttled:
+   * {@value}.
+   * This is to help isolate throttling to the test which failed,
+   * rather than have it surface in a followup test.
+   * Also the test reports will record durations more accurately,
+   * as JUnit doesn't include setup/teardown times in its reports.
+   * There's a cost: single test runs will sleep, and the last test
+   * run may throttle when it doesn't need to.
+   * The last test {}@link {@link #test_999_delete_all_entries()}
+   * doesn't do the sleep so a full batch run should not suffer here.
+   */
+  public static final int THROTTLE_RECOVER_TIME_MILLIS = 5_000;
 
   private DynamoDBMetadataStore ddbms;
   private DynamoDBMetadataStoreTableManager tableHandler;
@@ -119,7 +136,7 @@ public class ITestDynamoDBMetadataStoreScale
    * @throws AssumptionViolatedException if the FS isn't running S3Guard + DDB/
    */
   @Override
-  public MetadataStore createMetadataStore() throws IOException {
+  public DynamoDBMetadataStore createMetadataStore() throws IOException {
     S3AFileSystem fs = getFileSystem();
     assumeTrue("S3Guard is disabled for " + fs.getUri(),
         fs.hasMetadataStore());
@@ -145,12 +162,16 @@ public class ITestDynamoDBMetadataStoreScale
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     conf.set(S3GUARD_DDB_REGION_KEY, region);
     conf.set(S3GUARD_DDB_THROTTLE_RETRY_INTERVAL, "50ms");
-    conf.set(S3GUARD_DDB_MAX_RETRIES, "2");
+    conf.set(S3GUARD_DDB_MAX_RETRIES, "1");
     conf.set(MAX_ERROR_RETRIES, "1");
     conf.set(S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY, "5ms");
 
     DynamoDBMetadataStore ms = new DynamoDBMetadataStore();
-    ms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
+    // init the metastore in a bigger retry loop than the test setup
+    // in case the previous test case overloaded things
+    final Invoker fsInvoker = fs.createStoreContext().getInvoker();
+    fsInvoker.retry("init metastore", null, true,
+        () -> ms.initialize(conf, new S3Guard.TtlTimeProvider(conf)));
     // wire up the owner FS so that we can make assertions about throttle
     // events
     ms.bindToOwnerFilesystem(fs);
@@ -168,8 +189,7 @@ public class ITestDynamoDBMetadataStoreScale
     table = ddb.getTable(tableName);
     originalCapacity = table.describe().getProvisionedThroughput();
 
-    // If you set the same provisioned I/O as already set it throws an
-    // exception, avoid that.
+    // is this table too big for throttling to surface?
     isOverProvisionedForTest = (
         originalCapacity.getReadCapacityUnits() > MAXIMUM_READ_CAPACITY
             || originalCapacity.getWriteCapacityUnits() > MAXIMUM_WRITE_CAPACITY);
@@ -177,27 +197,45 @@ public class ITestDynamoDBMetadataStoreScale
 
   @Override
   public void teardown() throws Exception {
-    if (ddbms != null) {
-      S3GuardTableAccess tableAccess = new S3GuardTableAccess(ddbms);
-      ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
-      builder.withCondition(
-          ExpressionSpecBuilder.S(PARENT).beginsWith("/test/"));
-
-      Iterable<DDBPathMetadata> entries = tableAccess.scanMetadata(builder);
-      List<Path> list = new ArrayList<>();
-      entries.iterator().forEachRemaining(e -> {
-        Path p = e.getFileStatus().getPath();
-        LOG.info("Deleting {}", p);
-        list.add(p);
-      });
-      tableAccess.delete(list);
-    }
     IOUtils.cleanupWithLogger(LOG, ddbms);
     super.teardown();
   }
 
+  /**
+   * Is throttling likely?
+   * @return true if the DDB table has prepaid IO and is small enough
+   * to throttle.
+   */
   private boolean expectThrottling() {
     return !isOverProvisionedForTest && !isOnDemandTable;
+  }
+
+  /**
+   * Recover from throttling by sleeping briefly.
+   */
+  private void recoverFromThrottling() throws InterruptedException {
+    LOG.info("Sleeping to recover from throttling for {} ms",
+        THROTTLE_RECOVER_TIME_MILLIS);
+    Thread.sleep(THROTTLE_RECOVER_TIME_MILLIS);
+  }
+
+  /**
+   * The subclass expects the superclass to be throttled; sometimes it is.
+   */
+  @Test
+  @Override
+  public void test_010_Put() throws Throwable {
+    ThrottleTracker tracker = new ThrottleTracker(ddbms);
+    try {
+      // if this doesn't throttle, all is well.
+      super.test_010_Put();
+    } catch (AWSServiceThrottledException ex) {
+      // if the service was throttled, all is good.
+      // log and continue
+      LOG.warn("DDB connection was throttled", ex);
+    } finally {
+      LOG.info("Statistics {}", tracker);
+    }
   }
 
   /**
@@ -283,9 +321,8 @@ public class ITestDynamoDBMetadataStoreScale
               }
             }
           });
-      if (expectThrottling()) {
-        assertNotEquals("No batch retries in " + result,
-            0, result.getBatchThrottles());
+      if (expectThrottling() && result.probeThrottlingDetected()) {
+        recoverFromThrottling();
       }
     } finally {
       describe("Cleaning up table %s", tableName);
@@ -326,7 +363,12 @@ public class ITestDynamoDBMetadataStoreScale
     execute("get",
         OPERATIONS_PER_THREAD * 2,
         expectThrottling(),
-        () -> tableHandler.getVersionMarkerItem()
+        () -> {
+          try {
+            tableHandler.getVersionMarkerItem();
+          } catch (FileNotFoundException ignored) {
+          }
+        }
     );
   }
 
@@ -473,6 +515,39 @@ public class ITestDynamoDBMetadataStoreScale
         statistics.getLong(throttledKey) > 0);
   }
 
+  @Test
+  public void test_999_delete_all_entries() throws Throwable {
+    describe("Delete all entries from the table");
+    S3GuardTableAccess tableAccess = new S3GuardTableAccess(ddbms);
+    ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
+    final String path = "/test/";
+    builder.withCondition(
+        ExpressionSpecBuilder.S(PARENT).beginsWith(path));
+    Iterable<DDBPathMetadata> entries =
+        ddbms.wrapWithRetries(tableAccess.scanMetadata(builder));
+    List<Path> list = new ArrayList<>();
+    try {
+      entries.iterator().forEachRemaining(e -> {
+        Path p = e.getFileStatus().getPath();
+        LOG.info("Deleting {}", p);
+        list.add(p);
+      });
+    } catch (WrappedIOException e) {
+      // the iterator may have overloaded; swallow if so.
+      if (!(e.getCause() instanceof AWSServiceThrottledException)) {
+        throw e;
+      }
+    }
+    // sending this in one by one for more efficient retries
+    for (Path p : list) {
+      ddbms.getInvoker()
+          .retry("delete",
+              path,
+              true,
+              () -> tableAccess.delete(p));
+    }
+  }
+
   /**
    * Execute a set of operations in parallel, collect throttling statistics
    * and return them.
@@ -504,7 +579,8 @@ public class ITestDynamoDBMetadataStoreScale
             final ContractTestUtils.NanoTimer t
                 = new ContractTestUtils.NanoTimer();
             for (int j = 0; j < operationsPerThread; j++) {
-              if (tracker.isThrottlingDetected()) {
+              if (tracker.isThrottlingDetected()
+                  || throttleExceptions.get() > 0) {
                 outcome.skipped = true;
                 return outcome;
               }
@@ -539,13 +615,12 @@ public class ITestDynamoDBMetadataStoreScale
     LOG.info("Completed {} with {}", operation, tracker);
     LOG.info("time to execute: {} millis", elapsedMs);
 
-    for (Future<ExecutionOutcome> future : futures) {
-      assertTrue("Future timed out", future.isDone());
-    }
+    Assertions.assertThat(futures)
+        .describedAs("Futures of all tasks")
+        .allMatch(Future::isDone);
     tracker.probe();
-
-    if (expectThrottling) {
-      tracker.assertThrottlingDetected();
+    if (expectThrottling() && tracker.probeThrottlingDetected()) {
+      recoverFromThrottling();
     }
     for (Future<ExecutionOutcome> future : futures) {
 
