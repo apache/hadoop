@@ -47,6 +47,10 @@ public class BulkDeleteRetryHandler extends AbstractStoreOperation {
   private static final Logger THROTTLE_LOG = LoggerFactory.getLogger(
       THROTTLE_LOG_NAME);
 
+  /**
+   * This is an error string we see in exceptions when the XML parser
+   * failed: {@value}.
+   */
   public static final String XML_PARSE_BROKEN = "Failed to parse XML document";
 
   private final S3AInstrumentation instrumentation;
