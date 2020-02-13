@@ -16,25 +16,17 @@
  * limitations under the License.
  */
 
-module.exports = { // YARN UI App configurations
-    hosts: {
-      localBaseAddress: "",
-      timelineWebAddress: "localhost:8188",
-      timelineV1WebAddress: "localhost:8188",
-      rmWebAddress: "localhost:8088",
-      jhsAddress: "localhost:19888",
-      protocolScheme: "http:",
-      isSecurityEnabled: ""
-    },
-    namespaces: {
-      timeline: 'ws/v1/applicationhistory',
-      timelineService: 'ws/v2/timeline/apps',
-      cluster: 'ws/v1/cluster',
-      metrics: 'ws/v1/cluster/metrics',
-      timelineV2: 'ws/v2/timeline',
-      timelineV2Log: 'ws/v2/applicationlog',
-      dashService: 'app/v1/services',
-      node: '{nodeAddress}/ws/v1/node',
-      jhs: 'ws/v1/history'
-    },
-};
+import AbstractAdapter from './abstract';
+
+export default AbstractAdapter.extend({
+  address: "jhsAddress",
+  restNameSpace: "jhs",
+  serverName: "JHS",
+
+  urlForQuery(query/*, modelName*/) {
+    var url = this._buildURL();
+    var containerId = query['containerId'];
+    delete query.containerId;
+    return url + '/containers/' + containerId + '/logs';
+  }
+});

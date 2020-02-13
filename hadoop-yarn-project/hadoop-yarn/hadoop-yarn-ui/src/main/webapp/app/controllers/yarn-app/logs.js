@@ -50,31 +50,39 @@ export default Ember.Controller.extend({
         this.fetchContainersForAttemptId(attemptId)
           .then(hash => {
             let containers = null;
-            let containerIdArr = [];
+            let containerIdArr = {};
+
+            // Getting running containers from the RM first
             if (
               hash.rmContainers.get("length") > 0 &&
               hash.rmContainers.get("content")
             ) {
               hash.rmContainers.get("content").forEach(function(o) {
-                containerIdArr.push(o.id);
+                containerIdArr[o.id] = true;
               }.bind(this));
               containers = (containers || []).concat(
                 hash.rmContainers.get("content")
               );
             }
+
+            let historyProvider = this.fallbackToJHS ? hash.jhsContainers : hash.tsContainers;
+            let fieldName =  this.fallbackToJHS ? "containerId" : "id";
+
+            // Getting aggregated containers from the selected history provider
             if (
-              hash.tsContainers.get("length") > 0 &&
-              hash.tsContainers.get("content")
+              historyProvider.get("length") > 0 &&
+              historyProvider.get("content")
             ) {
-              let tscontainer = [];
-              hash.tsContainers.get("content").forEach(function(o) {
-                if(!containerIdArr.contains(o.id)) {
-                  tscontainer.push(o);
+              let historyContainers = [];
+              historyProvider.get("content").forEach(function(o) {
+                if(!containerIdArr[o[fieldName]])) {
+                  historyContainers.push(o);
                 }
               }.bind(this));
               containers = (containers || []).concat(
-                tscontainer);
+                historyContainers);
             }
+
             this.set("attemptContainerList", containers);
             this.initializeSelect(".js-fetch-logs-containers");
             if (containerId) {
@@ -201,28 +209,36 @@ export default Ember.Controller.extend({
   }),
 
   fetchContainersForAttemptId(attemptId) {
-    return Ember.RSVP.hash({
-      rmContainers: this.store
-        .query("yarn-container", {
-          app_attempt_id: attemptId
-        })
-        .catch(function() {
-          return Ember.A();
-        }),
-      tsContainers: this.store
-        .query("yarn-timeline-container", {
-          app_attempt_id: attemptId
-        })
-        .catch(function() {
-          return Ember.A();
-        })
-    });
+    let request = {};
+
+    request["rmContainers"] = this.store
+      .query("yarn-container", {
+        app_attempt_id: attemptId
+      })
+      .catch(function(error) {
+        return Ember.A();
+      });
+
+    let historyProvider = this.fallbackToJHS ? "jhsContainers" : "tsContainers";
+    let historyQuery = this.fallbackToJHS ? "yarn-jhs-container" : "yarn-timeline-container";
+
+    request[historyProvider] = this.store
+      .query(historyQuery, {
+        app_attempt_id: attemptId
+      })
+      .catch(function(error) {
+        return Ember.A();
+      });
+
+    return Ember.RSVP.hash(request);
   },
 
   fetchLogFilesForContainerId(containerId) {
+    let queryName = this.fallbackToJHS ? "yarn-jhs-log" : "yarn-log";
+
     return Ember.RSVP.hash({
       logs: this.store
-        .query("yarn-log", {
+        .query(queryName, {
           containerId: containerId
         })
         .catch(function() {
@@ -232,8 +248,10 @@ export default Ember.Controller.extend({
   },
 
   fetchContentForLogFile(id) {
+    let queryName = this.fallbackToJHS ? 'yarn-app-jhs-log' : 'yarn-app-log';
+
     return Ember.RSVP.hash({
-      logs: this.store.findRecord('yarn-app-log', id)
+      logs: this.store.findRecord(queryName, id)
     });
   },
 
@@ -265,10 +283,24 @@ export default Ember.Controller.extend({
     return logAggregationStatus !== "SUCCEEDED";
   }),
 
-  isTimelineUnHealthy: function() {
-      if (this.model && this.model.timelineHealth) {
-        return this.model.timelineHealth.get('isTimelineUnHealthy');
+  fallbackToJHS: function() {
+    // Let's fall back to JHS if ATS is not available, but JHS is.
+    return this.model &&
+      (!this.model.timelineHealth || this.model.timelineHealth.get('isTimelineUnHealthy')) &&
+      this.model.jhsHealth && this.model.jhsHealth.get('isJHSHealthy');
+  }.property('model.timelineHealth', 'model.isJHSHealthy'),
+
+  areJHSandATSUnhealthy: function() {
+    if (this.model && this.model.timelineHealth) {
+      if (!this.model.timelineHealth.get('isTimelineUnHealthy')) {
+        return false;
       }
-      return true;
-    }.property('model.timelineHealth')
+    }
+    if (this.model && this.model.jhsHealth) {
+      if (this.model.jhsHealth.get('isJHSHealthy')) {
+        return false;
+      }
+    }
+    return true;
+  }.property('model.timelineHealth', 'model.isJHSHealthy')
 });
