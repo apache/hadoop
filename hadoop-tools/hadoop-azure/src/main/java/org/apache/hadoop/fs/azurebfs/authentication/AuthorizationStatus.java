@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.authentication;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
+import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResource;
 import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResourceResult;
 import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResult;
 
@@ -60,14 +62,41 @@ public class AuthorizationStatus {
    * Update authTokenMap
    * Also update the refresh interval for each SAS token.
    *
+   * @param authorizationResource
    * @param authResult - Authorizer AuthorizationResult
    */
-  public void setSasToken(AuthorizationResult authResult) {
+  public void setSasToken(AuthorizationResource[] authorizationResource,
+      AuthorizationResult authResult) throws AbfsAuthorizationException {
 
     AuthorizationResourceResult[] resourceResult = authResult
         .getAuthResourceResult();
 
+    int i = 0;
     for (AuthorizationResourceResult singleResourceAuth : resourceResult) {
+      // First check if the requested resource matches the resource
+      // for which authToken is returned
+      AuthorizationResource authorizationRequestedForResource =
+          authorizationResource[i];
+      if ((singleResourceAuth == null) || (singleResourceAuth.storePathUri
+          == null) || (singleResourceAuth.authorizerAction == null))  {
+        throw new AbfsAuthorizationException("Invalid authorization response");
+      }
+
+      if (!singleResourceAuth.storePathUri
+              .equals(authorizationRequestedForResource.storePathUri)
+              || singleResourceAuth.authorizerAction.equalsIgnoreCase(
+              authorizationRequestedForResource.authorizerAction)) {
+
+        throw new AbfsAuthorizationException(String.format(
+            "Mismatch in requested resource authorization action to received."
+                + " Requested %s-%s, "
+                + "Received %s-%s",
+            authorizationRequestedForResource.storePathUri.toString(),
+            authorizationRequestedForResource.authorizerAction,
+            singleResourceAuth.storePathUri.toString(),
+            singleResourceAuth.authorizerAction));
+      }
+
       SasTokenData authToken = new SasTokenData();
 
       // By default SASToken will be set for refresh

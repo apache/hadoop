@@ -23,6 +23,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationExcep
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.Map;
 import java.util.Set;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.APPEND_ACTION;
@@ -56,14 +58,12 @@ public class MockAbfsAuthorizer implements AbfsAuthorizer {
   public static final String TEST_WRITE_THEN_READ_ONLY =
       "writeThenReadOnlyFile";
   private static final Set<String> apiAuthorizerActions = new HashSet<String>();
-  public String name1 = "defaultMockName1";
-  public String name2 = "defaultMockName2";
   public String accountName;
   private Configuration conf;
-  private Set<String> readOnlyPaths = new HashSet<String>();
-  private Set<String> writeOnlyPaths = new HashSet<String>();
-  private Set<String> readWritePaths = new HashSet<String>();
-  private int writeThenReadOnly = 0;
+  private Set<String> readOnlyPathsPrefixes = new HashSet<String>();
+  private Set<String> writeOnlyPathsPrefixes = new HashSet<String>();
+  private Set<String> readWritePathsPrefixes = new HashSet<String>();
+  private Map<String, WriteReadMode> writeReadModeMap = null;
 
   public MockAbfsAuthorizer(Configuration conf) {
     this.conf = conf;
@@ -71,14 +71,14 @@ public class MockAbfsAuthorizer implements AbfsAuthorizer {
 
   @Override
   public void init() throws AbfsAuthorizationException {
-    readOnlyPaths.add(TEST_READ_ONLY_FILE_0);
-    readOnlyPaths.add(TEST_READ_ONLY_FILE_1);
-    readOnlyPaths.add(TEST_READ_ONLY_FOLDER);
-    writeOnlyPaths.add(TEST_WRITE_ONLY_FILE_0);
-    writeOnlyPaths.add(TEST_WRITE_ONLY_FILE_1);
-    writeOnlyPaths.add(TEST_WRITE_ONLY_FOLDER);
-    readWritePaths.add(TEST_READ_WRITE_FILE_0);
-    readWritePaths.add(TEST_READ_WRITE_FILE_1);
+    readOnlyPathsPrefixes.add(TEST_READ_ONLY_FILE_0);
+    readOnlyPathsPrefixes.add(TEST_READ_ONLY_FILE_1);
+    readOnlyPathsPrefixes.add(TEST_READ_ONLY_FOLDER);
+    writeOnlyPathsPrefixes.add(TEST_WRITE_ONLY_FILE_0);
+    writeOnlyPathsPrefixes.add(TEST_WRITE_ONLY_FILE_1);
+    writeOnlyPathsPrefixes.add(TEST_WRITE_ONLY_FOLDER);
+    readWritePathsPrefixes.add(TEST_READ_WRITE_FILE_0);
+    readWritePathsPrefixes.add(TEST_READ_WRITE_FILE_1);
 
     apiAuthorizerActions.add(RENAME_SOURCE_ACTION);
     apiAuthorizerActions.add(RENAME_DESTINATION_ACTION);
@@ -129,30 +129,36 @@ public class MockAbfsAuthorizer implements AbfsAuthorizer {
       String storePath = resource.storePathUri.getPath();
       int indexofLastDelimiter = storePath.lastIndexOf("/");
       String storeFileOrFolder = storePath.substring(indexofLastDelimiter + 1);
+      String getStoreFileOrFolderPrefix = getStorePathPrefix(storeFileOrFolder);
+
       accessPermissions neededAccessPerm = getAccessPermission(storeAction);
 
       if ((neededAccessPerm == accessPermissions.Read) && (
-          readOnlyPaths.contains(storeFileOrFolder) || readWritePaths
-              .contains(storeFileOrFolder))) {
+          readOnlyPathsPrefixes.contains(getStoreFileOrFolderPrefix)
+              || readWritePathsPrefixes.contains(getStoreFileOrFolderPrefix))) {
         // READ
         return getAuthzResourceResultWithoutSAS(resource);
       } else if ((neededAccessPerm == accessPermissions.Read)
-          && storeFileOrFolder.equals(TEST_WRITE_THEN_READ_ONLY) && (
-          writeThenReadOnly == 1)) {
-        // WRITE THEN READ
+          && storeFileOrFolder.startsWith(TEST_WRITE_THEN_READ_ONLY) && (
+          writeReadModeMap.containsKey(storeFileOrFolder) && (
+              writeReadModeMap.get(storeFileOrFolder)
+                  == WriteReadMode.READ_MODE))) {
+        // WRITE THEN READ FILE - Currently in read mode
         return getAuthzResourceResultWithoutSAS(resource);
       } else if ((neededAccessPerm == accessPermissions.Write) && (
-          writeOnlyPaths.contains(storeFileOrFolder) || readWritePaths
-              .contains(storeFileOrFolder))) {
+          writeOnlyPathsPrefixes.contains(getStoreFileOrFolderPrefix)
+              || readWritePathsPrefixes.contains(getStoreFileOrFolderPrefix))) {
         // WRITE
         return getAuthzResourceResultWithoutSAS(resource);
       } else if ((neededAccessPerm == accessPermissions.Write)
-          && storeFileOrFolder.equals(TEST_WRITE_THEN_READ_ONLY) && (
-          writeThenReadOnly == 0)) {
-        // WRITE THEN READ
+          && storeFileOrFolder.startsWith(TEST_WRITE_THEN_READ_ONLY) && (
+          writeReadModeMap.containsKey(storeFileOrFolder) && (
+              writeReadModeMap.get(storeFileOrFolder)
+                  == WriteReadMode.WRITE_MODE))) {
+        // WRITE THEN READ FILE - Currently in write mode
         return getAuthzResourceResultWithoutSAS(resource);
       } else if ((neededAccessPerm == accessPermissions.ReadWrite)
-          && readWritePaths.contains(storeFileOrFolder)) {
+          && readWritePathsPrefixes.contains(getStoreFileOrFolderPrefix)) {
         return getAuthzResourceResultWithoutSAS(resource);
       }
 
@@ -161,6 +167,35 @@ public class MockAbfsAuthorizer implements AbfsAuthorizer {
     }
 
     return null;
+  }
+
+  private String getStorePathPrefix(String storeFileOrFolder) {
+    if (storeFileOrFolder.startsWith(TEST_READ_ONLY_FILE_0)) {
+      return TEST_READ_ONLY_FILE_0;
+    }
+    if (storeFileOrFolder.startsWith(TEST_READ_ONLY_FILE_1)) {
+      return TEST_READ_ONLY_FILE_1;
+    }
+    if (storeFileOrFolder.startsWith(TEST_READ_ONLY_FOLDER)) {
+      return TEST_READ_ONLY_FOLDER;
+    }
+    if (storeFileOrFolder.startsWith(TEST_WRITE_ONLY_FILE_0)) {
+      return TEST_WRITE_ONLY_FILE_0;
+    }
+    if (storeFileOrFolder.startsWith(TEST_WRITE_ONLY_FILE_1)) {
+      return TEST_WRITE_ONLY_FILE_1;
+    }
+    if (storeFileOrFolder.startsWith(TEST_WRITE_ONLY_FOLDER)) {
+      return TEST_WRITE_ONLY_FOLDER;
+    }
+    if (storeFileOrFolder.startsWith(TEST_READ_WRITE_FILE_0)) {
+      return TEST_READ_WRITE_FILE_0;
+    }
+    if (storeFileOrFolder.startsWith(TEST_READ_WRITE_FILE_1)) {
+      return TEST_READ_WRITE_FILE_1;
+    }
+
+    return storeFileOrFolder;
   }
 
   private accessPermissions getAccessPermission(String storeAction) {
@@ -202,26 +237,34 @@ public class MockAbfsAuthorizer implements AbfsAuthorizer {
       AuthorizationResource... authorizationResource)
       throws AbfsAuthorizationException {
     AuthorizationResult result = new AuthorizationResult();
-    result.authResourceResult =
+    AuthorizationResourceResult[] authResourceResult =
         new AuthorizationResourceResult[authorizationResource.length];
     int index = -1;
 
     for (AuthorizationResource authzResource : authorizationResource) {
-      result.authResourceResult[++index] = checkAndFetchAuthzResourceResult(
+      authResourceResult[++index] = checkAndFetchAuthzResourceResult(
           authzResource);
     }
 
-    result.isAuthorized = true;
+    result.setAuthResourceResult(authResourceResult);
+    result.setAuthorized(true);
 
     return result;
   }
 
-  public void setwriteThenReadOnly(int writeThenReadOnly) {
-    this.writeThenReadOnly = writeThenReadOnly;
+  public void setwriteThenReadOnly(String storePath, WriteReadMode mode) {
+    if (writeReadModeMap == null) {
+      writeReadModeMap = new Hashtable<>();
+    }
+    writeReadModeMap.put(storePath, mode);
   }
 
   enum accessPermissions {
     Read, Write, Execute, ReadWrite, ReadExecute, ReadWriteExecute,
     SuperUserOrOwner, None
+  }
+
+  public enum WriteReadMode {
+    WRITE_MODE, READ_MODE
   }
 }

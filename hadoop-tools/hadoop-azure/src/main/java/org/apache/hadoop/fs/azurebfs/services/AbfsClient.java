@@ -220,9 +220,9 @@ public class AbfsClient implements Closeable {
     // hence need to trigger authorization now.
     if (this.authorizer != null) {
 
-      String authorizerPath = ((relativePath == null) ? "": relativePath);
+      String authorizerPath = relativePath;
 
-      if (relativePath.length() == 0) {
+      if ((relativePath == null) || (relativePath.length() == 0)) {
         authorizerPath = AbfsHttpConstants.ROOT_PATH;
       } else if (relativePath.charAt(0) != Path.SEPARATOR_CHAR) {
         authorizerPath = Path.SEPARATOR_CHAR + relativePath;

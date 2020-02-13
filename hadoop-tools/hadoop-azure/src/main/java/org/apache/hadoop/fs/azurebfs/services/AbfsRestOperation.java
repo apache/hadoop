@@ -317,7 +317,7 @@ public class AbfsRestOperation {
       // User is authorized. Check for SAS Token.
       if (authorizer.getAuthType() == AuthType.SAS) {
         if (authzResult.getAuthResourceResult().length == authorizationResource.length) {
-          authzStatus.setSasToken(authzResult);
+          authzStatus.setSasToken(authorizationResource, authzResult);
         } else {
           throw new AbfsAuthorizationException(
               "Authorizer failed to provide SAS token.", new IOException());

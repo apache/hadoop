@@ -25,8 +25,8 @@ package org.apache.hadoop.fs.azurebfs.extensions;
  */
 public class AuthorizationResult {
 
-  boolean isAuthorized;
-  AuthorizationResourceResult[] authResourceResult;
+  private boolean isAuthorized;
+  private AuthorizationResourceResult[] authResourceResult;
 
   public boolean isAuthorized() {
     return isAuthorized;
@@ -36,12 +36,20 @@ public class AuthorizationResult {
     isAuthorized = authorized;
   }
 
-  public AuthorizationResourceResult[] getAuthResourceResult() {
-    return authResourceResult;
+  public void setAuthResourceResult(
+      final AuthorizationResourceResult[] authResourceResult) {
+    this.authResourceResult =
+        new AuthorizationResourceResult[authResourceResult.length];
+    System.arraycopy(authResourceResult, 0, this.authResourceResult, 0,
+        authResourceResult.length);
   }
 
-  public void setAuthResourceResult(
-      AuthorizationResourceResult[] authResourceResult) {
-    this.authResourceResult = authResourceResult;
+  public final AuthorizationResourceResult[] getAuthResourceResult() {
+    AuthorizationResourceResult[] authResourceResult =
+        new AuthorizationResourceResult[this.authResourceResult.length];
+    System.arraycopy(this.authResourceResult, 0,
+        authResourceResult, 0,
+        this.authResourceResult.length);
+    return authResourceResult;
   }
 }
