@@ -25,9 +25,9 @@ import RESTAbstractAdapter from './restabstract';
  * in plain text format and not JSON.
  */
 export default RESTAbstractAdapter.extend({
-  address: "timelineWebAddress",
-  restNameSpace: "timelineV2Log",
-  serverName: "ATS",
+  address: "jhsAddress",
+  restNameSpace: "jhs",
+  serverName: "JHS",
 
   headers: {
     Accept: 'text/plain'
@@ -35,14 +35,10 @@ export default RESTAbstractAdapter.extend({
 
   urlForFindRecord(id/*, modelName, snapshot*/) {
     var splits = Converter.splitForAppLogs(id);
-    var clusterId = this.get("env.app.clusterId");
     var containerId = splits[0];
     var logFile = splits[1];
-    if (splits[2]) {
-      clusterId = splits[2];
-    }
     var url = this._buildURL();
-    url = url + '/containers/' + containerId + '/logs/' + logFile + '?clusterid=' + clusterId;
+    url = url + '/containerlogs/' + containerId + '/' + logFile;
     Ember.Logger.info('The URL for getting the log: ' + url);
     return url;
   },
