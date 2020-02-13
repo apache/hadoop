@@ -39,6 +39,8 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 
 import org.junit.Test;
 
+import org.apache.hadoop.fs.s3a.impl.ErrorTranslation;
+
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 
 /**
@@ -200,6 +202,28 @@ public class TestS3AExceptionTranslation {
         new ExecutionException(
             new AmazonClientException(
               new InterruptedIOException(""))));
+  }
+
+  /**
+   * 404 defaults to FileNotFound.
+   */
+  @Test
+  public void test404Handling() throws Exception {
+    verifyTranslated(
+        FileNotFoundException.class,
+        createS3Exception(404));
+  }
+
+  /**
+   * 404 + NoSuchBucket == Unknown bucket.
+   */
+  @Test
+  public void testUnknownBucketException() throws Exception {
+    AmazonS3Exception ex404 = createS3Exception(404);
+    ex404.setErrorCode(ErrorTranslation.AwsErrorCodes.E_NO_SUCH_BUCKET);
+    verifyTranslated(
+        UnknownStoreException.class,
+        ex404);
   }
 
 }

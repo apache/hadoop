@@ -25,19 +25,15 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * The bucket or other AWS resource is unknown.
+ *
  * Why not a subclass of FileNotFoundException?
- * There's too much code which caches an FNFE and infers that the file isn't there;
- * a missing bucket is far more significant.
+ * There's too much code which caches an FNFE and infers that the file isn't
+ * there - a missing bucket is far more significant and generally should
+ * not be ignored.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class UnknownStoreException extends IOException {
-
-  /**
-   * The AWS S3 error code used to recognize when a 404 means the bucket is
-   * unknown.
-   */
-  public static final String E_NO_SUCH_BUCKET = "NoSuchBucket";
 
   /**
    * Constructor.
