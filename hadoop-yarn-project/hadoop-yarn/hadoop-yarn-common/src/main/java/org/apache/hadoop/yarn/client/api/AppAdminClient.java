@@ -281,7 +281,7 @@ public abstract class AppAdminClient extends CompositeService {
   @Public
   @Unstable
   public abstract int actionCleanUp(String appName, String userName) throws
-      IOException, YarnException;
+      IOException, YarnException, InterruptedException;
 
   @Public
   @Unstable

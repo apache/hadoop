@@ -24,6 +24,7 @@ import java.net.URI;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.Map;
+import java.security.PrivilegedExceptionAction;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -657,13 +658,26 @@ public class ApiServiceClient extends AppAdminClient {
 
   @Override
   public int actionCleanUp(String appName, String userName) throws
-      IOException, YarnException {
-    ServiceClient sc = new ServiceClient();
-    sc.init(getConfig());
-    sc.start();
-    int result = sc.actionCleanUp(appName, userName);
-    sc.close();
-    return result;
+      IOException, YarnException, InterruptedException {
+    UserGroupInformation proxyUser;
+    UserGroupInformation ugi;
+    if (UserGroupInformation.isSecurityEnabled()) {
+      proxyUser = UserGroupInformation.getLoginUser();
+      ugi = UserGroupInformation.createProxyUser(userName, proxyUser);
+    } else {
+      ugi = UserGroupInformation.createRemoteUser(userName);
+    }
+    return ugi.doAs((PrivilegedExceptionAction<Integer>) () -> {
+      ServiceClient sc = new ServiceClient();
+      try {
+        sc.init(getConfig());
+        sc.start();
+        int result = sc.actionCleanUp(appName, userName);
+        return result;
+      } finally {
+        sc.close();
+      }
+    });
   }
 
   @Override
