@@ -75,7 +75,7 @@ export default Ember.Controller.extend({
             ) {
               let historyContainers = [];
               historyProvider.get("content").forEach(function(o) {
-                if(!containerIdArr[o[fieldName]])) {
+                if(!containerIdArr[o[fieldName]]) {
                   historyContainers.push(o);
                 }
               }.bind(this));
