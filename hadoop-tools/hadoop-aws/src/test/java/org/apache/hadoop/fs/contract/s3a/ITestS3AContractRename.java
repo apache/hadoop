@@ -156,7 +156,7 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
     S3ATestUtils.MetricDiff fileCopyBytes = new S3ATestUtils.MetricDiff(fs,
         Statistic.FILES_COPIED_BYTES);
 
-    fs.rename(src, dest);
+    rename(src, dest);
 
     describe("Rename has completed, examining data under " + base);
     fileCopyDiff.assertDiffEquals("Number of files copied", 1);

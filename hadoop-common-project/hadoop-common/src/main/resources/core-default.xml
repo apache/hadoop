@@ -1698,7 +1698,7 @@
 
 <property>
   <name>fs.s3a.retry.throttle.limit</name>
-  <value>${fs.s3a.attempts.maximum}</value>
+  <value>20</value>
   <description>
     Number of times to retry any throttled request.
   </description>
@@ -1706,9 +1706,12 @@
 
 <property>
   <name>fs.s3a.retry.throttle.interval</name>
-  <value>1000ms</value>
+  <value>100ms</value>
   <description>
-    Interval between retry attempts on throttled requests.
+    Initial between retry attempts on throttled requests, +/- 50%. chosen at random.
+    i.e. for an intial value of 3000ms, the initial delay would be in the range 1500ms to 4500ms.
+    Backoffs are exponential; again randomness is used to avoid the thundering heard problem.
+    500ms is the default value used by the AWS S3 Retry policy.
   </description>
 </property>
 

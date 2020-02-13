@@ -525,6 +525,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     commit.setDestinationKey(fs.pathToKey(destFile));
     fullThrottle();
     actions.revertCommit(commit, null);
+    resetFailures();
     assertPathExists("parent of reverted (nonexistent) commit",
         destFile.getParent());
   }
