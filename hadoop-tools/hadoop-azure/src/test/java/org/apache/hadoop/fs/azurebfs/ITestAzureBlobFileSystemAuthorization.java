@@ -18,20 +18,19 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-
 import java.io.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.*;
-import org.apache.hadoop.fs.azurebfs.extensions.*;
 import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.*;
+import org.apache.hadoop.fs.azurebfs.extensions.*;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsAction;
