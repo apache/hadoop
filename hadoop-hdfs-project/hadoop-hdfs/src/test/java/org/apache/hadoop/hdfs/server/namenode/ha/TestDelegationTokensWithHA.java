@@ -59,6 +59,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.HashSet;
 
+import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider.OBSERVER_PROBE_RETRY_PERIOD_KEY;
 import static org.junit.Assert.*;
 
 /**
@@ -122,6 +123,7 @@ public class TestDelegationTokensWithHA {
   public void testObserverReadProxyProviderWithDT() throws Exception {
     // Make the first node standby, so that the ORPP will try it first
     // instead of just using and succeeding on the active
+    conf.setInt(OBSERVER_PROBE_RETRY_PERIOD_KEY, 0);
     cluster.transitionToStandby(0);
     cluster.transitionToActive(1);
 
