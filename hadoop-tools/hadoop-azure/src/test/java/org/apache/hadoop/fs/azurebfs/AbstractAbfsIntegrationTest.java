@@ -158,11 +158,7 @@ public abstract class AbstractAbfsIntegrationTest extends
         this.getFileSystemName() + "@" + this.getAccountName();
     URI defaultUri = null;
 
-    try {
-      defaultUri = new URI(abfsScheme, abfsUrl, null, null, null);
-    } catch (Exception ex) {
-      throw new AssertionError(ex);
-    }
+    defaultUri = new URI(abfsScheme, abfsUrl, null, null, null);
 
     this.testUrl = defaultUri.toString();
     abfsConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,

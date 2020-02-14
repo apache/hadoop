@@ -236,8 +236,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 
       // If an authorizer is set, account needs to be HNS enabled. No need
       // for server calls to check the same.
-      if (this.abfsConfiguration.getAbfsAuthorizer() != null)
-      {
+      if (this.abfsConfiguration.getAbfsAuthorizer() != null) {
         LOG.debug("Authorizer is set. Account MUST be Namespace enabled.");
         isNamespaceEnabled = true;
         isNamespaceEnabledSet = true;
@@ -1145,9 +1144,9 @@ public class AzureBlobFileSystemStore implements Closeable {
     AuthType authType = abfsConfiguration.getAuthType(accountName);
     AbfsAuthorizer authorizer = abfsConfiguration.getAbfsAuthorizer();
 
-    // Create cred instance based on account level Auth config if
+    // Create cred instance based on account level auth config if
     // - authorizer is not configured
-    // - or authroizer configured will not provide SAS
+    // - or configured authorizer does not provide SAS
     if ((authorizer == null) || ((authorizer.getAuthType() != AuthType.SAS))) {
       switch (authType) {
       case SharedKey:
@@ -1169,10 +1168,10 @@ public class AzureBlobFileSystemStore implements Closeable {
         break;
       case SAS:
         throw new UnsupportedOperationException(
-            "There is no " + "Authorizer configured");
+            "There is no Authorizer configured");
       case None:
         throw new UnsupportedOperationException(
-            "No authentication means " + "configured");
+            "No authentication means configured");
       }
     }
 

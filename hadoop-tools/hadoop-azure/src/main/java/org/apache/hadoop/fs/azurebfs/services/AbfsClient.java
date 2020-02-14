@@ -31,13 +31,10 @@ import java.util.List;
 import java.util.Locale;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.fs.Path;
+
+import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.fs.azurebfs.authentication.AuthorizationStatus;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants;
-import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
-import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResource;
-import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
-import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
@@ -46,9 +43,13 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
+import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
+import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResource;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
+import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
@@ -268,9 +269,7 @@ public class AbfsClient implements Closeable {
     }
 
     AuthorizationResource[] authResource = new AuthorizationResource[1];
-    authResource[0] = new AuthorizationResource();
-    authResource[0].authorizerAction = authorizerAction;
-    authResource[0].storePathUri = qualifiedPathUri;
+    authResource[0] = new AuthorizationResource(authorizerAction, qualifiedPathUri);
 
     // Exception will be thrown from fetchAuthorizationStatus if
     // authorization status could not be fetched or user is not authorized.

@@ -24,7 +24,10 @@ package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
 public class AbfsAuthorizerUnhandledException
     extends AzureBlobFileSystemException {
   public AbfsAuthorizerUnhandledException(Exception innerException) {
-    super("An unhandled Authorizer request processing exception",
+    super(String.format(
+        "An unhandled Authorizer request processing exception %s %s",
+        ((innerException != null) ? innerException.getMessage() : ""),
+        ((innerException != null) ? innerException.getStackTrace() : "")),
         innerException);
   }
 }

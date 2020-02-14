@@ -18,16 +18,20 @@
 
 package org.apache.hadoop.fs.azurebfs.extensions;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizerUnhandledException;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
-import java.io.IOException;
-
 /**
  * Interface to support authorization in Azure Blob File System.
+ * Authorizer could choose to provide
+ * - just the authorization status or
+ * - additionally provide ABFS SAS tokens, in which case they need
+ * to inherit from the AbfsSASAuthorizer class.
  */
 @InterfaceAudience.LimitedPrivate("authorization-subsystems")
 @InterfaceStability.Unstable
@@ -43,24 +47,22 @@ public interface AbfsAuthorizer {
 
   /**
    * Get AuthType supported by Authorizer if Authorizer would be providing
-   * authentication token to ABFS server.
+   * SAS token to ABFS server.
    *
-   * If Authorizer is not going to provide any auth tokens, return AuthType.None
-   * @return
+   * If Authorizer is not going to provide any SAS tokens, return AuthType.None
+   * @return AuthType supported by AbfsAuthorizer
    */
   AuthType getAuthType();
 
   /**
-   * Checks if the provided {@link AuthorizationResource} is allowed to
-   * perform requested action.
+   * Checks if the provided {@link AuthorizationResource} is authorized to
+   * perform the requested action.
    *
-   * @param authorizationResource which contains the action and store path URI
-   * @return AuthorizationResult with store URI and Auth token if Authorizer
-   * is providing any.
-   * @throws AbfsAuthorizationException on authorization failure.
-   * @throws IOException network problems or
-   * similarITestAzureBlobFileSystemListStatus.
-   */
+   * @param authorizationResource which contains the store path and the store
+   * operation action string for which authorization is requested.
+   * @return AuthorizationResult which contains the SAS token for each
+   * AuthorizationResource present in the request
+   **/
   AuthorizationResult checkPrivileges(
       AuthorizationResource... authorizationResource)
       throws AbfsAuthorizationException, AbfsAuthorizerUnhandledException;

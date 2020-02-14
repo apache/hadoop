@@ -18,30 +18,16 @@
 
 package org.apache.hadoop.fs.azurebfs.extensions;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
-import org.apache.hadoop.fs.azurebfs.services.AuthType;
-
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.Set;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.APPEND_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.CHECKACCESS_ACTION_PREFIX_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.CREATEFILE_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.DELETE_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.EXECUTE_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.GETACL_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.GETFILESTATUS_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.LISTSTATUS_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.MKDIR_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.READ_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.RENAME_DESTINATION_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.RENAME_SOURCE_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.SETACL_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.SETOWNER_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.SETPERMISSION_ACTION;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants.*;
 
 /**
  * A mock Azure Blob File System Authorization Implementation
@@ -57,12 +43,12 @@ public class MockAbfsAuthorizer implements AbfsAuthorizer {
   public static final String TEST_READ_WRITE_FILE_1 = "readWriteFile1";
   public static final String TEST_WRITE_THEN_READ_ONLY =
       "writeThenReadOnlyFile";
-  private static final Set<String> apiAuthorizerActions = new HashSet<String>();
+  private static final Set<String> apiAuthorizerActions = new HashSet<>();
   public String accountName;
   private Configuration conf;
-  private Set<String> readOnlyPathsPrefixes = new HashSet<String>();
-  private Set<String> writeOnlyPathsPrefixes = new HashSet<String>();
-  private Set<String> readWritePathsPrefixes = new HashSet<String>();
+  private Set<String> readOnlyPathsPrefixes = new HashSet<>();
+  private Set<String> writeOnlyPathsPrefixes = new HashSet<>();
+  private Set<String> readWritePathsPrefixes = new HashSet<>();
   private Map<String, WriteReadMode> writeReadModeMap = null;
 
   public MockAbfsAuthorizer(Configuration conf) {
@@ -100,9 +86,8 @@ public class MockAbfsAuthorizer implements AbfsAuthorizer {
   private AuthorizationResourceResult getAuthzResourceResultWithoutSAS(
       AuthorizationResource resource) {
     AuthorizationResourceResult resourceResult =
-        new AuthorizationResourceResult();
-    resourceResult.authorizerAction = resource.authorizerAction;
-    resourceResult.storePathUri = resource.storePathUri;
+        new AuthorizationResourceResult(resource.getStorePathUri(),
+            resource.getAuthorizerAction(), null);
     return resourceResult;
   }
 
@@ -125,8 +110,8 @@ public class MockAbfsAuthorizer implements AbfsAuthorizer {
   private AuthorizationResourceResult checkAuthorizationForStoreAction(
       AuthorizationResource resource, String storeAction)
       throws AbfsAuthorizationException {
-    if (resource.authorizerAction.equalsIgnoreCase(storeAction)) {
-      String storePath = resource.storePathUri.getPath();
+    if (resource.getAuthorizerAction().equalsIgnoreCase(storeAction)) {
+      String storePath = resource.getStorePathUri().getPath();
       int indexofLastDelimiter = storePath.lastIndexOf("/");
       String storeFileOrFolder = storePath.substring(indexofLastDelimiter + 1);
       String getStoreFileOrFolderPrefix = getStorePathPrefix(storeFileOrFolder);
@@ -236,7 +221,6 @@ public class MockAbfsAuthorizer implements AbfsAuthorizer {
   public AuthorizationResult checkPrivileges(
       AuthorizationResource... authorizationResource)
       throws AbfsAuthorizationException {
-    AuthorizationResult result = new AuthorizationResult();
     AuthorizationResourceResult[] authResourceResult =
         new AuthorizationResourceResult[authorizationResource.length];
     int index = -1;
@@ -246,8 +230,8 @@ public class MockAbfsAuthorizer implements AbfsAuthorizer {
           authzResource);
     }
 
-    result.setAuthResourceResult(authResourceResult);
-    result.setAuthorized(true);
+    AuthorizationResult result = new AuthorizationResult(true,
+        authResourceResult);
 
     return result;
   }

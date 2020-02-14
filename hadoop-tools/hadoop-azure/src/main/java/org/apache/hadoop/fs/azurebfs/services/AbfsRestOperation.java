@@ -270,9 +270,7 @@ public class AbfsRestOperation {
         operationType, authorizerAction);
 
     AuthorizationResource[] authResource = new AuthorizationResource[1];
-    authResource[0] = new AuthorizationResource();
-    authResource[0].storePathUri = qualifiedUri;
-    authResource[0].authorizerAction = authorizerAction;
+    authResource[0] = new AuthorizationResource(authorizerAction, qualifiedUri);
 
     this.authorizationStatus = fetchAuthorizationStatus(this.authorizer,
         authResource);
@@ -292,8 +290,8 @@ public class AbfsRestOperation {
 
     LOG.debug("Initiate authorization check for :");
     for (AuthorizationResource authResource : authorizationResource) {
-      LOG.debug("action: {} on path: {}", authResource.authorizerAction,
-          authResource.storePathUri.getPath());
+      LOG.debug("action: {} on path: {}", authResource.getAuthorizerAction(),
+          authResource.getStorePathUri().getPath());
     }
 
     AuthorizationResult authzResult = null;

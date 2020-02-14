@@ -118,8 +118,8 @@ public class AzureBlobFileSystem extends FileSystem {
     this.setWorkingDirectory(this.getHomeDirectory());
 
     // auto-creation of container is disabled when authorizer is configured
-    if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization() && (
-        this.authorizer == null)) {
+    if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()
+        && (this.authorizer == null)) {
       if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH)) == null) {
         try {
           this.createFileSystem();

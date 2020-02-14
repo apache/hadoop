@@ -588,26 +588,25 @@ public class AbfsConfiguration{
   }
 
   public AbfsAuthorizer getAbfsAuthorizer() throws AzureBlobFileSystemException {
-    if (this.authorizer != null)
-    {
-      return this.authorizer;
+    if (authorizer != null) {
+      return authorizer;
     }
 
-    String authClassName = this.abfsAuthorizerClass;
+    String authClassName = abfsAuthorizerClass;
 
     try {
       if (authClassName != null && !authClassName.isEmpty()) {
         @SuppressWarnings("unchecked")
         Class<AbfsAuthorizer> authClass = (Class<AbfsAuthorizer>) rawConfig.getClassByName(authClassName);
-        this.authorizer =
+        authorizer =
             authClass.getConstructor(new Class[] {Configuration.class}).newInstance(rawConfig);
         LOG.trace("Initializing {}", authClassName);
-        this.authorizer.init();
-        if ((this.authorizer.getAuthType() != AuthType.SAS) && (
-            this.authorizer.getAuthType() != AuthType.None)) {
+        authorizer.init();
+        if ((authorizer.getAuthType() != AuthType.SAS) && (
+            authorizer.getAuthType() != AuthType.None)) {
           throw new AbfsAuthorizationException(
               "Invalid Authorizer AuthType.", new IllegalArgumentException(
-              "Authorizer AuthType set as " + this.authorizer.getAuthType().name()
+              "Authorizer AuthType set as " + authorizer.getAuthType().name()
                   + ". Valid values are SAS and None"));
         }
 
@@ -625,7 +624,8 @@ public class AbfsConfiguration{
       throw new AbfsAuthorizationException("Unable to initialize "
           + "Authorizer", e);
     }
-    return this.authorizer;
+
+    return authorizer;
   }
 
   void validateStorageAccountKeys() throws InvalidConfigurationValueException {

@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.fs.azurebfs.authentication;
 
+import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
+
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
 import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResource;
 import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResourceResult;
 import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResult;
-
-import java.net.URI;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.HashMap;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_SAS_REFRESH_INTERVAL_BEFORE_EXPIRY;
 
@@ -36,7 +36,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.D
  */
 public class AuthorizationStatus {
   private boolean isAuthorized;
-  private HashMap<URI, SasTokenData> sasTokenMap;
+  private final Map<URI, SasTokenData> sasTokenMap;
 
   public AuthorizationStatus() {
     sasTokenMap = new HashMap<>();
@@ -45,7 +45,7 @@ public class AuthorizationStatus {
   /**
    * Fetch the SAS token
    *
-   * @return
+   * @return SAS token queryparam string
    */
   public String getSasTokenQuery(URI storePathUri) {
     if (sasTokenMap.containsKey(storePathUri)) {
@@ -77,24 +77,26 @@ public class AuthorizationStatus {
       // for which authToken is returned
       AuthorizationResource authorizationRequestedForResource =
           authorizationResource[i];
-      if ((singleResourceAuth == null) || (singleResourceAuth.storePathUri
-          == null) || (singleResourceAuth.authorizerAction == null))  {
+
+      if ((singleResourceAuth == null)
+          || (singleResourceAuth.getStorePathUri() == null)
+          || (singleResourceAuth.getAuthorizerAction() == null))  {
         throw new AbfsAuthorizationException("Invalid authorization response");
       }
 
-      if (!singleResourceAuth.storePathUri
-              .equals(authorizationRequestedForResource.storePathUri)
-              || singleResourceAuth.authorizerAction.equalsIgnoreCase(
-              authorizationRequestedForResource.authorizerAction)) {
+      if (!singleResourceAuth.getStorePathUri()
+              .equals(authorizationRequestedForResource.getStorePathUri())
+              || singleResourceAuth.getAuthorizerAction().equalsIgnoreCase(
+              authorizationRequestedForResource.getAuthorizerAction())) {
 
         throw new AbfsAuthorizationException(String.format(
             "Mismatch in requested resource authorization action to received."
                 + " Requested %s-%s, "
                 + "Received %s-%s",
-            authorizationRequestedForResource.storePathUri.toString(),
-            authorizationRequestedForResource.authorizerAction,
-            singleResourceAuth.storePathUri.toString(),
-            singleResourceAuth.authorizerAction));
+            authorizationRequestedForResource.getStorePathUri().toString(),
+            authorizationRequestedForResource.getAuthorizerAction(),
+            singleResourceAuth.getStorePathUri().toString(),
+            singleResourceAuth.getAuthorizerAction()));
       }
 
       SasTokenData authToken = new SasTokenData();
@@ -105,9 +107,9 @@ public class AuthorizationStatus {
       // If the sas token is short lived and below 5 mins, set the sas token
       // refresh to be half time before expiry
       authToken.sasExpiryTime = getSasExpiryDateTime(
-          singleResourceAuth.authToken);
+          singleResourceAuth.getAuthToken());
 
-      authToken.sasToken = singleResourceAuth.authToken;
+      authToken.sasToken = singleResourceAuth.getAuthToken();
       long durationToExpiryInSec = (
           Duration.between(authToken.sasExpiryTime, Instant.now()).toMillis()
               / 1000);
@@ -117,14 +119,14 @@ public class AuthorizationStatus {
             (int) durationToExpiryInSec / 2;
       }
 
-      sasTokenMap.put(singleResourceAuth.storePathUri, authToken);
+      sasTokenMap.put(singleResourceAuth.getStorePathUri(), authToken);
     }
   }
 
   /**
    * Fetch SAS token expiry
    *
-   * @return
+   * @return Time of SAS token expiry
    */
   private Instant getSasExpiryDateTime(String sasToken) {
     int startIndex = sasToken.indexOf("ske");
@@ -163,7 +165,7 @@ public class AuthorizationStatus {
    * Fetches and checks SAS token for provided Store Path URI
    *
    * @param storepathUri
-   * @return
+   * @return true if the SAS token is still valid, else false
    */
   public boolean isValidSas(URI storepathUri) {
     if (sasTokenMap.containsKey(storepathUri)) {

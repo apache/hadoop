@@ -25,7 +25,26 @@ import java.net.URI;
  * AuthorizationResult with results for each resource.
  */
 public class AuthorizationResourceResult {
-  public URI storePathUri;
-  public String authorizerAction;
-  public String authToken;
+  private final URI storePathUri;
+  private final String authorizerAction;
+  private final String authToken;
+
+  public AuthorizationResourceResult(final URI storePathUri,
+      final String authorizerAction, final String authToken) {
+    this.storePathUri = storePathUri;
+    this.authorizerAction = authorizerAction;
+    this.authToken = authToken;
+  }
+
+  public final URI getStorePathUri() {
+    return storePathUri;
+  }
+
+  public final String getAuthorizerAction() {
+    return authorizerAction;
+  }
+
+  public final String getAuthToken() {
+    return authToken;
+  }
 }

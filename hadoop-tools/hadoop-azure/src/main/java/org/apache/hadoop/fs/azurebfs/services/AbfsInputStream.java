@@ -231,7 +231,7 @@ public class AbfsInputStream extends FSInputStream {
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       op = client.read(path, position, b, offset, length, tolerateOobAppends
-          ? "*" : eTag, this.authzStatus);
+          ? "*" : eTag, authzStatus);
       this.authzStatus = op.getAuthorizationStatus();
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {

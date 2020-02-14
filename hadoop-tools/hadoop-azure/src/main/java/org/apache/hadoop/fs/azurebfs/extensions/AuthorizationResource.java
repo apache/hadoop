@@ -24,6 +24,19 @@ import java.net.URI;
  * AuthorizationResource with action and store path URI
  */
 public class AuthorizationResource {
-  public String authorizerAction;
-  public URI storePathUri;
+  private final String authorizerAction;
+  private final URI storePathUri;
+
+  public AuthorizationResource(String authorizerAction, URI storePathUri) {
+    this.authorizerAction = authorizerAction;
+    this.storePathUri = storePathUri;
+  }
+
+  public final String getAuthorizerAction() {
+    return authorizerAction;
+  }
+
+  public final URI getStorePathUri() {
+    return storePathUri;
+  }
 }

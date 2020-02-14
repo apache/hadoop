@@ -22,7 +22,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperati
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 
 /**
- * Defines the string literals that need to be set to authorizer as action
+ * Defines the string literals that need to be sent to authorizer as action
+ * string.
  */
 public class AbfsAuthorizerConstants {
 
@@ -51,7 +52,7 @@ public class AbfsAuthorizerConstants {
   /**
    * Converts AbfsRestOperation to Authorizer action
    * @param opType
-   * @return
+   * @return Authorizer action string
    */
   public static String getAction(AbfsRestOperationType opType)
       throws InvalidAbfsRestOperationException {
@@ -83,7 +84,7 @@ public class AbfsAuthorizerConstants {
       return MKDIR_ACTION;
     default:
       throw new InvalidAbfsRestOperationException(
-          new Exception("Unknown ABFS " + "Rest Opertation" + opType.name()));
+          new Exception("Unknown ABFS " + "Rest Operation" + opType.name()));
     }
   }
 

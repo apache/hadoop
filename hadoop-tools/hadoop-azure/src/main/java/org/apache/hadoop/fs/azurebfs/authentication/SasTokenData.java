@@ -20,7 +20,11 @@ package org.apache.hadoop.fs.azurebfs.authentication;
 
 import java.time.Instant;
 
-public class SasTokenData {
+/**
+ * SasTokenData will store the SAS Token, its expiry time and the interval
+ * before expiry when the token will be refreshed.
+ */
+public final class SasTokenData {
   public String sasToken;
   public Instant sasExpiryTime;
   public int sasRefreshIntervalBeforeExpiryInSec;

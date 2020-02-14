@@ -18,19 +18,19 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.*;
+import org.apache.hadoop.fs.azurebfs.extensions.*;
 import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
-import org.apache.hadoop.fs.azurebfs.extensions.MockAbfsAuthorizer;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -99,10 +99,10 @@ public class ITestAzureBlobFileSystemAuthorization
     final AzureBlobFileSystem fs = this.getFileSystem();
     Path testFilePath = new Path(
         TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName());
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.WRITE_MODE);
     fs.create(testFilePath).close();
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.READ_MODE);
     fs.open(testFilePath).close();
   }
@@ -151,11 +151,11 @@ public class ITestAzureBlobFileSystemAuthorization
     Path testFilePath = new Path(
         TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName());
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.WRITE_MODE);
     fs.create(testFilePath).close();
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.READ_MODE);
     intercept(AbfsAuthorizationException.class, () -> {
       fs.append(testFilePath).close();
@@ -203,11 +203,11 @@ public class ITestAzureBlobFileSystemAuthorization
     Path testFilePath = new Path(
         TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName());
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.WRITE_MODE);
     fs.create(testFilePath).close();
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.READ_MODE);
     intercept(AbfsAuthorizationException.class, () -> {
       fs.delete(testFilePath, false);
@@ -220,11 +220,11 @@ public class ITestAzureBlobFileSystemAuthorization
     Path testFilePath = new Path(
         TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName());
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.WRITE_MODE);
     fs.create(testFilePath).close();
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.READ_MODE);
     fs.listStatus(testFilePath);
   }
@@ -269,11 +269,11 @@ public class ITestAzureBlobFileSystemAuthorization
     Path testFilePath = new Path(
         TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName());
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.WRITE_MODE);
     fs.create(testFilePath).close();
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.READ_MODE);
     fs.getFileStatus(testFilePath);
   }
@@ -304,11 +304,11 @@ public class ITestAzureBlobFileSystemAuthorization
     Path testFilePath = new Path(
         TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName());
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.WRITE_MODE);
     fs.create(testFilePath).close();
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.READ_MODE);
     intercept(AbfsAuthorizationException.class, () -> {
       fs.setOwner(testFilePath, TEST_USER, TEST_GROUP);
@@ -332,11 +332,11 @@ public class ITestAzureBlobFileSystemAuthorization
     Path testFilePath = new Path(
         TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName());
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.WRITE_MODE);
     fs.create(testFilePath).close();
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.READ_MODE);
     intercept(AbfsAuthorizationException.class, () -> {
       fs.setPermission(testFilePath,
@@ -362,11 +362,11 @@ public class ITestAzureBlobFileSystemAuthorization
     Path testFilePath = new Path(
         TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName());
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.WRITE_MODE);
     fs.create(testFilePath).close();
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.READ_MODE);
     List<AclEntry> aclSpec = Arrays
         .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
@@ -393,11 +393,11 @@ public class ITestAzureBlobFileSystemAuthorization
     Path testFilePath = new Path(
         TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName());
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.WRITE_MODE);
     fs.create(testFilePath).close();
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.READ_MODE);
     List<AclEntry> aclSpec = Arrays
         .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
@@ -422,11 +422,11 @@ public class ITestAzureBlobFileSystemAuthorization
     Path testFilePath = new Path(
         TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName());
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.WRITE_MODE);
     fs.create(testFilePath).close();
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.READ_MODE);
     intercept(AbfsAuthorizationException.class, () -> {
       fs.removeDefaultAcl(testFilePath);
@@ -449,11 +449,11 @@ public class ITestAzureBlobFileSystemAuthorization
     Path testFilePath = new Path(
         TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName());
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.WRITE_MODE);
     fs.create(testFilePath).close();
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.READ_MODE);
     intercept(AbfsAuthorizationException.class, () -> {
       fs.removeAcl(testFilePath);
@@ -478,11 +478,11 @@ public class ITestAzureBlobFileSystemAuthorization
     Path testFilePath = new Path(
         TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName());
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.WRITE_MODE);
     fs.create(testFilePath).close();
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.READ_MODE);
     List<AclEntry> aclSpec = Arrays
         .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
@@ -497,11 +497,11 @@ public class ITestAzureBlobFileSystemAuthorization
     Path testFilePath = new Path(
         TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName());
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.WRITE_MODE);
     fs.create(testFilePath).close();
 
-    ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer())
+    getMockAuthorizer(fs)
         .setwriteThenReadOnly(testFilePath.getName(), WriteReadMode.READ_MODE);
     List<AclEntry> aclSpec = Arrays
         .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
@@ -520,5 +520,10 @@ public class ITestAzureBlobFileSystemAuthorization
     intercept(AbfsAuthorizationException.class, () -> {
       fs.getAclStatus(testFilePath);
     });
+  }
+
+  private MockAbfsAuthorizer getMockAuthorizer(AzureBlobFileSystem fs)
+      throws Exception {
+    return ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer());
   }
 }

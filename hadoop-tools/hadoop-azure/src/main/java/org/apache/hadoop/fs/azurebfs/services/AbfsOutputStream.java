@@ -18,35 +18,20 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.nio.ByteBuffer;
-import java.util.Locale;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import com.google.common.annotations.*;
+import com.google.common.base.*;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.azurebfs.authentication.*;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.*;
+import org.apache.hadoop.io.*;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import java.io.*;
+import java.net.*;
+import java.nio.*;
+import java.util.*;
+import java.util.concurrent.*;
 
-import org.apache.hadoop.fs.azurebfs.authentication.AuthorizationStatus;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizerUnhandledException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.io.ElasticByteBufferPool;
-import org.apache.hadoop.fs.FSExceptionMessages;
-import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.fs.Syncable;
-
-import static org.apache.hadoop.io.IOUtils.wrapException;
+import static org.apache.hadoop.io.IOUtils.*;
 
 /**
  * The BlobFsOutputStream for Rest AbfsClient.
@@ -110,7 +95,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         10L,
         TimeUnit.SECONDS,
         new LinkedBlockingQueue<>());
-    this.completionService = new ExecutorCompletionService<AuthorizationStatus>(this.threadExecutor);
+    this.completionService = new ExecutorCompletionService<>(this.threadExecutor);
   }
 
   /**
@@ -361,16 +346,14 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       AbfsRestOperation op = client.flush(path, offset, retainUncommitedData,
           isClose, this.authzStatus);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
+    } catch (AbfsAuthorizationException | AbfsAuthorizerUnhandledException ex) {
+      throw ex;
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
-        if (((AbfsRestOperationException) ex).getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+        if (((AbfsRestOperationException) ex).getStatusCode()
+            == HttpURLConnection.HTTP_NOT_FOUND) {
           throw new FileNotFoundException(ex.getMessage());
         }
-      }
-
-      if ((ex instanceof AbfsAuthorizationException)
-          || (ex instanceof AbfsAuthorizerUnhandledException)) {
-        throw ex;
       }
 
       throw new IOException(ex);

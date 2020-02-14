@@ -25,31 +25,56 @@ package org.apache.hadoop.fs.azurebfs.extensions;
  */
 public class AuthorizationResult {
 
-  private boolean isAuthorized;
-  private AuthorizationResourceResult[] authResourceResult;
+  private final boolean isAuthorized;
+  private final AuthorizationResourceResult[] authResourceResult;
 
   public boolean isAuthorized() {
     return isAuthorized;
   }
 
-  public void setAuthorized(boolean authorized) {
-    isAuthorized = authorized;
-  }
-
-  public void setAuthResourceResult(
-      final AuthorizationResourceResult[] authResourceResult) {
+  /**
+   * Sets the AuthorizationResult.
+   * Creates a deep copy of resource results to prevent any modifications.
+   * @param isAuthorized true if user is authorized, false otherwise
+   * @param resourceResults Results of each resource authorization.
+   */
+  AuthorizationResult(final boolean isAuthorized,
+      final AuthorizationResourceResult[] resourceResults)
+  {
+    this.isAuthorized = isAuthorized;
     this.authResourceResult =
-        new AuthorizationResourceResult[authResourceResult.length];
-    System.arraycopy(authResourceResult, 0, this.authResourceResult, 0,
-        authResourceResult.length);
+        new AuthorizationResourceResult[resourceResults.length];
+
+    int i = 0;
+    for (AuthorizationResourceResult singleResourceResult :
+        resourceResults) {
+      this.authResourceResult[i] =
+          new AuthorizationResourceResult(singleResourceResult.getStorePathUri(),
+              singleResourceResult.getAuthorizerAction(),
+              singleResourceResult.getAuthToken());
+      i++;
+    }
   }
 
+  /**
+   * Returns a copy of the AuthorizationResourceResult to prevent accidental
+   * modifications
+   * @return copy of AuthorizationResourceResult
+   */
   public final AuthorizationResourceResult[] getAuthResourceResult() {
-    AuthorizationResourceResult[] authResourceResult =
+    int i = 0;
+    AuthorizationResourceResult[] resourceResults =
         new AuthorizationResourceResult[this.authResourceResult.length];
-    System.arraycopy(this.authResourceResult, 0,
-        authResourceResult, 0,
-        this.authResourceResult.length);
-    return authResourceResult;
+
+    for (AuthorizationResourceResult singleResourceResult :
+        this.authResourceResult) {
+      resourceResults[i] =
+          new AuthorizationResourceResult(singleResourceResult.getStorePathUri(),
+              singleResourceResult.getAuthorizerAction(),
+              singleResourceResult.getAuthToken());
+      i++;
+    }
+
+    return resourceResults;
   }
 }
