@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azurebfs.extensions;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 /**
- * Interface to support Authorizer providing SAS token
+ * Abstract class to support Authorizer providing SAS token.
  */
 public abstract class AbfsSASAuthorizer implements AbfsAuthorizer {
 

@@ -498,7 +498,7 @@ public class AbfsConfiguration{
   }
 
   /**
-   * Return the accountName for the config generated
+   * Return the accountName for the config generated.
    * @return accountName
    */
   public String getAccountName() {

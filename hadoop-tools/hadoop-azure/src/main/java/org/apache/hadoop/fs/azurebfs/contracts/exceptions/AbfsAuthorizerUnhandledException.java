@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
 
 /**
- * Exception for all unhandled errors while communicating with authorizer
+ * Exception for all unhandled errors while communicating with authorizer.
  */
 public class AbfsAuthorizerUnhandledException
     extends AzureBlobFileSystemException {

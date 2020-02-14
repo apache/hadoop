@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.azurebfs.extensions;
 import java.net.URI;
 
 /**
- * AuthorizationResource with action and store path URI
+ * AuthorizationResource sent to Authorizer to check for authorization
+ * status on a store path URI to perform an action.
  */
 public class AuthorizationResource {
   private final String authorizerAction;

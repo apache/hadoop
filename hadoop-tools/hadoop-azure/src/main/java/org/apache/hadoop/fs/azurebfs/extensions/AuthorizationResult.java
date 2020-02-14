@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azurebfs.extensions;
 /**
  * AuthorizationResult will be returned by Authorizer with store path URI and
  * supported Auth token if the AuthorizationResource is found authorized for
- * specified action
+ * specified action.
  */
 public class AuthorizationResult {
 
@@ -58,7 +58,7 @@ public class AuthorizationResult {
 
   /**
    * Returns a copy of the AuthorizationResourceResult to prevent accidental
-   * modifications
+   * modifications.
    * @return copy of AuthorizationResourceResult
    */
   public final AuthorizationResourceResult[] getAuthResourceResult() {

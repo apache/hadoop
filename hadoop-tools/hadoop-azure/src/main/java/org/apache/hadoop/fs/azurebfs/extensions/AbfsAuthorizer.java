@@ -49,7 +49,7 @@ public interface AbfsAuthorizer {
    * Get AuthType supported by Authorizer if Authorizer would be providing
    * SAS token to ABFS server.
    *
-   * If Authorizer is not going to provide any SAS tokens, return AuthType.None
+   * If Authorizer is not going to provide any SAS tokens, return AuthType.None.
    * @return AuthType supported by AbfsAuthorizer
    */
   AuthType getAuthType();

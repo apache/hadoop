@@ -136,7 +136,7 @@ public class AbfsRestOperation {
 
   /**
    * Constructor that accepts cached authorization status
-   * used by read anf append APIs
+   * used by read and append APIs.
    * @param opType
    * @param abfsClient
    * @param httpMethod
@@ -163,7 +163,7 @@ public class AbfsRestOperation {
 
   /**
    * Constructor that accepts cached authorization status
-   * used by flush API
+   * used by flush API.
    * @param opType
    * @param abfsClient
    * @param httpMethod
@@ -257,17 +257,18 @@ public class AbfsRestOperation {
     if ((this.authorizationStatus != null) &&
         this.authorizationStatus.isAuthorized() &&
         (this.authorizer.getAuthType() != AuthType.SAS)) {
+      LOG.debug("Provided authorization status is valid (Authorizer Authype "
+          + "is not SAS");
       return;
     } else if ((this.authorizer.getAuthType() == AuthType.SAS)
         && this.authorizationStatus.isValidSas(qualifiedUri)) {
+      LOG.debug("Provided authorization status and the SAS token is valid");
       return; // Current sasData is already valid.
     } else {
       this.authorizationStatus = null; // reset authzStatus
     }
 
     String authorizerAction = AbfsAuthorizerConstants.getAction(operationType);
-    LOG.debug("Authorizer action for AbfsRestOperation:{} is {}",
-        operationType, authorizerAction);
 
     AuthorizationResource[] authResource = new AuthorizationResource[1];
     authResource[0] = new AuthorizationResource(authorizerAction, qualifiedUri);
@@ -277,7 +278,7 @@ public class AbfsRestOperation {
   }
 
   /**
-   * Fetch Authorization status for a store path on a action
+   * Fetch Authorization status for a store path on a action.
    * @param authorizer
    * @param authorizationResource
    * @return AuthorizationStatus
@@ -288,9 +289,9 @@ public class AbfsRestOperation {
       AuthorizationResource[] authorizationResource)
       throws AzureBlobFileSystemException {
 
-    LOG.debug("Initiate authorization check for :");
     for (AuthorizationResource authResource : authorizationResource) {
-      LOG.debug("action: {} on path: {}", authResource.getAuthorizerAction(),
+      LOG.debug("checkPrivileges: Action={} Path={}",
+          authResource.getAuthorizerAction(),
           authResource.getStorePathUri().getPath());
     }
 
@@ -327,7 +328,7 @@ public class AbfsRestOperation {
   }
 
   /**
-   * Updates Http Request with Auth Token
+   * Updates Http Request with Auth Token.
    * @param url
    * @param method
    * @param requestHeaders

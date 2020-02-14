@@ -43,9 +43,9 @@ public class AuthorizationStatus {
   }
 
   /**
-   * Fetch the SAS token
-   *
-   * @return SAS token queryparam string
+   * Fetch SAS token from the specific storePath URI.
+   * @param storePathUri
+   * @return SAS token queryparam string.
    */
   public String getSasTokenQuery(URI storePathUri) {
     if (sasTokenMap.containsKey(storePathUri)) {
@@ -59,11 +59,11 @@ public class AuthorizationStatus {
   }
 
   /**
-   * Update authTokenMap
+   * Updates sasTokenMap from the AuthorizationResult received from Authorizer.
    * Also update the refresh interval for each SAS token.
    *
    * @param authorizationResource
-   * @param authResult - Authorizer AuthorizationResult
+   * @param authResult - Authorizer AuthorizationResult.
    */
   public void setSasToken(AuthorizationResource[] authorizationResource,
       AuthorizationResult authResult) throws AbfsAuthorizationException {
@@ -78,21 +78,40 @@ public class AuthorizationStatus {
       AuthorizationResource authorizationRequestedForResource =
           authorizationResource[i];
 
-      if ((singleResourceAuth == null)
-          || (singleResourceAuth.getStorePathUri() == null)
-          || (singleResourceAuth.getAuthorizerAction() == null))  {
-        throw new AbfsAuthorizationException("Invalid authorization response");
+      if (singleResourceAuth == null) {
+        throw new AbfsAuthorizationException("Invalid authorization "
+            + "response. Null resource Authorization result");
+      }
+
+      if (singleResourceAuth.getStorePathUri() == null) {
+        throw new AbfsAuthorizationException("Invalid authorization "
+            + "response. Resource Authorization result with Null storePath "
+            + "URI");
+      }
+
+      if (singleResourceAuth.getAuthorizerAction() == null) {
+        throw new AbfsAuthorizationException(String.format(
+            "Invalid authorization response. Resource Authorization result "
+                + "for %s has null authorizerAction",
+            singleResourceAuth.getStorePathUri()));
+      }
+
+      if (singleResourceAuth.getAuthToken() == null) {
+        throw new AbfsAuthorizationException(String.format(
+            "Invalid authorization response. Resource Authorization result "
+                + "for %s for authorize action %s has null SAS token",
+            singleResourceAuth.getStorePathUri(),
+            singleResourceAuth.getAuthorizerAction()));
       }
 
       if (!singleResourceAuth.getStorePathUri()
-              .equals(authorizationRequestedForResource.getStorePathUri())
-              || singleResourceAuth.getAuthorizerAction().equalsIgnoreCase(
-              authorizationRequestedForResource.getAuthorizerAction())) {
+          .equals(authorizationRequestedForResource.getStorePathUri())
+          || singleResourceAuth.getAuthorizerAction().equalsIgnoreCase(
+          authorizationRequestedForResource.getAuthorizerAction())) {
 
         throw new AbfsAuthorizationException(String.format(
             "Mismatch in requested resource authorization action to received."
-                + " Requested %s-%s, "
-                + "Received %s-%s",
+                + " Requested %s-%s, Received %s-%s",
             authorizationRequestedForResource.getStorePathUri().toString(),
             authorizationRequestedForResource.getAuthorizerAction(),
             singleResourceAuth.getStorePathUri().toString(),
@@ -124,9 +143,9 @@ public class AuthorizationStatus {
   }
 
   /**
-   * Fetch SAS token expiry
+   * Fetch SAS token expiry for a given SAS Token query URL.
    *
-   * @return Time of SAS token expiry
+   * @return Time of SAS token expiry.
    */
   private Instant getSasExpiryDateTime(String sasToken) {
     int startIndex = sasToken.indexOf("ske");
@@ -141,9 +160,9 @@ public class AuthorizationStatus {
   }
 
   /**
-   * Check if the SAS is valid and if it needs update
+   * Check if SASTokenData is valid and or if it needs update.
    *
-   * @return true if SAS token is valid, false otherwise
+   * @return true if SAS token is valid, false otherwise.
    */
   public boolean isValidSas(SasTokenData sasTokenData) {
     String sasTokenQuery = sasTokenData.sasToken;
@@ -162,10 +181,10 @@ public class AuthorizationStatus {
   }
 
   /**
-   * Fetches and checks SAS token for provided Store Path URI
+   * Fetches and checks SAS token for provided Store Path URI.
    *
    * @param storepathUri
-   * @return true if the SAS token is still valid, else false
+   * @return true if the SAS token is still valid, else false.
    */
   public boolean isValidSas(URI storepathUri) {
     if (sasTokenMap.containsKey(storepathUri)) {

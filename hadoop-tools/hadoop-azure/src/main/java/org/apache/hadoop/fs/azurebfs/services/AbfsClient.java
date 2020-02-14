@@ -138,7 +138,7 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-   * Get Auth Type which is in effect for current FileSystem instance
+   * Get Auth Type which is in effect for current FileSystem instance.
    * @return AuthType
    */
   public AuthType getAuthType() {
@@ -501,7 +501,7 @@ public class AbfsClient implements Closeable {
             buffer,
             bufferOffset,
             bufferLength,
-        authzStatus);
+            authzStatus);
     op.execute();
 
     return op;

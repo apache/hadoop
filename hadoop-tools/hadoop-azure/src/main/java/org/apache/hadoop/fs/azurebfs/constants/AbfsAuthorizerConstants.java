@@ -41,8 +41,9 @@ public class AbfsAuthorizerConstants {
   public static final String MKDIR_ACTION = "mkdir";
   public static final String GETACL_ACTION = "getaclstatus";
   public static final String GETFILESTATUS_ACTION = "getfilestatus";
-  public static final String SETACL_ACTION = "setacl"; // Modify, removeacl,
-  // setacl
+  // Action mapped to FS APIs such as ModifyAclEntries, RemoveAclEntries,
+  // RemoveAcl, RemoveDefaultAcl, SetAclEntries
+  public static final String SETACL_ACTION = "setacl";
   public static final String SETOWNER_ACTION = "setowner";
   public static final String SETPERMISSION_ACTION = "setpermission";
   public static final String APPEND_ACTION = "write";
@@ -50,7 +51,7 @@ public class AbfsAuthorizerConstants {
   public static final String EXECUTE_ACTION = "execute";
 
   /**
-   * Converts AbfsRestOperation to Authorizer action
+   * Converts AbfsRestOperation type to an Authorizer action string.
    * @param opType
    * @return Authorizer action string
    */
