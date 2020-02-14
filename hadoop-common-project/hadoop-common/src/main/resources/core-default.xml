@@ -3843,4 +3843,13 @@
       Enable Server Name Indication (SNI) host check for HTTPS enabled server.
     </description>
   </property>
+
+  <property>
+    <name>hadoop.metrics.jvm.use-thread-mxbean</name>
+    <value>false</value>
+    <description>
+      Whether or not ThreadMXBean is used for getting thread info in JvmMetrics,
+      ThreadGroup approach is preferred for better performance.
+    </description>
+  </property>
 </configuration>
