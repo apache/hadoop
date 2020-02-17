@@ -712,7 +712,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
                       localFile,
                       destPath,
                       partition,
-                      uploadPartSize);
+                      uploadPartSize,
+                      context);
               LOG.debug("{}: adding pending commit {}", getRole(), commit);
               commits.add(commit);
             });
