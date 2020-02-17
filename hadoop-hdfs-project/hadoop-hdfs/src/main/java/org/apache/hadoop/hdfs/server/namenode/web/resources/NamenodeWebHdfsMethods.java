@@ -58,6 +58,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
@@ -1012,6 +1013,18 @@ public class NamenodeWebHdfsMethods {
         return rb.status(Status.OK).entity(js).type(MediaType.APPLICATION_JSON)
             .build();
       }
+    }
+    case GETFILEBLOCKLOCATIONS:
+    {
+      final long offsetValue = offset.getValue();
+      final Long lengthValue = length.getValue();
+      LocatedBlocks locatedBlocks = getRpcClientProtocol()
+          .getBlockLocations(fullpath, offsetValue, lengthValue != null ?
+              lengthValue : Long.MAX_VALUE);
+      BlockLocation[] locations =
+          DFSUtilClient.locatedBlocks2Locations(locatedBlocks);
+      final String js = JsonUtil.toJsonString(locations);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GET_BLOCK_LOCATIONS:
     {
