@@ -670,7 +670,11 @@ public class NetworkTopology {
           }
           if ((NodeBase.getPath(node) + NodeBase.PATH_SEPARATOR_STR)
               .startsWith(scope + NodeBase.PATH_SEPARATOR_STR)) {
-            excludedCountInScope++;
+            if (node instanceof InnerNode) {
+              excludedCountInScope += ((InnerNode) node).getNumOfLeaves();
+            } else {
+              excludedCountInScope++;
+            }
           } else {
             excludedCountOffScope++;
           }

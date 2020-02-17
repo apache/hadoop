@@ -614,4 +614,22 @@ public class TestNetworkTopology {
           frequency.get(dataNodes[i]) > 0);
     }
   }
+
+  @Test
+  public void testCountNumOfAvailableNodes() {
+    int numNodes = cluster.countNumOfAvailableNodes(NodeBase.ROOT, null);
+    assertEquals(20, numNodes);
+
+    // Excluding a single node
+    Collection<Node> excludedNodes = new HashSet<Node>();
+    excludedNodes.add(dataNodes[0]);
+    numNodes = cluster.countNumOfAvailableNodes(NodeBase.ROOT, excludedNodes);
+    assertEquals(19, numNodes);
+
+    // Excluding a full rack
+    Node d4r1 = cluster.getNode("/d4/r1");
+    excludedNodes.add(d4r1);
+    numNodes = cluster.countNumOfAvailableNodes(NodeBase.ROOT, excludedNodes);
+    assertEquals(12, numNodes);
+  }
 }
