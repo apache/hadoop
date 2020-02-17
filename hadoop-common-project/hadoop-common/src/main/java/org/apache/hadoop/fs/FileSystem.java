@@ -132,6 +132,25 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
  * New methods may be marked as Unstable or Evolving for their initial release,
  * as a warning that they are new and may change based on the
  * experience of use in applications.
+ * <b>Important note for developers</b>
+ *
+ * If you're making changes here to the public API or protected methods,
+ * you must review the following subclasses and make sure that
+ * they are filtering/passing through new methods as appropriate.
+ *
+ * {@link FilterFileSystem}: methods are passed through.
+ * {@link ChecksumFileSystem}: checksums are created and
+ * verified.
+ * {@code TestHarFileSystem} will need its {@code MustNotImplement}
+ * interface updated.
+ *
+ * There are some external places your changes will break things.
+ * Do co-ordinate changes here.
+ *
+ * HBase: HBoss
+ * Hive: HiveShim23
+ * {@code shims/0.23/src/main/java/org/apache/hadoop/hive/shims/Hadoop23Shims.java}
+ *
  *****************************************************************/
 @SuppressWarnings("DeprecatedIsStillUsed")
 @InterfaceAudience.Public
