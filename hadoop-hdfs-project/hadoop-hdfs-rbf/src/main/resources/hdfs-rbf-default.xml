@@ -239,14 +239,6 @@
   </property>
 
   <property>
-    <name>dfs.federation.router.metrics.enable</name>
-    <value>true</value>
-    <description>
-      If the metrics service in the router is enabled.
-    </description>
-  </property>
-
-  <property>
     <name>dfs.federation.router.file.resolver.client.class</name>
     <value>org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver</value>
     <description>
