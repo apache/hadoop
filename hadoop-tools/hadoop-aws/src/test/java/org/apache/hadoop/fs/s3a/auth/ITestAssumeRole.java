@@ -581,7 +581,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
           return operations.uploadFileToPendingCommit(localSrc,
               uploadDest, "", uploadPartSize, progress);
         });
-    progress.assertCount("progress counter not expected.", 1);
+    progress.assertCount("progress counter not expected.", 0);
     // delete the file
     localSrc.delete();
     // create a directory there
@@ -603,9 +603,9 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
           pending.save(fs, new Path(readOnlyDir,
               name + CommitConstants.PENDING_SUFFIX), true);
           assertTrue(src.delete());
-          progress.assertCount("Process counter is not expected",
-                  1);
         }));
+    progress.assertCount("Process counter is not expected",
+        range);
 
     try {
       // we expect to be able to list all the files here

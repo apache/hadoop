@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.fs.s3a.auth;
 
 import org.apache.hadoop.util.Progressable;
@@ -26,17 +27,17 @@ import static org.junit.Assert.assertEquals;
  */
 public class ProgressCounter implements Progressable {
 
-    private long count;
+  private long count;
 
-    public void progress() {
-        count++;
-    }
+  public void progress() {
+    count++;
+  }
 
-    public long getCount() {
-        return count;
-    }
+  public long getCount() {
+    return count;
+  }
 
-    public void assertCount(String message, int expected) {
-      assertEquals(message, expected, getCount());
-    }
+  public void assertCount(String message, int expected) {
+    assertEquals(message, expected, getCount());
+  }
 }
