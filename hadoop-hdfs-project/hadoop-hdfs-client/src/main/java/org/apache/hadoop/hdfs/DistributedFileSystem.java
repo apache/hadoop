@@ -3384,6 +3384,16 @@ public class DistributedFileSystem extends FileSystem
       return this;
     }
 
+    /**
+     * Advise that a block replica NOT be written to the local rack DataNode.
+     *
+     * @see CreateFlag for the details.
+     */
+    public HdfsDataOutputStreamBuilder noLocalRack() {
+      getFlags().add(CreateFlag.NO_LOCAL_RACK);
+      return this;
+    }
+
     @VisibleForTesting
     String getStoragePolicyName() {
       return storagePolicyName;
