@@ -45,6 +45,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+
 import javax.annotation.Nullable;
 
 import com.amazonaws.AmazonClientException;
@@ -3459,33 +3461,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
           changeTracker.maybeApplyConstraint(copyObjectRequest);
 
-          setOptionalCopyObjectRequestParameters(copyObjectRequest);
           copyObjectRequest.setCannedAccessControlList(cannedACL);
           copyObjectRequest.setNewObjectMetadata(dstom);
           Optional.ofNullable(srcom.getStorageClass())
               .ifPresent(copyObjectRequest::setStorageClass);
-          // KMS key patch
-          SSEAwsKeyManagementParams kmsParams = null;
-          String sourceKMSId = srcom.getSSEAwsKmsKeyId();
-          if (isNotEmpty(sourceKMSId)) {
-            // source KMS ID is propagated
-            LOG.debug("Propagating SSE-KMS settings from source {}",
-                sourceKMSId);
-            kmsParams = new SSEAwsKeyManagementParams(sourceKMSId);
-          }
-          if (S3AEncryptionMethods.SSE_KMS.equals(
-              encryptionSecrets.getEncryptionMethod())
-              && isNotEmpty(encryptionSecrets.getEncryptionKey())) {
-            // client has KMS encryption settings.
-            // and explicitly defines a key
-            // these override any of the source file
-            kmsParams = new SSEAwsKeyManagementParams(
-                encryptionSecrets.getEncryptionKey());
-          }
-          if (kmsParams != null) {
-            copyObjectRequest.setSSEAwsKeyManagementParams(
-                kmsParams);
-          }
+
+          propagateEncryptionParams(srcom, copyObjectRequest);
           Copy copy = transfers.copy(copyObjectRequest);
           copy.addProgressListener(progressListener);
           CopyOutcome copyOutcome = CopyOutcome.waitForCopy(copy);
@@ -3509,6 +3490,42 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           instrumentation.filesCopied(1, size);
           return result;
         });
+  }
+
+  /**
+   * Propagate encryption parameters from source file if set else use the
+   * current file system encryption settings.
+   * @param srcom
+   * @param copyObjectRequest
+   */
+  private void propagateEncryptionParams(ObjectMetadata srcom,
+                                         CopyObjectRequest copyObjectRequest) {
+    Optional<SSEAwsKeyManagementParams> kmsParams = Optional.empty();
+    String sourceKMSId = srcom.getSSEAwsKmsKeyId();
+    if (isNotEmpty(sourceKMSId)) {
+      // source KMS ID is propagated
+      LOG.debug("Propagating SSE-KMS settings from source {}",
+          sourceKMSId);
+      kmsParams = Optional.of(new SSEAwsKeyManagementParams(sourceKMSId));
+    }
+    kmsParams.ifPresent(
+            copyObjectRequest::setSSEAwsKeyManagementParams);
+    switch(encryptionSecrets.getEncryptionMethod()) {
+      /**
+       * Overriding with client encryption settings.
+       */
+      case SSE_C:
+        generateSSECustomerKey().ifPresent(customerKey -> {
+          copyObjectRequest.setSourceSSECustomerKey(customerKey);
+          copyObjectRequest.setDestinationSSECustomerKey(customerKey);
+        });
+        break;
+      case SSE_KMS:
+        generateSSEAwsKeyParams().ifPresent(
+                copyObjectRequest::setSSEAwsKeyManagementParams);
+        break;
+      default:
+    }
   }
 
   /**
@@ -3546,23 +3563,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("Initiate multipart upload to {}", request.getKey());
     incrementStatistic(OBJECT_MULTIPART_UPLOAD_INITIATED);
     return getAmazonS3Client().initiateMultipartUpload(request);
-  }
-
-  protected void setOptionalCopyObjectRequestParameters(
-      CopyObjectRequest copyObjectRequest) throws IOException {
-    switch (getServerSideEncryptionAlgorithm()) {
-    case SSE_KMS:
-      generateSSEAwsKeyParams().ifPresent(
-          copyObjectRequest::setSSEAwsKeyManagementParams);
-      break;
-    case SSE_C:
-      generateSSECustomerKey().ifPresent(customerKey -> {
-        copyObjectRequest.setSourceSSECustomerKey(customerKey);
-        copyObjectRequest.setDestinationSSECustomerKey(customerKey);
-      });
-      break;
-    default:
-    }
   }
 
   private void setOptionalPutRequestParameters(PutObjectRequest request) {

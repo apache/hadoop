@@ -93,22 +93,6 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
     Configuration c = fs.getConf();
     String kmsKey = c.getTrimmed(SERVER_SIDE_ENCRYPTION_KEY);
     assertEncrypted(path, SSE_KMS, kmsKey);
-/*
-    ObjectMetadata objectMetadata = fs.getObjectMetadata(path);
-    String details = String.format(
-        "copied file %s with encryption algorthm %s and key %s",
-        path,
-        objectMetadata.getSSEAlgorithm(),
-        objectMetadata.getSSEAwsKmsKeyId());
-    // algorithm must be SSE-KMS, regardless of the default bucket settings
-    Assertions.assertThat(objectMetadata.getSSEAlgorithm())
-        .describedAs("SSE algorithm in %s", details)
-        .isEqualTo(getSSEAlgorithm().getMethod());
-    // and the key must be ours.
-    Assertions.assertThat(objectMetadata.getSSEAwsKmsKeyId())
-        .describedAs("SSE KMS key ID in %s", details)
-        .isEqualTo(kmsKey);
-*/
   }
 
   @Override
@@ -150,18 +134,6 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
       // we assert that the renamed file has picked up the KMS key of our FS
       assertEncrypted(renamedFile, SSE_KMS, kmsKey);
     }
-
-
-/*
-    Path targetDir = path("target");
-    Path dest = new Path(targetDir, src.getName() + "-another");
-    byte[] dataTarget = dataset(1024, 'A', 'Z');
-    writeDataset(fs, dest, dataTarget, dataTarget.length, 1024 * 1024, true);
-    ContractTestUtils.verifyFileContents(fs, dest, dataTarget);
-    fs.rename(src, targetDir);
-    Path renamedFile = new Path(targetDir, src.getName());
-    ContractTestUtils.verifyFileContents(fs, renamedFile, data);
-    assertEncrypted(renamedFile);*/
   }
 
 
