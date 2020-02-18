@@ -107,10 +107,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     writeDataset(fs, src, data, data.length, 1024 * 1024, true);
     ContractTestUtils.verifyFileContents(fs, src, data);
     Path targetDir = path("target");
-    Path dest = new Path(targetDir, src.getName() + "-another");
-    byte[] dataTarget = dataset(1024, 'A', 'Z');
-    writeDataset(fs, dest, dataTarget, dataTarget.length, 1024*1024, true);
-    ContractTestUtils.verifyFileContents(fs, dest, dataTarget);
+    mkdirs(targetDir);
     fs.rename(src, targetDir);
     Path renamedFile = new Path(targetDir, src.getName());
     ContractTestUtils.verifyFileContents(fs, renamedFile, data);
