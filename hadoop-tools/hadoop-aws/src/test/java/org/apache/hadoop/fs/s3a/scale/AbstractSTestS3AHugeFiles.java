@@ -25,6 +25,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.junit.FixMethodOrder;
@@ -457,6 +459,30 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     logFSState();
   }
 
+  /**
+   * Test to verify source file encryption key.
+   * @throws IOException
+   */
+  @Test
+  public void test_090_verifyRenameSourceEncryption() throws IOException {
+    if(isEncrypted(getFileSystem())) {
+      assertEncrypted(getHugefile());
+    }
+  }
+
+  protected void assertEncrypted(Path hugeFile) throws IOException {
+    //Concrete classes will have implementation.
+  }
+
+  /**
+   * Checks if the encryption is enabled for the file system.
+   * @param fileSystem
+   * @return
+   */
+  protected boolean isEncrypted(S3AFileSystem fileSystem) {
+    return false;
+  }
+
   @Test
   public void test_100_renameHugeFile() throws Throwable {
     assumeHugeFileExists();
@@ -485,6 +511,20 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     bandwidth(timer2, size);
   }
 
+  /**
+   * Test to verify target file encryption key.
+   * @throws IOException
+   */
+  @Test
+  public void test_110_verifyRenameDestEncryption() throws IOException {
+    if(isEncrypted(getFileSystem())) {
+      /**
+       * Using hugeFile again as hugeFileRenamed is renamed back
+       * to hugeFile.
+       */
+      assertEncrypted(hugefile);
+    }
+  }
   /**
    * Cleanup: delete the files.
    */

@@ -45,7 +45,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -3511,20 +3510,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     kmsParams.ifPresent(
             copyObjectRequest::setSSEAwsKeyManagementParams);
     switch(encryptionSecrets.getEncryptionMethod()) {
-      /**
-       * Overriding with client encryption settings.
-       */
-      case SSE_C:
-        generateSSECustomerKey().ifPresent(customerKey -> {
-          copyObjectRequest.setSourceSSECustomerKey(customerKey);
-          copyObjectRequest.setDestinationSSECustomerKey(customerKey);
-        });
-        break;
-      case SSE_KMS:
-        generateSSEAwsKeyParams().ifPresent(
-                copyObjectRequest::setSSEAwsKeyManagementParams);
-        break;
-      default:
+    /**
+     * Overriding with client encryption settings.
+     */
+    case SSE_C:
+      generateSSECustomerKey().ifPresent(customerKey -> {
+        copyObjectRequest.setSourceSSECustomerKey(customerKey);
+        copyObjectRequest.setDestinationSSECustomerKey(customerKey);
+      });
+      break;
+    case SSE_KMS:
+      generateSSEAwsKeyParams().ifPresent(
+              copyObjectRequest::setSSEAwsKeyManagementParams);
+      break;
+    default:
     }
   }
 
