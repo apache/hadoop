@@ -56,7 +56,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private boolean supportFlush;
   private boolean disableOutputStreamFlush;
   private boolean supportAppendWithFlush;
-  private boolean disableOutputStreamFlush;
+  private boolean appendBlob;
   private volatile IOException lastError;
 
   private long lastFlushOffset;
@@ -311,27 +311,22 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         AbfsPerfTracker tracker = client.getAbfsPerfTracker();
         try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
                 "writeCurrentBufferToService", "append")) {
+          if (flush) {
+            /* Append with Flush enabled should happen
+             * when all the data which was supposed to be
+             * appended has been sent and finished.
+             */
+            while(lastTotalAppendOffset <  lastFlushOffset);
+          }
           AbfsRestOperation op = client.append(path, offset, bytes, 0,
-                  bytesLength);
+              bytesLength, flush, isClose);
           perfInfo.registerResult(op.getResult());
           byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
           perfInfo.registerSuccess(true);
           return null;
         }
-        if (flush) {
-          /* Append with Flush enabled should happen
-           * when all the data which was supposed to be 
-           * appended has been sent and finished.
-           */
-          while(lastTotalAppendOffset <  lastFlushOffset);
-        }
-        client.append(path, offset, bytes, 0,
-            bytesLength, flush, isClose);
-        byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
-        return null;
       }
-    }
-    );
+    });
 
     writeOperations.add(new WriteOperation(job, offset, bytesLength, flush));
 

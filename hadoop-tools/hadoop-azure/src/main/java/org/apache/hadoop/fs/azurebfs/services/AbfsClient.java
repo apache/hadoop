@@ -119,7 +119,6 @@ public class AbfsClient implements Closeable {
     this.sasTokenProvider = sasTokenProvider;
   }
 
-  @Override
   public void close() throws IOException {
     if (tokenProvider instanceof Closeable) {
       IOUtils.cleanupWithLogger(LOG, (Closeable) tokenProvider);

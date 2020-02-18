@@ -166,10 +166,6 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ENABLE_APPEND_WITH_FLUSH)
   private boolean enableAppendWithFlush;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_DISABLE_OUTPUTSTREAM_FLUSH,
-      DefaultValue = DEFAULT_DISABLE_OUTPUTSTREAM_FLUSH)
-  private boolean disableOutputStreamFlush;
-
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_AUTOTHROTTLING,
       DefaultValue = DEFAULT_ENABLE_AUTOTHROTTLING)
   private boolean enableAutoThrottling;
@@ -480,10 +476,6 @@ public class AbfsConfiguration{
 
   public boolean isAppendWithFlushEnabled() {
     return this.enableAppendWithFlush;
-  }
-
-  public boolean isOutputStreamFlushDisabled() {
-    return this.disableOutputStreamFlush;
   }
 
   public boolean isAutoThrottlingEnabled() {

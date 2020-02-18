@@ -438,9 +438,10 @@ public class AzureBlobFileSystemStore implements Closeable {
       return new AbfsOutputStream(
           client,
           AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
-          0,
+          Long.valueOf(0),
           abfsConfiguration.getWriteBufferSize(),
           abfsConfiguration.isFlushEnabled(),
+          abfsConfiguration.isOutputStreamFlushDisabled(),
           abfsConfiguration.isAppendWithFlushEnabled(),
           appendBlob);
     }
@@ -520,24 +521,23 @@ public class AzureBlobFileSystemStore implements Closeable {
 
       final long offset = overwrite ? 0 : contentLength;
 
-    perfInfo.registerSuccess(true);
+      perfInfo.registerSuccess(true);
 
-    boolean appendBlob = false;
-    if (isAppendBlobKey(path.toString())) {
-      appendBlob = true;
+      boolean appendBlob = false;
+      if (isAppendBlobKey(path.toString())) {
+        appendBlob = true;
+      }
+
+      return new AbfsOutputStream(
+          client,
+          AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
+          offset,
+          abfsConfiguration.getWriteBufferSize(),
+          abfsConfiguration.isFlushEnabled(),
+          abfsConfiguration.isOutputStreamFlushDisabled(),
+          abfsConfiguration.isAppendWithFlushEnabled(),
+          appendBlob);
     }
-
-    final long offset = overwrite ? 0 : contentLength;
-    perfInfo.registerSuccess(true);
-
-    return new AbfsOutputStream(
-        client,
-        AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
-        offset,
-        abfsConfiguration.getWriteBufferSize(),
-        abfsConfiguration.isFlushEnabled(),
-        abfsConfiguration.isAppendWithFlushEnabled(),
-        appendBlob);
   }
 
   public void rename(final Path source, final Path destination) throws
