@@ -280,12 +280,10 @@
     <dependency>
       <groupId>io.opentracing</groupId>
       <artifactId>opentracing-util</artifactId>
-      <version>0.31.0</version>
     </dependency>
     <dependency>
-      <groupId>io.jaegertracing</groupId>
-      <artifactId>jaeger-client</artifactId>
-      <version>0.33.1</version>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-jaeger</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.htrace</groupId>
