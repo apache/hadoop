@@ -990,6 +990,8 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
         Assertions.assertThat(toChar(bytes))
             .describedAs("open(%s)", testFilePath)
             .isEqualTo(text);
+        expectExceptionWhenReadingOpenFileAPI(rawFS, testFilePath, text,
+            null);
       } else {
         // unversioned sequence
         expectExceptionWhenReading(testFilePath, text);
@@ -1032,8 +1034,26 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
   private void expectExceptionWhenReadingOpenFileAPI(
       Path testFilePath, String text, FileStatus status)
       throws Exception {
+    expectExceptionWhenReadingOpenFileAPI(guardedFs,
+        testFilePath, text, status);
+  }
+
+  /**
+   * We expect the read to fail with an FNFE: open will be happy.
+   * @param fs filesystem
+   * @param testFilePath path of the test file
+   * @param text the context in the file.
+   * @param status optional status for the withFileStatus operation.
+   * @throws Exception failure other than the FNFE
+   */
+  private void expectExceptionWhenReadingOpenFileAPI(
+      final S3AFileSystem fs,
+      final Path testFilePath
+      , final String text,
+      final FileStatus status)
+      throws Exception {
     final FutureDataInputStreamBuilder builder
-        = guardedFs.openFile(testFilePath);
+        = fs.openFile(testFilePath);
     if (status != null) {
       builder.withFileStatus(status);
     }
