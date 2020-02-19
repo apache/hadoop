@@ -206,15 +206,17 @@ public class FSPermissionChecker implements AccessControlEnforcer {
    */
   void checkPermission(INode inode, int snapshotId, FsAction access)
       throws AccessControlException {
+    byte[][] pathComponents = inode.getPathComponents();
+    INodeAttributes nodeAttributes = getINodeAttrs(pathComponents,
+        pathComponents.length - 1, inode, snapshotId);
     try {
-      byte[][] localComponents = {inode.getLocalNameBytes()};
-      INodeAttributes[] iNodeAttr = {inode.getSnapshotINode(snapshotId)};
+      INodeAttributes[] iNodeAttr = {nodeAttributes};
       AccessControlEnforcer enforcer = getAccessControlEnforcer();
       enforcer.checkPermission(
           fsOwner, supergroup, callerUgi,
           iNodeAttr, // single inode attr in the array
           new INode[]{inode}, // single inode in the array
-          localComponents, snapshotId,
+          pathComponents, snapshotId,
           null, -1, // this will skip checkTraverse() because
           // not checking ancestor here
           false, null, null,
@@ -223,7 +225,8 @@ public class FSPermissionChecker implements AccessControlEnforcer {
           false);
     } catch (AccessControlException ace) {
       throw new AccessControlException(
-          toAccessControlString(inode, inode.getFullPathName(), access));
+          toAccessControlString(nodeAttributes, inode.getFullPathName(),
+              access));
     }
   }
 
