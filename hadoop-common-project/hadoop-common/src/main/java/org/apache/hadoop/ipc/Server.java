@@ -1789,7 +1789,7 @@ public abstract class Server {
 
     private SocketChannel channel;
     private ByteBuffer data;
-    private ByteBuffer dataLengthBuffer;
+    private final ByteBuffer dataLengthBuffer;
     private LinkedList<RpcCall> responseQueue;
     // number of outstanding rpcs
     private AtomicInteger rpcCount = new AtomicInteger();
@@ -2833,7 +2833,6 @@ public abstract class Server {
     private synchronized void close() {
       disposeSasl();
       data = null;
-      dataLengthBuffer = null;
       if (!channel.isOpen())
         return;
       try {socket.shutdownOutput();} catch(Exception e) {
