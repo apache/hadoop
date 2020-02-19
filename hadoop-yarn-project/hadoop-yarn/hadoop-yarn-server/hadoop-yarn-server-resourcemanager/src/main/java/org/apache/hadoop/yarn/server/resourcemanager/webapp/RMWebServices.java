@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -2639,14 +2640,22 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
                 ((MutableConfScheduler) scheduler).getMutableConfProvider();
         Configuration schedulerConf = mutableConfigurationProvider
                 .getConfiguration();
-        Configuration newConfig = mutableConfigurationProvider
+        Configuration newSchedulerConf = mutableConfigurationProvider
                 .applyChanges(schedulerConf, mutationInfo);
         Configuration yarnConf = ((CapacityScheduler) scheduler).getConf();
+
+        Configuration newConfig = new Configuration(yarnConf);
+        Iterator<Map.Entry<String, String>> iter = newSchedulerConf.iterator();
+        Entry<String, String> e = null;
+        while (iter.hasNext()) {
+          e = iter.next();
+          newConfig.set(e.getKey(), e.getValue());
+        }
         CapacitySchedulerConfigValidator.validateCSConfiguration(yarnConf,
                 newConfig, rm.getRMContext());
 
         return Response.status(Status.OK)
-                .entity(new ConfInfo(newConfig))
+                .entity(new ConfInfo(newSchedulerConf))
                 .build();
       } catch (Exception e) {
         String errorMsg = "CapacityScheduler configuration validation failed:"
