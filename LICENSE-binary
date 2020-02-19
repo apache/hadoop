@@ -346,7 +346,7 @@ org.eclipse.jetty.websocket:javax-websocket-client-impl:9.3.27.v20190418
 org.eclipse.jetty.websocket:javax-websocket-server-impl:9.3.27.v20190418
 org.ehcache:ehcache:3.3.1
 org.lz4:lz4-java:1.6.0
-org.objenesis:objenesis:1.0:compile
+org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.0.5
 org.yaml:snakeyaml:1.16:
 org.wildfly.openssl:wildfly-openssl:1.0.7.Final
