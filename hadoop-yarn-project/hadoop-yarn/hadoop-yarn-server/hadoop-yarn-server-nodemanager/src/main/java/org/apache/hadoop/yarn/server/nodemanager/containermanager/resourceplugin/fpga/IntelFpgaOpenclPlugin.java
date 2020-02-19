@@ -238,8 +238,10 @@ public class IntelFpgaOpenclPlugin implements AbstractFpgaVendorPlugin {
           .findFirst();
 
       if (aocxPath.isPresent()) {
-        ipFilePath = aocxPath.get().toUri().toString();
-        LOG.debug("Found: {}", ipFilePath);
+        ipFilePath = aocxPath.get().toString();
+        LOG.info("Found: {}", ipFilePath);
+      } else {
+        LOG.warn("Requested IP file not found");
       }
     } else {
       LOG.warn("Localized resource is null!");
@@ -249,8 +251,7 @@ public class IntelFpgaOpenclPlugin implements AbstractFpgaVendorPlugin {
   }
 
   private boolean matchesIpid(Path p, String id) {
-    return p.getName().toLowerCase().equals(id.toLowerCase())
-        && p.getName().endsWith(".aocx");
+    return p.getName().toLowerCase().equals(id.toLowerCase() + ".aocx");
   }
 
   /**
