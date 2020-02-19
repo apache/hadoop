@@ -167,8 +167,11 @@ public class S3GuardFsckViolationHandler {
       return msDirListing;
     }
 
-    public abstract String fixViolation(S3AFileSystem fs,
-        DynamoDBMetadataStore ddbms) throws IOException;
+    public String fixViolation(S3AFileSystem fs,
+        DynamoDBMetadataStore ddbms) throws IOException {
+      return String.format("Fixing of violation: %s is not supported yet.",
+          this.getClass().getSimpleName());
+    }
   }
 
   /**
@@ -183,12 +186,6 @@ public class S3GuardFsckViolationHandler {
     @Override
     public String getError() {
       return "No PathMetadata for this path in the MS.";
-    }
-
-    @Override
-    public String fixViolation(S3AFileSystem fs, DynamoDBMetadataStore ddbms) {
-      return String.format("Fixing of violation: %s is not supported yet.",
-          this.getClass().getSimpleName());
     }
   }
 
@@ -205,12 +202,6 @@ public class S3GuardFsckViolationHandler {
     public String getError() {
       return "Entry does not have a parent entry (not root)";
     }
-
-    @Override
-    public String fixViolation(S3AFileSystem fs, DynamoDBMetadataStore ddbms) {
-      return String.format("Fixing of violation: %s is not supported yet.",
-          this.getClass().getSimpleName());
-    }
   }
 
   /**
@@ -225,12 +216,6 @@ public class S3GuardFsckViolationHandler {
     @Override
     public String getError() {
       return "The entry's parent in the metastore database is a file.";
-    }
-
-    @Override
-    public String fixViolation(S3AFileSystem fs, DynamoDBMetadataStore ddbms) {
-      return String.format("Fixing of violation: %s is not supported yet.",
-          this.getClass().getSimpleName());
     }
   }
 
@@ -248,12 +233,6 @@ public class S3GuardFsckViolationHandler {
       return "The entry in the metastore database has a parent entry " +
           "which is a tombstone marker";
     }
-
-    @Override
-    public String fixViolation(S3AFileSystem fs, DynamoDBMetadataStore ddbms) {
-      return String.format("Fixing of violation: %s is not supported yet.",
-          this.getClass().getSimpleName());
-    }
   }
 
   /**
@@ -269,12 +248,6 @@ public class S3GuardFsckViolationHandler {
     public String getError() {
       return "A directory in S3 is a file entry in the MS";
     }
-
-    @Override
-    public String fixViolation(S3AFileSystem fs, DynamoDBMetadataStore ddbms) {
-      return String.format("Fixing of violation: %s is not supported yet.",
-          this.getClass().getSimpleName());
-    }
   }
 
   /**
@@ -289,12 +262,6 @@ public class S3GuardFsckViolationHandler {
     @Override
     public String getError() {
       return "A file in S3 is a directory entry in the MS";
-    }
-
-    @Override
-    public String fixViolation(S3AFileSystem fs, DynamoDBMetadataStore ddbms) {
-      return String.format("Fixing of violation: %s is not supported yet.",
-          this.getClass().getSimpleName());
     }
   }
 
@@ -315,12 +282,6 @@ public class S3GuardFsckViolationHandler {
           Arrays.asList(getS3DirListing()), getMsDirListing().getListing());
       return str;
     }
-
-    @Override
-    public String fixViolation(S3AFileSystem fs, DynamoDBMetadataStore ddbms) {
-      return String.format("Fixing of violation: %s is not supported yet.",
-          this.getClass().getSimpleName());
-    }
   }
 
   /**
@@ -335,12 +296,6 @@ public class S3GuardFsckViolationHandler {
     @Override public String getError() {
       return String.format("File length mismatch - S3: %s, MS: %s",
           getS3FileStatus().getLen(), getMsFileStatus().getLen());
-    }
-
-    @Override
-    public String fixViolation(S3AFileSystem fs, DynamoDBMetadataStore ddbms) {
-      return String.format("Fixing of violation: %s is not supported yet.",
-          this.getClass().getSimpleName());
     }
   }
 
@@ -359,12 +314,6 @@ public class S3GuardFsckViolationHandler {
           getS3FileStatus().getModificationTime(),
           getMsFileStatus().getModificationTime());
     }
-
-    @Override
-    public String fixViolation(S3AFileSystem fs, DynamoDBMetadataStore ddbms) {
-      return String.format("Fixing of violation: %s is not supported yet.",
-          this.getClass().getSimpleName());
-    }
   }
 
   /**
@@ -380,12 +329,6 @@ public class S3GuardFsckViolationHandler {
     public String getError() {
       return String.format("getVersionId mismatch - S3: %s, MS: %s",
           getS3FileStatus().getVersionId(), getMsFileStatus().getVersionId());
-    }
-
-    @Override
-    public String fixViolation(S3AFileSystem fs, DynamoDBMetadataStore ddbms) {
-      return String.format("Fixing of violation: %s is not supported yet.",
-          this.getClass().getSimpleName());
     }
   }
 
@@ -403,12 +346,6 @@ public class S3GuardFsckViolationHandler {
       return String.format("Etag mismatch - S3: %s, MS: %s",
         getS3FileStatus().getETag(), getMsFileStatus().getETag());
     }
-
-    @Override
-    public String fixViolation(S3AFileSystem fs, DynamoDBMetadataStore ddbms) {
-      return String.format("Fixing of violation: %s is not supported yet.",
-          this.getClass().getSimpleName());
-    }
   }
 
   /**
@@ -423,12 +360,6 @@ public class S3GuardFsckViolationHandler {
     @Override
     public String getError() {
       return "No etag.";
-    }
-
-    @Override
-    public String fixViolation(S3AFileSystem fs, DynamoDBMetadataStore ddbms) {
-      return String.format("Fixing of violation: %s is not supported yet.",
-          this.getClass().getSimpleName());
     }
   }
 
@@ -445,12 +376,6 @@ public class S3GuardFsckViolationHandler {
     @Override
     public String getError() {
       return "The entry for the path is tombstoned in the MS.";
-    }
-
-    @Override
-    public String fixViolation(S3AFileSystem fs, DynamoDBMetadataStore ddbms) {
-      return String.format("Fixing of violation: %s is not supported yet.",
-          this.getClass().getSimpleName());
     }
   }
 
@@ -491,12 +416,6 @@ public class S3GuardFsckViolationHandler {
     @Override
     public String getError() {
       return "No lastUpdated field provided for the entry.";
-    }
-
-    @Override
-    public String fixViolation(S3AFileSystem fs, DynamoDBMetadataStore ddbms) {
-      return String.format("Fixing of violation: %s is not supported yet.",
-          this.getClass().getSimpleName());
     }
   }
 }

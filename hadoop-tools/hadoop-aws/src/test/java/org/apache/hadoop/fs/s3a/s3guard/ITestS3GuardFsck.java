@@ -24,6 +24,7 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
@@ -499,6 +500,19 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       assertComparePairsSize(comparePairs, 1);
       checkForViolationInPairs(file, comparePairs,
           S3GuardFsck.Violation.ORPHAN_DDB_ENTRY);
+
+      // fix the violation
+      s3GuardFsck.fixViolations(
+          comparePairs.stream().filter(cP -> cP.getViolations()
+              .contains(S3GuardFsck.Violation.ORPHAN_DDB_ENTRY))
+              .collect(Collectors.toList())
+      );
+
+      // assert that the violation is fixed
+      final List<S3GuardFsck.ComparePair> fixedComparePairs =
+          s3GuardFsck.checkDdbInternalConsistency(cwd);
+      checkNoViolationInPairs(file, fixedComparePairs,
+          S3GuardFsck.Violation.ORPHAN_DDB_ENTRY);
     } finally {
       cleanup(file, cwd);
     }
@@ -599,6 +613,12 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
   private void checkNoViolationInPairs(Path file2,
       List<S3GuardFsck.ComparePair> comparePairs,
       S3GuardFsck.Violation violation) {
+
+    if (comparePairs.size() == 0) {
+      LOG.info("Compare pairs is empty, so there's no violation. (As expected.)");
+      return;
+    }
+
     final S3GuardFsck.ComparePair file2Pair = comparePairs.stream()
         .filter(p -> p.getPath().equals(file2))
         .findFirst().get();
