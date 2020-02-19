@@ -111,6 +111,9 @@ public class WorkerId implements Writable {
    * Implememt equals method for WorkerId.
    */
   public final boolean equals(final Object o) {
+    if (o == null || this.getClass() != o.getClass()) {
+      return false;
+    }
     WorkerId x = (WorkerId) o;
     return x.getHostname().equals(this.hostname);
   }
