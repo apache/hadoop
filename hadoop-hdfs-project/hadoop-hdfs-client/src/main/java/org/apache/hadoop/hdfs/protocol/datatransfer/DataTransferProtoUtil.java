@@ -90,7 +90,10 @@ public abstract class DataTransferProtoUtil {
         .setToken(PBHelperClient.convert(blockToken));
     Span span = Tracer.getCurrentSpan();
     if (span != null) {
-      builder.setSpanContext(TraceUtils.spanContextToByteString(span.context()));
+      DataTransferTraceInfoProto.Builder traceInfoProtoBuilder =
+          DataTransferTraceInfoProto.newBuilder().setSpanContext(
+              TraceUtils.spanContextToByteString(span.context()));
+      builder.setTraceInfo(traceInfoProtoBuilder);
     }
     return builder.build();
   }

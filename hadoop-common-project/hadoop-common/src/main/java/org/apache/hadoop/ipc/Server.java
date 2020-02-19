@@ -100,6 +100,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.Rpc
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto.SaslAuth;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto.SaslState;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RPCTraceInfoProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SaslPropertiesResolver;
@@ -2657,19 +2658,21 @@ public abstract class Server {
       }
 
       Span span = null;
-      if (header.hasSpanContext()) {
-        if (tracer == null) {
-          // TODO: Maybe set tracer using setTracer() ?
-          tracer = Tracer.curThreadTracer();
-        }
-        if (tracer != null) {
-          // If the incoming RPC included tracing info, always continue the
-          // trace
-          SpanContext spanCtx = TraceUtils.byteStringToSpanContext(
-              header.getSpanContext());
-          if (spanCtx != null) {
-            span = tracer.newSpan(
-                RpcClientUtil.toTraceName(rpcRequest.toString()), spanCtx);
+      if (header.hasTraceInfo()) {
+        RPCTraceInfoProto traceInfoProto = header.getTraceInfo();
+        if (traceInfoProto.hasSpanContext()) {
+          if (tracer == null) {
+            setTracer(Tracer.curThreadTracer());
+          }
+          if (tracer != null) {
+            // If the incoming RPC included tracing info, always continue the
+            // trace
+            SpanContext spanCtx = TraceUtils.byteStringToSpanContext(
+                traceInfoProto.getSpanContext());
+            if (spanCtx != null) {
+              span = tracer.newSpan(
+                  RpcClientUtil.toTraceName(rpcRequest.toString()), spanCtx);
+            }
           }
         }
       }

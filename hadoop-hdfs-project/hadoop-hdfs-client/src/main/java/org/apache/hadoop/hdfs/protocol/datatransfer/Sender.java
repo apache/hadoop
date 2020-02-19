@@ -215,7 +215,10 @@ public class Sender implements DataTransferProtocol {
             setSlotId(PBHelperClient.convert(slotId));
     Span span = Tracer.getCurrentSpan();
     if (span != null) {
-      builder.setSpanContext(TraceUtils.spanContextToByteString(span.context()));
+      DataTransferTraceInfoProto.Builder traceInfoProtoBuilder =
+          DataTransferTraceInfoProto.newBuilder().setSpanContext(
+              TraceUtils.spanContextToByteString(span.context()));
+      builder.setTraceInfo(traceInfoProtoBuilder);
     }
     ReleaseShortCircuitAccessRequestProto proto = builder.build();
     send(out, Op.RELEASE_SHORT_CIRCUIT_FDS, proto);
@@ -228,7 +231,10 @@ public class Sender implements DataTransferProtocol {
             setClientName(clientName);
     Span span = Tracer.getCurrentSpan();
     if (span != null) {
-      builder.setSpanContext(TraceUtils.spanContextToByteString(span.context()));
+      DataTransferTraceInfoProto.Builder traceInfoProtoBuilder =
+          DataTransferTraceInfoProto.newBuilder().setSpanContext(
+              TraceUtils.spanContextToByteString(span.context()));
+      builder.setTraceInfo(traceInfoProtoBuilder);
     }
     ShortCircuitShmRequestProto proto = builder.build();
     send(out, Op.REQUEST_SHORT_CIRCUIT_SHM, proto);

@@ -412,7 +412,7 @@ public class DataNode extends ReconfigurableBase
 
   private static Tracer createTracer(Configuration conf) {
     return new Tracer.Builder("DataNode").
-        conf(TraceUtils.wrapHadoopConfOT(DATANODE_HTRACE_PREFIX , conf)).
+        conf(TraceUtils.wrapHadoopConfOT(DATANODE_HTRACE_PREFIX, conf)).
         build();
   }
 

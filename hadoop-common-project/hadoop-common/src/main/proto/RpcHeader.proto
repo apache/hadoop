@@ -63,7 +63,7 @@ enum RpcKindProto {
 message RPCTraceInfoProto {
     optional int64 traceId = 1; // parentIdHigh
     optional int64 parentId = 2; // parentIdLow
-
+    optional bytes spanContext = 3; // OpenTracing SpanContext
 }
 
 /**
@@ -91,7 +91,6 @@ message RpcRequestHeaderProto { // the header for the RpcRequest
   optional RPCTraceInfoProto traceInfo = 6; // tracing info
   optional RPCCallerContextProto callerContext = 7; // call context
   optional int64 stateId = 8; // The last seen Global State ID
-  optional bytes spanContext = 9; // OpenTracing SpanContext
 }
 
 

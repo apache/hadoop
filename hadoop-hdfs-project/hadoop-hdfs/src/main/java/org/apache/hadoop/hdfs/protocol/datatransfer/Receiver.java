@@ -97,7 +97,8 @@ public abstract class Receiver implements DataTransferProtocol {
 
   private TraceScope continueTraceSpan(BaseHeaderProto header,
                                              String description) {
-    return continueTraceSpan(header.getSpanContext(), description);
+    return continueTraceSpan(header.getTraceInfo().getSpanContext(),
+        description);
   }
 
   /** Process op by the corresponding method. */
@@ -246,7 +247,8 @@ public abstract class Receiver implements DataTransferProtocol {
       throws IOException {
     final ReleaseShortCircuitAccessRequestProto proto =
       ReleaseShortCircuitAccessRequestProto.parseFrom(vintPrefixed(in));
-    TraceScope traceScope = continueTraceSpan(proto.getSpanContext(),
+    TraceScope traceScope = continueTraceSpan(
+        proto.getTraceInfo().getSpanContext(),
         proto.getClass().getSimpleName());
     try {
       releaseShortCircuitFds(PBHelperClient.convert(proto.getSlotId()));
@@ -259,7 +261,8 @@ public abstract class Receiver implements DataTransferProtocol {
   private void opRequestShortCircuitShm(DataInputStream in) throws IOException {
     final ShortCircuitShmRequestProto proto =
         ShortCircuitShmRequestProto.parseFrom(vintPrefixed(in));
-    TraceScope traceScope = continueTraceSpan(proto.getSpanContext(),
+    TraceScope traceScope = continueTraceSpan(
+        proto.getTraceInfo().getSpanContext(),
         proto.getClass().getSimpleName());
     try {
       requestShortCircuitShm(proto.getClientName());

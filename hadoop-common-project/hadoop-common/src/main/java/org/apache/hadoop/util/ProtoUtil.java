@@ -181,7 +181,10 @@ public abstract class ProtoUtil {
     // Add tracing info if we are currently tracing.
     Span span = Tracer.getCurrentSpan();
     if (span != null) {
-      result.setSpanContext(TraceUtils.spanContextToByteString(span.context()));
+      RPCTraceInfoProto.Builder traceInfoProtoBuilder =
+          RPCTraceInfoProto.newBuilder().setSpanContext(
+              TraceUtils.spanContextToByteString(span.context()));
+      result.setTraceInfo(traceInfoProtoBuilder);
     }
 
     // Add caller context if it is not null

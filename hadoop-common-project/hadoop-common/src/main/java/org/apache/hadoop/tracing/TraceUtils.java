@@ -116,11 +116,13 @@ public class TraceUtils {
     }
 
     SpanContext context = null;
-    ByteArrayInputStream stream = new ByteArrayInputStream(byteString.toByteArray());
+    ByteArrayInputStream stream =
+        new ByteArrayInputStream(byteString.toByteArray());
 
     try {
       ObjectInputStream objStream = new ObjectInputStream(stream);
-      Map<String, String> carrier = (Map<String, String>) objStream.readObject();
+      Map<String, String> carrier =
+          (Map<String, String>) objStream.readObject();
 
       context = GlobalTracer.get().extract(Format.Builtin.TEXT_MAP,
           new TextMapExtractAdapter(carrier));
