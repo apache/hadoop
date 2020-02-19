@@ -73,10 +73,8 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
 
     // the exception must not be caught and marked down to an FNFE
     expectUnknownStore(() -> fs.exists(src));
-    expectUnknownStore(() -> fs.isFile(src));
-    expectUnknownStore(() -> fs.isDirectory(src));
+    expectUnknownStore(() -> fs.listStatus(src));
     expectUnknownStore(() -> fs.mkdirs(src));
-    expectUnknownStore(() -> fs.delete(src));
 
     byte[] data = dataset(1024, 'a', 'z');
     expectUnknownStore(

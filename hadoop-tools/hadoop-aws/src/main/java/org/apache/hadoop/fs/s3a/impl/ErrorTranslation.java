@@ -38,6 +38,12 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 public class ErrorTranslation {
 
   /**
+   * Private constructor for utility class.
+   */
+  private ErrorTranslation() {
+  }
+
+  /**
    * Does this exception indicate that the AWS Bucket was unknown.
    * @param e exception.
    * @return true if the status code and error code mean that the
