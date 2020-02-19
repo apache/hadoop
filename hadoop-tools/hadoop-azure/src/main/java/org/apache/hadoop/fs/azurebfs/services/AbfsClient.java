@@ -22,8 +22,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -31,10 +29,9 @@ import java.util.List;
 import java.util.Locale;
 
 import com.google.common.annotations.VisibleForTesting;
-
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
+import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
-import org.apache.hadoop.fs.azurebfs.authentication.AuthorizationStatus;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsAuthorizerConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
@@ -43,13 +40,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
-import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
-import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResource;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
-import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
@@ -66,28 +59,30 @@ public class AbfsClient implements Closeable {
   private final SharedKeyCredentials sharedKeyCredentials;
   private final String xMsVersion = "2018-11-09";
   private final ExponentialRetryPolicy retryPolicy;
+  private final String accountName;
   private final String filesystem;
+  private final AuthType authType;
   private final AbfsConfiguration abfsConfiguration;
   private final String userAgent;
   private final AbfsPerfTracker abfsPerfTracker;
 
-  private final AccessTokenProvider tokenProvider;
+  private AccessTokenProvider tokenProvider;
 
-  private final AbfsAuthorizer authorizer;
+  private SASTokenProvider sasTokenProvider;
 
 
-  public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
+  private AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
                     final ExponentialRetryPolicy exponentialRetryPolicy,
-                    final AccessTokenProvider tokenProvider,
-                    final AbfsPerfTracker abfsPerfTracker)
-      throws AzureBlobFileSystemException {
+                    final AbfsPerfTracker abfsPerfTracker) {
     this.baseUrl = baseUrl;
     this.sharedKeyCredentials = sharedKeyCredentials;
     String baseUrlString = baseUrl.toString();
     this.filesystem = baseUrlString.substring(baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
     this.abfsConfiguration = abfsConfiguration;
     this.retryPolicy = exponentialRetryPolicy;
+    this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
+    this.authType = abfsConfiguration.getAuthType(accountName);
 
     String sslProviderName = null;
 
@@ -105,9 +100,25 @@ public class AbfsClient implements Closeable {
     }
 
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
-    this.tokenProvider = tokenProvider;
     this.abfsPerfTracker = abfsPerfTracker;
-    this.authorizer = this.abfsConfiguration.getAbfsAuthorizer();
+  }
+
+  public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
+                    final AbfsConfiguration abfsConfiguration,
+                    final ExponentialRetryPolicy exponentialRetryPolicy,
+                    final AccessTokenProvider tokenProvider,
+                    final AbfsPerfTracker abfsPerfTracker) {
+    this(baseUrl, sharedKeyCredentials, abfsConfiguration, exponentialRetryPolicy, abfsPerfTracker);
+    this.tokenProvider = tokenProvider;
+  }
+
+  public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
+                    final AbfsConfiguration abfsConfiguration,
+                    final ExponentialRetryPolicy exponentialRetryPolicy,
+                    final SASTokenProvider sasTokenProvider,
+                    final AbfsPerfTracker abfsPerfTracker) {
+    this(baseUrl, sharedKeyCredentials, abfsConfiguration, exponentialRetryPolicy, abfsPerfTracker);
+    this.sasTokenProvider = sasTokenProvider;
   }
 
   @Override
@@ -131,23 +142,6 @@ public class AbfsClient implements Closeable {
 
   SharedKeyCredentials getSharedKeyCredentials() {
     return sharedKeyCredentials;
-  }
-
-  public AbfsAuthorizer getAuthorizer() {
-    return authorizer;
-  }
-
-  /**
-   * Get Auth Type which is in effect for current FileSystem instance.
-   * @return AuthType
-   */
-  public AuthType getAuthType() {
-    if ((authorizer != null) && (authorizer.getAuthType() != AuthType.None))
-    {
-      return authorizer.getAuthType();
-    }
-
-    return this.abfsConfiguration.getAuthType(this.abfsConfiguration.getAccountName());
   }
 
   List<AbfsHttpHeader> createDefaultHeaders() {
@@ -212,26 +206,6 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation listPath(final String relativePath, final boolean recursive, final int listMaxResults,
                                     final String continuation) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    AuthorizationStatus listPathAuthzStatus = null;
-    boolean useSASToken = ((this.authorizer != null)
-        && this.authorizer.getAuthType() == AuthType.SAS);
-
-    // Path which is listed will be present in the directory queryparam
-    // and not in the reqeuest url.
-    // hence need to trigger authorization now.
-    if (this.authorizer != null) {
-
-      String authorizerPath = relativePath;
-
-      if ((relativePath == null) || (relativePath.length() == 0)) {
-        authorizerPath = AbfsHttpConstants.ROOT_PATH;
-      } else if (relativePath.charAt(0) != Path.SEPARATOR_CHAR) {
-        authorizerPath = Path.SEPARATOR_CHAR + relativePath;
-      }
-
-      listPathAuthzStatus = getAuthorizationStatus(authorizerPath,
-          AbfsAuthorizerConstants.LISTSTATUS_ACTION);
-    }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
@@ -242,38 +216,19 @@ public class AbfsClient implements Closeable {
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAXRESULTS, String.valueOf(listMaxResults));
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(abfsConfiguration.isUpnUsed()));
 
+    if (authType == AuthType.SAS) {
+      appendSASTokenToQuery(relativePath, SASTokenProvider.LISTSTATUS_OPERATION, abfsUriQueryBuilder);
+    }
+
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
-    if (useSASToken) {
-      final AbfsRestOperation op = new AbfsRestOperation(AbfsRestOperationType.ListPaths,
-          this, HTTP_METHOD_GET, url, requestHeaders);
-      op.execute();
-      return op;
-    }
-    else {
-      final AbfsRestOperation op = new AbfsRestOperation(AbfsRestOperationType.ListPaths,
-          this, HTTP_METHOD_GET, url, requestHeaders, listPathAuthzStatus);
-      op.execute();
-      return op;
-    }
-  }
-
-  private AuthorizationStatus getAuthorizationStatus(String authorizerPath,
-      String authorizerAction) throws AzureBlobFileSystemException {
-
-    URL pathUrl = createRequestUrl(authorizerPath, "");
-    URI qualifiedPathUri;
-    try {
-      qualifiedPathUri = UriUtils.getQualifiedPathURI(pathUrl);
-    } catch (URISyntaxException ex) {
-      throw new InvalidUriException("Invalid URL: " + pathUrl.toString());
-    }
-
-    AuthorizationResource[] authResource = new AuthorizationResource[1];
-    authResource[0] = new AuthorizationResource(authorizerAction, qualifiedPathUri);
-
-    // Exception will be thrown from fetchAuthorizationStatus if
-    // authorization status could not be fetched or user is not authorized.
-    return AbfsRestOperation.fetchAuthorizationStatus(authorizer, authResource);
+    final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.ListPaths,
+            this,
+            HTTP_METHOD_GET,
+            url,
+            requestHeaders);
+    op.execute();
+    return op;
   }
 
   public AbfsRestOperation getFilesystemProperties() throws AzureBlobFileSystemException {
@@ -328,9 +283,14 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, isFile ? FILE : DIRECTORY);
 
+    if (authType == AuthType.SAS) {
+      String operation = isFile ? SASTokenProvider.CREATEFILE_OPERATION : SASTokenProvider.MKDIR_OPERATION;
+      appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
+    }
+
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-        isFile ? AbfsRestOperationType.CreatePath : AbfsRestOperationType.Mkdir,
+            AbfsRestOperationType.CreatePath,
             this,
             HTTP_METHOD_PUT,
             url,
@@ -339,45 +299,26 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation renamePath(final String source, final String destination, final String continuation)
+  public AbfsRestOperation renamePath(String source, final String destination, final String continuation)
           throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    AuthorizationStatus srcAuthzStatus = null;
-    String renameSource = FORWARD_SLASH + this.getFileSystem() + source;
-    String sourceSasToken = null;
 
-    // Source path  will be present in the rename source header
-    // and not in the reqeuest url.
-    // hence need to trigger authorization now.
-    if (this.authorizer != null) {
-      // Exception will be thrown from fetchAuthorizationStatus if
-      // authorization status could not be fetched or user is not authorized.
-      srcAuthzStatus = getAuthorizationStatus(renameSource,
-          AbfsAuthorizerConstants.RENAME_SOURCE_ACTION);
-
-      URL sourceUrl = createRequestUrl(renameSource, "");
-      URI qualifiedSourceUri;
-      try {
-        qualifiedSourceUri = UriUtils.getQualifiedPathURI(sourceUrl);
-      } catch (URISyntaxException ex) {
-        throw new InvalidUriException("Invalid URL: " + sourceUrl.toString());
-      }
-
-      if ((this.authorizer.getAuthType() == AuthType.SAS) &&
-          srcAuthzStatus.isValidSas(qualifiedSourceUri)) {
-        sourceSasToken = srcAuthzStatus.getSasTokenQuery(qualifiedSourceUri);
-      }
+    if (authType == AuthType.SAS) {
+      final AbfsUriQueryBuilder queryBuilder = new AbfsUriQueryBuilder();
+      appendSASTokenToQuery(source, SASTokenProvider.RENAME_SOURCE_OPERATION, queryBuilder);
+      source += queryBuilder.toString();
     }
 
-    final String encodedRenameSource = (sourceSasToken != null) ?
-        urlEncode(renameSource + sourceSasToken) :
-        urlEncode(renameSource);
-    requestHeaders
-        .add(new AbfsHttpHeader(X_MS_RENAME_SOURCE, encodedRenameSource));
+    final String encodedRenameSource = urlEncode(FORWARD_SLASH + this.getFileSystem() + source);
+    requestHeaders.add(new AbfsHttpHeader(X_MS_RENAME_SOURCE, encodedRenameSource));
     requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, STAR));
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
+
+    if (authType == AuthType.SAS) {
+      appendSASTokenToQuery(destination, SASTokenProvider.RENAME_DESTINATION_OPERATION, abfsUriQueryBuilder);
+    }
 
     final URL url = createRequestUrl(destination, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -391,7 +332,7 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation append(final String path, final long position, final byte[] buffer, final int offset,
-      final int length, final AuthorizationStatus authzStatus) throws AzureBlobFileSystemException {
+                                  final int length) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
@@ -402,19 +343,22 @@ public class AbfsClient implements Closeable {
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, APPEND_ACTION);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_POSITION, Long.toString(position));
 
+    if (authType == AuthType.SAS) {
+      appendSASTokenToQuery(path, SASTokenProvider.APPEND_OPERATION, abfsUriQueryBuilder);
+    }
+
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
         AbfsRestOperationType.Append,
             this,
             HTTP_METHOD_PUT,
             url,
-            requestHeaders, buffer, offset, length, authzStatus);
+            requestHeaders, buffer, offset, length);
     op.execute();
     return op;
   }
 
-  public AbfsRestOperation flush(final String path, final long position, boolean retainUncommittedData, boolean isClose,
-      final AuthorizationStatus authzStatus)
+  public AbfsRestOperation flush(final String path, final long position, boolean retainUncommittedData, boolean isClose)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
@@ -428,13 +372,17 @@ public class AbfsClient implements Closeable {
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RETAIN_UNCOMMITTED_DATA, String.valueOf(retainUncommittedData));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
 
+    if (authType == AuthType.SAS) {
+      appendSASTokenToQuery(path, SASTokenProvider.APPEND_OPERATION, abfsUriQueryBuilder);
+    }
+
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
             AbfsRestOperationType.Flush,
             this,
             HTTP_METHOD_PUT,
             url,
-            requestHeaders, authzStatus);
+            requestHeaders);
     op.execute();
     return op;
   }
@@ -469,6 +417,10 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(abfsConfiguration.isUpnUsed()));
 
+    if (authType == AuthType.SAS) {
+      appendSASTokenToQuery(path, SASTokenProvider.GETFILESTATUS_OPERATION, abfsUriQueryBuilder);
+    }
+
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
             AbfsRestOperationType.GetPathStatus,
@@ -481,14 +433,17 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation read(final String path, final long position, final byte[] buffer, final int bufferOffset,
-                                final int bufferLength, final String eTag,
-      final AuthorizationStatus authzStatus) throws AzureBlobFileSystemException {
+                                final int bufferLength, final String eTag) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     requestHeaders.add(new AbfsHttpHeader(RANGE,
             String.format("bytes=%d-%d", position, position + bufferLength - 1)));
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+
+    if (authType == AuthType.SAS) {
+      appendSASTokenToQuery(path, SASTokenProvider.READ_OPERATION, abfsUriQueryBuilder);
+    }
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
 
@@ -500,8 +455,7 @@ public class AbfsClient implements Closeable {
             requestHeaders,
             buffer,
             bufferOffset,
-            bufferLength,
-            authzStatus);
+            bufferLength);
     op.execute();
 
     return op;
@@ -514,6 +468,10 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RECURSIVE, String.valueOf(recursive));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
+
+    if (authType == AuthType.SAS) {
+      appendSASTokenToQuery(path, SASTokenProvider.DELETE_OPERATION, abfsUriQueryBuilder);
+    }
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -544,6 +502,10 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.SET_ACCESS_CONTROL);
 
+    if (authType == AuthType.SAS) {
+      appendSASTokenToQuery(path, SASTokenProvider.SETOWNER_OPERATION, abfsUriQueryBuilder);
+    }
+
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
         AbfsRestOperationType.SetOwner,
@@ -567,6 +529,10 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.SET_ACCESS_CONTROL);
+
+    if (authType == AuthType.SAS) {
+      appendSASTokenToQuery(path, SASTokenProvider.SETPERMISSION_OPERATION, abfsUriQueryBuilder);
+    }
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -600,6 +566,10 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.SET_ACCESS_CONTROL);
 
+    if (authType == AuthType.SAS) {
+      appendSASTokenToQuery(path, SASTokenProvider.SETACL_OPERATION, abfsUriQueryBuilder);
+    }
+
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
         AbfsRestOperationType.SetAcl,
@@ -621,6 +591,10 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.GET_ACCESS_CONTROL);
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(useUPN));
+
+    if (authType == AuthType.SAS) {
+      appendSASTokenToQuery(path, SASTokenProvider.GETACL_OPERATION, abfsUriQueryBuilder);
+    }
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -653,6 +627,15 @@ public class AbfsClient implements Closeable {
         AbfsHttpConstants.HTTP_METHOD_HEAD, url, createDefaultHeaders());
     op.execute();
     return op;
+  }
+
+  private void appendSASTokenToQuery(String path, String operation, AbfsUriQueryBuilder queryBuilder) throws SASTokenProviderException {
+    try {
+      String sasToken = sasTokenProvider.getSASToken(this.accountName, this.filesystem, path, operation);
+      queryBuilder.setSASToken(sasToken);
+    } catch (Exception ex) {
+      throw new SASTokenProviderException("Failed to acquire a SAS token.", ex);
+    }
   }
 
   private URL createRequestUrl(final String query) throws AzureBlobFileSystemException {
@@ -703,6 +686,10 @@ public class AbfsClient implements Closeable {
     } else {
       return null;
     }
+  }
+
+  public AuthType getAuthType() {
+    return authType;
   }
 
   @VisibleForTesting

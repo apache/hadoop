@@ -33,11 +33,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriAuthorityException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
-import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
@@ -78,7 +73,6 @@ public abstract class AbstractAbfsIntegrationTest extends
   private String accountName;
   private String testUrl;
   private AuthType authType;
-  private AbfsAuthorizer authorizer;
 
   protected AbstractAbfsIntegrationTest() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
@@ -134,49 +128,15 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
 
-  public void loadAuthorizer() throws Exception {
-    this.authorizer = abfsConfig.getAbfsAuthorizer();
-
-    // if authorizerClass is configured, auto-creation of filesystem is disabled
-    if (authorizer == null) {
-      throw new InvalidConfigurationValueException(
-          "loadAuthorizer failed as " + "authorizer class is not configured");
-    }
-
-    // if authorizerClass is configured, auto-creation of filesystem is disabled
-    abfsConfig.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
-        false);
-
-    // AbstractAbfsIntegrationTest always uses a new instance of FileSystem,
-    // need to disable that and force filesystem provided in test configs.
-    String[] authorityParts = authorityParts(
-        new java.net.URI(rawConfig.get(FS_AZURE_CONTRACT_TEST_URI)));
-    this.fileSystemName = authorityParts[0];
-
-    // Reset URL with configured filesystem
-    final String abfsUrl =
-        this.getFileSystemName() + "@" + this.getAccountName();
-    URI defaultUri = null;
-
-    defaultUri = new URI(abfsScheme, abfsUrl, null, null, null);
-
-    this.testUrl = defaultUri.toString();
-    abfsConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
-        defaultUri.toString());
-
-    // update rawConfig which will be used to fetch the filesystem instance
-    rawConfig = abfsConfig.getRawConfiguration();
-    rawConfig.set(FS_AZURE_ABFS_AUTHORIZER, abfsConfig.getAbfsAuthorizerClass());
-  }
-
-
   @Before
   public void setup() throws Exception {
     //Create filesystem first to make sure getWasbFileSystem() can return an existing filesystem.
     createFileSystem();
 
     // Only live account without namespace support can run ABFS&WASB compatibility tests
-    if (!isIPAddress && !abfs.getIsNamespaceEnabled()) {
+    if (!isIPAddress
+        && (abfsConfig.getAuthType(accountName) != AuthType.SAS)
+        && !abfs.getIsNamespaceEnabled()) {
       final URI wasbUri = new URI(abfsUrlToWasbUrl(getTestUrl()));
       final AzureNativeFileSystemStore azureNativeFileSystemStore =
           new AzureNativeFileSystemStore();
@@ -209,22 +169,19 @@ public abstract class AbstractAbfsIntegrationTest extends
         return;
       }
 
-      // If authorizer is present, configured FileSystem would have been used,
-      // instead of unique. Skip Delete.
-      if (authorizer == null) {
-        final AzureBlobFileSystemStore abfsStore = abfs.getAbfsStore();
-        abfsStore.deleteFilesystem();
+      final AzureBlobFileSystemStore abfsStore = abfs.getAbfsStore();
+      abfsStore.deleteFilesystem();
 
-        AbfsRestOperationException ex = intercept(AbfsRestOperationException.class,
-            new Callable<Hashtable<String, String>>() {
-              @Override
-              public Hashtable<String, String> call() throws Exception {
-                return abfsStore.getFilesystemProperties();
-              }
-            });
-        if (FILE_SYSTEM_NOT_FOUND.getStatusCode() != ex.getStatusCode()) {
-          LOG.warn("Deleted test filesystem may still exist: {} {}", abfs, ex);
-        }
+      AbfsRestOperationException ex = intercept(
+              AbfsRestOperationException.class,
+              new Callable<Hashtable<String, String>>() {
+                @Override
+                public Hashtable<String, String> call() throws Exception {
+                  return abfsStore.getFilesystemProperties();
+                }
+              });
+      if (FILE_SYSTEM_NOT_FOUND.getStatusCode() != ex.getStatusCode()) {
+        LOG.warn("Deleted test filesystem may still exist: {}", abfs, ex);
       }
     } catch (Exception e) {
       LOG.warn("During cleanup: {}", e, e);
@@ -395,31 +352,5 @@ public abstract class AbstractAbfsIntegrationTest extends
   protected AbfsDelegationTokenManager getDelegationTokenManager()
       throws IOException {
     return getFileSystem().getDelegationTokenManager();
-  }
-
-  private String[] authorityParts(URI uri)
-      throws InvalidUriAuthorityException, InvalidUriException {
-    final String authority = uri.getRawAuthority();
-    if (null == authority) {
-      throw new InvalidUriAuthorityException(uri.toString());
-    }
-
-    if (!authority.contains(
-        AbfsHttpConstants.AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER)) {
-      throw new InvalidUriAuthorityException(uri.toString());
-    }
-
-    final String[] authorityParts = authority.split(
-        AbfsHttpConstants.AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER, 2);
-
-    if (authorityParts.length < 2
-        || authorityParts[0] != null && authorityParts[0].isEmpty()) {
-      final String errMsg = String.format(
-          "'%s' has a malformed authority, expected container name. "
-              + "Authority takes the form " + FileSystemUriSchemes.ABFS_SCHEME
-              + "://[<container name>@]<account name>", uri.toString());
-      throw new InvalidUriException(errMsg);
-    }
-    return authorityParts;
   }
 }

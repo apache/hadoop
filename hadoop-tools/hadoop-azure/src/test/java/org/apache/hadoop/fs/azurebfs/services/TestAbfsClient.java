@@ -21,13 +21,14 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.net.URL;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.VersionInfo;
 
@@ -45,7 +46,7 @@ public final class TestAbfsClient {
                                  boolean includeSSLProvider)
       throws AzureBlobFileSystemException {
     AbfsClient client = new AbfsClient(baseUrl, null,
-        config, null, null, null);
+        config, null, (AccessTokenProvider) null, null);
     String sslProviderName = null;
     if (includeSSLProvider) {
       sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory().getProviderName();

@@ -40,6 +40,5 @@ public enum AbfsRestOperationType {
     Flush,
     ReadFile,
     DeletePath,
-    CheckAccess,
-    Mkdir
+    CheckAccess
 }

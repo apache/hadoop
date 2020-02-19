@@ -36,19 +36,19 @@ import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidati
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.StringConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.Base64StringConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.BooleanConfigurationValidatorAnnotation;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.KeyProviderException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TokenAccessProviderException;
 import org.apache.hadoop.fs.azurebfs.diagnostics.Base64StringConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.BooleanConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.IntegerConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.LongConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.StringConfigurationBasicValidator;
-import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
+import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.CustomTokenProviderAdapter;
@@ -80,7 +80,6 @@ public class AbfsConfiguration{
   private final String accountName;
   private final boolean isSecure;
   private static final Logger LOG = LoggerFactory.getLogger(AbfsConfiguration.class);
-  private AbfsAuthorizer authorizer = null;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_BUFFER_SIZE,
       MinValue = MIN_BUFFER_SIZE,
@@ -171,9 +170,6 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ENABLE_DELEGATION_TOKEN)
   private boolean enableDelegationToken;
 
-  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_AUTHORIZER,
-      DefaultValue = "")
-  private String abfsAuthorizerClass;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ALWAYS_USE_HTTPS,
           DefaultValue = DEFAULT_ENABLE_HTTPS)
@@ -216,6 +212,14 @@ public class AbfsConfiguration{
         field.set(this, validateBoolean(field));
       }
     }
+  }
+
+  /**
+   * Gets the Azure Storage account name corresponding to this instance of configuration.
+   * @return the Azure Storage account name
+   */
+  public String getAccountName() {
+    return accountName;
   }
 
   /**
@@ -437,7 +441,9 @@ public class AbfsConfiguration{
   }
 
   public boolean getCreateRemoteFileSystemDuringInitialization() {
-    return this.createRemoteFileSystemDuringInitialization;
+    // we do not support creating the filesystem when AuthType is SAS
+    return this.createRemoteFileSystemDuringInitialization
+        && this.getAuthType(this.accountName) != AuthType.SAS;
   }
 
   public boolean getSkipUserGroupMetadataDuringInitialization() {
@@ -495,14 +501,6 @@ public class AbfsConfiguration{
    */
   public boolean shouldTrackLatency() {
     return this.trackLatency;
-  }
-
-  /**
-   * Return the accountName for the config generated.
-   * @return accountName
-   */
-  public String getAccountName() {
-    return accountName;
   }
 
   public AccessTokenProvider getTokenProvider() throws TokenAccessProviderException {
@@ -587,45 +585,37 @@ public class AbfsConfiguration{
     }
   }
 
-  public AbfsAuthorizer getAbfsAuthorizer() throws AzureBlobFileSystemException {
-    if (authorizer != null) {
-      return authorizer;
+  public SASTokenProvider getSASTokenProvider() throws AzureBlobFileSystemException {
+    AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
+    if (authType != AuthType.SAS) {
+      throw new SASTokenProviderException(String.format(
+        "Invalid auth type: %s is being used, expecting SAS", authType));
     }
-
-    String authClassName = abfsAuthorizerClass;
 
     try {
-      if (authClassName != null && !authClassName.isEmpty()) {
-        @SuppressWarnings("unchecked")
-        Class<AbfsAuthorizer> authClass = (Class<AbfsAuthorizer>) rawConfig.getClassByName(authClassName);
-        authorizer =
-            authClass.getConstructor(new Class[] {Configuration.class}).newInstance(rawConfig);
-        LOG.trace("Initializing {}", authClassName);
-        authorizer.init();
-        if ((authorizer.getAuthType() != AuthType.SAS) && (
-            authorizer.getAuthType() != AuthType.None)) {
-          throw new AbfsAuthorizationException(
-              "Invalid Authorizer AuthType.", new IllegalArgumentException(
-              "Authorizer AuthType set as " + authorizer.getAuthType().name()
-                  + ". Valid values are SAS and None"));
-        }
-
-        LOG.trace("{} init complete", authClassName);
+      String configKey = FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
+      Class<? extends SASTokenProvider> sasTokenProviderClass =
+          getClass(configKey, null, SASTokenProvider.class);
+      if (sasTokenProviderClass == null) {
+        throw new IllegalArgumentException(
+            String.format("The configuration value for \"%s\" is invalid.", configKey));
       }
-    } catch (
-        IllegalAccessException
-        | InstantiationException
-        | ClassNotFoundException
-        | IllegalArgumentException
-        | InvocationTargetException
-        | NoSuchMethodException
-        | SecurityException
-        | AbfsAuthorizationException e) {
-      throw new AbfsAuthorizationException("Unable to initialize "
-          + "Authorizer", e);
-    }
 
-    return authorizer;
+      SASTokenProvider sasTokenProvider = ReflectionUtils
+          .newInstance(sasTokenProviderClass, rawConfig);
+      if (sasTokenProvider == null) {
+        throw new IllegalArgumentException("Failed to initialize " + sasTokenProviderClass);
+      }
+
+      LOG.trace("Initializing {}", sasTokenProviderClass.getName());
+      sasTokenProvider.initialize(rawConfig, accountName);
+      LOG.trace("{} init complete", sasTokenProviderClass.getName());
+      return sasTokenProvider;
+    } catch(IllegalArgumentException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new TokenAccessProviderException("Unable to load SAS token provider class: " + e, e);
+    }
   }
 
   void validateStorageAccountKeys() throws InvalidConfigurationValueException {
@@ -716,17 +706,6 @@ public class AbfsConfiguration{
   void setDisableOutputStreamFlush(boolean disableOutputStreamFlush) {
     this.disableOutputStreamFlush = disableOutputStreamFlush;
   }
-
-  @VisibleForTesting
-  void setAbfsAuthorizerClass(String authorizerClass) {
-    this.abfsAuthorizerClass = authorizerClass;
-  }
-
-  @VisibleForTesting
-  public String getAbfsAuthorizerClass() {
-    return abfsAuthorizerClass;
-  }
-
 
   private String getTrimmedPasswordString(String key, String defaultValue) throws IOException {
     String value = getPasswordString(key);

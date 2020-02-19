@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,16 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.authentication;
+package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
 
-import java.time.Instant;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
- * SasTokenData will store the SAS Token, its expiry time and the interval
- * before expiry when the token will be refreshed.
+ * Thrown if there is an error instantiating the SASTokenProvider or getting
+ * a SAS token.
  */
-public final class SasTokenData {
-  public String sasToken;
-  public Instant sasExpiryTime;
-  public int sasRefreshIntervalBeforeExpiryInSec;
+@InterfaceAudience.Private
+public class SASTokenProviderException extends AzureBlobFileSystemException {
+
+  public SASTokenProviderException(String message) {
+    super(message);
+  }
+
+  public SASTokenProviderException(String message, Throwable cause) {
+    super(message);
+    initCause(cause);
+  }
 }

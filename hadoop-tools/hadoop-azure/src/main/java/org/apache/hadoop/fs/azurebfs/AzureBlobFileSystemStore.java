@@ -71,7 +71,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
-import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
+import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformer;
@@ -233,15 +233,6 @@ public class AzureBlobFileSystemStore implements Closeable {
 
   public boolean getIsNamespaceEnabled() throws AzureBlobFileSystemException {
     if (!isNamespaceEnabledSet) {
-
-      // If an authorizer is set, account needs to be HNS enabled. No need
-      // for server calls to check the same.
-      if (this.abfsConfiguration.getAbfsAuthorizer() != null) {
-        LOG.debug("Authorizer is set. Account MUST be Namespace enabled.");
-        isNamespaceEnabled = true;
-        isNamespaceEnabledSet = true;
-        return isNamespaceEnabled;
-      }
 
       LOG.debug("Get root ACL status");
       try (AbfsPerfInfo perfInfo = startTracking("getIsNamespaceEnabled", "getAclStatus")) {
@@ -1140,45 +1131,37 @@ public class AzureBlobFileSystemStore implements Closeable {
 
     SharedKeyCredentials creds = null;
     AccessTokenProvider tokenProvider = null;
+    SASTokenProvider sasTokenProvider = null;
 
-    AuthType authType = abfsConfiguration.getAuthType(accountName);
-    AbfsAuthorizer authorizer = abfsConfiguration.getAbfsAuthorizer();
-
-    // Create cred instance based on account level auth config if
-    // - authorizer is not configured
-    // - or configured authorizer does not provide SAS
-    if ((authorizer == null) || ((authorizer.getAuthType() != AuthType.SAS))) {
-      switch (authType) {
-      case SharedKey:
-        LOG.trace("Fetching SharedKey credentials");
-        int dotIndex = accountName.indexOf(AbfsHttpConstants.DOT);
-        if (dotIndex <= 0) {
-          throw new InvalidUriException(
-              uri.toString() + " - account name is not fully qualified.");
-        }
-        creds = new SharedKeyCredentials(accountName.substring(0, dotIndex),
-            abfsConfiguration.getStorageAccountKey());
-        break;
-      case Custom:
-      case OAuth:
-        LOG.trace("Fetching token provider");
-        tokenProvider = abfsConfiguration.getTokenProvider();
-        ExtensionHelper
-            .bind(tokenProvider, uri, abfsConfiguration.getRawConfiguration());
-        break;
-      case SAS:
-        throw new UnsupportedOperationException(
-            "There is no Authorizer configured");
-      case None:
-        throw new UnsupportedOperationException(
-            "No authentication means configured");
+    if (this.authType == AuthType.SharedKey) {
+      LOG.trace("Fetching SharedKey credentials");
+      int dotIndex = accountName.indexOf(AbfsHttpConstants.DOT);
+      if (dotIndex <= 0) {
+        throw new InvalidUriException(
+                uri.toString() + " - account name is not fully qualified.");
       }
+      creds = new SharedKeyCredentials(accountName.substring(0, dotIndex),
+            abfsConfiguration.getStorageAccountKey());
+    } else if (this.authType == AuthType.SAS) {
+      LOG.trace("Fetching SAS token provider");
+      sasTokenProvider = abfsConfiguration.getSASTokenProvider();
+    } else {
+      LOG.trace("Fetching token provider");
+      tokenProvider = abfsConfiguration.getTokenProvider();
+      ExtensionHelper.bind(tokenProvider, uri,
+            abfsConfiguration.getRawConfiguration());
     }
 
     LOG.trace("Initializing AbfsClient for {}", baseUrl);
-    this.client =  new AbfsClient(baseUrl, creds, abfsConfiguration,
-        new ExponentialRetryPolicy(abfsConfiguration.getMaxIoRetries()),
-        tokenProvider, abfsPerfTracker);
+    if (tokenProvider != null) {
+      this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
+          new ExponentialRetryPolicy(abfsConfiguration.getMaxIoRetries()),
+          tokenProvider, abfsPerfTracker);
+    } else {
+      this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
+          new ExponentialRetryPolicy(abfsConfiguration.getMaxIoRetries()),
+          sasTokenProvider, abfsPerfTracker);
+    }
     LOG.trace("AbfsClient init complete");
   }
 
@@ -1402,10 +1385,5 @@ public class AzureBlobFileSystemStore implements Closeable {
   @VisibleForTesting
   AbfsClient getClient() {
     return this.client;
-  }
-
-  @VisibleForTesting
-  AbfsAuthorizer getAuthorizer() throws AzureBlobFileSystemException {
-    return this.abfsConfiguration.getAbfsAuthorizer();
   }
 }

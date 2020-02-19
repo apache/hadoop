@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,436 +18,291 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import java.io.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.junit.Assume;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestName;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.*;
-import org.apache.hadoop.fs.azurebfs.extensions.*;
-import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 
-import static org.apache.hadoop.fs.azurebfs.extensions.MockAbfsAuthorizer.*;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Test Perform Authorization Check operation
  */
-public class ITestAzureBlobFileSystemAuthorization
-    extends AbstractAbfsIntegrationTest {
+public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrationTest {
 
-  private static final String TEST_READ_ONLY_FILE_PATH_PREFIX_0 =
-      TEST_READ_ONLY_FILE_0;
-  private static final String TEST_READ_ONLY_FILE_PATH_PREFIX_1 =
-      TEST_READ_ONLY_FILE_1;
-  private static final String TEST_READ_ONLY_FOLDER_PATH_PREFIX =
-      TEST_READ_ONLY_FOLDER;
-  private static final String TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 =
-      TEST_WRITE_ONLY_FILE_0;
-  private static final String TEST_WRITE_ONLY_FILE_PATH_PREFIX_1 =
-      TEST_WRITE_ONLY_FILE_1;
-  private static final String TEST_READ_WRITE_FILE_PATH_PREFIX_0 =
-      TEST_READ_WRITE_FILE_0;
-  private static final String TEST_READ_WRITE_FILE_PATH_PREFIX_1 =
-      TEST_READ_WRITE_FILE_1;
-  private static final String TEST_WRITE_ONLY_FOLDER_PATH_PREFIX =
-      TEST_WRITE_ONLY_FOLDER;
-  private static final String TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX =
-      TEST_WRITE_THEN_READ_ONLY;
-  private static final String TEST_AUTHZ_CLASS =
-      "org.apache.hadoop.fs" + ".azurebfs.extensions.MockAbfsAuthorizer";
+  private static final String TEST_AUTHZ_CLASS = "org.apache.hadoop.fs.azurebfs.extensions.MockSASTokenProvider";
   private static final String TEST_USER = UUID.randomUUID().toString();
   private static final String TEST_GROUP = UUID.randomUUID().toString();
   private static final String BAR = UUID.randomUUID().toString();
-  @Rule
-  public TestName name = new TestName();
 
   public ITestAzureBlobFileSystemAuthorization() throws Exception {
+    // The mock SAS token provider relies on the account key to generate SAS.
+    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
   }
 
   @Override
   public void setup() throws Exception {
-    boolean isHNSEnabled = this.getConfiguration().getBoolean(
-        TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
-    Assume.assumeTrue(isHNSEnabled == true);
-    this.getConfiguration().setAbfsAuthorizerClass(TEST_AUTHZ_CLASS);
-    loadAuthorizer();
+    this.getConfiguration().set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_AUTHZ_CLASS);
+    this.getConfiguration().set(ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, "SAS");
     super.setup();
   }
 
   @Test
   public void testOpenFileWithInvalidPath() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    intercept(IllegalArgumentException.class, () -> {
-      fs.open(new Path("")).close();
+    intercept(IllegalArgumentException.class,
+        ()-> {
+          fs.open(new Path("")).close();
     });
   }
 
   @Test
   public void testOpenFileAuthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.Open, false,
-        null, null);
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString());
+    fs.create(path).close();
+    fs.open(path).close();
   }
 
   @Test
   public void testOpenFileUnauthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.Open, true,
-        null, null);
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.open(path).close();
+    });
   }
 
   @Test
   public void testCreateFileAuthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.None, FileSystemOperations.CreatePath, false,
-        null, null);
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString());
+    fs.create(path).close();
   }
 
   @Test
   public void testCreateFileUnauthorized() throws Exception {
-    runTest(TEST_READ_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.None, FileSystemOperations.CreatePath, true, null,
-        null);
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.create(path).close();
+    });
   }
 
   @Test
   public void testAppendFileAuthorized() throws Exception {
-    runTest(TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.AppendClose,
-        false, null, null);
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString());
+    fs.create(path).close();
+    fs.append(path).close();
   }
 
   @Test
   public void testAppendFileUnauthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.AppendClose,
-        true, null, null);
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.append(path).close();
+    });
   }
 
   @Test
-  public void testRenameSourceUnauthorized() throws Exception {
-    runTest(TEST_READ_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.None, FileSystemOperations.RenamePath, true,
-        TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(), null);
+  public void testRenameAuthorized() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString());
+    Path dst = new Path(UUID.randomUUID().toString());
+    fs.create(path).close();
+    fs.rename(path, dst);
   }
 
   @Test
-  public void testRenameDestUnauthorized() throws Exception {
-    runTest(TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.None, FileSystemOperations.RenamePath, true,
-        TEST_READ_ONLY_FILE_PATH_PREFIX_1 + name.getMethodName(), null);
+  public void testRenameUnauthorized() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    Path dst = new Path(UUID.randomUUID().toString());
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.rename(path, dst);
+    });
   }
 
   @Test
   public void testDeleteFileAuthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.DeletePath,
-        false, null, null);
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString());
+    fs.create(path).close();
+    fs.delete(path, false);
   }
 
   @Test
   public void testDeleteFileUnauthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.DeletePath, true,
-        null, null);
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.delete(path, false);
+    });
   }
 
   @Test
   public void testListStatusAuthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.ListPaths, false,
-        null, null);
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString());
+    fs.create(path).close();
+    fs.listStatus(path);
   }
 
   @Test
   public void testListStatusUnauthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.ListPaths, true,
-        null, null);
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.listStatus(path);
+    });
   }
 
   @Test
   public void testMkDirsAuthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FOLDER_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.None, FileSystemOperations.Mkdir, false, null,
-        null);
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString());
+    fs.mkdirs(path, new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
   }
 
   @Test
   public void testMkDirsUnauthorized() throws Exception {
-    runTest(TEST_READ_ONLY_FOLDER_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.None, FileSystemOperations.Mkdir, true, null,
-        null);
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.mkdirs(path, new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
+    });
   }
 
   @Test
   public void testGetFileStatusAuthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.GetPathStatus,
-        false, null, null);
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString());
+    fs.getFileStatus(path);
   }
 
   @Test
   public void testGetFileStatusUnauthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.GetPathStatus,
-        true, null, null);
-  }
-
-  @Test
-  public void testSetOwnerAuthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.SetOwner, false,
-        null, null);
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.getFileStatus(path);
+    });
   }
 
   @Test
   public void testSetOwnerUnauthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.SetOwner, true,
-        null, null);
-  }
-
-  @Test
-  public void testSetPermissionAuthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.SetPermissions,
-        false, null, null);
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.setOwner(path, TEST_USER, TEST_GROUP);
+    });
   }
 
   @Test
   public void testSetPermissionUnauthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.SetPermissions,
-        true, null, null);
-  }
-
-  @Test
-  public void testModifyAclEntriesAuthorized() throws Exception {
-    List<AclEntry> aclSpec = Arrays
-        .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
-
-    runTest(TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.ModifyAclEntries,
-        false, null, aclSpec);
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.setPermission(path, new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
+    });
   }
 
   @Test
   public void testModifyAclEntriesUnauthorized() throws Exception {
-    List<AclEntry> aclSpec = Arrays
-        .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
-
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.ModifyAclEntries,
-        true, null, aclSpec);
-  }
-
-  @Test
-  public void testRemoveAclEntriesAuthorized() throws Exception {
-    List<AclEntry> aclSpec = Arrays
-        .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
-
-    runTest(TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.RemoveAclEntries,
-        false, null, aclSpec);
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    List<AclEntry> aclSpec = Arrays.asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.modifyAclEntries(path, aclSpec);
+    });
   }
 
   @Test
   public void testRemoveAclEntriesUnauthorized() throws Exception {
-    List<AclEntry> aclSpec = Arrays
-        .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
-
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.RemoveAclEntries,
-        true, null, aclSpec);
-  }
-
-  @Test
-  public void testRemoveDefaultAclAuthorized() throws Exception {
-    runTest(TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.RemoveDefaultAcl,
-        false, null, null);
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    List<AclEntry> aclSpec = Arrays.asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.removeAclEntries(path, aclSpec);
+    });
   }
 
   @Test
   public void testRemoveDefaultAclUnauthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.RemoveDefaultAcl,
-        true, null, null);
-  }
-
-  @Test
-  public void testRemoveAclAuthorized() throws Exception {
-    runTest(TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.RemoveAcl, false,
-        null, null);
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.removeDefaultAcl(path);
+    });
   }
 
   @Test
   public void testRemoveAclUnauthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.RemoveAcl, true,
-        null, null);
-  }
-
-  @Test
-  public void testSetAclAuthorized() throws Exception {
-    List<AclEntry> aclSpec = Arrays
-        .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
-
-    runTest(TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.SetAcl, false,
-        null, aclSpec);
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.removeAcl(path);
+    });
   }
 
   @Test
   public void testSetAclUnauthorized() throws Exception {
-    List<AclEntry> aclSpec = Arrays
-        .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
-
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.SetAcl, true,
-        null, aclSpec);
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    List<AclEntry> aclSpec = Arrays.asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.setAcl(path, aclSpec);
+    });
   }
 
   @Test
   public void testGetAclStatusAuthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.GetAcl, false,
-        null, null);
+    final AzureBlobFileSystem fs = getFileSystem();
+    assumeTrue("This test case only runs when namespace is enabled", fs.getIsNamespaceEnabled());
+    Path path = new Path(UUID.randomUUID().toString());
+    List<AclEntry> aclSpec = Arrays.asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
+    fs.getAclStatus(path);
   }
 
   @Test
   public void testGetAclStatusUnauthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.GetAcl, true,
-        null, null);
-  }
-
-  private void runTest(String reqFileName, FileSystemOperations initialOp,
-      FileSystemOperations testOp, boolean expectAbfsAuthoirzationException,
-      String renameDestFileName, List<AclEntry> aclSpec) throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path testFilePath = new Path(reqFileName);
-    Path renameDestPath = (renameDestFileName == null) ?
-        null :
-        new Path(renameDestFileName);
-    boolean isWriteThenReadOnlyFile = (reqFileName
-        .startsWith(TEST_WRITE_THEN_READ_ONLY));
-
-    // Initial steps
-    if (isWriteThenReadOnlyFile) {
-      getMockAuthorizer(fs).setwriteThenReadOnly(reqFileName, WriteReadMode.WRITE_MODE);
-    }
-
-    if (initialOp != FileSystemOperations.None) {
-      executeOp(fs, initialOp, testFilePath, renameDestPath, aclSpec);
-    }
-
-    if (isWriteThenReadOnlyFile) {
-      getMockAuthorizer(fs).setwriteThenReadOnly(reqFileName, WriteReadMode.READ_MODE);
-    }
-
-    // Test Operation
-    if (expectAbfsAuthoirzationException) {
-      intercept(AbfsAuthorizationException.class, () -> {
-        executeOp(fs, testOp, testFilePath, renameDestPath, aclSpec);
-      });
-    } else {
-      executeOp(fs, testOp, testFilePath, renameDestPath, aclSpec);
-    }
-  }
-
-  private void executeOp(AzureBlobFileSystem fs, FileSystemOperations op,
-      Path reqPath, Path renameDestPath, List<AclEntry> aclSpec)
-      throws IOException {
-    switch (op) {
-    case ListPaths:
-      fs.listStatus(reqPath);
-      break;
-    case CreatePath:
-      fs.create(reqPath);
-      break;
-    case RenamePath:
-      fs.rename(reqPath, renameDestPath);
-      break;
-    case GetAcl:
-      fs.getAclStatus(reqPath);
-      break;
-    case GetPathStatus:
-      fs.getFileStatus(reqPath);
-      break;
-    case SetAcl:
-      fs.setAcl(reqPath, aclSpec);
-      break;
-    case SetOwner:
-      fs.setOwner(reqPath, TEST_USER, TEST_GROUP);
-      break;
-    case SetPermissions:
-      fs.setPermission(reqPath,
-          new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
-      break;
-    case Append:
-      fs.append(reqPath);
-      break;
-    case ReadFile:
-      fs.open(reqPath);
-      break;
-    case AppendClose:
-      fs.append(reqPath).close();
-      break;
-    case CreateClose:
-      fs.create(reqPath).close();
-      break;
-    case Open:
-      fs.open(reqPath);
-      break;
-    case DeletePath:
-      fs.delete(reqPath, false);
-      break;
-    case Mkdir:
-      fs.mkdirs(reqPath,
-          new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
-      break;
-    case RemoveAclEntries:
-      fs.removeAclEntries(reqPath, aclSpec);
-      break;
-    case ModifyAclEntries:
-      fs.modifyAclEntries(reqPath, aclSpec);
-      break;
-    case RemoveAcl:
-      fs.removeAcl(reqPath);
-      break;
-    case RemoveDefaultAcl:
-      fs.removeDefaultAcl(reqPath);
-      break;
-    default:
-      throw new IllegalStateException("Unexpected value: " + op);
-    }
-  }
-
-  private MockAbfsAuthorizer getMockAuthorizer(AzureBlobFileSystem fs)
-      throws Exception {
-    return ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer());
-  }
-
-  enum FileSystemOperations {
-    None, ListPaths, CreatePath, RenamePath, GetAcl, GetPathStatus, SetAcl,
-    SetOwner, SetPermissions, Append, ReadFile, DeletePath, Mkdir,
-    RemoveAclEntries, RemoveDefaultAcl, RemoveAcl, ModifyAclEntries,
-    AppendClose, CreateClose, Open
+    Path path = new Path(UUID.randomUUID().toString() + "unauthorized");
+    List<AclEntry> aclSpec = Arrays.asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          fs.getAclStatus(path);
+    });
   }
 }

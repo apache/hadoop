@@ -28,7 +28,6 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem.Statistics;
-import org.apache.hadoop.fs.azurebfs.authentication.AuthorizationStatus;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 
@@ -54,7 +53,6 @@ public class AbfsInputStream extends FSInputStream {
   private int limit = 0;     // offset of next byte to be read into buffer from service (i.e., upper marker+1
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
-  private AuthorizationStatus authzStatus = null;
 
   public AbfsInputStream(
       final AbfsClient client,
@@ -230,9 +228,7 @@ public class AbfsInputStream extends FSInputStream {
     final AbfsRestOperation op;
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
-      op = client.read(path, position, b, offset, length, tolerateOobAppends
-          ? "*" : eTag, authzStatus);
-      this.authzStatus = op.getAuthorizationStatus();
+      op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {

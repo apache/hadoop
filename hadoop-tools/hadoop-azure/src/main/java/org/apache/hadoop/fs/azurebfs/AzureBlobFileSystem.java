@@ -29,7 +29,6 @@ import java.net.URISyntaxException;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -39,6 +38,7 @@ import java.util.concurrent.Future;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,15 +61,13 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizerUnhandledException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.FileSystemOperationUnhandledException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriAuthorityException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
-import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
+import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -97,7 +95,6 @@ public class AzureBlobFileSystem extends FileSystem {
 
   private boolean delegationTokenEnabled = false;
   private AbfsDelegationTokenManager delegationTokenManager;
-  private AbfsAuthorizer authorizer;
 
   @Override
   public void initialize(URI uri, Configuration configuration)
@@ -113,13 +110,10 @@ public class AzureBlobFileSystem extends FileSystem {
     LOG.trace("AzureBlobFileSystemStore init complete");
 
     final AbfsConfiguration abfsConfiguration = abfsStore.getAbfsConfiguration();
-    this.authorizer = abfsConfiguration.getAbfsAuthorizer();
 
     this.setWorkingDirectory(this.getHomeDirectory());
 
-    // auto-creation of container is disabled when authorizer is configured
-    if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()
-        && (this.authorizer == null)) {
+    if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
       if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH)) == null) {
         try {
           this.createFileSystem();
@@ -143,9 +137,6 @@ public class AzureBlobFileSystem extends FileSystem {
 
     AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration.isAutoThrottlingEnabled());
 
-    // Initialize ABFS authorizer
-    //
-    this.authorizer = abfsConfiguration.getAbfsAuthorizer();
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
   }
 
@@ -1071,11 +1062,6 @@ public class AzureBlobFileSystem extends FileSystem {
   private void checkException(final Path path,
                               final AzureBlobFileSystemException exception,
                               final AzureServiceErrorCode... allowedErrorCodesList) throws IOException {
-    if ((exception instanceof AbfsAuthorizationException)
-        || (exception instanceof AbfsAuthorizerUnhandledException)) {
-      throw exception;
-    }
-
     if (exception instanceof AbfsRestOperationException) {
       AbfsRestOperationException ere = (AbfsRestOperationException) exception;
 
@@ -1094,6 +1080,8 @@ public class AzureBlobFileSystem extends FileSystem {
       } else {
         throw ere;
       }
+    } else if (exception instanceof SASTokenProviderException) {
+      throw exception;
     } else {
       if (path == null) {
         throw exception;
