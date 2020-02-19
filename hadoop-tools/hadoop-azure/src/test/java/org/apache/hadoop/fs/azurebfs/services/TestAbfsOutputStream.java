@@ -42,7 +42,7 @@ public final class TestAbfsOutputStream {
   public void verifyShortWriteRequest() throws Exception {
 
     AbfsClient client = mock(AbfsClient.class);
-    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, true, false);
+    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false);
     final byte[] b = new byte[writeSize];
     new Random().nextBytes(b);
     out.write(b);
@@ -76,7 +76,7 @@ public final class TestAbfsOutputStream {
   public void verifyWriteRequest() throws Exception {
 
     AbfsClient client = mock(AbfsClient.class);
-    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, true, false);
+    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false);
     final byte[] b = new byte[writeSize];
     new Random().nextBytes(b);
 
@@ -105,7 +105,7 @@ public final class TestAbfsOutputStream {
   public void verifyWriteRequestOfBufferSizeAndClose() throws Exception {
 
     AbfsClient client = mock(AbfsClient.class);
-    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, true, false);
+    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
 
@@ -143,7 +143,7 @@ public final class TestAbfsOutputStream {
   public void verifyWriteRequestOfBufferSize() throws Exception {
 
     AbfsClient client = mock(AbfsClient.class);
-    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, true, false);
+    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
 
@@ -172,7 +172,7 @@ public final class TestAbfsOutputStream {
   public void verifyWriteRequestOfBufferSizeWithAppendBlob() throws Exception {
 
     AbfsClient client = mock(AbfsClient.class);
-    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, true, true);
+    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
 
@@ -201,7 +201,7 @@ public final class TestAbfsOutputStream {
   public void verifyWriteRequestOfBufferSizeAndHFlush() throws Exception {
 
     AbfsClient client = mock(AbfsClient.class);
-    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, true, false);
+    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
 
@@ -239,7 +239,7 @@ public final class TestAbfsOutputStream {
   public void verifyWriteRequestOfBufferSizeAndFlush() throws Exception {
 
     AbfsClient client = mock(AbfsClient.class);
-    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, true, false);
+    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
 
