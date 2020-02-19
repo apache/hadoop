@@ -28,6 +28,8 @@ import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import java.util.Arrays;
+
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public abstract class INodeAttributeProvider {
@@ -193,31 +195,6 @@ public abstract class INodeAttributeProvider {
       this.ignoreEmptyDir = ignoreEmptyDir;
     }
 
-    public AuthorizationContext(
-        String fsOwner,
-        String supergroup,
-        UserGroupInformation callerUgi,
-        INodeAttributes[] inodeAttrs,
-        INode[] inodes,
-        byte[][] pathByNameArr,
-        int snapshotId,
-        String path,
-        int ancestorIndex,
-        boolean doCheckOwner,
-        FsAction ancestorAccess,
-        FsAction parentAccess,
-        FsAction access,
-        FsAction subAccess,
-        boolean ignoreEmptyDir,
-        String operationName,
-        CallerContext callerContext) {
-      this(fsOwner, supergroup, callerUgi, inodeAttrs, inodes,
-          pathByNameArr, snapshotId, path, ancestorIndex, doCheckOwner,
-          ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
-      this.operationName = operationName;
-      this.callerContext = callerContext;
-    }
-
     public AuthorizationContext(Builder builder) {
       this(builder.fsOwner, builder.supergroup, builder.callerUgi,
           builder.inodeAttrs, builder.inodes, builder.pathByNameArr,
@@ -231,10 +208,27 @@ public abstract class INodeAttributeProvider {
     @VisibleForTesting
     @Override
     public boolean equals(Object obj) {
-      if (!(obj instanceof AuthorizationContext)) {
+      if (obj == this) {
+        return true;
+      } else if (obj == null || getClass() != obj.getClass()) {
         return false;
       }
-      return true;
+      AuthorizationContext other = (AuthorizationContext)obj;
+      return fsOwner.equals(other.fsOwner) &&
+          supergroup.equals(other.supergroup) &&
+          callerUgi.equals(other.callerUgi) &&
+          Arrays.deepEquals(inodeAttrs, other.inodeAttrs) &&
+          Arrays.deepEquals(inodes, other.inodes) &&
+          Arrays.deepEquals(pathByNameArr, other.pathByNameArr) &&
+          snapshotId == other.snapshotId &&
+          path.equals(other.path) &&
+          ancestorIndex == other.ancestorIndex &&
+          doCheckOwner == other.doCheckOwner &&
+          ancestorAccess == other.ancestorAccess &&
+          parentAccess == other.parentAccess &&
+          access == other.access &&
+          subAccess == other.subAccess &&
+          ignoreEmptyDir == other.ignoreEmptyDir;
     }
   }
 
@@ -277,6 +271,14 @@ public abstract class INodeAttributeProvider {
         boolean ignoreEmptyDir)
             throws AccessControlException;
 
+    /**
+     * Checks permission on a file system object. Has to throw an Exception
+     * if the filesystem object is not accessessible by the calling Ugi.
+     * @param authzContext an {@link AuthorizationContext} object encapsulating
+     *                     the various parameters required to authorize an
+     *                     operation.
+     * @throws AccessControlException
+     */
     void checkPermissionWithContext(AuthorizationContext authzContext)
         throws AccessControlException;
   }
