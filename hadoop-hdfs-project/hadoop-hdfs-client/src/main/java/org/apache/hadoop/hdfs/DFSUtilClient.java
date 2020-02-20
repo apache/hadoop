@@ -1004,7 +1004,7 @@ public class DFSUtilClient {
    * @param ugi {@link UserGroupInformation} of current user.
    * @return the home directory of current user.
    */
-  public static Path getHomeDirectory(Configuration conf,
+  public static String getHomeDirectory(Configuration conf,
       UserGroupInformation ugi) {
     String userHomePrefix = HdfsClientConfigKeys
         .DFS_USER_HOME_DIR_PREFIX_DEFAULT;
@@ -1013,7 +1013,7 @@ public class DFSUtilClient {
           HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_KEY,
           HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_DEFAULT);
     }
-    return new Path(userHomePrefix + "/" + ugi.getShortUserName());
+    return userHomePrefix + Path.SEPARATOR + ugi.getShortUserName();
   }
 
   /**
@@ -1022,9 +1022,10 @@ public class DFSUtilClient {
    * @param ugi user of trash owner.
    * @return unqualified path of trash root.
    */
-  public static Path getTrashRoot(Configuration conf,
+  public static String getTrashRoot(Configuration conf,
       UserGroupInformation ugi) {
-    return new Path(getHomeDirectory(conf, ugi), FileSystem.TRASH_PREFIX);
+    return getHomeDirectory(conf, ugi)
+        + Path.SEPARATOR + FileSystem.TRASH_PREFIX;
   }
 
   /**
@@ -1033,9 +1034,10 @@ public class DFSUtilClient {
    * @param ugi user of trash owner.
    * @return unqualified path of trash root.
    */
-  public static Path getEZTrashRoot(EncryptionZone ez,
+  public static String getEZTrashRoot(EncryptionZone ez,
       UserGroupInformation ugi) {
-    return new Path(new Path(ez.getPath(), FileSystem.TRASH_PREFIX),
-        ugi.getShortUserName());
+    String ezpath = ez.getPath();
+    return (ezpath.equals("/") ? ezpath : ezpath + Path.SEPARATOR)
+        + FileSystem.TRASH_PREFIX + Path.SEPARATOR + ugi.getShortUserName();
   }
 }

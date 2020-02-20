@@ -1550,30 +1550,42 @@ public class TestWebHDFS {
         "jceks://file" + new Path(testRootDir.toString(), "test.jks").toUri());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
     cluster.waitActive();
-    DistributedFileSystem fs = cluster.getFileSystem();
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    final WebHdfsFileSystem webhdfs = WebHdfsTestUtil.getWebHdfsFileSystem(
+        conf, WebHdfsConstants.WEBHDFS_SCHEME);
     HdfsAdmin dfsAdmin = new HdfsAdmin(cluster.getURI(), conf);
-    fs.getClient().setKeyProvider(
+    dfs.getClient().setKeyProvider(
         cluster.getNameNode().getNamesystem().getProvider());
     final String testkey = "test_key";
     DFSTestUtil.createKey(testkey, cluster, conf);
 
     final Path zone1 = new Path("/zone1");
-    final Path dir1 = new Path(zone1, "dir1");
-    fs.mkdirs(zone1, new FsPermission(700));
+    dfs.mkdirs(zone1, new FsPermission(700));
     dfsAdmin.createEncryptionZone(zone1, testkey,
         EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH));
 
-    fs.mkdirs(dir1, new FsPermission(700));
+    final Path insideEZ = new Path(zone1, "insideEZ");
+    dfs.mkdirs(insideEZ, new FsPermission(700));
+    assertEquals(
+        dfs.getTrashRoot(insideEZ).toUri().getPath(),
+        webhdfs.getTrashRoot(insideEZ).toUri().getPath());
 
-    final WebHdfsFileSystem webFS = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
-        WebHdfsConstants.WEBHDFS_SCHEME);
-    assertEquals(fs.getTrashRoot(dir1).toUri().getPath(),
-        webFS.getTrashRoot(dir1).toUri().getPath());
+    final Path outsideEZ = new Path("/outsideEZ");
+    dfs.mkdirs(outsideEZ, new FsPermission(755));
+    assertEquals(
+        dfs.getTrashRoot(outsideEZ).toUri().getPath(),
+        webhdfs.getTrashRoot(outsideEZ).toUri().getPath());
 
-    final Path dir2 = new Path("/dir2");
-    fs.mkdirs(dir2, new FsPermission(755));
-    assertEquals(fs.getTrashRoot(dir2).toUri().getPath(),
-        webFS.getTrashRoot(dir2).toUri().getPath());
+    final Path root = new Path("/");
+    assertEquals(
+        dfs.getTrashRoot(root).toUri().getPath(),
+        webhdfs.getTrashRoot(root).toUri().getPath());
+    assertEquals(
+        webhdfs.getTrashRoot(root).toUri().getPath(),
+        webhdfs.getTrashRoot(zone1).toUri().getPath());
+    assertEquals(
+        webhdfs.getTrashRoot(outsideEZ).toUri().getPath(),
+        webhdfs.getTrashRoot(zone1).toUri().getPath());
   }
 
   @Test

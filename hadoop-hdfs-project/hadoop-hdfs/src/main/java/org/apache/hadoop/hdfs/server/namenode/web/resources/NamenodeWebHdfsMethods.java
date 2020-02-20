@@ -1244,7 +1244,7 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETHOMEDIRECTORY: {
-      String userHome = DFSUtilClient.getHomeDirectory(conf, ugi).toString();
+      String userHome = DFSUtilClient.getHomeDirectory(conf, ugi);
       final String js = JsonUtil.toJsonString("Path", userHome);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
@@ -1348,17 +1348,36 @@ public class NamenodeWebHdfsMethods {
   private String getTrashRoot(Configuration conf, String fullPath)
       throws IOException {
     UserGroupInformation ugi= UserGroupInformation.getCurrentUser();
-    org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(fullPath);
-    String parentSrc = path.isRoot() ?
-        path.toUri().getPath() : path.getParent().toUri().getPath();
-    EncryptionZone ez = getRpcClientProtocol().getEZForPath(parentSrc);
-    org.apache.hadoop.fs.Path trashRoot;
+    String parentSrc = getParent(fullPath);
+    EncryptionZone ez = getRpcClientProtocol().getEZForPath(
+        parentSrc != null ? parentSrc : fullPath);
+    String trashRoot;
     if (ez != null) {
       trashRoot = DFSUtilClient.getEZTrashRoot(ez, ugi);
     } else {
       trashRoot = DFSUtilClient.getTrashRoot(conf, ugi);
     }
-    return trashRoot.toUri().getPath();
+    return trashRoot;
+  }
+
+  /**
+   * Returns the parent of a path in the same way as Path#getParent.
+   * @return the parent of a path or null if at root
+   */
+  public String getParent(String path) {
+    int lastSlash = path.lastIndexOf('/');
+    int start = 0;
+    if ((path.length() == start) || // empty path
+        (lastSlash == start && path.length() == start + 1)) { // at root
+      return null;
+    }
+    String parent;
+    if (lastSlash == -1) {
+      parent = org.apache.hadoop.fs.Path.CUR_DIR;
+    } else {
+      parent = path.substring(0, lastSlash == start ? start + 1 : lastSlash);
+    }
+    return parent;
   }
 
   private static DirectoryListing getDirectoryListing(final ClientProtocol cp,
