@@ -31,6 +31,7 @@ import java.time.format.*;
 import java.util.*;
 
 import static org.apache.hadoop.fs.azurebfs.sasTokenGenerator.SASTokenConstants.*;
+import org.apache.hadoop.fs.azurebfs.services.*;
 
 public class DelegationSASGenerator {
 
@@ -51,13 +52,6 @@ public class DelegationSASGenerator {
   private String ske;
   private String sks;
   private String skv;
-  //  private String authorizerAction;
-  //  private URI storePathURI;
-  //  private String userOID;
-  //  private String version;
-  //  private String correlationID;
-  //  private String ip;
-  //  private boolean isUserAuthorized;
 
   /**
    * Constructor for DelegationSASGenerator.
@@ -169,83 +163,72 @@ public class DelegationSASGenerator {
         unauthorizedUserOID,
         correlationID, ip, version, Blob_SignedResource);
 
-    Map<String, String> qp = new HashMap<String, String>();
+    AbfsUriQueryBuilder qp = new AbfsUriQueryBuilder();
 
     if (sp != null) {
-      qp.put(SASTokenConstants.SignedPermission, sp);
+      qp.addQuery(SASTokenConstants.SignedPermission, sp);
     }
 
     if (st != null) {
-      qp.put(SASTokenConstants.SignedStart, st);
+      qp.addQuery(SASTokenConstants.SignedStart, st);
     }
 
     if (se != null) {
-      qp.put(SASTokenConstants.SignedExpiry, se);
+      qp.addQuery(SASTokenConstants.SignedExpiry, se);
     }
 
     if (skoid != null) {
-      qp.put(SASTokenConstants.SignedKeyOid, skoid);
+      qp.addQuery(SASTokenConstants.SignedKeyOid, skoid);
     }
 
     if (sktid != null) {
-      qp.put(SASTokenConstants.SignedKeyTid, sktid);
+      qp.addQuery(SASTokenConstants.SignedKeyTid, sktid);
     }
 
     if (skt != null) {
-      qp.put(SASTokenConstants.SignedKeyStart, skt);
+      qp.addQuery(SASTokenConstants.SignedKeyStart, skt);
     }
 
     if (ske != null) {
-      qp.put(SASTokenConstants.SignedKeyExpiry, ske);
+      qp.addQuery(SASTokenConstants.SignedKeyExpiry, ske);
     }
 
     if (sks != null) {
-      qp.put(SASTokenConstants.SignedKeyService, sks);
+      qp.addQuery(SASTokenConstants.SignedKeyService, sks);
     }
 
     if (skv != null) {
-      qp.put(SASTokenConstants.SignedKeyVersion, skv);
+      qp.addQuery(SASTokenConstants.SignedKeyVersion, skv);
     }
 
     if (authorizedUserOID != null) {
-      qp.put(SASTokenConstants.SignedAuthorizedAgentOid, authorizedUserOID);
+      qp.addQuery(SASTokenConstants.SignedAuthorizedAgentOid, authorizedUserOID);
     }
 
     if (unauthorizedUserOID != null) {
-      qp.put(SASTokenConstants.SignedUnauthorizedAgentOid, unauthorizedUserOID);
+      qp.addQuery(SASTokenConstants.SignedUnauthorizedAgentOid, unauthorizedUserOID);
     }
 
     if (!version.equalsIgnoreCase("2018-11-09")) {
       if (correlationID != null) {
-        qp.put(SASTokenConstants.SignedCorrelationId, correlationID);
+        qp.addQuery(SASTokenConstants.SignedCorrelationId, correlationID);
       }
     }
 
     if (ip != null) {
-      qp.put(SASTokenConstants.SignedIP, ip);
+      qp.addQuery(SASTokenConstants.SignedIP, ip);
     }
 
-    qp.put(SASTokenConstants.SignedVersion, version);
+    qp.addQuery(SASTokenConstants.SignedVersion, version);
 
     // TODO: Add directory SAS support
-    qp.put(SASTokenConstants.SignedResource, Blob_SignedResource);
+    qp.addQuery(SASTokenConstants.SignedResource, Blob_SignedResource);
 
     if (signature != null) {
-      qp.put(SASTokenConstants.Signature, signature);
+      qp.addQuery(SASTokenConstants.Signature, signature);
     }
 
-    StringBuilder sb = new StringBuilder();
-    String separator = "";
-    for (Map.Entry<String, String> entry : qp.entrySet()) {
-      String name = entry.getKey();
-        sb.append(separator);
-        sb.append(name);
-        sb.append(SASTokenConstants.EqualTo);
-        sb.append(entry.getValue());
-        separator = SASTokenConstants.QuerySeperator;
-    }
-
-    return sb.toString();
+    return qp.toString();
   }
 
   private String getRequiredSASPermission(final String authorizerAction,

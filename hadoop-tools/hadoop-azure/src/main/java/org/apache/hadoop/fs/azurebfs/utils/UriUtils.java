@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.net.*;
 import java.util.regex.Pattern;
 
 import org.apache.http.client.utils.URIBuilder;
@@ -87,11 +84,13 @@ public final class UriUtils {
   public static URL addSASToRequestUrl(URL requestUrl, String sasToken)
       throws URISyntaxException, MalformedURLException {
     URIBuilder uriBuilder = new URIBuilder(requestUrl.toURI());
+    sasToken = (sasToken.startsWith("?") ? sasToken.substring(1) : sasToken);
     String[] sasQueryParamKVPairs = sasToken.split("&");
     for(String sasQueryParam : sasQueryParamKVPairs)
     {
       String key = sasQueryParam.substring(0, sasQueryParam.indexOf("="));
-      String value = sasQueryParam.substring(sasQueryParam.indexOf("=") + 1);
+      String value =
+          URLDecoder.decode(sasQueryParam.substring(sasQueryParam.indexOf("=") + 1));// new PR handles it in AbfsUriBuilder
 
       uriBuilder.addParameter(key, value);
     }
