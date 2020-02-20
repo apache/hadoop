@@ -1220,11 +1220,12 @@ org.apache.hadoop.fs.s3a.UnknownStoreException:
 Check the URI is correct, and that the bucket actually exists.
 
 If using a third-party store, verify that you've configured
-the client to talk to the specific server in `fs.s3a.endpoint`. Forgetting to update this value and
-asking the AWS S3 endpoint for a bucket is not an unusual occurrence.
+the client to talk to the specific server in `fs.s3a.endpoint`.
+Forgetting to update this value and asking the AWS S3 endpoint
+for a bucket is not an unusual occurrence.
 
-This can surface during IO if the bucket has been deleted, or the startup check for bucket existence
-has been disabled by setting `fs.s3a.bucket.probe` to 0.
+This can surface during filesystem API calls if the bucket is deleted while you are using it,
+ -or the startup check for bucket existence has been disabled by setting `fs.s3a.bucket.probe` to 0.
 
 ```
 org.apache.hadoop.fs.s3a.UnknownStoreException: s3a://random-bucket-7d9217b0-b426-4344-82ea-25d6cbb316f1/

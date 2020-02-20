@@ -68,6 +68,7 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
         () -> fs.listStatus(root));
 
     Path src = new Path(root, "testfile");
+    Path dest = new Path(root, "dst");
     expectUnknownStore(
         () -> fs.getFileStatus(src));
 
@@ -77,6 +78,7 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
     expectUnknownStore(() -> fs.isDirectory(src));
     expectUnknownStore(() -> fs.mkdirs(src));
     expectUnknownStore(() -> fs.delete(src));
+    expectUnknownStore(() -> fs.rename(src, dest));
 
     byte[] data = dataset(1024, 'a', 'z');
     expectUnknownStore(
@@ -106,6 +108,12 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
     intercept(UnknownStoreException.class, eval);
   }
 
+  /**
+   * Create a new configuration with the given bucket probe;
+   * we also disable FS caching.
+   * @param probe value to use as the bucket probe.
+   * @return a configuration.
+   */
   private Configuration createConfigurationWithProbe(final int probe) {
     Configuration conf = new Configuration(getFileSystem().getConf());
     S3ATestUtils.disableFilesystemCaching(conf);
@@ -115,6 +123,7 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
 
   @Test
   public void testBucketProbingV1() throws Exception {
+    describe("Test the V1 bucket probe");
     Configuration configuration = createConfigurationWithProbe(1);
     expectUnknownStore(
         () -> FileSystem.get(uri, configuration));
@@ -122,6 +131,7 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
 
   @Test
   public void testBucketProbingV2() throws Exception {
+    describe("Test the V2 bucket probe");
     Configuration configuration = createConfigurationWithProbe(2);
     expectUnknownStore(
         () -> FileSystem.get(uri, configuration));
@@ -129,6 +139,7 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
 
   @Test
   public void testBucketProbingParameterValidation() throws Exception {
+    // TODO; update
     Configuration configuration = createConfigurationWithProbe(3);
     intercept(IllegalArgumentException.class,
             "Value of " + S3A_BUCKET_PROBE + " should be between 0 to 2",
