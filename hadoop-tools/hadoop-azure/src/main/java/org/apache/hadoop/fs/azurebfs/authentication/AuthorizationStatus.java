@@ -18,17 +18,16 @@
 
 package org.apache.hadoop.fs.azurebfs.authentication;
 
-import java.net.URI;
-import java.time.Duration;
-import java.time.Instant;
+import java.io.*;
+import java.net.*;
+import java.time.*;
 import java.util.*;
 
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsAuthorizationException;
-import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResource;
-import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResourceResult;
-import org.apache.hadoop.fs.azurebfs.extensions.AuthorizationResult;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.*;
+import org.apache.hadoop.fs.azurebfs.extensions.*;
 
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_SAS_REFRESH_INTERVAL_BEFORE_EXPIRY;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
 
 /**
  * AuthorizationStatus maintains the status of Authorization and also SAS
@@ -66,7 +65,8 @@ public class AuthorizationStatus {
    * @param authResult - Authorizer AuthorizationResult.
    */
   public void setSasToken(AuthorizationResource[] authorizationResource,
-      AuthorizationResult authResult) throws AbfsAuthorizationException {
+      AuthorizationResult authResult)
+      throws AbfsAuthorizationException, AbfsAuthorizerUnhandledException {
 
     AuthorizationResourceResult[] resourceResult = authResult
         .getAuthResourceResult();
@@ -104,9 +104,9 @@ public class AuthorizationStatus {
             singleResourceAuth.getAuthorizerAction()));
       }
 
-      if (!singleResourceAuth.getStorePathUri()
-          .equals(authorizationRequestedForResource.getStorePathUri())
-          || singleResourceAuth.getAuthorizerAction().equalsIgnoreCase(
+      if (!singleResourceAuth.getStorePathUri().toString()
+          .equals(authorizationRequestedForResource.getStorePathUri().toString())
+          || !singleResourceAuth.getAuthorizerAction().equalsIgnoreCase(
           authorizationRequestedForResource.getAuthorizerAction())) {
 
         throw new AbfsAuthorizationException(String.format(
@@ -125,13 +125,26 @@ public class AuthorizationStatus {
       // expiry
       // If the sas token is short lived and below 5 mins, set the sas token
       // refresh to be half time before expiry
-      authToken.sasExpiryTime = getSasExpiryDateTime(
-          singleResourceAuth.getAuthToken());
+      try {
+        authToken.sasExpiryTime = getSasExpiryDateTime(
+            singleResourceAuth.getAuthToken());
+      } catch (UnsupportedEncodingException e) {
+        throw new AbfsAuthorizerUnhandledException(e);
+      }
 
       authToken.sasToken = singleResourceAuth.getAuthToken();
       long durationToExpiryInSec = (
-          Duration.between(authToken.sasExpiryTime, Instant.now()).toMillis()
+          Duration.between(Instant.now(), authToken.sasExpiryTime).toMillis()
               / 1000);
+
+      if (durationToExpiryInSec < 0) {
+        throw new AbfsAuthorizerUnhandledException(new InvalidRequestException(
+            String.format("SAS token received is already expired. Expiry:%s "
+                    + "StorePathURI:%s AuthorizerAction: %s",
+                authToken.sasExpiryTime.toString(),
+                singleResourceAuth.getStorePathUri(),
+                singleResourceAuth.getAuthorizerAction())));
+      }
 
       if (durationToExpiryInSec < DEFAULT_SAS_REFRESH_INTERVAL_BEFORE_EXPIRY) {
         authToken.sasRefreshIntervalBeforeExpiryInSec =
@@ -147,16 +160,19 @@ public class AuthorizationStatus {
    *
    * @return Time of SAS token expiry.
    */
-  private Instant getSasExpiryDateTime(String sasToken) {
-    int startIndex = sasToken.indexOf("ske");
-    int endIndex = sasToken.indexOf("&", startIndex);
+  private Instant getSasExpiryDateTime(String sasToken)
+      throws UnsupportedEncodingException {
+    String decodedSASToken = URLDecoder.decode(sasToken, "UTF-8");
+    int startIndex = decodedSASToken.indexOf("se");
+    int endIndex = decodedSASToken.indexOf("&", startIndex);
     if (endIndex == -1) {
-      endIndex = sasToken.length();
+      endIndex = decodedSASToken.length();
     }
-    String ske = sasToken.substring(sasToken.indexOf("ske") + 4, // remove ske=
+    String se = decodedSASToken.substring(decodedSASToken.indexOf("se") + 3,
+        // remove se=
         endIndex);
 
-    return Instant.parse(ske);
+    return Instant.parse(se);
   }
 
   /**
@@ -176,7 +192,7 @@ public class AuthorizationStatus {
 
     // if expiry is within configured refresh interval,
     // SAS token needs update. Return status as invalid.
-    return sasTokenData.sasExpiryTime.isBefore(currentDateTime
+    return sasTokenData.sasExpiryTime.isAfter(currentDateTime
         .minusSeconds(sasTokenData.sasRefreshIntervalBeforeExpiryInSec));
   }
 

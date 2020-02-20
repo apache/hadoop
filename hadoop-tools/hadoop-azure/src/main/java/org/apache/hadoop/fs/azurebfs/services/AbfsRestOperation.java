@@ -261,6 +261,7 @@ public class AbfsRestOperation {
           + "is not SAS");
       return;
     } else if ((this.authorizer.getAuthType() == AuthType.SAS)
+        && (this.authorizationStatus != null)
         && this.authorizationStatus.isValidSas(qualifiedUri)) {
       LOG.debug("Provided authorization status and the SAS token is valid");
       return; // Current sasData is already valid.

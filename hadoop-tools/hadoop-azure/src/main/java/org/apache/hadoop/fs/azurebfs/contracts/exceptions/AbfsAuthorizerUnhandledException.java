@@ -25,7 +25,7 @@ public class AbfsAuthorizerUnhandledException
     extends AzureBlobFileSystemException {
   public AbfsAuthorizerUnhandledException(Exception innerException) {
     super(String.format(
-        "An unhandled Authorizer request processing exception %s %s",
+        "An unhandled authorizer request processing exception: %s %s",
         ((innerException != null) ? innerException.getMessage() : ""),
         ((innerException != null) ? innerException.getStackTrace() : "")),
         innerException);

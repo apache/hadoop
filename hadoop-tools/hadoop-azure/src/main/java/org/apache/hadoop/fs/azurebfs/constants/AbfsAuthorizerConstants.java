@@ -48,7 +48,6 @@ public class AbfsAuthorizerConstants {
   public static final String SETPERMISSION_ACTION = "setpermission";
   public static final String APPEND_ACTION = "write";
   public static final String READ_ACTION = "read";
-  public static final String EXECUTE_ACTION = "execute";
 
   /**
    * Converts AbfsRestOperation type to an Authorizer action string.

@@ -18,71 +18,73 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import java.io.*;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
-
-import org.junit.Assume;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
-
-import org.apache.hadoop.fs.Path;
+import com.fasterxml.jackson.dataformat.xml.*;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.azurebfs.constants.*;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.*;
 import org.apache.hadoop.fs.azurebfs.extensions.*;
-import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
-import org.apache.hadoop.fs.permission.AclEntry;
-import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.azurebfs.oauth2.*;
+import org.apache.hadoop.fs.permission.*;
+import org.codehaus.jettison.json.*;
+import org.junit.*;
+import org.junit.rules.*;
+import org.junit.runner.*;
+import org.junit.runners.*;
+
+import java.io.*;
+import java.net.*;
+import java.time.*;
+import java.time.format.*;
+import java.util.*;
 
 import static org.apache.hadoop.fs.azurebfs.extensions.MockAbfsAuthorizer.*;
-import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
-import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
-import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.fs.azurebfs.extensions.MockAbfsAuthorizerEnums.*;
+import static org.apache.hadoop.fs.azurebfs.sasTokenGenerator.SASTokenConstants.VALID_SAS_REST_API_VERSIONS;
+import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.*;
+import static org.apache.hadoop.fs.permission.AclEntryScope.*;
+import static org.apache.hadoop.fs.permission.AclEntryType.*;
+import static org.apache.hadoop.test.LambdaTestUtils.*;
+
 
 /**
  * Test Perform Authorization Check operation
  */
+@RunWith(Parameterized.class)
 public class ITestAzureBlobFileSystemAuthorization
     extends AbstractAbfsIntegrationTest {
-
-  private static final String TEST_READ_ONLY_FILE_PATH_PREFIX_0 =
-      TEST_READ_ONLY_FILE_0;
-  private static final String TEST_READ_ONLY_FILE_PATH_PREFIX_1 =
-      TEST_READ_ONLY_FILE_1;
-  private static final String TEST_READ_ONLY_FOLDER_PATH_PREFIX =
-      TEST_READ_ONLY_FOLDER;
-  private static final String TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 =
-      TEST_WRITE_ONLY_FILE_0;
-  private static final String TEST_WRITE_ONLY_FILE_PATH_PREFIX_1 =
-      TEST_WRITE_ONLY_FILE_1;
-  private static final String TEST_READ_WRITE_FILE_PATH_PREFIX_0 =
-      TEST_READ_WRITE_FILE_0;
-  private static final String TEST_READ_WRITE_FILE_PATH_PREFIX_1 =
-      TEST_READ_WRITE_FILE_1;
-  private static final String TEST_WRITE_ONLY_FOLDER_PATH_PREFIX =
-      TEST_WRITE_ONLY_FOLDER;
-  private static final String TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX =
-      TEST_WRITE_THEN_READ_ONLY;
-  private static final String TEST_AUTHZ_CLASS =
-      "org.apache.hadoop.fs" + ".azurebfs.extensions.MockAbfsAuthorizer";
   private static final String TEST_USER = UUID.randomUUID().toString();
   private static final String TEST_GROUP = UUID.randomUUID().toString();
   private static final String BAR = UUID.randomUUID().toString();
+  private final String test_authorize_class;
+
   @Rule
   public TestName name = new TestName();
 
-  public ITestAzureBlobFileSystemAuthorization() throws Exception {
+  @Parameterized.Parameters(name = "test_authorize_class={0}")
+  public static Iterable<Object> getMockAuthorizer() {
+    return Arrays.asList(
+        //"org.apache.hadoop.fs.azurebfs.extensions.MockAbfsAuthorizer",
+        "org.apache.hadoop.fs.azurebfs.extensions.MockAbfsSASAuthorizer");
+  }
+
+  public ITestAzureBlobFileSystemAuthorization(final String authorizerClassName) throws Exception {
+    test_authorize_class = authorizerClassName;
+    if (test_authorize_class.equals("org.apache.hadoop.fs.azurebfs.extensions"
+        + ".MockAbfsSASAuthorizer")) {
+      // Test enabled to fetch delegation key using oAuth creds
+      Assume.assumeTrue(this.getConfiguration().getTokenProvider() != null);
+
+      MockAbfsSASAuthorizer.setUserDelegationKey(fetchDelegationKey(this.getConfiguration().getTokenProvider(),
+          this.getConfiguration().getAccountName()));
+    }
   }
 
   @Override
   public void setup() throws Exception {
     boolean isHNSEnabled = this.getConfiguration().getBoolean(
         TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
-    Assume.assumeTrue(isHNSEnabled == true);
-    this.getConfiguration().setAbfsAuthorizerClass(TEST_AUTHZ_CLASS);
+    Assume.assumeTrue(isHNSEnabled);
+    this.getConfiguration().setAbfsAuthorizerClass(test_authorize_class);
     loadAuthorizer();
     super.setup();
   }
@@ -97,283 +99,208 @@ public class ITestAzureBlobFileSystemAuthorization
 
   @Test
   public void testOpenFileAuthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.Open, false,
-        null, null);
+    runTest(FileSystemOperations.Open, false);
   }
 
   @Test
   public void testOpenFileUnauthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.Open, true,
-        null, null);
+    runTest(FileSystemOperations.Open, true);
   }
 
   @Test
   public void testCreateFileAuthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.None, FileSystemOperations.CreatePath, false,
-        null, null);
+    runTest(FileSystemOperations.CreatePath, false);
   }
 
   @Test
   public void testCreateFileUnauthorized() throws Exception {
-    runTest(TEST_READ_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.None, FileSystemOperations.CreatePath, true, null,
-        null);
+    runTest(FileSystemOperations.CreatePath, true);
   }
 
   @Test
   public void testAppendFileAuthorized() throws Exception {
-    runTest(TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.AppendClose,
-        false, null, null);
+    runTest(FileSystemOperations.AppendClose,
+        false);
   }
 
   @Test
   public void testAppendFileUnauthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.AppendClose,
-        true, null, null);
+    runTest(FileSystemOperations.AppendClose,
+        true);
   }
 
   @Test
   public void testRenameSourceUnauthorized() throws Exception {
-    runTest(TEST_READ_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.None, FileSystemOperations.RenamePath, true,
-        TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(), null);
+    runTest(FileSystemOperations.RenamePath, true);
   }
 
   @Test
   public void testRenameDestUnauthorized() throws Exception {
-    runTest(TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.None, FileSystemOperations.RenamePath, true,
-        TEST_READ_ONLY_FILE_PATH_PREFIX_1 + name.getMethodName(), null);
+    runTest(FileSystemOperations.RenamePath, true);
   }
 
   @Test
   public void testDeleteFileAuthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.DeletePath,
-        false, null, null);
+    runTest(FileSystemOperations.DeletePath,
+        false);
   }
 
   @Test
   public void testDeleteFileUnauthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.DeletePath, true,
-        null, null);
+    runTest(FileSystemOperations.DeletePath, true);
   }
 
   @Test
   public void testListStatusAuthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.ListPaths, false,
-        null, null);
+    runTest(FileSystemOperations.ListPaths, false);
   }
 
   @Test
   public void testListStatusUnauthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.ListPaths, true,
-        null, null);
+    runTest(FileSystemOperations.ListPaths, true);
   }
 
   @Test
   public void testMkDirsAuthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FOLDER_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.None, FileSystemOperations.Mkdir, false, null,
-        null);
+    runTest(FileSystemOperations.Mkdir, false);
   }
 
   @Test
   public void testMkDirsUnauthorized() throws Exception {
-    runTest(TEST_READ_ONLY_FOLDER_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.None, FileSystemOperations.Mkdir, true, null,
-        null);
+    runTest(FileSystemOperations.Mkdir, true);
   }
 
   @Test
   public void testGetFileStatusAuthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.GetPathStatus,
-        false, null, null);
+    runTest(FileSystemOperations.GetPathStatus,
+        false);
   }
 
   @Test
   public void testGetFileStatusUnauthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.GetPathStatus,
-        true, null, null);
+    runTest(FileSystemOperations.GetPathStatus,
+        true);
   }
 
   @Test
   public void testSetOwnerAuthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.SetOwner, false,
-        null, null);
+    runTest(FileSystemOperations.SetOwner, false);
   }
 
   @Test
   public void testSetOwnerUnauthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.SetOwner, true,
-        null, null);
+    runTest(FileSystemOperations.SetOwner, true);
   }
 
   @Test
   public void testSetPermissionAuthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.SetPermissions,
-        false, null, null);
+    runTest(FileSystemOperations.SetPermissions,
+        false);
   }
 
   @Test
   public void testSetPermissionUnauthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.SetPermissions,
-        true, null, null);
+    runTest(FileSystemOperations.SetPermissions,
+        true);
   }
 
   @Test
   public void testModifyAclEntriesAuthorized() throws Exception {
-    List<AclEntry> aclSpec = Arrays
-        .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
-
-    runTest(TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.ModifyAclEntries,
-        false, null, aclSpec);
+    runTest(FileSystemOperations.ModifyAclEntries,
+        false);
   }
 
   @Test
   public void testModifyAclEntriesUnauthorized() throws Exception {
-    List<AclEntry> aclSpec = Arrays
-        .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
-
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.ModifyAclEntries,
-        true, null, aclSpec);
+       runTest(FileSystemOperations.ModifyAclEntries,
+        true);
   }
 
   @Test
   public void testRemoveAclEntriesAuthorized() throws Exception {
-    List<AclEntry> aclSpec = Arrays
-        .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
-
-    runTest(TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.RemoveAclEntries,
-        false, null, aclSpec);
+    runTest(FileSystemOperations.RemoveAclEntries,
+        false);
   }
 
   @Test
   public void testRemoveAclEntriesUnauthorized() throws Exception {
-    List<AclEntry> aclSpec = Arrays
-        .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
-
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.RemoveAclEntries,
-        true, null, aclSpec);
+    runTest(FileSystemOperations.RemoveAclEntries,
+        true);
   }
 
   @Test
   public void testRemoveDefaultAclAuthorized() throws Exception {
-    runTest(TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.RemoveDefaultAcl,
-        false, null, null);
+    runTest(FileSystemOperations.RemoveDefaultAcl,
+        false);
   }
 
   @Test
   public void testRemoveDefaultAclUnauthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.RemoveDefaultAcl,
-        true, null, null);
+    runTest(FileSystemOperations.RemoveDefaultAcl,
+        true);
   }
 
   @Test
   public void testRemoveAclAuthorized() throws Exception {
-    runTest(TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.RemoveAcl, false,
-        null, null);
+    runTest(FileSystemOperations.RemoveAcl, false);
   }
 
   @Test
   public void testRemoveAclUnauthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.RemoveAcl, true,
-        null, null);
+    runTest(FileSystemOperations.RemoveAcl, true);
   }
 
   @Test
   public void testSetAclAuthorized() throws Exception {
-    List<AclEntry> aclSpec = Arrays
-        .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
-
-    runTest(TEST_READ_WRITE_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.SetAcl, false,
-        null, aclSpec);
+    runTest(FileSystemOperations.SetAcl, false);
   }
 
   @Test
   public void testSetAclUnauthorized() throws Exception {
-    List<AclEntry> aclSpec = Arrays
-        .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
-
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.SetAcl, true,
-        null, aclSpec);
+       runTest(FileSystemOperations.SetAcl, true);
   }
 
   @Test
   public void testGetAclStatusAuthorized() throws Exception {
-    runTest(TEST_WRITE_THEN_READ_ONLY_PATH_PREFIX + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.GetAcl, false,
-        null, null);
+    runTest(FileSystemOperations.GetAcl, false);
   }
 
   @Test
   public void testGetAclStatusUnauthorized() throws Exception {
-    runTest(TEST_WRITE_ONLY_FILE_PATH_PREFIX_0 + name.getMethodName(),
-        FileSystemOperations.CreateClose, FileSystemOperations.GetAcl, true,
-        null, null);
+    runTest(FileSystemOperations.GetAcl, true);
   }
 
-  private void runTest(String reqFileName, FileSystemOperations initialOp,
-      FileSystemOperations testOp, boolean expectAbfsAuthoirzationException,
-      String renameDestFileName, List<AclEntry> aclSpec) throws Exception {
+  private void runTest(FileSystemOperations testOp,
+      boolean expectAbfsAuthorizationException) throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path testFilePath = new Path(reqFileName);
-    Path renameDestPath = (renameDestFileName == null) ?
-        null :
-        new Path(renameDestFileName);
-    boolean isWriteThenReadOnlyFile = (reqFileName
-        .startsWith(TEST_WRITE_THEN_READ_ONLY));
 
-    // Initial steps
-    if (isWriteThenReadOnlyFile) {
-      getMockAuthorizer(fs).setwriteThenReadOnly(reqFileName, WriteReadMode.WRITE_MODE);
-    }
+    Path reqPath = new Path("requestPath"
+        + UUID.randomUUID().toString()
+        + (expectAbfsAuthorizationException ? "unauthorized":""));
 
-    if (initialOp != FileSystemOperations.None) {
-      executeOp(fs, initialOp, testFilePath, renameDestPath, aclSpec);
+    getMockAuthorizer(fs).setSkipAuthCheck(true);
+    if ((testOp != FileSystemOperations.CreatePath)
+    && (testOp != FileSystemOperations.Mkdir))
+    {
+      fs.create(reqPath).close();
     }
-
-    if (isWriteThenReadOnlyFile) {
-      getMockAuthorizer(fs).setwriteThenReadOnly(reqFileName, WriteReadMode.READ_MODE);
-    }
+    getMockAuthorizer(fs).setSkipAuthCheck(false);
 
     // Test Operation
-    if (expectAbfsAuthoirzationException) {
+    if (expectAbfsAuthorizationException) {
       intercept(AbfsAuthorizationException.class, () -> {
-        executeOp(fs, testOp, testFilePath, renameDestPath, aclSpec);
+        executeOp(reqPath, fs, testOp);
       });
     } else {
-      executeOp(fs, testOp, testFilePath, renameDestPath, aclSpec);
+      executeOp(reqPath, fs, testOp);
     }
   }
 
-  private void executeOp(AzureBlobFileSystem fs, FileSystemOperations op,
-      Path reqPath, Path renameDestPath, List<AclEntry> aclSpec)
+  private void executeOp(Path reqPath, AzureBlobFileSystem fs,
+      FileSystemOperations op)
       throws IOException {
+
+
     switch (op) {
     case ListPaths:
       fs.listStatus(reqPath);
@@ -382,7 +309,8 @@ public class ITestAzureBlobFileSystemAuthorization
       fs.create(reqPath);
       break;
     case RenamePath:
-      fs.rename(reqPath, renameDestPath);
+      fs.rename(reqPath,
+          new Path("renameDest" + UUID.randomUUID().toString()));
       break;
     case GetAcl:
       fs.getAclStatus(reqPath);
@@ -391,7 +319,8 @@ public class ITestAzureBlobFileSystemAuthorization
       fs.getFileStatus(reqPath);
       break;
     case SetAcl:
-      fs.setAcl(reqPath, aclSpec);
+      fs.setAcl(reqPath, Arrays
+          .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL)));
       break;
     case SetOwner:
       fs.setOwner(reqPath, TEST_USER, TEST_GROUP);
@@ -423,10 +352,12 @@ public class ITestAzureBlobFileSystemAuthorization
           new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
       break;
     case RemoveAclEntries:
-      fs.removeAclEntries(reqPath, aclSpec);
+      fs.removeAclEntries(reqPath, Arrays
+          .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL)));
       break;
     case ModifyAclEntries:
-      fs.modifyAclEntries(reqPath, aclSpec);
+      fs.modifyAclEntries(reqPath, Arrays
+          .asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL)));
       break;
     case RemoveAcl:
       fs.removeAcl(reqPath);
@@ -442,6 +373,56 @@ public class ITestAzureBlobFileSystemAuthorization
   private MockAbfsAuthorizer getMockAuthorizer(AzureBlobFileSystem fs)
       throws Exception {
     return ((MockAbfsAuthorizer) fs.getAbfsStore().getAuthorizer());
+  }
+
+  public static final DateTimeFormatter ISO_8601_UTC_DATE_FORMATTER =
+      DateTimeFormatter
+          .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT)
+          .withZone(ZoneId.of("UTC"));
+
+  public static UserDelegationKey fetchDelegationKey(AccessTokenProvider oauthTokenProvider,
+      String accountName) throws IOException, JSONException {
+    String accessToken = oauthTokenProvider.getToken().getAccessToken();
+    String restVersion = VALID_SAS_REST_API_VERSIONS.iterator().next();
+    String start = ISO_8601_UTC_DATE_FORMATTER.format(Instant.now());
+    String expiry = ISO_8601_UTC_DATE_FORMATTER
+        .format(Instant.now().plusSeconds(10 * 60));
+
+    HttpURLConnection conn = null;
+    String urlString = "https://" + accountName.replace("dfs", "blob")
+        + "/?restype=service&comp=userdelegationkey";
+    String httpMethod = "POST";
+    URL url = new URL(urlString);
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(httpMethod);
+    conn.setRequestProperty("x-ms-version", restVersion);
+    conn.setRequestProperty("Authorization", "Bearer " + accessToken);
+    conn.setRequestProperty("Content-Type", "application/xml;charset=utf-8");
+    conn.setDoOutput(true);
+
+    KeyInfo keyInfo = new KeyInfo();
+    keyInfo.Start = start;
+    keyInfo.Expiry = expiry;
+    XmlMapper mapper = new XmlMapper();
+    String content = mapper.writeValueAsString(keyInfo);
+    conn.getOutputStream().write(content.getBytes("UTF-8"));
+    BufferedReader in = null;
+    try {
+      conn.getResponseCode();
+      in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+    } catch (Exception ex) {
+      System.out.println(" exception: " + ex.getMessage() + ex.getStackTrace());
+    }
+    String inputLine;
+    StringBuffer response = new StringBuffer();
+    while ((inputLine = in.readLine()) != null) {
+      response.append(inputLine);
+    }
+    in.close();
+    //print in String
+    System.out.println(response.toString());
+    return mapper
+        .readValue(response.toString(), UserDelegationKey.class);
   }
 
   enum FileSystemOperations {

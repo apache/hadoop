@@ -25,7 +25,6 @@ import java.net.URL;
 import java.util.regex.Pattern;
 
 import org.apache.http.client.utils.URIBuilder;
-
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SECURE_SCHEME;
 
@@ -91,9 +90,8 @@ public final class UriUtils {
     String[] sasQueryParamKVPairs = sasToken.split("&");
     for(String sasQueryParam : sasQueryParamKVPairs)
     {
-      String[] queryParam = sasQueryParam.split("=");
-      String key = queryParam[0];
-      String value = queryParam[1];
+      String key = sasQueryParam.substring(0, sasQueryParam.indexOf("="));
+      String value = sasQueryParam.substring(sasQueryParam.indexOf("=") + 1);
 
       uriBuilder.addParameter(key, value);
     }

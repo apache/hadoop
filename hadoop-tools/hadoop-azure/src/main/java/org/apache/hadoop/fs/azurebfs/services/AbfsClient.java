@@ -231,6 +231,11 @@ public class AbfsClient implements Closeable {
 
       listPathAuthzStatus = getAuthorizationStatus(authorizerPath,
           AbfsAuthorizerConstants.LISTSTATUS_ACTION);
+
+      if (useSASToken) {
+        // Need to update REST layer that SAS is generated for the request path
+
+      }
     }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -243,18 +248,19 @@ public class AbfsClient implements Closeable {
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(abfsConfiguration.isUpnUsed()));
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
-    if (useSASToken) {
+//    if (useSASToken) {
+//      final AbfsRestOperation op = new AbfsRestOperation(AbfsRestOperationType.ListPaths,
+//          this, HTTP_METHOD_GET, url, requestHeaders);
+//      op.execute();
+//      return op;
+//    }
+//    else {
       final AbfsRestOperation op = new AbfsRestOperation(AbfsRestOperationType.ListPaths,
-          this, HTTP_METHOD_GET, url, requestHeaders);
+          this, HTTP_METHOD_GET, url, requestHeaders,
+          listPathAuthzStatus);
       op.execute();
       return op;
-    }
-    else {
-      final AbfsRestOperation op = new AbfsRestOperation(AbfsRestOperationType.ListPaths,
-          this, HTTP_METHOD_GET, url, requestHeaders, listPathAuthzStatus);
-      op.execute();
-      return op;
-    }
+//    }
   }
 
   private AuthorizationStatus getAuthorizationStatus(String authorizerPath,
