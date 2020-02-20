@@ -77,48 +77,10 @@ public class DelegationSASGenerator {
     initializeMac(delegationKey);
   }
 
-  private static String encode(final byte[] data) {
-    final StringBuilder builder = new StringBuilder();
-    final int dataRemainder = data.length % 3;
-
-    int j = 0;
-    int n = 0;
-    for (; j < data.length; j += 3) {
-
-      if (j < data.length - dataRemainder) {
-        n = ((data[j] & 0xFF) << 16) + ((data[j + 1] & 0xFF) << 8) + (
-            data[j + 2] & 0xFF);
-      } else {
-        if (dataRemainder == 1) {
-          n = (data[j] & 0xFF) << 16;
-        } else if (dataRemainder == 2) {
-          n = ((data[j] & 0xFF) << 16) + ((data[j + 1] & 0xFF) << 8);
-        }
-      }
-
-      // Left here for readability
-      // byte char1 = (byte) ((n >>> 18) & 0x3F);
-      // byte char2 = (byte) ((n >>> 12) & 0x3F);
-      // byte char3 = (byte) ((n >>> 6) & 0x3F);
-      // byte char4 = (byte) (n & 0x3F);
-      builder.append(BASE_64_CHARS.charAt((byte) ((n >>> 18) & 0x3F)));
-      builder.append(BASE_64_CHARS.charAt((byte) ((n >>> 12) & 0x3F)));
-      builder.append(BASE_64_CHARS.charAt((byte) ((n >>> 6) & 0x3F)));
-      builder.append(BASE_64_CHARS.charAt((byte) (n & 0x3F)));
-    }
-
-    final int bLength = builder.length();
-
-    // append '=' to pad
-    if (data.length % 3 == 1) {
-      builder.replace(bLength - 2, bLength, "==");
-    } else if (data.length % 3 == 2) {
-      builder.replace(bLength - 1, bLength, "=");
-    }
-
-    return builder.toString();
-  }
-
+  //With new PR with interface SASTokenProvider
+  // accountname, filesystem and path will be sent as separate arguments
+  // So using AbfsPathUriParts to break down URI to accountName, filesystem and
+  // path can be avoided in the new interface.
   public String generateSAS(boolean isUserAuthorized, String authorizerAction,
       URI storePathURI, Instant startTime, Instant expiryTime,
       String correlationID, String version, String authorizedUserOID,
@@ -209,6 +171,9 @@ public class DelegationSASGenerator {
       qp.addQuery(SASTokenConstants.SignedUnauthorizedAgentOid, unauthorizedUserOID);
     }
 
+    // Currently 2018-11-09 is the supported version of DSAS on ABFS server
+    // 2019-12-12 version that will be deployed next will include support for
+    // permissions like move (rename), ownership and permission (acl apis)
     if (!version.equalsIgnoreCase("2018-11-09")) {
       if (correlationID != null) {
         qp.addQuery(SASTokenConstants.SignedCorrelationId, correlationID);
@@ -221,7 +186,6 @@ public class DelegationSASGenerator {
 
     qp.addQuery(SASTokenConstants.SignedVersion, version);
 
-    // TODO: Add directory SAS support
     qp.addQuery(SASTokenConstants.SignedResource, Blob_SignedResource);
 
     if (signature != null) {
@@ -290,7 +254,6 @@ public class DelegationSASGenerator {
     sb.append("/" + uriParts.getAccountName() + "/" + uriParts
         .getAbfsFileSystemName());
 
-    // TODO: Add directory SAS support
     if (sr.equalsIgnoreCase(Blob_SignedResource)) {
       sb.append(uriParts.getPathRelativeToAbfsFileSystem());
     } else {
@@ -338,7 +301,6 @@ public class DelegationSASGenerator {
     sb.append("\n"); // - For optional : rsct - ResponseContentType
 
     String stringToSign = sb.toString();
-    System.out.println("stringToSign = " + stringToSign);
     return computeHmac256(stringToSign);
   }
 
@@ -363,19 +325,7 @@ public class DelegationSASGenerator {
       hmac = hmacSha256.doFinal(utf8Bytes);
     }
 
-    String encodeStr = encode(hmac);
-    System.out.println("encode : " + encodeStr);
-    String base64Str = Base64.getEncoder().encodeToString(hmac);
-    System.out.println("base64 : " + base64Str);
-    String inhouse = org.apache.hadoop.fs.azurebfs.utils.Base64.encode(hmac);
-    System.out.println("inhouse : " + inhouse);
-
-    System.out.println("decode - encode: " + Base64.getDecoder().decode(encodeStr));
-    System.out.println("decode - base64: " + Base64.getDecoder().decode(base64Str));
-    System.out.println("decode - inhouse: " + Base64.getDecoder().decode(inhouse));
-
-    return org.apache.hadoop.fs.azurebfs.utils.Base64.encode(hmac);
-    //return Base64.getEncoder().encodeToString(hmac);
+    return Base64.getEncoder().encodeToString(hmac);
   }
 
   public class AbfsPathUriParts {

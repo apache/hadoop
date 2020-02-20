@@ -253,8 +253,6 @@ public class SASTokenConstants {
         put(ABFS_RENAME_DESTINATION_ACTION, ABFS_SAS_PERMISSION_WRITE);
         put(ABFS_CHECKACCESS_ACTION_PREFIX_ACTION, ABFS_SAS_PERMISSION_READ);
         put(ABFS_LISTSTATUS_ACTION, "r");
-//            String.format("%s%s",ABFS_SAS_PERMISSION_READ,
-//                ABFS_SAS_PERMISSION_EXECUTE));
         put(ABFS_DELETE_ACTION, ABFS_SAS_PERMISSION_DELETE);
         put(ABFS_CREATEFILE_ACTION, String.format(
             "%s%s%s",ABFS_SAS_PERMISSION_CREATE, ABFS_SAS_PERMISSION_WRITE,
@@ -262,9 +260,6 @@ public class SASTokenConstants {
         put(ABFS_MKDIR_ACTION, ABFS_SAS_PERMISSION_CREATE);
         put(ABFS_GETACL_ACTION, ABFS_SAS_PERMISSION_READ);
         put(ABFS_GETFILESTATUS_ACTION, ABFS_SAS_PERMISSION_READ);
-//        put(ABFS_SETACL_ACTION, String.format(
-//            "%s%s%s",ABFS_SAS_PERMISSION_READ, ABFS_SAS_PERMISSION_WRITE,
-//            ABFS_SAS_PERMISSION_EXECUTE));
         put(ABFS_SETACL_ACTION, "rwxd");
         put(ABFS_APPEND_ACTION, ABFS_SAS_PERMISSION_WRITE);
         put(ABFS_READ_ACTION, ABFS_SAS_PERMISSION_READ);
@@ -299,6 +294,6 @@ public class SASTokenConstants {
   public static final Set<String> VALID_SAS_REST_API_VERSIONS =
       new HashSet<String>() {{
         add("2018-11-09");
-        //add("2019-12-12");
+        //add("2019-12-12"); - Not in production yet
       }};
 }
