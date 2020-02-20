@@ -316,6 +316,19 @@ public class TestSchedConfCLI extends JerseyTestBase {
   }
 
   @Test(timeout = 10000)
+  public void testAddQueuesWithCommaInValue() {
+    SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
+    cli.addQueues("root.a:a1=a1Val1\\,a1Val2 a1Val3,a2=a2Val1\\,a2Val2",
+        schedUpdateInfo);
+    QueueConfigInfo addInfo = schedUpdateInfo.getAddQueueInfo().get(0);
+    assertEquals("root.a", addInfo.getQueue());
+    Map<String, String> params = addInfo.getParams();
+    assertEquals(2, params.size());
+    assertEquals("a1Val1,a1Val2 a1Val3", params.get("a1"));
+    assertEquals("a2Val1,a2Val2", params.get("a2"));
+  }
+
+  @Test(timeout = 10000)
   public void testRemoveQueues() {
     SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
     cli.removeQueues("root.a;root.b;root.c.c1", schedUpdateInfo);
@@ -354,6 +367,19 @@ public class TestSchedConfCLI extends JerseyTestBase {
   }
 
   @Test(timeout = 10000)
+  public void testUpdateQueuesWithCommaInValue() {
+    SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
+    cli.updateQueues("root.a:a1=a1Val1\\,a1Val2 a1Val3,a2=a2Val1\\,a2Val2",
+        schedUpdateInfo);
+    QueueConfigInfo updateInfo = schedUpdateInfo.getUpdateQueueInfo().get(0);
+    assertEquals("root.a", updateInfo.getQueue());
+    Map<String, String> params = updateInfo.getParams();
+    assertEquals(2, params.size());
+    assertEquals("a1Val1,a1Val2 a1Val3", params.get("a1"));
+    assertEquals("a2Val1,a2Val2", params.get("a2"));
+  }
+
+  @Test(timeout = 10000)
   public void testGlobalUpdate() {
     SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
     cli.globalUpdates("schedKey1=schedVal1,schedKey2=schedVal2",
@@ -361,6 +387,19 @@ public class TestSchedConfCLI extends JerseyTestBase {
     Map<String, String> globalInfo = schedUpdateInfo.getGlobalParams();
     assertEquals(2, globalInfo.size());
     assertEquals("schedVal1", globalInfo.get("schedKey1"));
+    assertEquals("schedVal2", globalInfo.get("schedKey2"));
+  }
+
+  @Test(timeout = 10000)
+  public void testGlobalUpdateWithCommaInValue() {
+    SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
+    cli.globalUpdates(
+        "schedKey1=schedVal1.1\\,schedVal1.2 schedVal1.3,schedKey2=schedVal2",
+        schedUpdateInfo);
+    Map<String, String> globalInfo = schedUpdateInfo.getGlobalParams();
+    assertEquals(2, globalInfo.size());
+    assertEquals("schedVal1.1,schedVal1.2 schedVal1.3",
+        globalInfo.get("schedKey1"));
     assertEquals("schedVal2", globalInfo.get("schedKey2"));
   }
 }
