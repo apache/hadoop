@@ -187,26 +187,26 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
             md.getSSEAlgorithm(),
             md.getSSEAwsKmsKeyId());
     switch(algorithm) {
-      case SSE_C:
-        assertNull("Metadata algorithm should have been null in "
-                        + details,
-                md.getSSEAlgorithm());
-        assertEquals("Wrong SSE-C algorithm in "
-                        + details,
-                SSE_C_ALGORITHM, md.getSSECustomerAlgorithm());
-        String md5Key = convertKeyToMd5();
-        assertEquals("getSSECustomerKeyMd5() wrong in " + details,
-                md5Key, md.getSSECustomerKeyMd5());
-        break;
-      case SSE_KMS:
-        assertEquals("Wrong algorithm in " + details,
-                AWS_KMS_SSE_ALGORITHM, md.getSSEAlgorithm());
-        assertEquals("Wrong KMS key in " + details,
-                kmsKeyArn,
-                md.getSSEAwsKmsKeyId());
-        break;
-      default:
-        assertEquals("AES256", md.getSSEAlgorithm());
+    case SSE_C:
+      assertNull("Metadata algorithm should have been null in "
+                      + details,
+              md.getSSEAlgorithm());
+      assertEquals("Wrong SSE-C algorithm in "
+                      + details,
+              SSE_C_ALGORITHM, md.getSSECustomerAlgorithm());
+      String md5Key = convertKeyToMd5();
+      assertEquals("getSSECustomerKeyMd5() wrong in " + details,
+              md5Key, md.getSSECustomerKeyMd5());
+      break;
+    case SSE_KMS:
+      assertEquals("Wrong algorithm in " + details,
+              AWS_KMS_SSE_ALGORITHM, md.getSSEAlgorithm());
+      assertEquals("Wrong KMS key in " + details,
+              kmsKeyArn,
+              md.getSSEAwsKmsKeyId());
+      break;
+    default:
+      assertEquals("AES256", md.getSSEAlgorithm());
     }
   }
 

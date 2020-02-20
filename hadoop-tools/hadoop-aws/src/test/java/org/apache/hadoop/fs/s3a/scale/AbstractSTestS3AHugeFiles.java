@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
