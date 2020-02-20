@@ -38,7 +38,7 @@ import org.apache.hadoop.util.VersionInfo;
  */
 public final class TestAbfsClient {
 
-  private final String accountName = "bogusAccountName";
+  private final String accountName = "bogusAccountName.dfs.core.windows.net";
 
   private void validateUserAgent(String expectedPattern,
                                  URL baseUrl,

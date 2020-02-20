@@ -1,13 +1,14 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
-
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.StandardCharsets;
+import java.time.*;
+import java.time.format.*;
+import java.util.*;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
 
 /**
  * Created by tmarq on 2/17/20.
@@ -15,6 +16,10 @@ import java.nio.charset.StandardCharsets;
 public class SASGenerator {
 
   private static final String HMAC_SHA256 = "HmacSHA256";
+  public static final DateTimeFormatter ISO_8601_UTC_DATE_FORMATTER =
+      DateTimeFormatter
+          .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT)
+          .withZone(ZoneId.of("UTC"));
   private Mac hmacSha256;
   private byte[] key;
 
@@ -24,19 +29,34 @@ public class SASGenerator {
   }
 
   public String getContainerSASWithFullControl(String accountName, String containerName) {
-    String sp = "rwdl";
-    String se = "2021-01-01";
+    String sp = "racwdl";
     String sv = "2018-11-09";
     String sr = "c";
+    String st = ISO_8601_UTC_DATE_FORMATTER.format(Instant.now());
+    String se =
+        ISO_8601_UTC_DATE_FORMATTER.format(Instant.now().plusSeconds(60));
 
-    // compute string to sign
+    String signature = computeSignatureForSAS(sp, st, se, sv, "c",
+        accountName, containerName);
+
+    AbfsUriQueryBuilder qb = new AbfsUriQueryBuilder();
+    qb.addQuery("sp", sp);
+    qb.addQuery("st", st);
+    qb.addQuery("se", se);
+    qb.addQuery("sv", sv);
+    qb.addQuery("sr", sr);
+    qb.addQuery("sig", signature);
+    return qb.toString();
+  }
+
+  private String computeSignatureForSAS(String sp, String st,
+      String se, String sv, String sr, String accountName, String containerName) {
+
     StringBuilder sb = new StringBuilder();
-    // sp
     sb.append(sp);
     sb.append("\n");
-    // st
+    sb.append(st);
     sb.append("\n");
-    // se
     sb.append(se);
     sb.append("\n");
     // canonicalized resource
@@ -45,39 +65,22 @@ public class SASGenerator {
     sb.append("/");
     sb.append(containerName);
     sb.append("\n");
-    // si
-    sb.append("\n");
-    // sip
-    sb.append("\n");
-    // spr
-    sb.append("\n");
-    // sv
+    sb.append("\n"); // si
+    sb.append("\n"); // sip
+    sb.append("\n"); // spr
     sb.append(sv);
     sb.append("\n");
-    // sr
     sb.append(sr);
     sb.append("\n");
-    // For ResponseCacheControl
-    sb.append("\n");
-    // For ResponseContentDisposition
-    sb.append("\n");
-    // For ResponseContentEncoding
-    sb.append("\n");
-    // For ResponseContentLanguage
-    sb.append("\n");
-    // For ResponseContentType
-    sb.append("\n");
+    sb.append("\n"); // - For optional : rscc - ResponseCacheControl
+    sb.append("\n"); // - For optional : rscd - ResponseContentDisposition
+    sb.append("\n"); // - For optional : rsce - ResponseContentEncoding
+    sb.append("\n"); // - For optional : rscl - ResponseContentLanguage
+    sb.append("\n"); // - For optional : rsct - ResponseContentType
 
     String stringToSign = sb.toString();
-    String sig = computeHmac256(stringToSign);
-
-    AbfsUriQueryBuilder qb = new AbfsUriQueryBuilder();
-    qb.addQuery("sp", sp);
-    qb.addQuery("se", se);
-    qb.addQuery("sv", sv);
-    qb.addQuery("sr", sr);
-    qb.addQuery("sig", sig);
-    return qb.toString();
+    //System.out.println("stringToSign = " + stringToSign);
+    return computeHmac256(stringToSign);
   }
 
   private void initializeMac() {

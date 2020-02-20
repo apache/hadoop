@@ -36,10 +36,11 @@ public class MockSASTokenProvider implements SASTokenProvider {
   private byte[] accountKey;
   private SASGenerator generator;
 
+  private boolean skipAuthorizationForTestSetup = false;
+
   // For testing we use a container SAS for all operations.
   private String generateSAS(byte[] accountKey, String accountName, String fileSystemName) {
-     throw new NotImplementedException("Sneha you can use your SAS generation code or fix the SASGenerator code.");
-     //return generator.getContainerSASWithFullControl(accountName, fileSystemName);
+     return generator.getContainerSASWithFullControl(accountName, fileSystemName);
   }
 
   @Override
@@ -68,9 +69,21 @@ public class MockSASTokenProvider implements SASTokenProvider {
   public String getSASToken(String accountName, String fileSystem, String path,
                      String operation) throws IOException, AccessControlException
   {
-    if (path.contains("unauthorized")) {
-      throw new AccessControlException("The user is not authorized to perform this operation.");
+    if (!isSkipAuthorizationForTestSetup() && path.contains("unauthorized")) {
+      throw new AccessControlException(
+          "The user is not authorized to perform this operation.");
     }
+
     return generateSAS(accountKey, accountName, fileSystem);
+  }
+
+
+  public boolean isSkipAuthorizationForTestSetup() {
+    return skipAuthorizationForTestSetup;
+  }
+
+  public void setSkipAuthorizationForTestSetup(
+      boolean skipAuthorizationForTestSetup) {
+    this.skipAuthorizationForTestSetup = skipAuthorizationForTestSetup;
   }
 }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -302,14 +303,16 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation renamePath(String source, final String destination, final String continuation)
           throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    String sasToken = "";
 
     if (authType == AuthType.SAS) {
       final AbfsUriQueryBuilder queryBuilder = new AbfsUriQueryBuilder();
       appendSASTokenToQuery(source, SASTokenProvider.RENAME_SOURCE_OPERATION, queryBuilder);
-      source += queryBuilder.toString();
+      sasToken = queryBuilder.toString();
     }
 
-    final String encodedRenameSource = urlEncode(FORWARD_SLASH + this.getFileSystem() + source);
+    final String encodedRenameSource =
+        urlEncode(FORWARD_SLASH + this.getFileSystem() + source) + sasToken;
     requestHeaders.add(new AbfsHttpHeader(X_MS_RENAME_SOURCE, encodedRenameSource));
     requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, STAR));
 
@@ -631,8 +634,10 @@ public class AbfsClient implements Closeable {
 
   private void appendSASTokenToQuery(String path, String operation, AbfsUriQueryBuilder queryBuilder) throws SASTokenProviderException {
     try {
+      LOG.trace("Fetch SAS token for {}", path);
       String sasToken = sasTokenProvider.getSASToken(this.accountName, this.filesystem, path, operation);
       queryBuilder.setSASToken(sasToken);
+      LOG.trace("SAS token fetch complete for {}", path);
     } catch (Exception ex) {
       throw new SASTokenProviderException("Failed to acquire a SAS token.", ex);
     }
@@ -725,5 +730,10 @@ public class AbfsClient implements Closeable {
   @VisibleForTesting
   URL getBaseUrl() {
     return baseUrl;
+  }
+
+  @VisibleForTesting
+  public SASTokenProvider getSasTokenProvider() {
+    return this.sasTokenProvider;
   }
 }
