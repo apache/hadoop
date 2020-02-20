@@ -464,20 +464,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Test bucket existence in S3.
-   * When value of {@link Constants#S3A_BUCKET_PROBE is set to 0 by client,
+   * When the value of {@link Constants#S3A_BUCKET_PROBE} is set to 0,
    * bucket existence check is not done to improve performance of
    * S3AFileSystem initialization. When set to 1 or 2, bucket existence check
    * will be performed which is potentially slow.
-   * @throws IOException
+   * If 3 or higher: warn and use the v2 check.
+   * @throws UnknownStoreException the bucket is absent
+   * @throws IOException any other problem talking to S3
    */
   @Retries.RetryTranslated
   private void doBucketProbing() throws IOException {
-    int bucketProbe = this.getConf()
+    int bucketProbe = getConf()
             .getInt(S3A_BUCKET_PROBE, S3A_BUCKET_PROBE_DEFAULT);
-    Preconditions.checkArgument(bucketProbe >= 0 && bucketProbe <= 2,
-            "Value of " + S3A_BUCKET_PROBE + " should be between 0 to 2");
+    Preconditions.checkArgument(bucketProbe >= 0,
+            "Value of " + S3A_BUCKET_PROBE + " should be >= 0");
     switch (bucketProbe) {
     case 0:
+      LOG.debug("skipping check for bucket existence");
       break;
     case 1:
       verifyBucketExists();
@@ -486,7 +489,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       verifyBucketExistsV2();
       break;
     default:
-      //This will never get executed because of above Precondition check.
+      // we have no idea what this is, assume it is from a later release.
+      LOG.warn("Unknown bucket probe option {}: {}; falling back to check #2",
+          S3A_BUCKET_PROBE, bucketProbe);
+      verifyBucketExistsV2();
       break;
     }
   }
