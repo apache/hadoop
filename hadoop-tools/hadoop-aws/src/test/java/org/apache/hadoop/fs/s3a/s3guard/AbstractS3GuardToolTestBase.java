@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
@@ -36,6 +35,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.s3a.S3AUtils;
+import org.apache.hadoop.fs.s3a.UnknownStoreException;
 import org.apache.hadoop.util.StopWatch;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileSystem;
@@ -506,7 +506,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
           cmdR.getName(),
           S3A_THIS_BUCKET_DOES_NOT_EXIST
       };
-      intercept(FileNotFoundException.class,
+      intercept(UnknownStoreException.class,
           () -> cmdR.run(argsR));
     }
   }

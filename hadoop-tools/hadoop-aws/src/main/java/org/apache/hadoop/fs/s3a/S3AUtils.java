@@ -86,6 +86,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
@@ -249,6 +250,18 @@ public final class S3AUtils {
 
       // the object isn't there
       case 404:
+        if (isUnknownBucket(ase)) {
+          // this is a missing bucket
+          ioe = new UnknownStoreException(path, ase);
+        } else {
+          // a normal unknown object
+          ioe = new FileNotFoundException(message);
+          ioe.initCause(ase);
+        }
+        break;
+
+      // this also surfaces sometimes and is considered to
+      // be ~ a not found exception.
       case 410:
         ioe = new FileNotFoundException(message);
         ioe.initCause(ase);
