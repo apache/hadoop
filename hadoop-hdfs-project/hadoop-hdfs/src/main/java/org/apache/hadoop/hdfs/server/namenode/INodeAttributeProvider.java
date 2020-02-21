@@ -232,6 +232,12 @@ public abstract class INodeAttributeProvider {
     }
   }
 
+  @Override
+  public int hashCode() {
+    assert false : "hashCode not designed";
+    return 42; // any arbitrary constant will do
+  }
+
   /**
    * The AccessControlEnforcer allows implementations to override the
    * default File System permission checking logic enforced on a file system
