@@ -91,7 +91,7 @@
 
     <zookeeper.version>3.4.9</zookeeper.version>
     <curator.version>2.7.1</curator.version>
-    <findbugs.version>3.0.0</findbugs.version>
+    <findbugs.version>3.0.5</findbugs.version>
 
     <tomcat.version>8.5.43</tomcat.version>
     <joda-time.version>2.9.4</joda-time.version>
@@ -1080,7 +1080,7 @@
       <dependency>
         <groupId>com.google.code.findbugs</groupId>
         <artifactId>jsr305</artifactId>
-        <version>${findbugs.version}</version>
+        <version>3.0.2</version>
       </dependency>
       <dependency>
         <groupId>javax.xml.bind</groupId>
