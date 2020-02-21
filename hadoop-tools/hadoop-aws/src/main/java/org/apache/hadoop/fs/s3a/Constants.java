@@ -482,6 +482,20 @@ public final class Constants {
   public static final boolean DEFAULT_METADATASTORE_AUTHORITATIVE = false;
 
   /**
+   * Bucket validation parameter which can be set by client. This will be
+   * used in {@code S3AFileSystem.initialize(URI, Configuration)}.
+   * Value: {@value}
+   */
+  public static final String S3A_BUCKET_PROBE = "fs.s3a.bucket.probe";
+
+  /**
+   * Default value of bucket validation parameter. An existence of bucket
+   * will be validated using {@code S3AFileSystem.verifyBucketExistsV2()}.
+   * Value: {@value}
+   */
+  public static final int S3A_BUCKET_PROBE_DEFAULT = 2;
+
+  /**
    * How long a directory listing in the MS is considered as authoritative.
    */
   public static final String METADATASTORE_METADATA_TTL =
