@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.junit.Assert.*;
 
 import java.io.EOFException;
@@ -38,6 +39,8 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 
 import org.junit.Test;
+
+import org.apache.hadoop.fs.s3a.impl.ErrorTranslation;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 
@@ -98,9 +101,24 @@ public class TestS3AExceptionTranslation {
     verifyTranslated(403, AccessDeniedException.class);
   }
 
+  /**
+   * 404 defaults to FileNotFound.
+   */
   @Test
   public void test404isNotFound() throws Exception {
-    verifyTranslated(404, FileNotFoundException.class);
+    verifyTranslated(SC_404, FileNotFoundException.class);
+  }
+
+  /**
+   * 404 + NoSuchBucket == Unknown bucket.
+   */
+  @Test
+  public void testUnknownBucketException() throws Exception {
+    AmazonS3Exception ex404 = createS3Exception(SC_404);
+    ex404.setErrorCode(ErrorTranslation.AwsErrorCodes.E_NO_SUCH_BUCKET);
+    verifyTranslated(
+        UnknownStoreException.class,
+        ex404);
   }
 
   @Test
