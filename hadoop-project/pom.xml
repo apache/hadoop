@@ -90,7 +90,7 @@
 
     <zookeeper.version>3.4.13</zookeeper.version>
     <curator.version>2.13.0</curator.version>
-    <findbugs.version>3.0.0</findbugs.version>
+    <findbugs.version>3.0.5</findbugs.version>
     <spotbugs.version>3.1.0-RC1</spotbugs.version>
     <dnsjava.version>2.1.7</dnsjava.version>
 
@@ -1220,7 +1220,7 @@
       <dependency>
         <groupId>com.google.code.findbugs</groupId>
         <artifactId>jsr305</artifactId>
-        <version>${findbugs.version}</version>
+        <version>3.0.2</version>
       </dependency>
       <dependency>
         <groupId>javax.xml.bind</groupId>
