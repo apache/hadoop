@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -772,7 +773,7 @@ public class DFSUtilClient {
    * @param ugi {@link UserGroupInformation} of current user.
    * @return the home directory of current user.
    */
-  public static Path getHomeDirectory(Configuration conf,
+  public static String getHomeDirectory(Configuration conf,
       UserGroupInformation ugi) {
     String userHomePrefix = HdfsClientConfigKeys
         .DFS_USER_HOME_DIR_PREFIX_DEFAULT;
@@ -781,6 +782,31 @@ public class DFSUtilClient {
           HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_KEY,
           HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_DEFAULT);
     }
-    return new Path(userHomePrefix + "/" + ugi.getShortUserName());
+    return userHomePrefix + Path.SEPARATOR + ugi.getShortUserName();
+  }
+
+  /**
+   * Returns trash root in non-encryption zone.
+   * @param conf configuration.
+   * @param ugi user of trash owner.
+   * @return unqualified path of trash root.
+   */
+  public static String getTrashRoot(Configuration conf,
+      UserGroupInformation ugi) {
+    return getHomeDirectory(conf, ugi)
+        + Path.SEPARATOR + FileSystem.TRASH_PREFIX;
+  }
+
+  /**
+   * Returns trash root in encryption zone.
+   * @param ez encryption zone.
+   * @param ugi user of trash owner.
+   * @return unqualified path of trash root.
+   */
+  public static String getEZTrashRoot(EncryptionZone ez,
+      UserGroupInformation ugi) {
+    String ezpath = ez.getPath();
+    return (ezpath.equals("/") ? ezpath : ezpath + Path.SEPARATOR)
+        + FileSystem.TRASH_PREFIX + Path.SEPARATOR + ugi.getShortUserName();
   }
 }
