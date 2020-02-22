@@ -82,7 +82,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT;
@@ -172,9 +171,6 @@ public class FSDirectory implements Closeable {
   // Each entry in this set must be a normalized path.
   private volatile SortedSet<String> protectedDirectories;
 
-  // lock to protect the directory and BlockMap
-  private final ReentrantReadWriteLock dirLock;
-
   private final boolean isPermissionEnabled;
   private final boolean isPermissionContentSummarySubAccess;
   /**
@@ -215,37 +211,44 @@ public class FSDirectory implements Closeable {
     attributeProvider = provider;
   }
 
-  // utility methods to acquire and release read lock and write lock
+  /**
+   * The directory lock dirLock provided redundant locking.
+   * It has been used whenever namesystem.fsLock was used.
+   * dirLock is now removed and utility methods to acquire and release dirLock
+   * remain as placeholders only
+   */
   void readLock() {
-    this.dirLock.readLock().lock();
+    assert namesystem.hasReadLock() : "Should hold namesystem read lock";
   }
 
   void readUnlock() {
-    this.dirLock.readLock().unlock();
+    assert namesystem.hasReadLock() : "Should hold namesystem read lock";
   }
 
   void writeLock() {
-    this.dirLock.writeLock().lock();
+    assert namesystem.hasWriteLock() : "Should hold namesystem write lock";
   }
 
   void writeUnlock() {
-    this.dirLock.writeLock().unlock();
+    assert namesystem.hasWriteLock() : "Should hold namesystem write lock";
   }
 
   boolean hasWriteLock() {
-    return this.dirLock.isWriteLockedByCurrentThread();
+    return namesystem.hasWriteLock();
   }
 
   boolean hasReadLock() {
-    return this.dirLock.getReadHoldCount() > 0 || hasWriteLock();
+    return namesystem.hasReadLock();
   }
 
+  @Deprecated // dirLock is obsolete, use namesystem.fsLock instead
   public int getReadHoldCount() {
-    return this.dirLock.getReadHoldCount();
+    return namesystem.getReadHoldCount();
   }
 
+  @Deprecated // dirLock is obsolete, use namesystem.fsLock instead
   public int getWriteHoldCount() {
-    return this.dirLock.getWriteHoldCount();
+    return namesystem.getWriteHoldCount();
   }
 
   public int getListLimit() {
@@ -273,7 +276,6 @@ public class FSDirectory implements Closeable {
   };
 
   FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
-    this.dirLock = new ReentrantReadWriteLock(true); // fair
     this.inodeId = new INodeId();
     rootDir = createRoot(ns);
     inodeMap = INodeMap.newInstance(rootDir);
@@ -1492,12 +1494,7 @@ public class FSDirectory implements Closeable {
    * @return The inode associated with the given id
    */
   public INode getInode(long id) {
-    readLock();
-    try {
-      return inodeMap.get(id);
-    } finally {
-      readUnlock();
-    }
+    return inodeMap.get(id);
   }
   
   @VisibleForTesting
