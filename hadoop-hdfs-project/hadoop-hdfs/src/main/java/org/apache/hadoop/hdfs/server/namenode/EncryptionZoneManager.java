@@ -187,11 +187,11 @@ public class EncryptionZoneManager {
       final int count) throws IOException {
     INodesInPath iip;
     final FSPermissionChecker pc = dir.getPermissionChecker();
-    dir.readLock();
+    dir.getFSNamesystem().readLock();
     try {
       iip = dir.resolvePath(pc, zone, DirOp.READ);
     } finally {
-      dir.readUnlock();
+      dir.getFSNamesystem().readUnlock();
     }
     reencryptionHandler
         .pauseForTestingAfterNthCheckpoint(iip.getLastINode().getId(), count);
@@ -280,11 +280,11 @@ public class EncryptionZoneManager {
     if (getProvider() == null || reencryptionHandler == null) {
       return;
     }
-    dir.writeLock();
+    dir.getFSNamesystem().writeLock();
     try {
       reencryptionHandler.stopThreads();
     } finally {
-      dir.writeUnlock();
+      dir.getFSNamesystem().writeUnlock();
     }
     if (reencryptHandlerExecutor != null) {
       reencryptHandlerExecutor.shutdownNow();
