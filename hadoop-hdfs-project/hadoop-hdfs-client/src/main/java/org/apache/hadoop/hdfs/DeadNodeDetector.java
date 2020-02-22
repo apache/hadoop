@@ -24,7 +24,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,11 +102,6 @@ public class DeadNodeDetector implements Runnable {
    */
   private Map<String, DatanodeInfo> probeInProg =
       new ConcurrentHashMap<String, DatanodeInfo>();
-
-  /**
-   * The last time when detect dead node.
-   */
-  private long lastDetectDeadTS = 0;
 
   /**
    * Interval time in milliseconds for probing dead node behavior.
@@ -416,20 +410,15 @@ public class DeadNodeDetector implements Runnable {
    * Check dead node periodically.
    */
   private void checkDeadNodes() {
-    long ts = Time.monotonicNow();
-    if (ts - lastDetectDeadTS > deadNodeDetectInterval) {
-      Set<DatanodeInfo> datanodeInfos = clearAndGetDetectedDeadNodes();
-      for (DatanodeInfo datanodeInfo : datanodeInfos) {
-        LOG.debug("Add dead node to check: {}.", datanodeInfo);
-        if (!deadNodesProbeQueue.offer(datanodeInfo)) {
-          LOG.debug("Skip to add dead node {} to check " +
-              "since the probe queue is full.", datanodeInfo);
-          break;
-        }
+    Set<DatanodeInfo> datanodeInfos = clearAndGetDetectedDeadNodes();
+    for (DatanodeInfo datanodeInfo : datanodeInfos) {
+      LOG.debug("Add dead node to check: {}.", datanodeInfo);
+      if (!deadNodesProbeQueue.offer(datanodeInfo)) {
+        LOG.debug("Skip to add dead node {} to check " +
+                "since the probe queue is full.", datanodeInfo);
+        break;
       }
-      lastDetectDeadTS = ts;
     }
-
     state = State.IDLE;
   }
 
