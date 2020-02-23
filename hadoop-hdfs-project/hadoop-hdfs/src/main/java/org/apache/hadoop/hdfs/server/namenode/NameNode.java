@@ -96,6 +96,8 @@ import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.GcTimeMonitor;
+import org.apache.hadoop.util.GcTimeMonitor.Builder;
 import org.apache.htrace.core.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -176,6 +178,12 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_STRE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_GC_TIME_MONITOR_SLEEP_INTERVAL_MS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_GC_TIME_MONITOR_SLEEP_INTERVAL_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_GC_TIME_MONITOR_OBSERVATION_WINDOW_MS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_GC_TIME_MONITOR_OBSERVATION_WINDOW_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_GC_TIME_MONITOR_ENABLE;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_GC_TIME_MONITOR_ENABLE_DEFAULT;
 
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
@@ -411,6 +419,7 @@ public class NameNode extends ReconfigurableBase implements
   private NameNodeRpcServer rpcServer;
 
   private JvmPauseMonitor pauseMonitor;
+  private GcTimeMonitor gcTimeMonitor;
   private ObjectName nameNodeStatusBeanName;
   protected final Tracer tracer;
   protected final TracerConfigurationManager tracerConfigurationManager;
@@ -723,6 +732,22 @@ public class NameNode extends ReconfigurableBase implements
     pauseMonitor.init(conf);
     pauseMonitor.start();
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
+
+    if (conf.getBoolean(DFS_NAMENODE_GC_TIME_MONITOR_ENABLE,
+        DFS_NAMENODE_GC_TIME_MONITOR_ENABLE_DEFAULT)) {
+      long observationWindow = conf.getTimeDuration(
+          DFS_NAMENODE_GC_TIME_MONITOR_OBSERVATION_WINDOW_MS,
+          DFS_NAMENODE_GC_TIME_MONITOR_OBSERVATION_WINDOW_MS_DEFAULT,
+          TimeUnit.MILLISECONDS);
+      long sleepInterval = conf.getTimeDuration(
+          DFS_NAMENODE_GC_TIME_MONITOR_SLEEP_INTERVAL_MS,
+          DFS_NAMENODE_GC_TIME_MONITOR_SLEEP_INTERVAL_MS_DEFAULT,
+          TimeUnit.MILLISECONDS);
+      gcTimeMonitor = new Builder().observationWindowMs(observationWindow)
+          .sleepIntervalMs(sleepInterval).build();
+      gcTimeMonitor.start();
+      metrics.getJvmMetrics().setGcTimeMonitor(gcTimeMonitor);
+    }
 
     if (NamenodeRole.NAMENODE == role) {
       startHttpServer(conf);
