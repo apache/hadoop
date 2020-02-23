@@ -5737,6 +5737,14 @@
   </property>
 
   <property>
+    <name>dfs.namenode.blockreport.max.lock.hold.time</name>
+    <value>4</value>
+    <description>
+      The BlockReportProcessingThread max write lock hold time in ms.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.journalnode.edits.dir.perm</name>
     <value>700</value>
     <description>
