@@ -1069,6 +1069,21 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_BLOCKPLACEMENTPOLICY_DEFAULT_PREFER_LOCAL_NODE_KEY =
       "dfs.namenode.block-placement-policy.default.prefer-local-node";
   public static final boolean  DFS_NAMENODE_BLOCKPLACEMENTPOLICY_DEFAULT_PREFER_LOCAL_NODE_DEFAULT = true;
+  public static final String DFS_NAMENODE_GC_TIME_MONITOR_ENABLE =
+      "dfs.namenode.gc.time.monitor.enable";
+  public static final boolean DFS_NAMENODE_GC_TIME_MONITOR_ENABLE_DEFAULT =
+      true;
+  public static final String
+      DFS_NAMENODE_GC_TIME_MONITOR_OBSERVATION_WINDOW_MS =
+      "dfs.namenode.gc.time.monitor.observation.window.ms";
+  public static final long
+      DFS_NAMENODE_GC_TIME_MONITOR_OBSERVATION_WINDOW_MS_DEFAULT =
+      TimeUnit.MINUTES.toMillis(1);
+  public static final String DFS_NAMENODE_GC_TIME_MONITOR_SLEEP_INTERVAL_MS =
+      "dfs.namenode.gc.time.monitor.sleep.interval.ms";
+  public static final long
+      DFS_NAMENODE_GC_TIME_MONITOR_SLEEP_INTERVAL_MS_DEFAULT =
+      TimeUnit.SECONDS.toMillis(5);
 
   public static final String DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY = "dfs.block.local-path-access.user";
   public static final String DFS_DOMAIN_SOCKET_PATH_KEY =
