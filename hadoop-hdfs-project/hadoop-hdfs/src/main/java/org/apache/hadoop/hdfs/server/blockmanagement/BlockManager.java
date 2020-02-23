@@ -393,6 +393,9 @@ public class BlockManager implements BlockStatsMXBean {
   // Max number of blocks to log info about during a block report.
   private final long maxNumBlocksToLog;
 
+  // Max write lock hold time for BlockReportProcessingThread(ms).
+  private final long maxLockHoldTime;
+
   /**
    * When running inside a Standby node, the node may receive block reports
    * from datanodes before receiving the corresponding namespace edits from
@@ -543,6 +546,10 @@ public class BlockManager implements BlockStatsMXBean {
     this.maxNumBlocksToLog =
         conf.getLong(DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
             DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT);
+    this.maxLockHoldTime = conf.getTimeDuration(
+        DFSConfigKeys.DFS_NAMENODE_BLOCKREPORT_MAX_LOCK_HOLD_TIME,
+        DFSConfigKeys.DFS_NAMENODE_BLOCKREPORT_MAX_LOCK_HOLD_TIME_DEFAULT,
+        TimeUnit.MILLISECONDS);
     this.numBlocksPerIteration = conf.getInt(
         DFSConfigKeys.DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT,
         DFSConfigKeys.DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT_DEFAULT);
@@ -5159,7 +5166,6 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   private class BlockReportProcessingThread extends Thread {
-    private static final long MAX_LOCK_HOLD_MS = 4;
     private long lastFull = 0;
 
     private final BlockingQueue<Runnable> queue;
@@ -5195,7 +5201,7 @@ public class BlockManager implements BlockStatsMXBean {
             do {
               processed++;
               action.run();
-              if (Time.monotonicNow() - start > MAX_LOCK_HOLD_MS) {
+              if (Time.monotonicNow() - start > maxLockHoldTime) {
                 break;
               }
               action = queue.poll();
