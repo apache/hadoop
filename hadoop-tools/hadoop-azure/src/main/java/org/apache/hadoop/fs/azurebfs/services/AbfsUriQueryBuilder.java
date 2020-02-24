@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
  */
 public class AbfsUriQueryBuilder {
   private Map<String, String> parameters;
-  private String sasToken;
+  private String sasToken = null;
 
   public AbfsUriQueryBuilder() {
     this.parameters = new HashMap<>();
