@@ -95,7 +95,6 @@ public class FSConfigToCSConfigRuleHandler {
       properties.load(is);
     }
     actions = new HashMap<>();
-    initPropertyActions();
   }
 
   public FSConfigToCSConfigRuleHandler(ConversionOptions conversionOptions) {
@@ -113,7 +112,7 @@ public class FSConfigToCSConfigRuleHandler {
     initPropertyActions();
   }
 
-  private void initPropertyActions() {
+  public void initPropertyActions() {
     setActionForProperty(MAX_CAPACITY_PERCENTAGE);
     setActionForProperty(MAX_CHILD_CAPACITY);
     setActionForProperty(USER_MAX_RUNNING_APPS);
