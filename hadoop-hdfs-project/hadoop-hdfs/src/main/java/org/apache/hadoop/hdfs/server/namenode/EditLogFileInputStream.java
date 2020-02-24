@@ -68,7 +68,6 @@ public class EditLogFileInputStream extends EditLogInputStream {
     CLOSED
   }
   private State state = State.UNINIT;
-  private InputStream fStream = null;
   private int logVersion = 0;
   private FSEditLogOp.Reader reader = null;
   private FSEditLogLoader.PositionTrackingInputStream tracker = null;
@@ -154,6 +153,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
       throws LogHeaderCorruptException, IOException {
     Preconditions.checkState(state == State.UNINIT);
     BufferedInputStream bin = null;
+    InputStream fStream = null;
     try {
       fStream = log.getInputStream();
       bin = new BufferedInputStream(fStream);
