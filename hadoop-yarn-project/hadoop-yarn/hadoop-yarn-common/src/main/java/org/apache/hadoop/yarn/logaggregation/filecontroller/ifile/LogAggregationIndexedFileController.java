@@ -592,8 +592,8 @@ public class LogAggregationIndexedFileController
     ApplicationId appId = logRequest.getAppId();
     String appOwner = logRequest.getAppOwner();
     ApplicationAttemptId appAttemptId = logRequest.getAppAttemptId();
-    boolean getAllContainers = ((containerIdStr == null ||
-        containerIdStr.isEmpty()) && appAttemptId != null);
+    boolean getAllContainers = (containerIdStr == null ||
+        containerIdStr.isEmpty());
     String nodeIdStr = (nodeId == null || nodeId.isEmpty()) ? null
         : LogAggregationUtils.getNodeString(nodeId);
     RemoteIterator<FileStatus> nodeFiles = LogAggregationUtils
@@ -638,7 +638,8 @@ public class LogAggregationIndexedFileController
           for (Entry<String, List<IndexedFileLogMeta>> log : logMeta
               .getLogMetas().entrySet()) {
             String currentContainerIdStr = log.getKey();
-            if (!belongsToAppAttempt(appAttemptId, currentContainerIdStr)) {
+            if (appAttemptId != null &&
+                !belongsToAppAttempt(appAttemptId, currentContainerIdStr)) {
               continue;
             }
             ContainerLogMeta meta = new ContainerLogMeta(
