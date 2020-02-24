@@ -76,6 +76,9 @@ public class FSConfigToCSConfigRuleHandler {
   public static final String FAIR_AS_DRF =
       "fairAsDrf.action";
 
+  public static final String MAPPED_DYNAMIC_QUEUE =
+      "mappedDynamicQueue.action";
+
   @VisibleForTesting
   enum RuleAction {
     WARNING,
@@ -122,6 +125,7 @@ public class FSConfigToCSConfigRuleHandler {
     setActionForProperty(RESERVATION_SYSTEM);
     setActionForProperty(QUEUE_AUTO_CREATE);
     setActionForProperty(FAIR_AS_DRF);
+    setActionForProperty(MAPPED_DYNAMIC_QUEUE);
   }
 
   public void handleMaxCapacityPercentage(String queueName) {
@@ -180,7 +184,8 @@ public class FSConfigToCSConfigRuleHandler {
     handle(QUEUE_AUTO_CREATE,
         null,
         format(
-            "Placement rules: queue auto-create is not supported (type: %s)",
+            "Placement rules: queue auto-create is not supported (type: %s),"
+            + " please configure auto-create-child-queue property manually",
             placementRule));
   }
 
@@ -190,6 +195,21 @@ public class FSConfigToCSConfigRuleHandler {
         format(
             "Queue %s will use DRF policy instead of Fair",
             queueName));
+  }
+
+  public void handleDynamicMappedQueue(String mapping, boolean create) {
+    String msg = "Mapping rule %s is dynamic - this might cause inconsistent"
+        + " behaviour compared to FS.";
+
+    if (create) {
+      msg += " Also, setting auto-create-child-queue=true is"
+          + " necessary, because the create flag was set to true on the"
+          + " original placement rule.";
+    }
+
+    handle(MAPPED_DYNAMIC_QUEUE,
+        null,
+        format(msg, mapping));
   }
 
   private void handle(String actionName, String fsSetting, String message) {
