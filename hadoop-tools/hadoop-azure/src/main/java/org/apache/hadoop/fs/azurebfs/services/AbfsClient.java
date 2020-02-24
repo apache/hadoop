@@ -29,12 +29,14 @@ import java.util.List;
 import java.util.Locale;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
@@ -59,17 +61,15 @@ public class AbfsClient implements Closeable {
   private final SharedKeyCredentials sharedKeyCredentials;
   private final String xMsVersion = "2018-11-09";
   private final ExponentialRetryPolicy retryPolicy;
-  private final String accountName;
   private final String filesystem;
-  private final AuthType authType;
   private final AbfsConfiguration abfsConfiguration;
   private final String userAgent;
   private final AbfsPerfTracker abfsPerfTracker;
 
+  private final String accountName;
+  private final AuthType authType;
   private AccessTokenProvider tokenProvider;
-
   private SASTokenProvider sasTokenProvider;
-
 
   private AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
@@ -215,10 +215,7 @@ public class AbfsClient implements Closeable {
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAXRESULTS, String.valueOf(listMaxResults));
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(abfsConfiguration.isUpnUsed()));
-
-    if (authType == AuthType.SAS) {
-      appendSASTokenToQuery(relativePath, SASTokenProvider.LISTSTATUS_OPERATION, abfsUriQueryBuilder);
-    }
+    appendSASTokenToQuery(relativePath, SASTokenProvider.LISTSTATUS_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -283,10 +280,10 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, isFile ? FILE : DIRECTORY);
 
-    if (authType == AuthType.SAS) {
-      String operation = isFile ? SASTokenProvider.CREATEFILE_OPERATION : SASTokenProvider.MKDIR_OPERATION;
-      appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
-    }
+    String operation = isFile
+        ? SASTokenProvider.CREATEFILE_OPERATION
+        : SASTokenProvider.MKDIR_OPERATION;
+    appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -302,25 +299,20 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation renamePath(String source, final String destination, final String continuation)
           throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    String sasToken = "";
 
-    if (authType == AuthType.SAS) {
-      final AbfsUriQueryBuilder queryBuilder = new AbfsUriQueryBuilder();
-      appendSASTokenToQuery(source, SASTokenProvider.RENAME_SOURCE_OPERATION, queryBuilder);
-      sasToken = queryBuilder.toString();
-    }
+    final AbfsUriQueryBuilder srcQueryBuilder = new AbfsUriQueryBuilder();
+    appendSASTokenToQuery(source, SASTokenProvider.RENAME_SOURCE_OPERATION, srcQueryBuilder);
+    String sasToken = srcQueryBuilder.toString();
 
     final String encodedRenameSource =
         urlEncode(FORWARD_SLASH + this.getFileSystem() + source) + sasToken;
+    LOG.trace("Rename source queryparam added {}", encodedRenameSource);
     requestHeaders.add(new AbfsHttpHeader(X_MS_RENAME_SOURCE, encodedRenameSource));
     requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, STAR));
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
-
-    if (authType == AuthType.SAS) {
-      appendSASTokenToQuery(destination, SASTokenProvider.RENAME_DESTINATION_OPERATION, abfsUriQueryBuilder);
-    }
+    appendSASTokenToQuery(destination, SASTokenProvider.RENAME_DESTINATION_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(destination, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -344,10 +336,7 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, APPEND_ACTION);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_POSITION, Long.toString(position));
-
-    if (authType == AuthType.SAS) {
-      appendSASTokenToQuery(path, SASTokenProvider.APPEND_OPERATION, abfsUriQueryBuilder);
-    }
+    appendSASTokenToQuery(path, SASTokenProvider.APPEND_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -373,10 +362,7 @@ public class AbfsClient implements Closeable {
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_POSITION, Long.toString(position));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RETAIN_UNCOMMITTED_DATA, String.valueOf(retainUncommittedData));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
-
-    if (authType == AuthType.SAS) {
-      appendSASTokenToQuery(path, SASTokenProvider.APPEND_OPERATION, abfsUriQueryBuilder);
-    }
+    appendSASTokenToQuery(path, SASTokenProvider.APPEND_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -418,10 +404,7 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(abfsConfiguration.isUpnUsed()));
-
-    if (authType == AuthType.SAS) {
-      appendSASTokenToQuery(path, SASTokenProvider.GETFILESTATUS_OPERATION, abfsUriQueryBuilder);
-    }
+    appendSASTokenToQuery(path, SASTokenProvider.GETFILESTATUS_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -442,10 +425,7 @@ public class AbfsClient implements Closeable {
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-
-    if (authType == AuthType.SAS) {
-      appendSASTokenToQuery(path, SASTokenProvider.READ_OPERATION, abfsUriQueryBuilder);
-    }
+    appendSASTokenToQuery(path, SASTokenProvider.READ_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
 
@@ -470,10 +450,7 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RECURSIVE, String.valueOf(recursive));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
-
-    if (authType == AuthType.SAS) {
-      appendSASTokenToQuery(path, SASTokenProvider.DELETE_OPERATION, abfsUriQueryBuilder);
-    }
+    appendSASTokenToQuery(path, SASTokenProvider.DELETE_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -503,10 +480,7 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.SET_ACCESS_CONTROL);
-
-    if (authType == AuthType.SAS) {
-      appendSASTokenToQuery(path, SASTokenProvider.SETOWNER_OPERATION, abfsUriQueryBuilder);
-    }
+    appendSASTokenToQuery(path, SASTokenProvider.SETOWNER_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -531,10 +505,7 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.SET_ACCESS_CONTROL);
-
-    if (authType == AuthType.SAS) {
-      appendSASTokenToQuery(path, SASTokenProvider.SETPERMISSION_OPERATION, abfsUriQueryBuilder);
-    }
+    appendSASTokenToQuery(path, SASTokenProvider.SETPERMISSION_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -567,10 +538,7 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.SET_ACCESS_CONTROL);
-
-    if (authType == AuthType.SAS) {
-      appendSASTokenToQuery(path, SASTokenProvider.SETACL_OPERATION, abfsUriQueryBuilder);
-    }
+    appendSASTokenToQuery(path, SASTokenProvider.SETACL_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -593,10 +561,7 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.GET_ACCESS_CONTROL);
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(useUPN));
-
-    if (authType == AuthType.SAS) {
-      appendSASTokenToQuery(path, SASTokenProvider.GETACL_OPERATION, abfsUriQueryBuilder);
-    }
+    appendSASTokenToQuery(path, SASTokenProvider.GETACL_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -631,14 +596,27 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
+  /**
+   * If configured for SAS AuthType, appends SAS token to queryBuilder
+   * @param path
+   * @param operation
+   * @param queryBuilder
+   * @throws SASTokenProviderException
+   */
   private void appendSASTokenToQuery(String path, String operation, AbfsUriQueryBuilder queryBuilder) throws SASTokenProviderException {
-    try {
-      LOG.trace("Fetch SAS token for {}", path);
-      String sasToken = sasTokenProvider.getSASToken(this.accountName, this.filesystem, path, operation);
-      queryBuilder.setSASToken(sasToken);
-      LOG.trace("SAS token fetch complete for {}", path);
-    } catch (Exception ex) {
-      throw new SASTokenProviderException("Failed to acquire a SAS token.", ex);
+    if (this.authType == AuthType.SAS) {
+      try {
+        LOG.trace("Fetch SAS token for {} on {}", operation, path);
+        String sasToken = sasTokenProvider.getSASToken(this.accountName,
+            this.filesystem, path, operation);
+        queryBuilder.setSASToken(sasToken);
+        LOG.trace("SAS token fetch complete for {} on {}", operation, path);
+      } catch (Exception ex) {
+        throw new SASTokenProviderException(String.format("Failed to acquire a SAS token for {} on {} due to {}",
+            operation,
+            path,
+            ex.toString()));
+      }
     }
   }
 

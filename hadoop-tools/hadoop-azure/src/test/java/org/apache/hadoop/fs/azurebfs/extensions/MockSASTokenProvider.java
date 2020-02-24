@@ -20,13 +20,12 @@ package org.apache.hadoop.fs.azurebfs.extensions;
 
 import java.io.IOException;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.AccessControlException;
+
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.SASGenerator;
-import org.apache.hadoop.security.AccessControlException;
 
 /**
  * A mock SAS token provider implementation
@@ -67,8 +66,7 @@ public class MockSASTokenProvider implements SASTokenProvider {
    */
   @Override
   public String getSASToken(String accountName, String fileSystem, String path,
-                     String operation) throws IOException, AccessControlException
-  {
+                     String operation) throws IOException, AccessControlException {
     if (!isSkipAuthorizationForTestSetup() && path.contains("unauthorized")) {
       throw new AccessControlException(
           "The user is not authorized to perform this operation.");

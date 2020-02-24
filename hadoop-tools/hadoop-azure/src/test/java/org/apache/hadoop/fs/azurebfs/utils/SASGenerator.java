@@ -30,11 +30,12 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
 
 /**
- * Created by tmarq on 2/17/20.
+ * Test container SAS generator
  */
 public class SASGenerator {
 
   private static final String HMAC_SHA256 = "HmacSHA256";
+  private static final int TOKEN_EXPIRY_PERIOD_IN_SECONDS = 60;
   public static final DateTimeFormatter ISO_8601_UTC_DATE_FORMATTER =
       DateTimeFormatter
           .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT)
@@ -53,7 +54,7 @@ public class SASGenerator {
     String sr = "c";
     String st = ISO_8601_UTC_DATE_FORMATTER.format(Instant.now());
     String se =
-        ISO_8601_UTC_DATE_FORMATTER.format(Instant.now().plusSeconds(60));
+        ISO_8601_UTC_DATE_FORMATTER.format(Instant.now().plusSeconds(TOKEN_EXPIRY_PERIOD_IN_SECONDS));
 
     String signature = computeSignatureForSAS(sp, st, se, sv, "c",
         accountName, containerName);

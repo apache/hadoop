@@ -204,8 +204,8 @@ public abstract class AbstractAbfsIntegrationTest extends
       // AbstractAbfsIntegrationTest always uses a new instance of FileSystem,
       // need to disable that and force filesystem provided in test configs.
       String[] authorityParts =
-          (new java.net.URI(rawConfig.get(FS_AZURE_CONTRACT_TEST_URI))).getRawAuthority().split(
-        AbfsHttpConstants.AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER, 2);;
+          (new URI(rawConfig.get(FS_AZURE_CONTRACT_TEST_URI))).getRawAuthority().split(
+        AbfsHttpConstants.AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER, 2);
       this.fileSystemName = authorityParts[0];
 
       // Reset URL with configured filesystem

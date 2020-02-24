@@ -1133,7 +1133,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     AccessTokenProvider tokenProvider = null;
     SASTokenProvider sasTokenProvider = null;
 
-    if (this.authType == AuthType.SharedKey) {
+    if (authType == AuthType.SharedKey) {
       LOG.trace("Fetching SharedKey credentials");
       int dotIndex = accountName.indexOf(AbfsHttpConstants.DOT);
       if (dotIndex <= 0) {
@@ -1142,7 +1142,7 @@ public class AzureBlobFileSystemStore implements Closeable {
       }
       creds = new SharedKeyCredentials(accountName.substring(0, dotIndex),
             abfsConfiguration.getStorageAccountKey());
-    } else if (this.authType == AuthType.SAS) {
+    } else if (authType == AuthType.SAS) {
       LOG.trace("Fetching SAS token provider");
       sasTokenProvider = abfsConfiguration.getSASTokenProvider();
     } else {

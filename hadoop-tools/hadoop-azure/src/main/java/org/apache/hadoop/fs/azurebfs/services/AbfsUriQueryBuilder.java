@@ -66,8 +66,8 @@ public class AbfsUriQueryBuilder {
     }
     // append SAS Token
     if (sasToken != null) {
-      sasToken = sasToken.startsWith(AbfsHttpConstants.QUESTION_MARK) ?
-          sasToken.substring(1)
+      sasToken = sasToken.startsWith(AbfsHttpConstants.QUESTION_MARK)
+          ? sasToken.substring(1)
           : sasToken;
 
       if (first) {

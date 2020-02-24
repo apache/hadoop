@@ -18,20 +18,19 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import java.io.*;
+import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.UUID;
 
-import org.apache.hadoop.fs.azurebfs.constants.*;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
-import org.apache.hadoop.fs.azurebfs.extensions.*;
-import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
+import org.apache.hadoop.fs.azurebfs.extensions.MockSASTokenProvider;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 
@@ -39,7 +38,6 @@ import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assume.assumeTrue;
 
 /**
  * Test Perform Authorization Check operation
@@ -212,8 +210,7 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
 
     getMockSASTokenProvider(fs).setSkipAuthorizationForTestSetup(true);
     if ((testOp != FileSystemOperations.CreatePath)
-        && (testOp != FileSystemOperations.Mkdir))
-    {
+        && (testOp != FileSystemOperations.Mkdir)) {
       fs.create(reqPath).close();
       fs.getFileStatus(reqPath);
     }

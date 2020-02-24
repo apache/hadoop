@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;

@@ -32,22 +32,22 @@ import org.apache.hadoop.security.AccessControlException;
 @InterfaceStability.Unstable
 public interface SASTokenProvider {
 
-  public static final String CONCAT_SOURCE_OPERATION = "concat-source";
-  public static final String CONCAT_TARGET_OPERATION = "concat-target";
-  public static final String CREATEFILE_OPERATION = "create";
-  public static final String DELETE_OPERATION = "delete";
-  public static final String EXECUTE_OPERATION = "execute";
-  public static final String GETACL_OPERATION = "getaclstatus";
-  public static final String GETFILESTATUS_OPERATION = "getfilestatus";
-  public static final String LISTSTATUS_OPERATION = "liststatus";
-  public static final String MKDIR_OPERATION = "mkdir";
-  public static final String READ_OPERATION = "read";
-  public static final String RENAME_SOURCE_OPERATION = "rename-source";
-  public static final String RENAME_DESTINATION_OPERATION = "rename-destination";
-  public static final String SETACL_OPERATION = "setacl";
-  public static final String SETOWNER_OPERATION = "setowner";
-  public static final String SETPERMISSION_OPERATION = "setpermission";
-  public static final String APPEND_OPERATION = "write";
+  String CONCAT_SOURCE_OPERATION = "concat-source";
+  String CONCAT_TARGET_OPERATION = "concat-target";
+  String CREATEFILE_OPERATION = "create";
+  String DELETE_OPERATION = "delete";
+  String EXECUTE_OPERATION = "execute";
+  String GETACL_OPERATION = "getaclstatus";
+  String GETFILESTATUS_OPERATION = "getfilestatus";
+  String LISTSTATUS_OPERATION = "liststatus";
+  String MKDIR_OPERATION = "mkdir";
+  String READ_OPERATION = "read";
+  String RENAME_SOURCE_OPERATION = "rename-source";
+  String RENAME_DESTINATION_OPERATION = "rename-destination";
+  String SETACL_OPERATION = "setacl";
+  String SETOWNER_OPERATION = "setowner";
+  String SETPERMISSION_OPERATION = "setpermission";
+  String APPEND_OPERATION = "write";
 
   /**
    * Initialize authorizer for Azure Blob File System.
