@@ -166,11 +166,13 @@ public class FSConfigToCSConfigConverter {
   private void loadConversionRules(String rulesFile) throws IOException {
     if (rulesFile != null) {
       LOG.info("Reading conversion rules file from: " + rulesFile);
-      this.ruleHandler.loadRulesFromFile(rulesFile);
+      ruleHandler.loadRulesFromFile(rulesFile);
     } else {
       LOG.info("Conversion rules file is not defined, " +
           "using default conversion config!");
     }
+
+    ruleHandler.initPropertyActions();
   }
 
   private Configuration getInputYarnSiteConfig(
