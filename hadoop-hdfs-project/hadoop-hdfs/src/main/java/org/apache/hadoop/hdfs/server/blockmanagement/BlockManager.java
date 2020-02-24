@@ -3175,6 +3175,7 @@ public class BlockManager implements BlockStatsMXBean {
   
   private void processQueuedMessages(Iterable<ReportedBlockInfo> rbis)
       throws IOException {
+    boolean isPreviousMessageProcessed = true;
     for (ReportedBlockInfo rbi : rbis) {
       LOG.debug("Processing previouly queued message {}", rbi);
       if (rbi.getReportedState() == null) {
@@ -3182,9 +3183,15 @@ public class BlockManager implements BlockStatsMXBean {
         DatanodeStorageInfo storageInfo = rbi.getStorageInfo();
         removeStoredBlock(getStoredBlock(rbi.getBlock()),
             storageInfo.getDatanodeDescriptor());
+      } else if (!isPreviousMessageProcessed) {
+        // if the previous IBR processing was skipped, skip processing all
+        // further IBR's so as to ensure same sequence of processing.
+        queueReportedBlock(rbi.getStorageInfo(), rbi.getBlock(),
+            rbi.getReportedState(), QUEUE_REASON_FUTURE_GENSTAMP);
       } else {
-        processAndHandleReportedBlock(rbi.getStorageInfo(),
-            rbi.getBlock(), rbi.getReportedState(), null);
+        isPreviousMessageProcessed =
+            processAndHandleReportedBlock(rbi.getStorageInfo(), rbi.getBlock(),
+                rbi.getReportedState(), null);
       }
     }
   }
@@ -4092,8 +4099,14 @@ public class BlockManager implements BlockStatsMXBean {
     processAndHandleReportedBlock(storageInfo, block, ReplicaState.FINALIZED,
         delHintNode);
   }
-  
-  private void processAndHandleReportedBlock(
+
+  /**
+   * Process a reported block.
+   * @return true if the block is processed, or false if the block is queued
+   * to be processed later.
+   * @throws IOException
+   */
+  private boolean processAndHandleReportedBlock(
       DatanodeStorageInfo storageInfo, Block block,
       ReplicaState reportedState, DatanodeDescriptor delHintNode)
       throws IOException {
@@ -4107,7 +4120,7 @@ public class BlockManager implements BlockStatsMXBean {
         isGenStampInFuture(block)) {
       queueReportedBlock(storageInfo, block, reportedState,
           QUEUE_REASON_FUTURE_GENSTAMP);
-      return;
+      return false;
     }
 
     // find block by blockId
@@ -4118,7 +4131,7 @@ public class BlockManager implements BlockStatsMXBean {
       blockLog.debug("BLOCK* addBlock: block {} on node {} size {} does not " +
           "belong to any file", block, node, block.getNumBytes());
       addToInvalidates(new Block(block), node);
-      return;
+      return true;
     }
 
     BlockUCState ucState = storedBlock.getBlockUCState();
@@ -4127,7 +4140,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     // Ignore replicas already scheduled to be removed from the DN
     if(invalidateBlocks.contains(node, block)) {
-      return;
+      return true;
     }
 
     BlockToMarkCorrupt c = checkReplicaCorrupt(
@@ -4145,14 +4158,14 @@ public class BlockManager implements BlockStatsMXBean {
       } else {
         markBlockAsCorrupt(c, storageInfo, node);
       }
-      return;
+      return true;
     }
 
     if (isBlockUnderConstruction(storedBlock, ucState, reportedState)) {
       addStoredBlockUnderConstruction(
           new StatefulBlockInfo(storedBlock, new Block(block), reportedState),
           storageInfo);
-      return;
+      return true;
     }
 
     // Add replica if appropriate. If the replica was previously corrupt
@@ -4162,6 +4175,7 @@ public class BlockManager implements BlockStatsMXBean {
             corruptReplicas.isReplicaCorrupt(storedBlock, node))) {
       addStoredBlock(storedBlock, block, storageInfo, delHintNode, true);
     }
+    return true;
   }
 
   /**
