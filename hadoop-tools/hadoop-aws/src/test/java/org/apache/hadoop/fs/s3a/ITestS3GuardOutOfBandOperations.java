@@ -307,11 +307,6 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     overwriteFileInListing("THE TEXT", "THE LONGER TEXT");
   }
 
-  @Test
-  public void testListingDelete() throws Exception {
-    deleteFileInListing();
-  }
-
   /**
    * Tests that tombstone expiry is implemented. If a file is created raw
    * while the tombstone exist in ms for with the same name then S3Guard will
@@ -940,8 +935,8 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
   /**
    * Delete a file and use listStatus to build up the S3Guard cache.
    */
-  private void deleteFileInListing()
-      throws Exception {
+  @Test
+  public void testListingDelete() throws Exception {
 
     boolean allowAuthoritative = authoritative;
     LOG.info("Authoritative mode enabled: {}", allowAuthoritative);
