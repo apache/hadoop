@@ -26,6 +26,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.conve
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.USER_MAX_APPS_DEFAULT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.USER_MAX_RUNNING_APPS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.RuleAction.ABORT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.RuleAction.WARNING;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -370,6 +371,41 @@ public class TestFSConfigToCSConfigConverter {
         ABORT, actions.get(RESERVATION_SYSTEM));
     assertEquals("queueAutoCreate",
         ABORT, actions.get(QUEUE_AUTO_CREATE));
+  }
+
+  @Test
+  public void testConvertFSConfigurationWithoutRulesFile() throws Exception {
+    ruleHandler = new FSConfigToCSConfigRuleHandler(
+        createDefaultConversionOptions());
+    createConverter();
+
+    FSConfigToCSConfigConverterParams params =
+        createDefaultParamsBuilder()
+            .withClusterResource(CLUSTER_RESOURCE_STRING)
+            .build();
+
+    converter.convert(params);
+
+    ruleHandler = converter.getRuleHandler();
+    Map<String, FSConfigToCSConfigRuleHandler.RuleAction> actions =
+        ruleHandler.getActions();
+
+    assertEquals("maxCapacityPercentage",
+        WARNING, actions.get(MAX_CAPACITY_PERCENTAGE));
+    assertEquals("maxChildCapacity",
+        WARNING, actions.get(MAX_CHILD_CAPACITY));
+    assertEquals("userMaxRunningApps",
+        WARNING, actions.get(USER_MAX_RUNNING_APPS));
+    assertEquals("userMaxAppsDefault",
+        WARNING, actions.get(USER_MAX_APPS_DEFAULT));
+    assertEquals("dynamicMaxAssign",
+        WARNING, actions.get(DYNAMIC_MAX_ASSIGN));
+    assertEquals("specifiedNotFirstRule",
+        WARNING, actions.get(SPECIFIED_NOT_FIRST));
+    assertEquals("reservationSystem",
+        WARNING, actions.get(RESERVATION_SYSTEM));
+    assertEquals("queueAutoCreate",
+        WARNING, actions.get(QUEUE_AUTO_CREATE));
   }
 
   @Test
