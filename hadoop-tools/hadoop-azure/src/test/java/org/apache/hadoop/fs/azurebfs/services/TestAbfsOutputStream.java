@@ -186,7 +186,7 @@ public final class TestAbfsOutputStream {
     final Configuration conf = new Configuration();
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
-    AbfsPerfTracker tracker = mock(AbfsPerfTracker.class);
+    AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
