@@ -57,7 +57,7 @@ class QueuePlacementConverter {
 
         // nested rule
         if (userRule.getParentRule() != null) {
-          handleNestedRule(mapping, userRule);
+          handleNestedRule(mapping, userRule, ruleHandler);
         } else {
           if (!userAsDefaultQueue) {
             if (mapping.length() > 0) {
@@ -102,20 +102,28 @@ class QueuePlacementConverter {
   }
 
   private void handleNestedRule(StringBuilder mapping,
-      UserPlacementRule userRule) {
+      UserPlacementRule userRule, FSConfigToCSConfigRuleHandler ruleHandler) {
     PlacementRule pr = userRule.getParentRule();
     if (mapping.length() > 0) {
       mapping.append(RULE_SEPARATOR);
     }
     if (pr instanceof PrimaryGroupPlacementRule) {
-      mapping.append("u:" + USER + ":" + PRIMARY_GROUP + "." + USER);
+      String mappingString = "u:" + USER + ":" + PRIMARY_GROUP + "." + USER;
+      ruleHandler.handleDynamicMappedQueue(mappingString,
+          ((PrimaryGroupPlacementRule) pr).getCreateFlag());
+      mapping.append(mappingString);
     } else if (pr instanceof SecondaryGroupExistingPlacementRule) {
+      String mappingString = "u:" + USER + ":" + SECONDARY_GROUP + "." + USER;
+      ruleHandler.handleDynamicMappedQueue(mappingString,
+          ((SecondaryGroupExistingPlacementRule) pr).getCreateFlag());
       mapping.append("u:" + USER + ":" + SECONDARY_GROUP + "." + USER);
     } else if (pr instanceof DefaultPlacementRule) {
       DefaultPlacementRule defaultRule = (DefaultPlacementRule) pr;
-      mapping.append("u:" + USER + ":")
-        .append(defaultRule.defaultQueueName)
-        .append("." + USER);
+      String mappingString =
+          "u:" + USER + ":" + defaultRule.defaultQueueName + "." + USER;
+      ruleHandler.handleDynamicMappedQueue(mappingString,
+          defaultRule.getCreateFlag());
+      mapping.append(mappingString);
     } else {
       throw new UnsupportedOperationException("Unsupported nested rule: "
           + pr.getClass().getCanonicalName());
