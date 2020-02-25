@@ -20,10 +20,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -491,5 +494,65 @@ public class TestFSConfigToCSConfigArgumentHandler {
 
     assertFalse("No terminal rule check was enabled",
         conversionOptions.isNoRuleTerminalCheck());
+  }
+
+  @Test
+  public void testYarnSiteOptionInOutputFolder() throws Exception {
+    setupFSConfigConversionFiles(true);
+
+    FSConfigToCSConfigArgumentHandler argumentHandler =
+        createArgumentHandler();
+
+    String[] args = new String[] {
+        "-y", FSConfigConverterTestCommons.YARN_SITE_XML,
+        "-o", FSConfigConverterTestCommons.TEST_DIR};
+
+    int retVal = argumentHandler.parseAndConvert(args);
+    assertEquals("Return value", -1, retVal);
+
+    assertTrue(fsTestCommons.getErrContent()
+        .toString().contains("contains the yarn-site.xml"));
+  }
+
+  private void testFileExistsInOutputFolder(String file) throws Exception {
+    File testFile = new File(FSConfigConverterTestCommons.OUTPUT_DIR, file);
+    try {
+      FileUtils.touch(testFile);
+
+      setupFSConfigConversionFiles(true);
+
+      FSConfigToCSConfigArgumentHandler argumentHandler =
+          createArgumentHandler();
+
+      String[] args = new String[] {
+          "-y", FSConfigConverterTestCommons.YARN_SITE_XML,
+          "-o", FSConfigConverterTestCommons.OUTPUT_DIR};
+
+      int retVal = argumentHandler.parseAndConvert(args);
+      assertEquals("Return value", -1, retVal);
+
+      String expectedMessage = String.format(
+          "already contains a file or directory named %s", file);
+
+      assertTrue(fsTestCommons.getErrContent()
+          .toString().contains(expectedMessage));
+    } finally {
+      if (testFile.exists()) {
+        testFile.delete();
+      }
+    }
+  }
+
+  @Test
+  public void testYarnSiteExistsInOutputFolder() throws Exception {
+    testFileExistsInOutputFolder(
+        YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+  }
+
+  @Test
+  public void testCapacitySchedulerXmlExistsInOutputFolder()
+      throws Exception {
+    testFileExistsInOutputFolder(
+        YarnConfiguration.CS_CONFIGURATION_FILE);
   }
 }
