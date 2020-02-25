@@ -2719,7 +2719,7 @@
   <value>${user.home}/hadoop-http-auth-signature-secret</value>
   <description>
     The signature secret for signing the authentication tokens.
-    The same secret should be used for JT/NN/DN/TT configurations.
+    The same secret should be used for RM/NM/NN/DN configurations.
   </description>
 </property>
 
