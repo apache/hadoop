@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.stream.ChunkedStream;
+import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -215,9 +216,16 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     }
 
     final DFSClient dfsClient = newDfsClient(nnId, confForCreate);
-    OutputStream out = dfsClient.createWrappedOutputStream(dfsClient.create(
+    final DFSOutputStream dfsos = dfsClient.create(
         path, permission, flags, createParent, replication, blockSize, null,
-        bufferSize, null), null);
+        bufferSize, null);
+    OutputStream out;
+    try {
+      out = dfsClient.createWrappedOutputStream(dfsos, null);
+    } catch (IOException ex) {
+      dfsos.close();
+      throw ex;
+    }
 
     resp = new DefaultHttpResponse(HTTP_1_1, CREATED);
 
