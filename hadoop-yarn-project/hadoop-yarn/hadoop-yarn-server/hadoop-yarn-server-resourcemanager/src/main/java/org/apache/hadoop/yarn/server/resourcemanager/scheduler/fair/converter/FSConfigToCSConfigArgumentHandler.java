@@ -25,6 +25,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +39,13 @@ import com.google.common.annotations.VisibleForTesting;
 public class FSConfigToCSConfigArgumentHandler {
   private static final Logger LOG =
       LoggerFactory.getLogger(FSConfigToCSConfigArgumentHandler.class);
+
+  private static final String ALREADY_CONTAINS_EXCEPTION_MSG =
+      "The %s (provided with %s|%s arguments) contains " +
+          "the %s provided with the %s|%s options.";
+  private static final String ALREADY_CONTAINS_FILE_EXCEPTION_MSG =
+      "The %s %s (provided with %s|%s arguments) already contains a file " +
+          "or directory named %s which will be the output of the conversion!";
 
   private FSConfigToCSConfigRuleHandler ruleHandler;
   private FSConfigToCSConfigConverterParams converterParams;
@@ -213,6 +221,7 @@ public class FSConfigToCSConfigArgumentHandler {
     checkFile(CliOption.FAIR_SCHEDULER, fairSchedulerXmlFile);
     checkFile(CliOption.CONVERSION_RULES, conversionRulesFile);
     checkDirectory(CliOption.OUTPUT_DIR, outputDir);
+    checkOutputDirDoesNotContainXmls(yarnSiteXmlFile, outputDir);
 
     return FSConfigToCSConfigConverterParams.Builder.create()
         .withYarnSiteXmlConfig(yarnSiteXmlFile)
@@ -223,6 +232,45 @@ public class FSConfigToCSConfigArgumentHandler {
         .withConsole(cliParser.hasOption(CliOption.CONSOLE_MODE.shortSwitch))
         .withOutputDirectory(outputDir)
         .build();
+  }
+
+  private static void checkOutputDirDoesNotContainXmls(String yarnSiteXmlFile,
+      String outputDir) {
+    if (yarnSiteXmlFile == null || outputDir == null) {
+      return;
+    }
+
+    // check whether yarn-site.xml is not in the output folder
+    File xmlFile = new File(yarnSiteXmlFile);
+    File xmlParentFolder = xmlFile.getParentFile();
+    File output = new File(outputDir);
+    if (output.equals(xmlParentFolder)) {
+      throw new IllegalArgumentException(
+          String.format(ALREADY_CONTAINS_EXCEPTION_MSG,
+              CliOption.OUTPUT_DIR.name, CliOption.OUTPUT_DIR.shortSwitch,
+              CliOption.OUTPUT_DIR.longSwitch, CliOption.YARN_SITE.name,
+              CliOption.YARN_SITE.shortSwitch,
+              CliOption.YARN_SITE.longSwitch));
+    }
+
+    // check whether the output folder does not contain nor yarn-site.xml
+    // neither capacity-scheduler.xml
+    checkFileNotInOutputDir(output,
+        YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+    checkFileNotInOutputDir(output,
+        YarnConfiguration.CS_CONFIGURATION_FILE);
+  }
+
+  private static void checkFileNotInOutputDir(File output, String fileName) {
+    File file = new File(output, fileName);
+    if (file.exists()) {
+      throw new IllegalArgumentException(
+          String.format(ALREADY_CONTAINS_FILE_EXCEPTION_MSG,
+              CliOption.OUTPUT_DIR.name, output,
+              CliOption.OUTPUT_DIR.shortSwitch,
+              CliOption.OUTPUT_DIR.longSwitch,
+              fileName));
+    }
   }
 
   private void printHelp(Options opts) {
