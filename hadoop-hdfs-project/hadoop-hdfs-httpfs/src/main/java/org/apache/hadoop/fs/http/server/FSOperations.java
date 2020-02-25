@@ -18,7 +18,6 @@
 package org.apache.hadoop.fs.http.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
@@ -38,7 +37,6 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.util.StringUtils;
@@ -1528,41 +1526,6 @@ public class FSOperations {
   }
 
   /**
-   * Executor that performs a getFileBlockLocations FileSystemAccess
-   * file system operation.
-   */
-  @InterfaceAudience.Private
-  @SuppressWarnings("rawtypes")
-  public static class FSFileBlockLocations implements
-      FileSystemAccess.FileSystemExecutor<Map> {
-    private Path path;
-    private long offsetValue;
-    private long lengthValue;
-
-    /**
-     * Creates a file-block-locations executor.
-     *
-     * @param path the path to retrieve the location
-     * @param offsetValue offset into the given file
-     * @param lengthValue length for which to get locations for
-     */
-    public FSFileBlockLocations(String path, long offsetValue,
-        long lengthValue) {
-      this.path = new Path(path);
-      this.offsetValue = offsetValue;
-      this.lengthValue = lengthValue;
-    }
-
-    @Override
-    public Map execute(FileSystem fs) throws IOException {
-      BlockLocation[] locations =
-          fs.getFileBlockLocations(this.path, this.offsetValue,
-              this.lengthValue);
-      return JsonUtil.toJsonMap(locations);
-    }
-  }
-
-  /**
    *  Executor that performs a createSnapshot FileSystemAccess operation.
    */
   @InterfaceAudience.Private
@@ -1665,5 +1628,4 @@ public class FSOperations {
       return null;
     }
   }
-
 }
