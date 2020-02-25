@@ -52,6 +52,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
@@ -137,6 +138,8 @@ public class TestTimelineAuthFilterForV2 {
       testMiniKDC.start();
       testMiniKDC.createPrincipal(
           httpSpnegoKeytabFile, HTTP_USER + "/localhost");
+      // reset the realm after the testMiniKDC has been created
+      KerberosName.resetDefaultRealm();
     } catch (Exception e) {
       fail("Couldn't setup MiniKDC.");
     }
