@@ -611,7 +611,7 @@ public class AbfsClient implements Closeable {
         queryBuilder.setSASToken(sasToken);
         LOG.trace("SAS token fetch complete for {} on {}", operation, path);
       } catch (Exception ex) {
-        throw new SASTokenProviderException(String.format("Failed to acquire a SAS token for {} on {} due to {}",
+        throw new SASTokenProviderException(String.format("Failed to acquire a SAS token for %s on %s due to %s",
             operation,
             path,
             ex.toString()));
