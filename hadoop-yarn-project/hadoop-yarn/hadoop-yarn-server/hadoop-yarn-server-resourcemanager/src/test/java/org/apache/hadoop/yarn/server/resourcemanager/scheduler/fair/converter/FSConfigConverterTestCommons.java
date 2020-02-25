@@ -35,7 +35,7 @@ import static org.junit.Assert.assertTrue;
  *
  */
 public class FSConfigConverterTestCommons {
-  private final static String TEST_DIR =
+  public final static String TEST_DIR =
       new File(System.getProperty("test.build.data", "/tmp")).getAbsolutePath();
   public final static String FS_ALLOC_FILE =
       new File(TEST_DIR, "test-fair-scheduler.xml").getAbsolutePath();
