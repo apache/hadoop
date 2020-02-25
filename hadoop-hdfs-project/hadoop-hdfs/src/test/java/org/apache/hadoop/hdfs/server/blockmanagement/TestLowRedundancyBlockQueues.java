@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -90,6 +91,32 @@ public class TestLowRedundancyBlockQueues {
             "blocks count is incorrect!",
         highestPriorityECBlockCount,
         queues.getHighestPriorityECBlockCount());
+  }
+
+  @Test
+  public void testQueuePositionCanBeReset() throws Throwable {
+    LowRedundancyBlocks queues = new LowRedundancyBlocks();
+    for (int i=0; i< 4; i++) {
+      BlockInfo block = genBlockInfo(i);
+      queues.add(block, 2, 0, 0, 3);
+    }
+    List<List<BlockInfo>> blocks;
+    // Get one block from the queue - should be block ID 0 returned
+    blocks = queues.chooseLowRedundancyBlocks(1, false);
+    assertEquals(1, blocks.get(2).size());
+    assertEquals(0, blocks.get(2).get(0).getBlockId());
+
+    // Get the next blocks - should be ID 1
+    blocks = queues.chooseLowRedundancyBlocks(1, false);
+    assertEquals(1, blocks.get(2).get(0).getBlockId());
+
+    // Get the next block, but also reset this time - should be ID 2 returned
+    blocks = queues.chooseLowRedundancyBlocks(1, true);
+    assertEquals(2, blocks.get(2).get(0).getBlockId());
+
+    // Get one more block and due to resetting the queue it will be block id 0
+    blocks = queues.chooseLowRedundancyBlocks(1, false);
+    assertEquals(0, blocks.get(2).get(0).getBlockId());
   }
 
   /**
