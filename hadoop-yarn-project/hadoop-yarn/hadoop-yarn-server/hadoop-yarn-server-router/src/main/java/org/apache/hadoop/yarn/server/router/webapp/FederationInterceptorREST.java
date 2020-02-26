@@ -97,6 +97,7 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -237,7 +238,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       SubClusterId subClusterId, String webAppAddress) {
     DefaultRequestInterceptorREST interceptor =
         getInterceptorForSubCluster(subClusterId);
-    if (interceptor == null) {
+    String webAppAddresswithScheme = WebAppUtils.getHttpSchemePrefix(
+            this.getConf()) + webAppAddress;
+    if (interceptor == null || !webAppAddresswithScheme.equals(interceptor.
+        getWebAppAddress())){
       interceptor = createInterceptorForSubCluster(subClusterId, webAppAddress);
     }
     return interceptor;
