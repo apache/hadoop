@@ -23,6 +23,7 @@ import java.lang.reflect.Field;
 import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -595,23 +596,18 @@ public class AbfsConfiguration{
       String configKey = FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
       Class<? extends SASTokenProvider> sasTokenProviderClass =
           getClass(configKey, null, SASTokenProvider.class);
-      if (sasTokenProviderClass == null) {
-        throw new IllegalArgumentException(
-            String.format("The configuration value for \"%s\" is invalid.", configKey));
-      }
+      Preconditions.checkArgument(sasTokenProviderClass != null,
+          String.format("The configuration value for \"%s\" is invalid.", configKey));
 
       SASTokenProvider sasTokenProvider = ReflectionUtils
           .newInstance(sasTokenProviderClass, rawConfig);
-      if (sasTokenProvider == null) {
-        throw new IllegalArgumentException("Failed to initialize " + sasTokenProviderClass);
-      }
+      Preconditions.checkArgument(sasTokenProvider != null,
+          String.format("Failed to initialize %s", sasTokenProviderClass));
 
       LOG.trace("Initializing {}", sasTokenProviderClass.getName());
       sasTokenProvider.initialize(rawConfig, accountName);
       LOG.trace("{} init complete", sasTokenProviderClass.getName());
       return sasTokenProvider;
-    } catch(IllegalArgumentException e) {
-      throw e;
     } catch (Exception e) {
       throw new TokenAccessProviderException("Unable to load SAS token provider class: " + e, e);
     }

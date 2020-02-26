@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TokenAccessProviderException;
 import org.apache.hadoop.fs.azurebfs.extensions.MockSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -63,6 +64,21 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     this.getConfiguration().set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_AUTHZ_CLASS);
     this.getConfiguration().set(ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, "SAS");
     super.setup();
+  }
+
+  @Test
+  public void testSASTokenProviderInitializeException() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+
+    final AzureBlobFileSystem testFs = new AzureBlobFileSystem();
+
+    MockSASTokenProvider.setThrowExceptionAtInit(true);
+    intercept(TokenAccessProviderException.class,
+        ()-> {
+          testFs.initialize(fs.getUri(), this.getConfiguration().getRawConfiguration());
+        });
+
+    MockSASTokenProvider.setThrowExceptionAtInit(false);
   }
 
   @Test

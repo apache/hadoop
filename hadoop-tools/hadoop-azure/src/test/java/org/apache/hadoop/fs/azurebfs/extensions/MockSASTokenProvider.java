@@ -34,8 +34,8 @@ public class MockSASTokenProvider implements SASTokenProvider {
 
   private byte[] accountKey;
   private SASGenerator generator;
-
   private boolean skipAuthorizationForTestSetup = false;
+  private static boolean throwExceptionAtInit = false;
 
   // For testing we use a container SAS for all operations.
   private String generateSAS(byte[] accountKey, String accountName, String fileSystemName) {
@@ -44,6 +44,10 @@ public class MockSASTokenProvider implements SASTokenProvider {
 
   @Override
   public void initialize(Configuration configuration, String accountName) throws IOException {
+    if (throwExceptionAtInit) {
+      throw new RuntimeException("MockSASTokenProvider initialize exception");
+    }
+
     try {
       AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, accountName);
       accountKey = Base64.decode(abfsConfig.getStorageAccountKey());
@@ -75,7 +79,6 @@ public class MockSASTokenProvider implements SASTokenProvider {
     return generateSAS(accountKey, accountName, fileSystem);
   }
 
-
   public boolean isSkipAuthorizationForTestSetup() {
     return skipAuthorizationForTestSetup;
   }
@@ -84,4 +87,9 @@ public class MockSASTokenProvider implements SASTokenProvider {
       boolean skipAuthorizationForTestSetup) {
     this.skipAuthorizationForTestSetup = skipAuthorizationForTestSetup;
   }
+
+  public static void setThrowExceptionAtInit(final boolean shouldThrowExceptionAtInit) {
+    throwExceptionAtInit = shouldThrowExceptionAtInit;
+  }
+
 }

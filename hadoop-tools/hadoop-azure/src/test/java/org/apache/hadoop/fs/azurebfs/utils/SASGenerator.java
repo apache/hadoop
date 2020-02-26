@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
 
 /**
- * Test container SAS generator
+ * Test container SAS generator.
  */
 public class SASGenerator {
 

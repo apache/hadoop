@@ -301,10 +301,12 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder srcQueryBuilder = new AbfsUriQueryBuilder();
     appendSASTokenToQuery(source, SASTokenProvider.RENAME_SOURCE_OPERATION, srcQueryBuilder);
-    String sasToken = srcQueryBuilder.toString();
+    String encodedRenameSource = urlEncode(FORWARD_SLASH + this.getFileSystem() + source);
 
-    final String encodedRenameSource =
-        urlEncode(FORWARD_SLASH + this.getFileSystem() + source) + sasToken;
+    if (authType == AuthType.SAS) {
+      encodedRenameSource += srcQueryBuilder.toString();
+    }
+
     LOG.trace("Rename source queryparam added {}", encodedRenameSource);
     requestHeaders.add(new AbfsHttpHeader(X_MS_RENAME_SOURCE, encodedRenameSource));
     requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, STAR));
