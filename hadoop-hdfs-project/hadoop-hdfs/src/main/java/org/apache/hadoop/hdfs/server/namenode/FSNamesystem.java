@@ -94,6 +94,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.ACTIVE;
+import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.STANDBY;
 import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.OBSERVER;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -1452,7 +1453,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /** Stop services required in standby state */
   void stopStandbyServices() throws IOException {
-    LOG.info("Stopping services started for standby state");
+    HAServiceState curState = getState() == OBSERVER? OBSERVER : STANDBY;
+    LOG.info("Stopping services started for {} state", curState);
     if (standbyCheckpointer != null) {
       standbyCheckpointer.stop();
     }
