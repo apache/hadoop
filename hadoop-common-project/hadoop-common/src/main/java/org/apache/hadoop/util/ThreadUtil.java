@@ -50,6 +50,34 @@ public class ThreadUtil {
   }
 
   /**
+   * Join a thread as uninterruptible.
+   * The call continues to block until the result is available even when the
+   * caller thread is interrupted.
+   * The method will log any {@link InterruptedException} then will re-interrupt
+   * the thread.
+   *
+   * @param toJoin the thread to Join on.
+   */
+  public static void joinUninterruptibly(Thread toJoin) {
+    boolean interrupted = false;
+    try {
+      while (true) {
+        try {
+          toJoin.join();
+          return;
+        } catch (InterruptedException e) {
+          interrupted = true;
+          LOG.warn("interrupted while sleeping", e);
+        }
+      }
+    } finally {
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
+  /**
    * Convenience method that returns a resource as inputstream from the
    * classpath.
    * <p>
