@@ -184,6 +184,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_GC_TIME_MONITOR_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_GC_TIME_MONITOR_OBSERVATION_WINDOW_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_GC_TIME_MONITOR_ENABLE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_GC_TIME_MONITOR_ENABLE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY;
 
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
@@ -322,7 +324,9 @@ public class NameNode extends ReconfigurableBase implements
           DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
           DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY,
           DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY,
-          DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION));
+          DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION,
+          DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+          DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY));
 
   private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
@@ -2179,6 +2183,10 @@ public class NameNode extends ReconfigurableBase implements
         || property.equals(
             DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION)) {
       return reconfReplicationParameters(newVal, property);
+    } else if (property.equals(DFS_BLOCK_REPLICATOR_CLASSNAME_KEY) || property
+        .equals(DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY)) {
+      reconfBlockPlacementPolicy();
+      return newVal;
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property));
@@ -2221,6 +2229,11 @@ public class NameNode extends ReconfigurableBase implements
     } finally {
       namesystem.writeUnlock();
     }
+  }
+
+  private void reconfBlockPlacementPolicy() {
+    getNamesystem().getBlockManager()
+        .refreshBlockPlacementPolicy(getNewConf());
   }
 
   private int adjustNewVal(int defaultVal, String newVal) {
