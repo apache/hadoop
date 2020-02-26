@@ -81,6 +81,10 @@ public class DefaultRequestInterceptorREST
     this.webAppAddress = webAppAddress;
   }
 
+  protected String getWebAppAddress() {
+    return this.webAppAddress;
+  }
+
   protected void setSubClusterId(SubClusterId scId) {
     this.subClusterId = scId;
   }
