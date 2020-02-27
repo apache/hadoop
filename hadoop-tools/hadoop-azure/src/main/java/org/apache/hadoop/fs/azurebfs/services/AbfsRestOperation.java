@@ -160,18 +160,26 @@ public class AbfsRestOperation {
       // initialize the HTTP request and open the connection
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
 
-      // sign the HTTP request
-      if (client.getAccessToken() == null) {
-        LOG.debug("Signing request with shared key");
-        // sign the HTTP request
-        client.getSharedKeyCredentials().signRequest(
-                httpOperation.getConnection(),
-                hasRequestBody ? bufferLength : 0);
-      } else {
-        LOG.debug("Authenticating request with OAuth2 access token");
-        httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
-                client.getAccessToken());
+      switch(client.getAuthType()) {
+        case Custom:
+        case OAuth:
+          LOG.debug("Authenticating request with OAuth2 access token");
+          httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+              client.getAccessToken());
+          break;
+        case SAS:
+          // do nothing; the SAS token should already be appended to the query string
+          break;
+        case SharedKey:
+          // sign the HTTP request
+          LOG.debug("Signing request with shared key");
+          // sign the HTTP request
+          client.getSharedKeyCredentials().signRequest(
+              httpOperation.getConnection(),
+              hasRequestBody ? bufferLength : 0);
+          break;
       }
+
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
