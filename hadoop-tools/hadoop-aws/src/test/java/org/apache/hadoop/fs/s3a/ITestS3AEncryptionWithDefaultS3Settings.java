@@ -92,7 +92,7 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
     S3AFileSystem fs = getFileSystem();
     Configuration c = fs.getConf();
     String kmsKey = c.getTrimmed(SERVER_SIDE_ENCRYPTION_KEY);
-    assertEncrypted(path, SSE_KMS, kmsKey);
+    EncryptionTestUtils.assertEncrypted(fs, path, SSE_KMS, kmsKey);
   }
 
   @Override
@@ -132,9 +132,7 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
       ContractTestUtils.verifyFileContents(fs, renamedFile, data);
       String kmsKey = fs2Conf.getTrimmed(SERVER_SIDE_ENCRYPTION_KEY);
       // we assert that the renamed file has picked up the KMS key of our FS
-      assertEncrypted(renamedFile, SSE_KMS, kmsKey);
+      EncryptionTestUtils.assertEncrypted(fs, renamedFile, SSE_KMS, kmsKey);
     }
   }
-
-
 }

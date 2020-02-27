@@ -24,6 +24,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.EncryptionTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
@@ -69,6 +70,7 @@ public class ITestS3AHugeFilesEncryption extends AbstractSTestS3AHugeFiles {
   protected void assertEncrypted(Path hugeFile) throws IOException {
     Configuration c = new Configuration();
     String kmsKey = c.get(SERVER_SIDE_ENCRYPTION_KEY);
-    assertEncrypted(hugeFile, SSE_KMS, kmsKey);
+    EncryptionTestUtils.assertEncrypted(getFileSystem(), hugeFile,
+            SSE_KMS, kmsKey);
   }
 }

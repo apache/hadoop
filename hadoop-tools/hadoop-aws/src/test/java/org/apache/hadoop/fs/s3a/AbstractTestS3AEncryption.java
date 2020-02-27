@@ -161,7 +161,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     String kmsKeyArn = this.getConfiguration().
         getTrimmed(SERVER_SIDE_ENCRYPTION_KEY);
     S3AEncryptionMethods algorithm = getSSEAlgorithm();
-    assertEncrypted(path, algorithm, kmsKeyArn);
+    EncryptionTestUtils.assertEncrypted(getFileSystem(), path, algorithm, kmsKeyArn);
   }
 
   protected abstract S3AEncryptionMethods getSSEAlgorithm();

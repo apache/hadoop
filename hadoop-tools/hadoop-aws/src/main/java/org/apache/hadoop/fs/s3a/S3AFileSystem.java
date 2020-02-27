@@ -45,7 +45,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import javax.annotation.Nullable;
 
 import com.amazonaws.AmazonClientException;
@@ -3460,12 +3459,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
           changeTracker.maybeApplyConstraint(copyObjectRequest);
 
+          setOptionalCopyObjectRequestParameters(srcom, copyObjectRequest);
           copyObjectRequest.setCannedAccessControlList(cannedACL);
           copyObjectRequest.setNewObjectMetadata(dstom);
           Optional.ofNullable(srcom.getStorageClass())
               .ifPresent(copyObjectRequest::setStorageClass);
 
-          propagateEncryptionParams(srcom, copyObjectRequest);
+
           Copy copy = transfers.copy(copyObjectRequest);
           copy.addProgressListener(progressListener);
           CopyOutcome copyOutcome = CopyOutcome.waitForCopy(copy);
@@ -3493,23 +3493,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Propagate encryption parameters from source file if set else use the
-   * current file system encryption settings.
-   * @param srcom
-   * @param copyObjectRequest
+   * current filesystem encryption settings.
+   * @param srcom source object meta.
+   * @param copyObjectRequest copy object request body.
    */
-  private void propagateEncryptionParams(ObjectMetadata srcom,
-                                         CopyObjectRequest copyObjectRequest) {
-    Optional<SSEAwsKeyManagementParams> kmsParams = Optional.empty();
+  private void setOptionalCopyObjectRequestParameters(ObjectMetadata srcom,
+                                                      CopyObjectRequest copyObjectRequest) {
     String sourceKMSId = srcom.getSSEAwsKmsKeyId();
     if (isNotEmpty(sourceKMSId)) {
       // source KMS ID is propagated
       LOG.debug("Propagating SSE-KMS settings from source {}",
           sourceKMSId);
-      kmsParams = Optional.of(new SSEAwsKeyManagementParams(sourceKMSId));
+      copyObjectRequest.setSSEAwsKeyManagementParams(
+              new SSEAwsKeyManagementParams(sourceKMSId));
     }
-    kmsParams.ifPresent(
-            copyObjectRequest::setSSEAwsKeyManagementParams);
-    switch(encryptionSecrets.getEncryptionMethod()) {
+    switch(getServerSideEncryptionAlgorithm()) {
     /**
      * Overriding with client encryption settings.
      */
