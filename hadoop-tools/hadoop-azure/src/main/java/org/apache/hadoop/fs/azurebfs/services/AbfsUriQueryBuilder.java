@@ -42,6 +42,10 @@ public class AbfsUriQueryBuilder {
   }
 
   public void setSASToken(final String sasToken) {
+    if ((sasToken == null) || sasToken.isEmpty()) {
+      throw new UnsupportedOperationException("SASToken received is empty or null");
+    }
+
     this.sasToken = sasToken;
   }
 
