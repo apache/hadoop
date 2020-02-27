@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
  */
 public class AbfsUriQueryBuilder {
   private Map<String, String> parameters;
+  private String sasToken = null;
 
   public AbfsUriQueryBuilder() {
     this.parameters = new HashMap<>();
@@ -38,6 +39,10 @@ public class AbfsUriQueryBuilder {
     if (value != null && !value.isEmpty()) {
       this.parameters.put(name, value);
     }
+  }
+
+  public void setSASToken(final String sasToken) {
+    this.sasToken = sasToken;
   }
 
   @Override
@@ -58,6 +63,16 @@ public class AbfsUriQueryBuilder {
       catch (AzureBlobFileSystemException ex) {
         throw new IllegalArgumentException("Query string param is not encode-able: " + entry.getKey() + "=" + entry.getValue());
       }
+    }
+    // append SAS Token
+    if (sasToken != null) {
+      if (first) {
+        sb.append(AbfsHttpConstants.QUESTION_MARK);
+      } else {
+        sb.append(AbfsHttpConstants.AND_MARK);
+      }
+
+      sb.append(sasToken);
     }
     return sb.toString();
   }
