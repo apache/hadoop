@@ -16,26 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.extensions;
+package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
 
-import java.io.IOException;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
- * Exception raised on ABFS Authorization failures.
+ * Thrown if there is an error instantiating the SASTokenProvider or getting
+ * a SAS token.
  */
-public class AbfsAuthorizationException extends IOException {
+@InterfaceAudience.Private
+public class SASTokenProviderException extends AzureBlobFileSystemException {
 
-  private static final long serialVersionUID = 1L;
-
-  public AbfsAuthorizationException(String message, Exception e) {
-    super(message, e);
-  }
-
-  public AbfsAuthorizationException(String message) {
+  public SASTokenProviderException(String message) {
     super(message);
   }
 
-  public AbfsAuthorizationException(Throwable e) {
-    super(e);
+  public SASTokenProviderException(String message, Throwable cause) {
+    super(message);
+    initCause(cause);
   }
 }
