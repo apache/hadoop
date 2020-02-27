@@ -398,6 +398,12 @@ public class FileUtil {
                              Configuration conf) throws IOException {
     Path src = srcStatus.getPath();
     dst = checkDest(src.getName(), dstFS, dst, overwrite);
+
+    if (src.toUri().equals(dst.toUri())) {
+      throw new PathOperationException("Source (" + src + ") and destination " +
+          "(" + dst + ") are equal in the copy command.");
+    }
+
     if (srcStatus.isDirectory()) {
       checkDependencies(srcFS, src, dstFS, dst);
       if (!dstFS.mkdirs(dst)) {
