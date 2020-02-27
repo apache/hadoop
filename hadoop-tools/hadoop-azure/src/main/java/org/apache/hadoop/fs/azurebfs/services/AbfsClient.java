@@ -610,6 +610,10 @@ public class AbfsClient implements Closeable {
         LOG.trace("Fetch SAS token for {} on {}", operation, path);
         String sasToken = sasTokenProvider.getSASToken(this.accountName,
             this.filesystem, path, operation);
+        if (sasToken.isEmpty() || (sasToken == null)) {
+          throw new UnsupportedOperationException("SASToken received is empty or null");
+        }
+
         queryBuilder.setSASToken(sasToken);
         LOG.trace("SAS token fetch complete for {} on {}", operation, path);
       } catch (Exception ex) {

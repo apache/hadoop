@@ -25,6 +25,8 @@ import java.util.UUID;
 import org.junit.Assume;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
@@ -35,6 +37,8 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.MOCK_SASTOKENPROVIDER_FAIL_INIT;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
@@ -46,6 +50,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrationTest {
 
   private static final String TEST_AUTHZ_CLASS = "org.apache.hadoop.fs.azurebfs.extensions.MockSASTokenProvider";
+  private static final String TEST_ERR_AUTHZ_CLASS = "org.apache.hadoop.fs.azurebfs.extensions.MockErrorSASTokenProvider";
   private static final String TEST_USER = UUID.randomUUID().toString();
   private static final String TEST_GROUP = UUID.randomUUID().toString();
   private static final String BAR = UUID.randomUUID().toString();
@@ -71,14 +76,46 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = this.getFileSystem();
 
     final AzureBlobFileSystem testFs = new AzureBlobFileSystem();
+    Configuration testConfig = this.getConfiguration().getRawConfiguration();
+    testConfig.set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
+    testConfig.set(MOCK_SASTOKENPROVIDER_FAIL_INIT, "true");
 
-    MockSASTokenProvider.setThrowExceptionAtInit(true);
     intercept(TokenAccessProviderException.class,
         ()-> {
           testFs.initialize(fs.getUri(), this.getConfiguration().getRawConfiguration());
         });
+  }
 
-    MockSASTokenProvider.setThrowExceptionAtInit(false);
+  @Test
+  public void testSASTokenProviderEmptySASToken() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+
+    final AzureBlobFileSystem testFs = new AzureBlobFileSystem();
+    Configuration testConfig = this.getConfiguration().getRawConfiguration();
+    testConfig.set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
+    testConfig.set(MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN, "true");
+
+    testFs.initialize(fs.getUri(),
+        this.getConfiguration().getRawConfiguration());
+    intercept(SASTokenProviderException.class,
+        () -> {
+          testFs.create(new org.apache.hadoop.fs.Path("/testFile"));
+        });
+  }
+
+  @Test
+  public void testSASTokenProviderNullSASToken() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+
+    final AzureBlobFileSystem testFs = new AzureBlobFileSystem();
+    Configuration testConfig = this.getConfiguration().getRawConfiguration();
+    testConfig.set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
+
+    testFs.initialize(fs.getUri(), this.getConfiguration().getRawConfiguration());
+    intercept(SASTokenProviderException.class,
+        ()-> {
+          testFs.create(new org.apache.hadoop.fs.Path("/testFile"));
+        });
   }
 
   @Test

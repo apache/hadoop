@@ -35,7 +35,8 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
 public class SASGenerator {
 
   private static final String HMAC_SHA256 = "HmacSHA256";
-  private static final int TOKEN_EXPIRY_PERIOD_IN_SECONDS = 60;
+  private static final int TOKEN_START_PERIOD_IN_SECONDS = 5 * 60;
+  private static final int TOKEN_EXPIRY_PERIOD_IN_SECONDS = 24 * 60 * 60;
   public static final DateTimeFormatter ISO_8601_UTC_DATE_FORMATTER =
       DateTimeFormatter
           .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT)
@@ -52,7 +53,7 @@ public class SASGenerator {
     String sp = "racwdl";
     String sv = "2018-11-09";
     String sr = "c";
-    String st = ISO_8601_UTC_DATE_FORMATTER.format(Instant.now());
+    String st = ISO_8601_UTC_DATE_FORMATTER.format(Instant.now().minusSeconds(TOKEN_START_PERIOD_IN_SECONDS));
     String se =
         ISO_8601_UTC_DATE_FORMATTER.format(Instant.now().plusSeconds(TOKEN_EXPIRY_PERIOD_IN_SECONDS));
 
