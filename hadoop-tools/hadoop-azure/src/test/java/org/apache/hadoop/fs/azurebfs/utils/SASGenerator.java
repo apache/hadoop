@@ -67,7 +67,7 @@ public class SASGenerator {
     qb.addQuery("sv", sv);
     qb.addQuery("sr", sr);
     qb.addQuery("sig", signature);
-    return qb.toString();
+    return qb.toString().substring(1);
   }
 
   private String computeSignatureForSAS(String sp, String st,
