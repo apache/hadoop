@@ -1110,6 +1110,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     Collection<String> alClasses =
         conf.getTrimmedStringCollection(DFS_NAMENODE_AUDIT_LOGGERS_KEY);
     List<AuditLogger> auditLoggers = Lists.newArrayList();
+    boolean topAuditLoggerAdded = false;
     if (alClasses != null && !alClasses.isEmpty()) {
       for (String className : alClasses) {
         try {
@@ -1118,9 +1119,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             logger = new FSNamesystemAuditLogger();
           } else {
             logger = (AuditLogger) Class.forName(className).newInstance();
+            if (TopAuditLogger.class.getName().equals(
+                    logger.getClass().getName())) {
+              topAuditLoggerAdded = true;
+            }
           }
           logger.initialize(conf);
           auditLoggers.add(logger);
+        } catch (InstantiationException e) {
+          LOG.error("{} instantiation failed.", className, e);
+          throw new RuntimeException(e);
         } catch (RuntimeException re) {
           throw re;
         } catch (Exception e) {
@@ -1137,7 +1145,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
 
     // Add audit logger to calculate top users
-    if (topConf.isEnabled) {
+    if (topConf.isEnabled && !topAuditLoggerAdded) {
       topMetrics = new TopMetrics(conf, topConf.nntopReportingPeriodsMs);
       if (DefaultMetricsSystem.instance().getSource(
           TOPMETRICS_METRICS_SOURCE_NAME) == null) {
