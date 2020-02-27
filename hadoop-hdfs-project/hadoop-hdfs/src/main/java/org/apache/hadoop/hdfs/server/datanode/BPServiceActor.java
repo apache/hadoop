@@ -828,7 +828,7 @@ class BPServiceActor implements Runnable {
     fullBlockReportLeaseId = 0;
 
     // random short delay - helps scatter the BR from all DNs
-    scheduler.scheduleBlockReport(dnConf.initialBlockReportDelayMs);
+    scheduler.scheduleBlockReport(dnConf.initialBlockReportDelayMs, true);
   }
 
 
@@ -1217,14 +1217,19 @@ class BPServiceActor implements Runnable {
 
     void forceFullBlockReportNow() {
       forceFullBlockReport.set(true);
-      resetBlockReportTime = true;
     }
 
     /**
      * This methods  arranges for the data node to send the block report at
      * the next heartbeat.
+     * @param delay specifies the maximum amount of random delay(in
+     *              milliseconds) in sending the block report. A value of 0
+     *              or less makes the BR to go right away without any delay.
+     * @param isRegistration if true, resets the future BRs for randomness,
+     *                       post first BR to avoid regular BRs from all DN's
+     *                       coming at one time.
      */
-    long scheduleBlockReport(long delay) {
+    long scheduleBlockReport(long delay, boolean isRegistration) {
       if (delay > 0) { // send BR after random delay
         // Numerical overflow is possible here and is okay.
         nextBlockReportTime =
@@ -1232,7 +1237,9 @@ class BPServiceActor implements Runnable {
       } else { // send at next heartbeat
         nextBlockReportTime = monotonicNow();
       }
-      resetBlockReportTime = true; // reset future BRs for randomness
+      resetBlockReportTime = isRegistration; // reset future BRs for
+      // randomness, post first block report to avoid regular BRs from all
+      // DN's coming at one time.
       return nextBlockReportTime;
     }
 
@@ -1257,9 +1264,18 @@ class BPServiceActor implements Runnable {
          *   2) unexpected like 21:35:43, next report should be at 2:20:14
          *      on the next day.
          */
-        nextBlockReportTime +=
-              (((monotonicNow() - nextBlockReportTime + blockReportIntervalMs) /
-                  blockReportIntervalMs)) * blockReportIntervalMs;
+        long factor =
+            (monotonicNow() - nextBlockReportTime + blockReportIntervalMs)
+                / blockReportIntervalMs;
+        if (factor != 0) {
+          nextBlockReportTime += factor * blockReportIntervalMs;
+        } else {
+          // If the difference between the present time and the scheduled
+          // time is very less, the factor can be 0, so in that case, we can
+          // ignore that negligible time, spent while sending the BRss and
+          // schedule the next BR after the blockReportInterval.
+          nextBlockReportTime += blockReportIntervalMs;
+        }
       }
     }
 
