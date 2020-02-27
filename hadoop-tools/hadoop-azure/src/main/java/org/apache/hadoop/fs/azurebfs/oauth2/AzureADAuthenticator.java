@@ -394,6 +394,7 @@ public final class AzureADAuthenticator {
     AzureADToken token = new AzureADToken();
     try {
       int expiryPeriod = 0;
+      long expiresOn = -1;
 
       JsonFactory jf = new JsonFactory();
       JsonParser jp = jf.createJsonParser(httpResponseStream);
@@ -411,14 +412,21 @@ public final class AzureADAuthenticator {
           if (fieldName.equals("expires_in")) {
             expiryPeriod = Integer.parseInt(fieldValue);
           }
+          if (fieldName.equals("expires_on")) {
+            expiresOn = Long.parseLong(fieldValue);
+          }
         }
         jp.nextToken();
       }
       jp.close();
-      long expiry = System.currentTimeMillis();
-      expiry = expiry + expiryPeriod * 1000L; // convert expiryPeriod to milliseconds and add
-      token.setExpiry(new Date(expiry));
-      LOG.debug("AADToken: fetched token with expiry " + token.getExpiry().toString());
+      if(expiresOn > -1) {
+        token.setExpiry(new Date(expiresOn));
+      } else {
+        long expiry = System.currentTimeMillis();
+        expiry = expiry + expiryPeriod * 1000L; // convert expiryPeriod to milliseconds and add
+        token.setExpiry(new Date(expiry));
+      }
+      LOG.debug("AADToken: fetched token with expiry {}, expiresOn passed: {}", token.getExpiry().toString(), expiresOn);
     } catch (Exception ex) {
       LOG.debug("AADToken: got exception when parsing json token " + ex.toString());
       throw ex;

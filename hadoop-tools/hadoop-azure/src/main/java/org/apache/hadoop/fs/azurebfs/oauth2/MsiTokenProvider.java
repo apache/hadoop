@@ -36,6 +36,10 @@ public class MsiTokenProvider extends AccessTokenProvider {
 
   private final String clientId;
 
+  private long tokenFetchTime = -1;
+
+  private static final long ONE_HOUR = 3600 * 1000;
+
   private static final Logger LOG = LoggerFactory.getLogger(AccessTokenProvider.class);
 
   public MsiTokenProvider(final String authEndpoint, final String tenantGuid,
@@ -51,6 +55,28 @@ public class MsiTokenProvider extends AccessTokenProvider {
     LOG.debug("AADToken: refreshing token from MSI");
     AzureADToken token = AzureADAuthenticator
         .getTokenFromMsi(authEndpoint, tenantGuid, clientId, authority, false);
+    tokenFetchTime = System.currentTimeMillis();
     return token;
+  }
+
+  /**
+   * Checks if the token is about to expire as per base expiry logic. Otherwise try to expire every 1 hour
+   *
+   *
+   * @return true if the token is expiring in next 5 minutes
+   */
+  @Override
+  protected boolean isTokenAboutToExpire() {
+    if(tokenFetchTime == -1
+      || super.isTokenAboutToExpire()){
+      return true;
+    }
+    boolean expiring = false;
+    long offset = ONE_HOUR;
+    if ((tokenFetchTime + offset) > System.currentTimeMillis()) expiring = true;
+    if (expiring) {
+      LOG.debug("MSIToken: token renewing : " + offset + " milliseconds window");
+    }
+    return expiring;
   }
 }
