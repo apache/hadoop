@@ -626,7 +626,7 @@ points for third-parties to integrate their authentication and authorization
 services into the ABFS client.
 
 * `CustomDelegationTokenManager` : adds ability to issue Hadoop Delegation Tokens.
-* `AbfsAuthorizer` permits client-side authorization of file operations.
+* `SASTokenProvider`: allows for custom provision of Azure Storage Shared Access Signature (SAS) tokens.
 * `CustomTokenProviderAdaptee`: allows for custom provision of
 Azure OAuth tokens.
 * `KeyProvider`.
