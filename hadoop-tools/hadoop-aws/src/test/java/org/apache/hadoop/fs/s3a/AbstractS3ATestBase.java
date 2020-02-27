@@ -33,7 +33,6 @@ import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
 /**
  * An extension of the contract test base set up for S3A tests.
@@ -72,10 +71,7 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
    */
   @Override
   protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    // patch in S3Guard options
-    maybeEnableS3Guard(conf);
-    return conf;
+    return S3ATestUtils.prepareTestConfiguration(super.createConfiguration());
   }
 
   protected Configuration getConfiguration() {
