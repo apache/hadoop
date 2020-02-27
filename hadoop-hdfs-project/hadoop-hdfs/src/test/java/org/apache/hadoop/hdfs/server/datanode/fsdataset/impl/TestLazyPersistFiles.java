@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
-import com.google.common.collect.Iterators;
-import com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -33,7 +31,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.fs.StorageType.RAM_DISK;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
@@ -98,28 +95,20 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
     makeTestFile(path1, BLOCK_SIZE, true);
     ensureFileReplicasOnStorageType(path1, RAM_DISK);
 
-    // Stop the DataNode and sleep for the time it takes the NN to
-    // detect the DN as being dead.
-    cluster.shutdownDataNodes();
-    Thread.sleep(30000L);
+    // Stop the DataNode.
+    shutdownDataNodes();
     assertThat(cluster.getNamesystem().getNumDeadDataNodes(), is(1));
 
-    // Next, wait for the replication monitor to mark the file as corrupt
-    Thread.sleep(2 * DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT * 1000);
-
+    // Next, wait for the redundancy monitor to mark the file as corrupt.
+    waitForRedundancyMonitorCycle();
     // Wait for the LazyPersistFileScrubber to run
-    Thread.sleep(2 * LAZY_WRITE_FILE_SCRUBBER_INTERVAL_SEC * 1000);
-
+    waitForScrubberCycle();
     // Ensure that path1 does not exist anymore, whereas path2 does.
-    assert(!fs.exists(path1));
+    waitForFile(path1, false);
 
     // We should have zero blocks that needs replication i.e. the one
-    // belonging to path2.
-    assertThat(cluster.getNameNode()
-                      .getNamesystem()
-                      .getBlockManager()
-                      .getUnderReplicatedBlocksCount(),
-               is(0L));
+    // belonging to path2. This needs a wait.
+    waitForRedundancyCount(0L);
   }
 
   @Test
@@ -134,18 +123,14 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
 
     // Stop the DataNode and sleep for the time it takes the NN to
     // detect the DN as being dead.
-    cluster.shutdownDataNodes();
-    Thread.sleep(30000L);
+    shutdownDataNodes();
 
-    // Next, wait for the replication monitor to mark the file as corrupt
-    Thread.sleep(2 * DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT * 1000);
-
+    // wait for the redundancy monitor to mark the file as corrupt.
+    waitForCorruptBlock(1L);
     // Wait for the LazyPersistFileScrubber to run
-    Thread.sleep(2 * LAZY_WRITE_FILE_SCRUBBER_INTERVAL_SEC * 1000);
-
+    waitForScrubberCycle();
     // Ensure that path1 exist.
-    Assert.assertTrue(fs.exists(path1));
-
+    waitForFile(path1, true);
   }
 
  /**
@@ -160,21 +145,14 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
     makeTestFile(path1, BLOCK_SIZE, true);
     ensureFileReplicasOnStorageType(path1, RAM_DISK);
 
-    cluster.shutdownDataNodes();
+    shutdownDataNodes();
 
     cluster.restartNameNodes();
 
-    // wait for the replication monitor to mark the file as corrupt
-    Thread.sleep(2 * DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT * 1000);
-
-    Long corruptBlkCount = (long) Iterators.size(cluster.getNameNode()
-        .getNamesystem().getBlockManager().getCorruptReplicaBlockIterator());
-
-    // Check block detected as corrupted
-    assertThat(corruptBlkCount, is(1L));
-
+    // wait for the redundancy monitor to mark the file as corrupt.
+    waitForCorruptBlock(1L);
     // Ensure path1 exist.
-    Assert.assertTrue(fs.exists(path1));
+    waitForFile(path1, true);
   }
 
   /**
@@ -216,10 +194,19 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
       threads[i].start();
     }
 
-    Thread.sleep(500);
-
     for (int i = 0; i < NUM_TASKS; i++) {
-      Uninterruptibles.joinUninterruptibly(threads[i]);
+      boolean interrupted = false;
+      while (true) {
+        try {
+          threads[i].join();
+          break;
+        } catch (InterruptedException e) {
+          interrupted = true;
+        }
+      }
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
     }
     Assert.assertFalse(testFailed.get());
   }
@@ -233,7 +220,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
    */
   @Test
   public void testConcurrentWrites()
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
     getClusterBuilder().setRamDiskReplicaCapacity(9).build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     final int SEED = 0xFADED;
@@ -282,11 +269,11 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
       this.seed = seed;
       this.latch = latch;
       this.bFail = bFail;
-      System.out.println("Creating Writer: " + id);
+      LOG.info("Creating Writer: " + id);
     }
 
     public void run() {
-      System.out.println("Writer " + id + " starting... ");
+      LOG.info("Writer " + id + " starting... ");
       int i = 0;
       try {
         for (i = 0; i < paths.length; i++) {

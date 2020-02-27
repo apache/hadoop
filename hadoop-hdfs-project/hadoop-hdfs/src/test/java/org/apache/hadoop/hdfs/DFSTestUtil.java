@@ -1909,7 +1909,7 @@ public class DFSTestUtil {
           throw new UnhandledException("Test failed due to unexpected exception", e);
         }
       }
-    }, 1000, 60000);
+    }, 50, 60000);
   }
 
   public static StorageReceivedDeletedBlocks[] makeReportForReceivedBlock(

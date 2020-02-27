@@ -46,9 +46,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
 import javax.management.ObjectName;
-
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -233,6 +231,8 @@ public class BlockManager implements BlockStatsMXBean {
 
   /** Replication thread. */
   final Daemon replicationThread = new Daemon(new ReplicationMonitor());
+  /** Timestamp for the last cycle of the redundancy thread. */
+  private final AtomicLong lastReplicationCycleTS = new AtomicLong(-1);
   
   /** Block report thread for handling async reports. */
   private final BlockReportProcessingThread blockReportThread =
@@ -3986,11 +3986,15 @@ public class BlockManager implements BlockStatsMXBean {
     return neededReplications.size();
   }
 
+  @VisibleForTesting
+  public long getLastReplicationCycleTS() {
+    return lastReplicationCycleTS.get();
+  }
+
   /**
    * Periodically calls computeReplicationWork().
    */
   private class ReplicationMonitor implements Runnable {
-
     @Override
     public void run() {
       while (namesystem.isRunning()) {
@@ -4000,6 +4004,7 @@ public class BlockManager implements BlockStatsMXBean {
             computeDatanodeWork();
             processPendingReplications();
             rescanPostponedMisreplicatedBlocks();
+            lastReplicationCycleTS.set(Time.monotonicNow());
           }
           Thread.sleep(replicationRecheckInterval);
         } catch (Throwable t) {
