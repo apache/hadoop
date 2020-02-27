@@ -17,12 +17,19 @@
  */
 package org.apache.hadoop.fs.azurebfs;
 
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.Arrays;
 
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_TIMEOUT;
 
@@ -31,6 +38,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST
  * This class does not attempt to bind to Azure.
  */
 public class AbstractAbfsTestWithTimeout extends Assert {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractAbfsTestWithTimeout.class);
+
   /**
    * The name of the current method.
    */
@@ -67,4 +77,42 @@ public class AbstractAbfsTestWithTimeout extends Assert {
   protected int getTestTimeoutMillis() {
     return TEST_TIMEOUT;
   }
+
+  /**
+   * Describe a test in the logs.
+   *
+   * @param text text to print
+   * @param args arguments to format in the printing
+   */
+  protected void describe(String text, Object... args) {
+    LOG.info("\n\n{}: {}\n",
+        methodName.getMethodName(),
+        String.format(text, args));
+  }
+
+  /**
+   * Validate Contents written on a file in Abfs
+   *
+   * @param fs AzureBlobFileSystem
+   * @param path Path of the file
+   * @param originalByteArray original byte array
+   * @return
+   * @throws IOException
+   */
+  protected boolean validateContent(AzureBlobFileSystem fs, Path path,
+      byte[] originalByteArray)
+      throws IOException {
+    FSDataInputStream in = fs.open(path);
+    byte[] contentByteArray = new byte[originalByteArray.length];
+    int seekPos = 0;
+    while (in.read() != -1) {
+      in.seek(seekPos);
+      contentByteArray[seekPos] = (byte) (in.read());
+      seekPos++;
+    }
+
+    return Arrays.equals(contentByteArray, originalByteArray);
+
+  }
+
 }

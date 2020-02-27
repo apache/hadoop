@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
+import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.io.ElasticByteBufferPool;
@@ -50,6 +51,7 @@ import static org.apache.hadoop.io.IOUtils.wrapException;
  */
 public class AbfsOutputStream extends OutputStream implements Syncable, StreamCapabilities {
   private final AbfsClient client;
+  private final Statistics statistics;
   private final String path;
   private long position;
   private boolean closed;
@@ -82,6 +84,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   public AbfsOutputStream(
       final AbfsClient client,
+      final Statistics statistics,
       final String path,
       final long position,
       final int bufferSize,
@@ -90,6 +93,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       final boolean supportAppendWithFlush,
       final boolean appendBlob) {
     this.client = client;
+    this.statistics = statistics;
     this.path = path;
     this.position = position;
     this.closed = false;
@@ -187,6 +191,14 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
       writableBytes = bufferSize - bufferIndex;
     }
+    incrementWriteOps();
+  }
+
+  /**
+   * Increment Write Operations.
+   */
+  public void incrementWriteOps() {
+    statistics.incrementWriteOps(1);
   }
 
   /**

@@ -143,7 +143,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
 
     // TEST WRITE FILE
     try {
-      abfsStore.openFileForWrite(EXISTED_FILE_PATH, true);
+      abfsStore.openFileForWrite(EXISTED_FILE_PATH, fs.getFsStatistics(),true);
     } catch (AbfsRestOperationException e) {
       assertEquals(AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH, e.getErrorCode());
     }
