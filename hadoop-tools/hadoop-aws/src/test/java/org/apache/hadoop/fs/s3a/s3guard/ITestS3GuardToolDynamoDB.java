@@ -365,6 +365,18 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
     assertEquals(ERROR, result);
   }
 
+  /**
+   * Test that the fix flag is accepted by the fsck.
+   *
+   * Note that we don't have an assert at the end of this test because
+   * there maybe some errors found during the check and the returned value
+   * will be ERROR and not SUCCESS. So if we assert on SUCCESS, then the test
+   * could (likely) to be flaky.
+   * If the FIX_FLAG parameter is not accepted here an exception will be thrown
+   * so the test will break.
+   *
+   * @throws Exception
+   */
   @Test
   public void testCLIFsckDDbFixAndInternalSucceed() throws Exception {
     describe("This test serves the purpose to run fsck with the correct " +

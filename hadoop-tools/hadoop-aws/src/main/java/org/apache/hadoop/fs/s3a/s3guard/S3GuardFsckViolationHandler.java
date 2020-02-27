@@ -102,15 +102,19 @@ public class S3GuardFsckViolationHandler {
             .getDeclaredConstructor(S3GuardFsck.ComparePair.class)
             .newInstance(comparePair);
 
-        if (handleMode == HandleMode.LOG) {
-          final String errorStr = handler.getError();
-          sB.append(errorStr);
+        switch (handleMode) {
+          case FIX:
+            final String errorStr = handler.getError();
+            sB.append(errorStr);
+            break;
+          case LOG:
+            final String fixStr = handler.fixViolation(rawFs, metadataStore);
+            sB.append(fixStr);
+            break;
+          default:
+            throw new UnsupportedOperationException("Unknown handleMode: " + handleMode);
         }
 
-        if (handleMode == HandleMode.FIX) {
-          final String fixStr = handler.fixViolation(rawFs, metadataStore);
-          sB.append(fixStr);
-        }
       } catch (NoSuchMethodException e) {
         LOG.error("Can not find declared constructor for handler: {}",
             violation.getHandler());
