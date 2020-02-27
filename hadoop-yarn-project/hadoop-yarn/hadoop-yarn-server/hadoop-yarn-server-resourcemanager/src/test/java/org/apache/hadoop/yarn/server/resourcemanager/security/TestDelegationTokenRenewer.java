@@ -220,6 +220,7 @@ public class TestDelegationTokenRenewer {
     UserGroupInformation.setConfiguration(conf);
     eventQueue = new LinkedBlockingQueue<Event>();
     dispatcher = new AsyncDispatcher(eventQueue);
+    dispatcher.init(conf);
     Renewer.reset();
     delegationTokenRenewer = createNewDelegationTokenRenewer(conf, counter);
     RMContext mockContext =  mock(RMContext.class);
@@ -241,6 +242,11 @@ public class TestDelegationTokenRenewer {
   
   @After
   public void tearDown() {
+    try {
+      dispatcher.close();
+    } catch (IOException e) {
+      LOG.debug("Unable to close the dispatcher. " + e);
+    }
     delegationTokenRenewer.stop();
   }
   
@@ -1711,10 +1717,10 @@ public class TestDelegationTokenRenewer {
         "kerberos");
     yarnConf.set(YarnConfiguration.RM_STORE,
         MemoryRMStateStore.class.getName());
-    yarnConf.setTimeDuration(YarnConfiguration.RM_DT_RENEWER_THREAD_TIMEOUT, 5,
+    yarnConf.setTimeDuration(YarnConfiguration.RM_DT_RENEWER_THREAD_TIMEOUT, 3,
         TimeUnit.SECONDS);
     yarnConf.setTimeDuration(
-        YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_INTERVAL, 5,
+        YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_INTERVAL, 3,
         TimeUnit.SECONDS);
     yarnConf.setInt(YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS,
         3);
@@ -1786,11 +1792,11 @@ public class TestDelegationTokenRenewer {
           throws IOException {
         try {
           if (renewDelay.get()) {
-            // Delay for 4 times than the configured timeout
+            // Delay for 2 times than the configured timeout
             Thread.sleep(config.getTimeDuration(
                 YarnConfiguration.RM_DT_RENEWER_THREAD_TIMEOUT,
                 YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_TIMEOUT,
-                TimeUnit.MILLISECONDS) * 4);
+                TimeUnit.MILLISECONDS) * 2);
           }
           super.renewToken(dttr);
         } catch (InterruptedException e) {
