@@ -18,7 +18,7 @@
 # Dockerfile for installing the necessary dependencies for building Hadoop.
 # See BUILDING.txt.
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 WORKDIR /root
 
@@ -44,9 +44,11 @@ ENV DEBCONF_TERSE true
 RUN apt-get -q update \
     && apt-get -q install -y --no-install-recommends \
         apt-utils \
+        bats \
         build-essential \
         bzip2 \
         clang \
+        cmake \
         curl \
         doxygen \
         fuse \
@@ -75,6 +77,7 @@ RUN apt-get -q update \
         python-setuptools \
         python-wheel \
         rsync \
+        shellcheck \
         software-properties-common \
         snappy \
         sudo \
@@ -93,20 +96,8 @@ RUN apt-get -q update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-
 ######
-# Install cmake 3.1.0 (3.5.1 ships with Xenial)
-######
-RUN mkdir -p /opt/cmake \
-    && curl -L -s -S \
-      https://cmake.org/files/v3.1/cmake-3.1.0-Linux-x86_64.tar.gz \
-      -o /opt/cmake.tar.gz \
-    && tar xzf /opt/cmake.tar.gz --strip-components 1 -C /opt/cmake
-ENV CMAKE_HOME /opt/cmake
-ENV PATH "${PATH}:/opt/cmake/bin"
-
-######
-# Install Google Protobuf 3.7.1 (2.6.0 ships with Xenial)
+# Install Google Protobuf 3.7.1 (3.0.0 ships with Bionic)
 ######
 # hadolint ignore=DL3003
 RUN mkdir -p /opt/protobuf-src \
@@ -123,7 +114,7 @@ ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
 ######
-# Install Apache Maven 3.3.9 (3.3.9 ships with Xenial)
+# Install Apache Maven 3.6.0 (3.6.0 ships with Bionic)
 ######
 # hadolint ignore=DL3008
 RUN apt-get -q update \
@@ -133,7 +124,7 @@ RUN apt-get -q update \
 ENV MAVEN_HOME /usr
 
 ######
-# Install findbugs 3.0.1 (3.0.1 ships with Xenial)
+# Install findbugs 3.1.0 (3.1.0 ships with Bionic)
 # Ant is needed for findbugs
 ######
 # hadolint ignore=DL3008
@@ -142,25 +133,6 @@ RUN apt-get -q update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 ENV FINDBUGS_HOME /usr
-
-####
-# Install shellcheck (0.4.6, the latest as of 2017-09-26)
-####
-# hadolint ignore=DL3008
-RUN add-apt-repository -y ppa:hvr/ghc \
-    && apt-get -q update \
-    && apt-get -q install -y --no-install-recommends shellcheck ghc-8.0.2 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-####
-# Install bats (0.4.0, the latest as of 2017-09-26, ships with Xenial)
-####
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends bats \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
 
 ####
 # Install pylint at fixed version (2.0.0 removed python2 support)
