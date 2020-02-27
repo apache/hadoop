@@ -2445,14 +2445,16 @@ public class BlockManager implements BlockStatsMXBean {
       if (priority != LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY
           && (!node.isDecommissionInProgress() && !node.isEnteringMaintenance())
           && node.getNumberOfBlocksToBeReplicated() >= maxReplicationStreams) {
-        if (isStriped && state == StoredReplicaState.LIVE) {
+        if (isStriped && (state == StoredReplicaState.LIVE
+            || state == StoredReplicaState.DECOMMISSIONING)) {
           liveBusyBlockIndices.add(blockIndex);
         }
         continue; // already reached replication limit
       }
 
       if (node.getNumberOfBlocksToBeReplicated() >= replicationStreamsHardLimit) {
-        if (isStriped && state == StoredReplicaState.LIVE) {
+        if (isStriped && (state == StoredReplicaState.LIVE
+            || state == StoredReplicaState.DECOMMISSIONING)) {
           liveBusyBlockIndices.add(blockIndex);
         }
         continue;
