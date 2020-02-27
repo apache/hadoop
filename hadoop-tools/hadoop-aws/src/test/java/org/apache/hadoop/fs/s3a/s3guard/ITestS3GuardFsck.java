@@ -610,7 +610,14 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
         .contains(violation);
   }
 
-  private void checkNoViolationInPairs(Path file2,
+  /**
+   * Check that there is no violation in the pair provided.
+   *
+   * @param file the path to filter to in the comparePairs list.
+   * @param comparePairs the list to validate.
+   * @param violation the violation that should not be in the list.
+   */
+  private void checkNoViolationInPairs(Path file,
       List<S3GuardFsck.ComparePair> comparePairs,
       S3GuardFsck.Violation violation) {
 
@@ -619,11 +626,11 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       return;
     }
 
-    final S3GuardFsck.ComparePair file2Pair = comparePairs.stream()
-        .filter(p -> p.getPath().equals(file2))
+    final S3GuardFsck.ComparePair comparePair = comparePairs.stream()
+        .filter(p -> p.getPath().equals(file))
         .findFirst().get();
-    assertNotNull("The pair should not be null.", file2Pair);
-    Assertions.assertThat(file2Pair.getViolations())
+    assertNotNull("The pair should not be null.", comparePair);
+    Assertions.assertThat(comparePair.getViolations())
         .describedAs("Violations in the pair")
         .doesNotContain(violation);
   }
