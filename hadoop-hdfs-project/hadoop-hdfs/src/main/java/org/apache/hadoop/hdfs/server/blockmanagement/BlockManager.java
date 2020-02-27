@@ -49,7 +49,6 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import java.util.concurrent.atomic.AtomicLong;
 import javax.management.ObjectName;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -325,12 +324,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   /** Redundancy thread. */
   private final Daemon redundancyThread = new Daemon(new RedundancyMonitor());
-  /**
-   * Timestamp marking the end time of {@link #redundancyThread}'s full cycle.
-   * This value can be checked by the Junit tests to verify that the
-   * {@link #redundancyThread} has run at least one full iteration.
-   */
-  private final AtomicLong lastRedundancyCycleTS = new AtomicLong(-1);
+
   /** StorageInfoDefragmenter thread. */
   private final Daemon storageInfoDefragmenterThread =
       new Daemon(new StorageInfoDefragmenter());
@@ -4801,17 +4795,6 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   /**
-   * Used as ad hoc to check the time stamp of the last full cycle of
-   * {@link #redundancyThread}. This is used by the Junit tests to block until
-   * {@link #lastRedundancyCycleTS} is updated.
-   * @return the current {@link #lastRedundancyCycleTS}.
-   */
-  @VisibleForTesting
-  public long getLastRedundancyMonitorTS() {
-    return lastRedundancyCycleTS.get();
-  }
-
-  /**
    * Periodically calls computeBlockRecoveryWork().
    */
   private class RedundancyMonitor implements Runnable {
@@ -4825,7 +4808,6 @@ public class BlockManager implements BlockStatsMXBean {
             computeDatanodeWork();
             processPendingReconstructions();
             rescanPostponedMisreplicatedBlocks();
-            lastRedundancyCycleTS.set(Time.monotonicNow());
           }
           TimeUnit.MILLISECONDS.sleep(redundancyRecheckIntervalMs);
         } catch (Throwable t) {
