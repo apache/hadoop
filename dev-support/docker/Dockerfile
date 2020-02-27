@@ -64,6 +64,7 @@ RUN apt-get -q update \
         libsasl2-dev \
         libsnappy-dev \
         libssl-dev \
+        libsnappy-dev \
         libtool \
         libzstd1-dev \
         locales \
@@ -79,7 +80,6 @@ RUN apt-get -q update \
         rsync \
         shellcheck \
         software-properties-common \
-        snappy \
         sudo \
         valgrind \
         zlib1g-dev \
