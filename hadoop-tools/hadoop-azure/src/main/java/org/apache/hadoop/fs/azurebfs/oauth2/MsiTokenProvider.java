@@ -73,7 +73,7 @@ public class MsiTokenProvider extends AccessTokenProvider {
     }
     boolean expiring = false;
     long offset = ONE_HOUR;
-    if ((tokenFetchTime + offset) > System.currentTimeMillis()) expiring = true;
+    if ((tokenFetchTime + offset) < System.currentTimeMillis()) expiring = true;
     if (expiring) {
       LOG.debug("MSIToken: token renewing : " + offset + " milliseconds window");
     }
