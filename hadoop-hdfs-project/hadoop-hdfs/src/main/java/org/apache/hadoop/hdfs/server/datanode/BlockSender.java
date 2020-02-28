@@ -664,18 +664,21 @@ class BlockSender implements java.io.Closeable {
          * It was done here because the NIO throws an IOException for EPIPE.
          */
         String ioem = e.getMessage();
-        /*
-         * If we got an EIO when reading files or transferTo the client socket,
-         * it's very likely caused by bad disk track or other file corruptions.
-         */
-        if (ioem.startsWith(EIO_ERROR)) {
-          throw new DiskFileCorruptException("A disk IO error occurred", e);
-        }
-        if (!ioem.startsWith("Broken pipe") && !ioem.startsWith("Connection reset")) {
-          LOG.error("BlockSender.sendChunks() exception: ", e);
-          datanode.getBlockScanner().markSuspectBlock(
-              ris.getVolumeRef().getVolume().getStorageID(),
-              block);
+        if (ioem != null) {
+          /*
+           * If we got an EIO when reading files or transferTo the client
+           * socket, it's very likely caused by bad disk track or other file
+           * corruptions.
+           */
+          if (ioem.startsWith(EIO_ERROR)) {
+            throw new DiskFileCorruptException("A disk IO error occurred", e);
+          }
+          if (!ioem.startsWith("Broken pipe")
+              && !ioem.startsWith("Connection reset")) {
+            LOG.error("BlockSender.sendChunks() exception: ", e);
+            datanode.getBlockScanner().markSuspectBlock(
+                ris.getVolumeRef().getVolume().getStorageID(), block);
+          }
         }
       }
       throw ioeToSocketException(e);
