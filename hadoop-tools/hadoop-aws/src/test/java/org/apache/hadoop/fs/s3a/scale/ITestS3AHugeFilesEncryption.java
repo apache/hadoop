@@ -65,7 +65,7 @@ public class ITestS3AHugeFilesEncryption extends AbstractSTestS3AHugeFiles {
     Configuration c = new Configuration();
     return c.get(SERVER_SIDE_ENCRYPTION_KEY) != null;
   }
-  
+
   @Override
   protected void assertEncrypted(Path hugeFile) throws IOException {
     Configuration c = new Configuration();

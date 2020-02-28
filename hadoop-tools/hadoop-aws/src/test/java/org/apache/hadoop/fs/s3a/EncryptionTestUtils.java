@@ -31,7 +31,7 @@ import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-public class EncryptionTestUtils {
+public final class EncryptionTestUtils {
 
   /** Private constructor */
   private EncryptionTestUtils() {
@@ -76,26 +76,26 @@ public class EncryptionTestUtils {
             md.getSSEAlgorithm(),
             md.getSSEAwsKmsKeyId());
     switch(algorithm) {
-      case SSE_C:
-        assertNull("Metadata algorithm should have been null in "
-                        + details,
-                md.getSSEAlgorithm());
-        assertEquals("Wrong SSE-C algorithm in "
-                        + details,
-                SSE_C_ALGORITHM, md.getSSECustomerAlgorithm());
-        String md5Key = convertKeyToMd5(fs);
-        assertEquals("getSSECustomerKeyMd5() wrong in " + details,
-                md5Key, md.getSSECustomerKeyMd5());
-        break;
-      case SSE_KMS:
-        assertEquals("Wrong algorithm in " + details,
-                AWS_KMS_SSE_ALGORITHM, md.getSSEAlgorithm());
-        assertEquals("Wrong KMS key in " + details,
-                kmsKeyArn,
-                md.getSSEAwsKmsKeyId());
-        break;
-      default:
-        assertEquals("AES256", md.getSSEAlgorithm());
+    case SSE_C:
+      assertNull("Metadata algorithm should have been null in "
+                      + details,
+              md.getSSEAlgorithm());
+      assertEquals("Wrong SSE-C algorithm in "
+                      + details,
+              SSE_C_ALGORITHM, md.getSSECustomerAlgorithm());
+      String md5Key = convertKeyToMd5(fs);
+      assertEquals("getSSECustomerKeyMd5() wrong in " + details,
+              md5Key, md.getSSECustomerKeyMd5());
+      break;
+    case SSE_KMS:
+      assertEquals("Wrong algorithm in " + details,
+              AWS_KMS_SSE_ALGORITHM, md.getSSEAlgorithm());
+      assertEquals("Wrong KMS key in " + details,
+              kmsKeyArn,
+              md.getSSEAwsKmsKeyId());
+      break;
+    default:
+      assertEquals("AES256", md.getSSEAlgorithm());
     }
   }
 

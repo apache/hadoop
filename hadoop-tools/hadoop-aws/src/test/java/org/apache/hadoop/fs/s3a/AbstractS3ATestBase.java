@@ -145,17 +145,4 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   protected String getTestTableName(String suffix) {
     return getTestDynamoTablePrefix(getConfiguration()) + suffix;
   }
-
-  /**
-   * Assert that an exception failed with a specific status code.
-   * @param e exception
-   * @param code expected status code
-   * @throws AWSServiceIOException rethrown if the status code does not match.
-   */
-  protected void assertStatusCode(AWSServiceIOException e, int code)
-      throws AWSServiceIOException {
-    if (e.getStatusCode() != code) {
-      throw e;
-    }
-  }
 }

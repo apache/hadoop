@@ -3464,8 +3464,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           copyObjectRequest.setNewObjectMetadata(dstom);
           Optional.ofNullable(srcom.getStorageClass())
               .ifPresent(copyObjectRequest::setStorageClass);
-
-
           Copy copy = transfers.copy(copyObjectRequest);
           copy.addProgressListener(progressListener);
           CopyOutcome copyOutcome = CopyOutcome.waitForCopy(copy);
@@ -3497,8 +3495,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param srcom source object meta.
    * @param copyObjectRequest copy object request body.
    */
-  private void setOptionalCopyObjectRequestParameters(ObjectMetadata srcom,
-                                                      CopyObjectRequest copyObjectRequest) {
+  private void setOptionalCopyObjectRequestParameters(
+          ObjectMetadata srcom,
+          CopyObjectRequest copyObjectRequest) {
     String sourceKMSId = srcom.getSSEAwsKmsKeyId();
     if (isNotEmpty(sourceKMSId)) {
       // source KMS ID is propagated
