@@ -420,7 +420,7 @@ public final class AzureADAuthenticator {
       }
       jp.close();
       if(expiresOnInSecs > -1) {
-        token.setExpiry(new Date(expiresOnInSecs));
+        token.setExpiry(new Date(expiresOnInSecs * 1000));
       } else {
         long expiry = System.currentTimeMillis();
         expiry = expiry + expiryPeriodInSecs * 1000L; // convert expiryPeriod to milliseconds and add
