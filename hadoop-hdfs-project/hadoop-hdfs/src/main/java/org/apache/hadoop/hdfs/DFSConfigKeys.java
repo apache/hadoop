@@ -156,6 +156,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_DATANODE_FIXED_VOLUME_SIZE_KEY =
       "dfs.datanode.fixed.volume.size";
   public static final boolean DFS_DATANODE_FIXED_VOLUME_SIZE_DEFAULT = false;
+  public static final String  DFS_DATANODE_REPLICA_CACHE_ROOT_DIR_KEY =
+      "dfs.datanode.replica.cache.root.dir";
+  public static final String DFS_DATANODE_REPLICA_CACHE_EXPIRY_TIME_KEY =
+      "dfs.datanode.replica.cache.expiry.time";
+  public static final long DFS_DATANODE_REPLICA_CACHE_EXPIRY_TIME_DEFAULT =
+      300000;
 
   // This setting is for testing/internal use only.
   public static final String  DFS_DATANODE_DUPLICATE_REPLICA_DELETION = "dfs.datanode.duplicate.replica.deletion";
