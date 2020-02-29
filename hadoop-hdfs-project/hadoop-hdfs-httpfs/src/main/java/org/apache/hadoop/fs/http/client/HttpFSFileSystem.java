@@ -263,7 +263,7 @@ public class HttpFSFileSystem extends FileSystem
     RENAMESNAPSHOT(HTTP_PUT), GETSNAPSHOTDIFF(HTTP_GET),
     GETSNAPSHOTTABLEDIRECTORYLIST(HTTP_GET), GETSERVERDEFAULTS(HTTP_GET),
     CHECKACCESS(HTTP_GET), SETECPOLICY(HTTP_PUT), GETECPOLICY(
-        HTTP_GET), UNSETECPOLICY(HTTP_POST);
+        HTTP_GET), UNSETECPOLICY(HTTP_POST), SATISFYSTORAGEPOLICY(HTTP_PUT);
 
     private String httpMethod;
 
@@ -1656,6 +1656,15 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.UNSETECPOLICY.toString());
     HttpURLConnection conn =
         getConnection(Operation.UNSETECPOLICY.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  @Override
+  public void satisfyStoragePolicy(final Path path) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.SATISFYSTORAGEPOLICY.toString());
+    HttpURLConnection conn = getConnection(
+        Operation.SATISFYSTORAGEPOLICY.getMethod(), params, path, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 }
