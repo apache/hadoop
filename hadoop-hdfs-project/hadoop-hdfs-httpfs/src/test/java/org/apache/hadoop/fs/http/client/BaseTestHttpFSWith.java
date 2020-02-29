@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.ipc.RemoteException;
@@ -1146,7 +1148,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT,
     ALLOW_SNAPSHOT, DISALLOW_SNAPSHOT, DISALLOW_SNAPSHOT_EXCEPTION,
     FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST,
-    GET_SERVERDEFAULTS, CHECKACCESS, SETECPOLICY
+    GET_SERVERDEFAULTS, CHECKACCESS, SETECPOLICY, SATISFYSTORAGEPOLICY
   }
 
   private void operation(Operation op) throws Exception {
@@ -1275,6 +1277,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case SETECPOLICY:
       testErasureCodingPolicy();
+      break;
+    case SATISFYSTORAGEPOLICY:
+      testStoragePolicySatisfier();
       break;
     }
 
@@ -1810,6 +1815,42 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       } else {
         Assert.fail(fs.getClass().getSimpleName() + " doesn't support access");
       }
+    }
+  }
+
+  public void testStoragePolicySatisfier() throws Exception {
+    final String dir = "/parent";
+    Path path1 = new Path(dir);
+    String file = "/parent/file";
+    Path filePath = new Path(file);
+    if (!this.isLocalFS()) {
+      FileSystem fs = this.getHttpFSFileSystem();
+      DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+          .get(path1.toUri(), this.getProxiedFSConf());
+      dfs.mkdirs(path1);
+      dfs.create(filePath).close();
+      dfs.setStoragePolicy(filePath, HdfsConstants.COLD_STORAGE_POLICY_NAME);
+      BlockStoragePolicy storagePolicy =
+          (BlockStoragePolicy) dfs.getStoragePolicy(filePath);
+      assertEquals(HdfsConstants.COLD_STORAGE_POLICY_NAME,
+          storagePolicy.getName());
+      Map<String, byte[]> xAttrs;
+      if (fs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+        httpFS.satisfyStoragePolicy(path1);
+        xAttrs = httpFS.getXAttrs(path1);
+        assertTrue(xAttrs
+            .containsKey(HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY));
+      } else if (fs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+        webHdfsFileSystem.satisfyStoragePolicy(path1);
+        xAttrs = webHdfsFileSystem.getXAttrs(path1);
+        assertTrue(xAttrs
+            .containsKey(HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY));
+      } else {
+        Assert.fail(fs.getClass().getSimpleName() + " doesn't support access");
+      }
+      dfs.delete(path1, true);
     }
   }
 }
