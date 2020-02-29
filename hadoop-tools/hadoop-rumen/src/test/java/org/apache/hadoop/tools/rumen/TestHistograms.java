@@ -19,6 +19,7 @@
 package org.apache.hadoop.tools.rumen;
 import java.io.IOException;
 
+import java.io.OutputStream;
 import java.util.List;
 
 import com.fasterxml.jackson.core.JsonEncoding;
@@ -142,8 +143,8 @@ public class TestHistograms {
         ObjectMapper mapper = new ObjectMapper();
         JsonFactory factory = mapper.getFactory();
         FSDataOutputStream ostream = lfs.create(goldFilePath, true);
-        JsonGenerator gen = factory.createGenerator(ostream,
-            JsonEncoding.UTF8);
+        JsonGenerator gen =
+            factory.createGenerator((OutputStream) ostream, JsonEncoding.UTF8);
         gen.useDefaultPrettyPrinter();
         
         gen.writeObject(newResult);
