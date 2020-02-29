@@ -293,7 +293,7 @@ public class ClientContext {
     if (deadNodeDetectorThr != null) {
       deadNodeDetectorThr.interrupt();
       try {
-        deadNodeDetectorThr.join(3000);
+        deadNodeDetectorThr.join();
       } catch (InterruptedException e) {
         LOG.warn("Encountered exception while waiting to join on dead " +
             "node detector thread.", e);
