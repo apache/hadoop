@@ -243,7 +243,7 @@ public class DeadNodeDetector implements Runnable {
 
   @Override
   public void run() {
-    while (true) {
+    while (!Thread.currentThread().isInterrupted()) {
       clearAndGetDetectedDeadNodes();
       LOG.debug("Current detector state {}, the detected nodes: {}.", state,
           deadNodes.values());
@@ -261,6 +261,8 @@ public class DeadNodeDetector implements Runnable {
         try {
           Thread.sleep(ERROR_SLEEP_MS);
         } catch (InterruptedException e) {
+          LOG.debug("Got interrupted while DeadNodeDetector is error.", e);
+          Thread.currentThread().interrupt();
         }
         return;
       default:
@@ -270,8 +272,9 @@ public class DeadNodeDetector implements Runnable {
   }
 
   @VisibleForTesting
-  static void disabledProbeThreadForTest() {
-    disabledProbeThreadForTest = true;
+  static void setDisabledProbeThreadForTest(
+      boolean disabledProbeThreadForTest) {
+    DeadNodeDetector.disabledProbeThreadForTest = disabledProbeThreadForTest;
   }
 
   /**
@@ -426,7 +429,8 @@ public class DeadNodeDetector implements Runnable {
     try {
       Thread.sleep(IDLE_SLEEP_MS);
     } catch (InterruptedException e) {
-
+      LOG.debug("Got interrupted while DeadNodeDetector is idle.", e);
+      Thread.currentThread().interrupt();
     }
 
     state = State.CHECK_DEAD;
@@ -548,7 +552,9 @@ public class DeadNodeDetector implements Runnable {
     try {
       Thread.sleep(time);
     } catch (InterruptedException e) {
+      LOG.debug("Got interrupted while probe is scheduling.", e);
       Thread.currentThread().interrupt();
+      return;
     }
   }
 
@@ -566,7 +572,7 @@ public class DeadNodeDetector implements Runnable {
 
     @Override
     public void run() {
-      while (true) {
+      while (!Thread.currentThread().isInterrupted()) {
         deadNodeDetector.scheduleProbe(type);
         if (type == ProbeType.CHECK_SUSPECT) {
           probeSleep(deadNodeDetector.suspectNodeDetectInterval);
