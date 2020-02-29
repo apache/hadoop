@@ -4517,6 +4517,23 @@
 </property>
 
 <property>
+  <name>dfs.datanode.replica.cache.root.dir</name>
+  <value></value>
+  <description>
+    Use this key to change root dir of replica cache.
+    The default root dir is currentDir.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.replica.cache.expiry.time</name>
+  <value>5m</value>
+  <description>
+    Living time of replica cached files in milliseconds.
+  </description>
+</property>
+
+<property>
   <name>dfs.ha.fencing.methods</name>
   <value></value>
   <description>
