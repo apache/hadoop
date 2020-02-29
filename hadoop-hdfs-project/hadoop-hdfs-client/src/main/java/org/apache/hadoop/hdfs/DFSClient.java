@@ -247,6 +247,20 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private final int smallBufferSize;
   private final long serverDefaultsValidityPeriod;
 
+  /**
+   * Disabled stop DeadNodeDetectorThread for the testing when MiniDFSCluster
+   * start.
+   */
+  private static volatile boolean disabledStopDeadNodeDetectorThreadForTest =
+      false;
+
+  @VisibleForTesting
+  public static void setDisabledStopDeadNodeDetectorThreadForTest(
+      boolean disabledStopDeadNodeDetectorThreadForTest) {
+    DFSClient.disabledStopDeadNodeDetectorThreadForTest =
+        disabledStopDeadNodeDetectorThreadForTest;
+  }
+
   public DfsClientConf getConf() {
     return dfsClientConf;
   }
@@ -637,7 +651,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       closeAllFilesBeingWritten(false);
       clientRunning = false;
       // close dead node detector thread
-      clientContext.stopDeadNodeDetectorThread();
+      if (!disabledStopDeadNodeDetectorThreadForTest) {
+        clientContext.stopDeadNodeDetectorThread();
+      }
+
       // close connections to the namenode
       closeConnectionToNamenode();
     }
