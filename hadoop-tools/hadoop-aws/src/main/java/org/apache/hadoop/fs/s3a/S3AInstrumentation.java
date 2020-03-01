@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AMultipartUploaderStatistics;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricStringBuilder;
@@ -42,6 +43,7 @@ import org.apache.hadoop.metrics2.lib.MutableMetric;
 import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
@@ -193,7 +195,13 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED,
       STORE_IO_THROTTLED,
       DELEGATION_TOKENS_ISSUED,
-      FILES_DELETE_REJECTED
+      FILES_DELETE_REJECTED,
+      MULTIPART_INSTANTIATED,
+      MULTIPART_UPLOAD_STARTED,
+      MULTIPART_PART_PUT,
+      MULTIPART_UPLOAD_COMPLETED,
+      MULTIPART_UPLOAD_ABORTED,
+      MULTIPART_ABORT_UPLOADS_UNDER_PATH_INVOKED
   };
 
   private static final Statistic[] GAUGES_TO_CREATE = {
@@ -1269,6 +1277,56 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     /** A token has been issued. */
     public void tokenIssued() {
       incrementCounter(DELEGATION_TOKENS_ISSUED, 1);
+    }
+  }
+
+  /**
+   * Request a new instance of the multipart upload statistics.
+   * @return a statistics counter
+   */
+  public S3AMultipartUploaderStatistics newMultipartUploaderStatistics() {
+    return new S3AMultipartUploaderStatisticsImpl();
+  }
+
+  private final class S3AMultipartUploaderStatisticsImpl implements
+      S3AMultipartUploaderStatistics {
+
+    @Override
+    public void instantiated() {
+      incrementCounter(MULTIPART_INSTANTIATED, 1);
+    }
+
+    @Override
+    public void uploadStarted() {
+      incrementCounter(MULTIPART_UPLOAD_STARTED, 1);
+    }
+
+    @Override
+    public void partPut() {
+      incrementCounter(MULTIPART_PART_PUT, 1);
+
+    }
+
+    @Override
+    public void uploadCompleted() {
+      incrementCounter(MULTIPART_UPLOAD_COMPLETED, 1);
+    }
+
+    @Override
+    public void uploadAborted() {
+      incrementCounter(MULTIPART_UPLOAD_ABORTED, 1);
+
+    }
+
+    @Override
+    public void abortUploadsUnderPathInvoked() {
+      incrementCounter(MULTIPART_ABORT_UPLOADS_UNDER_PATH_INVOKED, 1);
+
+    }
+
+    @Override
+    public void close() throws IOException {
+
     }
   }
 

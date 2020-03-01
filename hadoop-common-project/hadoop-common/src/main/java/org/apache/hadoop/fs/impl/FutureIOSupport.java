@@ -53,7 +53,7 @@ public final class FutureIOSupport {
    * @throws IOException if something went wrong
    * @throws RuntimeException any nested RTE thrown
    */
-  public static <T> T awaitFuture(final Future<T> future)
+  public static <T> T  awaitFuture(final Future<T> future)
       throws InterruptedIOException, IOException, RuntimeException {
     try {
       return future.get();

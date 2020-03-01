@@ -24,18 +24,20 @@ import java.util.EnumSet;
 
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.MultipartUploaderBuilder;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 
+/**
+ * Builder for {@link FileSystemMultipartUploader}.
+ */
 public class FileSystemMultipartUploaderBuilder extends
-    MultipartUploaderBuilder<FileSystemMultipartUploader, FileSystemMultipartUploaderBuilder> {
+    MultipartUploaderBuilderImpl<FileSystemMultipartUploader, FileSystemMultipartUploaderBuilder> {
 
   public FileSystemMultipartUploaderBuilder(
       @Nonnull final FileSystem fileSystem,
-      @Nonnull final Path p) {
-    super(fileSystem, p);
+      @Nonnull final Path path) {
+    super(fileSystem, path);
   }
 
   @Override
@@ -83,4 +85,6 @@ public class FileSystemMultipartUploaderBuilder extends
   protected long getBlockSize() {
     return super.getBlockSize();
   }
+
+
 }

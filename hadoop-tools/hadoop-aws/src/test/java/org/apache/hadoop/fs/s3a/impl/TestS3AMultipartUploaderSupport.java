@@ -23,7 +23,7 @@ import java.io.IOException;
 
 import org.junit.Test;
 
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.test.HadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.*;
@@ -37,30 +37,32 @@ public class TestS3AMultipartUploaderSupport extends HadoopTestBase {
 
   @Test
   public void testRoundTrip() throws Throwable {
-    Pair<Long, String> result = roundTrip("tag", 1);
+    Triple<Integer, Long, String>result = roundTrip(999, "tag", 1);
+    assertEquals(999, (int)result.getLeft());
     assertEquals("tag", result.getRight());
-    assertEquals(1, result.getLeft().longValue());
+    assertEquals(1, result.getMiddle().longValue());
   }
 
   @Test
   public void testRoundTrip2() throws Throwable {
     long len = 1L + Integer.MAX_VALUE;
-    Pair<Long, String> result = roundTrip("11223344",
-        len);
+    Triple<Integer, Long, String>result =
+        roundTrip(1, "11223344", len);
+    assertEquals(1, (int) result.getLeft());
     assertEquals("11223344", result.getRight());
-    assertEquals(len, result.getLeft().longValue());
+    assertEquals(len, result.getMiddle().longValue());
   }
 
   @Test
   public void testNoEtag() throws Throwable {
     intercept(IllegalArgumentException.class,
-        () -> buildPartHandlePayload("", 1));
+        () -> buildPartHandlePayload(0, "", 1));
   }
 
   @Test
   public void testNoLen() throws Throwable {
     intercept(IllegalArgumentException.class,
-        () -> buildPartHandlePayload("tag", -1));
+        () -> buildPartHandlePayload(0, "tag", -1));
   }
 
   @Test
@@ -71,14 +73,17 @@ public class TestS3AMultipartUploaderSupport extends HadoopTestBase {
 
   @Test
   public void testBadHeader() throws Throwable {
-    byte[] bytes = buildPartHandlePayload("tag", 1);
+    byte[] bytes = buildPartHandlePayload(0, "tag", 1);
     bytes[2]='f';
     intercept(IOException.class, "header",
         () -> parsePartHandlePayload(bytes));
   }
 
-  private Pair<Long, String> roundTrip(final String tag, final long len) throws IOException {
-    byte[] bytes = buildPartHandlePayload(tag, len);
+  private Triple<Integer, Long, String> roundTrip(
+      int partNumber,
+      String tag,
+      long len) throws IOException {
+    byte[] bytes = buildPartHandlePayload(partNumber, tag, len);
     return parsePartHandlePayload(bytes);
   }
 }

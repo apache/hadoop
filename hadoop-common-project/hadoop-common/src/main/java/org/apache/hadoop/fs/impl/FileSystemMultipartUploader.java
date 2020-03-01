@@ -22,13 +22,16 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,8 +83,10 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
 
   private final Options.ChecksumOpt checksumOpt;
 
-  public FileSystemMultipartUploader(final FileSystemMultipartUploaderBuilder builder,
+  public FileSystemMultipartUploader(
+      final FileSystemMultipartUploaderBuilder builder,
       FileSystem fs) {
+    super(builder.getPath());
     this.builder = builder;
     this.fs = fs;
     blockSize = builder.getBlockSize();
@@ -90,8 +95,9 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
   }
 
   @Override
-  public CompletableFuture<UploadHandle> initialize(Path filePath)
+  public CompletableFuture<UploadHandle> startUpload(Path filePath)
       throws IOException {
+    checkPath(filePath);
     return FutureIOSupport.eval(() -> {
       Path collectorPath = createCollectorPath(filePath);
       fs.mkdirs(collectorPath, FsPermission.getDirDefault());
@@ -103,10 +109,9 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
   }
 
   @Override
-  public CompletableFuture<PartHandle> putPart(Path filePath,
+  public CompletableFuture<PartHandle> putPart(UploadHandle uploadId,
+      int partNumber, Path filePath,
       InputStream inputStream,
-      int partNumber,
-      UploadHandle uploadId,
       long lengthInBytes)
       throws IOException {
     checkPutArguments(filePath, inputStream, partNumber, uploadId,
@@ -115,14 +120,12 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
         inputStream, partNumber, uploadId, lengthInBytes));
   }
 
-  public PartHandle innerPutPart(Path filePath,
+  private PartHandle innerPutPart(Path filePath,
       InputStream inputStream,
       int partNumber,
       UploadHandle uploadId,
       long lengthInBytes)
       throws IOException {
-    checkPutArguments(filePath, inputStream, partNumber, uploadId,
-        lengthInBytes);
     byte[] uploadIdByteArray = uploadId.toByteArray();
     checkUploadId(uploadIdByteArray);
     Path collectorPath = new Path(new String(uploadIdByteArray, 0,
@@ -169,17 +172,22 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
   }
 
   @Override
-  public CompletableFuture<PathHandle> complete(Path filePath,
-      Map<Integer, PartHandle> handleMap,
-      UploadHandle multipartUploadId) throws IOException {
-    return FutureIOSupport.eval(() -> innerComplete(filePath,
-        handleMap, multipartUploadId));
+  public CompletableFuture<PathHandle> complete(
+      UploadHandle uploadId,
+      Path filePath,
+      Map<Integer, PartHandle> handleMap) throws IOException {
+
+    checkPath(filePath);
+    return FutureIOSupport.eval(() ->
+        innerComplete(filePath, handleMap, uploadId));
   }
 
-  public PathHandle innerComplete(Path filePath,
+  public PathHandle innerComplete(
+      Path filePath,
       Map<Integer, PartHandle> handleMap,
       UploadHandle multipartUploadId) throws IOException {
 
+    checkPath(filePath);
 
     checkUploadId(multipartUploadId.toByteArray());
 
@@ -197,6 +205,13 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
         })
         .collect(Collectors.toList());
 
+    int count = partHandles.size();
+    // built up to identify duplicates -if the size of this set is
+    // below that of the number of parts, then there's a duplicate entry.
+    Set<Path> values = new HashSet<>(count);
+    values.addAll(partHandles);
+    Preconditions.checkArgument(values.size() == count,
+        "Duplicate PartHandles");
     byte[] uploadIdByteArray = multipartUploadId.toByteArray();
     Path collectorPath = new Path(new String(uploadIdByteArray, 0,
         uploadIdByteArray.length, Charsets.UTF_8));
@@ -219,8 +234,10 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
   }
 
   @Override
-  public CompletableFuture<Void> abort(Path filePath, UploadHandle uploadId)
+  public CompletableFuture<Void> abort(UploadHandle uploadId,
+      Path filePath)
       throws IOException {
+    checkPath(filePath);
     byte[] uploadIdByteArray = uploadId.toByteArray();
     checkUploadId(uploadIdByteArray);
     Path collectorPath = new Path(new String(uploadIdByteArray, 0,

@@ -21,29 +21,34 @@ package org.apache.hadoop.fs.s3a.impl;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 
-import org.apache.hadoop.fs.MultipartUploaderBuilder;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.impl.MultipartUploaderBuilderImpl;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.WriteOperationHelper;
+import org.apache.hadoop.fs.s3a.WriteOperations;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AMultipartUploaderStatistics;
 
 /**
- * Builder for S3A multiparts.
+ * Builder for S3A multipart uploaders.
  */
 public class S3AMultipartUploaderBuilder extends
-    MultipartUploaderBuilder<S3AMultipartUploader, S3AMultipartUploaderBuilder> {
+    MultipartUploaderBuilderImpl<S3AMultipartUploader, S3AMultipartUploaderBuilder> {
 
-  private final WriteOperationHelper writeHelper;
+  private final WriteOperations writeOperations;
 
   private final StoreContext context;
 
+  private final S3AMultipartUploaderStatistics statistics;
+
   public S3AMultipartUploaderBuilder(
       @Nonnull final S3AFileSystem fileSystem,
-      @Nonnull final WriteOperationHelper writeHelper,
+      @Nonnull final WriteOperations writeOperations,
       @Nonnull final StoreContext context,
-      @Nonnull final Path p) {
+      @Nonnull final Path p,
+      @Nonnull final S3AMultipartUploaderStatistics statistics) {
     super(fileSystem, p);
-    this.writeHelper = writeHelper;
+    this.writeOperations = writeOperations;
     this.context = context;
+    this.statistics = statistics;
   }
 
   @Override
@@ -54,7 +59,7 @@ public class S3AMultipartUploaderBuilder extends
   @Override
   public S3AMultipartUploader build()
       throws IllegalArgumentException, IOException {
-    return new S3AMultipartUploader(this, writeHelper, context);
+    return new S3AMultipartUploader(this, writeOperations, context, statistics);
   }
 
 }

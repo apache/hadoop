@@ -234,7 +234,26 @@ public enum Statistic {
       "Rate of S3 request throttling"),
 
   DELEGATION_TOKENS_ISSUED("delegation_tokens_issued",
-      "Number of delegation tokens issued");
+      "Number of delegation tokens issued"),
+
+  MULTIPART_INSTANTIATED(
+      "multipart_instantiated",
+      "Multipart Uploader Instantiated"),
+  MULTIPART_UPLOAD_STARTED(
+      "multipart_upload_started",
+      "Multipart Upload Started"),
+  MULTIPART_PART_PUT(
+      "multipart_part_put",
+      "Multipart Part Put"),
+  MULTIPART_UPLOAD_COMPLETED(
+      "multipart_upload_completed",
+      "Multipart Upload Completed"),
+  MULTIPART_UPLOAD_ABORTED(
+      "multipart_upload_aborted",
+      "Multipart Upload "),
+  MULTIPART_ABORT_UPLOADS_UNDER_PATH_INVOKED(
+      "multipart_abort_uploads_under_path_invoked",
+      "Multipart Upload ");
 
   private static final Map<String, Statistic> SYMBOL_MAP =
       new HashMap<>(Statistic.values().length);

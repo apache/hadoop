@@ -87,7 +87,7 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class WriteOperationHelper {
+public class WriteOperationHelper implements WriteOperations {
   private static final Logger LOG =
       LoggerFactory.getLogger(WriteOperationHelper.class);
 
@@ -254,8 +254,8 @@ public class WriteOperationHelper {
       Retried retrying,
       @Nullable BulkOperationState operationState) throws IOException {
     if (partETags.isEmpty()) {
-      throw new IOException(
-          "No upload parts in multipart upload to " + destKey);
+      throw new PathIOException(destKey,
+          "No upload parts in multipart upload");
     }
     CompleteMultipartUploadResult uploadResult =
         invoker.retry("Completing multipart upload", destKey,

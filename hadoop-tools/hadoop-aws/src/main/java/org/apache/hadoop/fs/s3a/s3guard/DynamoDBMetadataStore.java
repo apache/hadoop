@@ -912,17 +912,27 @@ public class DynamoDBMetadataStore implements MetadataStore,
       DDBPathMetadata oldEntry = ancestorState.put(path, entry);
       boolean addAncestors = true;
       if (oldEntry != null) {
-        if (!oldEntry.getFileStatus().isDirectory()
-            || !entry.getFileStatus().isDirectory()) {
-          // check for and warn if the existing bulk operation overwrote it.
-          // this should never occur outside tests explicitly creating it
+        // check for and warn if the existing bulk operation has an inconsistent
+        // entry.
+        // two directories or two files are both allowed.
+        // file-over-file can happen in multipart uploaders when the same
+        // uploader is overwriting file entries to the same destination as
+        // part of its bulk operation.
+        boolean oldWasDir = oldEntry.getFileStatus().isDirectory();
+        boolean newIsDir = entry.getFileStatus().isDirectory();
+        if ((oldWasDir && ! newIsDir)
+            || (!oldWasDir && newIsDir)) {
           LOG.warn("Overwriting a S3Guard file created in the operation: {}",
               oldEntry);
           LOG.warn("With new entry: {}", entry);
           // restore the old state
           ancestorState.put(path, oldEntry);
           // then raise an exception
-          throw new PathIOException(path.toString(), E_INCONSISTENT_UPDATE);
+          throw new PathIOException(path.toString(),
+              String.format("%s old %s new %s",
+                  E_INCONSISTENT_UPDATE,
+                  oldEntry,
+                  entry));
         } else {
           // a directory is already present. Log and continue.
           LOG.debug("Directory at {} being updated with value {}",

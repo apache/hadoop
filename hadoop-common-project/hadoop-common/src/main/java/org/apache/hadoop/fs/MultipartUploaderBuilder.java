@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,226 +15,64 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.fs;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.util.EnumSet;
+import java.util.concurrent.CompletableFuture;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.Options.ChecksumOpt;
-import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.util.Progressable;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 
 /**
- * Builder for {@link FSDataOutputStream} and its subclasses.
- *
- * It is used to create {@link FSDataOutputStream} when creating a new file or
- * appending an existing file on {@link FileSystem}.
- *
- * By default, it does not create parent directory that do not exist.
- * {@link FileSystem#createNonRecursive(Path, boolean, int, short, long,
- * Progressable)}.
- *
- * To create missing parent directory, use {@link #recursive()}.
- *
- * To be more generic, {@link #opt(String, int)} and {@link #must(String, int)}
- * variants provide implementation-agnostic way to customize the builder.
- * Each FS-specific builder implementation can interpret the FS-specific
- * options accordingly, for example:
- *
- * <code>
- *
- * // Don't
- * if (fs instanceof FooFileSystem) {
- *   FooFileSystem fs = (FooFileSystem) fs;
- *   OutputStream out = dfs.createFile(path)
- *     .optionA()
- *     .optionB("value")
- *     .cache()
- *   .build()
- * } else if (fs instanceof BarFileSystem) {
- *   ...
- * }
- *
- * // Do
- * OutputStream out = fs.createFile(path)
- *   .permission(perm)
- *   .bufferSize(bufSize)
- *   .opt("foofs:option.a", true)
- *   .opt("foofs:option.b", "value")
- *   .opt("barfs:cache", true)
- *   .must("foofs:cache", true)
- *   .must("barfs:cache-size", 256 * 1024 * 1024)
- *   .build();
- * </code>
- *
- * If the option is not related to the file system, the option will be ignored.
- * If the option is must, but not supported by the file system, a
- * {@link IllegalArgumentException} will be thrown.
- *
+ * Builder interface for Multipart readers.
+ * @param <S>
+ * @param <B>
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public abstract class MultipartUploaderBuilder
-    <S extends MultipartUploader, B extends MultipartUploaderBuilder<S, B>>
-    extends AbstractFSBuilderImpl<S, B> {
-  private final FileSystem fs;
-  private FsPermission permission = null;
-  private int bufferSize;
-  private short replication;
-  private long blockSize;
-  private final EnumSet<CreateFlag> flags = EnumSet.noneOf(CreateFlag.class);
-  private ChecksumOpt checksumOpt = null;
-
-  /**
-   * Return the concrete implementation of the builder instance.
-   */
-  public abstract B getThisBuilder();
-
-  /**
-   * Construct from a {@link FileContext}.
-   *
-   * @param fc FileContext
-   * @param p path.
-   * @throws IOException failure
-   */
-  public MultipartUploaderBuilder(@Nonnull FileContext fc,
-      @Nonnull Path p) throws IOException {
-    super(checkNotNull(p));
-    checkNotNull(fc);
-    this.fs = null;
-
-    AbstractFileSystem afs = fc.getFSofPath(p);
-    FsServerDefaults defaults = afs.getServerDefaults(p);
-    bufferSize = defaults.getFileBufferSize();
-    replication = defaults.getReplication();
-    blockSize = defaults.getBlockSize();
-  }
-
-  /**
-   * Constructor.
-   */
-  protected MultipartUploaderBuilder(@Nonnull FileSystem fileSystem,
-      @Nonnull Path p) {
-    super(checkNotNull(p));
-    checkNotNull(fileSystem);
-    fs = fileSystem;
-    bufferSize = fs.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
-        IO_FILE_BUFFER_SIZE_DEFAULT);
-    replication = fs.getDefaultReplication(p);
-    blockSize = fs.getDefaultBlockSize(p);
-  }
-
-  protected FileSystem getFS() {
-    checkNotNull(fs);
-    return fs;
-  }
-
-  protected FsPermission getPermission() {
-    if (permission == null) {
-      permission = FsPermission.getFileDefault();
-    }
-    return permission;
-  }
+public interface MultipartUploaderBuilder<S extends MultipartUploader, B extends MultipartUploaderBuilder<S, B>>
+    extends FSBuilder<S, B> {
 
   /**
    * Set permission for the file.
    */
-  public B permission(@Nonnull final FsPermission perm) {
-    checkNotNull(perm);
-    permission = perm;
-    return getThisBuilder();
-  }
-
-  protected int getBufferSize() {
-    return bufferSize;
-  }
+  B permission(@Nonnull FsPermission perm);
 
   /**
    * Set the size of the buffer to be used.
    */
-  public B bufferSize(int bufSize) {
-    bufferSize = bufSize;
-    return getThisBuilder();
-  }
-
-  protected short getReplication() {
-    return replication;
-  }
+  B bufferSize(int bufSize);
 
   /**
    * Set replication factor.
    */
-  public B replication(short replica) {
-    replication = replica;
-    return getThisBuilder();
-  }
-
-  protected long getBlockSize() {
-    return blockSize;
-  }
+  B replication(short replica);
 
   /**
    * Set block size.
    */
-  public B blockSize(long blkSize) {
-    blockSize = blkSize;
-    return getThisBuilder();
-  }
-
-  protected EnumSet<CreateFlag> getFlags() {
-    return flags;
-  }
+  B blockSize(long blkSize);
 
   /**
    * Create an FSDataOutputStream at the specified path.
    */
-  public B create() {
-    flags.add(CreateFlag.CREATE);
-    return getThisBuilder();
-  }
+  B create();
 
   /**
    * Set to true to overwrite the existing file.
    * Set it to false, an exception will be thrown when calling {@link #build()}
    * if the file exists.
    */
-  public B overwrite(boolean overwrite) {
-    if (overwrite) {
-      flags.add(CreateFlag.OVERWRITE);
-    } else {
-      flags.remove(CreateFlag.OVERWRITE);
-    }
-    return getThisBuilder();
-  }
+  B overwrite(boolean overwrite);
 
   /**
    * Append to an existing file (optional operation).
    */
-  public B append() {
-    flags.add(CreateFlag.APPEND);
-    return getThisBuilder();
-  }
-
-  protected ChecksumOpt getChecksumOpt() {
-    return checksumOpt;
-  }
+  B append();
 
   /**
    * Set checksum opt.
    */
-  public B checksumOpt(@Nonnull final ChecksumOpt chksumOpt) {
-    checkNotNull(chksumOpt);
-    checksumOpt = chksumOpt;
-    return getThisBuilder();
-  }
+  B checksumOpt(@Nonnull Options.ChecksumOpt chksumOpt);
 
   /**
    * Create the FSDataOutputStream to write on the file system.
@@ -242,5 +80,5 @@ public abstract class MultipartUploaderBuilder
    * @throws IllegalArgumentException if the parameters are not valid.
    * @throws IOException on errors when file system creates or appends the file.
    */
-  public abstract S build() throws IllegalArgumentException, IOException;
+  S build() throws IllegalArgumentException, IOException;
 }

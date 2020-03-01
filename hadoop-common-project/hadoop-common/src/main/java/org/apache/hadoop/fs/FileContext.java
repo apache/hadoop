@@ -2957,4 +2957,30 @@ public class FileContext implements PathCapabilities {
         (fs, p) -> fs.hasPathCapability(p, capability));
   }
 
+  /**
+   * Return a set of server default configuration values based on path.
+   * @param path path to fetch server defaults
+   * @return server default configuration values for path
+   * @throws IOException an I/O error occurred
+   */
+  public FsServerDefaults getServerDefaults(final Path path) throws IOException {
+    return FsLinkResolution.resolve(this,
+        fixRelativePart(path),
+        (fs, p) -> fs.getServerDefaults(p));
+  }
+
+  /**
+   * Create a multipart uploader.
+   * @param basePath file path under which all files are uploaded
+   * @return a MultipartUploaderBuilder object to build the uploader
+   * @throws IOException if some early checks cause IO failures.
+   * @throws UnsupportedOperationException if support is checked early.
+   */
+  @InterfaceStability.Unstable
+  public MultipartUploaderBuilder createMultipartUploader(Path basePath)
+      throws IOException {
+    return FsLinkResolution.resolve(this,
+        fixRelativePart(basePath),
+        (fs, p) -> fs.createMultipartUploader(p));
+  }
 }
