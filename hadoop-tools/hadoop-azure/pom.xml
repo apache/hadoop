@@ -45,6 +45,7 @@
     <fs.azure.scale.test.timeout>7200</fs.azure.scale.test.timeout>
     <fs.azure.scale.test.list.performance.threads>10</fs.azure.scale.test.list.performance.threads>
     <fs.azure.scale.test.list.performance.files>1000</fs.azure.scale.test.list.performance.files>
+    <powermock.version>2.0.4</powermock.version>
   </properties>
 
   <build>
@@ -284,15 +285,18 @@
       <scope>test</scope>
     </dependency>
 
+
     <dependency>
       <groupId>org.powermock</groupId>
       <artifactId>powermock-api-mockito2</artifactId>
       <scope>test</scope>
+      <version>${powermock.version}</version>
     </dependency>
     <dependency>
       <groupId>org.powermock</groupId>
       <artifactId>powermock-module-junit4</artifactId>
       <scope>test</scope>
+      <version>${powermock.version}</version>
     </dependency>
     <dependency>
       <groupId>org.hamcrest</groupId>
