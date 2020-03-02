@@ -80,7 +80,8 @@ public class MsiTokenProvider extends AccessTokenProvider {
     // refresh token.
     if (expiring) {
       LOG.debug(
-          "MSIToken: token renewing : " + ONE_HOUR + " milliseconds window");
+          "MSIToken: token renewing. Time elapsed since last token fetch:"
+              + " {} milli seconds", elapsedTimeSinceLastTokenRefreshInMillis);
     }
 
     return expiring;
