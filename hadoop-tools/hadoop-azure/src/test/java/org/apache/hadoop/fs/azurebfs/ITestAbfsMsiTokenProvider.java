@@ -35,6 +35,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.isEmptyString;
 import static org.junit.Assume.assumeThat;
 
@@ -52,13 +53,13 @@ public final class ITestAbfsMsiTokenProvider
   public void test() throws IOException {
     AbfsConfiguration conf = getConfiguration();
     assumeThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT),
-        not(isEmptyString()));
+        not(isEmptyOrNullString()));
     assumeThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT),
-        not(isEmptyString()));
+        not(isEmptyOrNullString()));
     assumeThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID),
-        not(isEmptyString()));
+        not(isEmptyOrNullString()));
     assumeThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY),
-        not(isEmptyString()));
+        not(isEmptyOrNullString()));
 
     String tenantGuid = conf
         .getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
