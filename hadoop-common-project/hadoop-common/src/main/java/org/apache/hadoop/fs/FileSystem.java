@@ -2228,33 +2228,6 @@ public abstract class FileSystem extends Configured
   }
 
   /**
-   * Batched listing API that returns {@link PartialListing}s for the
-   * passed Paths.
-   *
-   * @param paths List of paths to list.
-   * @return RemoteIterator that returns corresponding PartialListings.
-   * @throws IOException
-   */
-  public RemoteIterator<PartialListing<FileStatus>> batchedListStatusIterator(
-      final List<Path> paths) throws IOException {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  /**
-   * Batched listing API that returns {@link PartialListing}s for the passed
-   * Paths. The PartialListing will contain {@link LocatedFileStatus} entries
-   * with locations.
-   *
-   * @param paths List of paths to list.
-   * @return RemoteIterator that returns corresponding PartialListings.
-   * @throws IOException
-   */
-  public RemoteIterator<PartialListing<LocatedFileStatus>> batchedListLocatedStatusIterator(
-      final List<Path> paths) throws IOException {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  /**
    * List the statuses and block locations of the files in the given path.
    * Does not guarantee to return the iterator that traverses statuses
    * of the files in a sorted order.

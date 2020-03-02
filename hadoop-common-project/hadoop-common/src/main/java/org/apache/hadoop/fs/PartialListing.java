@@ -35,7 +35,7 @@ import java.util.List;
  * {@link #get()} will throw an Exception if there was a failure.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceStability.Unstable
 public class PartialListing<T extends FileStatus> {
   private final Path listedPath;
   private final List<T> partialListing;
