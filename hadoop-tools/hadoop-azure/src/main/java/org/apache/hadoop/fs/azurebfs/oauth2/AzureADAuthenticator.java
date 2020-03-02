@@ -393,7 +393,8 @@ public final class AzureADAuthenticator {
   private static AzureADToken parseTokenFromStream(InputStream httpResponseStream) throws IOException {
     AzureADToken token = new AzureADToken();
     try {
-      int expiryPeriod = 0;
+      int expiryPeriodInSecs = 0;
+      long expiresOnInSecs = -1;
 
       JsonFactory jf = new JsonFactory();
       JsonParser jp = jf.createJsonParser(httpResponseStream);
@@ -408,17 +409,29 @@ public final class AzureADAuthenticator {
           if (fieldName.equals("access_token")) {
             token.setAccessToken(fieldValue);
           }
+
           if (fieldName.equals("expires_in")) {
-            expiryPeriod = Integer.parseInt(fieldValue);
+            expiryPeriodInSecs = Integer.parseInt(fieldValue);
           }
+
+          if (fieldName.equals("expires_on")) {
+            expiresOnInSecs = Long.parseLong(fieldValue);
+          }
+
         }
         jp.nextToken();
       }
       jp.close();
-      long expiry = System.currentTimeMillis();
-      expiry = expiry + expiryPeriod * 1000L; // convert expiryPeriod to milliseconds and add
-      token.setExpiry(new Date(expiry));
-      LOG.debug("AADToken: fetched token with expiry " + token.getExpiry().toString());
+      if (expiresOnInSecs > -1) {
+        token.setExpiry(new Date(expiresOnInSecs * 1000));
+      } else {
+        long expiry = System.currentTimeMillis();
+        expiry = expiry + expiryPeriodInSecs
+            * 1000L; // convert expiryPeriod to milliseconds and add
+        token.setExpiry(new Date(expiry));
+      }
+      LOG.debug("AADToken: fetched token with expiry {}, expiresOn passed: {}",
+          token.getExpiry().toString(), expiresOnInSecs);
     } catch (Exception ex) {
       LOG.debug("AADToken: got exception when parsing json token " + ex.toString());
       throw ex;
