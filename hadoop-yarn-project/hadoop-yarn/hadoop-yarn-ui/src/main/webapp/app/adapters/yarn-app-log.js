@@ -43,7 +43,7 @@ export default RESTAbstractAdapter.extend({
     }
     var url = this._buildURL();
     url = url + '/containers/' + containerId + '/logs/' + logFile + '?clusterid=' + clusterId;
-    console.log('log url' + url);
+    Ember.Logger.info('The URL for getting the log: ' + url);
     return url;
   },
 

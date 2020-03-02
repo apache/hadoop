@@ -818,16 +818,25 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     }
     // create the file paths
     for (int i = 0; i < fileCount; i++) {
-      String name = PREFIX + i;
+      String name = filenameOfIndex(i);
       Path p = new Path(destDir, name);
       filePaths.add(p);
     }
     for (int i = 0; i < dirCount; i++) {
-      String name = "dir-" + i;
+      String name = String.format("dir-%03d", i);
       Path p = new Path(destDir, name);
       dirPaths.add(p);
       buildPaths(filePaths, dirPaths, p, depth - 1, fileCount, dirCount);
     }
 
+  }
+
+  /**
+   * Given an index, return a string to use as the filename.
+   * @param i index
+   * @return name
+   */
+  public static String filenameOfIndex(final int i) {
+    return String.format("%s%03d", PREFIX, i);
   }
 }

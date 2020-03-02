@@ -284,14 +284,35 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     Node localNode = null;
     boolean avoidStaleNodes = (stats != null
         && stats.isAvoidingStaleDataNodesForWrite());
+    boolean avoidLocalRack = (addBlockFlags != null
+        && addBlockFlags.contains(AddBlockFlag.NO_LOCAL_RACK) && writer != null
+        && clusterMap.getNumOfRacks() > 2);
     boolean avoidLocalNode = (addBlockFlags != null
         && addBlockFlags.contains(AddBlockFlag.NO_LOCAL_WRITE)
         && writer != null
         && !excludedNodes.contains(writer));
+    // Attempt to exclude local rack if the client suggests so. If no enough
+    // nodes can be obtained or number of racks are less than three, it falls
+    // back to the default block placement
+    // policy.
+    if (avoidLocalRack) {
+      results = new ArrayList<>(chosenStorage);
+      Set<Node> excludedNodeCopy = new HashSet<>(excludedNodes);
+      excludedNodeCopy
+          .addAll(clusterMap.getLeaves(writer.getNetworkLocation()));
+
+      localNode = chooseTarget(numOfReplicas, writer, excludedNodeCopy,
+          blocksize, maxNodesPerRack, results, avoidStaleNodes, storagePolicy,
+          EnumSet.noneOf(StorageType.class), results.isEmpty(), sTypes);
+      if (results.size() < numOfReplicas) {
+        // not enough nodes; discard results and fall back
+        results = null;
+      }
+    }
     // Attempt to exclude local node if the client suggests so. If no enough
     // nodes can be obtained, it falls back to the default block placement
     // policy.
-    if (avoidLocalNode) {
+    if (avoidLocalNode && results == null) {
       results = new ArrayList<>(chosenStorage);
       Set<Node> excludedNodeCopy = new HashSet<>(excludedNodes);
       if (writer != null) {

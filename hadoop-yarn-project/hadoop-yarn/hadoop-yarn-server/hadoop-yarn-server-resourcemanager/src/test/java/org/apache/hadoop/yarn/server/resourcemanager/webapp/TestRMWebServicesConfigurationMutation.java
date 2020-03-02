@@ -763,6 +763,32 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         newCSConf.getMaximumSystemApplications());
   }
 
+  @Test
+  public void testValidateWithClusterMaxAllocation() throws Exception {
+    WebResource r = resource();
+    int clusterMax = YarnConfiguration.
+        DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB * 2;
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        clusterMax);
+
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    Map<String, String> updateParam = new HashMap<>();
+    updateParam.put(CapacitySchedulerConfiguration.MAXIMUM_APPLICATIONS_SUFFIX,
+        "100");
+    QueueConfigInfo aUpdateInfo = new QueueConfigInfo("root.a", updateParam);
+    updateInfo.getUpdateQueueInfo().add(aUpdateInfo);
+
+    ClientResponse response =
+        r.path("ws").path("v1").path("cluster")
+            .path(RMWSConsts.SCHEDULER_CONF_VALIDATE)
+            .queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity(YarnWebServiceUtils.toJson(updateInfo,
+                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+  }
+
   @Override
   @After
   public void tearDown() throws Exception {

@@ -156,6 +156,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_DATANODE_FIXED_VOLUME_SIZE_KEY =
       "dfs.datanode.fixed.volume.size";
   public static final boolean DFS_DATANODE_FIXED_VOLUME_SIZE_DEFAULT = false;
+  public static final String  DFS_DATANODE_REPLICA_CACHE_ROOT_DIR_KEY =
+      "dfs.datanode.replica.cache.root.dir";
+  public static final String DFS_DATANODE_REPLICA_CACHE_EXPIRY_TIME_KEY =
+      "dfs.datanode.replica.cache.expiry.time";
+  public static final long DFS_DATANODE_REPLICA_CACHE_EXPIRY_TIME_DEFAULT =
+      300000;
 
   // This setting is for testing/internal use only.
   public static final String  DFS_DATANODE_DUPLICATE_REPLICA_DELETION = "dfs.datanode.duplicate.replica.deletion";
@@ -244,6 +250,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY;
   public static final int DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_DEFAULT = 3;
+  public static final String DFS_NAMENODE_REDUNDANCY_QUEUE_RESTART_ITERATIONS =
+      "dfs.namenode.redundancy.queue.restart.iterations";
+  public static final int
+      DFS_NAMENODE_REDUNDANCY_QUEUE_RESTART_ITERATIONS_DEFAULT = 2400;
   public static final String  DFS_NAMENODE_REPLICATION_MIN_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_REPLICATION_MIN_KEY;
   public static final int     DFS_NAMENODE_REPLICATION_MIN_DEFAULT = 1;
@@ -290,6 +300,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       = "dfs.namenode.blockreport.queue.size";
   public static final int    DFS_NAMENODE_BLOCKREPORT_QUEUE_SIZE_DEFAULT
       = 1024;
+  public static final String DFS_NAMENODE_BLOCKREPORT_MAX_LOCK_HOLD_TIME
+      = "dfs.namenode.blockreport.max.lock.hold.time";
+  public static final long
+      DFS_NAMENODE_BLOCKREPORT_MAX_LOCK_HOLD_TIME_DEFAULT = 4;
   @Deprecated
   public static final String  DFS_WEBHDFS_USER_PATTERN_KEY =
       HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY;
@@ -1065,6 +1079,21 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_BLOCKPLACEMENTPOLICY_DEFAULT_PREFER_LOCAL_NODE_KEY =
       "dfs.namenode.block-placement-policy.default.prefer-local-node";
   public static final boolean  DFS_NAMENODE_BLOCKPLACEMENTPOLICY_DEFAULT_PREFER_LOCAL_NODE_DEFAULT = true;
+  public static final String DFS_NAMENODE_GC_TIME_MONITOR_ENABLE =
+      "dfs.namenode.gc.time.monitor.enable";
+  public static final boolean DFS_NAMENODE_GC_TIME_MONITOR_ENABLE_DEFAULT =
+      true;
+  public static final String
+      DFS_NAMENODE_GC_TIME_MONITOR_OBSERVATION_WINDOW_MS =
+      "dfs.namenode.gc.time.monitor.observation.window.ms";
+  public static final long
+      DFS_NAMENODE_GC_TIME_MONITOR_OBSERVATION_WINDOW_MS_DEFAULT =
+      TimeUnit.MINUTES.toMillis(1);
+  public static final String DFS_NAMENODE_GC_TIME_MONITOR_SLEEP_INTERVAL_MS =
+      "dfs.namenode.gc.time.monitor.sleep.interval.ms";
+  public static final long
+      DFS_NAMENODE_GC_TIME_MONITOR_SLEEP_INTERVAL_MS_DEFAULT =
+      TimeUnit.SECONDS.toMillis(5);
 
   public static final String DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY = "dfs.block.local-path-access.user";
   public static final String DFS_DOMAIN_SOCKET_PATH_KEY =

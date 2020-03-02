@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -123,4 +124,34 @@ public final class CallableSupplier<T> implements Supplier {
     }
   }
 
+  /**
+   * Wait for a single of future to complete, ignoring exceptions raised.
+   * @param future future to wait for.
+   */
+  public static <T> void waitForCompletionIgnoringExceptions(
+      @Nullable final CompletableFuture<T> future) {
+    if (future != null) {
+      try (DurationInfo ignore =
+               new DurationInfo(LOG, false, "Waiting for task completion")) {
+        future.join();
+      } catch (Exception e) {
+        LOG.debug("Ignoring exception raised in task completion: ");
+      }
+    }
+  }
+
+  /**
+   * Block awaiting completion for any non-null future passed in;
+   * No-op if a null arg was supplied.
+   * @param future future
+   * @throws IOException if one of the called futures raised an IOE.
+   * @throws RuntimeException if one of the futures raised one.
+   */
+  public static void maybeAwaitCompletion(
+      @Nullable final CompletableFuture<Void> future)
+      throws IOException {
+    if (future != null) {
+      waitForCompletion(future);
+    }
+  }
 }

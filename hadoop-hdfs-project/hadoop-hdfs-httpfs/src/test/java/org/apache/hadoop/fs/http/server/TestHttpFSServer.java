@@ -19,16 +19,21 @@ package org.apache.hadoop.fs.http.server;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
@@ -186,6 +191,8 @@ public class TestHttpFSServer extends HFSTestCase {
     Configuration conf = new Configuration(hdfsConf);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.EXTERNAL.toString());
     File hdfsSite = new File(hadoopConfDir, "hdfs-site.xml");
     OutputStream os = new FileOutputStream(hdfsSite);
     conf.writeXml(os);
@@ -1800,5 +1807,31 @@ public class TestHttpFSServer extends HFSTestCase {
     conn4.setRequestMethod("POST");
     conn4.connect();
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn4.getResponseCode());
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testStoragePolicySatisfier() throws Exception {
+    createHttpFSServer(false, false);
+    final String dir = "/parent";
+    Path path1 = new Path(dir);
+    String file = "/parent/file";
+    Path filePath = new Path(file);
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .get(path1.toUri(), TestHdfsHelper.getHdfsConf());
+    dfs.mkdirs(path1);
+    dfs.create(filePath).close();
+    dfs.setStoragePolicy(filePath, HdfsConstants.COLD_STORAGE_POLICY_NAME);
+    BlockStoragePolicy storagePolicy =
+        (BlockStoragePolicy) dfs.getStoragePolicy(filePath);
+    assertEquals(HdfsConstants.COLD_STORAGE_POLICY_NAME,
+        storagePolicy.getName());
+    HttpURLConnection conn = putCmdWithReturn(dir, "SATISFYSTORAGEPOLICY", "");
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    Map<String, byte[]> xAttrs = dfs.getXAttrs(path1);
+    assertTrue(
+        xAttrs.containsKey(HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY));
   }
 }

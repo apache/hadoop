@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.AWSServiceIOException;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
@@ -134,5 +135,18 @@ public final class ExtraAssertions {
         "Inner cause is of wrong type : expected " + expected,
         thrown);
     return (T)cause;
+  }
+
+  /**
+   * Assert that an exception failed with a specific status code.
+   * @param e exception
+   * @param code expected status code
+   * @throws AWSServiceIOException rethrown if the status code does not match.
+   */
+  protected void assertStatusCode(AWSServiceIOException e, int code)
+          throws AWSServiceIOException {
+    if (e.getStatusCode() != code) {
+      throw e;
+    }
   }
 }
