@@ -126,7 +126,7 @@ public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
     }
 
     if (queueD1Acl != null) {
-      setAdminAndSubmitACL(csConf, d1Path, queueD1Acl);
+      setAdminAndSubmitACL(csConf, queueD1Acl, d1Path);
     }
     resourceManager.getResourceScheduler()
         .reinitialize(csConf, resourceManager.getRMContext());
