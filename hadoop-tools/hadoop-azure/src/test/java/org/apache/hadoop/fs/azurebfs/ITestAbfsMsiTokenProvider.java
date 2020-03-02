@@ -57,10 +57,10 @@ public final class ITestAbfsMsiTokenProvider
     assumeThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY),
         not(isEmptyString()));
 
-    String authEndpoint = conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
-    String tenantGuid = conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
-    String clientId = conf.get(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
-    String authority = conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
+    String authEndpoint = conf.getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
+    String tenantGuid = conf.getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
+    String clientId = conf.getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+    String authority = conf.getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
     AccessTokenProvider tokenProvider = new MsiTokenProvider(authEndpoint,
         tenantGuid, clientId, authority);
 
@@ -69,4 +69,5 @@ public final class ITestAbfsMsiTokenProvider
     assertThat(token.getAccessToken(), not(isEmptyString()));
     assertThat(token.getExpiry().after(new Date()), is(true));
   }
+
 }
