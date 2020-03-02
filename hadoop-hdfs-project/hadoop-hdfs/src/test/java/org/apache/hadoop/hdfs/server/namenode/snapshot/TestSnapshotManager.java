@@ -92,4 +92,15 @@ public class TestSnapshotManager {
           StringUtils.toLowerCase(se.getMessage()).contains("rollover"));
     }
   }
+
+
+  @Test
+  public void testValidateSnapshotIDWidth() {
+    FSDirectory fsdir = mock(FSDirectory.class);
+    SnapshotManager snapshotManager = new SnapshotManager(new Configuration(),
+        fsdir);
+    Assert.assertTrue(snapshotManager.
+        getMaxSnapshotID() < Snapshot.CURRENT_STATE_ID);
+  }
+
 }
