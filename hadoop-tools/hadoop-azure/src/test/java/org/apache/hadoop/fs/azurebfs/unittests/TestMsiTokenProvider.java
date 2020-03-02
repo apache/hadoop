@@ -48,7 +48,7 @@ import static org.powermock.reflect.Whitebox.setInternalState;
  */
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(AzureADAuthenticator.class)
-public class MsiTokenProviderTest {
+public class TestMsiTokenProvider {
 
   private static final long ONE_HOUR = 3600 * 1000;
   private static final long TWO_HOUR = ONE_HOUR * 2;
