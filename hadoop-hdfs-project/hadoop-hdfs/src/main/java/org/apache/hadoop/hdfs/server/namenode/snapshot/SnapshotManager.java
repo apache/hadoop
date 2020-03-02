@@ -96,7 +96,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   private final boolean snapshotDiffAllowSnapRootDescendant;
 
   private final AtomicInteger numSnapshots = new AtomicInteger();
-  private static final int SNAPSHOT_ID_BIT_WIDTH = 31;
+  private static final int SNAPSHOT_ID_BIT_WIDTH = 28;
 
   private boolean allowNestedSnapshots = false;
   private int snapshotCounter = 0;
@@ -542,7 +542,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    * @return maximum allowable snapshot ID.
    */
   public int getMaxSnapshotID() {
-    return ((1 << SNAPSHOT_ID_BIT_WIDTH) - 3);
+    return (1 << SNAPSHOT_ID_BIT_WIDTH);
   }
 
   private ObjectName mxBeanName;
