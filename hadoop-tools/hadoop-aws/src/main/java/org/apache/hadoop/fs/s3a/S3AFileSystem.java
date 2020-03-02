@@ -3459,7 +3459,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
           changeTracker.maybeApplyConstraint(copyObjectRequest);
 
-          setOptionalCopyObjectRequestParameters(copyObjectRequest);
+          setOptionalCopyObjectRequestParameters(srcom, copyObjectRequest);
           copyObjectRequest.setCannedAccessControlList(cannedACL);
           copyObjectRequest.setNewObjectMetadata(dstom);
           Optional.ofNullable(srcom.getStorageClass())
@@ -3487,6 +3487,41 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           instrumentation.filesCopied(1, size);
           return result;
         });
+  }
+
+  /**
+   * Propagate encryption parameters from source file if set else use the
+   * current filesystem encryption settings.
+   * @param srcom source object meta.
+   * @param copyObjectRequest copy object request body.
+   */
+  private void setOptionalCopyObjectRequestParameters(
+          ObjectMetadata srcom,
+          CopyObjectRequest copyObjectRequest) {
+    String sourceKMSId = srcom.getSSEAwsKmsKeyId();
+    if (isNotEmpty(sourceKMSId)) {
+      // source KMS ID is propagated
+      LOG.debug("Propagating SSE-KMS settings from source {}",
+          sourceKMSId);
+      copyObjectRequest.setSSEAwsKeyManagementParams(
+              new SSEAwsKeyManagementParams(sourceKMSId));
+    }
+    switch(getServerSideEncryptionAlgorithm()) {
+    /**
+     * Overriding with client encryption settings.
+     */
+    case SSE_C:
+      generateSSECustomerKey().ifPresent(customerKey -> {
+        copyObjectRequest.setSourceSSECustomerKey(customerKey);
+        copyObjectRequest.setDestinationSSECustomerKey(customerKey);
+      });
+      break;
+    case SSE_KMS:
+      generateSSEAwsKeyParams().ifPresent(
+              copyObjectRequest::setSSEAwsKeyManagementParams);
+      break;
+    default:
+    }
   }
 
   /**
@@ -3524,23 +3559,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("Initiate multipart upload to {}", request.getKey());
     incrementStatistic(OBJECT_MULTIPART_UPLOAD_INITIATED);
     return getAmazonS3Client().initiateMultipartUpload(request);
-  }
-
-  protected void setOptionalCopyObjectRequestParameters(
-      CopyObjectRequest copyObjectRequest) throws IOException {
-    switch (getServerSideEncryptionAlgorithm()) {
-    case SSE_KMS:
-      generateSSEAwsKeyParams().ifPresent(
-          copyObjectRequest::setSSEAwsKeyManagementParams);
-      break;
-    case SSE_C:
-      generateSSECustomerKey().ifPresent(customerKey -> {
-        copyObjectRequest.setSourceSSECustomerKey(customerKey);
-        copyObjectRequest.setDestinationSSECustomerKey(customerKey);
-      });
-      break;
-    default:
-    }
   }
 
   private void setOptionalPutRequestParameters(PutObjectRequest request) {
