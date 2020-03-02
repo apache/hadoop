@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
 import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
@@ -26,6 +27,8 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Date;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY;
+import static org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT;
@@ -57,10 +60,15 @@ public final class ITestAbfsMsiTokenProvider
     assumeThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY),
         not(isEmptyString()));
 
-    String authEndpoint = conf.getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
-    String tenantGuid = conf.getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
+    String tenantGuid = conf
+        .getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
     String clientId = conf.getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
-    String authority = conf.getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
+    String authEndpoint = getTrimmedPasswordString(conf,
+        FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT,
+        DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
+    String authority = getTrimmedPasswordString(conf,
+        FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
+        DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
     AccessTokenProvider tokenProvider = new MsiTokenProvider(authEndpoint,
         tenantGuid, clientId, authority);
 
@@ -68,6 +76,15 @@ public final class ITestAbfsMsiTokenProvider
     token = tokenProvider.getToken();
     assertThat(token.getAccessToken(), not(isEmptyString()));
     assertThat(token.getExpiry().after(new Date()), is(true));
+  }
+
+  private String getTrimmedPasswordString(AbfsConfiguration conf, String key,
+      String defaultValue) throws IOException {
+    String value = conf.getPasswordString(key);
+    if (StringUtils.isBlank(value)) {
+      value = defaultValue;
+    }
+    return value.trim();
   }
 
 }
