@@ -39,7 +39,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
  */
 public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     implements S3ATestConstants {
-
   protected static final Logger LOG =
       LoggerFactory.getLogger(AbstractS3ATestBase.class);
 

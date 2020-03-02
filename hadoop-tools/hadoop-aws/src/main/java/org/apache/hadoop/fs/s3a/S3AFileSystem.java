@@ -2489,7 +2489,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * Wait for an upload to complete.
    * If the waiting for completion is interrupted, the upload will be
    * aborted before an {@code InterruptedIOException} is thrown.
-   * @param upload upload to wait for
+   * @param uploadInfo upload to wait for
    * @param key destination key
    * @return the upload result
    * @throws InterruptedIOException if the blocking was interrupted.
@@ -2592,7 +2592,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
           setOptionalObjectMetadata(dstom);
           CopyObjectRequest copyObjectRequest =
               new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
-          setOptionalCopyObjectRequestParameters(copyObjectRequest);
+          setOptionalCopyObjectRequestParameters(srcom, copyObjectRequest);
           copyObjectRequest.setCannedAccessControlList(cannedACL);
           copyObjectRequest.setNewObjectMetadata(dstom);
           Copy copy = transfers.copy(copyObjectRequest);
@@ -2608,6 +2608,49 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         });
   }
 
+  /**
+   * Propagate encryption parameters from source file if set else use the
+   * current filesystem encryption settings.
+   * @param srcom source object meta.
+   * @param copyObjectRequest copy object request body.
+   */
+  private void setOptionalCopyObjectRequestParameters(
+          ObjectMetadata srcom,
+          CopyObjectRequest copyObjectRequest) {
+    String sourceKMSId = srcom.getSSEAwsKmsKeyId();
+    if (isNotEmpty(sourceKMSId)) {
+      // source KMS ID is propagated
+      LOG.debug("Propagating SSE-KMS settings from source {}",
+          sourceKMSId);
+      copyObjectRequest.setSSEAwsKeyManagementParams(
+              new SSEAwsKeyManagementParams(sourceKMSId));
+    }
+    switch(getServerSideEncryptionAlgorithm()) {
+    /**
+     * Overriding with client encryption settings.
+     */
+    case SSE_C:
+      if (isNotBlank(getServerSideEncryptionKey(bucket, getConf()))) {
+        //at the moment, only supports copy using the same key
+        SSECustomerKey customerKey = generateSSECustomerKey();
+        copyObjectRequest.setSourceSSECustomerKey(customerKey);
+        copyObjectRequest.setDestinationSSECustomerKey(customerKey);
+      }
+      break;
+    case SSE_KMS:
+      copyObjectRequest.setSSEAwsKeyManagementParams(
+              generateSSEAwsKeyParams()
+      );
+      break;
+    default:
+    }
+  }
+
+  /**
+   * Set the optional parameters when initiating the request (encryption,
+   * headers, storage, etc).
+   * @param req request to patch.
+   */
   protected void setOptionalMultipartUploadRequestParameters(
       InitiateMultipartUploadRequest req) {
     switch (serverSideEncryptionAlgorithm) {
@@ -2655,26 +2698,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     LOG.debug("Initiate multipart upload to {}", request.getKey());
     incrementStatistic(OBJECT_MULTIPART_UPLOAD_INITIATED);
     return getAmazonS3Client().initiateMultipartUpload(request);
-  }
-
-  protected void setOptionalCopyObjectRequestParameters(
-      CopyObjectRequest copyObjectRequest) throws IOException {
-    switch (serverSideEncryptionAlgorithm) {
-    case SSE_KMS:
-      copyObjectRequest.setSSEAwsKeyManagementParams(
-          generateSSEAwsKeyParams()
-      );
-      break;
-    case SSE_C:
-      if (isNotBlank(getServerSideEncryptionKey(bucket, getConf()))) {
-        //at the moment, only supports copy using the same key
-        SSECustomerKey customerKey = generateSSECustomerKey();
-        copyObjectRequest.setSourceSSECustomerKey(customerKey);
-        copyObjectRequest.setDestinationSSECustomerKey(customerKey);
-      }
-      break;
-    default:
-    }
   }
 
   private void setOptionalPutRequestParameters(PutObjectRequest request) {
