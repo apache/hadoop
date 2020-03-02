@@ -1,64 +1,122 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+<configuration>
+  <!-- ABFS HNS ENABLED CLIENT CREDS -->
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
-
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<configuration xmlns:xi="http://www.w3.org/2001/XInclude">
-
-  <!--====================  WASB CONFIGURATION ====================-->
-  <!-- For tests against azure-emulator -->
-  <property>
-    <name>fs.azure.test.emulator</name>
-    <value>false</value>
-  </property>
-
-  <property>
-    <name>fs.azure.secure.mode</name>
-    <value>false</value>
-  </property>
-
+  <!--=============== General Configs ===============-->
   <property>
     <name>fs.azure.test.namespace.enabled</name>
     <value>false</value>
   </property>
-
   <property>
-    <name>fs.azure.abfs.latency.track</name>
+    <name>fs.azure.account.auth.type</name>
+    <value>OAuth</value>
+  </property>
+  <property>
+    <name>fs.azure.scale.test.enabled</name>
     <value>false</value>
   </property>
+  <property>
+    <name>fs.azure.test.emulator</name>
+    <value>false</value>
+    <description>For tests against azure-emulator</description>
+  </property>
+  <property>
+    <name>fs.azure.always.use.https</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>fs.azure.secure.mode</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>fs.azure.io.retry.max.retries</name>
+    <value>30</value>
+  </property>
 
-  <!--====================  ABFS CONFIGURATION ====================-->
-  <!-- SEE relevant section in "site/markdown/testing_azure.md"-->
+  <!--=============== WASB Configs ===============-->
+  <property>
+    <name>fs.azure.wasb.account.name</name>
+    <value>mhtbithsatest.blob.core.windows.net</value>
+  </property>
+  <property>
+    <name>fs.azure.account.key.mhtbithsatest.blob.core.windows.net</name>
+    <value>28K4JNVzB9OovqnpEM4NfamspmsKwqQJ167czbAHLXwmA/0BqlXiEacF+CGW7YovPGCewGwsKxMA1LzRj2faDA==</value>
+  </property>
+  <property>
+    <name>fs.contract.test.fs.wasb</name>
+    <value>asb://mhtbithclustertest1-2019-05-31t11-50-50-142z@mhtbithsatest.blob.core.windows.net</value>
+  </property>
 
-  <!--========== CONFIGURATION SHARED BY WASB AND ABFS ==========-->
+  <!--=============== ABFS Configs ===============-->
+  <property>
+    <name>fs.azure.abfs.account.name</name>
+    <value>bithgen2nse.dfs.core.windows.net</value>
+  </property>
+  <property>
+    <name>fs.azure.account.key.bithgen2nse.dfs.core.windows.net</name>
+    <value>m9hGMgSk0MH7cLuhzhbM+bwuCqrEjCzN8CIKl4ZGtyqcz8a3ZvgTtziqZMv7Hqfg18lJtmAY5/6O5kRgeOqAUQ==</value>
+  </property>
+  <property>
+    <name>fs.contract.test.fs.abfs</name>
+    <value>abfs://bithgen2nsefs@bithgen2nse.dfs.core.windows.net</value>
+  </property>
+  <property>
+    <name>fs.contract.test.fs.abfss</name>
+    <value>abfss://bithgen2nsefs@bithgen2nse.dfs.core.windows.net</value>
+  </property>
+
+  <!--=============== ABFS OAuth Configs ===============-->
+  <property>
+    <name>fs.azure.account.oauth.provider.type.bithgen2nse.dfs.core.windows.net</name>
+    <value>org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider</value>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.client.endpoint.bithgen2nse.dfs.core.windows.net</name>
+    <value>https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/oauth2/token</value>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.client.id.bithgen2nse.dfs.core.windows.net</name>
+    <value>43dbd144-51d1-4126-ba19-d7ca3fc05885</value>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.client.secret.bithgen2nse.dfs.core.windows.net</name>
+    <value>Ra27n4dLGs8+l462sKDuY7rkXV06QLSPBxtqDjO2ffw=</value>
+  </property>
+
+  <!--=============== Newly added Configs ===============-->
+  <!--
+  <property>
+      <name>fs.azure.enable.check.access</name>
+      <value>true</value>
+  </property>
+  <property>
+      <name>fs.azure.enable.abfs.flush</name>
+      <value>true</value>
+  </property>
+  <property>
+      <name>fs.azure.account.oauth2.msi.authority</name>
+      <value>https://login.microsoftonline.com</value>
+  </property>
+  <property>
+      <name>fs.azure.account.oauth2.msi.endpoint</name>
+      <value>http://169.254.169.254/metadata/identity/oauth2/token</value>
+  </property>
+  <property>
+      <name>fs.azure.account.oauth2.refresh.token.endpoint</name>
+      <value>https://login.microsoftonline.com/Common/oauth2/token</value>
+  </property>
+
+  -->
+  <!--=============== Others Configs ===============-->
   <property>
     <name>fs.azure.user.agent.prefix</name>
     <value>MSFT</value>
   </property>
 
-  <!--====================== IMPORTANT!! ========================-->
-  <!--WARNING!!
-      PLEASE CREATE A FILE NAMED "azure-auth-keys.xml"
-      AND SEE "site/markdown/testing_azure.md", THEN
-      STORE THE CONFIGURATION PROPERTIES WITHIN IT.
-      TO PREVENT ACCIDENTAL LEAKS OF YOUR STORAGE ACCOUNT CREDENTIALS,
-      THIS FILE IS LISTED IN .gitignore TO PREVENT YOU FROM INCLUDING
-      IT IN PATCHES OR COMMITS. -->
-  <!--=============================================================-->
-
   <include xmlns="http://www.w3.org/2001/XInclude" href="azure-auth-keys.xml">
     <fallback />
   </include>
-
 </configuration>
+
+
