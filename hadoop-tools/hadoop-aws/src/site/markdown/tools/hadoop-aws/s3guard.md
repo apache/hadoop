@@ -14,13 +14,11 @@
 
 # S3Guard: Consistency and Metadata Caching for S3A
 
-**Experimental Feature**
-
 <!-- MACRO{toc|fromDepth=0|toDepth=5} -->
 
 ## Overview
 
-*S3Guard* is an experimental feature for the S3A client of the S3 object store,
+*S3Guard* is a feature for the S3A client of the S3 object store,
 which can use a (consistent) database as the store of metadata about objects
 in an S3 bucket.
 
@@ -47,8 +45,6 @@ For links to early design documents and related patches, see
 [HADOOP-13345](https://issues.apache.org/jira/browse/HADOOP-13345).
 
 *Important*
-
-* S3Guard is experimental and should be considered unstable.
 
 * While all underlying data is persisted in S3, if, for some reason,
 the S3Guard-cached metadata becomes inconsistent with that in S3,
@@ -182,8 +178,7 @@ recommended that you leave the default setting here:
     <value>false</value>
 </property>
 ```
-
-Setting this to `true` is currently an experimental feature.
+.
 Note that a MetadataStore MAY persist this bit in the directory listings. (Not
 MUST).
 
