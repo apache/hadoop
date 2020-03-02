@@ -409,12 +409,15 @@ public final class AzureADAuthenticator {
           if (fieldName.equals("access_token")) {
             token.setAccessToken(fieldValue);
           }
+
           if (fieldName.equals("expires_in")) {
             expiryPeriodInSecs = Integer.parseInt(fieldValue);
           }
+
           if (fieldName.equals("expires_on")) {
             expiresOnInSecs = Long.parseLong(fieldValue);
           }
+
         }
         jp.nextToken();
       }

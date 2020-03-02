@@ -62,7 +62,6 @@ public class MsiTokenProvider extends AccessTokenProvider {
   /**
    * Checks if the token is about to expire as per base expiry logic. Otherwise try to expire every 1 hour
    *
-   *
    * @return true if the token is expiring in next 5 minutes
    */
   @Override
@@ -71,12 +70,16 @@ public class MsiTokenProvider extends AccessTokenProvider {
       || super.isTokenAboutToExpire()){
       return true;
     }
+
     boolean expiring = false;
-    long offset = ONE_HOUR;
-    if ((tokenFetchTime + offset) < System.currentTimeMillis()) expiring = true;
+    long elapsedTimeSinceLastTokenRefreshInMillis = System.currentTimeMillis() - tokenFetchTime;
+    expiring = elapsedTimeSinceLastTokenRefreshInMillis >= ONE_HOUR || elapsedTimeSinceLastTokenRefreshInMillis < 0;
+    // In case of, Token is not refreshed for 1 hr or any clock skew issues, refresh token.
     if (expiring) {
-      LOG.debug("MSIToken: token renewing : " + offset + " milliseconds window");
+      LOG.debug("MSIToken: token renewing : " + ONE_HOUR + " milliseconds window");
     }
+
     return expiring;
   }
+
 }
