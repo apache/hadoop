@@ -31,6 +31,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -43,6 +46,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
@@ -85,6 +89,9 @@ public class TestFSConfigToCSConfigConverter {
 
   @Mock
   private DryRunResultHolder dryRunResultHolder;
+
+  @Mock
+  private QueuePlacementConverter placementConverter;
 
   private FSConfigToCSConfigConverter converter;
   private Configuration config;
@@ -583,6 +590,7 @@ public class TestFSConfigToCSConfigConverter {
     config.setBoolean(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE,
         userAsDefaultQueue);
 
+    converter.setConvertPlacementRules(true);
     converter.convert(config);
 
     Configuration convertedConf = getConvertedCSConfig();
@@ -648,6 +656,37 @@ public class TestFSConfigToCSConfigConverter {
       assertNull("Auto-create queue shouldn't be set",
           convertedConf.get(property));
     }
+  }
+
+  @Test
+  public void testPlacementRulesConversionDisabled() throws Exception {
+    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
+        .withFairSchedulerXmlConfig(FAIR_SCHEDULER_XML)
+        .withConvertPlacementRules(false)
+        .build();
+
+    converter.setPlacementConverter(placementConverter);
+    converter.convert(params);
+
+    verifyZeroInteractions(placementConverter);
+  }
+
+  @Test
+  public void testPlacementRulesConversionEnabled() throws Exception {
+    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
+        .withFairSchedulerXmlConfig(FAIR_SCHEDULER_XML)
+        .withConvertPlacementRules(true)
+        .build();
+
+    converter.setPlacementConverter(placementConverter);
+    converter.convert(params);
+
+    verify(placementConverter).convertPlacementPolicy(
+        any(PlacementManager.class),
+        any(FSConfigToCSConfigRuleHandler.class),
+        any(Boolean.class));
   }
 
   private Configuration getConvertedCSConfig() {

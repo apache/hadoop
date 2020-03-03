@@ -98,6 +98,10 @@ public class FSConfigToCSConfigArgumentHandler {
         "Disables checking whether a placement rule is terminal to maintain" +
         " backward compatibility with configs that were made before YARN-8967.",
         false),
+    CONVERT_PLACEMENT_RULES("convert placement rules",
+        "m", "convert-placement-rules",
+        "Convert Fair Scheduler placement rules to Capacity" +
+        " Scheduler mapping rules", false),
     HELP("help", "h", "help", "Displays the list of options", false);
 
     private final String name;
@@ -216,6 +220,8 @@ public class FSConfigToCSConfigArgumentHandler {
         cliParser.getOptionValue(CliOption.CONVERSION_RULES.shortSwitch);
     String outputDir =
         cliParser.getOptionValue(CliOption.OUTPUT_DIR.shortSwitch);
+    boolean convertPlacementRules =
+        cliParser.hasOption(CliOption.CONVERT_PLACEMENT_RULES.shortSwitch);
 
     checkFile(CliOption.YARN_SITE, yarnSiteXmlFile);
     checkFile(CliOption.FAIR_SCHEDULER, fairSchedulerXmlFile);
@@ -231,6 +237,7 @@ public class FSConfigToCSConfigArgumentHandler {
             cliParser.getOptionValue(CliOption.CLUSTER_RESOURCE.shortSwitch))
         .withConsole(cliParser.hasOption(CliOption.CONSOLE_MODE.shortSwitch))
         .withOutputDirectory(outputDir)
+        .withConvertPlacementRules(convertPlacementRules)
         .build();
   }
 
