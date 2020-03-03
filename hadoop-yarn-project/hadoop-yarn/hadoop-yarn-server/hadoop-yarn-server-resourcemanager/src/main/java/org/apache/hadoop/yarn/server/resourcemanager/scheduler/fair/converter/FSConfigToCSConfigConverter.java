@@ -91,10 +91,12 @@ public class FSConfigToCSConfigConverter {
   private Configuration convertedYarnSiteConfig;
   private Configuration capacitySchedulerConfig;
   private FSConfigToCSConfigRuleHandler ruleHandler;
+  private QueuePlacementConverter placementConverter;
 
   private OutputStream yarnSiteOutputStream;
   private OutputStream capacitySchedulerOutputStream;
   private boolean consoleMode = false;
+  private boolean convertPlacementRules = false;
 
   public FSConfigToCSConfigConverter(FSConfigToCSConfigRuleHandler
       ruleHandler, ConversionOptions conversionOptions) {
@@ -102,6 +104,7 @@ public class FSConfigToCSConfigConverter {
     this.conversionOptions = conversionOptions;
     this.yarnSiteOutputStream = System.out;
     this.capacitySchedulerOutputStream = System.out;
+    this.placementConverter = new QueuePlacementConverter();
   }
 
   public void convert(FSConfigToCSConfigConverterParams params)
@@ -113,6 +116,8 @@ public class FSConfigToCSConfigConverter {
     handleFairSchedulerConfig(params, inputYarnSiteConfig);
 
     this.clusterResource = getClusterResource(params);
+    this.convertPlacementRules = params.isConvertPlacementRules();
+
     convert(inputYarnSiteConfig);
   }
 
@@ -309,16 +314,19 @@ public class FSConfigToCSConfigConverter {
     queueConverter.convertQueueHierarchy(rootQueue);
     emitACLs(fs);
 
-    PlacementManager placementManager =
-        fs.getRMContext().getQueuePlacementManager();
+    if (convertPlacementRules) {
+      LOG.info("Converting placement rules");
+      PlacementManager placementManager =
+          fs.getRMContext().getQueuePlacementManager();
 
-    if (placementManager.getPlacementRules().size() > 0) {
-      QueuePlacementConverter placementConverter =
-          new QueuePlacementConverter();
-      Map<String, String> properties =
-          placementConverter.convertPlacementPolicy(placementManager,
-              ruleHandler, userAsDefaultQueue);
-      properties.forEach((k, v) -> capacitySchedulerConfig.set(k, v));
+      if (placementManager.getPlacementRules().size() > 0) {
+        Map<String, String> properties =
+            placementConverter.convertPlacementPolicy(placementManager,
+                ruleHandler, userAsDefaultQueue);
+        properties.forEach((k, v) -> capacitySchedulerConfig.set(k, v));
+      }
+    } else {
+      LOG.info("Ignoring the conversion of placement rules");
     }
   }
 
@@ -432,6 +440,15 @@ public class FSConfigToCSConfigConverter {
     return convertedYarnSiteConfig;
   }
 
+  @VisibleForTesting
+  void setConvertPlacementRules(boolean convertPlacementRules) {
+    this.convertPlacementRules = convertPlacementRules;
+  }
+
+  @VisibleForTesting
+  void setPlacementConverter(QueuePlacementConverter converter) {
+    this.placementConverter = converter;
+  }
   /*
    * Determines whether <queuePlacementPolicy> is present
    * in the allocation file or not.
