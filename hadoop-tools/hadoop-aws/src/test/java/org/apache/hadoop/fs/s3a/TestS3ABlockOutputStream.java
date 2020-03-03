@@ -45,11 +45,10 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
     S3ADataBlocks.BlockFactory blockFactory =
         mock(S3ADataBlocks.BlockFactory.class);
     long blockSize = Constants.DEFAULT_MULTIPART_SIZE;
-    S3AInstrumentation.OutputStreamStatistics statistics = null;
     WriteOperationHelper oHelper = mock(WriteOperationHelper.class);
     PutTracker putTracker = mock(PutTracker.class);
     stream = spy(new S3ABlockOutputStream(fs, "", executorService,
-      progressable, blockSize, blockFactory, statistics, oHelper,
+      progressable, blockSize, blockFactory, null, oHelper,
       putTracker));
   }
 

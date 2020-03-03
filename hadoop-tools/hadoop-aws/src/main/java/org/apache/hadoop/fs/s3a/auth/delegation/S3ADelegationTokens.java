@@ -34,9 +34,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.fs.s3a.impl.statistics.DelegationTokenStatistics;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -134,9 +134,9 @@ public class S3ADelegationTokens extends AbstractDTService {
           AWSPolicyProvider.AccessLevel.WRITE);
 
   /**
-   * Statistics for the owner FS.
+   * Statistics for the operations.
    */
-  private S3AInstrumentation.DelegationTokenStatistics stats;
+  private DelegationTokenStatistics stats;
 
   /**
    * Name of the token binding as extracted from token kind; used for

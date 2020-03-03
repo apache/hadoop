@@ -34,8 +34,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
+import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreCapabilities;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
@@ -1162,7 +1162,7 @@ public final class S3ATestUtils {
    * @param out output stream
    * @return the (active) stats of the write
    */
-  public static S3AInstrumentation.OutputStreamStatistics
+  public static BlockOutputStreamStatistics
       getOutputStreamStatistics(FSDataOutputStream out) {
     S3ABlockOutputStream blockOutputStream
         = (S3ABlockOutputStream) out.getWrappedStream();

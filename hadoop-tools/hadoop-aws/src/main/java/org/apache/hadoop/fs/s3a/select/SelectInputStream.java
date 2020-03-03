@@ -39,9 +39,9 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.Retries;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.io.IOUtils;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -103,7 +103,7 @@ public class SelectInputStream extends FSInputStream implements
 
   private final S3AReadOpContext readContext;
 
-  private final S3AInstrumentation.InputStreamStatistics streamStatistics;
+  private final S3AInputStreamStatistics streamStatistics;
 
   private long readahead;
 
@@ -130,7 +130,7 @@ public class SelectInputStream extends FSInputStream implements
     this.uri = "s3a://" + this.bucket + "/" + this.key;
     this.readContext = readContext;
     this.readahead = readContext.getReadahead();
-    this.streamStatistics = readContext.getInstrumentation()
+    this.streamStatistics = readContext.getS3AStatisticsContext()
         .newInputStreamStatistics();
     SelectRecordsInputStream stream = once(
         "S3 Select",
@@ -428,7 +428,7 @@ public class SelectInputStream extends FSInputStream implements
    */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  public S3AInstrumentation.InputStreamStatistics getS3AStreamStatistics() {
+  public S3AInputStreamStatistics getS3AStreamStatistics() {
     return streamStatistics;
   }
 

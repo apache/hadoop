@@ -49,6 +49,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
@@ -105,16 +106,25 @@ public class WriteOperationHelper {
   private final String bucket;
 
   /**
+   * statistics context.
+   */
+  private final S3AStatisticsContext statisticsContext;
+
+  /**
    * Constructor.
    * @param owner owner FS creating the helper
    * @param conf Configuration object
+   * @param statisticsContext statistics context
    *
    */
-  protected WriteOperationHelper(S3AFileSystem owner, Configuration conf) {
+  protected WriteOperationHelper(S3AFileSystem owner,
+      Configuration conf,
+      S3AStatisticsContext statisticsContext) {
     this.owner = owner;
     this.invoker = new Invoker(new S3ARetryPolicy(conf),
         this::operationRetried);
     this.conf = conf;
+    this.statisticsContext = statisticsContext;
     bucket = owner.getBucket();
   }
 

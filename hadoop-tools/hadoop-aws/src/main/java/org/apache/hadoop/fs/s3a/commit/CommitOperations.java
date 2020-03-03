@@ -44,12 +44,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
+import org.apache.hadoop.fs.s3a.impl.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
@@ -79,7 +79,7 @@ public class CommitOperations {
   private final S3AFileSystem fs;
 
   /** Statistics. */
-  private final S3AInstrumentation.CommitterStatistics statistics;
+  private final CommitterStatistics statistics;
 
   /**
    * Write operations for the destination fs.
@@ -126,7 +126,7 @@ public class CommitOperations {
   }
 
   /** @return statistics. */
-  protected S3AInstrumentation.CommitterStatistics getStatistics() {
+  protected CommitterStatistics getStatistics() {
     return statistics;
   }
 

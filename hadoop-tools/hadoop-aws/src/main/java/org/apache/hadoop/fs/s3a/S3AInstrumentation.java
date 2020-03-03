@@ -18,14 +18,25 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import javax.annotation.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.s3a.impl.statistics.ChangeTrackerStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.CommitterStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.CountingChangeTracker;
+import org.apache.hadoop.fs.s3a.impl.statistics.DelegationTokenStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
+import org.apache.hadoop.fs.statistics.impl.DynamicIOStatisticsBuilder;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricStringBuilder;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -49,6 +60,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationSupport.createDynamicIOStatistics;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 
 /**
@@ -70,25 +82,25 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
   private static final String METRICS_SOURCE_BASENAME = "S3AMetrics";
 
   /**
-   * {@value #METRICS_SYSTEM_NAME} The name of the s3a-specific metrics
+   * {@value} The name of the s3a-specific metrics
    * system instance used for s3a metrics.
    */
   public static final String METRICS_SYSTEM_NAME = "s3a-file-system";
 
   /**
-   * {@value #CONTEXT} Currently all s3a metrics are placed in a single
+   * {@value} Currently all s3a metrics are placed in a single
    * "context". Distinct contexts may be used in the future.
    */
   public static final String CONTEXT = "s3aFileSystem";
 
   /**
-   * {@value #METRIC_TAG_FILESYSTEM_ID} The name of a field added to metrics
+   * {@value} The name of a field added to metrics
    * records that uniquely identifies a specific FileSystem instance.
    */
   public static final String METRIC_TAG_FILESYSTEM_ID = "s3aFileSystemId";
 
   /**
-   * {@value #METRIC_TAG_BUCKET} The name of a field added to metrics records
+   * {@value} The name of a field added to metrics records
    * that indicates the hostname portion of the FS URL.
    */
   public static final String METRIC_TAG_BUCKET = "bucket";
@@ -561,9 +573,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
   /**
    * Create a stream input statistics instance.
    * @return the new instance
+   * @param filesystemStatistics FS Stats.
    */
-  public InputStreamStatistics newInputStreamStatistics() {
-    return new InputStreamStatistics();
+  public S3AInputStreamStatistics newInputStreamStatistics(
+      final FileSystem.Statistics filesystemStatistics) {
+    return new InputStreamStatisticsImpl(filesystemStatistics);
   }
 
   /**
@@ -579,8 +593,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
    * Create a new instance of the committer statistics.
    * @return a new committer statistics instance
    */
-  CommitterStatistics newCommitterStatistics() {
-    return new CommitterStatistics();
+  public CommitterStatistics newCommitterStatistics() {
+    return new CommitterStatisticsImpl();
   }
 
   /**
@@ -588,7 +602,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
    * the filesystem-wide statistics.
    * @param statistics stream statistics
    */
-  private void mergeInputStreamStatistics(InputStreamStatistics statistics) {
+  private void mergeInputStreamStatistics(InputStreamStatisticsImpl statistics) {
     streamOpenOperations.incr(statistics.openOperations);
     streamCloseOperations.incr(statistics.closeOperations);
     streamClosed.incr(statistics.closed);
@@ -634,35 +648,45 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
 
   /**
    * Statistics updated by an input stream during its actual operation.
-   * These counters not thread-safe and are for use in a single instance
-   * of a stream.
+   * These counters are marked as volatile so that IOStatistics on the stream
+   * will get the latest values.
+   * They are only to be incremented within synchronized blocks.
    */
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
-  public final class InputStreamStatistics implements AutoCloseable {
-    public long openOperations;
-    public long closeOperations;
-    public long closed;
-    public long aborted;
-    public long seekOperations;
-    public long readExceptions;
-    public long forwardSeekOperations;
-    public long backwardSeekOperations;
-    public long bytesRead;
-    public long bytesSkippedOnSeek;
-    public long bytesBackwardsOnSeek;
-    public long readOperations;
-    public long readFullyOperations;
-    public long readsIncomplete;
-    public long bytesReadInClose;
-    public long bytesDiscardedInAbort;
-    public long policySetCount;
-    public long inputPolicy;
+  private final class InputStreamStatisticsImpl implements
+      S3AInputStreamStatistics {
+
+    /**
+     * Distance used when incrementing FS stats.
+     */
+    private static final int DISTANCE = 5;
+
+    private final FileSystem.Statistics filesystemStatistics;
+
+    public volatile long openOperations;
+    public volatile long closeOperations;
+    public volatile long closed;
+    public volatile long aborted;
+    public volatile long seekOperations;
+    public volatile long readExceptions;
+    public volatile long forwardSeekOperations;
+    public volatile long backwardSeekOperations;
+    public volatile long bytesRead;
+    public volatile long bytesSkippedOnSeek;
+    public volatile long bytesBackwardsOnSeek;
+    public volatile long readOperations;
+    public volatile long readFullyOperations;
+    public volatile long readsIncomplete;
+    public volatile long bytesReadInClose;
+    public volatile long bytesDiscardedInAbort;
+    public volatile long policySetCount;
+    public volatile long inputPolicy;
     /** This is atomic so that it can be passed as a reference. */
     private final AtomicLong versionMismatches = new AtomicLong(0);
-    private InputStreamStatistics mergedStats;
+    private InputStreamStatisticsImpl mergedStats;
 
-    private InputStreamStatistics() {
+    private InputStreamStatisticsImpl(FileSystem.Statistics filesystemStatistics) {
+
+      this.filesystemStatistics = filesystemStatistics;
     }
 
     /**
@@ -670,6 +694,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * @param negativeOffset how far was the seek?
      * This is expected to be negative.
      */
+    @Override
     public void seekBackwards(long negativeOffset) {
       seekOperations++;
       backwardSeekOperations++;
@@ -682,6 +707,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * @param skipped number of bytes skipped by reading from the stream.
      * If the seek was implemented by a close + reopen, set this to zero.
      */
+    @Override
     public void seekForwards(long skipped) {
       seekOperations++;
       forwardSeekOperations++;
@@ -694,6 +720,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * The inner stream was opened.
      * @return the previous count
      */
+    @Override
     public long streamOpened() {
       long count = openOperations;
       openOperations++;
@@ -707,6 +734,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * @param remainingInCurrentRequest the number of bytes remaining in
      * the current request.
      */
+    @Override
     public void streamClose(boolean abortedConnection,
         long remainingInCurrentRequest) {
       closeOperations++;
@@ -722,6 +750,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     /**
      * An ignored stream read exception was received.
      */
+    @Override
     public void readException() {
       readExceptions++;
     }
@@ -731,6 +760,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * no-op if the argument is negative.
      * @param bytes number of bytes read
      */
+    @Override
     public void bytesRead(long bytes) {
       if (bytes > 0) {
         bytesRead += bytes;
@@ -742,6 +772,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * @param pos starting position of the read
      * @param len length of bytes to read
      */
+    @Override
     public void readOperationStarted(long pos, long len) {
       readOperations++;
     }
@@ -752,6 +783,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * @param pos starting position of the read
      * @param len length of bytes to read
      */
+    @Override
     public void readFullyOperationStarted(long pos, long len) {
       readFullyOperations++;
     }
@@ -761,6 +793,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * @param requested number of requested bytes
      * @param actual the actual number of bytes
      */
+    @Override
     public void readOperationCompleted(int requested, int actual) {
       if (requested > actual) {
         readsIncomplete++;
@@ -780,17 +813,20 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * The input policy has been switched.
      * @param updatedPolicy enum value of new policy.
      */
+    @Override
     public void inputPolicySet(int updatedPolicy) {
       policySetCount++;
       inputPolicy = updatedPolicy;
     }
 
     /**
-     * Get a reference to the version mismatch counter.
-     * @return a counter which can be incremented.
+     * The change tracker increments {@code versionMismatches} on any
+     * mismatch.
+     * @return change tracking.
      */
-    public AtomicLong getVersionMismatchCounter() {
-      return versionMismatches;
+    @Override
+    public ChangeTrackerStatistics getChangeTrackerStatistics() {
+      return new CountingChangeTracker(versionMismatches);
     }
 
     /**
@@ -839,7 +875,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * stats into the fs-wide stats. <b>Behavior is undefined if called on a
      * closed instance.</b>
      */
-    void merge(boolean isClosed) {
+    @Override
+    public void merge(boolean isClosed) {
       if (mergedStats != null) {
         mergeInputStreamStatistics(diff(mergedStats));
       } else {
@@ -848,15 +885,21 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       // If stats are closed, no need to create another copy
       if (!isClosed) {
         mergedStats = copy();
+      } else {
+        if (filesystemStatistics != null) {
+          // increment the read counter
+          filesystemStatistics.incrementBytesReadByDistance(DISTANCE,
+              bytesRead + bytesReadInClose);
+        }
       }
     }
 
     /**
-     * Returns a diff between this {@link InputStreamStatistics} instance and
-     * the given {@link InputStreamStatistics} instance.
+     * Returns a diff between this {@link InputStreamStatisticsImpl} instance and
+     * the given {@link InputStreamStatisticsImpl} instance.
      */
-    private InputStreamStatistics diff(InputStreamStatistics inputStats) {
-      InputStreamStatistics diff = new InputStreamStatistics();
+    private InputStreamStatisticsImpl diff(InputStreamStatisticsImpl inputStats) {
+      InputStreamStatisticsImpl diff = new InputStreamStatisticsImpl(filesystemStatistics);
       diff.openOperations = openOperations - inputStats.openOperations;
       diff.closeOperations = closeOperations - inputStats.closeOperations;
       diff.closed = closed - inputStats.closed;
@@ -887,11 +930,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     }
 
     /**
-     * Returns a new {@link InputStreamStatistics} instance with all the same
-     * values as this {@link InputStreamStatistics}.
+     * Returns a new {@link InputStreamStatisticsImpl} instance with all the same
+     * values as this {@link InputStreamStatisticsImpl}.
      */
-    private InputStreamStatistics copy() {
-      InputStreamStatistics copy = new InputStreamStatistics();
+    private InputStreamStatisticsImpl copy() {
+      InputStreamStatisticsImpl copy = new InputStreamStatisticsImpl(filesystemStatistics);
       copy.openOperations = openOperations;
       copy.closeOperations = closeOperations;
       copy.closed = closed;
@@ -912,37 +955,165 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       copy.inputPolicy = inputPolicy;
       return copy;
     }
+
+    /**
+     * Convert to an IOStatistics source which is
+     * dynamically updated.
+     * @return statistics
+     */
+    @Override
+    public IOStatistics createIOStatistics() {
+      DynamicIOStatisticsBuilder builder
+          = createDynamicIOStatistics();
+
+      builder.add(StreamStatisticNames.STREAM_CLOSED,
+          k -> closed);
+      builder.add(StreamStatisticNames.STREAM_CLOSE_OPERATIONS,
+          k -> closeOperations);
+      builder.add(StreamStatisticNames.STREAM_OPENED,
+          k -> openOperations);
+      builder.add(StreamStatisticNames.STREAM_READ_EXCEPTIONS,
+          k -> readExceptions);
+      builder.add(StreamStatisticNames.STREAM_READ_FULLY_OPERATIONS,
+          k -> readFullyOperations);
+      builder.add(StreamStatisticNames.STREAM_READ_OPERATIONS,
+          k -> readOperations);
+      builder.add(StreamStatisticNames.STREAM_READ_OPERATIONS_INCOMPLETE,
+          k -> readsIncomplete);
+      builder.add(StreamStatisticNames.STREAM_OPENED,
+          k -> openOperations);
+      builder.add(StreamStatisticNames.STREAM_ABORT_BYTES_DISCARDED,
+          k -> bytesDiscardedInAbort);
+      return builder.build();
+    }
+
+    @Override
+    public long getCloseOperations() {
+      return closeOperations;
+    }
+
+    @Override
+    public long getClosed() {
+      return closed;
+    }
+
+    @Override
+    public long getAborted() {
+      return aborted;
+    }
+
+    @Override
+    public long getForwardSeekOperations() {
+      return forwardSeekOperations;
+    }
+
+    @Override
+    public long getBackwardSeekOperations() {
+      return backwardSeekOperations;
+    }
+
+    @Override
+    public long getBytesRead() {
+      return bytesRead;
+    }
+
+    @Override
+    public long getBytesSkippedOnSeek() {
+      return bytesSkippedOnSeek;
+    }
+
+    @Override
+    public long getBytesBackwardsOnSeek() {
+      return bytesBackwardsOnSeek;
+    }
+
+    @Override
+    public long getBytesReadInClose() {
+      return bytesReadInClose;
+    }
+
+    @Override
+    public long getBytesDiscardedInAbort() {
+      return bytesDiscardedInAbort;
+    }
+
+    @Override
+    public long getOpenOperations() {
+      return openOperations;
+    }
+
+    @Override
+    public long getSeekOperations() {
+      return seekOperations;
+    }
+
+    @Override
+    public long getReadExceptions() {
+      return readExceptions;
+    }
+
+    @Override
+    public long getReadOperations() {
+      return readOperations;
+    }
+
+    @Override
+    public long getReadFullyOperations() {
+      return readFullyOperations;
+    }
+
+    @Override
+    public long getReadsIncomplete() {
+      return readsIncomplete;
+    }
+
+    @Override
+    public long getPolicySetCount() {
+      return policySetCount;
+    }
+
+    @Override
+    public long getVersionMismatches() {
+      return versionMismatches.get();
+    }
+
+    @Override
+    public long getInputPolicy() {
+      return inputPolicy;
+    }
   }
 
   /**
    * Create a stream output statistics instance.
    * @return the new instance
    */
-  OutputStreamStatistics newOutputStreamStatistics(Statistics statistics) {
-    return new OutputStreamStatistics(statistics);
+  public BlockOutputStreamStatistics newOutputStreamStatistics(
+      FileSystem.Statistics filesystemStatistics) {
+    return new BlockOutputStreamStatisticsImpl(filesystemStatistics);
   }
 
   /**
    * Merge in the statistics of a single output stream into
    * the filesystem-wide statistics.
-   * @param statistics stream statistics
+   * @param source stream statistics
    */
-  private void mergeOutputStreamStatistics(OutputStreamStatistics statistics) {
-    incrementCounter(STREAM_WRITE_TOTAL_TIME, statistics.totalUploadDuration());
-    incrementCounter(STREAM_WRITE_QUEUE_DURATION, statistics.queueDuration);
-    incrementCounter(STREAM_WRITE_TOTAL_DATA, statistics.bytesUploaded);
+  private void mergeOutputStreamStatistics(BlockOutputStreamStatisticsImpl source) {
+    incrementCounter(STREAM_WRITE_TOTAL_TIME, source.totalUploadDuration());
+    incrementCounter(STREAM_WRITE_QUEUE_DURATION, source.queueDuration);
+    incrementCounter(STREAM_WRITE_TOTAL_DATA, source.bytesUploaded);
     incrementCounter(STREAM_WRITE_BLOCK_UPLOADS,
-        statistics.blockUploadsCompleted);
+        source.blockUploadsCompleted);
+    incrementCounter(STREAM_WRITE_FAILURES, source.blockUploadsFailed);
   }
 
   /**
    * Statistics updated by an output stream during its actual operation.
-   * Some of these stats may be relayed. However, as block upload is
-   * spans multiple
+   * Some of these stats are propagated to any passed in
+   * {@link FileSystem.Statistics} instance; this is only done
+   * in close() for better cross-thread accounting.
    */
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
-  public final class OutputStreamStatistics implements Closeable {
+  private final class BlockOutputStreamStatisticsImpl implements
+      BlockOutputStreamStatistics {
     private final AtomicLong blocksSubmitted = new AtomicLong(0);
     private final AtomicLong blocksInQueue = new AtomicLong(0);
     private final AtomicLong blocksActive = new AtomicLong(0);
@@ -957,30 +1128,34 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     private final AtomicInteger blocksAllocated = new AtomicInteger(0);
     private final AtomicInteger blocksReleased = new AtomicInteger(0);
 
-    private Statistics statistics;
+    private final FileSystem.Statistics filesystemStatistics;
 
-    public OutputStreamStatistics(Statistics statistics){
-      this.statistics = statistics;
+    private BlockOutputStreamStatisticsImpl(
+        @Nullable FileSystem.Statistics filesystemStatistics) {
+      this.filesystemStatistics = filesystemStatistics;
     }
 
     /**
      * A block has been allocated.
      */
-    void blockAllocated() {
+    @Override
+    public void blockAllocated() {
       blocksAllocated.incrementAndGet();
     }
 
     /**
      * A block has been released.
      */
-    void blockReleased() {
+    @Override
+    public void blockReleased() {
       blocksReleased.incrementAndGet();
     }
 
     /**
      * Block is queued for upload.
      */
-    void blockUploadQueued(int blockSize) {
+    @Override
+    public void blockUploadQueued(int blockSize) {
       blocksSubmitted.incrementAndGet();
       blocksInQueue.incrementAndGet();
       bytesPendingUpload.addAndGet(blockSize);
@@ -989,7 +1164,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     }
 
     /** Queued block has been scheduled for upload. */
-    void blockUploadStarted(long duration, int blockSize) {
+    @Override
+    public void blockUploadStarted(long duration, int blockSize) {
       queueDuration.addAndGet(duration);
       blocksInQueue.decrementAndGet();
       blocksActive.incrementAndGet();
@@ -998,8 +1174,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     }
 
     /** A block upload has completed. */
-    void blockUploadCompleted(long duration, int blockSize) {
-      this.transferDuration.addAndGet(duration);
+    @Override
+    public void blockUploadCompleted(long duration, int blockSize) {
+      transferDuration.addAndGet(duration);
       incrementGauge(STREAM_WRITE_BLOCK_UPLOADS_ACTIVE, -1);
       blocksActive.decrementAndGet();
       blockUploadsCompleted.incrementAndGet();
@@ -1010,14 +1187,15 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      *  A final transfer completed event is still expected, so this
      *  does not decrement the active block counter.
      */
-    void blockUploadFailed(long duration, int blockSize) {
+    @Override
+    public void blockUploadFailed(long duration, int blockSize) {
       blockUploadsFailed.incrementAndGet();
     }
 
     /** Intermediate report of bytes uploaded. */
-    void bytesTransferred(long byteCount) {
+    @Override
+    public void bytesTransferred(long byteCount) {
       bytesUploaded.addAndGet(byteCount);
-      statistics.incrementBytesWritten(byteCount);
       bytesPendingUpload.addAndGet(-byteCount);
       incrementGauge(STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING, -byteCount);
     }
@@ -1026,7 +1204,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * Note exception in a multipart complete.
      * @param count count of exceptions
      */
-    void exceptionInMultipartComplete(int count) {
+    @Override
+    public void exceptionInMultipartComplete(int count) {
       if (count > 0) {
         exceptionsInMultipartFinalize.addAndGet(count);
       }
@@ -1035,7 +1214,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     /**
      * Note an exception in a multipart abort.
      */
-    void exceptionInMultipartAbort() {
+    @Override
+    public void exceptionInMultipartAbort() {
       exceptionsInMultipartFinalize.incrementAndGet();
     }
 
@@ -1043,6 +1223,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * Get the number of bytes pending upload.
      * @return the number of bytes in the pending upload state.
      */
+    @Override
     public long getBytesPendingUpload() {
       return bytesPendingUpload.get();
     }
@@ -1052,6 +1233,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * to be called at the end of the write.
      * @param size size in bytes
      */
+    @Override
     public void commitUploaded(long size) {
       incrementCounter(COMMITTER_BYTES_UPLOADED, size);
     }
@@ -1067,6 +1249,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
             " as pending upload in {}", this);
       }
       mergeOutputStreamStatistics(this);
+      // and patch the FS statistics.
+      // provided the stream is closed in the worker thread, this will
+      // ensure that the thread-specific worker stats are updated.
+      if (filesystemStatistics != null) {
+        filesystemStatistics.incrementBytesWritten(bytesUploaded.get());
+      }
     }
 
     long averageQueueTime() {
@@ -1084,11 +1272,13 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       return queueDuration.get() + transferDuration.get();
     }
 
-    public int blocksAllocated() {
+    @Override
+    public int getBlocksAllocated() {
       return blocksAllocated.get();
     }
 
-    public int blocksReleased() {
+    @Override
+    public int getBlocksReleased() {
       return blocksReleased.get();
     }
 
@@ -1097,7 +1287,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * if the numbers change during the (non-synchronized) calculation.
      * @return the number of actively allocated blocks.
      */
-    public int blocksActivelyAllocated() {
+    @Override
+    public int getBlocksActivelyAllocated() {
       return blocksAllocated.get() - blocksReleased.get();
     }
 
@@ -1115,7 +1306,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       sb.append(", bytesUploaded=").append(bytesUploaded);
       sb.append(", blocksAllocated=").append(blocksAllocated);
       sb.append(", blocksReleased=").append(blocksReleased);
-      sb.append(", blocksActivelyAllocated=").append(blocksActivelyAllocated());
+      sb.append(", blocksActivelyAllocated=").append(getBlocksActivelyAllocated());
       sb.append(", exceptionsInMultipartFinalize=").append(
           exceptionsInMultipartFinalize);
       sb.append(", transferDuration=").append(transferDuration).append(" ms");
@@ -1127,6 +1318,24 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
           .append(" bytes/s");
       sb.append('}');
       return sb.toString();
+    }
+
+    /**
+     * Convert to an IOStatistics source which is
+     * dynamically updated.
+     * @return statistics
+     */
+    @Override
+    public IOStatistics createIOStatistics() {
+      DynamicIOStatisticsBuilder builder = createDynamicIOStatistics();
+
+      builder.add(StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,
+          blocksSubmitted);
+      builder.add(StreamStatisticNames.STREAM_WRITE_TOTAL_DATA,
+          bytesUploaded);
+      builder.add(StreamStatisticNames.STREAM_WRITE_FAILURES,
+          blockUploadsFailed);
+      return builder.build();
     }
   }
 
@@ -1192,13 +1401,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
   }
 
   /**
-   * Instrumentation exported to S3Guard Committers.
+   * Instrumentation exported to S3A Committers.
    */
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
-  public final class CommitterStatistics {
+  private final class CommitterStatisticsImpl implements CommitterStatistics {
 
     /** A commit has been created. */
+    @Override
     public void commitCreated() {
       incrementCounter(COMMITTER_COMMITS_CREATED, 1);
     }
@@ -1207,6 +1415,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * Data has been uploaded to be committed in a subsequent operation.
      * @param size size in bytes
      */
+    @Override
     public void commitUploaded(long size) {
       incrementCounter(COMMITTER_BYTES_UPLOADED, size);
     }
@@ -1215,24 +1424,29 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * A commit has been completed.
      * @param size size in bytes
      */
+    @Override
     public void commitCompleted(long size) {
       incrementCounter(COMMITTER_COMMITS_COMPLETED, 1);
       incrementCounter(COMMITTER_BYTES_COMMITTED, size);
     }
 
     /** A commit has been aborted. */
+    @Override
     public void commitAborted() {
       incrementCounter(COMMITTER_COMMITS_ABORTED, 1);
     }
 
+    @Override
     public void commitReverted() {
       incrementCounter(COMMITTER_COMMITS_REVERTED, 1);
     }
 
+    @Override
     public void commitFailed() {
       incrementCounter(COMMITTER_COMMITS_FAILED, 1);
     }
 
+    @Override
     public void taskCompleted(boolean success) {
       incrementCounter(
           success ? COMMITTER_TASKS_SUCCEEDED
@@ -1240,6 +1454,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
           1);
     }
 
+    @Override
     public void jobCompleted(boolean success) {
       incrementCounter(
           success ? COMMITTER_JOBS_SUCCEEDED
@@ -1253,20 +1468,20 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
    * @return an instance of delegation token statistics
    */
   public DelegationTokenStatistics newDelegationTokenStatistics() {
-    return new DelegationTokenStatistics();
+    return new DelegationTokenStatisticsImpl();
   }
 
   /**
    * Instrumentation exported to S3A Delegation Token support.
    */
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
-  public final class DelegationTokenStatistics {
+  private final class DelegationTokenStatisticsImpl implements
+      DelegationTokenStatistics {
 
-    private DelegationTokenStatistics() {
+    private DelegationTokenStatisticsImpl() {
     }
 
     /** A token has been issued. */
+    @Override
     public void tokenIssued() {
       incrementCounter(DELEGATION_TOKENS_ISSUED, 1);
     }

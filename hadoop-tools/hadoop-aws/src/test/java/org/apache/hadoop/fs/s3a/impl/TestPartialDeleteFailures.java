@@ -48,8 +48,8 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
@@ -216,7 +216,7 @@ public class TestPartialDeleteFailures {
             "s3a-transfer-shared"),
         Constants.DEFAULT_EXECUTOR_CAPACITY,
         new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL, Invoker.LOG_EVENT),
-        new S3AInstrumentation(name),
+        new EmptyS3AStatisticsContext(),
         new S3AStorageStatistics(),
         S3AInputPolicy.Normal,
         ChangeDetectionPolicy.createPolicy(ChangeDetectionPolicy.Mode.None,

@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.apache.hadoop.fs.StorageStatistics.CommonStatisticNames;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -49,39 +50,56 @@ public enum Statistic {
   FAKE_DIRECTORIES_DELETED("fake_directories_deleted",
       "Total number of fake directory deletes submitted to object store."),
   IGNORED_ERRORS("ignored_errors", "Errors caught and ignored"),
-  INVOCATION_COPY_FROM_LOCAL_FILE(CommonStatisticNames.OP_COPY_FROM_LOCAL_FILE,
+  INVOCATION_COPY_FROM_LOCAL_FILE(
+      StoreStatisticNames.OP_COPY_FROM_LOCAL_FILE,
       "Calls of copyFromLocalFile()"),
-  INVOCATION_CREATE(CommonStatisticNames.OP_CREATE,
+  INVOCATION_CREATE(
+      StoreStatisticNames.OP_CREATE,
       "Calls of create()"),
-  INVOCATION_CREATE_NON_RECURSIVE(CommonStatisticNames.OP_CREATE_NON_RECURSIVE,
+  INVOCATION_CREATE_NON_RECURSIVE(
+      StoreStatisticNames.OP_CREATE_NON_RECURSIVE,
       "Calls of createNonRecursive()"),
-  INVOCATION_DELETE(CommonStatisticNames.OP_DELETE,
+  INVOCATION_DELETE(
+      StoreStatisticNames.OP_DELETE,
       "Calls of delete()"),
-  INVOCATION_EXISTS(CommonStatisticNames.OP_EXISTS,
+  INVOCATION_EXISTS(
+      StoreStatisticNames.OP_EXISTS,
       "Calls of exists()"),
-  INVOCATION_GET_DELEGATION_TOKEN(CommonStatisticNames.OP_GET_DELEGATION_TOKEN,
+  INVOCATION_GET_DELEGATION_TOKEN(
+      StoreStatisticNames.OP_GET_DELEGATION_TOKEN,
       "Calls of getDelegationToken()"),
-  INVOCATION_GET_FILE_CHECKSUM(CommonStatisticNames.OP_GET_FILE_CHECKSUM,
+  INVOCATION_GET_FILE_CHECKSUM(
+      StoreStatisticNames.OP_GET_FILE_CHECKSUM,
       "Calls of getFileChecksum()"),
-  INVOCATION_GET_FILE_STATUS(CommonStatisticNames.OP_GET_FILE_STATUS,
+  INVOCATION_GET_FILE_STATUS(
+      StoreStatisticNames.OP_GET_FILE_STATUS,
       "Calls of getFileStatus()"),
-  INVOCATION_GLOB_STATUS(CommonStatisticNames.OP_GLOB_STATUS,
+  INVOCATION_GLOB_STATUS(
+      StoreStatisticNames.OP_GLOB_STATUS,
       "Calls of globStatus()"),
-  INVOCATION_IS_DIRECTORY(CommonStatisticNames.OP_IS_DIRECTORY,
+  INVOCATION_IS_DIRECTORY(
+      StoreStatisticNames.OP_IS_DIRECTORY,
       "Calls of isDirectory()"),
-  INVOCATION_IS_FILE(CommonStatisticNames.OP_IS_FILE,
+  INVOCATION_IS_FILE(
+      StoreStatisticNames.OP_IS_FILE,
       "Calls of isFile()"),
-  INVOCATION_LIST_FILES(CommonStatisticNames.OP_LIST_FILES,
+  INVOCATION_LIST_FILES(
+      StoreStatisticNames.OP_LIST_FILES,
       "Calls of listFiles()"),
-  INVOCATION_LIST_LOCATED_STATUS(CommonStatisticNames.OP_LIST_LOCATED_STATUS,
+  INVOCATION_LIST_LOCATED_STATUS(
+      StoreStatisticNames.OP_LIST_LOCATED_STATUS,
       "Calls of listLocatedStatus()"),
-  INVOCATION_LIST_STATUS(CommonStatisticNames.OP_LIST_STATUS,
+  INVOCATION_LIST_STATUS(
+      StoreStatisticNames.OP_LIST_STATUS,
       "Calls of listStatus()"),
-  INVOCATION_MKDIRS(CommonStatisticNames.OP_MKDIRS,
+  INVOCATION_MKDIRS(
+      StoreStatisticNames.OP_MKDIRS,
       "Calls of mkdirs()"),
-  INVOCATION_OPEN(CommonStatisticNames.OP_OPEN,
+  INVOCATION_OPEN(
+      StoreStatisticNames.OP_OPEN,
       "Calls of open()"),
-  INVOCATION_RENAME(CommonStatisticNames.OP_RENAME,
+  INVOCATION_RENAME(
+      StoreStatisticNames.OP_RENAME,
       "Calls of rename()"),
   OBJECT_COPY_REQUESTS("object_copy_requests", "Object copy requests"),
   OBJECT_DELETE_REQUESTS("object_delete_requests", "Object delete requests"),
@@ -106,58 +124,83 @@ public enum Statistic {
       "number of bytes queued for upload/being actively uploaded"),
   OBJECT_SELECT_REQUESTS("object_select_requests",
       "Count of S3 Select requests issued"),
-  STREAM_ABORTED("stream_aborted",
+  STREAM_ABORTED(
+      StreamStatisticNames.STREAM_ABORTED,
       "Count of times the TCP stream was aborted"),
-  STREAM_BACKWARD_SEEK_OPERATIONS("stream_backward_seek_operations",
+  STREAM_BACKWARD_SEEK_OPERATIONS(
+      StreamStatisticNames.STREAM_BACKWARD_SEEK_OPERATIONS,
       "Number of executed seek operations which went backwards in a stream"),
-  STREAM_CLOSED("stream_closed", "Count of times the TCP stream was closed"),
-  STREAM_CLOSE_OPERATIONS("stream_close_operations",
+  STREAM_CLOSED(
+      StreamStatisticNames.STREAM_CLOSED,
+      "Count of times the TCP stream was closed"),
+  STREAM_CLOSE_OPERATIONS(
+      StreamStatisticNames.STREAM_CLOSE_OPERATIONS,
       "Total count of times an attempt to close a data stream was made"),
-  STREAM_FORWARD_SEEK_OPERATIONS("stream_forward_seek_operations",
+  STREAM_FORWARD_SEEK_OPERATIONS(
+      StreamStatisticNames.STREAM_FORWARD_SEEK_OPERATIONS,
       "Number of executed seek operations which went forward in a stream"),
-  STREAM_OPENED("stream_opened",
-      "Total count of times an input stream to object store was opened"),
-  STREAM_READ_EXCEPTIONS("stream_read_exceptions",
-      "Number of exceptions invoked on input streams"),
-  STREAM_READ_FULLY_OPERATIONS("stream_read_fully_operations",
+  STREAM_OPENED(
+      StreamStatisticNames.STREAM_OPENED,
+      "Total count of times an input stream to object store data was opened"),
+  STREAM_READ_EXCEPTIONS(
+      StreamStatisticNames.STREAM_READ_EXCEPTIONS,
+      "Number of exceptions raised during input stream reads"),
+  STREAM_READ_FULLY_OPERATIONS(
+      StreamStatisticNames.STREAM_READ_FULLY_OPERATIONS,
       "Count of readFully() operations in streams"),
-  STREAM_READ_OPERATIONS("stream_read_operations",
+  STREAM_READ_OPERATIONS(
+      StreamStatisticNames.STREAM_READ_OPERATIONS,
       "Count of read() operations in streams"),
-  STREAM_READ_OPERATIONS_INCOMPLETE("stream_read_operations_incomplete",
+  STREAM_READ_OPERATIONS_INCOMPLETE(
+      StreamStatisticNames.STREAM_READ_OPERATIONS_INCOMPLETE,
       "Count of incomplete read() operations in streams"),
-  STREAM_READ_VERSION_MISMATCHES("stream_read_version_mismatches",
+  STREAM_READ_VERSION_MISMATCHES(
+      StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES,
       "Count of version mismatches encountered while reading streams"),
-  STREAM_SEEK_BYTES_BACKWARDS("stream_bytes_backwards_on_seek",
+  STREAM_SEEK_BYTES_BACKWARDS(
+      StreamStatisticNames.STREAM_SEEK_BYTES_BACKWARDS,
       "Count of bytes moved backwards during seek operations"),
-  STREAM_SEEK_BYTES_READ("stream_bytes_read",
+  STREAM_SEEK_BYTES_READ(
+      StreamStatisticNames.STREAM_SEEK_BYTES_READ,
       "Count of bytes read during seek() in stream operations"),
-  STREAM_SEEK_BYTES_SKIPPED("stream_bytes_skipped_on_seek",
+  STREAM_SEEK_BYTES_SKIPPED(
+      StreamStatisticNames.STREAM_SEEK_BYTES_SKIPPED,
       "Count of bytes skipped during forward seek operation"),
-  STREAM_SEEK_OPERATIONS("stream_seek_operations",
+  STREAM_SEEK_OPERATIONS(
+      StreamStatisticNames.STREAM_READ_OPERATIONS,
       "Number of seek operations during stream IO."),
-  STREAM_CLOSE_BYTES_READ("stream_bytes_read_in_close",
+  STREAM_CLOSE_BYTES_READ(
+      StreamStatisticNames.STREAM_CLOSE_BYTES_READ,
       "Count of bytes read when closing streams during seek operations."),
-  STREAM_ABORT_BYTES_DISCARDED("stream_bytes_discarded_in_abort",
+  STREAM_ABORT_BYTES_DISCARDED(
+      StreamStatisticNames.STREAM_ABORT_BYTES_DISCARDED,
       "Count of bytes discarded by aborting the stream"),
-  STREAM_WRITE_FAILURES("stream_write_failures",
+  STREAM_WRITE_FAILURES(
+      StreamStatisticNames.STREAM_WRITE_FAILURES,
       "Count of stream write failures reported"),
-  STREAM_WRITE_BLOCK_UPLOADS("stream_write_block_uploads",
+  STREAM_WRITE_BLOCK_UPLOADS(
+      StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,
       "Count of block/partition uploads completed"),
-  STREAM_WRITE_BLOCK_UPLOADS_ACTIVE("stream_write_block_uploads_active",
+  STREAM_WRITE_BLOCK_UPLOADS_ACTIVE(
+      StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS_ACTIVE,
       "Count of block/partition uploads completed"),
-  STREAM_WRITE_BLOCK_UPLOADS_COMMITTED("stream_write_block_uploads_committed",
+  STREAM_WRITE_BLOCK_UPLOADS_COMMITTED(
+      StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS_COMMITTED,
       "Count of number of block uploads committed"),
-  STREAM_WRITE_BLOCK_UPLOADS_ABORTED("stream_write_block_uploads_aborted",
+  STREAM_WRITE_BLOCK_UPLOADS_ABORTED(
+      StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS_ABORTED,
       "Count of number of block uploads aborted"),
 
-  STREAM_WRITE_BLOCK_UPLOADS_PENDING("stream_write_block_uploads_pending",
+  STREAM_WRITE_BLOCK_UPLOADS_PENDING(
+      StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS_PENDING,
       "Gauge of block/partitions uploads queued to be written"),
   STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING(
       "stream_write_block_uploads_data_pending",
       "Gauge of block/partitions data uploads queued to be written"),
   STREAM_WRITE_TOTAL_TIME("stream_write_total_time",
       "Count of total time taken for uploads to complete"),
-  STREAM_WRITE_TOTAL_DATA("stream_write_total_data",
+  STREAM_WRITE_TOTAL_DATA(
+      StreamStatisticNames.STREAM_WRITE_TOTAL_DATA,
       "Count of total data uploaded in block output"),
   STREAM_WRITE_QUEUE_DURATION("stream_write_queue_duration",
       "Total queue duration of all block uploads"),
@@ -233,7 +276,8 @@ public enum Statistic {
   STORE_IO_THROTTLE_RATE("store_io_throttle_rate",
       "Rate of S3 request throttling"),
 
-  DELEGATION_TOKENS_ISSUED("delegation_tokens_issued",
+  DELEGATION_TOKENS_ISSUED(
+      StoreStatisticNames.DELEGATION_TOKENS_ISSUED,
       "Number of delegation tokens issued");
 
   private static final Map<String, Statistic> SYMBOL_MAP =

@@ -33,10 +33,13 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSExceptionMessages;
-import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
+import org.apache.hadoop.fs.FSInputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +47,7 @@ import org.slf4j.LoggerFactory;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.util.Optional;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
@@ -68,13 +72,15 @@ import static org.apache.hadoop.util.StringUtils.toLowerCase;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
-        CanUnbuffer, StreamCapabilities {
+        CanUnbuffer, StreamCapabilities, IOStatisticsSource {
 
   public static final String E_NEGATIVE_READAHEAD_VALUE
       = "Negative readahead value";
 
   public static final String OPERATION_OPEN = "open";
   public static final String OPERATION_REOPEN = "re-open";
+
+  private final IOStatistics ioStatistics;
 
   /**
    * This is the public position; the one set in {@link #seek(long)}
@@ -97,7 +103,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private final String uri;
   private static final Logger LOG =
       LoggerFactory.getLogger(S3AInputStream.class);
-  private final S3AInstrumentation.InputStreamStatistics streamStatistics;
+  private final S3AInputStreamStatistics streamStatistics;
   private S3AEncryptionMethods serverSideEncryptionAlgorithm;
   private String serverSideEncryptionKey;
   private S3AInputPolicy inputPolicy;
@@ -146,16 +152,18 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     this.contentLength = l;
     this.client = client;
     this.uri = "s3a://" + this.bucket + "/" + this.key;
-    this.streamStatistics = ctx.instrumentation.newInputStreamStatistics();
+    this.streamStatistics = ctx.getS3AStatisticsContext()
+        .newInputStreamStatistics();
     this.serverSideEncryptionAlgorithm =
         s3Attributes.getServerSideEncryptionAlgorithm();
     this.serverSideEncryptionKey = s3Attributes.getServerSideEncryptionKey();
     this.changeTracker = new ChangeTracker(uri,
         ctx.getChangeDetectionPolicy(),
-        streamStatistics.getVersionMismatchCounter(),
+        streamStatistics.getChangeTrackerStatistics(),
         s3Attributes);
     setInputPolicy(ctx.getInputPolicy());
     setReadahead(ctx.getReadahead());
+    this.ioStatistics = streamStatistics.createIOStatistics();
   }
 
   /**
@@ -348,7 +356,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     // open.  After that, an exception generally means the file has changed
     // and there is no point retrying anymore.
     Invoker invoker = context.getReadInvoker();
-    invoker.maybeRetry(streamStatistics.openOperations == 0,
+    invoker.maybeRetry(streamStatistics.getOpenOperations() == 0,
         "lazySeek", pathStr, true,
         () -> {
           //For lazy seek
@@ -747,7 +755,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  public S3AInstrumentation.InputStreamStatistics getS3AStreamStatistics() {
+  public S3AInputStreamStatistics getS3AStreamStatistics() {
     return streamStatistics;
   }
 
@@ -849,5 +857,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @VisibleForTesting
   boolean isObjectStreamOpen() {
     return wrappedStream != null;
+  }
+
+  @Override
+  public Optional<IOStatistics> getIOStatistics() {
+    return Optional.of(ioStatistics);
   }
 }
