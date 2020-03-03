@@ -430,6 +430,7 @@ public final class AzureADAuthenticator {
             * 1000L; // convert expiryPeriod to milliseconds and add
         token.setExpiry(new Date(expiry));
       }
+
       LOG.debug("AADToken: fetched token with expiry {}, expiresOn passed: {}",
           token.getExpiry().toString(), expiresOnInSecs);
     } catch (Exception ex) {

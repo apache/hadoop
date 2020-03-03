@@ -31,12 +31,13 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import java.io.IOException;
 import java.util.Date;
 
+import static org.junit.Assert.assertThat;
+
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.core.AllOf.allOf;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.when;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.reflect.Whitebox.getInternalState;
