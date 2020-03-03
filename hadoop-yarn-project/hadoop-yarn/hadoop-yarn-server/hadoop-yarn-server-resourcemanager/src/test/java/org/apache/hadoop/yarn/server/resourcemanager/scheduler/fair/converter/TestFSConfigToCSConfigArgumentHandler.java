@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.verify;
 
 import java.io.File;
 import java.io.IOException;
@@ -554,5 +555,47 @@ public class TestFSConfigToCSConfigArgumentHandler {
       throws Exception {
     testFileExistsInOutputFolder(
         YarnConfiguration.CS_CONFIGURATION_FILE);
+  }
+
+  @Test
+  public void testPlacementRulesConversionEnabled() throws Exception {
+    testPlacementRuleConversion(true);
+  }
+
+  @Test
+  public void testPlacementRulesConversionDisabled() throws Exception {
+    testPlacementRuleConversion(false);
+  }
+
+  private void testPlacementRuleConversion(boolean enabled) throws Exception {
+    setupFSConfigConversionFiles(true);
+
+    String[] args = null;
+    if (enabled) {
+      args = getArgumentsAsArrayWithDefaults("-f",
+          FSConfigConverterTestCommons.FS_ALLOC_FILE,
+          "-p", "-m");
+    } else {
+      args = getArgumentsAsArrayWithDefaults("-f",
+          FSConfigConverterTestCommons.FS_ALLOC_FILE,
+          "-p");
+    }
+    FSConfigToCSConfigArgumentHandler argumentHandler =
+        new FSConfigToCSConfigArgumentHandler(conversionOptions);
+    argumentHandler.setConverterSupplier(this::getMockConverter);
+
+    argumentHandler.parseAndConvert(args);
+
+    ArgumentCaptor<FSConfigToCSConfigConverterParams> captor =
+        ArgumentCaptor.forClass(FSConfigToCSConfigConverterParams.class);
+    verify(mockConverter).convert(captor.capture());
+    FSConfigToCSConfigConverterParams params = captor.getValue();
+
+    if (enabled) {
+      assertTrue("-m switch had no effect", params.isConvertPlacementRules());
+    } else {
+      assertFalse("Placement rule conversion was enabled",
+          params.isConvertPlacementRules());
+    }
   }
 }
