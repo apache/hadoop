@@ -94,7 +94,7 @@ public class TestSnapshotManager {
   }
 
   /**
-   *  Snapshot is recognized by INODE CURRENT_STATE_ID.
+   *  Snapshot is identified by INODE CURRENT_STATE_ID.
    *  So maximum allowable snapshotID should be less than CURRENT_STATE_ID
    */
   @Test
