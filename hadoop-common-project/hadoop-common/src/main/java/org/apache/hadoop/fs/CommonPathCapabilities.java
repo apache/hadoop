@@ -54,6 +54,13 @@ public final class CommonPathCapabilities {
   public static final String FS_CONCAT = "fs.capability.paths.concat";
 
   /**
+   * Does the store support native file copy.
+   * {@code FileSystem.copyFile(URI, URI)}
+   * Value: {@value}.
+   */
+  public static final String FS_NATIVE_COPY = "fs.capability.paths.native.copy";
+
+  /**
    * Does the store support {@code FileSystem.listCorruptFileBlocks(Path)} ()}?
    * Value: {@value}.
    */

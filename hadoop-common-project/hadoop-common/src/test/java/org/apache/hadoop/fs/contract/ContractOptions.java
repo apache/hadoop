@@ -207,6 +207,11 @@ public interface ContractOptions {
   String SUPPORTS_UNBUFFER = "supports-unbuffer";
 
   /**
+   * Indicates that FS supports native copy.
+   */
+  String SUPPORTS_NATIVE_COPY = "supports-native-copy";
+
+  /**
    * Maximum path length
    * {@value}
    */
