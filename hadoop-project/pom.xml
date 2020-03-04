@@ -204,6 +204,7 @@
     <assertj.version>3.12.2</assertj.version>
     <jline.version>3.9.0</jline.version>
     <powermock.version>1.5.6</powermock.version>
+    <powermock-api.version>2.0.4</powermock-api.version>
     <solr.version>7.7.0</solr.version>
     <openssl-wildfly.version>1.0.7.Final</openssl-wildfly.version>
   </properties>
@@ -1685,13 +1686,13 @@
         <groupId>org.powermock</groupId>
         <artifactId>powermock-api-mockito2</artifactId>
         <scope>test</scope>
-        <version>2.0.4</version>
+        <version>${powermock-api.version}</version>
       </dependency>
       <dependency>
         <groupId>org.powermock</groupId>
         <artifactId>powermock-module-junit4</artifactId>
         <scope>test</scope>
-        <version>2.0.4</version>
+        <version>${powermock-api.version}</version>
       </dependency>
 
     </dependencies>
