@@ -422,7 +422,7 @@ public final class AzureADAuthenticator {
         jp.nextToken();
       }
       jp.close();
-      if (expiresOnInSecs > -1) {
+      if (expiresOnInSecs > 0) {
         token.setExpiry(new Date(expiresOnInSecs * 1000));
       } else {
         long expiry = System.currentTimeMillis();
