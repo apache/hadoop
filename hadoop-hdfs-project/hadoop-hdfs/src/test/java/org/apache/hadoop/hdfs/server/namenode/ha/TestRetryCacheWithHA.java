@@ -34,8 +34,10 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1296,7 +1298,7 @@ public class TestRetryCacheWithHA {
    */
   public void testClientRetryWithFailover(final AtMostOnceOp op)
       throws Exception {
-    final Map<String, Object> results = new HashMap<String, Object>();
+    final Map<String, Object> results = new ConcurrentHashMap<>();
     
     op.prepare();
     // set DummyRetryInvocationHandler#block to true
@@ -1309,10 +1311,7 @@ public class TestRetryCacheWithHA {
           op.invoke();
           Object result = op.getResult();
           LOG.info("Operation " + op.name + " finished");
-          synchronized (TestRetryCacheWithHA.this) {
-            results.put(op.name, result == null ? "SUCCESS" : result);
-            TestRetryCacheWithHA.this.notifyAll();
-          }
+          results.put(op.name, result == null ? "SUCCESS" : result);
         } catch (Exception e) {
           LOG.info("Got Exception while calling " + op.name, e);
         } finally {
@@ -1332,40 +1331,48 @@ public class TestRetryCacheWithHA {
     // disable the block in DummyHandler
     LOG.info("Setting block to false");
     DummyRetryInvocationHandler.block.set(false);
-    
-    synchronized (this) {
-      while (!results.containsKey(op.name)) {
-        this.wait();
-      }
-      LOG.info("Got the result of " + op.name + ": "
-          + results.get(op.name));
-    }
+
+    GenericTestUtils.waitFor(() -> results.containsKey(op.name), 5, 10000);
+    LOG.info("Got the result of " + op.name + ": "
+        + results.get(op.name));
 
     // Waiting for failover.
-    while (cluster.getNamesystem(1).isInStandbyState()) {
-      Thread.sleep(10);
-    }
+    GenericTestUtils
+        .waitFor(() -> !cluster.getNamesystem(1).isInStandbyState(), 5, 10000);
 
-    long hitNN0 = cluster.getNamesystem(0).getRetryCache().getMetricsForTests()
-        .getCacheHit();
-    long hitNN1 = cluster.getNamesystem(1).getRetryCache().getMetricsForTests()
-        .getCacheHit();
-    assertTrue("CacheHit: " + hitNN0 + ", " + hitNN1,
-        hitNN0 + hitNN1 > 0);
-    long updatedNN0 = cluster.getNamesystem(0).getRetryCache()
-        .getMetricsForTests().getCacheUpdated();
-    long updatedNN1 = cluster.getNamesystem(1).getRetryCache()
-        .getMetricsForTests().getCacheUpdated();
+    final long[] hitsNN = new long[]{0, 0};
+    GenericTestUtils.waitFor(() -> {
+      hitsNN[0] = cluster.getNamesystem(0).getRetryCache()
+          .getMetricsForTests()
+          .getCacheHit();
+      hitsNN[1] = cluster.getNamesystem(1).getRetryCache()
+          .getMetricsForTests()
+          .getCacheHit();
+      return (hitsNN[0] + hitsNN[1]) > 0;
+    }, 5, 10000);
+
+    assertTrue("CacheHit: " + hitsNN[0] + ", " + hitsNN[1],
+        +hitsNN[0] + hitsNN[1] > 0);
+    final long[] updatesNN = new long[]{0, 0};
+    GenericTestUtils.waitFor(() -> {
+      updatesNN[0] = cluster.getNamesystem(0).getRetryCache()
+          .getMetricsForTests()
+          .getCacheUpdated();
+      updatesNN[1] = cluster.getNamesystem(1).getRetryCache()
+          .getMetricsForTests()
+          .getCacheUpdated();
+      return updatesNN[0] > 0 && updatesNN[1] > 0;
+    }, 5, 10000);
     // Cache updated metrics on NN0 should be >0 since the op was process on NN0
-    assertTrue("CacheUpdated on NN0: " + updatedNN0, updatedNN0 > 0);
+    assertTrue("CacheUpdated on NN0: " + updatesNN[0], updatesNN[0] > 0);
     // Cache updated metrics on NN0 should be >0 since NN1 applied the editlog
-    assertTrue("CacheUpdated on NN1: " + updatedNN1, updatedNN1 > 0);
+    assertTrue("CacheUpdated on NN1: " + updatesNN[1], updatesNN[1] > 0);
     long expectedUpdateCount = op.getExpectedCacheUpdateCount();
     if (expectedUpdateCount > 0) {
-      assertEquals("CacheUpdated on NN0: " + updatedNN0, expectedUpdateCount,
-          updatedNN0);
-      assertEquals("CacheUpdated on NN0: " + updatedNN1, expectedUpdateCount,
-          updatedNN1);
+      assertEquals("CacheUpdated on NN0: " + updatesNN[0], expectedUpdateCount,
+          updatesNN[0]);
+      assertEquals("CacheUpdated on NN0: " + updatesNN[1], expectedUpdateCount,
+          updatesNN[1]);
     }
   }
 
