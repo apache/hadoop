@@ -93,7 +93,10 @@ public class TestSnapshotManager {
     }
   }
 
-
+  /**
+   *  Snapshot is recognized by INODE CURRENT_STATE_ID.
+   *  So maximum allowable snapshotID should be less than CURRENT_STATE_ID
+   */
   @Test
   public void testValidateSnapshotIDWidth() {
     FSDirectory fsdir = mock(FSDirectory.class);
