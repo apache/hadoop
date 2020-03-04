@@ -210,7 +210,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     fs.delete(testFilePath, true);
     assertFalse(fs.exists(testFilePath));
     AbfsConfiguration configuration = this.getConfiguration();
- 
+
     //With the new code, it would not trigger a call to the backend
     stream.close();
   }
