@@ -93,8 +93,6 @@ public class TestINodeAttributeProvider {
         CALLED.add("checkPermission|" + authzContext.ancestorAccess + "|" +
             authzContext.parentAccess + "|" + authzContext.access);
       }
-
-      public void abc() {}
     }
 
     @Override
