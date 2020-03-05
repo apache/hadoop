@@ -44,12 +44,14 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
+import static org.apache.hadoop.io.IOUtils.LOG;
 import static org.apache.hadoop.io.IOUtils.wrapException;
 
 /**
  * The BlobFsOutputStream for Rest AbfsClient.
  */
 public class AbfsOutputStream extends OutputStream implements Syncable, StreamCapabilities {
+
   private final AbfsClient client;
   private final String path;
   private long position;
@@ -80,6 +82,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
           = new ElasticByteBufferPool();
 
   private final Statistics statistics;
+  private final AbfsOutputStreamStatistics outputStreamStatistics;
 
   public AbfsOutputStream(
           final AbfsClient client,
@@ -101,6 +104,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.buffer = byteBufferPool.getBuffer(false, bufferSize).array();
     this.bufferIndex = 0;
     this.writeOperations = new ConcurrentLinkedDeque<>();
+    this.outputStreamStatistics = new AbfsOutputStreamStatisticsImpl();
 
     this.maxConcurrentRequestCount = 4 * Runtime.getRuntime().availableProcessors();
 
@@ -278,6 +282,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         threadExecutor.shutdownNow();
       }
     }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Closing AbfsOutputStream ", toString());
+    }
   }
 
   private synchronized void flushInternal(boolean isClose) throws IOException {
@@ -296,16 +303,20 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     if (bufferIndex == 0) {
       return;
     }
+    outputStreamStatistics.writeCurrentBuffer();
 
     final byte[] bytes = buffer;
     final int bytesLength = bufferIndex;
+    outputStreamStatistics.bytesToUpload(bytesLength);
     buffer = byteBufferPool.getBuffer(false, bufferSize).array();
     bufferIndex = 0;
     final long offset = position;
     position += bytesLength;
 
     if (threadExecutor.getQueue().size() >= maxConcurrentRequestCount * 2) {
+      long start = System.currentTimeMillis();
       waitForTaskToComplete();
+      outputStreamStatistics.timeSpentTaskWait(start, System.currentTimeMillis());
     }
 
     final Future<Void> job = completionService.submit(new Callable<Void>() {
@@ -324,6 +335,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       }
     });
 
+    if (job.isCancelled()) {
+      outputStreamStatistics.uploadFailed(bytesLength);
+    } else {
+      outputStreamStatistics.uploadSuccessful(bytesLength);
+    }
     writeOperations.add(new WriteOperation(job, offset, bytesLength));
 
     // Try to shrink the queue
@@ -383,6 +399,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
    * operation FIFO queue.
    */
   private synchronized void shrinkWriteOperationQueue() throws IOException {
+    outputStreamStatistics.queueShrunk();
     try {
       while (writeOperations.peek() != null && writeOperations.peek().task.isDone()) {
         writeOperations.peek().task.get();
@@ -434,5 +451,29 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   @VisibleForTesting
   public synchronized void waitForPendingUploads() throws IOException {
     waitForTaskToComplete();
+  }
+
+  /**
+   * Getter method for AbfsOutputStream Statistics.
+   *
+   * @return statistics for AbfsOutputStream.
+   */
+  @VisibleForTesting
+  public AbfsOutputStreamStatisticsImpl getOutputStreamStatistics() {
+    return (AbfsOutputStreamStatisticsImpl) outputStreamStatistics;
+  }
+
+  /**
+   * Appending AbfsOutputStream Statistics to base toString().
+   *
+   * @return String with AbfsOutputStream statistics.
+   */
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(super.toString());
+    sb.append("AbfsOuputStream@").append(this.hashCode()).append("){");
+    sb.append(outputStreamStatistics.toString());
+    sb.append("}");
+    return sb.toString();
   }
 }
