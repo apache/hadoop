@@ -16,6 +16,11 @@
  */
 package org.apache.hadoop.yarn.util;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -28,11 +33,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.security.DockerCredentialTokenIdentifier;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonParser;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
@@ -103,7 +103,7 @@ public final class DockerClientConfigHandler {
 
     Credentials credentials = new Credentials();
     if (rootNode.has(CONFIG_AUTHS_KEY)) {
-      Iterator<String> iter = rootNode.get(CONFIG_AUTHS_KEY).getFieldNames();
+      Iterator<String> iter = rootNode.get(CONFIG_AUTHS_KEY).fieldNames();
       for (; iter.hasNext();) {
         String registryUrl = iter.next();
         String registryCred = rootNode.get(CONFIG_AUTHS_KEY)

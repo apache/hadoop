@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.documentstore;
 
-import org.codehaus.jackson.map.DeserializationConfig;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+
+import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 
 /**
  * A simple util class for Json SerDe.
@@ -35,7 +36,7 @@ public final class JsonUtils {
 
   static {
     OBJECT_MAPPER.configure(
-        DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        FAIL_ON_UNKNOWN_PROPERTIES, false);
   }
 
   /**

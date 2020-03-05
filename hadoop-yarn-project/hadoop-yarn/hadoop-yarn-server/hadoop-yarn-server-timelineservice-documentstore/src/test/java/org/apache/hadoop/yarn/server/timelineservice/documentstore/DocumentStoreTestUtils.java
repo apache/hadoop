@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.documentstore;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.entity.TimelineEntityDocument;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.flowactivity.FlowActivityDocument;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.flowrun.FlowRunDocument;
-import org.codehaus.jackson.type.TypeReference;
 
 import java.io.IOException;
 import java.util.List;
