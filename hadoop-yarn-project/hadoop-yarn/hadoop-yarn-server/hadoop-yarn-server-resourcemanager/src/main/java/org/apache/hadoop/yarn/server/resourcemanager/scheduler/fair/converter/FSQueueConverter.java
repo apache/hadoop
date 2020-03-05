@@ -94,7 +94,7 @@ public class FSQueueConverter {
 
     emitChildCapacity(queue);
     emitMaximumCapacity(queueName, queue);
-    emitAutoCreateChildQueue(queueName);
+    emitAutoCreateChildQueue(queueName, queue);
     emitSizeBasedWeight(queueName);
     emitOrderingPolicy(queueName, queue);
     checkMaxChildCapacitySetting(queue);
@@ -267,8 +267,8 @@ public class FSQueueConverter {
    * .auto-create-child-queue.enabled.
    * @param queueName
    */
-  private void emitAutoCreateChildQueue(String queueName) {
-    if (autoCreateChildQueues) {
+  private void emitAutoCreateChildQueue(String queueName, FSQueue queue) {
+    if (autoCreateChildQueues && !queue.getChildQueues().isEmpty()) {
       capacitySchedulerConfig.setBoolean(PREFIX + queueName +
           ".auto-create-child-queue.enabled", true);
     }

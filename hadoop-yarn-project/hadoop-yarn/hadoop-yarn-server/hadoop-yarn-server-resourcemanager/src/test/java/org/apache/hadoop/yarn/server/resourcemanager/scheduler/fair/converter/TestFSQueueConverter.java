@@ -341,7 +341,20 @@ public class TestFSQueueConverter {
 
     converter.convertQueueHierarchy(rootQueue);
 
-    assertTrueForQueues(ALL_QUEUES, ".auto-create-child-queue.enabled",
+    Set<String> parentQueues = Sets.newHashSet("root",
+        "root.admins",
+        "root.users");
+
+    Set<String> leafQueues = Sets.newHashSet(
+        "root.default",
+        "root.admins.alice",
+        "root.admins.bob",
+        "root.users.joe",
+        "root.users.john");
+
+    assertTrueForQueues(parentQueues, ".auto-create-child-queue.enabled",
+        csConfig);
+    assertNoValueForQueues(leafQueues, ".auto-create-child-queue.enabled",
         csConfig);
   }
 
