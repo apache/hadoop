@@ -87,17 +87,19 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
       + "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA,"
       + "SSL_RSA_WITH_RC4_128_MD5 \t";
   private static final String ONE_ENABLED_CIPHERS = EXCLUDED_CIPHERS
-      + ",TLS_RSA_WITH_AES_128_CBC_SHA";
+      + ",TLS_RSA_WITH_AES_128_CBC_SHA,"
+      + "TLS_AES_128_GCM_SHA256";
   private static final String EXCLUSIVE_ENABLED_CIPHERS
       = "\tTLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, \n"
       + "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,"
       + "TLS_RSA_WITH_AES_128_CBC_SHA,"
       + "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA,  "
       + "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,"
+      + "TLS_AES_128_GCM_SHA256,"
       + "TLS_DHE_RSA_WITH_AES_128_CBC_SHA,\t\n "
       + "TLS_DHE_DSS_WITH_AES_128_CBC_SHA";
 
-  static final String INCLUDED_PROTOCOLS = "SSLv2Hello,TLSv1.1";
+  static final String INCLUDED_PROTOCOLS = "TLSv1.3";
 
   @BeforeClass
   public static void setup() throws Exception {
