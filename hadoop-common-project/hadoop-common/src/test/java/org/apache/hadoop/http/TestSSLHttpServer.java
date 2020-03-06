@@ -99,7 +99,8 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
       + "TLS_DHE_RSA_WITH_AES_128_CBC_SHA,\t\n "
       + "TLS_DHE_DSS_WITH_AES_128_CBC_SHA";
 
-  static final String INCLUDED_PROTOCOLS = "TLSv1.3";
+  static final String INCLUDED_PROTOCOLS = "TLSv1.2";
+  static final String INCLUDED_PROTOCOLS_JDK11 = "TLSv1.3,TLSv1.2";
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -293,13 +294,30 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   @Test
   public void testIncludedProtocols() throws Exception {
     URL url = new URL(baseUrl, SERVLET_PATH_ECHO + "?a=b&c=d");
+
+    String includedProtocols;
+    String version = System.getProperty("java.version");
+    if (version.startsWith("1.")) { // JDK 8
+      includedProtocols = INCLUDED_PROTOCOLS;
+    } else { // JDK 11 and above
+      includedProtocols = INCLUDED_PROTOCOLS_JDK11;
+    }
     HttpsURLConnection conn =
         getConnectionWithPreferredProtocolSSLSocketFactory(url,
-        INCLUDED_PROTOCOLS);
+            includedProtocols);
     assertFalse("included protocol list is empty",
-        INCLUDED_PROTOCOLS.isEmpty());
+        includedProtocols.isEmpty());
 
     readFromConnection(conn);
+
+    PreferredProtocolSSLSocketFactory factory =
+        (PreferredProtocolSSLSocketFactory)conn.getSSLSocketFactory();
+
+    if (version.startsWith("1.")) {
+      assertEquals("TLSv1.2", factory.getSocket().getSession().getProtocol());
+    } else {
+      assertEquals("TLSv1.3", factory.getSocket().getSession().getProtocol());
+    }
   }
 
   /** Test that verified that additionally included cipher
@@ -407,6 +425,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   private class PreferredProtocolSSLSocketFactory extends SSLSocketFactory {
     private final SSLSocketFactory delegateSocketFactory;
     private final String[] enabledProtocols;
+    private SSLSocket sslSocket;
 
     PreferredProtocolSSLSocketFactory(SSLSocketFactory sslSocketFactory,
         String[] enabledProtocols) {
@@ -416,6 +435,10 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
       } else {
         this.enabledProtocols = null;
       }
+    }
+
+    public SSLSocket getSocket() {
+      return sslSocket;
     }
 
     @Override
@@ -431,7 +454,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     @Override
     public Socket createSocket(Socket socket, String string, int i, boolean bln)
         throws IOException {
-      SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(
+      sslSocket = (SSLSocket) delegateSocketFactory.createSocket(
           socket, string, i, bln);
       setEnabledProtocols(sslSocket);
       return sslSocket;
@@ -439,7 +462,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
     @Override
     public Socket createSocket(String string, int i) throws IOException {
-      SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(
+      sslSocket = (SSLSocket) delegateSocketFactory.createSocket(
           string, i);
       setEnabledProtocols(sslSocket);
       return sslSocket;
@@ -448,7 +471,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     @Override
     public Socket createSocket(String string, int i, InetAddress ia, int i1)
         throws IOException {
-      SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(
+      sslSocket = (SSLSocket) delegateSocketFactory.createSocket(
           string, i, ia, i1);
       setEnabledProtocols(sslSocket);
       return sslSocket;
@@ -456,7 +479,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
     @Override
     public Socket createSocket(InetAddress ia, int i) throws IOException {
-      SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(ia,
+      sslSocket = (SSLSocket) delegateSocketFactory.createSocket(ia,
           i);
       setEnabledProtocols(sslSocket);
       return sslSocket;
@@ -465,7 +488,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     @Override
     public Socket createSocket(InetAddress ia, int i, InetAddress ia1, int i1)
         throws IOException {
-      SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(ia,
+      sslSocket = (SSLSocket) delegateSocketFactory.createSocket(ia,
           i, ia1, i1);
       setEnabledProtocols(sslSocket);
       return sslSocket;
