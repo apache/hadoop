@@ -18,26 +18,26 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
-import org.junit.Test;
-
-import static org.junit.Assert.fail;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
- * Tests {@link InMemoryConfigurationStore}.
+ * This exception is thrown by {@link YarnConfigurationStore} if it's loading
+ * an incompatible persisted schema version.
  */
-public class TestInMemoryConfigurationStore extends ConfigurationStoreBaseTest {
+public class YarnConfStoreVersionIncompatibleException extends
+    YarnException {
+  private static final long serialVersionUID = -2829858253579013629L;
 
-  @Override
-  protected YarnConfigurationStore createConfStore() {
-    return new InMemoryConfigurationStore();
+  public YarnConfStoreVersionIncompatibleException(Throwable cause) {
+    super(cause);
   }
 
-  @Test
-  public void checkVersion() {
-    try {
-      confStore.checkVersion();
-    } catch (Exception e) {
-      fail("checkVersion threw exception");
-    }
+  public YarnConfStoreVersionIncompatibleException(String message) {
+    super(message);
+  }
+
+  public YarnConfStoreVersionIncompatibleException(
+      String message, Throwable cause) {
+    super(message, cause);
   }
 }

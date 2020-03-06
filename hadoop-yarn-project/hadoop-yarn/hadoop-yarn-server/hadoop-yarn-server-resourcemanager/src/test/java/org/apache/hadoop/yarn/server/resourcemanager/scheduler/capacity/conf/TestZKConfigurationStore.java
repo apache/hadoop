@@ -19,6 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
 import org.apache.hadoop.util.curator.ZKCuratorManager;
+import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.data.ACL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
@@ -49,6 +53,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -111,6 +116,29 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
     confStore.checkVersion();
     assertEquals(ZKConfigurationStore.CURRENT_VERSION_INFO,
         confStore.getConfStoreVersion());
+  }
+
+  @Test(expected = YarnConfStoreVersionIncompatibleException.class)
+  public void testIncompatibleVersion() throws Exception {
+    confStore.initialize(conf, schedConf, rmContext);
+
+    Version otherVersion = Version.newInstance(1, 1);
+    String znodeParentPath = conf.get(YarnConfiguration.
+            RM_SCHEDCONF_STORE_ZK_PARENT_PATH,
+        YarnConfiguration.DEFAULT_RM_SCHEDCONF_STORE_ZK_PARENT_PATH);
+    String zkVersionPath = ZKCuratorManager.getNodePath(znodeParentPath,
+        "VERSION");
+    String fencingNodePath = ZKCuratorManager.getNodePath(znodeParentPath,
+        "FENCING");
+    byte[] versionData =
+        ((VersionPBImpl) otherVersion).getProto().toByteArray();
+    List<ACL> zkAcl = ZKCuratorManager.getZKAcls(conf);
+    ((ZKConfigurationStore) confStore).zkManager.safeCreate(zkVersionPath,
+        versionData, zkAcl, CreateMode.PERSISTENT, zkAcl, fencingNodePath);
+
+    assertEquals("The configuration store should have stored the new" +
+        "version.", otherVersion, confStore.getConfStoreVersion());
+    confStore.checkVersion();
   }
 
   @Test
