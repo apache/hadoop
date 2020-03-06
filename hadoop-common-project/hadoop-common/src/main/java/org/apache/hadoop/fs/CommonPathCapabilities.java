@@ -126,9 +126,9 @@ public final class CommonPathCapabilities {
   public static final String FS_XATTRS = "fs.capability.paths.xattrs";
 
   /**
-   * Experimental support for {@link BatchListingOperations}.
+   * Probe for support for {@link BatchListingOperations}.
    */
   @InterfaceStability.Unstable
   public static final String FS_EXPERIMENTAL_BATCH_LISTING =
-      "fs.capability.experimental.batch.listing";
+      "fs.capability.batch.listing";
 }
