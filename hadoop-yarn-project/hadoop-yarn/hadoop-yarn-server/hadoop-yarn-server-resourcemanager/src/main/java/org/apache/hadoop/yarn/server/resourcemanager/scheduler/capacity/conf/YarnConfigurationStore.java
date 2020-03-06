@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateVersionIncompatibleException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 
 import java.io.IOException;
@@ -103,6 +102,7 @@ public abstract class YarnConfigurationStore {
 
   /**
    * Logs the configuration change to backing store.
+   *
    * @param logMutation configuration change to be persisted in write ahead log
    * @throws IOException if logging fails
    */
@@ -169,23 +169,22 @@ public abstract class YarnConfigurationStore {
   protected abstract Version getCurrentVersion();
 
   public void checkVersion() throws Exception {
-    // TODO this was taken from RMStateStore. Should probably refactor
     Version loadedVersion = getConfStoreVersion();
-    LOG.info("Loaded configuration store version info " + loadedVersion);
-    if (loadedVersion != null && loadedVersion.equals(getCurrentVersion())) {
+    Version currentVersion = getCurrentVersion();
+    LOG.info("Loaded configuration store version info {}", loadedVersion);
+
+    // when hard-coded schema version (currentVersion) is null the version check
+    // is unnecessary
+    if (currentVersion == null || currentVersion.equals(loadedVersion)) {
       return;
     }
     // if there is no version info, treat it as CURRENT_VERSION_INFO;
-    if (loadedVersion == null) {
-      loadedVersion = getCurrentVersion();
-    }
-    if (loadedVersion.isCompatibleTo(getCurrentVersion())) {
-      LOG.info("Storing configuration store version info "
-          + getCurrentVersion());
+    if (loadedVersion == null || loadedVersion.isCompatibleTo(currentVersion)) {
+      LOG.info("Storing configuration store version info {}", currentVersion);
       storeVersion();
     } else {
-      throw new RMStateVersionIncompatibleException(
-          "Expecting configuration store version " + getCurrentVersion()
+      throw new YarnConfStoreVersionIncompatibleException(
+          "Expecting configuration store version " + currentVersion
               + ", but loading version " + loadedVersion);
     }
   }

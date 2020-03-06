@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
+import org.apache.hadoop.yarn.server.records.Version;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileUtil;
@@ -76,6 +77,23 @@ public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
     assertEquals(LeveldbConfigurationStore.CURRENT_VERSION_INFO,
         confStore.getConfStoreVersion());
     confStore.close();
+  }
+
+  @Test(expected = YarnConfStoreVersionIncompatibleException.class)
+  public void testIncompatibleVersion() throws Exception {
+    try {
+      confStore.initialize(conf, schedConf, rmContext);
+
+      Version otherVersion = Version.newInstance(1, 1);
+      ((LeveldbConfigurationStore) confStore).storeVersion(otherVersion);
+
+      assertEquals("The configuration store should have stored the new" +
+              "version.", otherVersion,
+          confStore.getConfStoreVersion());
+      confStore.checkVersion();
+    } finally {
+      confStore.close();
+    }
   }
 
   @Test
