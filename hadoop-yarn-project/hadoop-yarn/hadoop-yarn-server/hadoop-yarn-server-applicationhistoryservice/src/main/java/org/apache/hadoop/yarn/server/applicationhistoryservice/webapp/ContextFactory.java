@@ -83,7 +83,7 @@ public final class ContextFactory {
   public static JAXBContext newContext(Class[] classes,
       Map<String, Object> properties) throws Exception {
     Class spFactory = Class.forName(
-        "com.sun.xml.internal.bind.v2.ContextFactory");
+        "com.sun.xml.bind.v2.ContextFactory");
     Method m = spFactory.getMethod("createContext", Class[].class, Map.class);
     return (JAXBContext) m.invoke((Object) null, classes, properties);
   }
@@ -123,7 +123,7 @@ public final class ContextFactory {
   public static JAXBContext createContext(String contextPath, ClassLoader
       classLoader, Map<String, Object> properties) throws Exception {
     Class spFactory = Class.forName(
-        "com.sun.xml.internal.bind.v2.ContextFactory");
+        "com.sun.xml.bind.v2.ContextFactory");
     Method m = spFactory.getMethod("createContext", String.class,
         ClassLoader.class, Map.class);
     return (JAXBContext) m.invoke(null, contextPath, classLoader,

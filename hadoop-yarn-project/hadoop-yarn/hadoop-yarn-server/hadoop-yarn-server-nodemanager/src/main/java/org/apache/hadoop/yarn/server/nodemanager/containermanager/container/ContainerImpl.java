@@ -37,6 +37,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerSubState;
 import org.apache.hadoop.yarn.api.records.LocalizationStatus;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.UpdateContainerSchedulerEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -180,6 +181,7 @@ public class ContainerImpl implements Container {
   private volatile ReInitializationContext reInitContext;
   private volatile boolean isReInitializing = false;
   private volatile boolean isMarkeForKilling = false;
+  private Object containerRuntimeData;
 
   /** The NM-wide configuration - not specific to this container */
   private final Configuration daemonConf;
@@ -1211,25 +1213,27 @@ public class ContainerImpl implements Container {
       container.containerLocalizationStartTime = clock.getTime();
 
       // Send requests for public, private resources
-      Map<String,LocalResource> cntrRsrc = ctxt.getLocalResources();
-      if (!cntrRsrc.isEmpty()) {
-        try {
+      Map<String, LocalResource> cntrRsrc;
+      try {
+        cntrRsrc = container.context
+            .getContainerExecutor().getLocalResources(container);
+        if (!cntrRsrc.isEmpty()) {
           Map<LocalResourceVisibility, Collection<LocalResourceRequest>> req =
               container.resourceSet.addResources(ctxt.getLocalResources());
           container.dispatcher.getEventHandler().handle(
               new ContainerLocalizationRequestEvent(container, req));
-        } catch (URISyntaxException e) {
-          // malformed resource; abort container launch
-          LOG.warn("Failed to parse resource-request", e);
-          container.cleanup();
+          return ContainerState.LOCALIZING;
+        } else {
+          container.sendScheduleEvent();
           container.metrics.endInitingContainer();
-          return ContainerState.LOCALIZATION_FAILED;
+          return ContainerState.SCHEDULED;
         }
-        return ContainerState.LOCALIZING;
-      } else {
-        container.sendScheduleEvent();
+      } catch (URISyntaxException | IOException e) {
+        // malformed resource; abort container launch
+        LOG.warn("Failed to parse resource-request", e);
+        container.cleanup();
         container.metrics.endInitingContainer();
-        return ContainerState.SCHEDULED;
+        return ContainerState.LOCALIZATION_FAILED;
       }
     }
   }
@@ -2282,5 +2286,19 @@ public class ContainerImpl implements Container {
     } finally {
       this.readLock.unlock();
     }
+  }
+
+  public void setContainerRuntimeData(Object containerRuntimeData) {
+    this.containerRuntimeData = containerRuntimeData;
+  }
+
+  public <T> T getContainerRuntimeData(Class<T> runtimeClass)
+      throws ContainerExecutionException {
+    if (!runtimeClass.isInstance(containerRuntimeData)) {
+      throw new ContainerExecutionException(
+          "Runtime class " + containerRuntimeData.getClass().getCanonicalName()
+          + " is invalid. Expected class " + runtimeClass.getCanonicalName());
+    }
+    return runtimeClass.cast(containerRuntimeData);
   }
 }

@@ -62,7 +62,6 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
 
   public ITestAbfsIdentityTransformer() throws Exception {
     super();
-    UserGroupInformation.reset();
     userGroupInfo = UserGroupInformation.getCurrentUser();
     localUser = userGroupInfo.getShortUserName();
     localGroup = userGroupInfo.getPrimaryGroupName();

@@ -112,12 +112,14 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    *          Old name of the snapshot
    * @param newName
    *          New name the snapshot will be renamed to
+   * @param mtime The snapshot modification time set by Time.now().
    * @throws SnapshotException
    *           Throw SnapshotException when either the snapshot with the old
    *           name does not exist or a snapshot with the new name already
    *           exists
    */
-  public void renameSnapshot(String path, String oldName, String newName)
+  public void renameSnapshot(String path, String oldName, String newName,
+      long mtime)
       throws SnapshotException {
     final int indexOfOld = searchSnapshot(DFSUtil.string2Bytes(oldName));
     if (indexOfOld < 0) {
@@ -137,6 +139,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       Snapshot snapshot = snapshotsByNames.remove(indexOfOld);
       final INodeDirectory ssRoot = snapshot.getRoot();
       ssRoot.setLocalName(newNameBytes);
+      ssRoot.setModificationTime(mtime, Snapshot.CURRENT_STATE_ID);
       indexOfNew = -indexOfNew - 1;
       if (indexOfNew <= indexOfOld) {
         snapshotsByNames.add(indexOfNew, snapshot);
@@ -166,10 +169,17 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     this.snapshotsByNames.add(snapshot);
   }
 
-  /** Add a snapshot. */
+  /**
+   * Add a snapshot.
+   * @param snapshotRoot Root of the snapshot.
+   * @param name Name of the snapshot.
+   * @param mtime The snapshot creation time set by Time.now().
+   * @throws SnapshotException Throw SnapshotException when there is a snapshot
+   *           with the same name already exists or snapshot quota exceeds
+   */
   public Snapshot addSnapshot(INodeDirectory snapshotRoot, int id, String name,
       final LeaseManager leaseManager, final boolean captureOpenFiles,
-      int maxSnapshotLimit)
+      int maxSnapshotLimit, long now)
       throws SnapshotException {
     //check snapshot quota
     final int n = getNumSnapshots();
@@ -195,8 +205,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     d.setSnapshotRoot(s.getRoot());
     snapshotsByNames.add(-i - 1, s);
 
-    // set modification time
-    final long now = Time.now();
+    // modification time is the snapshot creation time
     snapshotRoot.updateModificationTime(now, Snapshot.CURRENT_STATE_ID);
     s.getRoot().setModificationTime(now, Snapshot.CURRENT_STATE_ID);
 
@@ -224,12 +233,13 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    * @param reclaimContext records blocks and inodes that need to be reclaimed
    * @param snapshotRoot The directory where we take snapshots
    * @param snapshotName The name of the snapshot to be removed
+   * @param now The snapshot deletion time set by Time.now().
    * @return The removed snapshot. Null if no snapshot with the given name
    *         exists.
    */
   public Snapshot removeSnapshot(
       INode.ReclaimContext reclaimContext, INodeDirectory snapshotRoot,
-      String snapshotName) throws SnapshotException {
+      String snapshotName, long now) throws SnapshotException {
     final int i = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
     if (i < 0) {
       throw new SnapshotException("Cannot delete snapshot " + snapshotName
@@ -241,6 +251,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       snapshotRoot.cleanSubtree(reclaimContext, snapshot.getId(), prior);
       // remove from snapshotsByNames after successfully cleaning the subtree
       snapshotsByNames.remove(i);
+      snapshotRoot.updateModificationTime(now, Snapshot.CURRENT_STATE_ID);
       return snapshot;
     }
   }

@@ -184,6 +184,10 @@ public abstract class FSQueue implements Queue, Schedulable {
     return result;
   }
 
+  public ConfigurableResource getRawMaxShare() {
+    return maxShare;
+  }
+
   public Resource getReservedResource() {
     reservedResource.setMemorySize(metrics.getReservedMB());
     reservedResource.setVirtualCores(metrics.getReservedVirtualCores());
@@ -207,7 +211,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   }
 
   @VisibleForTesting
-  protected float getMaxAMShare() {
+  public float getMaxAMShare() {
     return maxAMShare;
   }
 

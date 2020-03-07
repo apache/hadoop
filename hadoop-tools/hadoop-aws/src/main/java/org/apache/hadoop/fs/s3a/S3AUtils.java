@@ -82,10 +82,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
  * Utility methods for S3A code.
@@ -247,6 +250,18 @@ public final class S3AUtils {
 
       // the object isn't there
       case 404:
+        if (isUnknownBucket(ase)) {
+          // this is a missing bucket
+          ioe = new UnknownStoreException(path, ase);
+        } else {
+          // a normal unknown object
+          ioe = new FileNotFoundException(message);
+          ioe.initCause(ase);
+        }
+        break;
+
+      // this also surfaces sometimes and is considered to
+      // be ~ a not found exception.
       case 410:
         ioe = new FileNotFoundException(message);
         ioe.initCause(ase);
@@ -1283,6 +1298,15 @@ public final class S3AUtils {
         DEFAULT_SOCKET_SEND_BUFFER, 2048);
     int sockRecvBuffer = intOption(conf, SOCKET_RECV_BUFFER,
         DEFAULT_SOCKET_RECV_BUFFER, 2048);
+    long requestTimeoutMillis = conf.getTimeDuration(REQUEST_TIMEOUT,
+        DEFAULT_REQUEST_TIMEOUT, TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+
+    if (requestTimeoutMillis > Integer.MAX_VALUE) {
+      LOG.debug("Request timeout is too high({} ms). Setting to {} ms instead",
+          requestTimeoutMillis, Integer.MAX_VALUE);
+      requestTimeoutMillis = Integer.MAX_VALUE;
+    }
+    awsConf.setRequestTimeout((int) requestTimeoutMillis);
     awsConf.setSocketBufferSizeHints(sockSendBuffer, sockRecvBuffer);
     String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM, "");
     if (!signerOverride.isEmpty()) {
@@ -1613,26 +1637,17 @@ public final class S3AUtils {
   /**
    * Close the Closeable objects and <b>ignore</b> any Exception or
    * null pointers.
-   * (This is the SLF4J equivalent of that in {@code IOUtils}).
+   * This is obsolete: use
+   * {@link org.apache.hadoop.io.IOUtils#cleanupWithLogger(Logger, Closeable...)}
    * @param log the log to log at debug level. Can be null.
    * @param closeables the objects to close
    */
+  @Deprecated
   public static void closeAll(Logger log,
       Closeable... closeables) {
-    if (log == null) {
-      log = LOG;
-    }
-    for (Closeable c : closeables) {
-      if (c != null) {
-        try {
-          log.debug("Closing {}", c);
-          c.close();
-        } catch (Exception e) {
-          log.debug("Exception in closing {}", c, e);
-        }
-      }
-    }
+    cleanupWithLogger(log, closeables);
   }
+
   /**
    * Close the Closeable objects and <b>ignore</b> any Exception or
    * null pointers.

@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
+import org.apache.hadoop.util.curator.ZKCuratorManager;
+import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.data.ACL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
@@ -37,6 +42,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.junit.After;
@@ -47,6 +53,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -111,6 +118,29 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
         confStore.getConfStoreVersion());
   }
 
+  @Test(expected = YarnConfStoreVersionIncompatibleException.class)
+  public void testIncompatibleVersion() throws Exception {
+    confStore.initialize(conf, schedConf, rmContext);
+
+    Version otherVersion = Version.newInstance(1, 1);
+    String znodeParentPath = conf.get(YarnConfiguration.
+            RM_SCHEDCONF_STORE_ZK_PARENT_PATH,
+        YarnConfiguration.DEFAULT_RM_SCHEDCONF_STORE_ZK_PARENT_PATH);
+    String zkVersionPath = ZKCuratorManager.getNodePath(znodeParentPath,
+        "VERSION");
+    String fencingNodePath = ZKCuratorManager.getNodePath(znodeParentPath,
+        "FENCING");
+    byte[] versionData =
+        ((VersionPBImpl) otherVersion).getProto().toByteArray();
+    List<ACL> zkAcl = ZKCuratorManager.getZKAcls(conf);
+    ((ZKConfigurationStore) confStore).zkManager.safeCreate(zkVersionPath,
+        versionData, zkAcl, CreateMode.PERSISTENT, zkAcl, fencingNodePath);
+
+    assertEquals("The configuration store should have stored the new" +
+        "version.", otherVersion, confStore.getConfStoreVersion());
+    confStore.checkVersion();
+  }
+
   @Test
   public void testPersistConfiguration() throws Exception {
     schedConf.set("key", "val");
@@ -147,7 +177,7 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
     YarnConfigurationStore.LogMutation mutation =
         new YarnConfigurationStore.LogMutation(update, TEST_USER);
     confStore.logMutation(mutation);
-    confStore.confirmMutation(true);
+    confStore.confirmMutation(mutation, true);
     long v2 = confStore.getConfigVersion();
     assertEquals(2, v2);
   }
@@ -159,10 +189,9 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
 
     Map<String, String> update = new HashMap<>();
     update.put("key", "val");
-    YarnConfigurationStore.LogMutation mutation =
-        new YarnConfigurationStore.LogMutation(update, TEST_USER);
+    LogMutation mutation = new LogMutation(update, TEST_USER);
     confStore.logMutation(mutation);
-    confStore.confirmMutation(true);
+    confStore.confirmMutation(mutation, true);
     assertEquals("val", confStore.retrieve().get("key"));
 
     // Create a new configuration store, and check for updated configuration
@@ -189,7 +218,7 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
     logs = ((ZKConfigurationStore) confStore).getLogs();
     assertEquals(1, logs.size());
     assertEquals("val1", logs.get(0).getUpdates().get("key1"));
-    confStore.confirmMutation(true);
+    confStore.confirmMutation(mutation, true);
     assertEquals(1, logs.size());
     assertEquals("val1", logs.get(0).getUpdates().get("key1"));
 
@@ -201,7 +230,7 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
     assertEquals(2, logs.size());
     assertEquals("val1", logs.get(0).getUpdates().get("key1"));
     assertEquals("val2", logs.get(1).getUpdates().get("key2"));
-    confStore.confirmMutation(true);
+    confStore.confirmMutation(mutation, true);
     assertEquals(2, logs.size());
     assertEquals("val1", logs.get(0).getUpdates().get("key1"));
     assertEquals("val2", logs.get(1).getUpdates().get("key2"));
@@ -215,10 +244,32 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
     assertEquals(2, logs.size());
     assertEquals("val2", logs.get(0).getUpdates().get("key2"));
     assertEquals("val3", logs.get(1).getUpdates().get("key3"));
-    confStore.confirmMutation(true);
+    confStore.confirmMutation(mutation, true);
     assertEquals(2, logs.size());
     assertEquals("val2", logs.get(0).getUpdates().get("key2"));
     assertEquals("val3", logs.get(1).getUpdates().get("key3"));
+  }
+
+
+  @Test
+  public void testDisableAuditLogs() throws Exception {
+    conf.setLong(YarnConfiguration.RM_SCHEDCONF_MAX_LOGS, 0);
+    confStore.initialize(conf, schedConf, rmContext);
+    String znodeParentPath = conf.get(YarnConfiguration.
+        RM_SCHEDCONF_STORE_ZK_PARENT_PATH,
+        YarnConfiguration.DEFAULT_RM_SCHEDCONF_STORE_ZK_PARENT_PATH);
+    String logsPath = ZKCuratorManager.getNodePath(znodeParentPath, "LOGS");
+    byte[] data = null;
+    ((ZKConfigurationStore) confStore).zkManager.setData(logsPath, data, -1);
+
+    Map<String, String> update = new HashMap<>();
+    update.put("key1", "val1");
+    YarnConfigurationStore.LogMutation mutation =
+        new YarnConfigurationStore.LogMutation(update, TEST_USER);
+    confStore.logMutation(mutation);
+
+    data = ((ZKConfigurationStore) confStore).zkManager.getData(logsPath);
+    assertNull("Failed to Disable Audit Logs", data);
   }
 
   public Configuration createRMHAConf(String rmIds, String rmId,
@@ -285,16 +336,17 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
         rm1.getResourceScheduler()).getMutableConfProvider();
     UserGroupInformation user = UserGroupInformation
         .createUserForTesting(TEST_USER, new String[0]);
-    confProvider.logAndApplyMutation(user, schedConfUpdateInfo);
+    LogMutation log = confProvider.logAndApplyMutation(user,
+        schedConfUpdateInfo);
     rm1.getResourceScheduler().reinitialize(conf1, rm1.getRMContext());
     assertEquals("val", ((MutableConfScheduler) rm1.getResourceScheduler())
         .getConfiguration().get("key"));
-    confProvider.confirmPendingMutation(true);
+    confProvider.confirmPendingMutation(log, true);
     assertEquals("val", ((MutableCSConfigurationProvider) confProvider)
         .getConfStore().retrieve().get("key"));
     // Next update is not persisted, it should not be recovered
     schedConfUpdateInfo.getGlobalParams().put("key", "badVal");
-    confProvider.logAndApplyMutation(user, schedConfUpdateInfo);
+    log = confProvider.logAndApplyMutation(user, schedConfUpdateInfo);
 
     // Start RM2 and verifies it starts with updated configuration
     rm2.getRMContext().getRMAdminService().transitionToActive(req);
@@ -377,9 +429,10 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
     stopParams.put("capacity", "0");
     QueueConfigInfo stopInfo = new QueueConfigInfo("root.default", stopParams);
     schedConfUpdateInfo.getUpdateQueueInfo().add(stopInfo);
-    confProvider.logAndApplyMutation(user, schedConfUpdateInfo);
+    LogMutation log = confProvider.logAndApplyMutation(user,
+        schedConfUpdateInfo);
     rm1.getResourceScheduler().reinitialize(conf1, rm1.getRMContext());
-    confProvider.confirmPendingMutation(true);
+    confProvider.confirmPendingMutation(log, true);
     assertTrue(Arrays.asList(((MutableConfScheduler) rm1.getResourceScheduler())
         .getConfiguration().get("yarn.scheduler.capacity.root.queues").split
             (",")).contains("a"));
@@ -388,9 +441,9 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
     schedConfUpdateInfo.getUpdateQueueInfo().clear();
     schedConfUpdateInfo.getAddQueueInfo().clear();
     schedConfUpdateInfo.getRemoveQueueInfo().add("root.default");
-    confProvider.logAndApplyMutation(user, schedConfUpdateInfo);
+    log =  confProvider.logAndApplyMutation(user, schedConfUpdateInfo);
     rm1.getResourceScheduler().reinitialize(conf1, rm1.getRMContext());
-    confProvider.confirmPendingMutation(true);
+    confProvider.confirmPendingMutation(log, true);
     assertEquals("a", ((MutableConfScheduler) rm1.getResourceScheduler())
         .getConfiguration().get("yarn.scheduler.capacity.root.queues"));
 

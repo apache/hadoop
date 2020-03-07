@@ -169,7 +169,8 @@ public abstract class BaseRouterWebServicesTest {
   protected AppsInfo getApps(String user)
       throws IOException, InterruptedException {
     return routerWebService.getApps(createHttpServletRequest(user), null, null,
-        null, null, null, null, null, null, null, null, null, null, null);
+        null, null, null, null, null, null, null, null, null, null, null,
+        null);
   }
 
   protected ActivitiesInfo getActivities(String user)

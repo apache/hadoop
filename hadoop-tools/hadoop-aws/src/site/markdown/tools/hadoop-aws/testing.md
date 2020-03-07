@@ -151,8 +151,9 @@ Example:
 
 For S3a encryption tests to run correctly, the
 `fs.s3a.server-side-encryption.key` must be configured in the s3a contract xml
-file with a AWS KMS encryption key arn as this value is different for each AWS
-KMS.
+file or `auth-keys.xml` file with a AWS KMS encryption key arn as this value is
+different for each AWS KMS. Please note this KMS key should be created in the
+same region as your S3 bucket. Otherwise, you may get `KMS.NotFoundException`.
 
 Example:
 
@@ -463,6 +464,22 @@ Otherwise, set a large timeout in `fs.s3a.scale.test.timeout`
 The tests are executed in an order to only clean up created files after
 the end of all the tests. If the tests are interrupted, the test data will remain.
 
+## <a name="alternate_s3"></a> Load tests.
+
+Some are designed to overload AWS services with more
+requests per second than an AWS account is permitted.
+
+The operation of these test maybe observable to other users of the same
+account -especially if they are working in the AWS region to which the
+tests are targeted.
+
+There may also run up larger bills.
+
+These tests all have the prefix `ILoadTest`
+
+They do not run automatically: they must be explicitly run from the command line or an IDE.
+
+Look in the source for these and reads the Javadocs before executing.
 
 ## <a name="alternate_s3"></a> Testing against non AWS S3 endpoints.
 
@@ -812,6 +829,31 @@ sequential one afterwards. The IO heavy ones must also be subclasses of
 
 This is invaluable for debugging test failures.
 
+How to set test options in your hadoop configuration rather
+than on the maven command line:
+
+As an example let's assume you want to run S3Guard integration tests using IDE.
+Please add the following properties in
+`hadoop-tools/hadoop-aws/src/test/resources/auth-keys.xml` file.
+ Local configuration is stored in auth-keys.xml. The changes to this file won't be committed,
+ so it's safe to store local config here.
+```xml
+<property>
+  <name>fs.s3a.s3guard.test.enabled</name>
+  <value>true</value>
+</property>
+```
+
+```xml
+<property>
+  <name>fs.s3a.s3guard.test.implementation</name>
+  <value>dynamo</value>
+</property>
+```
+
+Warning : Although this is easier for IDE debugging setups, once you do this,
+you cannot change configurations on the mvn command line, such as testing without s3guard.
+
 ### Keeping AWS Costs down
 
 Most of the base S3 tests are designed to use public AWS data
@@ -1078,7 +1120,7 @@ mvn -T 1C verify -Dtest=skip -Dit.test=ITestS3AMiscOperations -Ds3guard -Ddynamo
 ### Notes
 
 1. If the `s3guard` profile is not set, then the S3Guard properties are those
-of the test configuration set in `contract-test-options.xml` or `auth-keys.xml`
+of the test configuration set in s3a contract xml file or `auth-keys.xml`
 
 If the `s3guard` profile *is* set:
 1. The S3Guard options from maven (the dynamo and authoritative flags)
@@ -1258,6 +1300,27 @@ during the use of a S3Guarded S3A filesystem are wrapped by retry logic.
 *The best way to verify resilience is to run the entire `hadoop-aws` test suite,
 or even a real application, with throttling enabled.
 
+### Testing encrypted DynamoDB tables
+
+By default, a DynamoDB table is encrypted using AWS owned customer master key
+(CMK). You can enable server side encryption (SSE) using AWS managed CMK or
+customer managed CMK in KMS before running the S3Guard tests.
+1. To enable AWS managed CMK, set the config
+`fs.s3a.s3guard.ddb.table.sse.enabled` to true in `auth-keys.xml`.
+1. To enable customer managed CMK, you need to create a KMS key and set the
+config in `auth-keys.xml`. The value can be the key ARN or alias. Example:
+```
+  <property>
+    <name>fs.s3a.s3guard.ddb.table.sse.enabled</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>fs.s3a.s3guard.ddb.table.sse.cmk</name>
+    <value>arn:aws:kms:us-west-2:360379543683:key/071a86ff-8881-4ba0-9230-95af6d01ca01</value>
+  </property>
+```
+For more details about SSE on DynamoDB table, please see [S3Guard doc](./s3guard.html).
+
 ### Testing only: Local Metadata Store
 
 There is an in-memory Metadata Store for testing.
@@ -1352,6 +1415,9 @@ as it may take a couple of SDK updates before it is ready.
   in `fs.s3a.assumed.role.arn` for testing assumed roles,
   and `fs.s3a.server-side-encryption.key` for encryption, for full coverage.
   If you can, scale up the scale tests.
+1. Run the `ILoadTest*` load tests from your IDE or via maven through
+      `mvn verify -Dtest=skip -Dit.test=ILoadTest\*`  ; look for regressions in performance
+      as much as failures.
 1. Create the site with `mvn site -DskipTests`; look in `target/site` for the report.
 1. Review *every single `-output.txt` file in `hadoop-tools/hadoop-aws/target/failsafe-reports`,
   paying particular attention to
@@ -1445,6 +1511,7 @@ Then see if complete successfully in roughly the same time once the upgrade is a
 to AWS services.
 * Try and get other people, especially anyone with their own endpoints,
   apps or different deployment environments, to run their own tests.
+* Run the load tests, especially `ILoadTestS3ABulkDeleteThrottling`.
 
 ### Dealing with Deprecated APIs and New Features
 

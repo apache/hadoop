@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.ChunkedArrayList;
+import org.apache.hadoop.util.Time;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -104,16 +105,18 @@ class FSDirSnapshotOp {
 
     String snapshotPath;
     verifySnapshotName(fsd, snapshotName, snapshotRoot);
+    // time of snapshot creation
+    final long now = Time.now();
     fsd.writeLock();
     try {
       snapshotPath = snapshotManager.createSnapshot(
           fsd.getFSNamesystem().getLeaseManager(),
-          iip, snapshotRoot, snapshotName);
+          iip, snapshotRoot, snapshotName, now);
     } finally {
       fsd.writeUnlock();
     }
     fsd.getEditLog().logCreateSnapshot(snapshotRoot, snapshotName,
-        logRetryCache);
+        logRetryCache, now);
 
     return snapshotPath;
   }
@@ -126,15 +129,17 @@ class FSDirSnapshotOp {
       fsd.checkOwner(pc, iip);
     }
     verifySnapshotName(fsd, snapshotNewName, path);
+    // time of snapshot modification
+    final long now = Time.now();
     fsd.writeLock();
     try {
       snapshotManager.renameSnapshot(iip, path, snapshotOldName,
-          snapshotNewName);
+          snapshotNewName, now);
     } finally {
       fsd.writeUnlock();
     }
     fsd.getEditLog().logRenameSnapshot(path, snapshotOldName,
-        snapshotNewName, logRetryCache);
+        snapshotNewName, logRetryCache, now);
   }
 
   static SnapshottableDirectoryStatus[] getSnapshottableDirListing(
@@ -248,9 +253,11 @@ class FSDirSnapshotOp {
     ChunkedArrayList<INode> removedINodes = new ChunkedArrayList<>();
     INode.ReclaimContext context = new INode.ReclaimContext(
         fsd.getBlockStoragePolicySuite(), collectedBlocks, removedINodes, null);
+    // time of snapshot deletion
+    final long now = Time.now();
     fsd.writeLock();
     try {
-      snapshotManager.deleteSnapshot(iip, snapshotName, context);
+      snapshotManager.deleteSnapshot(iip, snapshotName, context, now);
       fsd.updateCount(iip, context.quotaDelta(), false);
       fsd.removeFromInodeMap(removedINodes);
       fsd.updateReplicationFactor(context.collectedBlocks()
@@ -260,7 +267,7 @@ class FSDirSnapshotOp {
     }
     removedINodes.clear();
     fsd.getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName,
-        logRetryCache);
+        logRetryCache, now);
 
     return collectedBlocks;
   }

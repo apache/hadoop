@@ -43,6 +43,15 @@ The implementations of `FileSystem` shipped with Apache Hadoop
 All the requirements of a valid FileSystem are considered implicit preconditions and postconditions:
 all operations on a valid FileSystem MUST result in a new FileSystem that is also valid.
 
+## Feasible features
+
+### <a name="ProtectedDirectories"></a>Protected directories
+
+HDFS has the notion of *Protected Directories*, which are declared in
+the option `fs.protected.directories`. Any attempt to delete or rename
+such a directory or a parent thereof raises an `AccessControlException`.
+Accordingly, any attempt to delete the root directory SHALL, if there is
+a protected directory, result in such an exception being raised.
 
 ## Predicates and other state access operations
 
@@ -709,24 +718,29 @@ exists in the metadata, but no copies of any its blocks can be located;
 Creates a [`FSDataInputStreamBuilder`](fsdatainputstreambuilder.html)
 to construct a operation to open the file at `path` for reading.
 
-
 When `build()` is invoked on the returned `FSDataInputStreamBuilder` instance,
 the builder parameters are verified and
-`openFileWithOptions(Path, Set<String>, Configuration, int)` invoked.
+`openFileWithOptions(Path, OpenFileParameters)` invoked.
 
 This (protected) operation returns a `CompletableFuture<FSDataInputStream>`
 which, when its `get()` method is called, either returns an input
 stream of the contents of opened file, or raises an exception.
 
-The base implementation of the `openFileWithOptions(PathHandle, Set<String>, Configuration, int)`
+The base implementation of the `openFileWithOptions(PathHandle, OpenFileParameters)`
 ultimately invokes `open(Path, int)`.
 
 Thus the chain `openFile(path).build().get()` has the same preconditions
 and postconditions as `open(Path p, int bufferSize)`
 
+However, there is one difference which implementations are free to
+take advantage of: 
 
-The `openFile()` operation may check the state of the filesystem during this
-call, but as the state of the filesystem may change betwen this call and
+The returned stream MAY implement a lazy open where file non-existence or
+access permission failures may not surface until the first `read()` of the
+actual data.
+
+The `openFile()` operation may check the state of the filesystem during its
+invocation, but as the state of the filesystem may change betwen this call and
 the actual `build()` and `get()` operations, this file-specific
 preconditions (file exists, file is readable, etc) MUST NOT be checked here.
 
@@ -757,6 +771,10 @@ It SHOULD be possible to always open a file without specifying any options,
 so as to present a consistent model to users. However, an implementation MAY
 opt to require one or more mandatory options to be set.
 
+The returned stream may perform "lazy" evaluation of file access. This is
+relevant for object stores where the probes for existence are expensive, and,
+even with an asynchronous open, may be considered needless.
+ 
 ### `FSDataInputStreamBuilder openFile(PathHandle)`
 
 Creates a `FSDataInputStreamBuilder` to build an operation to open a file.
@@ -765,13 +783,13 @@ to construct a operation to open the file identified by the given `PathHandle` f
 
 When `build()` is invoked on the returned `FSDataInputStreamBuilder` instance,
 the builder parameters are verified and
-`openFileWithOptions(PathHandle, Set<String>, Configuration, int)` invoked.
+`openFileWithOptions(PathHandle, OpenFileParameters)` invoked.
 
 This (protected) operation returns a `CompletableFuture<FSDataInputStream>`
 which, when its `get()` method is called, either returns an input
 stream of the contents of opened file, or raises an exception.
 
-The base implementation of the `openFileWithOptions(Path,PathHandle, Set<String>, Configuration, int)` method
+The base implementation of the `openFileWithOptions(PathHandle, OpenFileParameters)` method
 returns a future which invokes `open(Path, int)`.
 
 Thus the chain `openFile(pathhandle).build().get()` has the same preconditions
@@ -1008,12 +1026,6 @@ filesystem is desired.
             result = False
 
 1. Object Stores: see [Object Stores: root directory deletion](#object-stores-rm-root).
-
-HDFS has the notion of *Protected Directories*, which are declared in
-the option `fs.protected.directories`. Any attempt to delete such a directory
-or a parent thereof raises an `AccessControlException`. Accordingly, any
-attempt to delete the root directory SHALL, if there is a protected directory,
-result in such an exception being raised.
 
 This specification does not recommend any specific action. Do note, however,
 that the POSIX model assumes that there is a permissions model such that normal

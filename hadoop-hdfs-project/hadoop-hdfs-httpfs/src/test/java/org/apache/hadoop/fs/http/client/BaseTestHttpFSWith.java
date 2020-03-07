@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -43,11 +44,15 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.ipc.RemoteException;
@@ -943,10 +948,11 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
    * @throws Exception
    */
   private void assertSameAcls(AclStatus a, AclStatus b) throws Exception {
-    assertTrue(a.getOwner().equals(b.getOwner()));
-    assertTrue(a.getGroup().equals(b.getGroup()));
-    assertTrue(a.isStickyBit() == b.isStickyBit());
-    assertTrue(a.getEntries().size() == b.getEntries().size());
+    assertEquals(a.getOwner(), b.getOwner());
+    assertEquals(a.getGroup(), b.getGroup());
+    assertEquals(a.getPermission(), b.getPermission());
+    assertEquals(a.isStickyBit(), b.isStickyBit());
+    assertEquals(a.getEntries().size(), b.getEntries().size());
     for (AclEntry e : a.getEntries()) {
       assertTrue(b.getEntries().contains(e));
     }
@@ -1141,7 +1147,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     LIST_STATUS_BATCH, GETTRASHROOT, STORAGEPOLICY, ERASURE_CODING,
     CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT,
     ALLOW_SNAPSHOT, DISALLOW_SNAPSHOT, DISALLOW_SNAPSHOT_EXCEPTION,
-    FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST
+    FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST,
+    GET_SERVERDEFAULTS, CHECKACCESS, SETECPOLICY, SATISFYSTORAGEPOLICY
   }
 
   private void operation(Operation op) throws Exception {
@@ -1262,7 +1269,20 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     case GET_SNAPSHOTTABLE_DIRECTORY_LIST:
       testGetSnapshottableDirListing();
       break;
+    case GET_SERVERDEFAULTS:
+      testGetServerDefaults();
+      break;
+    case CHECKACCESS:
+      testAccess();
+      break;
+    case SETECPOLICY:
+      testErasureCodingPolicy();
+      break;
+    case SATISFYSTORAGEPOLICY:
+      testStoragePolicySatisfier();
+      break;
     }
+
   }
 
   @Parameterized.Parameters
@@ -1701,5 +1721,136 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     Assert.assertTrue(strEntries.contains(aclGroup));
     // Clean up
     proxyFs.delete(new Path(dir), true);
+  }
+
+  private void verifyGetServerDefaults(FileSystem fs, DistributedFileSystem dfs)
+      throws Exception {
+    FsServerDefaults sds = null;
+    if (fs instanceof HttpFSFileSystem) {
+      HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+      sds = httpFS.getServerDefaults();
+    } else if (fs instanceof WebHdfsFileSystem) {
+      WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+      sds = webHdfsFileSystem.getServerDefaults();
+    } else {
+      Assert.fail(
+          fs.getClass().getSimpleName() + " doesn't support getServerDefaults");
+    }
+    // Verify result with DFS
+    FsServerDefaults dfssds = dfs.getServerDefaults();
+    Assert.assertEquals(JsonUtil.toJsonString(sds),
+        JsonUtil.toJsonString(dfssds));
+  }
+
+  private void testGetServerDefaults() throws Exception {
+    if (!this.isLocalFS()) {
+      FileSystem fs = this.getHttpFSFileSystem();
+      Path path1 = new Path("/");
+      DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+          .get(path1.toUri(), this.getProxiedFSConf());
+      verifyGetServerDefaults(fs, dfs);
+    }
+  }
+
+  private void testAccess() throws Exception {
+    if (!this.isLocalFS()) {
+      FileSystem fs = this.getHttpFSFileSystem();
+      Path path1 = new Path("/");
+      DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+          .get(path1.toUri(), this.getProxiedFSConf());
+      verifyAccess(fs, dfs);
+    }
+  }
+
+  private void verifyAccess(FileSystem fs, DistributedFileSystem dfs)
+      throws Exception {
+    Path p1 = new Path("/p1");
+    dfs.mkdirs(p1);
+    dfs.setOwner(p1, "user1", "group1");
+    dfs.setPermission(p1, new FsPermission((short) 0444));
+
+    if (fs instanceof HttpFSFileSystem) {
+      HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+      httpFS.access(p1, FsAction.READ);
+    } else if (fs instanceof WebHdfsFileSystem) {
+      WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+      webHdfsFileSystem.access(p1, FsAction.READ);
+    } else {
+      Assert.fail(fs.getClass().getSimpleName() + " doesn't support access");
+    }
+  }
+
+  private void testErasureCodingPolicy() throws Exception {
+    if (!this.isLocalFS()) {
+      FileSystem fs = this.getHttpFSFileSystem();
+      Path path1 = new Path("/");
+      DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+          .get(path1.toUri(), this.getProxiedFSConf());
+      final String dir = "/xattrTest";
+      Path p1 = new Path(dir);
+
+      final ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies
+          .getByID(SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
+      final String ecPolicyName = ecPolicy.getName();
+      dfs.mkdirs(new Path(dir));
+      dfs.enableErasureCodingPolicy(ecPolicyName);
+
+      if (fs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+        httpFS.setErasureCodingPolicy(p1, ecPolicyName);
+        ErasureCodingPolicy ecPolicy1 = httpFS.getErasureCodingPolicy(p1);
+        assertEquals(ecPolicy, ecPolicy1);
+        httpFS.unsetErasureCodingPolicy(p1);
+        ecPolicy1 = httpFS.getErasureCodingPolicy(p1);
+        Assert.assertNull(ecPolicy1);
+      } else if (fs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+        webHdfsFileSystem.setErasureCodingPolicy(p1, ecPolicyName);
+        ErasureCodingPolicy ecPolicy1 =
+            webHdfsFileSystem.getErasureCodingPolicy(p1);
+        assertEquals(ecPolicy, ecPolicy1);
+        webHdfsFileSystem.unsetErasureCodingPolicy(p1);
+        ecPolicy1 = dfs.getErasureCodingPolicy(p1);
+        Assert.assertNull(ecPolicy1);
+      } else {
+        Assert.fail(fs.getClass().getSimpleName() + " doesn't support access");
+      }
+    }
+  }
+
+  public void testStoragePolicySatisfier() throws Exception {
+    final String dir = "/parent";
+    Path path1 = new Path(dir);
+    String file = "/parent/file";
+    Path filePath = new Path(file);
+    if (!this.isLocalFS()) {
+      FileSystem fs = this.getHttpFSFileSystem();
+      DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+          .get(path1.toUri(), this.getProxiedFSConf());
+      dfs.mkdirs(path1);
+      dfs.create(filePath).close();
+      dfs.setStoragePolicy(filePath, HdfsConstants.COLD_STORAGE_POLICY_NAME);
+      BlockStoragePolicy storagePolicy =
+          (BlockStoragePolicy) dfs.getStoragePolicy(filePath);
+      assertEquals(HdfsConstants.COLD_STORAGE_POLICY_NAME,
+          storagePolicy.getName());
+      Map<String, byte[]> xAttrs;
+      if (fs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+        httpFS.satisfyStoragePolicy(path1);
+        xAttrs = httpFS.getXAttrs(path1);
+        assertTrue(xAttrs
+            .containsKey(HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY));
+      } else if (fs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+        webHdfsFileSystem.satisfyStoragePolicy(path1);
+        xAttrs = webHdfsFileSystem.getXAttrs(path1);
+        assertTrue(xAttrs
+            .containsKey(HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY));
+      } else {
+        Assert.fail(fs.getClass().getSimpleName() + " doesn't support access");
+      }
+      dfs.delete(path1, true);
+    }
   }
 }

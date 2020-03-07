@@ -39,8 +39,9 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMappingEntity;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AppPriorityACLConfigurationParser.AppPriorityACLKeyType;
@@ -51,6 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.MultiNo
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.MultiNodePolicySpec;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicyForPendingApps;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicyWithExclusivePartitions;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
@@ -165,6 +167,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public static final String FIFO_WITH_PARTITIONS_APP_ORDERING_POLICY
       = "fifo-with-partitions";
+
+  public static final String FIFO_FOR_PENDING_APPS
+      = "fifo-for-pending-apps";
 
   public static final String DEFAULT_APP_ORDERING_POLICY =
       FIFO_APP_ORDERING_POLICY;
@@ -398,7 +403,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
   }
 
-  static String getQueuePrefix(String queue) {
+  public static String getQueuePrefix(String queue) {
     String queueName = PREFIX + queue + DOT;
     return queueName;
   }
@@ -579,6 +584,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     if (policyType.trim().equals(FIFO_WITH_PARTITIONS_APP_ORDERING_POLICY)) {
       policyType = FifoOrderingPolicyWithExclusivePartitions.class.getName();
     }
+    if (policyType.trim().equals(FIFO_FOR_PENDING_APPS)) {
+      policyType = FifoOrderingPolicyForPendingApps.class.getName();
+    }
+
     try {
       orderingPolicy = (OrderingPolicy<S>)
         Class.forName(policyType).newInstance();
@@ -1111,10 +1120,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
           throw new IllegalArgumentException(
               "unknown mapping prefix " + mapping[0]);
         }
-        m = new QueueMapping(
-                mappingType,
-                mapping[1],
-                mapping[2]);
+        m = QueueMappingBuilder.create()
+                .type(mappingType)
+                .source(mapping[1])
+                .queue(mapping[2])
+                .build();
       } catch (Throwable t) {
         throw new IllegalArgumentException(
             "Illegal queue mapping " + mappingValue);

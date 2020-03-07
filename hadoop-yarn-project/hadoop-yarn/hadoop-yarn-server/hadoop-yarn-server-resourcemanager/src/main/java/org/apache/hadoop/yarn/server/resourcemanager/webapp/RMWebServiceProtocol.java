@@ -186,6 +186,7 @@ public interface RMWebServiceProtocol {
    * @param finishEnd filter the result by finish end time. It is a QueryParam.
    * @param applicationTypes filter the result by types. It is a QueryParam.
    * @param applicationTags filter the result by tags. It is a QueryParam.
+   * @param name filter the name of the application. It is a QueryParam.
    * @param unselectedFields De-selected params to avoid from report. It is a
    *          QueryParam.
    * @return all apps in the cluster
@@ -195,7 +196,7 @@ public interface RMWebServiceProtocol {
       Set<String> statesQuery, String finalStatusQuery, String userQuery,
       String queueQuery, String count, String startedBegin, String startedEnd,
       String finishBegin, String finishEnd, Set<String> applicationTypes,
-      Set<String> applicationTags, Set<String> unselectedFields);
+      Set<String> applicationTags, String name, Set<String> unselectedFields);
 
   /**
    * This method retrieve all the activities in a specific node, and it is

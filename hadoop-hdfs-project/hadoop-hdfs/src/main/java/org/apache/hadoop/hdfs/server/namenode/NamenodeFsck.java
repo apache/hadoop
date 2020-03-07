@@ -94,7 +94,8 @@ import com.google.common.annotations.VisibleForTesting;
  * This class provides rudimentary checking of DFS volumes for errors and
  * sub-optimal conditions.
  * <p>The tool scans all files and directories, starting from an indicated
- *  root path. The following abnormal conditions are detected and handled:</p>
+ *  root path and its descendants. The following abnormal conditions are
+ *  detected and handled:</p>
  * <ul>
  * <li>files with blocks that are completely missing from all datanodes.<br>
  * In this case the tool can perform one of the following actions:
@@ -146,7 +147,6 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   private boolean showLocations = false;
   private boolean showRacks = false;
   private boolean showStoragePolcies = false;
-  private boolean showprogress = false;
   private boolean showCorruptFileBlocks = false;
 
   private boolean showReplicaDetails = false;
@@ -248,7 +248,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       } else if (key.equals("storagepolicies")) {
         this.showStoragePolcies = true;
       } else if (key.equals("showprogress")) {
-        this.showprogress = true;
+        out.println("The fsck switch -showprogress is deprecated and no " +
+                "longer has any effect. Progress is now shown by default.");
+        LOG.warn("The fsck switch -showprogress is deprecated and no longer " +
+            "has any effect. Progress is now shown by default.");
       } else if (key.equals("openforwrite")) {
         this.showOpenFiles = true;
       } else if (key.equals("listcorruptfileblocks")) {
@@ -500,9 +503,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   void check(String parent, HdfsFileStatus file, Result replRes, Result ecRes)
       throws IOException {
     String path = file.getFullName(parent);
-    if (showprogress &&
-        (totalDirs + totalSymlinks + replRes.totalFiles + ecRes.totalFiles)
-            % 100 == 0) {
+    if ((totalDirs + totalSymlinks + replRes.totalFiles + ecRes.totalFiles)
+            % 1000 == 0) {
       out.println();
       out.flush();
     }
@@ -606,7 +608,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     } else if (showFiles) {
       out.print(path + " " + fileLen + " bytes, " + redundancyPolicy + " " +
         blocks.locatedBlockCount() + " block(s): ");
-    } else if (showprogress) {
+    } else if (res.totalFiles % 100 == 0) {
       out.print('.');
     }
   }

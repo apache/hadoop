@@ -75,7 +75,6 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
   private DB versiondb;
   private long maxLogs;
   private Configuration conf;
-  private LogMutation pendingMutation;
   @VisibleForTesting
   protected static final Version CURRENT_VERSION_INFO = Version
       .newInstance(0, 1);
@@ -224,17 +223,19 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
 
   @Override
   public void logMutation(LogMutation logMutation) throws IOException {
-    LinkedList<LogMutation> logs = deserLogMutations(db.get(bytes(LOG_KEY)));
-    logs.add(logMutation);
-    if (logs.size() > maxLogs) {
-      logs.removeFirst();
+    if (maxLogs > 0) {
+      LinkedList<LogMutation> logs = deserLogMutations(db.get(bytes(LOG_KEY)));
+      logs.add(logMutation);
+      if (logs.size() > maxLogs) {
+        logs.removeFirst();
+      }
+      db.put(bytes(LOG_KEY), serLogMutations(logs));
     }
-    db.put(bytes(LOG_KEY), serLogMutations(logs));
-    pendingMutation = logMutation;
   }
 
   @Override
-  public void confirmMutation(boolean isValid) throws IOException {
+  public void confirmMutation(LogMutation pendingMutation,
+      boolean isValid) throws IOException {
     WriteBatch updateBatch = db.createWriteBatch();
     if (isValid) {
       for (Map.Entry<String, String> changes :
@@ -250,7 +251,6 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
           bytes(String.valueOf(configVersion)));
     }
     db.write(updateBatch);
-    pendingMutation = null;
   }
 
   private byte[] serLogMutations(LinkedList<LogMutation> mutations) throws
@@ -337,13 +337,22 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
     return deserLogMutations(db.get(bytes(LOG_KEY)));
   }
 
+  @VisibleForTesting
+  protected DB getDB() {
+    return db;
+  }
+
   @Override
   public void storeVersion() throws Exception {
-    String key = VERSION_KEY;
-    byte[] data = ((VersionPBImpl) CURRENT_VERSION_INFO).getProto()
+    storeVersion(CURRENT_VERSION_INFO);
+  }
+
+  @VisibleForTesting
+  protected void storeVersion(Version version) throws Exception {
+    byte[] data = ((VersionPBImpl) version).getProto()
         .toByteArray();
     try {
-      db.put(bytes(key), data);
+      db.put(bytes(VERSION_KEY), data);
     } catch (DBException e) {
       throw new IOException(e);
     }

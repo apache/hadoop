@@ -121,9 +121,20 @@ public class AbfsRestOperation {
    * HTTP operations.
    */
   void execute() throws AzureBlobFileSystemException {
+    // see if we have latency reports from the previous requests
+    String latencyHeader = this.client.getAbfsPerfTracker().getClientLatency();
+    if (latencyHeader != null && !latencyHeader.isEmpty()) {
+      AbfsHttpHeader httpHeader =
+              new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_ABFS_CLIENT_LATENCY, latencyHeader);
+      requestHeaders.add(httpHeader);
+    }
+
     int retryCount = 0;
+    LOG.debug("First execution of REST operation - {}", operationType);
     while (!executeHttpOperation(retryCount++)) {
       try {
+        LOG.debug("Retrying REST operation {}. RetryCount = {}",
+            operationType, retryCount);
         Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
@@ -134,6 +145,8 @@ public class AbfsRestOperation {
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
           result.getStorageErrorMessage(), null, result);
     }
+
+    LOG.trace("{} REST operation complete", operationType);
   }
 
   /**
@@ -147,18 +160,26 @@ public class AbfsRestOperation {
       // initialize the HTTP request and open the connection
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
 
-      // sign the HTTP request
-      if (client.getAccessToken() == null) {
-        LOG.debug("Signing request with shared key");
-        // sign the HTTP request
-        client.getSharedKeyCredentials().signRequest(
-                httpOperation.getConnection(),
-                hasRequestBody ? bufferLength : 0);
-      } else {
-        LOG.debug("Authenticating request with OAuth2 access token");
-        httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
-                client.getAccessToken());
+      switch(client.getAuthType()) {
+        case Custom:
+        case OAuth:
+          LOG.debug("Authenticating request with OAuth2 access token");
+          httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+              client.getAccessToken());
+          break;
+        case SAS:
+          // do nothing; the SAS token should already be appended to the query string
+          break;
+        case SharedKey:
+          // sign the HTTP request
+          LOG.debug("Signing request with shared key");
+          // sign the HTTP request
+          client.getSharedKeyCredentials().signRequest(
+              httpOperation.getConnection(),
+              hasRequestBody ? bufferLength : 0);
+          break;
       }
+
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
@@ -199,7 +220,7 @@ public class AbfsRestOperation {
       AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);
     }
 
-    LOG.debug("HttpRequest: " + httpOperation.toString());
+    LOG.debug("HttpRequest: {}", httpOperation.toString());
 
     if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
       return false;

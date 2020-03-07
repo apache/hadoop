@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -148,6 +149,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigValidator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
@@ -197,7 +200,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ConfigVersionInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ConfInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
@@ -210,6 +212,7 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -244,6 +247,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   boolean isCentralizedNodeLabelConfiguration = true;
   private boolean filterAppsByUser = false;
   private boolean filterInvalidXMLChars = false;
+  private boolean enableRestAppSubmissions = true;
 
   public final static String DELEGATION_TOKEN_HEADER =
       "Hadoop-YARN-RM-Delegation-Token";
@@ -262,6 +266,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     this.filterInvalidXMLChars = conf.getBoolean(
         YarnConfiguration.FILTER_INVALID_XML_CHARS,
         YarnConfiguration.DEFAULT_FILTER_INVALID_XML_CHARS);
+    this.enableRestAppSubmissions = conf.getBoolean(
+        YarnConfiguration.ENABLE_REST_APP_SUBMISSIONS,
+        YarnConfiguration.DEFAULT_ENABLE_REST_APP_SUBMISSIONS);
   }
 
   RMWebServices(ResourceManager rm, Configuration conf,
@@ -606,6 +613,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @QueryParam(RMWSConsts.FINISHED_TIME_END) String finishEnd,
       @QueryParam(RMWSConsts.APPLICATION_TYPES) Set<String> applicationTypes,
       @QueryParam(RMWSConsts.APPLICATION_TAGS) Set<String> applicationTags,
+      @QueryParam(RMWSConsts.NAME) String name,
       @QueryParam(RMWSConsts.DESELECTS) Set<String> unselectedFields) {
 
     initForReadableEndpoints();
@@ -623,6 +631,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
                     .withFinishTimeEnd(finishEnd)
                     .withApplicationTypes(applicationTypes)
                     .withApplicationTags(applicationTags)
+                    .withName(name)
             .build();
 
     List<ApplicationReport> appReports;
@@ -1716,6 +1725,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public Response createNewApplication(@Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
+    if (!enableRestAppSubmissions) {
+      String msg = "App submission via REST is disabled.";
+      return Response.status(Status.FORBIDDEN).entity(msg).build();
+    }
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
     initForWritableEndpoints(callerUGI, false);
 
@@ -1736,6 +1749,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public Response submitApplication(ApplicationSubmissionContextInfo newApp,
       @Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
+    if (!enableRestAppSubmissions) {
+      String msg = "App submission via REST is disabled.";
+      return Response.status(Status.FORBIDDEN).entity(msg).build();
+    }
 
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
     initForWritableEndpoints(callerUGI, false);
@@ -2582,6 +2599,13 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         MutableConfigurationProvider mutableConfigurationProvider =
             ((MutableConfScheduler) scheduler).getMutableConfProvider();
         mutableConfigurationProvider.formatConfigurationInStore(conf);
+        try {
+          rm.getRMContext().getRMAdminService().refreshQueues();
+        } catch (IOException | YarnException e) {
+          LOG.error("Exception thrown when formatting configuration.", e);
+          mutableConfigurationProvider.revertToOldConfig(conf);
+          throw e;
+        }
         return Response.status(Status.OK).entity("Configuration under " +
             "store successfully formatted.").build();
       } catch (Exception e) {
@@ -2593,6 +2617,61 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       return Response.status(Status.BAD_REQUEST)
           .entity("Scheduler Configuration format only supported by " +
           "MutableConfScheduler.").build();
+    }
+  }
+
+  @POST
+  @Path(RMWSConsts.SCHEDULER_CONF_VALIDATE)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public synchronized Response validateAndGetSchedulerConfiguration(
+          SchedConfUpdateInfo mutationInfo,
+          @Context HttpServletRequest hsr) throws AuthorizationException {
+    // Only admin user is allowed to read scheduler conf,
+    // in order to avoid leaking sensitive info, such as ACLs
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, true);
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+    if (scheduler instanceof MutableConfScheduler && ((MutableConfScheduler)
+            scheduler).isConfigurationMutable()) {
+      try {
+        MutableConfigurationProvider mutableConfigurationProvider =
+                ((MutableConfScheduler) scheduler).getMutableConfProvider();
+        Configuration schedulerConf = mutableConfigurationProvider
+                .getConfiguration();
+        Configuration newSchedulerConf = mutableConfigurationProvider
+                .applyChanges(schedulerConf, mutationInfo);
+        Configuration yarnConf = ((CapacityScheduler) scheduler).getConf();
+
+        Configuration newConfig = new Configuration(yarnConf);
+        Iterator<Map.Entry<String, String>> iter = newSchedulerConf.iterator();
+        Entry<String, String> e = null;
+        while (iter.hasNext()) {
+          e = iter.next();
+          newConfig.set(e.getKey(), e.getValue());
+        }
+        CapacitySchedulerConfigValidator.validateCSConfiguration(yarnConf,
+                newConfig, rm.getRMContext());
+
+        return Response.status(Status.OK)
+                .entity(new ConfInfo(newSchedulerConf))
+                .build();
+      } catch (Exception e) {
+        String errorMsg = "CapacityScheduler configuration validation failed:"
+                  + e.toString();
+        LOG.warn(errorMsg);
+        return Response.status(Status.BAD_REQUEST)
+                  .entity(errorMsg)
+                  .build();
+      }
+    } else {
+      String errorMsg = "Configuration change validation only supported by " +
+              "MutableConfScheduler.";
+      LOG.warn(errorMsg);
+      return Response.status(Status.BAD_REQUEST)
+              .entity(errorMsg)
+              .build();
     }
   }
 
@@ -2622,14 +2701,15 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
               throw new org.apache.hadoop.security.AccessControlException("User"
                   + " is not admin of all modified queues.");
             }
-            provider.logAndApplyMutation(callerUGI, mutationInfo);
+            LogMutation logMutation = provider.logAndApplyMutation(callerUGI,
+                mutationInfo);
             try {
               rm.getRMContext().getRMAdminService().refreshQueues();
             } catch (IOException | YarnException e) {
-              provider.confirmPendingMutation(false);
+              provider.confirmPendingMutation(logMutation, false);
               throw e;
             }
-            provider.confirmPendingMutation(true);
+            provider.confirmPendingMutation(logMutation, true);
             return null;
           }
         });
@@ -2773,7 +2853,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr)
       throws AuthorizationException {
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    initForWritableEndpoints(callerUGI, true);
+    initForWritableEndpoints(callerUGI, false);
     if (!EnumUtils.isValidEnum(
         SignalContainerCommand.class, command.toUpperCase())) {
       String errMsg =

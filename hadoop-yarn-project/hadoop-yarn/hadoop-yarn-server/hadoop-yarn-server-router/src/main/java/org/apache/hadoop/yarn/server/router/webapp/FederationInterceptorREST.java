@@ -97,6 +97,7 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -237,7 +238,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       SubClusterId subClusterId, String webAppAddress) {
     DefaultRequestInterceptorREST interceptor =
         getInterceptorForSubCluster(subClusterId);
-    if (interceptor == null) {
+    String webAppAddresswithScheme = WebAppUtils.getHttpSchemePrefix(
+            this.getConf()) + webAppAddress;
+    if (interceptor == null || !webAppAddresswithScheme.equals(interceptor.
+        getWebAppAddress())){
       interceptor = createInterceptorForSubCluster(subClusterId, webAppAddress);
     }
     return interceptor;
@@ -672,7 +676,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Set<String> statesQuery, String finalStatusQuery, String userQuery,
       String queueQuery, String count, String startedBegin, String startedEnd,
       String finishBegin, String finishEnd, Set<String> applicationTypes,
-      Set<String> applicationTags, Set<String> unselectedFields) {
+      Set<String> applicationTags, String name, Set<String> unselectedFields) {
     AppsInfo apps = new AppsInfo();
     long startTime = clock.getTime();
 
@@ -701,7 +705,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           AppsInfo rmApps = interceptor.getApps(hsrCopy, stateQuery,
               statesQuery, finalStatusQuery, userQuery, queueQuery, count,
               startedBegin, startedEnd, finishBegin, finishEnd,
-              applicationTypes, applicationTags, unselectedFields);
+              applicationTypes, applicationTags, name, unselectedFields);
 
           if (rmApps == null) {
             routerMetrics.incrMultipleAppsFailedRetrieved();

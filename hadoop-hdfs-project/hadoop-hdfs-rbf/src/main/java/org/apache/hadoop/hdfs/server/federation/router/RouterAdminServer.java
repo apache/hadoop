@@ -32,6 +32,7 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -84,12 +85,13 @@ import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolPB;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolServerSideTranslatorPB;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.AbstractService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 /**
  * This class is responsible for handling all of the Admin calls to the HDFS
@@ -240,6 +242,13 @@ public class RouterAdminServer extends AbstractService
     return this.adminAddress;
   }
 
+  void checkSuperuserPrivilege() throws AccessControlException {
+    RouterPermissionChecker pc = RouterAdminServer.getPermissionChecker();
+    if (pc != null) {
+      pc.checkSuperuserPrivilege();
+    }
+  }
+
   @Override
   protected void serviceInit(Configuration configuration) throws Exception {
     this.conf = configuration;
@@ -279,11 +288,24 @@ public class RouterAdminServer extends AbstractService
     UpdateMountTableEntryResponse response = getMountTableStore()
         .updateMountTableEntry(request);
     try {
-      if (updateEntry != null && router.isQuotaEnabled()
-          && isQuotaUpdated(request, oldEntry)) {
-        synchronizeQuota(updateEntry.getSourcePath(),
-            updateEntry.getQuota().getQuota(),
-            updateEntry.getQuota().getSpaceQuota());
+      if (updateEntry != null && router.isQuotaEnabled()) {
+        // update quota.
+        if (isQuotaUpdated(request, oldEntry)) {
+          synchronizeQuota(updateEntry.getSourcePath(),
+              updateEntry.getQuota().getQuota(),
+              updateEntry.getQuota().getSpaceQuota(), null);
+        }
+        // update storage type quota.
+        RouterQuotaUsage newQuota = request.getEntry().getQuota();
+        boolean locationsChanged = oldEntry == null ||
+            !oldEntry.getDestinations().equals(updateEntry.getDestinations());
+        for (StorageType t : StorageType.values()) {
+          if (locationsChanged || oldEntry.getQuota().getTypeQuota(t)
+              != newQuota.getTypeQuota(t)) {
+            synchronizeQuota(updateEntry.getSourcePath(),
+                HdfsConstants.QUOTA_DONT_SET, newQuota.getTypeQuota(t), t);
+          }
+        }
       }
     } catch (Exception e) {
       // Ignore exception, if any while reseting quota. Specifically to handle
@@ -336,16 +358,17 @@ public class RouterAdminServer extends AbstractService
    * @param path Source path in given mount table.
    * @param nsQuota Name quota definition in given mount table.
    * @param ssQuota Space quota definition in given mount table.
+   * @param type Storage type of quota. Null if it's not a storage type quota.
    * @throws IOException
    */
-  private void synchronizeQuota(String path, long nsQuota, long ssQuota)
-      throws IOException {
+  private void synchronizeQuota(String path, long nsQuota, long ssQuota,
+      StorageType type) throws IOException {
     if (isQuotaSyncRequired(nsQuota, ssQuota)) {
       if (iStateStoreCache) {
         ((StateStoreCache) this.router.getSubclusterResolver()).loadCache(true);
       }
       Quota routerQuota = this.router.getRpcServer().getQuotaModule();
-      routerQuota.setQuota(path, nsQuota, ssQuota, null);
+      routerQuota.setQuota(path, nsQuota, ssQuota, type, false);
     }
   }
 
@@ -372,7 +395,7 @@ public class RouterAdminServer extends AbstractService
     // clear sub-cluster's quota definition
     try {
       synchronizeQuota(request.getSrcPath(), HdfsConstants.QUOTA_RESET,
-          HdfsConstants.QUOTA_RESET);
+          HdfsConstants.QUOTA_RESET, null);
     } catch (Exception e) {
       // Ignore exception, if any while reseting quota. Specifically to handle
       // if the actual destination doesn't exist.
@@ -391,6 +414,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public EnterSafeModeResponse enterSafeMode(EnterSafeModeRequest request)
       throws IOException {
+    checkSuperuserPrivilege();
     boolean success = false;
     RouterSafemodeService safeModeService = this.router.getSafemodeService();
     if (safeModeService != null) {
@@ -411,6 +435,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public LeaveSafeModeResponse leaveSafeMode(LeaveSafeModeRequest request)
       throws IOException {
+    checkSuperuserPrivilege();
     boolean success = false;
     RouterSafemodeService safeModeService = this.router.getSafemodeService();
     if (safeModeService != null) {
@@ -507,11 +532,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public DisableNameserviceResponse disableNameservice(
       DisableNameserviceRequest request) throws IOException {
-
-    RouterPermissionChecker pc = getPermissionChecker();
-    if (pc != null) {
-      pc.checkSuperuserPrivilege();
-    }
+    checkSuperuserPrivilege();
 
     String nsId = request.getNameServiceId();
     boolean success = false;
@@ -544,10 +565,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public EnableNameserviceResponse enableNameservice(
       EnableNameserviceRequest request) throws IOException {
-    RouterPermissionChecker pc = getPermissionChecker();
-    if (pc != null) {
-      pc.checkSuperuserPrivilege();
-    }
+    checkSuperuserPrivilege();
 
     String nsId = request.getNameServiceId();
     DisabledNameserviceStore store = getDisabledNameserviceStore();
@@ -618,5 +636,11 @@ public class RouterAdminServer extends AbstractService
   public Collection<RefreshResponse> refresh(String identifier, String[] args) {
     // Let the registry handle as needed
     return RefreshRegistry.defaultRegistry().dispatch(identifier, args);
+  }
+
+  @Override // RouterGenericManager
+  public boolean refreshSuperUserGroupsConfiguration() throws IOException {
+    ProxyUsers.refreshSuperUserGroupsConfiguration();
+    return true;
   }
 }

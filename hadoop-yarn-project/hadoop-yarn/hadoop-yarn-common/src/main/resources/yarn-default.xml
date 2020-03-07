@@ -959,6 +959,30 @@
 
   <property>
     <description>
+    RM DelegationTokenRenewer thread timeout
+    </description>
+    <name>yarn.resourcemanager.delegation-token-renewer.thread-timeout</name>
+    <value>60s</value>
+  </property>
+
+  <property>
+    <description>
+    Default maximum number of retries for each RM DelegationTokenRenewer thread
+    </description>
+    <name>yarn.resourcemanager.delegation-token-renewer.thread-retry-max-attempts</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>
+    Time interval between each RM DelegationTokenRenewer thread retry attempt
+    </description>
+    <name>yarn.resourcemanager.delegation-token-renewer.thread-retry-interval</name>
+    <value>60s</value>
+  </property>
+
+  <property>
+    <description>
     Thread pool size for RMApplicationHistoryWriter.
     </description>
     <name>yarn.resourcemanager.history-writer.multi-threaded-dispatcher.pool-size</name>
@@ -1128,6 +1152,15 @@
   </property>
 
   <property>
+    <description>
+      How long the container executor should wait for the exit code file to
+      appear after a reacquired container has exited.
+    </description>
+    <name>yarn.nodemanager.container-executor.exit-code-file.timeout-ms</name>
+    <value>2000</value>
+  </property>
+
+  <property>
     <description>Max number of OPPORTUNISTIC containers to queue at the
       nodemanager.</description>
     <name>yarn.nodemanager.opportunistic-containers-max-queue-length</name>
@@ -1286,6 +1319,27 @@
     </description>
     <name>yarn.log-aggregation-enable</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to enable application placement based on user ID passed via
+      application tags. When it is enabled, userid=&lt;userId&gt;
+      pattern will be checked and if found, the application will be placed
+      onto the found user's queue,
+      if the original user has enough rights on the passed user's queue.
+    </description>
+    <name>yarn.resourcemanager.application-tag-based-placement.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Comma separated list of users who can use the application tag based
+      placement, if it is enabled.
+    </description>
+    <name>yarn.resourcemanager.application-tag-based-placement.username.whitelist</name>
+    <value></value>
   </property>
 
   <property>
@@ -1596,27 +1650,21 @@
   </property>
 
   <property>
-    <description>Frequency of running node health script.</description>
-    <name>yarn.nodemanager.health-checker.interval-ms</name>
-    <value>600000</value>
+    <description>The nodemanager health check scripts to run.</description>
+    <name>yarn.nodemanager.health-checker.scripts</name>
+    <value>script</value>
   </property>
 
   <property>
-    <description>Script time out period.</description>
-    <name>yarn.nodemanager.health-checker.script.timeout-ms</name>
+    <description>Health check script time out period.</description>
+    <name>yarn.nodemanager.health-checker.timeout-ms</name>
     <value>1200000</value>
   </property>
 
   <property>
-    <description>The health check script to run.</description>
-    <name>yarn.nodemanager.health-checker.script.path</name>
-    <value></value>
-  </property>
-
-  <property>
-    <description>The arguments to pass to the health check script.</description>
-    <name>yarn.nodemanager.health-checker.script.opts</name>
-    <value></value>
+    <description>Frequency of running node health scripts.</description>
+    <name>yarn.nodemanager.health-checker.interval-ms</name>
+    <value>600000</value>
   </property>
 
   <property>
@@ -1657,10 +1705,23 @@
   </property>
 
   <property>
-    <description>The minimum space that must be available on a disk for
-    it to be used. This applies to yarn.nodemanager.local-dirs and
+    <description>The minimum space in megabytes that must be available on a disk for
+    it to be used. If space on a disk falls below this threshold, it will be marked
+    as bad. This applies to yarn.nodemanager.local-dirs and
     yarn.nodemanager.log-dirs.</description>
     <name>yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb</name>
+    <value>0</value>
+  </property>
+
+  <property>
+    <description>The minimum space in megabytes that must be available on a bad
+    disk for it to be marked as good.  This value should not be less
+    than yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb.
+    If it is less than yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb,
+    or it is not set, it will be set to the
+    same value as yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb.
+    This applies to yarn.nodemanager.local-dirs and yarn.nodemanager.log-dirs.</description>
+    <name>yarn.nodemanager.disk-health-checker.min-free-space-per-disk-watermark-high-mb</name>
     <value>0</value>
   </property>
 
@@ -1769,7 +1830,7 @@
 
   <property>
     <description>Comma separated list of runtimes that are allowed when using
-    LinuxContainerExecutor. The allowed values are default, docker, and
+    LinuxContainerExecutor. The allowed values are default, docker, runc, and
     javasandbox.</description>
     <name>yarn.nodemanager.runtime.linux.allowed-runtimes</name>
     <value>default</value>
@@ -1909,6 +1970,144 @@
       containers that use DockerContainerRuntime.</description>
     <name>yarn.nodemanager.runtime.linux.docker.default-tmpfs-mounts</name>
     <value></value>
+  </property>
+
+  <property>
+    <description>The runC image tag to manifest plugin
+      class to be used.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-tag-to-manifest-plugin</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.runc.ImageTagToManifestPlugin</value>
+  </property>
+
+  <property>
+    <description>The runC manifest to resources plugin class to
+      be used.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.manifest-to-resources-plugin</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.runc.HdfsManifestToResourcesPlugin</value>
+  </property>
+
+  <property>
+    <description>The HDFS location under which the oci image manifests, layers,
+      and configs directories exist.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-toplevel-dir</name>
+    <value>/runc-root</value>
+  </property>
+
+  <property>
+    <description>Target count of layer mounts that we should keep on disk
+      at one time.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.layer-mounts-to-keep</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>The interval in seconds between executions of
+      reaping layer mounts.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.layer-mounts-interval-secs</name>
+    <value>600</value>
+  </property>
+
+  <property>
+    <description>Image to be used if no other image is specified.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-name</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Allow or disallow privileged containers.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.privileged-containers.allowed</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>The set of networks allowed when launching containers
+      using the RuncContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.allowed-container-networks</name>
+    <value>host,none,bridge</value>
+  </property>
+
+  <property>
+    <description>The set of runtimes allowed when launching containers
+      using the RuncContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.allowed-container-runtimes</name>
+    <value>runc</value>
+  </property>
+
+  <property>
+    <description>ACL list for users allowed to run privileged
+      containers.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.privileged-containers.acl</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Allow host pid namespace for runC containers.
+      Use with care.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.host-pid-namespace.allowed</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>The default list of read-only mounts to be bind-mounted
+      into all runC containers that use RuncContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.default-ro-mounts</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>The default list of read-write mounts to be bind-mounted
+      into all runC containers that use RuncContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.default-rw-mounts</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Path to the seccomp profile to use with runC
+      containers</description>
+    <name>yarn.nodemanager.runtime.linux.runc.seccomp-profile</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>The HDFS location where the runC image tag to hash
+      file exists.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-tag-to-manifest-plugin.hdfs-hash-file</name>
+    <value>/runc-root/image-tag-to-hash</value>
+  </property>
+
+  <property>
+    <description>The local file system location where the runC image tag
+      to hash file exists.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-tag-to-manifest-plugin.local-hash-file</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>The interval in seconds between refreshing the hdfs image tag
+      to hash cache.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-tag-to-manifest-plugin.cache-refresh-interval-secs</name>
+    <value>60</value>
+  </property>
+
+  <property>
+    <description>The number of manifests to cache in the image tag
+      to hash cache.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-tag-to-manifest-plugin.num-manifests-to-cache</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>The timeout value in seconds for the values in
+      the stat cache.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.hdfs-manifest-to-resources-plugin.stat-cache-timeout-interval-secs</name>
+    <value>360</value>
+  </property>
+
+  <property>
+    <description>The size of the stat cache which stores stats of the
+      layers and config.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.hdfs-manifest-to-resources-plugin.stat-cache-size</name>
+    <value>500</value>
   </property>
 
   <property>
@@ -4320,5 +4519,11 @@
     </description>
     <name>yarn.workflow-id.tag-prefix</name>
     <value>workflowid:</value>
+  </property>
+
+  <property>
+    <description>Whether or not to allow application submissions via REST. Default is true.</description>
+    <name>yarn.webapp.enable-rest-app-submissions</name>
+    <value>true</value>
   </property>
 </configuration>

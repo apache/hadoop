@@ -247,7 +247,7 @@ public final class PathMetadataDynamoDBTranslation {
    * @return the creation time, or null
    * @throws IOException if the item is not a version marker
    */
-  static Long extractCreationTimeFromMarker(Item marker) throws IOException {
+  static Long extractCreationTimeFromMarker(Item marker) {
     if (marker.hasAttribute(TABLE_CREATED)) {
       return marker.getLong(TABLE_CREATED);
     } else {
@@ -397,5 +397,17 @@ public final class PathMetadataDynamoDBTranslation {
       }
     }
     return "s3a://" + parent + "/" + child;
+  }
+
+  /**
+   * Create an empty dir marker which, when passed to the
+   * DDB metastore, is considered authoritative.
+   * @param status file status
+   * @return path metadata.
+   */
+  static PathMetadata authoritativeEmptyDirectoryMarker(
+      final S3AFileStatus status) {
+    return new DDBPathMetadata(status, Tristate.TRUE,
+        false, true, 0);
   }
 }

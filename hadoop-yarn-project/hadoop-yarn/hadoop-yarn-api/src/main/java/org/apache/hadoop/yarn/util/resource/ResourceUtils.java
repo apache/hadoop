@@ -76,6 +76,7 @@ public class ResourceUtils {
           + "\\p{Alnum}([\\p{Alnum}-]*\\p{Alnum})?)/)?\\p{Alpha}([\\w.-]*)$");
 
   private final static String RES_PATTERN = "^[^=]+=\\d+\\s?\\w*$";
+  public static final String YARN_IO_OPTIONAL = "(yarn\\.io/)?";
 
   private static volatile boolean initializedResources = false;
   private static final Map<String, Integer> RESOURCE_NAME_TO_INDEX =
@@ -696,7 +697,7 @@ public class ResourceUtils {
       Configuration configuration, String prefix) {
     List<ResourceInformation> result = new ArrayList<>();
     Map<String, String> customResourcesMap = configuration
-        .getValByRegex("^" + Pattern.quote(prefix) + "[^.]+$");
+        .getValByRegex("^" + Pattern.quote(prefix) + YARN_IO_OPTIONAL + "[^.]+$");
     for (Entry<String, String> resource : customResourcesMap.entrySet()) {
       String resourceName = resource.getKey().substring(prefix.length());
       Matcher matcher =

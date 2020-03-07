@@ -26,15 +26,13 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NoECPolicySetException;
-import org.apache.hadoop.hdfs.server.common.ECTopologyVerifier;
-import org.apache.hadoop.hdfs.server.namenode.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.util.ECPolicyLoader;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -330,7 +328,7 @@ public class ECAdmin extends Configured implements Tool {
           "Set the erasure coding policy for a file/directory.\n\n" +
           listing.toString() + "\n" +
           "-replicate and -policy are optional arguments. They cannot been " +
-          "used at the same time";
+          "used at the same time.\n";
     }
 
     @Override
@@ -536,14 +534,14 @@ public class ECAdmin extends Configured implements Tool {
       final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
         dfs.enableErasureCodingPolicy(ecPolicyName);
-        System.out.println("Erasure coding policy " + ecPolicyName +
-            " is enabled");
+        System.out
+            .println("Erasure coding policy " + ecPolicyName + " is enabled");
         ECTopologyVerifierResult result =
-            getECTopologyVerifierResultForPolicy(dfs, ecPolicyName);
+            dfs.getECTopologyResultForPolicies(ecPolicyName);
         if (!result.isSupported()) {
-          System.err.println("Warning: The cluster setup does not support " +
-              "EC policy " + ecPolicyName + ". Reason: " +
-              result.getResultMessage());
+          System.err.println(
+              "Warning: The cluster setup does not support " + "EC policy "
+                  + ecPolicyName + ". Reason: " + result.getResultMessage());
         }
       } catch (IOException e) {
         System.err.println(AdminHelper.prettifyException(e));
@@ -630,14 +628,21 @@ public class ECAdmin extends Configured implements Tool {
     public int run(Configuration conf, List<String> args) throws IOException {
       boolean isPolicyOption = StringUtils.popOption("-policy", args);
       final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
-      ECTopologyVerifierResult result;
+      ECTopologyVerifierResult result = null;
       if (isPolicyOption) {
         CommandFormat c = new CommandFormat(1, Integer.MAX_VALUE);
         c.parse(args);
         String[] parameters = args.toArray(new String[args.size()]);
-        result = getECTopologyResultForPolicies(dfs, parameters);
+        try {
+          result = dfs.getECTopologyResultForPolicies(parameters);
+        } catch (RemoteException e) {
+          if (e.getClassName().contains("HadoopIllegalArgumentException")) {
+            throw new HadoopIllegalArgumentException(e.getMessage());
+          }
+          throw e;
+        }
       } else {
-        result = getECTopologyVerifierResult(dfs);
+        result = dfs.getECTopologyResultForPolicies();
       }
       System.out.println(result.getResultMessage());
       if (result.isSupported()) {
@@ -645,62 +650,6 @@ public class ECAdmin extends Configured implements Tool {
       }
       return 2;
     }
-  }
-
-  private static ECTopologyVerifierResult getECTopologyVerifierResult(
-      final DistributedFileSystem dfs) throws IOException {
-    final ErasureCodingPolicyInfo[] policies =
-        dfs.getClient().getNamenode().getErasureCodingPolicies();
-    final DatanodeInfo[] report = dfs.getClient().getNamenode()
-        .getDatanodeReport(HdfsConstants.DatanodeReportType.ALL);
-
-    return ECTopologyVerifier.getECTopologyVerifierResult(report,
-        getEnabledPolicies(policies));
-  }
-
-  private static ECTopologyVerifierResult getECTopologyResultForPolicies(
-      final DistributedFileSystem dfs, final String... policyNames)
-      throws IOException {
-    ErasureCodingPolicy[] policies =
-        new ErasureCodingPolicy[policyNames.length];
-    for (int i = 0; i < policyNames.length; i++) {
-      policies[i] =
-        getPolicy(dfs.getClient().getNamenode().getErasureCodingPolicies(),
-            policyNames[i]);
-    }
-    final DatanodeInfo[] report = dfs.getClient().getNamenode()
-        .getDatanodeReport(HdfsConstants.DatanodeReportType.ALL);
-    return ECTopologyVerifier.getECTopologyVerifierResult(report, policies);
-  }
-
-  private static ECTopologyVerifierResult getECTopologyVerifierResultForPolicy(
-      final DistributedFileSystem dfs, final String policyName)
-      throws IOException {
-    final ErasureCodingPolicy policy =
-        getPolicy(dfs.getClient().getNamenode().getErasureCodingPolicies(),
-            policyName);
-    final DatanodeInfo[] report = dfs.getClient().getNamenode()
-        .getDatanodeReport(HdfsConstants.DatanodeReportType.ALL);
-    return ECTopologyVerifier.getECTopologyVerifierResult(report, policy);
-  }
-
-  private static ErasureCodingPolicy getPolicy(
-      final ErasureCodingPolicyInfo[] policies, final String policyName) {
-    for (ErasureCodingPolicyInfo policy : policies) {
-      if (policyName.equals(policy.getPolicy().getName())) {
-        return policy.getPolicy();
-      }
-    }
-    throw new HadoopIllegalArgumentException("The given erasure coding " +
-        "policy " + policyName + " does not exist.");
-  }
-
-  private static ErasureCodingPolicy[] getEnabledPolicies(
-      final ErasureCodingPolicyInfo[] policies) {
-    return Arrays.asList(policies).stream()
-        .filter(policyInfo -> policyInfo.isEnabled())
-        .map(ErasureCodingPolicyInfo::getPolicy)
-        .toArray(ErasureCodingPolicy[]::new);
   }
 
   private static final AdminHelper.Command[] COMMANDS = {

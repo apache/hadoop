@@ -38,16 +38,45 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.webapp.AppsBlock;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.View;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.THEAD;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TR;
 
 import com.google.inject.Inject;
 
 public class RMAppsBlock extends AppsBlock {
 
   private ResourceManager rm;
+
+  /** Columns for the Apps RM page. */
+  static final ColumnHeader[] COLUMNS = {
+      new ColumnHeader(".id", "ID"),
+      new ColumnHeader(".user", "User"),
+      new ColumnHeader(".name", "Name"),
+      new ColumnHeader(".type", "Application Type"),
+      new ColumnHeader(".apptag", "Application Tags"),
+      new ColumnHeader(".queue", "Queue"),
+      new ColumnHeader(".priority", "Application Priority"),
+      new ColumnHeader(".starttime", "StartTime"),
+      new ColumnHeader(".IDlaunchtime", "LaunchTime"),
+      new ColumnHeader(".finishtime", "FinishTime"),
+      new ColumnHeader(".state", "State"),
+      new ColumnHeader(".finalstatus", "FinalStatus"),
+      new ColumnHeader(".runningcontainer", "Running Containers"),
+      new ColumnHeader(".allocatedCpu", "Allocated CPU VCores"),
+      new ColumnHeader(".allocatedMemory", "Allocated Memory MB"),
+      new ColumnHeader(".reservedCpu", "Reserved CPU VCores"),
+      new ColumnHeader(".reservedMemory", "Reserved Memory MB"),
+      new ColumnHeader(".queuePercentage", "% of Queue"),
+      new ColumnHeader(".clusterPercentage", "% of Cluster"),
+      new ColumnHeader(".progress", "Progress"),
+      new ColumnHeader(".ui", "Tracking UI"),
+      new ColumnHeader(".blacklisted", "Blacklisted Nodes"),
+  };
 
   @Inject
   RMAppsBlock(ResourceManager rm, View.ViewContext ctx) {
@@ -57,25 +86,12 @@ public class RMAppsBlock extends AppsBlock {
 
   @Override
   protected void renderData(Block html) {
-    TBODY<TABLE<Hamlet>> tbody =
-        html.table("#apps").thead().tr().th(".id", "ID").th(".user", "User")
-          .th(".name", "Name").th(".type", "Application Type")
-          .th(".queue", "Queue").th(".priority", "Application Priority")
-          .th(".starttime", "StartTime")
-          .th("launchtime", "LaunchTime")
-          .th(".finishtime", "FinishTime").th(".state", "State")
-          .th(".finalstatus", "FinalStatus")
-          .th(".runningcontainer", "Running Containers")
-          .th(".allocatedCpu", "Allocated CPU VCores")
-          .th(".allocatedMemory", "Allocated Memory MB")
-          .th(".reservedCpu", "Reserved CPU VCores")
-          .th(".reservedMemory", "Reserved Memory MB")
-          .th(".queuePercentage", "% of Queue")
-          .th(".clusterPercentage", "% of Cluster")
-          .th(".progress", "Progress")
-          .th(".ui", "Tracking UI")
-          .th(".blacklisted", "Blacklisted Nodes").__()
-          .__().tbody();
+
+    TR<THEAD<TABLE<Hamlet>>> tr = html.table("#apps").thead().tr();
+    for (ColumnHeader col : COLUMNS) {
+      tr = tr.th(col.getSelector(), col.getCData());
+    }
+    TBODY<TABLE<Hamlet>> tbody = tr.__().__().tbody();
 
     StringBuilder appsTableData = new StringBuilder("[\n");
     for (ApplicationReport appReport : appReports) {
@@ -131,6 +147,10 @@ public class RMAppsBlock extends AppsBlock {
             .getType())))
         .append("\",\"")
         .append(
+          StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
+            app.getApplicationTags() == null ? "" : app.getApplicationTags())))
+        .append("\",\"")
+        .append(
           StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(app
              .getQueue()))).append("\",\"").append(String
              .valueOf(app.getPriority()))
@@ -178,10 +198,8 @@ public class RMAppsBlock extends AppsBlock {
           app.getTrackingUrl() == null
               || app.getTrackingUrl().equals(UNAVAILABLE)
               || app.getAppState() == YarnApplicationState.NEW ? "Unassigned"
-              : app.getAppState() == YarnApplicationState.FINISHED
-              || app.getAppState() == YarnApplicationState.FAILED
-              || app.getAppState() == YarnApplicationState.KILLED ? "History"
-              : "ApplicationMaster";
+              : Apps.isApplicationFinalState(app.getAppState()) ?
+              "History" : "ApplicationMaster";
       appsTableData.append(trackingURL == null ? "#" : "href='" + trackingURL)
         .append("'>").append(trackingUI).append("</a>\",").append("\"")
         .append(blacklistedNodesCount).append("\"],\n");

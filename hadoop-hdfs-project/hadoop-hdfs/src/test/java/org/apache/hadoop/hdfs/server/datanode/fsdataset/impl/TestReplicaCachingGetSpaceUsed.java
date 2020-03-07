@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CachingGetSpaceUsed;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -27,8 +28,11 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.Replica;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -36,6 +40,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Set;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DU_INTERVAL_KEY;
 import static org.junit.Assert.assertEquals;
@@ -144,5 +149,55 @@ public class TestReplicaCachingGetSpaceUsed {
         dataNode.getFSDataset().getDfsUsed());
 
     fs.delete(new Path("/testReplicaCachingGetSpaceUsedByRBWReplica"), true);
+  }
+
+  @Test(timeout = 15000)
+  public void testFsDatasetImplDeepCopyReplica() {
+    FsDatasetSpi<?> fsDataset = dataNode.getFSDataset();
+    ModifyThread modifyThread = new ModifyThread();
+    modifyThread.start();
+    String bpid = cluster.getNamesystem(0).getBlockPoolId();
+    int retryTimes = 10;
+
+    while (retryTimes > 0) {
+      try {
+        Set<? extends Replica> replicas = fsDataset.deepCopyReplica(bpid);
+        if (replicas.size() > 0) {
+          retryTimes--;
+        }
+      } catch (IOException e) {
+        modifyThread.setShouldRun(false);
+        Assert.fail("Encounter IOException when deep copy replica.");
+      }
+    }
+    modifyThread.setShouldRun(false);
+  }
+
+  private class ModifyThread extends Thread {
+    private boolean shouldRun = true;
+
+    @Override
+    public void run() {
+      FSDataOutputStream os = null;
+      while (shouldRun) {
+        try {
+          int id = RandomUtils.nextInt();
+          os = fs.create(new Path("/testFsDatasetImplDeepCopyReplica/" + id));
+          byte[] bytes = new byte[2048];
+          InputStream is = new ByteArrayInputStream(bytes);
+          IOUtils.copyBytes(is, os, bytes.length);
+          os.hsync();
+          os.close();
+        } catch (IOException e) {}
+      }
+
+      try {
+        fs.delete(new Path("/testFsDatasetImplDeepCopyReplica"), true);
+      } catch (IOException e) {}
+    }
+
+    private void setShouldRun(boolean shouldRun) {
+      this.shouldRun = shouldRun;
+    }
   }
 }

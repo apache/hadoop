@@ -260,7 +260,8 @@ public final class FederationStateStoreTestUtils {
       FederationNamenodeServiceState state) throws IOException {
     MembershipState entry = MembershipState.newInstance(
         "routerId", nameserviceId, namenodeId, "clusterId", "test",
-        "0.0.0.0:0", "0.0.0.0:0", "0.0.0.0:0", "0.0.0.0:0", state, false);
+        "0.0.0.0:0", "0.0.0.0:0", "0.0.0.0:0", "http", "0.0.0.0:0",
+        state, false);
     MembershipStats stats = MembershipStats.newInstance();
     stats.setNumOfActiveDatanodes(100);
     stats.setNumOfDeadDatanodes(10);

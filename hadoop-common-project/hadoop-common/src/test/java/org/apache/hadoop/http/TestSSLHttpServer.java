@@ -62,16 +62,15 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
       LoggerFactory.getLogger(TestSSLHttpServer.class);
   private static final String HTTPS_CIPHER_SUITES_KEY = "https.cipherSuites";
   private static final String JAVAX_NET_DEBUG_KEY = "javax.net.debug";
-  private static final String SSL_SERVER_KEYSTORE_PROP_PREFIX = "ssl.server" +
-          ".keystore";
-  private static final String SSL_SERVER_TRUSTSTORE_PROP_PREFIX = "ssl.server" +
-          ".truststore";
+  static final String SSL_SERVER_KEYSTORE_PROP_PREFIX = "ssl.server.keystore";
+  static final String SSL_SERVER_TRUSTSTORE_PROP_PREFIX = "ssl.server" +
+      ".truststore";
 
-  private static final String SERVLET_NAME_LONGHEADER = "longheader";
-  private static final String SERVLET_PATH_LONGHEADER =
+  static final String SERVLET_NAME_LONGHEADER = "longheader";
+  static final String SERVLET_PATH_LONGHEADER =
       "/" + SERVLET_NAME_LONGHEADER;
-  private static final String SERVLET_NAME_ECHO = "echo";
-  private static final String SERVLET_PATH_ECHO = "/" + SERVLET_NAME_ECHO;
+  static final String SERVLET_NAME_ECHO = "echo";
+  static final String SERVLET_PATH_ECHO = "/" + SERVLET_NAME_ECHO;
 
   private static HttpServer2 server;
   private static String keystoreDir;
@@ -79,7 +78,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   private static SSLFactory clientSslFactory;
   private static String cipherSuitesPropertyValue;
   private static String sslDebugPropertyValue;
-  private static final String EXCLUDED_CIPHERS =
+  static final String EXCLUDED_CIPHERS =
           "TLS_ECDHE_RSA_WITH_RC4_128_SHA,"
       + "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA, \n"
       + "SSL_RSA_WITH_DES_CBC_SHA,"
@@ -97,6 +96,8 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
       + "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,"
       + "TLS_DHE_RSA_WITH_AES_128_CBC_SHA,\t\n "
       + "TLS_DHE_DSS_WITH_AES_128_CBC_SHA";
+
+  static final String INCLUDED_PROTOCOLS = "SSLv2Hello,TLSv1.1";
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -128,6 +129,8 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
   private static void setupServer(Configuration conf, Configuration sslConf)
       throws IOException, URISyntaxException {
+    conf.set(SSLFactory.SSL_ENABLED_PROTOCOLS_KEY, INCLUDED_PROTOCOLS);
+    sslConf.set(SSLFactory.SSL_ENABLED_PROTOCOLS_KEY, INCLUDED_PROTOCOLS);
     server = new HttpServer2.Builder().setName("test")
         .addEndpoint(new URI("https://localhost")).setConf(conf)
         .keyPassword(
@@ -162,7 +165,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
    * This ensures that the value https.cipherSuites does
    * not affect the result of tests.
    */
-  private static void storeHttpsCipherSuites() {
+  static void storeHttpsCipherSuites() {
     String cipherSuites = System.getProperty(HTTPS_CIPHER_SUITES_KEY);
     if (cipherSuites != null) {
       LOG.info(
@@ -173,7 +176,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     System.clearProperty(HTTPS_CIPHER_SUITES_KEY);
   }
 
-  private static void restoreHttpsCipherSuites() {
+  static void restoreHttpsCipherSuites() {
     if (cipherSuitesPropertyValue != null) {
       LOG.info("Restoring property {} to value: {}", HTTPS_CIPHER_SUITES_KEY,
           cipherSuitesPropertyValue);
@@ -182,7 +185,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     }
   }
 
-  private static void turnOnSSLDebugLogging() {
+  static void turnOnSSLDebugLogging() {
     String sslDebug = System.getProperty(JAVAX_NET_DEBUG_KEY);
     if (sslDebug != null) {
       sslDebugPropertyValue = sslDebug;
@@ -190,7 +193,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     System.setProperty(JAVAX_NET_DEBUG_KEY, "all");
   }
 
-  private static void restoreSSLDebugLogging() {
+  static void restoreSSLDebugLogging() {
     if (sslDebugPropertyValue != null) {
       System.setProperty(JAVAX_NET_DEBUG_KEY, sslDebugPropertyValue);
       sslDebugPropertyValue = null;
@@ -210,6 +213,22 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     PreferredCipherSSLSocketFactory cipherSSLSocketFactory
             = new PreferredCipherSSLSocketFactory(sslSocketFactory,
             StringUtils.getTrimmedStrings(ciphers));
+    conn.setSSLSocketFactory(cipherSSLSocketFactory);
+    return conn;
+  }
+
+  private HttpsURLConnection
+      getConnectionWithPreferredProtocolSSLSocketFactory(URL url,
+      String protocols) throws IOException, GeneralSecurityException {
+    HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+    SSLSocketFactory sslSocketFactory = clientSslFactory
+        .createSSLSocketFactory();
+    LOG.info("Creating " +
+        PreferredProtocolSSLSocketFactory.class.getCanonicalName() +
+        " with protocols: " + protocols);
+    PreferredProtocolSSLSocketFactory cipherSSLSocketFactory
+        = new PreferredProtocolSSLSocketFactory(sslSocketFactory,
+        StringUtils.getTrimmedStrings(protocols));
     conn.setSSLSocketFactory(cipherSSLSocketFactory);
     return conn;
   }
@@ -267,6 +286,18 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     } catch (SSLHandshakeException ex) {
       LOG.info("No Ciphers in common, expected successful test result.", ex);
     }
+  }
+
+  @Test
+  public void testIncludedProtocols() throws Exception {
+    URL url = new URL(baseUrl, SERVLET_PATH_ECHO + "?a=b&c=d");
+    HttpsURLConnection conn =
+        getConnectionWithPreferredProtocolSSLSocketFactory(url,
+        INCLUDED_PROTOCOLS);
+    assertFalse("included protocol list is empty",
+        INCLUDED_PROTOCOLS.isEmpty());
+
+    readFromConnection(conn);
   }
 
   /** Test that verified that additionally included cipher
@@ -367,6 +398,80 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     private void setEnabledCipherSuites(SSLSocket sslSocket) {
       if (null != enabledCipherSuites) {
         sslSocket.setEnabledCipherSuites(enabledCipherSuites);
+      }
+    }
+  }
+
+  private class PreferredProtocolSSLSocketFactory extends SSLSocketFactory {
+    private final SSLSocketFactory delegateSocketFactory;
+    private final String[] enabledProtocols;
+
+    PreferredProtocolSSLSocketFactory(SSLSocketFactory sslSocketFactory,
+        String[] enabledProtocols) {
+      delegateSocketFactory = sslSocketFactory;
+      if (null != enabledProtocols && enabledProtocols.length > 0) {
+        this.enabledProtocols = enabledProtocols;
+      } else {
+        this.enabledProtocols = null;
+      }
+    }
+
+    @Override
+    public String[] getDefaultCipherSuites() {
+      return delegateSocketFactory.getDefaultCipherSuites();
+    }
+
+    @Override
+    public String[] getSupportedCipherSuites() {
+      return delegateSocketFactory.getSupportedCipherSuites();
+    }
+
+    @Override
+    public Socket createSocket(Socket socket, String string, int i, boolean bln)
+        throws IOException {
+      SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(
+          socket, string, i, bln);
+      setEnabledProtocols(sslSocket);
+      return sslSocket;
+    }
+
+    @Override
+    public Socket createSocket(String string, int i) throws IOException {
+      SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(
+          string, i);
+      setEnabledProtocols(sslSocket);
+      return sslSocket;
+    }
+
+    @Override
+    public Socket createSocket(String string, int i, InetAddress ia, int i1)
+        throws IOException {
+      SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(
+          string, i, ia, i1);
+      setEnabledProtocols(sslSocket);
+      return sslSocket;
+    }
+
+    @Override
+    public Socket createSocket(InetAddress ia, int i) throws IOException {
+      SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(ia,
+          i);
+      setEnabledProtocols(sslSocket);
+      return sslSocket;
+    }
+
+    @Override
+    public Socket createSocket(InetAddress ia, int i, InetAddress ia1, int i1)
+        throws IOException {
+      SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(ia,
+          i, ia1, i1);
+      setEnabledProtocols(sslSocket);
+      return sslSocket;
+    }
+
+    private void setEnabledProtocols(SSLSocket sslSocket) {
+      if (null != enabledProtocols) {
+        sslSocket.setEnabledProtocols(enabledProtocols);
       }
     }
   }

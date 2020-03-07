@@ -43,6 +43,8 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
+import static org.apache.hadoop.io.IOUtils.wrapException;
+
 /**
  * The BlobFsOutputStream for Rest AbfsClient.
  */
@@ -246,6 +248,12 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     try {
       flushInternal(true);
       threadExecutor.shutdown();
+    } catch (IOException e) {
+      // Problems surface in try-with-resources clauses if
+      // the exception thrown in a close == the one already thrown
+      // -so we wrap any exception with a new one.
+      // See HADOOP-16785
+      throw wrapException(path, e.getMessage(), e);
     } finally {
       lastError = new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
       buffer = null;
@@ -289,10 +297,16 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     final Future<Void> job = completionService.submit(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        client.append(path, offset, bytes, 0,
-            bytesLength);
-        byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
-        return null;
+        AbfsPerfTracker tracker = client.getAbfsPerfTracker();
+        try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
+                "writeCurrentBufferToService", "append")) {
+          AbfsRestOperation op = client.append(path, offset, bytes, 0,
+                  bytesLength);
+          perfInfo.registerResult(op.getResult());
+          byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
+          perfInfo.registerSuccess(true);
+          return null;
+        }
       }
     });
 
@@ -334,8 +348,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   private synchronized void flushWrittenBytesToServiceInternal(final long offset,
       final boolean retainUncommitedData, final boolean isClose) throws IOException {
-    try {
-      client.flush(path, offset, retainUncommitedData, isClose);
+    AbfsPerfTracker tracker = client.getAbfsPerfTracker();
+    try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
+            "flushWrittenBytesToServiceInternal", "flush")) {
+      AbfsRestOperation op = client.flush(path, offset, retainUncommitedData, isClose);
+      perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
         if (((AbfsRestOperationException) ex).getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {

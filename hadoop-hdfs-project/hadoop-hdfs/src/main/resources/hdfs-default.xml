@@ -307,7 +307,9 @@
 <property>
   <name>dfs.namenode.redundancy.considerLoad</name>
   <value>true</value>
-  <description>Decide if chooseTarget considers the target's load or not
+  <description>
+    Decide if chooseTarget considers the target's load or not when write.
+    Turn on by default.
   </description>
 </property>
 
@@ -318,6 +320,15 @@
       before being rejected for writes, only if considerLoad is true.
     </description>
   </property>
+
+<property>
+  <name>dfs.namenode.read.considerLoad</name>
+  <value>false</value>
+  <description>
+    Decide if sort block locations considers the target's load or not when read.
+    Turn off by default.
+  </description>
+</property>
 
 <property>
   <name>dfs.datanode.httpserver.filter.handlers</name>
@@ -1082,11 +1093,64 @@
 </property>
 
 <property>
+  <name>dfs.namenode.decommission.monitor.class</name>
+  <value>org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminDefaultMonitor</value>
+  <description>
+    Determines the implementation used for the decommission manager. The only
+    valid options are:
+
+    org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminDefaultMonitor
+    org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminBackoffMonitor
+
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.decommission.backoff.monitor.pending.limit</name>
+  <value>10000</value>
+  <description>
+    When the Backoff monitor is enabled, determines the maximum number of blocks
+    related to decommission and maintenance operations that can be loaded
+    into the replication queue at any given time. Every
+    dfs.namenode.decommission.interval seconds, the list is checked to see if
+    the blocks have become fully replicated and then further blocks are added
+    to reach the limit defined in this parameter.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.decommission.backoff.monitor.pending.blocks.per.lock</name>
+  <value>1000</value>
+  <description>
+    When loading blocks into the replication queue, release the namenode write
+    lock after the defined number of blocks have been processed.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.redundancy.interval.seconds</name>
   <value>3s</value>
   <description>The periodicity in seconds with which the namenode computes 
   low redundancy work for datanodes. Support multiple time unit suffix(case insensitive),
   as described in dfs.heartbeat.interval.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.redundancy.queue.restart.iterations</name>
+  <value>2400</value>
+  <description>When picking blocks from the low redundancy queues, reset the
+    bookmarked iterator after the set number of iterations to ensure any blocks
+    which were not processed on the first pass are retried before the iterators
+    would naturally reach their end point. This ensures blocks are retried
+    more frequently when there are many pending blocks or blocks are
+    continuously added to the queues preventing the iterator reaching its
+    natural endpoint.
+    The default setting of 2400 combined with the default of
+    dfs.namenode.redundancy.interval.seconds means the iterators will be reset
+    approximately every 2 hours.
+    Setting this parameter to zero disables the feature and the iterators will
+    be reset only when the end of all queues has been reached.
   </description>
 </property>
 
@@ -1995,6 +2059,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.enable.log.stale.datanode</name>
+  <value>false</value>
+  <description>
+    Enable and disable logging datanode staleness. Disabled by default.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.stale.datanode.interval</name>
   <value>30000</value>
   <description>
@@ -2502,6 +2574,8 @@
     The amount of milliseconds after which cached server defaults are updated.
 
     By default this parameter is set to 1 hour.
+    Support multiple time unit suffix(case insensitive), as described
+    in dfs.heartbeat.interval.
   </description>
 </property>
 
@@ -2640,12 +2714,21 @@
 </property>
 
 <property>
-  <name>dfs.datanode.cache.pmem.dirs</name>
+  <name>dfs.datanode.pmem.cache.dirs</name>
   <value></value>
   <description>
     This value specifies the persistent memory directory used for caching block
-    replica. It matters only if the value of dfs.datanode.cache.loader.class is
-    PmemMappableBlockLoader. Multiple directories separated by "," are acceptable.
+    replica. Multiple directories separated by "," are acceptable.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.pmem.cache.recovery</name>
+  <value>true</value>
+  <description>
+    This value specifies whether previous cache on persistent memory will be recovered.
+    This configuration can take effect only if persistent memory cache is enabled by
+    specifying value for 'dfs.datanode.pmem.cache.dirs'.
   </description>
 </property>
 
@@ -2976,6 +3059,87 @@
   </description>
 </property>
 
+  <property>
+    <name>dfs.client.deadnode.detection.enabled</name>
+    <value>false</value>
+    <description>
+      Set to true to enable dead node detection in client side. Then all the DFSInputStreams of the same client can
+      share the dead node information.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.deadnode.queue.max</name>
+    <value>100</value>
+    <description>
+      The max queue size of probing dead node.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.suspectnode.queue.max</name>
+    <value>1000</value>
+    <description>
+      The max queue size of probing suspect node.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.probe.deadnode.threads</name>
+    <value>10</value>
+    <description>
+      The maximum number of threads to use for probing dead node.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.probe.suspectnode.threads</name>
+    <value>10</value>
+    <description>
+      The maximum number of threads to use for probing suspect node.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.rpc.threads</name>
+    <value>20</value>
+    <description>
+      The maximum number of threads to use for calling RPC call to recheck the liveness of dead node.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.probe.deadnode.interval.ms</name>
+    <value>60000</value>
+    <description>
+      Interval time in milliseconds for probing dead node behavior.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.probe.suspectnode.interval.ms</name>
+    <value>300</value>
+    <description>
+      Interval time in milliseconds for probing suspect node behavior.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.probe.connection.timeout.ms</name>
+    <value>20000</value>
+    <description>
+      Connection timeout for probing dead node in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.refresh.read-block-locations.ms</name>
+    <value>0</value>
+    <description>
+      Refreshing LocatedBlocks period. A value of 0 disables the feature.
+    </description>
+  </property>
+
 <property>
   <name>dfs.namenode.lease-recheck-interval-ms</name>
   <value>2000</value>
@@ -3031,6 +3195,27 @@
     which will help to prevent writer threads from being starved, but can provide
     lower lock throughput. See java.util.concurrent.locks.ReentrantReadWriteLock
     for more information on fair/non-fair locks.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.lock.fair</name>
+  <value>true</value>
+  <description>If this is true, the Datanode FsDataset lock will be used in Fair
+    mode, which will help to prevent writer threads from being starved, but can
+    lower lock throughput. See java.util.concurrent.locks.ReentrantReadWriteLock
+    for more information on fair/non-fair locks.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.lock-reporting-threshold-ms</name>
+  <value>300</value>
+  <description>When thread waits to obtain a lock, or a thread holds a lock for
+    more than the threshold, a log message will be written. Note that
+    dfs.lock.suppress.warning.interval ensures a single log message is
+    emitted per interval for waiting threads and a single message for holding
+    threads to avoid excessive logging.
   </description>
 </property>
 
@@ -3646,7 +3831,16 @@
     HTTPS port for DataNode.
   </description>
 </property>
-
+<property>
+  <name>dfs.namenode.get-blocks.max-qps</name>
+  <value>20</value>
+  <description>
+    The maximum number of getBlocks RPCs data movement utilities can make to
+    a NameNode per second. Values less than or equal to 0 disable throttling.
+    This affects anything that uses a NameNodeConnector, i.e., the Balancer,
+    Mover, and StoragePolicySatisfier.
+  </description>
+</property>
 <property>
   <name>dfs.balancer.dispatcherThreads</name>
   <value>200</value>
@@ -4313,6 +4507,33 @@
 </property>
 
 <property>
+  <name>dfs.datanode.fixed.volume.size</name>
+  <value>false</value>
+  <description>
+    If false, call function getTotalSpace of File to get capacity of volume
+    during every heartbeat.
+    If true, cache the capacity when when the first call, and reuse it later.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.replica.cache.root.dir</name>
+  <value></value>
+  <description>
+    Use this key to change root dir of replica cache.
+    The default root dir is currentDir.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.replica.cache.expiry.time</name>
+  <value>5m</value>
+  <description>
+    Living time of replica cached files in milliseconds.
+  </description>
+</property>
+
+<property>
   <name>dfs.ha.fencing.methods</name>
   <value></value>
   <description>
@@ -4404,6 +4625,16 @@
   <value></value>
   <description>
     Kerberos keytab file for the journal node.
+  </description>
+</property>
+
+<property>
+  <name>dfs.batched.ls.limit</name>
+  <value>100</value>
+  <description>
+    Limit the number of paths that can be listed in a single batched
+    listing call. printed by ls. If less or equal to
+    zero, at most DFS_LIST_LIMIT_DEFAULT (= 1000) will be printed.
   </description>
 </property>
 
@@ -4516,6 +4747,18 @@
     org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicy.
     Special value between 0 and 1, noninclusive.  Increases chance of
     placing blocks on Datanodes with less disk space used.
+  </description>
+</property>
+
+<property>
+  <name>
+    dfs.namenode.available-space-block-placement-policy.balance-local-node
+  </name>
+  <value>false</value>
+  <description>
+    Only used when the dfs.block.replicator.classname is set to
+    org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicy.
+    If true, balances the local node too.
   </description>
 </property>
 
@@ -5043,14 +5286,6 @@
 </property>
 
 <property>
-  <name>dfs.web.authentication.filter</name>
-  <value>org.apache.hadoop.hdfs.web.AuthFilter</value>
-  <description>
-    Authentication filter class used for WebHDFS.
-  </description>
-</property>
-
-<property>
   <name>dfs.web.authentication.simple.anonymous.allowed</name>
   <value></value>
   <description>
@@ -5358,6 +5593,17 @@
   </property>
 
   <property>
+  <name>dfs.provided.acls.import.enabled</name>
+    <value>false</value>
+    <description>
+      Set to true to inherit ACLs (Access Control Lists) from remote stores
+      during mount. Disabled by default, i.e., ACLs are not inherited from
+      remote stores. Note had HDFS ACLs have to be enabled
+      (dfs.namenode.acls.enabled must be set to true) for this to take effect.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.provided.aliasmap.load.retries</name>
     <value>0</value>
     <description>
@@ -5526,12 +5772,58 @@
   </property>
 
   <property>
+    <name>dfs.namenode.blockreport.max.lock.hold.time</name>
+    <value>4</value>
+    <description>
+      The BlockReportProcessingThread max write lock hold time in ms.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.journalnode.edits.dir.perm</name>
     <value>700</value>
     <description>
       Permissions for the directories on on the local filesystem where
       the DFS journal node stores the edits. The permissions can either be
       octal or symbolic.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.lease-hard-limit-sec</name>
+    <value>1200</value>
+    <description>
+      Determines the namenode automatic lease recovery interval in seconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.gc.time.monitor.enable</name>
+    <value>true</value>
+    <description>
+      Enable the GcTimePercentage metrics in NameNode's JvmMetrics. It will
+      start a thread(GcTimeMonitor) computing the metric.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.gc.time.monitor.observation.window.ms</name>
+    <value>1m</value>
+    <description>
+      Determines the windows size of GcTimeMonitor. A window is a period of time
+      starts at now-windowSize and ends at now. The GcTimePercentage is the gc
+      time proportion of the window.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.gc.time.monitor.sleep.interval.ms</name>
+    <value>5s</value>
+    <description>
+      Determines the sleep interval in the window. The GcTimeMonitor wakes up in
+      the sleep interval periodically to compute the gc time proportion. The
+      shorter the interval the preciser the GcTimePercentage. The sleep interval
+      must be shorter than the window size.
     </description>
   </property>
 </configuration>

@@ -58,7 +58,6 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
   private int maxVersion;
   private Path schedulerConfDir;
   private FileSystem fileSystem;
-  private LogMutation pendingMutation;
   private PathFilter configFilePathFilter;
   private volatile Configuration schedConf;
   private volatile Configuration oldConf;
@@ -66,7 +65,7 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
   private Path configVersionFile;
 
   @Override
-  public void initialize(Configuration conf, Configuration vSchedConf,
+  public void initialize(Configuration fsConf, Configuration vSchedConf,
       RMContext rmContext) throws Exception {
     this.configFilePathFilter = new PathFilter() {
       @Override
@@ -80,6 +79,7 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
       }
     };
 
+    Configuration conf = new Configuration(fsConf);
     String schedulerConfPathStr = conf.get(
         YarnConfiguration.SCHEDULER_CONFIGURATION_FS_PATH);
     if (schedulerConfPathStr == null || schedulerConfPathStr.isEmpty()) {
@@ -88,6 +88,15 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
               + " must be set");
     }
     this.schedulerConfDir = new Path(schedulerConfPathStr);
+    String scheme = schedulerConfDir.toUri().getScheme();
+    if (scheme == null) {
+      scheme = FileSystem.getDefaultUri(conf).getScheme();
+    }
+    if (scheme != null) {
+      String disableCacheName = String.format("fs.%s.impl.disable.cache",
+          scheme);
+      conf.setBoolean(disableCacheName, true);
+    }
     this.fileSystem = this.schedulerConfDir.getFileSystem(conf);
     this.maxVersion = conf.getInt(
         YarnConfiguration.SCHEDULER_CONFIGURATION_FS_MAX_VERSION,
@@ -124,10 +133,9 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
    */
   @Override
   public void logMutation(LogMutation logMutation) throws IOException {
-    pendingMutation = logMutation;
     LOG.info(new GsonBuilder().serializeNulls().create().toJson(logMutation));
     oldConf = new Configuration(schedConf);
-    Map<String, String> mutations = pendingMutation.getUpdates();
+    Map<String, String> mutations = logMutation.getUpdates();
     for (Map.Entry<String, String> kv : mutations.entrySet()) {
       if (kv.getValue() == null) {
         this.schedConf.unset(kv.getKey());
@@ -139,12 +147,14 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
   }
 
   /**
+   * @param pendingMutation the log mutation to apply
    * @param isValid if true, finalize temp configuration file
    *                if false, remove temp configuration file and rollback
    * @throws Exception throw IOE when write temp configuration file fail
    */
   @Override
-  public void confirmMutation(boolean isValid) throws Exception {
+  public void confirmMutation(LogMutation pendingMutation,
+      boolean isValid) throws Exception {
     if (pendingMutation == null || tempConfigPath == null) {
       LOG.warn("pendingMutation or tempConfigPath is null, do nothing");
       return;

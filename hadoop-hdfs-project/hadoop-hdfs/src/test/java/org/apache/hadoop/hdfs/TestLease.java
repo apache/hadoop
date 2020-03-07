@@ -111,9 +111,10 @@ public class TestLease {
         Assert.fail("Write failed.");
       }
 
+      long hardlimit = conf.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
+          DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000;
       // make it look like the hard limit has been exceeded.
-      dfs.lastLeaseRenewal = Time.monotonicNow()
-      - HdfsConstants.LEASE_HARDLIMIT_PERIOD - 1000;
+      dfs.lastLeaseRenewal = Time.monotonicNow() - hardlimit - 1000;
       dfs.renewLease();
 
       // this should not work.

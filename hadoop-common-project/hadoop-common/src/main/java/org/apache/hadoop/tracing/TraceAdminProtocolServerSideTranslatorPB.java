@@ -32,8 +32,8 @@ import org.apache.hadoop.tracing.TraceAdminPB.ListSpanReceiversResponseProto;
 import org.apache.hadoop.tracing.TraceAdminPB.ConfigPair;
 import org.apache.hadoop.tracing.TraceAdminPB.RemoveSpanReceiverRequestProto;
 import org.apache.hadoop.tracing.TraceAdminPB.RemoveSpanReceiverResponseProto;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 @InterfaceAudience.Private
 public class TraceAdminProtocolServerSideTranslatorPB

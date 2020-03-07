@@ -54,7 +54,6 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
   protected static final Version CURRENT_VERSION_INFO = Version
       .newInstance(0, 1);
   private Configuration conf;
-  private LogMutation pendingMutation;
 
   private String znodeParentPath;
 
@@ -162,23 +161,24 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
 
   @Override
   public void logMutation(LogMutation logMutation) throws Exception {
-    byte[] storedLogs = zkManager.getData(logsPath);
-    LinkedList<LogMutation> logs = new LinkedList<>();
-    if (storedLogs != null) {
-      logs = (LinkedList<LogMutation>) deserializeObject(storedLogs);
+    if (maxLogs > 0) {
+      byte[] storedLogs = zkManager.getData(logsPath);
+      LinkedList<LogMutation> logs = new LinkedList<>();
+      if (storedLogs != null) {
+        logs = (LinkedList<LogMutation>) deserializeObject(storedLogs);
+      }
+      logs.add(logMutation);
+      if (logs.size() > maxLogs) {
+        logs.remove(logs.removeFirst());
+      }
+      zkManager.safeSetData(logsPath, serializeObject(logs), -1, zkAcl,
+              fencingNodePath);
     }
-    logs.add(logMutation);
-    if (logs.size() > maxLogs) {
-      logs.remove(logs.removeFirst());
-    }
-    zkManager.safeSetData(logsPath, serializeObject(logs), -1, zkAcl,
-        fencingNodePath);
-    pendingMutation = logMutation;
   }
 
   @Override
-  public void confirmMutation(boolean isValid)
-      throws Exception {
+  public void confirmMutation(LogMutation pendingMutation,
+      boolean isValid) throws Exception {
     if (isValid) {
       Configuration storedConfigs = retrieve();
       Map<String, String> mapConf = new HashMap<>();
@@ -199,7 +199,6 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
       zkManager.setData(confVersionPath, String.valueOf(configVersion), -1);
 
     }
-    pendingMutation = null;
   }
 
   @Override

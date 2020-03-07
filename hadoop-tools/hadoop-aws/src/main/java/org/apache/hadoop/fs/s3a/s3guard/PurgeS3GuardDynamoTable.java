@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -128,9 +129,10 @@ public class PurgeS3GuardDynamoTable
    * delete all entries from that bucket.
    * @return the exit code.
    * @throws ServiceLaunchException on failure.
+   * @throws IOException IO failure.
    */
   @Override
-  public int execute() throws ServiceLaunchException {
+  public int execute() throws ServiceLaunchException, IOException {
 
     URI uri = getUri();
     String host = uri.getHost();
@@ -144,7 +146,8 @@ public class PurgeS3GuardDynamoTable
     LOG.info("Scanning for entries with prefix {} to delete from {}",
         prefix, ddbms);
 
-    Iterable<DDBPathMetadata> entries = tableAccess.scanMetadata(builder);
+    Iterable<DDBPathMetadata> entries =
+        ddbms.wrapWithRetries(tableAccess.scanMetadata(builder));
     List<Path> list = new ArrayList<>();
     entries.iterator().forEachRemaining(e -> {
       if (!(e instanceof S3GuardTableAccess.VersionMarker)) {
@@ -169,7 +172,14 @@ public class PurgeS3GuardDynamoTable
             new DurationInfo(LOG,
                 "deleting %s entries from %s",
                 count, ddbms.toString());
-        tableAccess.delete(list);
+        // sending this in one by one for more efficient retries
+        for (Path path: list) {
+          ddbms.getInvoker()
+              .retry("delete",
+                  prefix,
+                  true,
+                  () -> tableAccess.delete(path));
+        }
         duration.close();
         long durationMillis = duration.value();
         long timePerEntry = durationMillis / count;

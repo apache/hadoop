@@ -105,7 +105,7 @@
       <artifactId>zookeeper</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.fusesource.leveldbjni</groupId>
+      <groupId>${leveldbjni.group}</groupId>
       <artifactId>leveldbjni-all</artifactId>
     </dependency>
     <dependency>
@@ -139,6 +139,16 @@
     <dependency>
       <groupId>org.apache.curator</groupId>
       <artifactId>curator-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+      <dependency>
+          <groupId>com.sun.jersey.jersey-test-framework</groupId>
+          <artifactId>jersey-test-framework-core</artifactId>
+      </dependency>
+    <dependency>
+      <groupId>com.sun.jersey.jersey-test-framework</groupId>
+      <artifactId>jersey-test-framework-core</artifactId>
+      <version>1.19</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -177,6 +187,30 @@
                   ${basedir}/../../hadoop-yarn-api/src/main/proto
                 </additionalProtoPathElement>
               </additionalProtoPathElements>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <executions>
+          <execution>
+            <id>replace-generated-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-test-sources</id>
+            <configuration>
+              <skip>false</skip>
             </configuration>
           </execution>
         </executions>

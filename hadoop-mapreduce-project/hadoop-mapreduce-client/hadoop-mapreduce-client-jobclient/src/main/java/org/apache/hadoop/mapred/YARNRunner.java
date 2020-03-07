@@ -94,6 +94,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenSelector;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -899,9 +900,7 @@ public class YARNRunner implements ClientProtocol {
     } catch (YarnException e) {
       throw new IOException(e);
     }
-    if (application.getYarnApplicationState() == YarnApplicationState.FINISHED
-        || application.getYarnApplicationState() == YarnApplicationState.FAILED
-        || application.getYarnApplicationState() == YarnApplicationState.KILLED) {
+    if (Apps.isApplicationFinalState(application.getYarnApplicationState())) {
       return;
     }
     killApplication(appId);

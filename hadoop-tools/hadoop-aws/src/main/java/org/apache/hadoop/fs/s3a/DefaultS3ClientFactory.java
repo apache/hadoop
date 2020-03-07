@@ -34,7 +34,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 
+import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 
 /**
@@ -56,7 +58,17 @@ public class DefaultS3ClientFactory extends Configured
       final String userAgentSuffix) throws IOException {
     Configuration conf = getConf();
     final ClientConfiguration awsConf = S3AUtils
-        .createAwsConf(getConf(), bucket, Constants.AWS_SERVICE_IDENTIFIER_S3);
+        .createAwsConf(conf, bucket, Constants.AWS_SERVICE_IDENTIFIER_S3);
+
+    // When EXPERIMENTAL_AWS_INTERNAL_THROTTLING is false
+    // throttling is explicitly disabled on the S3 client so that
+    // all failures are collected in S3A instrumentation, and its
+    // retry policy is the only one used.
+    // This may cause problems in copy/rename.
+    awsConf.setUseThrottleRetries(
+        conf.getBoolean(EXPERIMENTAL_AWS_INTERNAL_THROTTLING,
+            EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT));
+
     if (!StringUtils.isEmpty(userAgentSuffix)) {
       awsConf.setUserAgentSuffix(userAgentSuffix);
     }

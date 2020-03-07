@@ -537,8 +537,8 @@ This means that the default S3A authentication chain can be defined as
        Uses the values of fs.s3a.access.key and fs.s3a.secret.key.
     * com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
         configuration of AWS access key ID and secret access key in
-        environment variables named AWS_ACCESS_KEY_ID and
-        AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
+        environment variables named AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
+        and AWS_SESSION_TOKEN as documented in the AWS SDK.
     * org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider: picks up
        IAM credentials of any EC2 VM or AWS container in which the process is running.
   </description>
@@ -982,6 +982,43 @@ options are covered in [Testing](./testing.md).
   <value>2</value>
   <description>Select which version of the S3 SDK's List Objects API to use.
   Currently support 2 (default) and 1 (older API).</description>
+</property>
+
+<property>
+  <name>fs.s3a.connection.request.timeout</name>
+  <value>0</value>
+  <description>
+  Time out on HTTP requests to the AWS service; 0 means no timeout.
+  Measured in seconds; the usual time suffixes are all supported
+
+  Important: this is the maximum duration of any AWS service call,
+  including upload and copy operations. If non-zero, it must be larger
+  than the time to upload multi-megabyte blocks to S3 from the client,
+  and to rename many-GB files. Use with care.
+
+  Values that are larger than Integer.MAX_VALUE milliseconds are
+  converged to Integer.MAX_VALUE milliseconds
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.bucket.probe</name>
+  <value>2</value>
+  <description>
+     The value can be 0, 1 or 2 (default).
+     When set to 0, bucket existence checks won't be done
+     during initialization thus making it faster.
+     Though it should be noted that when the bucket is not available in S3,
+     or if fs.s3a.endpoint points to the wrong instance of a private S3 store
+     consecutive calls like listing, read, write etc. will fail with
+     an UnknownStoreException.
+     When set to 1, the bucket existence check will be done using the
+     V1 API of the S3 protocol which doesn't verify the client's permissions
+     to list or read data in the bucket.
+     When set to 2, the bucket existence check will be done using the
+     V2 API of the S3 protocol which does verify that the
+     client has permission to read the bucket.
+  </description>
 </property>
 ```
 

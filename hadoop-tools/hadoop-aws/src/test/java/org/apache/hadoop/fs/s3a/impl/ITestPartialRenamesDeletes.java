@@ -66,6 +66,7 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.bindRolePolicyStatements;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.forbidden;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.extractUndeletedPaths;
@@ -256,6 +257,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     assumedRoleConfig = createAssumedRoleConfig();
     bindRolePolicyStatements(assumedRoleConfig,
         STATEMENT_S3GUARD_CLIENT,
+        STATEMENT_ALLOW_SSE_KMS_RW,
         STATEMENT_ALL_BUCKET_READ_ACCESS,  // root:     r-x
         new Statement(Effects.Allow)       // dest:     rwx
             .addActions(S3_PATH_RW_OPERATIONS)
@@ -311,9 +313,9 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   private Configuration createAssumedRoleConfig(String roleARN) {
     Configuration conf = newAssumedRoleConfig(getContract().getConf(),
         roleARN);
-    String bucketName = getTestBucketName(conf);
-
-    removeBucketOverrides(bucketName, conf, ENABLE_MULTI_DELETE);
+    removeBaseAndBucketOverrides(conf,
+        DELEGATION_TOKEN_BINDING,
+        ENABLE_MULTI_DELETE);
     conf.setBoolean(ENABLE_MULTI_DELETE, multiDelete);
     return conf;
   }
@@ -816,16 +818,25 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     }
     // create the file paths
     for (int i = 0; i < fileCount; i++) {
-      String name = PREFIX + i;
+      String name = filenameOfIndex(i);
       Path p = new Path(destDir, name);
       filePaths.add(p);
     }
     for (int i = 0; i < dirCount; i++) {
-      String name = "dir-" + i;
+      String name = String.format("dir-%03d", i);
       Path p = new Path(destDir, name);
       dirPaths.add(p);
       buildPaths(filePaths, dirPaths, p, depth - 1, fileCount, dirCount);
     }
 
+  }
+
+  /**
+   * Given an index, return a string to use as the filename.
+   * @param i index
+   * @return name
+   */
+  public static String filenameOfIndex(final int i) {
+    return String.format("%s%03d", PREFIX, i);
   }
 }

@@ -156,6 +156,7 @@ public class TestRBFMetrics extends TestMetricsBase {
           stats.getNumOfEnteringMaintenanceDataNodes());
       assertEquals(json.getLong("numOfBlocks"), stats.getNumOfBlocks());
       assertEquals(json.getString("rpcAddress"), mockEntry.getRpcAddress());
+      assertEquals(json.getString("webScheme"), mockEntry.getWebScheme());
       assertEquals(json.getString("webAddress"), mockEntry.getWebAddress());
       nnsFound++;
     }

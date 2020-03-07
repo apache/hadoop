@@ -90,7 +90,7 @@ public class TestFSNamesystem {
     LeaseManager leaseMan = fsn.getLeaseManager();
     leaseMan.addLease("client1", fsn.getFSDirectory().allocateNewInodeId());
     assertEquals(1, leaseMan.countLease());
-    fsn.clear();
+    clearNamesystem(fsn);
     leaseMan = fsn.getLeaseManager();
     assertEquals(0, leaseMan.countLease());
   }
@@ -185,13 +185,22 @@ public class TestFSNamesystem {
     FSNamesystem fsn = new FSNamesystem(conf, fsImage);
     fsn.imageLoadComplete();
     assertTrue(fsn.isImageLoaded());
-    fsn.clear();
-    assertFalse(fsn.isImageLoaded());
+    clearNamesystem(fsn);
     final INodeDirectory root = (INodeDirectory) fsn.getFSDirectory()
             .getINode("/");
     assertTrue(root.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
     fsn.imageLoadComplete();
     assertTrue(fsn.isImageLoaded());
+  }
+
+  private void clearNamesystem(FSNamesystem fsn) {
+    fsn.writeLock();
+    try {
+      fsn.clear();
+      assertFalse(fsn.isImageLoaded());
+    } finally {
+      fsn.writeUnlock();
+    }
   }
 
   @Test
@@ -294,6 +303,14 @@ public class TestFSNamesystem {
               .or(instanceOf(TopAuditLogger.class))
               .or(instanceOf(DummyAuditLogger.class)));
     }
+
+    // Test Configuring TopAuditLogger.
+    conf.set(DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY,
+        "org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger");
+    fsn = new FSNamesystem(conf, fsImage);
+    auditLoggers = fsn.getAuditLoggers();
+    assertEquals(1, auditLoggers.size());
+    assertThat(auditLoggers.get(0), instanceOf(TopAuditLogger.class));
   }
 
   static class DummyAuditLogger implements AuditLogger {

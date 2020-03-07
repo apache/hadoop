@@ -24,9 +24,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -43,6 +41,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptA
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Before;
@@ -164,17 +168,14 @@ public class TestAppRunnability extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testDontAllowUndeclaredPools() throws Exception {
+  public void testDontAllowUndeclaredPools() {
     conf.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS, false);
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"jerry\">");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("jerry").build())
+        .writeToFile(ALLOC_FILE);
+
     // Restarting resource manager since the file location and content is
     // changed.
     resourceManager.stop();

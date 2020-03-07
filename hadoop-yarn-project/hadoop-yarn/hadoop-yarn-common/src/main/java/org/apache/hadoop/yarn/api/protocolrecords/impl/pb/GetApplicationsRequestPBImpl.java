@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsRequestProt
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable
@@ -55,6 +55,7 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   Range<Long> finish = null;
   private Set<String> applicationTags;
   private ApplicationsRequestScope scope;
+  private String name;
 
   public GetApplicationsRequestPBImpl() {
     builder = GetApplicationsRequestProto.newBuilder();
@@ -120,6 +121,9 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
     if (queues != null && !queues.isEmpty()) {
       builder.clearQueues();
       builder.addAllQueues(queues);
+    }
+    if (name != null) {
+      builder.setName(name);
     }
   }
 
@@ -368,6 +372,27 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
           "end): (" + begin + ", " + end + ")");
     }
     this.finish = Range.between(begin, end);
+  }
+
+  @Override
+  public synchronized String getName() {
+    GetApplicationsRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.name != null) {
+      return this.name;
+    }
+    if (p.hasName()) {
+      this.name = p.getName();
+    }
+    return this.name;
+  }
+
+  @Override
+  public synchronized void setName(String name) {
+    maybeInitBuilder();
+    if (name == null) {
+      builder.clearName();
+    }
+    this.name = name;
   }
 
   @Override

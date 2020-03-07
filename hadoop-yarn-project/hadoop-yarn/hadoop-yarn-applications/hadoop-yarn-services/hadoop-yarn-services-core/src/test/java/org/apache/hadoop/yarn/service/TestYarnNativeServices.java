@@ -938,4 +938,47 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     Assert.assertEquals("Restarted service state should be STABLE",
         ServiceState.STABLE, service.getState());
   }
+
+  @Test(timeout = 200000)
+  public void testAMFailureValidity() throws Exception {
+    setupInternal(NUM_NMS);
+    ServiceClient client = createClient(getConf());
+    Service exampleApp = new Service();
+    exampleApp.setName("example-app");
+    exampleApp.setVersion("v1");
+    exampleApp.addComponent(createComponent("compa", 2, "sleep 1000"));
+    Configuration serviceConfig = new Configuration();
+    serviceConfig.setProperty(AM_RESTART_MAX, "2");
+    serviceConfig.setProperty(AM_FAILURES_VALIDITY_INTERVAL, "1000");
+    exampleApp.setConfiguration(serviceConfig);
+    client.actionCreate(exampleApp);
+    waitForServiceToBeStable(client, exampleApp);
+
+    Service appStatus1 = client.getStatus(exampleApp.getName());
+    ApplicationId exampleAppId = ApplicationId.fromString(appStatus1.getId());
+    YarnClient yarnClient = createYarnClient(getConf());
+
+    // kill AM1
+    ApplicationReport applicationReport = yarnClient.getApplicationReport(
+        exampleAppId);
+    ApplicationAttemptReport attemptReport = yarnClient
+        .getApplicationAttemptReport(applicationReport
+            .getCurrentApplicationAttemptId());
+    yarnClient.signalToContainer(attemptReport.getAMContainerId(),
+        SignalContainerCommand.GRACEFUL_SHUTDOWN);
+    waitForServiceToBeStable(client, exampleApp);
+    Assert.assertEquals(ServiceState.STABLE, client.getStatus(
+        exampleApp.getName()).getState());
+
+    // kill AM2 after 'yarn.service.am-failure.validity-interval-ms'
+    Thread.sleep(2000);
+    applicationReport = yarnClient.getApplicationReport(exampleAppId);
+    attemptReport = yarnClient.getApplicationAttemptReport(applicationReport
+        .getCurrentApplicationAttemptId());
+    yarnClient.signalToContainer(attemptReport.getAMContainerId(),
+        SignalContainerCommand.GRACEFUL_SHUTDOWN);
+    waitForServiceToBeStable(client, exampleApp);
+    Assert.assertEquals(ServiceState.STABLE, client.getStatus(
+        exampleApp.getName()).getState());
+  }
 }

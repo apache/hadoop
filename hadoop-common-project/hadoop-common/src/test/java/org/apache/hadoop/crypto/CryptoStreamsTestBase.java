@@ -46,6 +46,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public abstract class CryptoStreamsTestBase {
   protected static final Logger LOG = LoggerFactory.getLogger(
       CryptoStreamsTestBase.class);
@@ -198,7 +200,7 @@ public abstract class CryptoStreamsTestBase {
     
     // EOF
     n = in.read(result, 0, dataLen);
-    Assert.assertEquals(n, -1);
+    assertThat(n).isEqualTo(-1);
   }
   
   /** Test crypto writing with different buffer size. */
@@ -612,7 +614,7 @@ public abstract class CryptoStreamsTestBase {
     
     // Skip after EOF
     skipped = in.skip(3);
-    Assert.assertEquals(skipped, 0);
+    assertThat(skipped).isZero();
     
     in.close();
   }
@@ -844,7 +846,7 @@ public abstract class CryptoStreamsTestBase {
     ((Seekable) in).seek(dataLen);
     buf.clear();
     n = ((ByteBufferReadable) in).read(buf);
-    Assert.assertEquals(n, -1);
+    assertThat(n).isEqualTo(-1);
     
     in.close();
   }

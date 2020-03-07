@@ -64,6 +64,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.azure.security.Constants;
@@ -643,6 +644,20 @@ public class NativeAzureFileSystem extends FileSystem {
     return "wasb";
   }
 
+  /**
+   * If fs.azure.override.canonical.service.name is set as true, return URI of
+   * the WASB filesystem, otherwise use the default implementation.
+   *
+   * @return a service string that uniquely identifies this file system
+   */
+  @Override
+  public String getCanonicalServiceName() {
+    if (returnUriAsCanonicalServiceName) {
+      return getUri().toString();
+    }
+    return super.getCanonicalServiceName();
+  }
+
 
   /**
    * <p>
@@ -725,6 +740,11 @@ public class NativeAzureFileSystem extends FileSystem {
    * Property to enable Append API.
    */
   public static final String APPEND_SUPPORT_ENABLE_PROPERTY_NAME = "fs.azure.enable.append.support";
+
+  /*
+   * Property to override canonical service name with filesystem's URI.
+   */
+  public static final String RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME = "fs.azure.override.canonical.service.name";
 
   /**
    * The configuration property to set number of threads to be used for rename operation.
@@ -1064,6 +1084,7 @@ public class NativeAzureFileSystem extends FileSystem {
      */
     @Override
     public void write(int b) throws IOException {
+      checkOpen();
       try {
         out.write(b);
       } catch(IOException e) {
@@ -1087,6 +1108,7 @@ public class NativeAzureFileSystem extends FileSystem {
      */
     @Override
     public void write(byte[] b) throws IOException {
+      checkOpen();
       try {
         out.write(b);
       } catch(IOException e) {
@@ -1117,6 +1139,7 @@ public class NativeAzureFileSystem extends FileSystem {
      */
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
+      checkOpen();
       try {
         out.write(b, off, len);
       } catch(IOException e) {
@@ -1179,6 +1202,17 @@ public class NativeAzureFileSystem extends FileSystem {
     private void restoreKey() throws IOException {
       store.rename(getEncodedKey(), getKey());
     }
+
+    /**
+     * Check for the stream being open.
+     * @throws IOException if the stream is closed.
+     */
+    private void checkOpen() throws IOException {
+      if (out == null) {
+        throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
+      }
+    }
+
   }
 
   private URI uri;
@@ -1192,6 +1226,7 @@ public class NativeAzureFileSystem extends FileSystem {
   // A counter to create unique (within-process) names for my metrics sources.
   private static AtomicInteger metricsSourceNameCounter = new AtomicInteger();
   private boolean appendSupportEnabled = false;
+  private boolean returnUriAsCanonicalServiceName = false;
   private DelegationTokenAuthenticatedURL authURL;
   private DelegationTokenAuthenticatedURL.Token authToken = new DelegationTokenAuthenticatedURL.Token();
   private String credServiceUrl;
@@ -1389,6 +1424,8 @@ public class NativeAzureFileSystem extends FileSystem {
     if (UserGroupInformation.isSecurityEnabled() && kerberosSupportEnabled) {
       this.wasbDelegationTokenManager = new RemoteWasbDelegationTokenManager(conf);
     }
+
+    this.returnUriAsCanonicalServiceName = conf.getBoolean(RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME, false);
   }
 
   @Override
@@ -3525,6 +3562,76 @@ public class NativeAzureFileSystem extends FileSystem {
     } else {
       store.changePermissionStatus(key, newPermissionStatus);
     }
+  }
+
+  /**
+   * Set the value of an attribute for a path.
+   *
+   * @param path The path on which to set the attribute
+   * @param xAttrName The attribute to set
+   * @param value The byte value of the attribute to set (encoded in utf-8)
+   * @param flag The mode in which to set the attribute
+   * @throws IOException If there was an issue setting the attribute on Azure
+   */
+  @Override
+  public void setXAttr(Path path, String xAttrName, byte[] value, EnumSet<XAttrSetFlag> flag) throws IOException {
+    Path absolutePath = makeAbsolute(path);
+    performAuthCheck(absolutePath, WasbAuthorizationOperations.WRITE, "setXAttr", absolutePath);
+
+    String key = pathToKey(absolutePath);
+    FileMetadata metadata;
+    try {
+      metadata = store.retrieveMetadata(key);
+    } catch (IOException ex) {
+      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+      if (innerException instanceof StorageException
+          && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+        throw new FileNotFoundException("File " + path + " doesn't exists.");
+      }
+      throw ex;
+    }
+
+    if (metadata == null) {
+      throw new FileNotFoundException("File doesn't exist: " + path);
+    }
+
+    boolean xAttrExists = store.retrieveAttribute(key, xAttrName) != null;
+    XAttrSetFlag.validate(xAttrName, xAttrExists, flag);
+    store.storeAttribute(key, xAttrName, value);
+  }
+
+  /**
+   * Get the value of an attribute for a path.
+   *
+   * @param path The path on which to get the attribute
+   * @param xAttrName The attribute to get
+   * @return The bytes of the attribute's value (encoded in utf-8)
+   *         or null if the attribute does not exist
+   * @throws IOException If there was an issue getting the attribute from Azure
+   */
+  @Override
+  public byte[] getXAttr(Path path, String xAttrName) throws IOException {
+    Path absolutePath = makeAbsolute(path);
+    performAuthCheck(absolutePath, WasbAuthorizationOperations.READ, "getXAttr", absolutePath);
+
+    String key = pathToKey(absolutePath);
+    FileMetadata metadata;
+    try {
+      metadata = store.retrieveMetadata(key);
+    } catch (IOException ex) {
+      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+      if (innerException instanceof StorageException
+              && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+        throw new FileNotFoundException("File " + path + " doesn't exists.");
+      }
+      throw ex;
+    }
+
+    if (metadata == null) {
+      throw new FileNotFoundException("File doesn't exist: " + path);
+    }
+
+    return store.retrieveAttribute(key, xAttrName);
   }
 
   /**

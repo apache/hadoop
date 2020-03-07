@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
@@ -342,6 +343,8 @@ public class TestBlockManager {
   @Test
   public void testOneOfTwoRacksDecommissioned() throws Exception {
     addNodes(nodes);
+    NameNode.initMetrics(new Configuration(),
+        HdfsServerConstants.NamenodeRole.NAMENODE);
     for (int i = 0; i < NUM_TEST_ITERS; i++) {
       doTestOneOfTwoRacksDecommissioned(i);
     }
@@ -660,6 +663,7 @@ public class TestBlockManager {
             liveNodes,
             new NumberReplicas(),
             new ArrayList<Byte>(),
+            new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY)[0]);
 
     assertEquals("Does not choose a source node for a less-than-highest-priority"
@@ -670,6 +674,7 @@ public class TestBlockManager {
             cntNodes,
             liveNodes,
             new NumberReplicas(),
+            new ArrayList<Byte>(),
             new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_VERY_LOW_REDUNDANCY).length);
 
@@ -684,6 +689,7 @@ public class TestBlockManager {
             cntNodes,
             liveNodes,
             new NumberReplicas(),
+            new ArrayList<Byte>(),
             new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY).length);
   }
@@ -730,13 +736,15 @@ public class TestBlockManager {
     List<DatanodeStorageInfo> liveNodes = new LinkedList<DatanodeStorageInfo>();
     NumberReplicas numReplicas = new NumberReplicas();
     List<Byte> liveBlockIndices = new ArrayList<>();
+    List<Byte> liveBusyBlockIndices = new ArrayList<>();
 
     bm.chooseSourceDatanodes(
             aBlockInfoStriped,
             cntNodes,
             liveNodes,
             numReplicas, liveBlockIndices,
-            LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY);
+            liveBusyBlockIndices,
+            LowRedundancyBlocks.QUEUE_VERY_LOW_REDUNDANCY);
 
     assertEquals("Choose the source node for reconstruction with one node reach"
             + " the MAX maxReplicationStreams, the numReplicas still return the"
@@ -791,12 +799,14 @@ public class TestBlockManager {
         new LinkedList<DatanodeStorageInfo>();
     NumberReplicas numReplicas = new NumberReplicas();
     List<Byte> liveBlockIndices = new ArrayList<>();
+    List<Byte> liveBusyBlockIndices = new ArrayList<>();
 
     bm.chooseSourceDatanodes(
         aBlockInfoStriped,
         containingNodes,
         nodesContainingLiveReplicas,
         numReplicas, liveBlockIndices,
+        liveBusyBlockIndices,
         LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY);
     assertEquals("There are 5 live replicas in " +
             "[ds2, ds3, ds4, ds5, ds6] datanodes ",
@@ -828,7 +838,9 @@ public class TestBlockManager {
             bm.getStoredBlock(aBlock),
             cntNodes,
             liveNodes,
-            new NumberReplicas(), new LinkedList<Byte>(),
+            new NumberReplicas(),
+            new LinkedList<Byte>(),
+            new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY)[0]);
 
 
@@ -842,7 +854,9 @@ public class TestBlockManager {
             bm.getStoredBlock(aBlock),
             cntNodes,
             liveNodes,
-            new NumberReplicas(), new LinkedList<Byte>(),
+            new NumberReplicas(),
+            new LinkedList<Byte>(),
+            new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY).length);
   }
 

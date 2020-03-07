@@ -37,6 +37,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.VersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 
 @InterfaceAudience.Private
 public class KMSWebApp implements ServletContextListener {
@@ -79,6 +80,11 @@ public class KMSWebApp implements ServletContextListener {
   private static Meter invalidCallsMeter;
   private static KMSAudit kmsAudit;
   private static KeyProviderCryptoExtension keyProviderCryptoExtension;
+
+  static {
+    SLF4JBridgeHandler.removeHandlersForRootLogger();
+    SLF4JBridgeHandler.install();
+  }
 
   @Override
   public void contextInitialized(ServletContextEvent sce) {

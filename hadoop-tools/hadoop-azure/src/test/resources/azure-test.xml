@@ -30,6 +30,11 @@
 
   <property>
     <name>fs.azure.test.namespace.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.azure.abfs.latency.track</name>
     <value>false</value>
   </property>
 

@@ -28,8 +28,8 @@ import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos.GetGroupsForUserRequestProto;
 import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos.GetGroupsForUserResponseProto;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class GetUserMappingsProtocolClientSideTranslatorPB implements
     ProtocolMetaInterface, GetUserMappingsProtocol, Closeable {

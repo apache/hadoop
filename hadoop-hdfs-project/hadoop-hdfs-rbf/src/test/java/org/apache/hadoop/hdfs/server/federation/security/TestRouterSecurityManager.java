@@ -201,4 +201,14 @@ public class TestRouterSecurityManager {
     intercept(ServiceStateException.class, "Failed to create SecretManager",
         () -> router.init(conf));
   }
+
+  @Test
+  public void testNotRunningSecretManager() throws Exception {
+    Configuration conf = initSecurity();
+    conf.set(DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS,
+        MockNotRunningSecretManager.class.getName());
+    Router router = new Router();
+    intercept(ServiceStateException.class, "Failed to create SecretManager",
+        () -> router.init(conf));
+  }
 }

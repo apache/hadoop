@@ -99,7 +99,7 @@ import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillTaskRequestProto
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class MRClientProtocolPBClientImpl implements MRClientProtocol,
     Closeable {

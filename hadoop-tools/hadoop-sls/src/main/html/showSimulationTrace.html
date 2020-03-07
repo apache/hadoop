@@ -69,265 +69,286 @@
   </div>
 </div>
 
-<div class="row">
-  <div class="divborder span8" style="margin-left:50px" id="area1"></div>
-  <div class="divborder span8" id="area2"></div>
+<div>
+  <div id="error-div" style="display:none">
+    <div class="alert alert-danger" role="alert" style="margin-left:20%; margin-right:20%">
+      <span id="error-message"></span>
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+  </div>
 </div>
 
-<div class="row">
-  <div class="divborder span8" style="margin-left:50px" id="area3"></div>
-  <div class="divborder span8" id="area4"></div>
-</div>
+<div id="data" style="display:none;">
+  <div class="row">
+    <div class="divborder span8 chart-area" style="margin-left:50px" id="area1"></div>
+    <div class="divborder span8 chart-area" id="area2"></div>
+  </div>
 
-<div class="row">
-  <div class="divborder span8" style="margin-left:50px" id="area5"></div>
-  <div class="divborder span8" id="area6"></div>
-</div>
+  <div class="row">
+    <div class="divborder span8 chart-area" style="margin-left:50px" id="area3"></div>
+    <div class="divborder span8 chart-area" id="area4"></div>
+  </div>
 
-<div class="row">
-  <div class="divborder span8" style="margin-left:50px" id="area7"></div>
-  <div class="span7" id="area8"></div>
+  <div class="row">
+    <div class="divborder span8 chart-area" style="margin-left:50px" id="area5"></div>
+    <div class="divborder span8 chart-area" id="area6"></div>
+  </div>
+
+  <div class="row">
+    <div class="divborder span8 " style="margin-left:50px" id="area7"></div>
+    <div class="span7 chart-area" id="area8"></div>
+  </div>
 </div>
 <p>&nbsp;</p>
 <script>
 // select file and draw
 function draw() {
-var filepath = document.getElementById('jsonfile').value;
-if (filepath) {
-for (var i = 1; i < 9; i ++) {
-$('#area' + i).empty();
-}
-filepath = filepath.replace("C:\\fakepath\\", "");
-drawCharts(filepath);
-} else {
-alert('choose file firstly.');
-}
+  $("#error-div").css("display", "none");
+  var filepath = document.getElementById('jsonfile').value;
+  if (filepath) {
+    $(".chart-area").empty();
+    filepath = filepath.replace("C:\\fakepath\\", "");
+    drawCharts(filepath);
+  } else {
+    $("#error-message").html("Please choose file.");
+    $("#error-div").css("display", "block");
+    $("#data").css("display", "none");
+  }
 }
 
 function drawCharts(filepath) {
-$.getJSON(filepath, function(data) {
-var numQueues = 0;
-var queueNames = new Array();
-for (var j in data[0]) {
-if (j.substring(0, 'queue'.length) === 'queue') {
-queueNames[numQueues] = j;
-numQueues ++;
-}
-}
-numQueues /= 2;
+  $.getJSON(filepath, function(data) {
+    var numQueues = 0;
+    var queueNames = new Array();
+    for (var j in data[0]) {
+      if (j.substring(0, 'queue'.length) === 'queue') {
+        queueNames[numQueues] = j;
+        numQueues ++;
+      }
+    }
+    numQueues /= 2;
 
-// create graph
-$.getJSON(filepath, function(data) {
-var basetime = data[0].time;
-data.forEach(function(d) {
-d.time = (d.time - basetime) / 1000;
-});
+    // create graph
+    $.getJSON(filepath, function(data) {
+      var basetime = data[0].time;
+      data.forEach(function(d) {
+        d.time = (d.time - basetime) / 1000;
+      });
 
-var legends = ["running.applications", "running.containers"];
-drawEachChart("#area1", data, legends, "Cluster running applications & containers", "Number", 0, 0);
-legends = ["jvm.free.memory", "jvm.max.memory", "jvm.total.memory"];
-drawEachChart("#area2", data, legends, "JVM memory", "Memory (GB)", 0, 0);
-legends = ["cluster.allocated.memory", "cluster.available.memory"];
-drawEachChart("#area3", data, legends, "Cluster allocated & available memory", "Memory (GB)", 0, 0);
-legends = ["cluster.allocated.vcores", "cluster.available.vcores"];
-drawEachChart("#area4", data, legends, "Cluster allocated & available vcores", "Number", 0, 0);
+      var legends = ["running.applications", "running.containers"];
+      drawEachChart("#area1", data, legends, "Cluster running applications & containers", "Number", 0, 0);
+      legends = ["jvm.free.memory", "jvm.max.memory", "jvm.total.memory"];
+      drawEachChart("#area2", data, legends, "JVM memory", "Memory (GB)", 0, 0);
+      legends = ["cluster.allocated.memory", "cluster.available.memory"];
+      drawEachChart("#area3", data, legends, "Cluster allocated & available memory", "Memory (GB)", 0, 0);
+      legends = ["cluster.allocated.vcores", "cluster.available.vcores"];
+      drawEachChart("#area4", data, legends, "Cluster allocated & available vcores", "Number", 0, 0);
 
-for (var i = 0; i < numQueues; i ++) {
-legends[i] = queueNames[i * 2];
-}
-drawEachChart("#area5", data, legends, "Queue allocated memory", "Memory (GB)", 1, 100);
-for (var i = 0; i < numQueues; i ++) {
-legends[i] = queueNames[i * 2 + 1];
-}
-drawEachChart("#area6", data, legends, "Queue allocated vcores", "VCores", 1, 90);
+      for (var i = 0; i < numQueues; i ++) {
+        legends[i] = queueNames[i * 2];
+      }
+      drawEachChart("#area5", data, legends, "Queue allocated memory", "Memory (GB)", 1, 100);
+      for (var i = 0; i < numQueues; i ++) {
+        legends[i] = queueNames[i * 2 + 1];
+      }
+      drawEachChart("#area6", data, legends, "Queue allocated vcores", "VCores", 1, 90);
 
-legends = [
-"scheduler.allocate.timecost",
-"scheduler.handle-NODE_ADDED.timecost", "scheduler.handle-NODE_REMOVED.timecost",
-"scheduler.handle-NODE_UPDATE.timecost", "scheduler.handle-APP_ADDED.timecost",
-"scheduler.handle-APP_REMOVED.timecost", "scheduler.handle-CONTAINER_EXPIRED.timecost"
-];
-drawEachChart("#area7", data, legends, "Scheduler allocate & handle operations timecost", "Timecost (ms)", 0, 210);
-});
-});
+      legends = [
+        "scheduler.allocate.timecost",
+        "scheduler.handle-NODE_ADDED.timecost", "scheduler.handle-NODE_REMOVED.timecost",
+        "scheduler.handle-NODE_UPDATE.timecost", "scheduler.handle-APP_ADDED.timecost",
+        "scheduler.handle-APP_REMOVED.timecost", "scheduler.handle-CONTAINER_EXPIRED.timecost"
+      ];
+      drawEachChart("#area7", data, legends, "Scheduler allocate & handle operations timecost", "Timecost (ms)", 0, 210);
+    });
+  }).done(function() {
+    $("#data").css("display", "block");
+  }).fail(function(jqxhr, textStatus, error) {
+    $("#error-message").html(String(error));
+    $("#error-div").css("display", "block");
+    $("#data").css("display", "none");
+  });
 }
 
 // draw different chart
 function drawEachChart(chartArea, data, legends, title, yLabelTitle, isArea, pl) {
-// drawchart
-var margin = {top: 50, right: 250, bottom: 50, left: 70};
-var width = 800 - margin.left - margin.right;
-var height = 420 - margin.top - margin.bottom;
+  // drawchart
+  var margin = {top: 50, right: 250, bottom: 50, left: 70};
+  var width = 800 - margin.left - margin.right;
+  var height = 420 - margin.top - margin.bottom;
 
-var x = d3.scale.linear().range([0, width]);
-var y = d3.scale.linear().range([height, 0]);
-var xAxis = d3.svg.axis().scale(x).orient("bottom");
-var yAxis = d3.svg.axis().scale(y).orient("left");
+  var x = d3.scale.linear().range([0, width]);
+  var y = d3.scale.linear().range([height, 0]);
+  var xAxis = d3.svg.axis().scale(x).orient("bottom");
+  var yAxis = d3.svg.axis().scale(y).orient("left");
 
-var color = d3.scale.category10();
+  var color = d3.scale.category10();
 
-if (isArea == 1){
-var area = d3.svg.area()
-.x(function(d) { return x(d.time); })
-.y0(function(d) { return y(d.y0); })
-.y1(function(d) { return y(d.y0 + d.y); });
+  if (isArea == 1) {
+    var area = d3.svg.area()
+      .x(function(d) { return x(d.time); })
+      .y0(function(d) { return y(d.y0); })
+      .y1(function(d) { return y(d.y0 + d.y); });
 
-var stack = d3.layout.stack()
-.values(function(d) { return d.values; });
+    var stack = d3.layout.stack()
+      .values(function(d) { return d.values; });
 
-// create chart
-var svg = d3.select(chartArea).append("svg")
-.attr("width", width + margin.left + margin.right)
-.attr("height", height + margin.top + margin.bottom)
-.append("g")
-.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    // create chart
+    var svg = d3.select(chartArea).append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-color.domain(d3.keys(data[0])
-.filter(function(key) {return $.inArray(key, legends) !== -1; }));
+    color.domain(d3.keys(data[0])
+      .filter(function(key) {return $.inArray(key, legends) !== -1; }));
 
-var points = stack(color.domain().map(function(name) {
-return {
-name: name,
-values: data.map(function(d) {
-return {time: d.time, y: d[name]};
-})
-};
-}));
+    var points = stack(color.domain().map(function(name) {
+      return {
+        name: name,
+        values: data.map(function(d) {
+          return {time: d.time, y: d[name]};
+        })
+      };
+    }));
 
-// x & y
-x.domain(d3.extent(data, function(d) { return d.time; }));
-y.domain([
-d3.min(points, function(c) {
-return 0.9 * d3.min(c.values, function(v) { return v.y; }); }),
-d3.max(points, function(c) {
-return 1.1 * d3.max(c.values, function(v) { return v.y + v.y0; }); })
-]);
+    // x & y
+    x.domain(d3.extent(data, function(d) { return d.time; }));
+    y.domain([
+      d3.min(points, function(c) {
+      return 0.9 * d3.min(c.values, function(v) { return v.y; }); }),
+      d3.max(points, function(c) {
+        return 1.1 * d3.max(c.values, function(v) { return v.y + v.y0; }); })
+      ]);
 
-svg.append("g").attr("class", "x axis")
-.attr("transform", "translate(0," + height + ")")
-.call(xAxis)
-.append("text")
-.attr("transform", "translate(" + (width / 2) + ", 45)")
-.style("text-anchor", "middle")
-.text("Time (s)");
+    svg.append("g").attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+      .append("text")
+      .attr("transform", "translate(" + (width / 2) + ", 45)")
+      .style("text-anchor", "middle")
+      .text("Time (s)");
 
-svg.append("g")
-.attr("class", "y axis")
-.call(yAxis)
-.append("text")
-.attr("transform", "rotate(-90)")
-.attr("y", 0 - margin.left)
-.attr("x",0 - (height / 2))
-.attr("dy", "1em")
-.style("text-anchor", "middle")
-.text(yLabelTitle);
+    svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 0 - margin.left)
+      .attr("x",0 - (height / 2))
+      .attr("dy", "1em")
+      .style("text-anchor", "middle")
+      .text(yLabelTitle);
 
-var point = svg.selectAll(".point")
-.data(points)
-.enter().append("g");
+    var point = svg.selectAll(".point")
+      .data(points)
+      .enter().append("g");
 
-point.append("path")
-.attr("class", "area")
-.attr("d", function(d) { return area(d.values); })
-.style("fill", function(d) { return color(d.name); });
-} else {
-// lines
-var line = d3.svg.line()
-.interpolate("basis")
-.x(function(d) { return x(d.time); })
-.y(function(d) { return y(d.value); });
+    point.append("path")
+      .attr("class", "area")
+      .attr("d", function(d) { return area(d.values); })
+      .style("fill", function(d) { return color(d.name); });
+  } else {
+    // lines
+    var line = d3.svg.line()
+      .interpolate("basis")
+      .x(function(d) { return x(d.time); })
+      .y(function(d) { return y(d.value); });
 
-// create chart
-var svg = d3.select(chartArea).append("svg")
-.attr("id", title)
-.attr("width", width + margin.left + margin.right)
-.attr("height", height + margin.top + margin.bottom)
-.append("g")
-.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    // create chart
+    var svg = d3.select(chartArea).append("svg")
+      .attr("id", title)
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-color.domain(d3.keys(data[0])
-.filter(function(key) {return $.inArray(key, legends) !== -1; }));
+    color.domain(d3.keys(data[0])
+      .filter(function(key) {return $.inArray(key, legends) !== -1; }));
 
-var values = color.domain().map(function(name) {
-return {
-name: name,
-values: data.map(function(d) {
-return {time: d.time, value: +d[name]};
-})
-};
-});
+    var values = color.domain().map(function(name) {
+      return {
+        name: name,
+        values: data.map(function(d) {
+          return {time: d.time, value: +d[name]};
+        })
+      };
+    });
 
-// x & y
-x.domain(d3.extent(data, function(d) { return d.time; }));
-y.domain([
-d3.min(values, function(c) { return 0.9 * d3.min(c.values, function(v) { return v.value; }); }),
-d3.max(values, function(c) { return 1.1 * d3.max(c.values, function(v) { return v.value; }); })
-]);
+    // x & y
+    x.domain(d3.extent(data, function(d) { return d.time; }));
+    y.domain([
+      d3.min(values, function(c) { return 0.9 * d3.min(c.values, function(v) { return v.value; }); }),
+      d3.max(values, function(c) { return 1.1 * d3.max(c.values, function(v) { return v.value; }); })
+    ]);
 
-svg.append("g").attr("class", "x axis")
-.attr("transform", "translate(0," + height + ")")
-.call(xAxis)
-.append("text")
-.attr("transform", "translate(" + (width / 2) + ", 45)")
-.style("text-anchor", "middle")
-.text("Time (s)");
+    svg.append("g").attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+      .append("text")
+      .attr("transform", "translate(" + (width / 2) + ", 45)")
+      .style("text-anchor", "middle")
+      .text("Time (s)");
 
-svg.append("g")
-.attr("class", "y axis")
-.call(yAxis)
-.append("text")
-.attr("transform", "rotate(-90)")
-.attr("y", 0 - margin.left)
-.attr("x",0 - (height / 2))
-.attr("dy", "1em")
-.style("text-anchor", "middle")
-.text(yLabelTitle);
+    svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 0 - margin.left)
+      .attr("x",0 - (height / 2))
+      .attr("dy", "1em")
+      .style("text-anchor", "middle")
+      .text(yLabelTitle);
 
-var value = svg.selectAll(".city")
-.data(values)
-.enter().append("g")
-.attr("class", "city");
+    var value = svg.selectAll(".city")
+      .data(values)
+      .enter().append("g")
+      .attr("class", "city");
 
-value.append("path")
-.attr("class", "line")
-.attr("d", function(d) { return line(d.values); })
-.style("stroke", function(d) { return color(d.name); });
-}
-// title
-svg.append("text")
-.attr("x", (width / 2))
-.attr("y", 10 - (margin.top / 2))
-.attr("text-anchor", "middle")
-.text(title);
+    value.append("path")
+      .attr("class", "line")
+      .attr("d", function(d) { return line(d.values); })
+      .style("stroke", function(d) { return color(d.name); });
+  }
 
-// legend
-var legend = svg.append("g")
-.attr("class", "legend")
-.attr("x", width - 50)
-.attr("y", 25)
-.attr("height", 120)
-.attr("width", 140);
+  // title
+  svg.append("text")
+    .attr("x", (width / 2))
+    .attr("y", 10 - (margin.top / 2))
+    .attr("text-anchor", "middle")
+    .text(title);
 
-legend.selectAll('g').data(legends)
-.enter()
-.append('g')
-.each(function(d, i) {
-var g = d3.select(this);
-g.append("rect")
-.attr("x", width - 5 - pl)
-.attr("y", i*20 + 0)
-.attr("width", 10)
-.attr("height", 10)
-.style("fill", color(d));
+  // legend
+  var legend = svg.append("g")
+    .attr("class", "legend")
+    .attr("x", width - 50)
+    .attr("y", 25)
+    .attr("height", 120)
+    .attr("width", 140);
 
-g.append("text")
-.attr("x", width + 15 - pl)
-.attr("y", i * 20 + 8)
-.attr("height",30)
-.attr("width",250)
-.style("fill", color(d))
-.text(d);
-});
+  legend.selectAll('g').data(legends)
+    .enter()
+    .append('g')
+    .each(function(d, i) {
+      var g = d3.select(this);
+      g.append("rect")
+        .attr("x", width - 5 - pl)
+        .attr("y", i*20 + 0)
+        .attr("width", 10)
+        .attr("height", 10)
+        .style("fill", color(d));
+
+      g.append("text")
+        .attr("x", width + 15 - pl)
+        .attr("y", i * 20 + 8)
+        .attr("height",30)
+        .attr("width",250)
+        .style("fill", color(d))
+        .text(d);
+    });
 }
 </script>
 </body>

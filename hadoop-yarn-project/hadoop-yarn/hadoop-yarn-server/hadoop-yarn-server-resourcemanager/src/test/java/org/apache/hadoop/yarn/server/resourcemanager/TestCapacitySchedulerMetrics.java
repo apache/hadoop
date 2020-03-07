@@ -78,8 +78,18 @@ public class TestCapacitySchedulerMetrics {
     Assert.assertEquals(0, csMetrics.getNumOfAllocates());
     Assert.assertEquals(0, csMetrics.getNumOfCommitSuccess());
 
-    RMApp rmApp = rm.submitApp(1024, "app", "user", null, false,
-        "default", 1, null, null, false);
+    RMApp rmApp = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withUnmanagedAM(false)
+            .withQueue("default")
+            .withMaxAppAttempts(1)
+            .withCredentials(null)
+            .withAppType(null)
+            .withWaitForAppAcceptedState(false)
+            .build());
     MockAM am = MockRM.launchAMWhenAsyncSchedulingEnabled(rmApp, rm);
     am.registerAppAttempt();
     am.allocate("*", 1024, 1, new ArrayList<>());

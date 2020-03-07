@@ -42,10 +42,12 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -74,6 +76,8 @@ public class TestPendingReconstruction {
 
   @Test
   public void testPendingReconstruction() {
+    NameNode.initMetrics(new Configuration(),
+        HdfsServerConstants.NamenodeRole.NAMENODE);
     PendingReconstructionBlocks pendingReconstructions;
     pendingReconstructions = new PendingReconstructionBlocks(TIMEOUT * 1000);
     pendingReconstructions.start();
@@ -85,8 +89,7 @@ public class TestPendingReconstruction {
       BlockInfo block = genBlockInfo(i, i, 0);
       DatanodeStorageInfo[] targets = new DatanodeStorageInfo[i];
       System.arraycopy(storages, 0, targets, 0, i);
-      pendingReconstructions.increment(block,
-          DatanodeStorageInfo.toDatanodeDescriptors(targets));
+      pendingReconstructions.increment(block, targets);
     }
     assertEquals("Size of pendingReconstruction ",
                  10, pendingReconstructions.size());
@@ -96,25 +99,24 @@ public class TestPendingReconstruction {
     // remove one item
     //
     BlockInfo blk = genBlockInfo(8, 8, 0);
-    pendingReconstructions.decrement(blk, storages[7].getDatanodeDescriptor()); // removes one replica
+    pendingReconstructions.decrement(blk, storages[7]); // removes one replica
     assertEquals("pendingReconstructions.getNumReplicas ",
                  7, pendingReconstructions.getNumReplicas(blk));
 
     //
     // insert the same item twice should be counted as once
     //
-    pendingReconstructions.increment(blk, storages[0].getDatanodeDescriptor());
+    pendingReconstructions.increment(blk, storages[0]);
     assertEquals("pendingReconstructions.getNumReplicas ",
         7, pendingReconstructions.getNumReplicas(blk));
 
     for (int i = 0; i < 7; i++) {
       // removes all replicas
-      pendingReconstructions.decrement(blk, storages[i].getDatanodeDescriptor());
+      pendingReconstructions.decrement(blk, storages[i]);
     }
     assertTrue(pendingReconstructions.size() == 9);
     pendingReconstructions.increment(blk,
-        DatanodeStorageInfo.toDatanodeDescriptors(
-            DFSTestUtil.createDatanodeStorageInfos(8)));
+        DFSTestUtil.createDatanodeStorageInfos(8));
     assertTrue(pendingReconstructions.size() == 10);
 
     //
@@ -144,8 +146,7 @@ public class TestPendingReconstruction {
     for (int i = 10; i < 15; i++) {
       BlockInfo block = genBlockInfo(i, i, 0);
       pendingReconstructions.increment(block,
-          DatanodeStorageInfo.toDatanodeDescriptors(
-              DFSTestUtil.createDatanodeStorageInfos(i)));
+          DFSTestUtil.createDatanodeStorageInfos(i));
     }
     assertEquals(15, pendingReconstructions.size());
     assertEquals(0L, pendingReconstructions.getNumTimedOuts());
@@ -213,8 +214,7 @@ public class TestPendingReconstruction {
       blockInfo = new BlockInfoContiguous(block, (short) 3);
 
       pendingReconstruction.increment(blockInfo,
-          DatanodeStorageInfo.toDatanodeDescriptors(
-              DFSTestUtil.createDatanodeStorageInfos(1)));
+          DFSTestUtil.createDatanodeStorageInfos(1));
       BlockCollection bc = Mockito.mock(BlockCollection.class);
       // Place into blocksmap with GenerationStamp = 1
       blockInfo.setGenerationStamp(1);
@@ -230,8 +230,7 @@ public class TestPendingReconstruction {
       block = new Block(2, 2, 0);
       blockInfo = new BlockInfoContiguous(block, (short) 3);
       pendingReconstruction.increment(blockInfo,
-          DatanodeStorageInfo.toDatanodeDescriptors(
-              DFSTestUtil.createDatanodeStorageInfos(1)));
+          DFSTestUtil.createDatanodeStorageInfos(1));
 
       // verify 2 blocks in pendingReconstructions
       assertEquals("Size of pendingReconstructions ", 2,
@@ -277,7 +276,8 @@ public class TestPendingReconstruction {
           getDatanodes().iterator().next() };
 
       // Add a stored block to the pendingReconstruction.
-      pendingReconstruction.increment(storedBlock, desc);
+      pendingReconstruction.increment(blockInfo,
+          DFSTestUtil.createDatanodeStorageInfos(1));
       assertEquals("Size of pendingReconstructions ", 1,
           pendingReconstruction.size());
 
@@ -306,6 +306,8 @@ public class TestPendingReconstruction {
         fsn.writeUnlock();
       }
 
+      GenericTestUtils.waitFor(() -> pendingReconstruction.size() == 0, 500,
+          10000);
       // The pending queue should be empty.
       assertEquals("Size of pendingReconstructions ", 0,
           pendingReconstruction.size());

@@ -43,6 +43,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     super();
   }
 
+  @Ignore("HADOOP-16845: Invalid continuation tokens are ignored by the ADLS "
+      + "Gen2 service, so we are disabling this test until the service is fixed.")
   @Test
   public void testContinuationTokenHavingEqualSign() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();

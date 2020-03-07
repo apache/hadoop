@@ -28,6 +28,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.junit.After;
@@ -98,7 +100,7 @@ public class TestFSSchedulerConfigurationStore {
 
     LogMutation logMutation = new LogMutation(updates, "test");
     configurationStore.logMutation(logMutation);
-    configurationStore.confirmMutation(true);
+    configurationStore.confirmMutation(logMutation, true);
     storeConf = configurationStore.retrieve();
     assertEquals(null, storeConf.get("a"));
     assertEquals("bb", storeConf.get("b"));
@@ -108,7 +110,7 @@ public class TestFSSchedulerConfigurationStore {
 
     updates.put("b", "bbb");
     configurationStore.logMutation(logMutation);
-    configurationStore.confirmMutation(true);
+    configurationStore.confirmMutation(logMutation, true);
     storeConf = configurationStore.retrieve();
     assertEquals(null, storeConf.get("a"));
     assertEquals("bbb", storeConf.get("b"));
@@ -131,10 +133,59 @@ public class TestFSSchedulerConfigurationStore {
 
     LogMutation logMutation = new LogMutation(updates, "test");
     configurationStore.logMutation(logMutation);
-    configurationStore.confirmMutation(false);
+    configurationStore.confirmMutation(logMutation, false);
     storeConf = configurationStore.retrieve();
 
     compareConfig(conf, storeConf);
+  }
+
+  @Test
+  public void testFileSystemClose() throws Exception {
+    MiniDFSCluster hdfsCluster = null;
+    FileSystem fs = null;
+    Path path = new Path("/tmp/confstore");
+    try {
+      HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+      hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
+          .numDataNodes(1).build();
+
+      fs = hdfsCluster.getFileSystem();
+      if (!fs.exists(path)) {
+        fs.mkdirs(path);
+      }
+
+      FSSchedulerConfigurationStore configStore =
+          new FSSchedulerConfigurationStore();
+      hdfsConfig.set(YarnConfiguration.SCHEDULER_CONFIGURATION_FS_PATH,
+          path.toString());
+      configStore.initialize(hdfsConfig, hdfsConfig, null);
+
+      // Close the FileSystem object and validate
+      fs.close();
+
+      try {
+        Map<String, String> updates = new HashMap<>();
+        updates.put("testkey", "testvalue");
+        LogMutation logMutation = new LogMutation(updates, "test");
+        configStore.logMutation(logMutation);
+        configStore.confirmMutation(logMutation, true);
+      } catch (IOException e) {
+        if (e.getMessage().contains("Filesystem closed")) {
+          fail("FSSchedulerConfigurationStore failed to handle " +
+              "FileSystem close");
+        } else {
+          fail("Should not get any exceptions");
+        }
+      }
+    } finally {
+      fs = hdfsCluster.getFileSystem();
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      if (hdfsCluster != null) {
+        hdfsCluster.shutdown();
+      }
+    }
   }
 
   @Test

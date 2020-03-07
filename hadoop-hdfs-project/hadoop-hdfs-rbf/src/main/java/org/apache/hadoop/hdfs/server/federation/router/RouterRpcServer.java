@@ -65,6 +65,7 @@ import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -76,6 +77,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -155,7 +157,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 /**
  * This class is responsible for handling all of the RPC calls to the It is
@@ -669,7 +671,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     RemoteMethod method = new RemoteMethod("getFileInfo",
         new Class<?>[] {String.class}, new RemoteParam());
     Map<RemoteLocation, HdfsFileStatus> results = rpcClient.invokeConcurrent(
-        locations, method, false, false, HdfsFileStatus.class);
+        locations, method, true, false, HdfsFileStatus.class);
     for (RemoteLocation loc : locations) {
       if (results.get(loc) != null) {
         return loc;
@@ -827,6 +829,13 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     return clientProto.getListing(src, startAfter, needLocation);
   }
 
+  @Override
+  public BatchedDirectoryListing getBatchedListing(
+      String[] srcs, byte[] startAfter, boolean needLocation)
+      throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
   @Override // ClientProtocol
   public HdfsFileStatus getFileInfo(String src) throws IOException {
     return clientProto.getFileInfo(src);
@@ -886,7 +895,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       DatanodeInfo[] result = entry.getValue();
       for (DatanodeInfo node : result) {
         String nodeId = node.getXferAddr();
-        if (!datanodesMap.containsKey(nodeId)) {
+        DatanodeInfo dn = datanodesMap.get(nodeId);
+        if (dn == null || node.getLastUpdate() > dn.getLastUpdate()) {
           // Add the subcluster as a suffix to the network location
           node.setNetworkLocation(
               NodeBase.PATH_SEPARATOR_STR + ns.getNameserviceId() +
@@ -1294,6 +1304,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     clientProto.unsetErasureCodingPolicy(src);
   }
 
+  @Override
+  public ECTopologyVerifierResult getECTopologyResultForPolicies(
+      String... policyNames) throws IOException {
+    return clientProto.getECTopologyResultForPolicies(policyNames);
+  }
+
   @Override // ClientProtocol
   public ECBlockGroupStats getECBlockGroupStats() throws IOException {
     return clientProto.getECBlockGroupStats();
@@ -1518,6 +1534,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
           if (quotaUsage != null) {
             quotaUsage.verifyNamespaceQuota();
             quotaUsage.verifyStoragespaceQuota();
+            quotaUsage.verifyQuotaByStorageType();
           }
         }
       }
