@@ -203,7 +203,7 @@
     <junit.platform.version>1.5.1</junit.platform.version>
     <assertj.version>3.12.2</assertj.version>
     <jline.version>3.9.0</jline.version>
-    <powermock.version>2.0.4</powermock.version>
+    <powermock.version>1.5.6</powermock.version>
     <solr.version>7.7.0</solr.version>
     <openssl-wildfly.version>1.0.7.Final</openssl-wildfly.version>
   </properties>
