@@ -340,6 +340,13 @@
                       </excludes>
                     </relocation>
                     <relocation>
+                      <pattern>javax/xml/bind/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.xml.bind.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
                       <pattern>net/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.net.</shadedPattern>
                       <excludes>
