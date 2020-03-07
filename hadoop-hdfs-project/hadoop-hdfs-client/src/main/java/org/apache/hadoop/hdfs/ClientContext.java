@@ -77,7 +77,7 @@ public class ClientContext {
   /**
    * Caches short-circuit file descriptors, mmap regions.
    */
-  private final ShortCircuitCache shortCircuitCache;
+  private final ShortCircuitCache[] shortCircuitCache;
 
   /**
    * Caches TCP and UNIX domain sockets for reuse.
@@ -131,6 +131,11 @@ public class ClientContext {
    * the DFSInputStreams in the same client.
    */
   private DeadNodeDetector deadNodeDetector = null;
+  
+  /**
+   * ShorCircuitCache array size.
+   */
+  private final int clientShortCircuitNum;
 
   private ClientContext(String name, DfsClientConf conf,
       Configuration config) {
@@ -138,7 +143,12 @@ public class ClientContext {
 
     this.name = name;
     this.confString = scConf.confAsString();
-    this.shortCircuitCache = ShortCircuitCache.fromConf(scConf);
+    this.clientShortCircuitNum = conf.clientShortCircuitNum;
+    this.shortCircuitCache = new ShortCircuitCache[this.clientShortCircuitNum];
+    for (int i = 0; i < this.clientShortCircuitNum; i++) {
+      this.shortCircuitCache[i] = ShortCircuitCache.fromConf(scConf);
+    }
+    
     this.peerCache = new PeerCache(scConf.getSocketCacheCapacity(),
         scConf.getSocketCacheExpiry());
     this.keyProviderCache = new KeyProviderCache(
