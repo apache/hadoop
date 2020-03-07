@@ -141,7 +141,7 @@ public interface HdfsClientConfigKeys {
       "dfs.short.circuit.shared.memory.watcher.interrupt.check.ms";
   int     DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT =
       60000;
-  String DFS_SHORT_CIRCUIT_NUM = "dfs.client.short.circuit.num";
+  String DFS_SHORT_CIRCUIT_NUM = "dfs.short.circuit.num";
   int DFS_SHORT_CIRCUIT_NUM_DEFAULT = 1;
   String  DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY =
       "dfs.client.slow.io.warning.threshold.ms";
