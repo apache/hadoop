@@ -142,7 +142,8 @@ public class DfsClientConf {
       replicaAccessorBuilderClasses;
 
   private final int stripedReadThreadpoolSize;
-
+  private final int clientShortCircuitNum;
+  
   private final boolean dataTransferTcpNoDelay;
 
   public DfsClientConf(Configuration conf) {
@@ -269,6 +270,14 @@ public class DfsClientConf {
         HdfsClientConfigKeys.StripedRead.THREADPOOL_SIZE_KEY +
         " must be greater than 0.");
     replicaAccessorBuilderClasses = loadReplicaAccessorBuilderClasses(conf);
+    
+    clientShortCircuitNum = conf.getInt(
+            HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM,
+            HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM_DEFAULT);
+    Preconditions.checkArgument(clientShortCircuitNum >= 1,
+            HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM + "can't be less then 1.");
+    Preconditions.checkArgument(clientShortCircuitNum <= 3,
+            HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM + "can't be more then 3.");  
   }
 
   @SuppressWarnings("unchecked")
