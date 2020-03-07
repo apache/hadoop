@@ -41,6 +41,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -86,18 +87,21 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
       + "SSL_RSA_EXPORT_WITH_RC4_40_MD5,\t \n"
       + "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA,"
       + "SSL_RSA_WITH_RC4_128_MD5 \t";
-  private static final String ONE_ENABLED_CIPHERS = EXCLUDED_CIPHERS
-      + ",TLS_RSA_WITH_AES_128_CBC_SHA,"
-      + "TLS_AES_128_GCM_SHA256";
-  private static final String EXCLUSIVE_ENABLED_CIPHERS
+  private static final String ONE_ENABLED_CIPHERS_TLS1_2 = EXCLUDED_CIPHERS
+      + ",TLS_RSA_WITH_AES_128_CBC_SHA";
+  private static final String ONE_ENABLED_CIPHERS_TLS1_3 = EXCLUDED_CIPHERS
+      + ",TLS_AES_128_GCM_SHA256";
+  private static final String EXCLUSIVE_ENABLED_CIPHERS_TLS1_2
       = "\tTLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, \n"
       + "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,"
       + "TLS_RSA_WITH_AES_128_CBC_SHA,"
       + "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA,  "
       + "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,"
-      + "TLS_AES_128_GCM_SHA256,"
       + "TLS_DHE_RSA_WITH_AES_128_CBC_SHA,\t\n "
       + "TLS_DHE_DSS_WITH_AES_128_CBC_SHA";
+  private static final String EXCLUSIVE_ENABLED_CIPHERS_TLS1_3 =
+      EXCLUSIVE_ENABLED_CIPHERS_TLS1_2 + ",TLS_AES_128_GCM_SHA256";
+
 
   static final String INCLUDED_PROTOCOLS = "TLSv1.2";
   static final String INCLUDED_PROTOCOLS_JDK11 = "TLSv1.3,TLSv1.2";
@@ -295,11 +299,8 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   public void testIncludedProtocols() throws Exception {
     URL url = new URL(baseUrl, SERVLET_PATH_ECHO + "?a=b&c=d");
 
-    String includedProtocols;
-    String version = System.getProperty("java.version");
-    if (version.startsWith("1.")) { // JDK 8
-      includedProtocols = INCLUDED_PROTOCOLS;
-    } else { // JDK 11 and above
+    String includedProtocols = INCLUDED_PROTOCOLS;
+    if (Shell.isJavaVersionAtLeast(11)) {
       includedProtocols = INCLUDED_PROTOCOLS_JDK11;
     }
     HttpsURLConnection conn =
@@ -313,20 +314,25 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     PreferredProtocolSSLSocketFactory factory =
         (PreferredProtocolSSLSocketFactory)conn.getSSLSocketFactory();
 
-    if (version.startsWith("1.")) {
-      assertEquals("TLSv1.2", factory.getSocket().getSession().getProtocol());
-    } else {
+    if (Shell.isJavaVersionAtLeast(11)) {
       assertEquals("TLSv1.3", factory.getSocket().getSession().getProtocol());
+    } else {
+      assertEquals("TLSv1.2", factory.getSocket().getSession().getProtocol());
     }
   }
 
   /** Test that verified that additionally included cipher
-   * TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA is only available cipher for working
+   * TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA (TLS 1.2) or
+   * TLS_AES_128_GCM_SHA256 (TLS 1.3) is only available cipher for working
    * TLS connection from client to server disabled for all other common ciphers.
    */
   @Test
   public void testOneEnabledCiphers() throws Exception {
-    testEnabledCiphers(ONE_ENABLED_CIPHERS);
+    if (Shell.isJavaVersionAtLeast(11)) {
+      testEnabledCiphers(ONE_ENABLED_CIPHERS_TLS1_3);
+    } else {
+      testEnabledCiphers(ONE_ENABLED_CIPHERS_TLS1_2);
+    }
   }
 
   /** Test verifies that mutually exclusive server's disabled cipher suites and
@@ -334,7 +340,11 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
    */
   @Test
   public void testExclusiveEnabledCiphers() throws Exception {
-    testEnabledCiphers(EXCLUSIVE_ENABLED_CIPHERS);
+    if (Shell.isJavaVersionAtLeast(11)) {
+      testEnabledCiphers(EXCLUSIVE_ENABLED_CIPHERS_TLS1_3);
+    } else {
+      testEnabledCiphers(EXCLUSIVE_ENABLED_CIPHERS_TLS1_2);
+    }
   }
 
   private void testEnabledCiphers(String ciphers) throws
