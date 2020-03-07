@@ -389,7 +389,7 @@ public class TestBlockReaderFactory {
 
         try (FSDataInputStream in = dfs.open(testFile)) {
           Assert.assertEquals(0,
-              dfs.getClient().getClientContext().getShortCircuitCache()
+              dfs.getClient().getClientContext().getShortCircuitCache(0)
                   .getReplicaInfoMapSize());
 
           final byte[] buf = new byte[testFileLen];
@@ -398,12 +398,12 @@ public class TestBlockReaderFactory {
 
           // Set cache size to 0 so the replica marked evictable by unbuffer
           // will be purged immediately.
-          dfs.getClient().getClientContext().getShortCircuitCache()
+          dfs.getClient().getClientContext().getShortCircuitCache(0)
               .setMaxTotalSize(0);
           LOG.info("Unbuffering");
           in.unbuffer();
           Assert.assertEquals(0,
-              dfs.getClient().getClientContext().getShortCircuitCache()
+              dfs.getClient().getClientContext().getShortCircuitCache(0)
                   .getReplicaInfoMapSize());
 
           DFSTestUtil.appendFile(dfs, testFile, "append more data");
@@ -432,7 +432,7 @@ public class TestBlockReaderFactory {
       final int expectedScrRepMapSize) {
     Assert.assertThat(expected, CoreMatchers.is(actual));
     Assert.assertEquals(expectedScrRepMapSize,
-        dfs.getClient().getClientContext().getShortCircuitCache()
+        dfs.getClient().getClientContext().getShortCircuitCache(0)
             .getReplicaInfoMapSize());
   }
 
@@ -467,7 +467,7 @@ public class TestBlockReaderFactory {
         calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
     Assert.assertTrue(Arrays.equals(contents, expected));
     final ShortCircuitCache cache =
-        fs.getClient().getClientContext().getShortCircuitCache();
+        fs.getClient().getClientContext().getShortCircuitCache(0);
     final DatanodeInfo datanode = new DatanodeInfoBuilder()
         .setNodeID(cluster.getDataNodes().get(0).getDatanodeId())
         .build();
@@ -516,7 +516,7 @@ public class TestBlockReaderFactory {
         calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
     Assert.assertTrue(Arrays.equals(contents, expected));
     final ShortCircuitCache cache =
-        fs.getClient().getClientContext().getShortCircuitCache();
+        fs.getClient().getClientContext().getShortCircuitCache(0);
     Assert.assertEquals(null, cache.getDfsClientShmManager());
     cluster.shutdown();
     sockDir.close();
@@ -548,7 +548,7 @@ public class TestBlockReaderFactory {
         calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
     Assert.assertTrue(Arrays.equals(contents, expected));
     final ShortCircuitCache cache =
-        fs.getClient().getClientContext().getShortCircuitCache();
+        fs.getClient().getClientContext().getShortCircuitCache(0);
     cache.close();
     Assert.assertTrue(cache.getDfsClientShmManager().
         getDomainSocketWatcher().isClosed());
