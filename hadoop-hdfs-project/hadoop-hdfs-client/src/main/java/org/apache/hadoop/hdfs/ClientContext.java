@@ -133,7 +133,7 @@ public class ClientContext {
   private DeadNodeDetector deadNodeDetector = null;
   
   /**
-   * ShorCircuitCache array size.
+   * ShortCircuitCache array size.
    */
   private final int clientShortCircuitNum;
 
