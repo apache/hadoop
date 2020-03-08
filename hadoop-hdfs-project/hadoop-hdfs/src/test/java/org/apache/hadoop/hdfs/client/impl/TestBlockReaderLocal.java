@@ -179,7 +179,7 @@ public class TestBlockReaderLocal {
       File metaFile = cluster.getBlockMetadataFile(0, block);
 
       ShortCircuitCache shortCircuitCache =
-          ClientContext.getFromConf(conf).getShortCircuitCache();
+          ClientContext.getFromConf(conf).getShortCircuitCache(0);
       cluster.shutdown();
       cluster = null;
       test.setup(dataFile, checksum);
