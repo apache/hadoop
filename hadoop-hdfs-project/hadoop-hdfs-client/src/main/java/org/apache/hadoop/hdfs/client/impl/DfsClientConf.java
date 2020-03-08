@@ -292,13 +292,15 @@ public class DfsClientConf {
         conf.getLong(HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
             HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000;
 
-        clientShortCircuitNum = conf.getInt(
-            HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM,
-            HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM_DEFAULT);
+    clientShortCircuitNum = conf.getInt(
+        HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM,
+        HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM_DEFAULT);
     Preconditions.checkArgument(clientShortCircuitNum >= 1,
-            HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM + "can't be less then 1.");
+        HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM + 
+        "can't be less then 1.");
     Preconditions.checkArgument(clientShortCircuitNum <= 3,
-            HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM + "can't be more then 3.");  
+        HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM +
+        "can't be more then 3.");  
   }
 
   @SuppressWarnings("unchecked")
