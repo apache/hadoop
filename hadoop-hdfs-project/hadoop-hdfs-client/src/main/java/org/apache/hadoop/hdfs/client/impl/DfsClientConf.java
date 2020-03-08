@@ -148,7 +148,7 @@ public class DfsClientConf {
 
   private final int stripedReadThreadpoolSize;
   private final int clientShortCircuitNum;
-  
+
   private final boolean dataTransferTcpNoDelay;
 
   private final boolean deadNodeDetectionEnabled;
