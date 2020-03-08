@@ -655,7 +655,7 @@ public class TestEnhancedByteBufferAccess {
     fsIn2.releaseBuffer(result2);
     fsIn2.close();
     
-    // check that the replica is anchored 
+    // check that the replica is anchored  
     final ExtendedBlock firstBlock =
         DFSTestUtil.getFirstBlock(fs, TEST_PATH);
     final ShortCircuitCache cache = ClientContext.get(
