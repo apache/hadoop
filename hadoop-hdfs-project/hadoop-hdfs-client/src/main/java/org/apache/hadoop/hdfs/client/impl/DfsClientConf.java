@@ -607,6 +607,11 @@ public class DfsClientConf {
   }
 
   /**
+   * @return the clientShortCircuitNum
+   */
+  public int getClientShortCircuitNum() { return clientShortCircuitNum; }
+
+  /**
    * @return the hedgedReadThresholdMillis
    */
   public long getHedgedReadThresholdMillis() {
