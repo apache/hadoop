@@ -138,9 +138,8 @@ public class DfsClientConf {
 
   /** wait time window before refreshing blocklocation for inputstream. */
   private final long refreshReadBlockLocationsMS;
-
+  
   private final ShortCircuitConf shortCircuitConf;
-
   private final long hedgedReadThresholdMillis;
   private final int hedgedReadThreadpoolSize;
   private final List<Class<? extends ReplicaAccessorBuilder>>
