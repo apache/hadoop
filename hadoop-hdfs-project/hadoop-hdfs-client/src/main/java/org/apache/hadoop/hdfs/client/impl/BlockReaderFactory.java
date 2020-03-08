@@ -584,7 +584,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
   private ShortCircuitReplicaInfo requestFileDescriptors(DomainPeer peer,
           Slot slot) throws IOException {
     ShortCircuitCache cache = 
-        clientContext.getShortCircuitCache(slot.getBlockId().getBlockId());
+        clientContext.getShortCircuitCache(block.getBlockId());
     final DataOutputStream out =
         new DataOutputStream(new BufferedOutputStream(peer.getOutputStream(), SMALL_BUFFER_SIZE));
     SlotId slotId = slot == null ? null : slot.getSlotId();
