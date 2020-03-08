@@ -131,7 +131,7 @@ public class ClientContext {
    * the DFSInputStreams in the same client.
    */
   private DeadNodeDetector deadNodeDetector = null;
-  
+ 
   /**
    * ShortCircuitCache array size.
    */
@@ -148,7 +148,7 @@ public class ClientContext {
     for (int i = 0; i < this.clientShortCircuitNum; i++) {
       this.shortCircuitCache[i] = ShortCircuitCache.fromConf(scConf);
     }
-    
+
     this.peerCache = new PeerCache(scConf.getSocketCacheCapacity(),
         scConf.getSocketCacheExpiry());
     this.keyProviderCache = new KeyProviderCache(
