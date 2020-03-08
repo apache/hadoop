@@ -237,8 +237,8 @@ public class ClientContext {
     return confString;
   }
 
-  public ShortCircuitCache getShortCircuitCache() {
-    return shortCircuitCache;
+  public ShortCircuitCache getShortCircuitCache(long idx) {
+    return shortCircuitCache[(int) (idx % clientShortCircuitNum)];
   }
 
   public PeerCache getPeerCache() {
