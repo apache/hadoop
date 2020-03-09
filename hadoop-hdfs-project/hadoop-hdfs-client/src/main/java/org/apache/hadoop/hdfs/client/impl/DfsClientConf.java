@@ -298,9 +298,9 @@ public class DfsClientConf {
     Preconditions.checkArgument(clientShortCircuitNum >= 1,
         HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM +
         "can't be less then 1.");
-    Preconditions.checkArgument(clientShortCircuitNum <= 3,
+    Preconditions.checkArgument(clientShortCircuitNum <= 5,
         HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM +
-        "can't be more then 3.");
+        "can't be more then 5.");
   }
 
   @SuppressWarnings("unchecked")
