@@ -486,11 +486,11 @@ running out of memory as it calculates the partitions.
 
 Any FileSystem that does not actually break files into blocks SHOULD
 return a number for this that results in efficient processing.
-A FileSystem MAY make this user-configurable (the S3 and Swift filesystem clients do this).
+A FileSystem MAY make this user-configurable (the object store connectors usually do this).
 
 ###  `long getDefaultBlockSize(Path p)`
 
-Get the "default" block size for a path —that is, the block size to be used
+Get the "default" block size for a path --that is, the block size to be used
 when writing objects to a path in the filesystem.
 
 #### Preconditions
@@ -539,14 +539,21 @@ on the filesystem.
 
 ### `boolean mkdirs(Path p, FsPermission permission)`
 
-Create a directory and all its parents
+Create a directory and all its parents.
 
 #### Preconditions
 
 
+The path must either be a directory or not exist
+ 
      if exists(FS, p) and not isDir(FS, p) :
          raise [ParentNotDirectoryException, FileAlreadyExistsException, IOException]
 
+No ancestor may be a file
+
+    forall d = ancestors(FS, p) : 
+        if exists(FS, d) and not isDir(FS, d) :
+            raise [ParentNotDirectoryException, FileAlreadyExistsException, IOException]
 
 #### Postconditions
 
@@ -586,6 +593,11 @@ Writing to or overwriting a directory must fail.
 
     if isDir(FS, p) : raise {FileAlreadyExistsException, FileNotFoundException, IOException}
 
+No ancestor may be a file
+
+    forall d = ancestors(FS, p) : 
+        if exists(FS, d) and not isDir(FS, d) :
+            raise [ParentNotDirectoryException, FileAlreadyExistsException, IOException]
 
 FileSystems may reject the request for other
 reasons, such as the FS being read-only  (HDFS),
@@ -593,7 +605,8 @@ the block size being below the minimum permitted (HDFS),
 the replication count being out of range (HDFS),
 quotas on namespace or filesystem being exceeded, reserved
 names, etc. All rejections SHOULD be `IOException` or a subclass thereof
-and MAY be a `RuntimeException` or subclass. For instance, HDFS may raise a `InvalidPathException`.
+and MAY be a `RuntimeException` or subclass.
+For instance, HDFS may raise an `InvalidPathException`.
 
 #### Postconditions
 
