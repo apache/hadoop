@@ -63,7 +63,8 @@ public class MsiTokenProvider extends AccessTokenProvider {
    * Checks if the token is about to expire as per base expiry logic.
    * Otherwise try to expire every 1 hour
    *
-   * @return true if the token is expiring in next 1 hour
+   * @return true if the token is expiring in next 1 hour or if a token has
+   * never been fetched
    */
   @Override
   protected boolean isTokenAboutToExpire() {

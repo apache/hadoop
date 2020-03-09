@@ -18,14 +18,16 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+
+import java.io.IOException;
+import java.util.Date;
+
+import org.junit.Test;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
 import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
-import org.junit.Test;
-
-import java.io.IOException;
-import java.util.Date;
 
 import static org.junit.Assume.assumeThat;
 
