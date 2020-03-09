@@ -29,9 +29,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
+import org.apache.hadoop.fs.BatchListingOperations;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -129,6 +131,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+
 /****************************************************************
  * Implementation of the abstract FileSystem for the DFS system.
  * This object is the way end-user code interacts with a Hadoop
@@ -138,7 +142,7 @@ import java.util.Optional;
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase" })
 @InterfaceStability.Unstable
 public class DistributedFileSystem extends FileSystem
-    implements KeyProviderTokenIssuer {
+    implements KeyProviderTokenIssuer, BatchListingOperations {
   private Path workingDir;
   private URI uri;
 
@@ -3575,6 +3579,15 @@ public class DistributedFileSystem extends FileSystem
     if (cap.isPresent()) {
       return cap.get();
     }
+    // this switch is for features which are in the DFS client but not
+    // (yet/ever) in the WebHDFS API.
+    switch (validatePathCapabilityArgs(path, capability)) {
+    case CommonPathCapabilities.FS_EXPERIMENTAL_BATCH_LISTING:
+      return true;
+    default:
+      // fall through
+    }
+
     return super.hasPathCapability(p, capability);
   }
 }
