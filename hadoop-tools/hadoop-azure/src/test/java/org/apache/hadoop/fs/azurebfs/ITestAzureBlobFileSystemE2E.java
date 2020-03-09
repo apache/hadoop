@@ -211,7 +211,9 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     assertFalse(fs.exists(testFilePath));
     AbfsConfiguration configuration = this.getConfiguration();
 
-    //With the new code, it would not trigger a call to the backend
+    //With the new code, a backend call is made on close only when
+    // there is pending data which needs to be flushed.
+    // hence no backend call would be made in this case.
     stream.close();
   }
 

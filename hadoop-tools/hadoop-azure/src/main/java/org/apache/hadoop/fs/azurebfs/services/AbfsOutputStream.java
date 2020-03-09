@@ -298,6 +298,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     if (this.appendBlob) {
         client.append(path, offset, bytes, 0,
             bytesLength, flush, isClose);
+        lastTotalAppendOffset += bytesLength;
+        if (flush) {
+          lastFlushOffset = lastTotalAppendOffset;
+        }
         return;
     }
 
