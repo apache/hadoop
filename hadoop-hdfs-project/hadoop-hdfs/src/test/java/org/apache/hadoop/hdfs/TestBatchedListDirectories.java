@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -253,6 +254,13 @@ public class TestBatchedListDirectories {
     }
   }
 
+  @Test
+  public void testDFSHasCapability() throws Throwable {
+    assertTrue("FS does not declare PathCapability support",
+        dfs.hasPathCapability(new Path("/"),
+            CommonPathCapabilities.FS_EXPERIMENTAL_BATCH_LISTING));
+  }
+
   private void listFilesInternal(int numFiles) throws Exception {
     List<Path> paths = FILE_PATHS.subList(0, numFiles);
     List<FileStatus> statuses = getStatuses(paths);
@@ -384,7 +392,8 @@ public class TestBatchedListDirectories {
       @Override
       public Void run() throws Exception {
         // try renew with long name
-        FileSystem fs = FileSystem.get(cluster.getURI(), conf);
+        DistributedFileSystem fs = (DistributedFileSystem)
+            FileSystem.get(cluster.getURI(), conf);
         RemoteIterator<PartialListing<FileStatus>> it =
             fs.batchedListStatusIterator(paths);
         PartialListing<FileStatus> listing = it.next();
