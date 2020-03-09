@@ -80,12 +80,12 @@ public class TestAuthorizationContext {
         callerContext(CallerContext.getCurrent());
 
     INodeAttributeProvider.AuthorizationContext authzContext = builder.build();
-    assertEquals(authzContext.fsOwner, fsOwner);
-    assertEquals(authzContext.supergroup, superGroup);
-    assertEquals(authzContext.callerUgi, ugi);
-    assertEquals(authzContext.inodeAttrs, emptyINodeAttributes);
-    assertEquals(authzContext.inodes, inodes);
-    assertEquals(authzContext.pathByNameArr, components);
+    assertEquals(authzContext.getFsOwner(), fsOwner);
+    assertEquals(authzContext.getSupergroup(), superGroup);
+    assertEquals(authzContext.getCallerUgi(), ugi);
+    assertEquals(authzContext.getInodeAttrs(), emptyINodeAttributes);
+    assertEquals(authzContext.getInodes(), inodes);
+    assertEquals(authzContext.getPathByNameArr(), components);
     assertEquals(authzContext.getSnapshotId(), snapshotId);
     assertEquals(authzContext.getPath(), path);
     assertEquals(authzContext.getAncestorIndex(), ancestorIndex);

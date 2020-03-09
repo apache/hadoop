@@ -373,9 +373,10 @@ public class FSPermissionChecker implements AccessControlEnforcer {
       throws AccessControlException {
     // The default authorization provider does not use the additional context
     // parameters including operationName and callerContext.
-    this.checkPermission(authzContext.fsOwner, authzContext.supergroup,
-        authzContext.callerUgi, authzContext.inodeAttrs, authzContext.inodes,
-        authzContext.pathByNameArr, authzContext.getSnapshotId(),
+    this.checkPermission(authzContext.getFsOwner(),
+        authzContext.getSupergroup(), authzContext.getCallerUgi(),
+        authzContext.getInodeAttrs(), authzContext.getInodes(),
+        authzContext.getPathByNameArr(), authzContext.getSnapshotId(),
         authzContext.getPath(), authzContext.getAncestorIndex(),
         authzContext.isDoCheckOwner(), authzContext.getAncestorAccess(),
         authzContext.getParentAccess(), authzContext.getAccess(),
