@@ -38,7 +38,6 @@ import java.util.concurrent.TimeoutException;
 import net.jcip.annotations.NotThreadSafe;
 import org.apache.commons.collections.map.LinkedMap;
 import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -928,9 +927,8 @@ public class TestShortCircuitCache {
     DomainPeer peer = getDomainPeerToDn(conf);
     MutableBoolean usedPeer = new MutableBoolean(false);
     ExtendedBlockId blockId = new ExtendedBlockId(123, "xyz");
-    final DatanodeInfo datanode =
-        DatanodeInfo.class.getConstructor(DatanodeID.class)
-            .newInstance(cluster.getDataNodes().get(0).getDatanodeId());
+    final DatanodeInfo datanode = new DatanodeInfo.DatanodeInfoBuilder()
+        .setNodeID(cluster.getDataNodes().get(0).getDatanodeId()).build();
     // Allocating the first shm slot requires using up a peer.
     Slot slot1 = cache.allocShmSlot(datanode, peer, usedPeer, blockId,
         "testReleaseSlotReuseDomainSocket_client");
@@ -970,9 +968,8 @@ public class TestShortCircuitCache {
     DomainPeer peer = getDomainPeerToDn(conf);
     MutableBoolean usedPeer = new MutableBoolean(false);
     ExtendedBlockId blockId = new ExtendedBlockId(123, "xyz");
-    final DatanodeInfo datanode =
-        DatanodeInfo.class.getConstructor(DatanodeID.class)
-            .newInstance(cluster.getDataNodes().get(0).getDatanodeId());
+    final DatanodeInfo datanode = new DatanodeInfo.DatanodeInfoBuilder()
+        .setNodeID(cluster.getDataNodes().get(0).getDatanodeId()).build();
     // Allocating the first shm slot requires using up a peer.
     Slot slot1 = cache.allocShmSlot(datanode, peer, usedPeer, blockId,
         "testReleaseSlotReuseDomainSocket_client");
