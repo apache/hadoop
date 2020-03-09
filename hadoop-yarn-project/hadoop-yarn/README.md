@@ -60,9 +60,9 @@ hadoop-yarn-api - YARN's cross platform external interface
 hadoop-yarn-common - Utilities which can be used by yarn clients and server
 
 hadoop-yarn-server - Implementation of the hadoop-yarn-api
-	hadoop-yarn-server-common - APIs shared between resourcemanager and nodemanager
-	hadoop-yarn-server-nodemanager (TaskTracker replacement)
-	hadoop-yarn-server-resourcemanager (JobTracker replacement)
+hadoop-yarn-server-common - APIs shared between resourcemanager and nodemanager
+hadoop-yarn-server-nodemanager (TaskTracker replacement)
+hadoop-yarn-server-resourcemanager (JobTracker replacement)
 
 Utilities for understanding the code
 ------------------------------------
