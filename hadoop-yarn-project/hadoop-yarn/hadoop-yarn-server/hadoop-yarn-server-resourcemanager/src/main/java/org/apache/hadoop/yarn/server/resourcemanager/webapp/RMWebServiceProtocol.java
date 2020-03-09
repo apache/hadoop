@@ -129,6 +129,7 @@ public interface RMWebServiceProtocol {
   ClusterScalingInfo getClusterScalingInfo(
       String apiVersion,
       String upscalingFactorInNodeResourceTypes,
+      String downscalingFactorInNodeCount,
       NodeInstanceTypeList instanceTypeList);
 
   /**

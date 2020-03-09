@@ -83,6 +83,8 @@ public final class RMWSConsts {
   public static final String SCALING = "/scaling";
   public static final String UPSCALING_FACTOR_IN_NODE_RESOURCE_TYPES_KEY =
       "upscaling-factor-in-node-resource-types";
+  public static final String DOWNSCALING_FACTOR_IN_NODE_COUNT =
+      "downscaling-factor-in-node-count";
 
   /**
    * Path for {@code RMWebServiceProtocol#getApps} and

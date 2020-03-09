@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,15 +20,21 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import javax.ws.rs.core.MediaType;
 
@@ -37,6 +43,7 @@ import com.sun.jersey.api.json.JSONMarshaller;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -50,12 +57,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterScalingInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DecommissionCandidateNodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DecommissionCandidates;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewNMCandidates;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInstanceType;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
@@ -88,8 +98,12 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestRMWebServicesNodesScaling extends JerseyTestBase {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      TestRMWebServicesNodesScaling.class);
 
   protected final int GB = 1024;
 
@@ -285,6 +299,21 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
         .accept("application/json").post(ClientResponse.class);
     assertEquals(400, response.getStatusInfo().getStatusCode());
 
+    // Case 6. Invalid downscaling node cout query param
+    r = resource();
+    response = r.path("ws").path("v1").path("cluster")
+        .path("scaling")
+        .queryParam(RMWSConsts.UPSCALING_FACTOR_IN_NODE_RESOURCE_TYPES_KEY,
+            ResourceInformation.MEMORY_URI)
+        .queryParam(RMWSConsts.DOWNSCALING_FACTOR_IN_NODE_COUNT,
+            "abc")
+        .header(RMWSConsts.SCALING_CUSTOM_HEADER_KEY,
+            RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1)
+        .entity(niTypeListStr, MediaType.APPLICATION_JSON)
+        .accept("application/json").post(ClientResponse.class);
+    json = response.getEntity(JSONObject.class);
+    assertEquals(400, response.getStatusInfo().getStatusCode());
+
     rm.stop();
   }
 
@@ -301,6 +330,7 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
     nms[2] = nm3;
     waitforNMRegistered(scheduler, 3, 5);
 
+    // Case 1. Basic scaling info
     WebResource r = resource();
     NodeInstanceTypeList niTypeList = new NodeInstanceTypeList();
     niTypeList.getInstanceTypes().addAll(fakeInstanceTypes(1));
@@ -330,6 +360,41 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
     JSONArray cnds = decommissionCandidates.getJSONArray("candidates");
     assertEquals(3, cnds.length());
 
+    // Case 2. Downscaling with requested node count
+    r = resource();
+    response = r.path("ws").path("v1").path("cluster")
+        .path("scaling")
+        .queryParam(RMWSConsts.UPSCALING_FACTOR_IN_NODE_RESOURCE_TYPES_KEY,
+            ResourceInformation.MEMORY_URI)
+        .queryParam(RMWSConsts.DOWNSCALING_FACTOR_IN_NODE_COUNT,
+            "2")
+        .header(RMWSConsts.SCALING_CUSTOM_HEADER_KEY,
+            RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1)
+        .entity(niTypeListStr, MediaType.APPLICATION_JSON)
+        .accept("application/json").post(ClientResponse.class);
+    json = response.getEntity(JSONObject.class);
+    decommissionCandidates =
+        json.getJSONObject("decommissionCandidates");
+    cnds = decommissionCandidates.getJSONArray("candidates");
+    assertEquals(2, cnds.length());
+
+    // Case 3. Downscaling with invalid requested node count
+    r = resource();
+    response = r.path("ws").path("v1").path("cluster")
+        .path("scaling")
+        .queryParam(RMWSConsts.UPSCALING_FACTOR_IN_NODE_RESOURCE_TYPES_KEY,
+            ResourceInformation.MEMORY_URI)
+        .queryParam(RMWSConsts.DOWNSCALING_FACTOR_IN_NODE_COUNT,
+            "2")
+        .header(RMWSConsts.SCALING_CUSTOM_HEADER_KEY,
+            RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1)
+        .entity(niTypeListStr, MediaType.APPLICATION_JSON)
+        .accept("application/json").post(ClientResponse.class);
+    json = response.getEntity(JSONObject.class);
+    decommissionCandidates =
+        json.getJSONObject("decommissionCandidates");
+    cnds = decommissionCandidates.getJSONArray("candidates");
+    assertEquals(2, cnds.length());
     NodeId id1 = nm1.getNodeId();
     rm.waitForState(id1, NodeState.RUNNING);
 
@@ -408,11 +473,12 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
         assertEquals(node.getAllocatedResource().getMemorySize(), 9 * GB);
         nodeStatus = createNodeStatus(
             node.getNodeID(), app1, 1);
-        ((RMNodeImpl)node.getRMNode()).handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus));
+        ((RMNodeImpl) node.getRMNode()).handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus));
         Assert.assertEquals(1, node1.getRunningApps().size());
       }
     }
 
+    // Case 4. With app running.
     r = resource();
     response = r.path("ws").path("v1").path("cluster")
         .path("scaling")
@@ -465,28 +531,29 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
 
     Map<Resource, Integer> containerAskToCount =
         new TreeMap<>(new Comparator<Resource>() {
-      private int getRealLength(ResourceInformation[] ris) {
-        int ret = 0;
-        for (ResourceInformation ri : ris) {
-          if (ri.getValue() != 0) {
-            ret++;
+          private int getRealLength(ResourceInformation[] ris) {
+            int ret = 0;
+            for (ResourceInformation ri : ris) {
+              if (ri.getValue() != 0) {
+                ret++;
+              }
+            }
+            return ret;
           }
-        }
-        return ret;
-      }
-      @Override
-      public int compare(Resource o1, Resource o2) {
-        int realLength1 = getRealLength(o1.getResources());
-        int realLength2 = getRealLength(o2.getResources());
-        if (realLength1 > realLength2) {
-          return -1;
-        } else if (realLength1 < realLength2){
-          return 1;
-        } else {
-          return o2.compareTo(o1);
-        }
-      }
-    });
+
+          @Override
+          public int compare(Resource o1, Resource o2) {
+            int realLength1 = getRealLength(o1.getResources());
+            int realLength2 = getRealLength(o2.getResources());
+            if (realLength1 > realLength2) {
+              return -1;
+            } else if (realLength1 < realLength2) {
+              return 1;
+            } else {
+              return o2.compareTo(o1);
+            }
+          }
+        });
 
     // Case 1. One 10 GB request, One 2 GB request. One m5.xlarge should serve
     containerAskToCount.put(cResource, 1);
@@ -540,9 +607,254 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
 
     assertEquals("There should be no container pending", true,
         metrics.getContainerAskToCount().size() == 0);
+  }
 
+  @Test
+  public void testClusterDownscalingRecommendationAlgorithm() {
+    FiCaSchedulerNode node_new = getMockNode("127.0.0.1", 8 * GB,
+        2, NodeState.NEW, 0, 0);
+    FiCaSchedulerNode node_running_1 = getMockNode("127.0.0.2", 8 * GB,
+        2, NodeState.RUNNING, 3, 2);
+    FiCaSchedulerNode node_running_2 = getMockNode("127.0.0.3", 8 * GB,
+        2, NodeState.RUNNING, 2, 2);
+    FiCaSchedulerNode node_running_3 = getMockNode("127.0.0.4", 8 * GB,
+        2, NodeState.RUNNING, 0, 0);
+    FiCaSchedulerNode node_unhealthy = getMockNode("127.0.0.5", 8 * GB,
+        2, NodeState.UNHEALTHY, 0, 2);
+    FiCaSchedulerNode node_decommissioning =
+        getMockNode("127.0.0.6", 8 * GB,
+            2, NodeState.DECOMMISSIONING, 0, 0);
+    FiCaSchedulerNode node_decommissioned = getMockNode("127.0.0.7", 8 * GB,
+        2, NodeState.DECOMMISSIONED, 0, 0);
+    FiCaSchedulerNode node_lost = getMockNode("127.0.0.8", 8 * GB,
+        2, NodeState.LOST, 0, 1);
+    FiCaSchedulerNode node_rebooted = getMockNode("127.0.0.9", 8 * GB,
+        2, NodeState.REBOOTED, 0, 3);
+    FiCaSchedulerNode node_shutdown = getMockNode("127.0.0.10", 8 * GB,
+        2, NodeState.SHUTDOWN, 0, 0);
 
+    List<FiCaSchedulerNode> rmNodes = new ArrayList<>();
+    rmNodes.add(node_new);
+    rmNodes.add(node_running_1);
+    rmNodes.add(node_running_2);
+    rmNodes.add(node_running_3);
+    rmNodes.add(node_unhealthy);
+    rmNodes.add(node_decommissioning);
+    rmNodes.add(node_decommissioned);
+    rmNodes.add(node_lost);
+    rmNodes.add(node_rebooted);
+    rmNodes.add(node_shutdown);
+    //Case 1. Ensure the comparator works as expected.
+    HashMap<RMNode, Integer> nodeToDecommissionTimeout = new HashMap<>();
+    HashMap<RMNode, Integer> nodeToAMCount = new HashMap<>();
+    HashMap<RMNode, Integer> nodeToRunningAppCount = new HashMap<>();
+    for (FiCaSchedulerNode node : rmNodes) {
+      nodeToDecommissionTimeout.put(node.getRMNode(), -1);
+      nodeToAMCount.put(node.getRMNode(), 0);
+      nodeToRunningAppCount.put(node.getRMNode(), 0);
+    }
+    nodeToDecommissionTimeout.put(node_decommissioning.getRMNode(), 120);
+    // running nodes have different am count and running count
+    nodeToAMCount.put(node_running_1.getRMNode(), 3);
+    nodeToAMCount.put(node_running_2.getRMNode(), 1);
+    nodeToAMCount.put(node_running_3.getRMNode(), 0);
+    nodeToRunningAppCount.put(node_running_1.getRMNode(), 2);
+    nodeToRunningAppCount.put(node_running_2.getRMNode(), 1);
+    nodeToRunningAppCount.put(node_running_3.getRMNode(), 0);
+    // running application should not matter because the state
+    nodeToRunningAppCount.put(node_lost.getRMNode(), 1);
+    nodeToRunningAppCount.put(node_unhealthy.getRMNode(), 2);
+    ClusterScalingInfo.DownscalingNodeComparator comparator =
+        new ClusterScalingInfo.DownscalingNodeComparator(
+            nodeToDecommissionTimeout, nodeToAMCount, nodeToRunningAppCount);
+    TreeSet<RMNode> sortedNodes = new TreeSet<>(comparator);
+    List<RMNode> expectedSortedNodes = new ArrayList<>();
+    expectedSortedNodes.add(node_lost.getRMNode());
+    expectedSortedNodes.add(node_unhealthy.getRMNode());
+    expectedSortedNodes.add(node_rebooted.getRMNode());
+    expectedSortedNodes.add(node_running_3.getRMNode());
+    expectedSortedNodes.add(node_running_2.getRMNode());
+    expectedSortedNodes.add(node_running_1.getRMNode());
+    expectedSortedNodes.add(node_new.getRMNode());
+    expectedSortedNodes.add(node_decommissioning.getRMNode());
+    expectedSortedNodes.add(node_decommissioned.getRMNode());
+    expectedSortedNodes.add(node_shutdown.getRMNode());
+    for (FiCaSchedulerNode node : rmNodes) {
+      RMNode rmNode = node.getRMNode();
+      sortedNodes.add(rmNode);
+    }
+    Iterator<RMNode> iterator = sortedNodes.iterator();
+    int i = 0;
+    while (iterator.hasNext()) {
+      NodeId id = iterator.next().getNodeID();
+      NodeId expectedId = expectedSortedNodes.get(i).getNodeID();
+      assertEquals(expectedId, id);
+      i++;
+    }
+    assertEquals(i, expectedSortedNodes.size());
+    assertEquals(i, sortedNodes.size());
 
+    // Case 2. End-to-end. Request 10 nodes to decommission. Should return 8
+    DecommissionCandidates decommissionCandidates =
+        new DecommissionCandidates();
+    ClusterScalingInfo.recommendDownscaling(rmNodes,
+        decommissionCandidates, 10);
+    assertEquals(expectedSortedNodes.size(),
+        decommissionCandidates.getCandidates().size());
+    for (i = 0; i < decommissionCandidates.getCandidates().size(); i++) {
+      DecommissionCandidateNodeInfo candidiate =
+          decommissionCandidates.getCandidates().get(i);
+      String id = candidiate.getNodeId();
+      String expectedId = expectedSortedNodes.get(i).getNodeID().toString();
+      assertEquals(expectedId, id);
+    }
+    // Case 3. Request 0
+    decommissionCandidates =
+        new DecommissionCandidates();
+    ClusterScalingInfo.recommendDownscaling(rmNodes,
+        decommissionCandidates, 0);
+    assertEquals(0,
+        decommissionCandidates.getCandidates().size());
+    // Case 4. Request 5
+    decommissionCandidates =
+        new DecommissionCandidates();
+    ClusterScalingInfo.recommendDownscaling(rmNodes,
+        decommissionCandidates, 5);
+    assertEquals(5,
+        decommissionCandidates.getCandidates().size());
+    for (i = 0; i < decommissionCandidates.getCandidates().size(); i++) {
+      DecommissionCandidateNodeInfo candidiate =
+          decommissionCandidates.getCandidates().get(i);
+      String id = candidiate.getNodeId();
+      String expectedId = expectedSortedNodes.get(i).getNodeID().toString();
+      assertEquals(expectedId, id);
+    }
+    // Case 5. Request -1. Let the engine decide
+    decommissionCandidates =
+        new DecommissionCandidates();
+    ClusterScalingInfo.recommendDownscaling(rmNodes,
+        decommissionCandidates, -1);
+    assertEquals(4,
+        decommissionCandidates.getCandidates().size());
+    for (i = 0; i < decommissionCandidates.getCandidates().size(); i++) {
+      DecommissionCandidateNodeInfo candidiate =
+          decommissionCandidates.getCandidates().get(i);
+      String id = candidiate.getNodeId();
+      String expectedId = expectedSortedNodes.get(i).getNodeID().toString();
+      assertEquals(expectedId, id);
+      assertEquals(true, candidiate.isRecommended());
+    }
+  }
+
+  @Test
+  public void testGetRecommendFlag() {
+    int amCount = 0;
+    int runningAppCount = 0;
+    NodeState state = NodeState.RUNNING;
+    // Case 1. Running node without app
+    assertEquals(true, ClusterScalingInfo.getDownscalingRecommendFlag(amCount,
+        runningAppCount, state));
+    // Case 2. Running node with am but no app
+    amCount = 1;
+    runningAppCount = 0;
+    assertEquals(false, ClusterScalingInfo.getDownscalingRecommendFlag(amCount,
+        runningAppCount, state));
+    // Case 3. LOST node with am
+    amCount = 1;
+    runningAppCount = 0;
+    state = NodeState.LOST;
+    assertEquals(true, ClusterScalingInfo.getDownscalingRecommendFlag(amCount,
+        runningAppCount, state));
+    // Case 4. LOST node without am
+    amCount = 0;
+    runningAppCount = 1;
+    state = NodeState.LOST;
+    assertEquals(true, ClusterScalingInfo.getDownscalingRecommendFlag(amCount,
+        runningAppCount, state));
+    // Case 5. LOST node without am and app
+    amCount = 0;
+    runningAppCount = 0;
+    state = NodeState.LOST;
+    assertEquals(true, ClusterScalingInfo.getDownscalingRecommendFlag(amCount,
+        runningAppCount, state));
+    // Case 6. UNHEALTHY node with am or app
+    amCount = 0;
+    runningAppCount = 1;
+    state = NodeState.UNHEALTHY;
+    assertEquals(true, ClusterScalingInfo.getDownscalingRecommendFlag(amCount,
+        runningAppCount, state));
+    // Case 7. REBOOTED node with am or app
+    amCount = 1;
+    runningAppCount = 1;
+    state = NodeState.REBOOTED;
+    assertEquals(true, ClusterScalingInfo.getDownscalingRecommendFlag(amCount,
+        runningAppCount, state));
+    // Case 8. DECOMMISSIONING node with am or app
+    amCount = 1;
+    runningAppCount = 1;
+    state = NodeState.DECOMMISSIONING;
+    assertEquals(false, ClusterScalingInfo.getDownscalingRecommendFlag(amCount,
+        runningAppCount, state));
+    // Case 9. DECOMMISSIONING node with am or app
+    amCount = 0;
+    runningAppCount = 0;
+    state = NodeState.DECOMMISSIONING;
+    assertEquals(false, ClusterScalingInfo.getDownscalingRecommendFlag(amCount,
+        runningAppCount, state));
+    // Case 9. DECOMMISSIONED node with am or app
+    amCount = 0;
+    runningAppCount = 1;
+    state = NodeState.DECOMMISSIONED;
+    assertEquals(false, ClusterScalingInfo.getDownscalingRecommendFlag(amCount,
+        runningAppCount, state));
+    // Case 9. SHUTDOWN node with am or app
+    amCount = 0;
+    runningAppCount = 0;
+    state = NodeState.SHUTDOWN;
+    assertEquals(false, ClusterScalingInfo.getDownscalingRecommendFlag(amCount,
+        runningAppCount, state));
+    // Case 10. NEW node with am or app
+    amCount = 0;
+    runningAppCount = 0;
+    state = NodeState.NEW;
+    assertEquals(false, ClusterScalingInfo.getDownscalingRecommendFlag(amCount,
+        runningAppCount, state));
+  }
+
+  private FiCaSchedulerNode getMockNode(String host,
+      int memory, int vcores, NodeState state,
+      int runningAmCount, int runningAppCount) {
+    NodeId nodeId = NodeId.newInstance(host, 1234);
+    RMNode rmNode = mock(RMNode.class);
+    when(rmNode.getNodeID()).thenReturn(nodeId);
+    when(rmNode.getTotalCapability()).thenReturn(
+        Resources.createResource(memory, vcores));
+    when(rmNode.getNodeAddress()).thenReturn(host + ":" + 1234);
+    when(rmNode.getHostName()).thenReturn(host);
+    when(rmNode.getRackName()).thenReturn("/default");
+    when(rmNode.getState()).thenReturn(state);
+    int timeout = state == NodeState.DECOMMISSIONING ? 120 : -1;
+    when(rmNode.getDecommissioningTimeout()).thenReturn(timeout);
+
+    List<ApplicationId> runningApps = new ArrayList<>();
+    while (runningAppCount > 0) {
+      runningApps.add(mock(ApplicationId.class));
+      runningAppCount--;
+    }
+    when(rmNode.getRunningApps()).thenReturn(runningApps);
+    FiCaSchedulerNode node = spy(new FiCaSchedulerNode(rmNode, false));
+    LOG.info("node = " + host + " avail=" + node.getUnallocatedResource());
+
+    when(node.getNodeID()).thenReturn(nodeId);
+    List<RMContainer> rmContainers = new ArrayList<>();
+    while (runningAmCount > 0) {
+      RMContainer c = mock(RMContainer.class);
+      when(c.isAMContainer()).thenReturn(true);
+      rmContainers.add(c);
+      runningAmCount--;
+    }
+    when(node.getCopiedListOfRunningContainers()).thenReturn(rmContainers);
+    return node;
   }
 
   private void heartbeat(MockRM rm, MockNM nm) {
@@ -558,7 +870,7 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
         nodeId, 0, getContainerStatuses(app, numRunningContainers),
         Collections.emptyList(),
         NodeHealthStatus.newInstance(
-            true,  "", System.currentTimeMillis() - 1000),
+            true, "", System.currentTimeMillis() - 1000),
         null, null, null);
   }
 
@@ -571,7 +883,7 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
     numRunningContainers = Math.min(total, numRunningContainers);
     List<ContainerStatus> output = new ArrayList<ContainerStatus>();
     for (int i = 0; i < total; i++) {
-      ContainerState cstate = (i >= numRunningContainers)?
+      ContainerState cstate = (i >= numRunningContainers) ?
           ContainerState.COMPLETE : ContainerState.RUNNING;
       output.add(ContainerStatus.newInstance(
           ContainerId.newContainerId(

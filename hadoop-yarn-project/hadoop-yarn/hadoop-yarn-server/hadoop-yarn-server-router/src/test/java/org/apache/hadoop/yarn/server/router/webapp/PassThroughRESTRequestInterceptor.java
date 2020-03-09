@@ -127,6 +127,7 @@ public class PassThroughRESTRequestInterceptor
   @Override
   public ClusterScalingInfo getClusterScalingInfo(String apiVersion,
       String upscalingFactorInNodeResourceTypes,
+      String downscalingFactorInNodeCount,
       NodeInstanceTypeList instanceTypeList) {
     return null;
   }

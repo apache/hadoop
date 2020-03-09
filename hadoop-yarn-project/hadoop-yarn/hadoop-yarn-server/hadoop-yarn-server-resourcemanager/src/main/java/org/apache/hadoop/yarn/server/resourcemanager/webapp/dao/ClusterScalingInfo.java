@@ -41,13 +41,22 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @XmlRootElement(name = "clusterScaling")
 @XmlAccessorType(XmlAccessType.NONE)
 public class ClusterScalingInfo {
+
+  private static final Logger LOG =
+        LoggerFactory.getLogger(ClusterScalingInfo.class.getName());
 
   public ClusterScalingInfo(){}
 
@@ -69,13 +78,17 @@ public class ClusterScalingInfo {
 
   public ClusterScalingInfo(final ResourceManager rm,
       String resourceTypes,
+      int downscalingFactorInNodeCount,
       NodeInstanceTypeList niTypeList) {
-    this(rm, rm.getResourceScheduler(), resourceTypes, niTypeList);
+    this(rm, rm.getResourceScheduler(), resourceTypes,
+        downscalingFactorInNodeCount,
+        niTypeList);
   }
 
   public ClusterScalingInfo(final ResourceManager rm,
       final ResourceScheduler rs,
-      String resTypes, NodeInstanceTypeList niTypeList) {
+      String resTypes,
+      int downscalingFactorInNodeCount, NodeInstanceTypeList niTypeList) {
     if (rs == null) {
       throw new NotFoundException("Null ResourceScheduler instance");
     }
@@ -101,7 +114,8 @@ public class ClusterScalingInfo {
     }
 
     // The downscaling
-    recommendDownscaling(rmNodes, decommissionCandidates);
+    recommendDownscaling(rmNodes, decommissionCandidates,
+        downscalingFactorInNodeCount);
 
     // The upscaling
     recommendUpscaling(pendingAppCount, pendingContainersCount,
@@ -109,8 +123,109 @@ public class ClusterScalingInfo {
         newNMCandidates);
   }
 
+  public static class DownscalingNodeComparator implements Comparator<RMNode> {
+    HashMap<RMNode, Integer> nodeToDecommissionTimeout;
+    HashMap<RMNode, Integer> nodeToAMCount;
+    HashMap<RMNode, Integer> nodeToRunningAppCount;
+
+    public DownscalingNodeComparator(HashMap<RMNode, Integer> nToD,
+        HashMap<RMNode, Integer> nToAM, HashMap<RMNode, Integer> nToR) {
+      this.nodeToDecommissionTimeout = nToD;
+      this.nodeToAMCount = nToAM;
+      this.nodeToRunningAppCount = nToR;
+    }
+
+    /**
+     * Sort the node, put smaller value ahead if apply:
+     * 1. The decommissioning timeout (if in decommissioning states)
+     * 2. The node state. Put unheathly, lost status nodes ahead
+     * 3. The AM count
+     * 4. The running application count
+     * */
+    @Override
+    public int compare(RMNode o1, RMNode o2) {
+      // Compare node states. Put higher score ahead
+      if (o1.getState() != o2.getState()) {
+        return scoreStatus(o1) > scoreStatus(o2) ? -1 : 1;
+      }
+      // Compare decommisoning timeout. Put smaller value ahead
+      int timeout1 = nodeToDecommissionTimeout.get(o1);
+      timeout1 = timeout1 == -1 ? Integer.MAX_VALUE : timeout1;
+      int timeout2 = nodeToDecommissionTimeout.get(o2);
+      timeout2 = timeout2 == -1 ? Integer.MAX_VALUE : timeout2;
+      if (timeout1 != timeout2) {
+        return timeout1 > timeout2 ? 1 : -1;
+      }
+      // Compare am count. Put smaller value ahead
+      int amCount1 = nodeToAMCount.get(o1);
+      int amCount2 = nodeToAMCount.get(o2);
+      if (amCount1 != amCount2) {
+        return amCount1 > amCount2 ? 1 : -1;
+      }
+      // Compare running application count
+      int appCount1 = nodeToRunningAppCount.get(o1);
+      int appCount2 = nodeToRunningAppCount.get(o2);
+      if (appCount1 != appCount2) {
+        return appCount1 > appCount2 ? 1 : -1;
+      }
+      return o1.getNodeID().compareTo(o2.getNodeID());
+    }
+
+    /** Manually return a score for state.
+     *  The reason of put REBOOTED state ahead of RUNNING is because
+     *  it is more likely to indicate a unhealthy state.
+     * @param node
+     * @return A score for the node state
+     */
+    private int scoreStatus(RMNode node) {
+      switch (node.getState()) {
+        case LOST:
+          return 10;
+        case UNHEALTHY:
+          return 9;
+        case REBOOTED:
+          return 8;
+        case RUNNING:
+          return 7;
+        case NEW:
+          return 6;
+        case DECOMMISSIONING:
+          return 5;
+        case DECOMMISSIONED:
+          return 4;
+        default:
+          return 0;
+      }
+    }
+  }
+
+  /**
+   * Recommend downscaling candidates based on input.
+   * If the "downscalingFactorInNodeCount" is negative, it means let the engine
+   * decide how many nodes to recommend. Otherwise, the nodes might not be
+   * recommended by the engine, but is required by the caller like time-based
+   * autoscaler asking for a fixed number.
+   *
+   * @param rmNodes list of RM nodes
+   * @param decommissionCandidates structure to populate
+   * @param downscalingFactorInNodeCount query param indicate node count
+   */
   public static void recommendDownscaling(List<FiCaSchedulerNode> rmNodes,
-      DecommissionCandidates decommissionCandidates) {
+      DecommissionCandidates decommissionCandidates,
+      int downscalingFactorInNodeCount) {
+
+    boolean upToEngine = false;
+    if (downscalingFactorInNodeCount == 0) {
+      return;
+    }
+    // if negative value, it means let the engine decide.
+    if (downscalingFactorInNodeCount <= 0) {
+      upToEngine = true;
+    }
+    HashMap<RMNode, Integer> nodeToDecommissionTimeout = new HashMap<>();
+    HashMap<RMNode, Integer> nodeToAMCount = new HashMap<>();
+    HashMap<RMNode, Integer> nodeToRunningAppCount = new HashMap<>();
+
     for (FiCaSchedulerNode node : rmNodes) {
       RMNode rmNode = node.getRMNode();
       Integer deTimeout = rmNode.getDecommissioningTimeout();
@@ -121,7 +236,7 @@ public class ClusterScalingInfo {
       if (deTimeout > 0 && rmNode.getState() != NodeState.DECOMMISSIONING) {
         deTimeout = -1;
       }
-
+      nodeToDecommissionTimeout.put(rmNode, deTimeout);
       int amCount = 0;
       for (RMContainer rmContainer : node.getCopiedListOfRunningContainers()) {
         // calculate AM count
@@ -129,26 +244,70 @@ public class ClusterScalingInfo {
           amCount++;
         }
       }
+      nodeToAMCount.put(rmNode, amCount);
+      nodeToRunningAppCount.put(rmNode,
+          node.getRMNode().getRunningApps().size());
+    }
+    DownscalingNodeComparator comparator = new DownscalingNodeComparator(
+        nodeToDecommissionTimeout, nodeToAMCount, nodeToRunningAppCount
+    );
+    TreeSet<RMNode> sortedNodes = new TreeSet<>(comparator);
+    // Sort all nodes
+    for (FiCaSchedulerNode node : rmNodes) {
+      RMNode rmNode = node.getRMNode();
+      sortedNodes.add(rmNode);
+    }
 
-      int runningAppCount = node.getRMNode().getRunningApps().size();
-      boolean recommendFlag = true;
-      if (amCount != 0 || runningAppCount != 0 ||
-          rmNode.getState() == NodeState.DECOMMISSIONED ||
-          rmNode.getState() == NodeState.SHUTDOWN) {
-        recommendFlag = false;
-      }
-      if (recommendFlag) {
-        DecommissionCandidateNodeInfo dcni = new DecommissionCandidateNodeInfo(
-            amCount,
-            runningAppCount,
-            deTimeout,
-            rmNode.getState(),
-            rmNode.getNodeID().toString(),
-            recommendFlag
-        );
+    // Fetch needed count of nodes
+    int neededCount = downscalingFactorInNodeCount;
+    int foundCount = 0;
+    if (downscalingFactorInNodeCount > rmNodes.size()) {
+      LOG.warn("Requested downscaling candidates count is larger than" +
+          "cluster node count!");
+      neededCount = rmNodes.size();
+    }
+    for (RMNode node : sortedNodes) {
+      int amCount = nodeToAMCount.get(node);
+      int runningAppCount = nodeToRunningAppCount.get(node);
+      boolean recommendFlag = getDownscalingRecommendFlag(amCount,
+          runningAppCount,
+          node.getState());
+      DecommissionCandidateNodeInfo dcni = new DecommissionCandidateNodeInfo(
+          nodeToAMCount.get(node),
+          nodeToRunningAppCount.get(node),
+          nodeToDecommissionTimeout.get(node),
+          node.getState(),
+          node.getNodeID().toString(),
+          recommendFlag
+      );
+
+      if (upToEngine) {
+        if (recommendFlag == true) {
+          decommissionCandidates.add(dcni);
+        }
+      } else {
         decommissionCandidates.add(dcni);
+        foundCount++;
+        if (foundCount == neededCount) {
+          return;
+        }
       }
     }
+  }
+
+  public static boolean getDownscalingRecommendFlag(int amCount,
+      int runningAppCount, NodeState state) {
+    if (state == NodeState.LOST ||
+        state == NodeState.UNHEALTHY ||
+        state == NodeState.REBOOTED ) {
+      return true;
+    }
+    // Recommend running node without running app
+    if (state == NodeState.RUNNING && amCount == 0 && runningAppCount == 0) {
+      return true;
+    }
+    // Ignore other state like DECOMMISSIONED, DECOMMISSIONING, SHUTDOWN, NEW
+    return false;
   }
 
   public static void recommendUpscaling(int pendingAppCount,

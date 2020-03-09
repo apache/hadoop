@@ -421,6 +421,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           String apiVersion,
       @QueryParam(RMWSConsts.UPSCALING_FACTOR_IN_NODE_RESOURCE_TYPES_KEY)
           String upscalingFactorInNodeResourceTypes,
+      @QueryParam(RMWSConsts.DOWNSCALING_FACTOR_IN_NODE_COUNT)
+          String downscalingFactorInNodeCount,
       NodeInstanceTypeList instanceTypeList) {
     initForReadableEndpoints();
     String defaultVersion = RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1;
@@ -431,8 +433,21 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     if (instanceTypeList == null) {
       throw new BadRequestException("Node instance types are needed!");
     }
+
+    int neededDownscalingNodeSize = -1;
+    if (downscalingFactorInNodeCount != null) {
+      try {
+        neededDownscalingNodeSize = Integer.valueOf(downscalingFactorInNodeCount);
+      } catch (NumberFormatException e) {
+        throw new BadRequestException("Invalid '" +
+            RMWSConsts.DOWNSCALING_FACTOR_IN_NODE_COUNT + "' value: " +
+            downscalingFactorInNodeCount);
+      }
+    }
+
     return new ClusterScalingInfo(this.rm,
         upscalingFactorInNodeResourceTypes,
+        neededDownscalingNodeSize,
         instanceTypeList.rebuild());
   }
 

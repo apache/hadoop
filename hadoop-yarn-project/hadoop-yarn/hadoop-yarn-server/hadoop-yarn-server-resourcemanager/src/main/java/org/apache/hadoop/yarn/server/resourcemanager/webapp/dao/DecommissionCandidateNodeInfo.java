@@ -78,4 +78,7 @@ public class DecommissionCandidateNodeInfo {
     return decommissionTimeout;
   }
 
+  public boolean isRecommended() {
+    return recommendFlag;
+  }
 }
