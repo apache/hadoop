@@ -131,7 +131,7 @@ public class ClientContext {
    * the DFSInputStreams in the same client.
    */
   private DeadNodeDetector deadNodeDetector = null;
- 
+
   /**
    * ShortCircuitCache array size.
    */
