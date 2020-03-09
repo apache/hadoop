@@ -1,10 +1,10 @@
-YARN (YET ANOTHER RESOURCE NEGOTIATOR or YARN Application Resource Negotiator)
-------------------------------------------------------------------------------
-
-Requirements
--------------
+YARN (YET ANOTHER RESOURCE NEGOTIATOR or YARN Application Resource Negotiator)  
+------------------------------------------------------------------------------  
+  
+Requirements  
+-------------  
 Java: JDK 1.6
-Maven: Maven 3
+Maven: Maven 3  
 
 Setup
 -----
@@ -69,8 +69,7 @@ Utilities for understanding the code
 Almost all of the yarn components as well as the mapreduce framework use
 state-machines for all the data objects. To understand those central pieces of
 the code, a visual representation of the state-machines helps much. You can first
-convert the state-machines into graphviz(.gv) format by
-running:
+convert the state-machines into graphviz(.gv) format by running:  
    mvn compile -Pvisualize
 Then you can use the dot program for generating directed graphs and convert the above
 .gv files to images. The graphviz package has the needed dot program and related
