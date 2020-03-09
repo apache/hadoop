@@ -106,7 +106,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     // the new API. Otherwise choose the old API.
     Class[] cArg = new Class[1];
     cArg[0] = INodeAttributeProvider.AuthorizationContext.class;
-    
+
     AccessControlEnforcer ace;
     if (attributeProvider == null) {
       // If attribute provider is null, use FSPermissionChecker default
@@ -375,11 +375,11 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     // parameters including operationName and callerContext.
     this.checkPermission(authzContext.fsOwner, authzContext.supergroup,
         authzContext.callerUgi, authzContext.inodeAttrs, authzContext.inodes,
-        authzContext.pathByNameArr, authzContext.snapshotId, authzContext.path,
-        authzContext.ancestorIndex, authzContext.doCheckOwner,
-        authzContext.ancestorAccess, authzContext.parentAccess,
-        authzContext.access, authzContext.subAccess,
-        authzContext.ignoreEmptyDir);
+        authzContext.pathByNameArr, authzContext.getSnapshotId(),
+        authzContext.getPath(), authzContext.getAncestorIndex(),
+        authzContext.isDoCheckOwner(), authzContext.getAncestorAccess(),
+        authzContext.getParentAccess(), authzContext.getAccess(),
+        authzContext.getSubAccess(), authzContext.isIgnoreEmptyDir());
   }
 
   private INodeAttributes getINodeAttrs(byte[][] pathByNameArr, int pathIdx,

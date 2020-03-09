@@ -47,7 +47,6 @@ public class TestAuthorizationContext {
 
   @Before
   public void setUp() throws IOException {
-    int snapshotId = 0;
     when(iip.getPathSnapshotId()).thenReturn(snapshotId);
     when(iip.getINodesArray()).thenReturn(inodes);
     when(iip.getPathComponents()).thenReturn(components);
@@ -87,11 +86,11 @@ public class TestAuthorizationContext {
     assertEquals(authzContext.inodeAttrs, emptyINodeAttributes);
     assertEquals(authzContext.inodes, inodes);
     assertEquals(authzContext.pathByNameArr, components);
-    assertEquals(authzContext.snapshotId, snapshotId);
-    assertEquals(authzContext.path, path);
-    assertEquals(authzContext.ancestorIndex, ancestorIndex);
-    assertEquals(authzContext.operationName, opType);
-    assertEquals(authzContext.callerContext, CallerContext.getCurrent());
+    assertEquals(authzContext.getSnapshotId(), snapshotId);
+    assertEquals(authzContext.getPath(), path);
+    assertEquals(authzContext.getAncestorIndex(), ancestorIndex);
+    assertEquals(authzContext.getOperationName(), opType);
+    assertEquals(authzContext.getCallerContext(), CallerContext.getCurrent());
   }
 
   @Test
@@ -110,18 +109,13 @@ public class TestAuthorizationContext {
     FSPermissionChecker.setOperationType(null);
 
     INodesInPath iip = mock(INodesInPath.class);
-    int snapshotId = 0;
     when(iip.getPathSnapshotId()).thenReturn(snapshotId);
-    INode[] inodes = new INode[] {};
     when(iip.getINodesArray()).thenReturn(inodes);
-    byte[][] components = new byte[][] {};
     when(iip.getPathComponents()).thenReturn(components);
-    String path = "";
     when(iip.getPath()).thenReturn(path);
 
     checker.checkPermission(iip, true, null, null, null, null, true);
 
-    INodeAttributes[] emptyINodeAttributes = new INodeAttributes[] {};
     verify(mockEnforcer).checkPermission(fsOwner, superGroup, ugi,
         emptyINodeAttributes, inodes, components, snapshotId, path,
         ancestorIndex, true, null, null, null, null, true);
@@ -146,8 +140,6 @@ public class TestAuthorizationContext {
     checker.checkPermission(iip, true,
         null, null, null,
         null, true);
-
-    INodeAttributes[] emptyINodeAttributes = new INodeAttributes[] {};
 
     INodeAttributeProvider.AuthorizationContext.Builder builder =
         new INodeAttributeProvider.AuthorizationContext.Builder();

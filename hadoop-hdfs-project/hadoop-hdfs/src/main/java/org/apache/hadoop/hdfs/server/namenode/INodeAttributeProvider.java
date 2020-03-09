@@ -35,23 +35,159 @@ import java.util.Arrays;
 public abstract class INodeAttributeProvider {
 
   public static class AuthorizationContext {
-    public String fsOwner;
-    public String supergroup;
-    public UserGroupInformation callerUgi;
-    public INodeAttributes[] inodeAttrs;
-    public INode[] inodes;
-    public byte[][] pathByNameArr;
-    public int snapshotId;
-    public String path;
-    public int ancestorIndex;
-    public boolean doCheckOwner;
-    public FsAction ancestorAccess;
-    public FsAction parentAccess;
-    public FsAction access;
-    public FsAction subAccess;
-    public boolean ignoreEmptyDir;
-    public String operationName;
-    public CallerContext callerContext;
+    private String fsOwner;
+    private String supergroup;
+    private UserGroupInformation callerUgi;
+    private INodeAttributes[] inodeAttrs;
+    private INode[] inodes;
+    private byte[][] pathByNameArr;
+    private int snapshotId;
+    private String path;
+    private int ancestorIndex;
+    private boolean doCheckOwner;
+    private FsAction ancestorAccess;
+    private FsAction parentAccess;
+    private FsAction access;
+    private FsAction subAccess;
+    private boolean ignoreEmptyDir;
+    private String operationName;
+    private CallerContext callerContext;
+
+    public String getFsOwner() {
+      return fsOwner;
+    }
+
+    public void setFsOwner(String fsOwner) {
+      this.fsOwner = fsOwner;
+    }
+
+    public String getSupergroup() {
+      return supergroup;
+    }
+
+    public void setSupergroup(String supergroup) {
+      this.supergroup = supergroup;
+    }
+
+    public UserGroupInformation getCallerUgi() {
+      return callerUgi;
+    }
+
+    public void setCallerUgi(UserGroupInformation callerUgi) {
+      this.callerUgi = callerUgi;
+    }
+
+    public INodeAttributes[] getInodeAttrs() {
+      return inodeAttrs;
+    }
+
+    public void setInodeAttrs(INodeAttributes[] inodeAttrs) {
+      this.inodeAttrs = inodeAttrs;
+    }
+
+    public INode[] getInodes() {
+      return inodes;
+    }
+
+    public void setInodes(INode[] inodes) {
+      this.inodes = inodes;
+    }
+
+    public byte[][] getPathByNameArr() {
+      return pathByNameArr;
+    }
+
+    public void setPathByNameArr(byte[][] pathByNameArr) {
+      this.pathByNameArr = pathByNameArr;
+    }
+
+    public int getSnapshotId() {
+      return snapshotId;
+    }
+
+    public void setSnapshotId(int snapshotId) {
+      this.snapshotId = snapshotId;
+    }
+
+    public String getPath() {
+      return path;
+    }
+
+    public void setPath(String path) {
+      this.path = path;
+    }
+
+    public int getAncestorIndex() {
+      return ancestorIndex;
+    }
+
+    public void setAncestorIndex(int ancestorIndex) {
+      this.ancestorIndex = ancestorIndex;
+    }
+
+    public boolean isDoCheckOwner() {
+      return doCheckOwner;
+    }
+
+    public void setDoCheckOwner(boolean doCheckOwner) {
+      this.doCheckOwner = doCheckOwner;
+    }
+
+    public FsAction getAncestorAccess() {
+      return ancestorAccess;
+    }
+
+    public void setAncestorAccess(FsAction ancestorAccess) {
+      this.ancestorAccess = ancestorAccess;
+    }
+
+    public FsAction getParentAccess() {
+      return parentAccess;
+    }
+
+    public void setParentAccess(FsAction parentAccess) {
+      this.parentAccess = parentAccess;
+    }
+
+    public FsAction getAccess() {
+      return access;
+    }
+
+    public void setAccess(FsAction access) {
+      this.access = access;
+    }
+
+    public FsAction getSubAccess() {
+      return subAccess;
+    }
+
+    public void setSubAccess(FsAction subAccess) {
+      this.subAccess = subAccess;
+    }
+
+    public boolean isIgnoreEmptyDir() {
+      return ignoreEmptyDir;
+    }
+
+    public void setIgnoreEmptyDir(boolean ignoreEmptyDir) {
+      this.ignoreEmptyDir = ignoreEmptyDir;
+    }
+
+    public String getOperationName() {
+      return operationName;
+    }
+
+    public void setOperationName(String operationName) {
+      this.operationName = operationName;
+    }
+
+    public CallerContext getCallerContext() {
+      return callerContext;
+    }
+
+    public void setCallerContext(CallerContext callerContext) {
+      this.callerContext = callerContext;
+    }
 
     public static class Builder {
       public String fsOwner;
@@ -178,21 +314,21 @@ public abstract class INodeAttributeProvider {
         FsAction access,
         FsAction subAccess,
         boolean ignoreEmptyDir) {
-      this.fsOwner = fsOwner;
-      this.supergroup = supergroup;
-      this.callerUgi = callerUgi;
-      this.inodeAttrs = inodeAttrs;
-      this.inodes = inodes;
-      this.pathByNameArr = pathByNameArr;
-      this.snapshotId = snapshotId;
-      this.path = path;
-      this.ancestorIndex = ancestorIndex;
-      this.doCheckOwner = doCheckOwner;
-      this.ancestorAccess = ancestorAccess;
-      this.parentAccess = parentAccess;
-      this.access = access;
-      this.subAccess = subAccess;
-      this.ignoreEmptyDir = ignoreEmptyDir;
+      this.setFsOwner(fsOwner);
+      this.setSupergroup(supergroup);
+      this.setCallerUgi(callerUgi);
+      this.setInodeAttrs(inodeAttrs);
+      this.setInodes(inodes);
+      this.setPathByNameArr(pathByNameArr);
+      this.setSnapshotId(snapshotId);
+      this.setPath(path);
+      this.setAncestorIndex(ancestorIndex);
+      this.setDoCheckOwner(doCheckOwner);
+      this.setAncestorAccess(ancestorAccess);
+      this.setParentAccess(parentAccess);
+      this.setAccess(access);
+      this.setSubAccess(subAccess);
+      this.setIgnoreEmptyDir(ignoreEmptyDir);
     }
 
     public AuthorizationContext(Builder builder) {
@@ -201,8 +337,8 @@ public abstract class INodeAttributeProvider {
           builder.snapshotId, builder.path, builder.ancestorIndex,
           builder.doCheckOwner, builder.ancestorAccess, builder.parentAccess,
           builder.access, builder.subAccess, builder.ignoreEmptyDir);
-      this.operationName = builder.operationName;
-      this.callerContext = builder.callerContext;
+      this.setOperationName(builder.operationName);
+      this.setCallerContext(builder.callerContext);
     }
 
     @VisibleForTesting
@@ -214,28 +350,28 @@ public abstract class INodeAttributeProvider {
         return false;
       }
       AuthorizationContext other = (AuthorizationContext)obj;
-      return fsOwner.equals(other.fsOwner) &&
-          supergroup.equals(other.supergroup) &&
-          callerUgi.equals(other.callerUgi) &&
-          Arrays.deepEquals(inodeAttrs, other.inodeAttrs) &&
-          Arrays.deepEquals(inodes, other.inodes) &&
-          Arrays.deepEquals(pathByNameArr, other.pathByNameArr) &&
-          snapshotId == other.snapshotId &&
-          path.equals(other.path) &&
-          ancestorIndex == other.ancestorIndex &&
-          doCheckOwner == other.doCheckOwner &&
-          ancestorAccess == other.ancestorAccess &&
-          parentAccess == other.parentAccess &&
-          access == other.access &&
-          subAccess == other.subAccess &&
-          ignoreEmptyDir == other.ignoreEmptyDir;
+      return getFsOwner().equals(other.getFsOwner()) &&
+          getSupergroup().equals(other.getSupergroup()) &&
+          getCallerUgi().equals(other.getCallerUgi()) &&
+          Arrays.deepEquals(getInodeAttrs(), other.getInodeAttrs()) &&
+          Arrays.deepEquals(getInodes(), other.getInodes()) &&
+          Arrays.deepEquals(getPathByNameArr(), other.getPathByNameArr()) &&
+          getSnapshotId() == other.getSnapshotId() &&
+          getPath().equals(other.getPath()) &&
+          getAncestorIndex() == other.getAncestorIndex() &&
+          isDoCheckOwner() == other.isDoCheckOwner() &&
+          getAncestorAccess() == other.getAncestorAccess() &&
+          getParentAccess() == other.getParentAccess() &&
+          getAccess() == other.getAccess() &&
+          getSubAccess() == other.getSubAccess() &&
+          isIgnoreEmptyDir() == other.isIgnoreEmptyDir();
     }
-  }
 
-  @Override
-  public int hashCode() {
-    assert false : "hashCode not designed";
-    return 42; // any arbitrary constant will do
+    @Override
+    public int hashCode() {
+      assert false : "hashCode not designed";
+      return 42; // any arbitrary constant will do
+    }
   }
 
   /**
