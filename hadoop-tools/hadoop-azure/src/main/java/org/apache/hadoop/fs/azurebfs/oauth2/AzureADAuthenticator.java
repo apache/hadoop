@@ -423,8 +423,10 @@ public final class AzureADAuthenticator {
       }
       jp.close();
       if (expiresOnInSecs > 0) {
+        LOG.debug("Expiry based on expires_on: {}", expiresOnInSecs);
         token.setExpiry(new Date(expiresOnInSecs * 1000));
       } else {
+        LOG.debug("Expiry based on expires_in: {}", expiryPeriodInSecs);
         long expiry = System.currentTimeMillis();
         expiry = expiry + expiryPeriodInSecs * 1000L; // convert expiryPeriod to milliseconds and add
         token.setExpiry(new Date(expiry));
