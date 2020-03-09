@@ -19,9 +19,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.runc;
 
+import com.fasterxml.jackson.annotation.JsonRawValue;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.codehaus.jackson.annotate.JsonRawValue;
-import org.codehaus.jackson.map.annotate.JsonSerialize;
 
 import java.util.List;
 import java.util.Map;

@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.yarn.sls.synthetic;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
@@ -30,18 +35,13 @@ import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.sls.appmaster.MRAMSimulator;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import javax.xml.bind.annotation.XmlRootElement;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.codehaus.jackson.JsonParser.Feature.INTERN_FIELD_NAMES;
-import static org.codehaus.jackson.map.DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES;
+import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 
 /**
  * This is a JobStoryProducer that operates from distribution of different
@@ -84,15 +84,16 @@ public class SynthTraceJobProducer implements JobStoryProducer {
     this.conf = conf;
     this.rand = new JDKRandomGenerator();
 
-    ObjectMapper mapper = new ObjectMapper();
-    mapper.configure(INTERN_FIELD_NAMES, true);
+    JsonFactory f = new JsonFactory();
+    f.configure(JsonFactory.Feature.INTERN_FIELD_NAMES, true);
+    ObjectMapper mapper = new ObjectMapper(f);
     mapper.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     FileSystem ifs = path.getFileSystem(conf);
     FSDataInputStream fileIn = ifs.open(path);
 
     // Initialize the random generator and the seed
-    this.trace = mapper.readValue(fileIn, Trace.class);
+    this.trace = mapper.readValue(fileIn.getWrappedStream(), Trace.class);
     this.seed = trace.rand_seed;
     this.rand.setSeed(seed);
     // Initialize the trace

@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -58,8 +60,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -501,7 +501,7 @@ public class TestRuncContainerRuntime {
     JsonNode configNode = mapper.readTree(configFile);
 
     RuncContainerExecutorConfig runcContainerExecutorConfig =
-        mapper.readValue(configNode, RuncContainerExecutorConfig.class);
+        mapper.readValue(configNode.traverse(), RuncContainerExecutorConfig.class);
     configSize = configNode.size();
 
     OCIRuntimeConfig ociRuntimeConfig =
