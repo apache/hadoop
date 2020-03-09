@@ -138,7 +138,7 @@ public class DfsClientConf {
 
   /** wait time window before refreshing blocklocation for inputstream. */
   private final long refreshReadBlockLocationsMS;
-  
+
   private final ShortCircuitConf shortCircuitConf;
   private final long hedgedReadThresholdMillis;
   private final int hedgedReadThreadpoolSize;
@@ -296,11 +296,11 @@ public class DfsClientConf {
         HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM,
         HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM_DEFAULT);
     Preconditions.checkArgument(clientShortCircuitNum >= 1,
-        HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM + 
+        HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM +
         "can't be less then 1.");
     Preconditions.checkArgument(clientShortCircuitNum <= 3,
         HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM +
-        "can't be more then 3.");  
+        "can't be more then 3.");
   }
 
   @SuppressWarnings("unchecked")
@@ -609,8 +609,8 @@ public class DfsClientConf {
   /**
    * @return the clientShortCircuitNum
    */
-  public int getClientShortCircuitNum() { 
-    return clientShortCircuitNum; 
+  public int getClientShortCircuitNum() {
+    return clientShortCircuitNum;
   }
 
   /**
