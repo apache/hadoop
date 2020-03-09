@@ -4138,6 +4138,14 @@
 </property>
 
 <property>
+  <name>dfs.short.circuit.num</name>
+  <value>1</value>
+  <description>
+    Number of short-circuit caches.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.read.striped.threadpool.size</name>
   <value>18</value>
   <description>
