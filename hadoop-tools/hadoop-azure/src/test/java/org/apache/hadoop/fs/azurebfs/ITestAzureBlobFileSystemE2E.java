@@ -206,15 +206,15 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
     FSDataOutputStream stream = fs.create(testFilePath);
     assertTrue(fs.exists(testFilePath));
+    stream.write(TEST_BYTE);
 
     fs.delete(testFilePath, true);
     assertFalse(fs.exists(testFilePath));
     AbfsConfiguration configuration = this.getConfiguration();
 
-    //With the new code, a backend call is made on close only when
-    // there is pending data which needs to be flushed.
-    // hence no backend call would be made in this case.
-    stream.close();
+    // trigger flush call
+    intercept(FileNotFoundException.class,
+            () -> stream.close());
   }
 
   private void testWriteOneByteToFile(Path testFilePath) throws Exception {

@@ -61,6 +61,9 @@ public final class ConfigurationKeys {
    *  documentation does not have such expectations of data being persisted.
    *  Default value of this config is true. **/
   public static final String FS_AZURE_DISABLE_OUTPUTSTREAM_FLUSH = "fs.azure.disable.outputstream.flush";
+  /** Provides a config control to enable OutputStream AppendWithFlush API
+   *  operations in AbfsOutputStream.
+   *  Default value of this config is true. **/
   public static final String FS_AZURE_ENABLE_APPEND_WITH_FLUSH = "fs.azure.enable.appendwithflush";
   /** Provides a config control to disable or enable OutputStream Flush API
    *  operations in AbfsOutputStream. Flush() will trigger actions that

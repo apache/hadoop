@@ -644,7 +644,7 @@ Consult the javadocs for `org.apache.hadoop.fs.azurebfs.constants.ConfigurationK
 of configuration options and their default values.
 
 ### <a name="appendblobkeyconfigoptions"></a> Append Blob Directories Options
-### <a name="appendblobkeyconfigoptions"></a> Config `fs.azure.appendblob.key` provides
+#### Config `fs.azure.appendblob.key` provides
 an option for using append blob for the files prefixed by the config value.
 
 ### <a name="flushconfigoptions"></a> Flush Options
