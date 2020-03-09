@@ -475,7 +475,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
               "giving up on BlockReaderLocal.", this, pathInfo);
       return null;
     }
-    ShortCircuitCache cache = 
+    ShortCircuitCache cache =
         clientContext.getShortCircuitCache(block.getBlockId());
     ExtendedBlockId key = new ExtendedBlockId(block.getBlockId(),
         block.getBlockPoolId());
@@ -527,7 +527,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
       if (curPeer.fromCache) remainingCacheTries--;
       DomainPeer peer = (DomainPeer)curPeer.peer;
       Slot slot = null;
-      ShortCircuitCache cache = 
+      ShortCircuitCache cache =
           clientContext.getShortCircuitCache(block.getBlockId());
       try {
         MutableBoolean usedPeer = new MutableBoolean(false);
@@ -583,7 +583,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
    */
   private ShortCircuitReplicaInfo requestFileDescriptors(DomainPeer peer,
           Slot slot) throws IOException {
-    ShortCircuitCache cache = 
+    ShortCircuitCache cache =
         clientContext.getShortCircuitCache(block.getBlockId());
     final DataOutputStream out =
         new DataOutputStream(new BufferedOutputStream(peer.getOutputStream(), SMALL_BUFFER_SIZE));
