@@ -43,7 +43,7 @@ public interface BatchListingOperations {
    * @throws IOException failure
    */
   RemoteIterator<PartialListing<FileStatus>> batchedListStatusIterator(
-      final List<Path> paths) throws IOException ;
+      List<Path> paths) throws IOException;
 
   /**
    * Batched listing API that returns {@link PartialListing}s for the passed
@@ -54,7 +54,8 @@ public interface BatchListingOperations {
    * @return RemoteIterator that returns corresponding PartialListings.
    * @throws IOException failure
    */
-   RemoteIterator<PartialListing<LocatedFileStatus>> batchedListLocatedStatusIterator(
-      final List<Path> paths) throws IOException;
+  RemoteIterator<PartialListing<LocatedFileStatus>>
+      batchedListLocatedStatusIterator(
+          List<Path> paths) throws IOException;
 
 }
