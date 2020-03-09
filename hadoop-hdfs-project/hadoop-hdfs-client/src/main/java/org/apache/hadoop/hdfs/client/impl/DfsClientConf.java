@@ -146,6 +146,7 @@ public class DfsClientConf {
       replicaAccessorBuilderClasses;
 
   private final int stripedReadThreadpoolSize;
+
   private final int clientShortCircuitNum;
 
   private final boolean dataTransferTcpNoDelay;
