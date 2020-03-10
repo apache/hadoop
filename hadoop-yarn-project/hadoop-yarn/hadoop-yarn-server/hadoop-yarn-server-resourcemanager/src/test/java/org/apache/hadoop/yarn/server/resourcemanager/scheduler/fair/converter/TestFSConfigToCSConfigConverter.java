@@ -301,19 +301,6 @@ public class TestFSConfigToCSConfigConverter {
   }
 
   @Test
-  public void testConvertFSConfigPctModeUsedAndClusterResourceNotDefined()
-      throws Exception {
-    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
-            .build();
-
-    expectedException.expect(ConversionException.class);
-    expectedException.expectMessage("cluster resource parameter" +
-        " is not defined via CLI");
-
-    converter.convert(params);
-  }
-
-  @Test
   public void testConvertFSConfigurationClusterResourceInvalid()
       throws Exception {
     FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()

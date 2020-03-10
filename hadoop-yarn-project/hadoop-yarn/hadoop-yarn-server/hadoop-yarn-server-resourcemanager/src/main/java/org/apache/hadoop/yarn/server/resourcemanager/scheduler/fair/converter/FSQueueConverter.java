@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.ConfigurableResource;
@@ -36,7 +35,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -51,6 +49,7 @@ public class FSQueueConverter {
   private Configuration capacitySchedulerConfig;
   private final boolean preemptionEnabled;
   private final boolean sizeBasedWeight;
+  @SuppressWarnings("unused")
   private final Resource clusterResource;
   private final float queueMaxAMShareDefault;
   private final boolean autoCreateChildQueues;
@@ -168,47 +167,13 @@ public class FSQueueConverter {
     ConfigurableResource rawMaxShare = queue.getRawMaxShare();
     final Resource maxResource = rawMaxShare.getResource();
 
-    long memSize = 0;
-    long vCores = 0;
-    boolean defined = false;
-
-    if (maxResource == null) {
-      if (rawMaxShare.getPercentages() != null) {
-        if (clusterResource == null) {
-          String message = String.format(
-              "<maxResources> defined in percentages for" +
-              " queue %s, but cluster resource parameter is not" +
-              " defined via CLI!", queueName);
-
-          conversionOptions.handleConversionError(message);
-          return;
-        }
-
-        ruleHandler.handleMaxCapacityPercentage(queueName);
-
-        double[] percentages = rawMaxShare.getPercentages();
-        int memIndex = ResourceUtils.getResourceTypeIndex().get("memory-mb");
-        int vcoreIndex = ResourceUtils.getResourceTypeIndex().get("vcores");
-
-        memSize = (long) (percentages[memIndex] *
-            clusterResource.getMemorySize());
-        vCores = (long) (percentages[vcoreIndex] *
-            clusterResource.getVirtualCores());
-        defined = true;
-      } else {
-        conversionOptions.handlePreconditionError(
-            "Illegal ConfigurableResource object = " + rawMaxShare);
-      }
-    } else if (isNotUnboundedResource(maxResource)) {
-      memSize = maxResource.getMemorySize();
-      vCores = maxResource.getVirtualCores();
-      defined = true;
+    if ((maxResource == null && rawMaxShare.getPercentages() != null)
+        || isNotUnboundedResource(maxResource)) {
+      ruleHandler.handleMaxResources();
     }
 
-    if (defined) {
-      capacitySchedulerConfig.set(PREFIX + queueName + ".maximum-capacity",
-          String.format("[memory=%d, vcores=%d]", memSize, vCores));
-    }
+    capacitySchedulerConfig.set(PREFIX + queueName + ".maximum-capacity",
+        "100");
   }
 
   /**
@@ -330,7 +295,7 @@ public class FSQueueConverter {
     List<FSQueue> children = queue.getChildQueues();
 
     int totalWeight = getTotalWeight(children);
-    Map<String, Capacity> capacities = getCapacities(totalWeight, children);
+    Map<String, BigDecimal> capacities = getCapacities(totalWeight, children);
     capacities
         .forEach((key, value) -> capacitySchedulerConfig.set(PREFIX + key +
                 ".capacity", value.toString()));
@@ -353,23 +318,21 @@ public class FSQueueConverter {
     }
   }
 
-  private Map<String, Capacity> getCapacities(int totalWeight,
+  private Map<String, BigDecimal> getCapacities(int totalWeight,
       List<FSQueue> children) {
     final BigDecimal hundred = new BigDecimal(100).setScale(3);
 
     if (children.size() == 0) {
       return new HashMap<>();
     } else if (children.size() == 1) {
-      Map<String, Capacity> capacity = new HashMap<>();
+      Map<String, BigDecimal> capacity = new HashMap<>();
       String queueName = children.get(0).getName();
-      capacity.put(queueName, Capacity.newCapacity(hundred));
+      capacity.put(queueName, hundred);
 
       return capacity;
     } else {
-      Map<String, Capacity> capacities = new HashMap<>();
-      Map<String, BigDecimal> bdCapacities = new HashMap<>();
+      Map<String, BigDecimal> capacities = new HashMap<>();
 
-      MutableBoolean needVerifySum = new MutableBoolean(true);
       children
           .stream()
           .forEach(queue -> {
@@ -381,48 +344,28 @@ public class FSQueueConverter {
                               .multiply(hundred)
                               .setScale(3);
 
-            // <minResources> defined?
             if (Resources.none().compareTo(queue.getMinShare()) != 0) {
-              needVerifySum.setFalse();
-
-              /* TODO: Needs discussion.
-               *
-               * Probably it's not entirely correct this way!
-               * Eg. root.queue1 in FS translates to 33%
-               * capacity, but minResources is defined as 1vcore,8GB
-               * which is less than 33%.
-               *
-               * Therefore max(calculatedCapacity, minResource) is
-               * more sound.
-               */
-              Resource minShare = queue.getMinShare();
-              // TODO: in Phase-2, we have to deal with other resources as well
-              String capacity = String.format("[memory=%d,vcores=%d]",
-                  minShare.getMemorySize(), minShare.getVirtualCores());
-              capacities.put(queue.getName(), Capacity.newCapacity(capacity));
-            } else {
-              capacities.put(queue.getName(), Capacity.newCapacity(pct));
-              bdCapacities.put(queue.getName(), pct);
+              ruleHandler.handleMinResources();
             }
+
+            capacities.put(queue.getName(), pct);
           });
 
-      if (needVerifySum.isTrue()) {
-        BigDecimal totalPct = new BigDecimal(0);
-        for (Map.Entry<String, BigDecimal> entry : bdCapacities.entrySet()) {
-          totalPct = totalPct.add(entry.getValue());
+      BigDecimal totalPct = new BigDecimal(0);
+      for (Map.Entry<String, BigDecimal> entry : capacities.entrySet()) {
+        totalPct = totalPct.add(entry.getValue());
+      }
+
+      // fix last value if total != 100.000
+      if (!totalPct.equals(hundred)) {
+        BigDecimal tmp = new BigDecimal(0);
+        for (int i = 0; i < children.size() - 2; i++) {
+          tmp = tmp.add(capacities.get(children.get(i).getQueueName()));
         }
 
-        // fix last value if total != 100.000
-        if (!totalPct.equals(hundred)) {
-          BigDecimal tmp = new BigDecimal(0);
-          for (int i = 0; i < children.size() - 2; i++) {
-            tmp = tmp.add(bdCapacities.get(children.get(i).getQueueName()));
-          }
-
-          String lastQueue = children.get(children.size() - 1).getName();
-          BigDecimal corrected = hundred.subtract(tmp);
-          capacities.put(lastQueue, Capacity.newCapacity(corrected));
-        }
+        String lastQueue = children.get(children.size() - 1).getName();
+        BigDecimal corrected = hundred.subtract(tmp);
+        capacities.put(lastQueue, corrected);
       }
 
       return capacities;
@@ -444,39 +387,5 @@ public class FSQueueConverter {
 
   private boolean isNotUnboundedResource(Resource res) {
     return Resources.unbounded().compareTo(res) != 0;
-  }
-
-  /*
-   * Represents a queue capacity in either percentage
-   * or in absolute resources
-   */
-  private static class Capacity {
-    private BigDecimal percentage;
-    private String absoluteResource;
-
-    public static Capacity newCapacity(BigDecimal pct) {
-      Capacity capacity = new Capacity();
-      capacity.percentage = pct;
-      capacity.absoluteResource = null;
-
-      return capacity;
-    }
-
-    public static Capacity newCapacity(String absoluteResource) {
-      Capacity capacity = new Capacity();
-      capacity.percentage = null;
-      capacity.absoluteResource = absoluteResource;
-
-      return capacity;
-    }
-
-    @Override
-    public String toString() {
-      if (percentage != null) {
-        return percentage.toString();
-      } else {
-        return absoluteResource;
-      }
-    }
   }
 }

@@ -55,6 +55,12 @@ public class FSConfigToCSConfigRuleHandler {
   public static final String MAX_CHILD_CAPACITY =
       "maxChildCapacity.action";
 
+  public static final String MAX_RESOURCES =
+      "maxResources.action";
+
+  public static final String MIN_RESOURCES =
+      "minResources.action";
+
   public static final String USER_MAX_RUNNING_APPS =
       "userMaxRunningApps.action";
 
@@ -118,6 +124,8 @@ public class FSConfigToCSConfigRuleHandler {
   public void initPropertyActions() {
     setActionForProperty(MAX_CAPACITY_PERCENTAGE);
     setActionForProperty(MAX_CHILD_CAPACITY);
+    setActionForProperty(MAX_RESOURCES);
+    setActionForProperty(MIN_RESOURCES);
     setActionForProperty(USER_MAX_RUNNING_APPS);
     setActionForProperty(USER_MAX_APPS_DEFAULT);
     setActionForProperty(DYNAMIC_MAX_ASSIGN);
@@ -136,6 +144,14 @@ public class FSConfigToCSConfigRuleHandler {
 
   public void handleMaxChildCapacity() {
     handle(MAX_CHILD_CAPACITY, "<maxChildResources>", null);
+  }
+
+  public void handleMaxResources() {
+    handle(MAX_RESOURCES, "<maxResources>", null);
+  }
+
+  public void handleMinResources() {
+    handle(MIN_RESOURCES, "<minResources>", null);
   }
 
   public void handleChildQueueCount(String queue, int count) {
