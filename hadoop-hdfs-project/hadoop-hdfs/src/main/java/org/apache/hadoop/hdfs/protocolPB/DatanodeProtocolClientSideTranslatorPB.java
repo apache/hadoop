@@ -319,6 +319,9 @@ public class DatanodeProtocolClientSideTranslatorPB implements
         .setNewLength(newlength).setCloseFile(closeFile)
         .setDeleteBlock(deleteblock);
     for (int i = 0; i < newtargets.length; i++) {
+      if (newtargets[i] == null) {
+        continue;
+      }
       builder.addNewTaragets(PBHelperClient.convert(newtargets[i]));
       builder.addNewTargetStorages(newtargetstorages[i]);
     }
