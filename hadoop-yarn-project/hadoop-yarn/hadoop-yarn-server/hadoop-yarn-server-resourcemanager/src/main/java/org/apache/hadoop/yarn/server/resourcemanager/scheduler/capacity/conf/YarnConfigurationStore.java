@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -154,6 +155,13 @@ public abstract class YarnConfigurationStore {
    * @throws Exception On version fetch failure
    */
   protected abstract Version getConfStoreVersion() throws Exception;
+
+  /**
+   * Get a list of configuration mutations.
+   * @return list of configuration mutations.
+   * @throws Exception On mutation fetch failure
+   */
+  protected abstract LinkedList<LogMutation> getLogs() throws Exception;
 
   /**
    * Persist the hard-coded schema version to the conf store.
