@@ -302,6 +302,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
     final byte[] bytes = buffer;
     final int bytesLength = bufferIndex;
+    bufferIndex = 0;
+    final long offset = position;
+    position += bytesLength;
 
     if (Runtime.getRuntime().freeMemory() < 100 * 1024 * 1024
         && buffersToBeReturned.get() > 0) {
@@ -315,9 +318,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
     buffer = byteBufferPool.getBuffer(false, bufferSize).array();
     buffersToBeReturned.incrementAndGet();
-    bufferIndex = 0;
-    final long offset = position;
-    position += bytesLength;
 
     final Future<Void> job = completionService.submit(new Callable<Void>() {
       @Override
