@@ -31,6 +31,7 @@
             <schedulingPolicy>drf</schedulingPolicy>
             <queue name="john">
                 <weight>1.0</weight>
+                <minResources>memory-mb=4096, vcores=1</minResources>
                 <schedulingPolicy>drf</schedulingPolicy>
                 <aclSubmitApps>john </aclSubmitApps>
                 <aclAdministerApps>john </aclAdministerApps>
@@ -38,6 +39,7 @@
             </queue>
             <queue name="joe">
                 <maxResources>memory-mb=50.0%, vcores=50.0%</maxResources>
+                <minResources>memory-mb=4096, vcores=1</minResources>
                 <weight>3.0</weight>
                 <allowPreemptionFrom>false</allowPreemptionFrom>
                 <schedulingPolicy>drf</schedulingPolicy>
