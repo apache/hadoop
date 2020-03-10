@@ -26,6 +26,7 @@ import java.net.HttpURLConnection;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ExecutorCompletionService;
@@ -445,7 +446,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   }
 
   @VisibleForTesting
-  public synchronized void waitForPendingUploads() throws IOException {
-    waitForTaskToComplete();
+  public synchronized void waitForPendingUploads()
+      throws IOException, ExecutionException, InterruptedException {
+      writeOperations.getFirst().task.get();
   }
 }
