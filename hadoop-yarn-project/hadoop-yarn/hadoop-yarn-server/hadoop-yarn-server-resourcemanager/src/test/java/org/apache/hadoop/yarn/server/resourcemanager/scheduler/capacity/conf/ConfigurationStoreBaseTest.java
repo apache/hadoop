@@ -34,16 +34,13 @@ import static org.junit.Assert.assertNull;
  * Base class for {@link YarnConfigurationStore} implementations.
  */
 public abstract class ConfigurationStoreBaseTest {
+  static final String TEST_USER = "testUser";
+  YarnConfigurationStore confStore = createConfStore();
+  Configuration conf;
+  Configuration schedConf;
+  RMContext rmContext;
 
-  protected YarnConfigurationStore confStore = createConfStore();
-
-  protected abstract YarnConfigurationStore createConfStore();
-
-  protected Configuration conf;
-  protected Configuration schedConf;
-  protected RMContext rmContext;
-
-  protected static final String TEST_USER = "testUser";
+  abstract YarnConfigurationStore createConfStore();
 
   @Before
   public void setUp() throws Exception {
@@ -59,20 +56,12 @@ public abstract class ConfigurationStoreBaseTest {
     confStore.initialize(conf, schedConf, rmContext);
     assertEquals("val1", confStore.retrieve().get("key1"));
 
-    Map<String, String> update1 = new HashMap<>();
-    update1.put("keyUpdate1", "valUpdate1");
-    YarnConfigurationStore.LogMutation mutation1 =
-        new YarnConfigurationStore.LogMutation(update1, TEST_USER);
-    confStore.logMutation(mutation1);
-    confStore.confirmMutation(mutation1, true);
+    confStore.confirmMutation(prepareLogMutation("keyUpdate1", "valUpdate1"),
+        true);
     assertEquals("valUpdate1", confStore.retrieve().get("keyUpdate1"));
 
-    Map<String, String> update2 = new HashMap<>();
-    update2.put("keyUpdate2", "valUpdate2");
-    YarnConfigurationStore.LogMutation mutation2 =
-        new YarnConfigurationStore.LogMutation(update2, TEST_USER);
-    confStore.logMutation(mutation2);
-    confStore.confirmMutation(mutation2, false);
+    confStore.confirmMutation(prepareLogMutation("keyUpdate2", "valUpdate2"),
+        false);
     assertNull("Configuration should not be updated",
         confStore.retrieve().get("keyUpdate2"));
     confStore.close();
@@ -84,13 +73,20 @@ public abstract class ConfigurationStoreBaseTest {
     confStore.initialize(conf, schedConf, rmContext);
     assertEquals("val", confStore.retrieve().get("key"));
 
+    confStore.confirmMutation(prepareLogMutation("key", null), true);
+    assertNull(confStore.retrieve().get("key"));
+    confStore.close();
+  }
+
+  YarnConfigurationStore.LogMutation prepareLogMutation(String key,
+                                                        String value)
+      throws Exception {
     Map<String, String> update = new HashMap<>();
-    update.put("key", null);
+    update.put(key, value);
     YarnConfigurationStore.LogMutation mutation =
         new YarnConfigurationStore.LogMutation(update, TEST_USER);
     confStore.logMutation(mutation);
-    confStore.confirmMutation(mutation, true);
-    assertNull(confStore.retrieve().get("key"));
-    confStore.close();
+
+    return mutation;
   }
 }

@@ -32,19 +32,22 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
+import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 
 
 /**
  * Tests {@link FSSchedulerConfigurationStore}.
  */
 public class TestFSSchedulerConfigurationStore {
+  private static final String TEST_USER = "test";
   private FSSchedulerConfigurationStore configurationStore;
   private Configuration conf;
   private File testSchedulerConfigurationDir;
@@ -90,35 +93,29 @@ public class TestFSSchedulerConfigurationStore {
     Configuration storeConf = configurationStore.retrieve();
     compareConfig(conf, storeConf);
 
-    Map<String, String> updates = new HashMap<>();
-    updates.put("a", null);
-    updates.put("b", "bb");
-
     Configuration expectConfig = new Configuration(conf);
     expectConfig.unset("a");
     expectConfig.set("b", "bb");
 
-    LogMutation logMutation = new LogMutation(updates, "test");
-    configurationStore.logMutation(logMutation);
-    configurationStore.confirmMutation(logMutation, true);
+    prepareParameterizedLogMutation(configurationStore, true,
+        "a", null, "b", "bb");
     storeConf = configurationStore.retrieve();
-    assertEquals(null, storeConf.get("a"));
+    assertNull(storeConf.get("a"));
     assertEquals("bb", storeConf.get("b"));
     assertEquals("c", storeConf.get("c"));
 
     compareConfig(expectConfig, storeConf);
 
-    updates.put("b", "bbb");
-    configurationStore.logMutation(logMutation);
-    configurationStore.confirmMutation(logMutation, true);
+    prepareParameterizedLogMutation(configurationStore, true,
+        "a", null, "b", "bbb");
     storeConf = configurationStore.retrieve();
-    assertEquals(null, storeConf.get("a"));
+    assertNull(storeConf.get("a"));
     assertEquals("bbb", storeConf.get("b"));
     assertEquals("c", storeConf.get("c"));
   }
 
   @Test
-  public void confirmMutationWithInValid() throws Exception {
+  public void confirmMutationWithInvalid() throws Exception {
     conf.set("a", "a");
     conf.set("b", "b");
     conf.set("c", "c");
@@ -127,13 +124,8 @@ public class TestFSSchedulerConfigurationStore {
     Configuration storeConf = configurationStore.retrieve();
     compareConfig(conf, storeConf);
 
-    Map<String, String> updates = new HashMap<>();
-    updates.put("a", null);
-    updates.put("b", "bb");
-
-    LogMutation logMutation = new LogMutation(updates, "test");
-    configurationStore.logMutation(logMutation);
-    configurationStore.confirmMutation(logMutation, false);
+    prepareParameterizedLogMutation(configurationStore, false,
+        "a", null, "b", "bb");
     storeConf = configurationStore.retrieve();
 
     compareConfig(conf, storeConf);
@@ -142,7 +134,7 @@ public class TestFSSchedulerConfigurationStore {
   @Test
   public void testFileSystemClose() throws Exception {
     MiniDFSCluster hdfsCluster = null;
-    FileSystem fs = null;
+    FileSystem fs;
     Path path = new Path("/tmp/confstore");
     try {
       HdfsConfiguration hdfsConfig = new HdfsConfiguration();
@@ -164,11 +156,8 @@ public class TestFSSchedulerConfigurationStore {
       fs.close();
 
       try {
-        Map<String, String> updates = new HashMap<>();
-        updates.put("testkey", "testvalue");
-        LogMutation logMutation = new LogMutation(updates, "test");
-        configStore.logMutation(logMutation);
-        configStore.confirmMutation(logMutation, true);
+        prepareParameterizedLogMutation(configStore, true,
+            "testkey", "testvalue");
       } catch (IOException e) {
         if (e.getMessage().contains("Filesystem closed")) {
           fail("FSSchedulerConfigurationStore failed to handle " +
@@ -178,13 +167,12 @@ public class TestFSSchedulerConfigurationStore {
         }
       }
     } finally {
+      assert hdfsCluster != null;
       fs = hdfsCluster.getFileSystem();
       if (fs.exists(path)) {
         fs.delete(path, true);
       }
-      if (hdfsCluster != null) {
-        hdfsCluster.shutdown();
-      }
+      hdfsCluster.shutdown();
     }
   }
 
@@ -197,15 +185,14 @@ public class TestFSSchedulerConfigurationStore {
     Configuration storedConfig = configurationStore.retrieve();
     assertEquals("a", storedConfig.get("a"));
     configurationStore.format();
-    boolean exceptionCaught = false;
     try {
-      storedConfig = configurationStore.retrieve();
+      configurationStore.retrieve();
+      fail("Expected an IOException with message containing \"no capacity " +
+          "scheduler file in\" to be thrown");
     } catch (IOException e) {
-      if (e.getMessage().contains("no capacity scheduler file in")) {
-        exceptionCaught = true;
-      }
+      assertThat(e.getMessage(),
+          CoreMatchers.containsString("no capacity scheduler file in"));
     }
-    assertTrue(exceptionCaught);
   }
 
   @Test
@@ -242,5 +229,28 @@ public class TestFSSchedulerConfigurationStore {
       assertEquals(entry.getKey(), storedConfig.get(entry.getKey()),
           schedulerConf.get(entry.getKey()));
     }
+  }
+
+  private void prepareParameterizedLogMutation(
+      FSSchedulerConfigurationStore configStore,
+      boolean validityFlag, String... values) throws Exception {
+    Map<String, String> updates = new HashMap<>();
+    String key;
+    String value;
+
+    if (values.length % 2 != 0) {
+      throw new IllegalArgumentException("The number of parameters should be " +
+          "even.");
+    }
+
+    for (int i = 1; i <= values.length; i += 2) {
+      key = values[i - 1];
+      value = values[i];
+      updates.put(key, value);
+    }
+
+    LogMutation logMutation = new LogMutation(updates, TEST_USER);
+    configStore.logMutation(logMutation);
+    configStore.confirmMutation(logMutation, validityFlag);
   }
 }
