@@ -299,21 +299,21 @@ public abstract class INodeAttributeProvider {
     }
 
     public AuthorizationContext(Builder builder) {
-      this.setFsOwner(fsOwner);
-      this.setSupergroup(supergroup);
-      this.setCallerUgi(callerUgi);
-      this.setInodeAttrs(inodeAttrs);
-      this.setInodes(inodes);
-      this.setPathByNameArr(pathByNameArr);
-      this.setSnapshotId(snapshotId);
-      this.setPath(path);
-      this.setAncestorIndex(ancestorIndex);
-      this.setDoCheckOwner(doCheckOwner);
-      this.setAncestorAccess(ancestorAccess);
-      this.setParentAccess(parentAccess);
-      this.setAccess(access);
-      this.setSubAccess(subAccess);
-      this.setIgnoreEmptyDir(ignoreEmptyDir);
+      this.setFsOwner(builder.fsOwner);
+      this.setSupergroup(builder.supergroup);
+      this.setCallerUgi(builder.callerUgi);
+      this.setInodeAttrs(builder.inodeAttrs);
+      this.setInodes(builder.inodes);
+      this.setPathByNameArr(builder.pathByNameArr);
+      this.setSnapshotId(builder.snapshotId);
+      this.setPath(builder.path);
+      this.setAncestorIndex(builder.ancestorIndex);
+      this.setDoCheckOwner(builder.doCheckOwner);
+      this.setAncestorAccess(builder.ancestorAccess);
+      this.setParentAccess(builder.parentAccess);
+      this.setAccess(builder.access);
+      this.setSubAccess(builder.subAccess);
+      this.setIgnoreEmptyDir(builder.ignoreEmptyDir);
       this.setOperationName(builder.operationName);
       this.setCallerContext(builder.callerContext);
     }
