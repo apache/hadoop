@@ -434,7 +434,10 @@ public final class AzureADAuthenticator {
         token.setExpiry(new Date(expiresOnInSecs * 1000));
       } else {
         if (isMsi) {
-          throw new IOException("MSI Responded with invalid expires_on");
+          // Currently there is a known issue that MSI does not update expires_in
+          // for refresh and will have the value from first AAD token fetch request.
+          // Due to this known limitation, expires_in is not supported for MSI token fetch flow.
+          throw new UnsupportedOperationException("MSI Responded with invalid expires_on");
         }
 
         LOG.debug("Expiry based on expires_in: {}", expiryPeriodInSecs);
