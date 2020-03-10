@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-
 import java.io.IOException;
 import java.util.Date;
 
@@ -30,7 +29,6 @@ import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
 import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
 
 import static org.junit.Assume.assumeThat;
-
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
