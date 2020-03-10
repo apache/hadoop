@@ -65,11 +65,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
       </snapshots>
     </repository>
     <repository>
-      <id>flipkart.nm.art</id>
-      <url>http://artifactory.nm.flipkart.com:8081/artifactory</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
+      <id>fk-art-snapshot</id>
+      <name>Flipkart-Artifactory</name>
+      <url>http://artifactory.fkinternal.com/artifactory/v1.0/artifacts/libs-snapshots-local</url>
+    </repository>
+    <repository>
+      <id>fk-art-release</id>
+      <name>Flipkart-Artifactory</name>
+      <url>http://artifactory.fkinternal.com/artifactory/v1.0/artifacts/libs-release-local</url>
     </repository>
   </repositories>
 
