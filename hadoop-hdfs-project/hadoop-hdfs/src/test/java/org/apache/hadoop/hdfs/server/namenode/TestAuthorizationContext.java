@@ -108,7 +108,6 @@ public class TestAuthorizationContext {
     // set operation type to null to force using the legacy API.
     FSPermissionChecker.setOperationType(null);
 
-    INodesInPath iip = mock(INodesInPath.class);
     when(iip.getPathSnapshotId()).thenReturn(snapshotId);
     when(iip.getINodesArray()).thenReturn(inodes);
     when(iip.getPathComponents()).thenReturn(components);

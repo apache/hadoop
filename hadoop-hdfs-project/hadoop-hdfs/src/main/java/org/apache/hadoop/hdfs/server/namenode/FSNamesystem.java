@@ -7693,7 +7693,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       Metadata metadata = FSDirEncryptionZoneOp.ensureKeyIsInitialized(dir,
           keyName, src);
       final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(operationName);
+      FSPermissionChecker.setOperationType(operationName);
       checkSuperuserPrivilege(pc);
       checkOperation(OperationCategory.WRITE);
       writeLock();

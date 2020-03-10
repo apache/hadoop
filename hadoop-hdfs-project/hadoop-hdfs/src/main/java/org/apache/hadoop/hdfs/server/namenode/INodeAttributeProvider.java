@@ -190,23 +190,23 @@ public abstract class INodeAttributeProvider {
     }
 
     public static class Builder {
-      public String fsOwner;
-      public String supergroup;
-      public UserGroupInformation callerUgi;
-      public INodeAttributes[] inodeAttrs;
-      public INode[] inodes;
-      public byte[][] pathByNameArr;
-      public int snapshotId;
-      public String path;
-      public int ancestorIndex;
-      public boolean doCheckOwner;
-      public FsAction ancestorAccess;
-      public FsAction parentAccess;
-      public FsAction access;
-      public FsAction subAccess;
-      public boolean ignoreEmptyDir;
-      public String operationName;
-      public CallerContext callerContext;
+      private String fsOwner;
+      private String supergroup;
+      private UserGroupInformation callerUgi;
+      private INodeAttributes[] inodeAttrs;
+      private INode[] inodes;
+      private byte[][] pathByNameArr;
+      private int snapshotId;
+      private String path;
+      private int ancestorIndex;
+      private boolean doCheckOwner;
+      private FsAction ancestorAccess;
+      private FsAction parentAccess;
+      private FsAction access;
+      private FsAction subAccess;
+      private boolean ignoreEmptyDir;
+      private String operationName;
+      private CallerContext callerContext;
 
       public AuthorizationContext build() {
         return new AuthorizationContext(this);
@@ -298,22 +298,7 @@ public abstract class INodeAttributeProvider {
       }
     }
 
-    public AuthorizationContext(
-        String fsOwner,
-        String supergroup,
-        UserGroupInformation callerUgi,
-        INodeAttributes[] inodeAttrs,
-        INode[] inodes,
-        byte[][] pathByNameArr,
-        int snapshotId,
-        String path,
-        int ancestorIndex,
-        boolean doCheckOwner,
-        FsAction ancestorAccess,
-        FsAction parentAccess,
-        FsAction access,
-        FsAction subAccess,
-        boolean ignoreEmptyDir) {
+    public AuthorizationContext(Builder builder) {
       this.setFsOwner(fsOwner);
       this.setSupergroup(supergroup);
       this.setCallerUgi(callerUgi);
@@ -329,14 +314,6 @@ public abstract class INodeAttributeProvider {
       this.setAccess(access);
       this.setSubAccess(subAccess);
       this.setIgnoreEmptyDir(ignoreEmptyDir);
-    }
-
-    public AuthorizationContext(Builder builder) {
-      this(builder.fsOwner, builder.supergroup, builder.callerUgi,
-          builder.inodeAttrs, builder.inodes, builder.pathByNameArr,
-          builder.snapshotId, builder.path, builder.ancestorIndex,
-          builder.doCheckOwner, builder.ancestorAccess, builder.parentAccess,
-          builder.access, builder.subAccess, builder.ignoreEmptyDir);
       this.setOperationName(builder.operationName);
       this.setCallerContext(builder.callerContext);
     }
@@ -402,7 +379,8 @@ public abstract class INodeAttributeProvider {
      *                  the path and all the sub-directories. If path is not a
      *                  directory, there should ideally be no effect.
      * @param ignoreEmptyDir Ignore permission checking for empty directory?
-     * @deprecated use {@link #checkPermissionWithContext(AuthorizationContext)}} instead
+     * @deprecated use{@link #checkPermissionWithContext(AuthorizationContext)}}
+     * instead
      * @throws AccessControlException
      */
     public abstract void checkPermission(String fsOwner, String supergroup,

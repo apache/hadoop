@@ -231,8 +231,8 @@ public class FSPermissionChecker implements AccessControlEnforcer {
 
     AccessControlEnforcer enforcer = getAccessControlEnforcer();
 
-    String opType;
-    if (this.authorizeWithContext && (opType = operationType.get()) != null) {
+    String opType = operationType.get();
+    if (this.authorizeWithContext && opType != null) {
       INodeAttributeProvider.AuthorizationContext.Builder builder =
           new INodeAttributeProvider.AuthorizationContext.Builder();
       builder.fsOwner(fsOwner).
@@ -278,8 +278,8 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     try {
       INodeAttributes[] iNodeAttr = {nodeAttributes};
       AccessControlEnforcer enforcer = getAccessControlEnforcer();
-      String opType;
-      if (this.authorizeWithContext && (opType = operationType.get()) != null) {
+      String opType = operationType.get();
+      if (this.authorizeWithContext && opType != null) {
         INodeAttributeProvider.AuthorizationContext.Builder builder =
             new INodeAttributeProvider.AuthorizationContext.Builder();
         builder.fsOwner(fsOwner).
