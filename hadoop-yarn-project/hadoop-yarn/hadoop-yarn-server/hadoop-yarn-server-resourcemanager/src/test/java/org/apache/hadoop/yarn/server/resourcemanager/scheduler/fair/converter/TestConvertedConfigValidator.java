@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import java.io.File;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,7 +38,13 @@ public class TestConvertedConfigValidator {
 
   @Before
   public void setup() {
+    QueueMetrics.clearQueueMetrics();
     validator = new ConvertedConfigValidator();
+  }
+
+  @After
+  public void after() {
+    QueueMetrics.clearQueueMetrics();
   }
 
   @Test
