@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -332,6 +333,12 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
 
   @Override
   public List<LogMutation> getConfirmedConfHistory(long fromId) {
+    // Unimplemented.
+    return null;
+  }
+
+  @Override
+  protected LinkedList<LogMutation> getLogs() {
     // Unimplemented.
     return null;
   }
