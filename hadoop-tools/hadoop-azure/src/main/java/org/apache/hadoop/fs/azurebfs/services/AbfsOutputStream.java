@@ -39,6 +39,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
@@ -47,13 +49,13 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
-import static org.apache.hadoop.io.IOUtils.LOG;
 import static org.apache.hadoop.io.IOUtils.wrapException;
 
 /**
  * The BlobFsOutputStream for Rest AbfsClient.
  */
 public class AbfsOutputStream extends OutputStream implements Syncable, StreamCapabilities {
+  public static final Logger LOG = LoggerFactory.getLogger(AbfsOutputStream.class);
   private final AbfsClient client;
   private final String path;
   private long position;
