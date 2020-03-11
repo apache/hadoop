@@ -104,7 +104,7 @@ public class YarnVersionInfo extends VersionInfo {
     LOG.debug("version: "+ getVersion());
     System.out.println("YARN " + getVersion());
     System.out.println("Subversion " + getUrl() + " -r " + getRevision());
-    System.out.println("Compiled by Amithsha S" + " on " + getDate());
+    System.out.println("Compiled by " + getUser()" + " on " + getDate());
     System.out.println("From source with checksum " + getSrcChecksum());
   }
 }
