@@ -17,25 +17,22 @@
  */
 
 package org.apache.hadoop.fs.azurebfs.services;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.conf.Configuration;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
 import org.junit.Assert;
 import org.junit.Test;
-
 import org.mockito.ArgumentCaptor;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.conf.Configuration;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.*;
-/**
- * Test useragent of abfs client.
- *
- */
+
 public final class TestAbfsOutputStream {
 
   private static int bufferSize = 4096;
@@ -47,6 +44,9 @@ public final class TestAbfsOutputStream {
   private final String accountValue1 = "one";
 
   @Test
+  /**
+   * The test verifies OutputStream shortwrite case(2000bytes write followed by flush, hflush, hsync) is making correct HTTP calls to the server
+   */
   public void verifyShortWriteRequest() throws Exception {
 
     AbfsClient client = mock(AbfsClient.class);
@@ -85,11 +85,12 @@ public final class TestAbfsOutputStream {
     Assert.assertEquals(Arrays.asList(true, false, true, false), acBool.getAllValues());
     Assert.assertEquals(Arrays.asList(0,writeSize, 0, 2*writeSize), acInt.getAllValues());
 
-    //verifyNoMoreInteractions(client);
-
   }
 
   @Test
+  /**
+   * The test verifies OutputStream Write of writeSize(1000 bytes) followed by a close is making correct HTTP calls to the server
+   */
   public void verifyWriteRequest() throws Exception {
 
     AbfsClient client = mock(AbfsClient.class);
@@ -125,10 +126,12 @@ public final class TestAbfsOutputStream {
     Assert.assertEquals(Arrays.asList(false, false, true, true), acBool.getAllValues());
     Assert.assertEquals(Arrays.asList(0, bufferSize, 0, 5*writeSize-bufferSize), acInt.getAllValues());
 
-    //verifyNoMoreInteractions(client);
   }
 
   @Test
+  /**
+   * The test verifies OutputStream Write of bufferSize(4KB) followed by a close is making correct HTTP calls to the server
+   */
   public void verifyWriteRequestOfBufferSizeAndClose() throws Exception {
 
     AbfsClient client = mock(AbfsClient.class);
@@ -174,10 +177,12 @@ public final class TestAbfsOutputStream {
     Assert.assertEquals(Arrays.asList(Long.valueOf(2*bufferSize)), acFlushLong.getAllValues());
     Assert.assertEquals(Arrays.asList(false, true), acFlushBool.getAllValues());
 
-//    verifyNoMoreInteractions(client);
   }
 
   @Test
+  /**
+   * The test verifies OutputStream Write of bufferSize(4KB) is making correct HTTP calls to the server
+   */
   public void verifyWriteRequestOfBufferSize() throws Exception {
 
     AbfsClient client = mock(AbfsClient.class);
@@ -213,10 +218,12 @@ public final class TestAbfsOutputStream {
     Assert.assertEquals(Arrays.asList(false, false, false, false), acBool.getAllValues());
     Assert.assertEquals(Arrays.asList(0, bufferSize, 0, bufferSize), acInt.getAllValues());
 
- //   verifyNoMoreInteractions(client);
   }
 
   @Test
+  /**
+   * The test verifies OutputStream Write of bufferSize(4KB) on a AppendBlob based stream is making correct HTTP calls to the server
+   */
   public void verifyWriteRequestOfBufferSizeWithAppendBlob() throws Exception {
 
     AbfsClient client = mock(AbfsClient.class);
@@ -252,10 +259,12 @@ public final class TestAbfsOutputStream {
     Assert.assertEquals(Arrays.asList(false, false, false, false), acBool.getAllValues());
     Assert.assertEquals(Arrays.asList(0, bufferSize, 0, bufferSize), acInt.getAllValues());
 
-    //verifyNoMoreInteractions(client);
   }
 
   @Test
+  /**
+   * The test verifies OutputStream Write of bufferSize(4KB)  followed by a hflush call is making correct HTTP calls to the server
+   */
   public void verifyWriteRequestOfBufferSizeAndHFlush() throws Exception {
 
     AbfsClient client = mock(AbfsClient.class);
@@ -301,10 +310,12 @@ public final class TestAbfsOutputStream {
     Assert.assertEquals(Arrays.asList(Long.valueOf(2*bufferSize)), acFlushLong.getAllValues());
     Assert.assertEquals(Arrays.asList(false, false), acFlushBool.getAllValues());
 
-    //verifyNoMoreInteractions(client);
   }
 
   @Test
+  /**
+   * The test verifies OutputStream Write of bufferSize(4KB)  followed by a flush call is making correct HTTP calls to the server
+   */
   public void verifyWriteRequestOfBufferSizeAndFlush() throws Exception {
 
     AbfsClient client = mock(AbfsClient.class);
@@ -340,10 +351,5 @@ public final class TestAbfsOutputStream {
     Assert.assertEquals(Arrays.asList(false, false, false, false), acBool.getAllValues());
     Assert.assertEquals(Arrays.asList(0, bufferSize, 0, bufferSize), acInt.getAllValues());
 
-    ArgumentCaptor<String> acFlushString = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<Long> acFlushLong = ArgumentCaptor.forClass(Long.class);
-    ArgumentCaptor<Boolean> acFlushBool = ArgumentCaptor.forClass(Boolean.class);
-
-    //verifyNoMoreInteractions(client);
   }
 }
