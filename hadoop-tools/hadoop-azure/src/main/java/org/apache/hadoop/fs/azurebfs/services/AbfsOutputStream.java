@@ -369,7 +369,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
     if (this.lastTotalAppendOffset > this.lastFlushOffset) {
       this.flushWrittenBytesToServiceInternal(this.lastTotalAppendOffset, true,
-          false/*Async flush on close not permitted*/);
+        false/*Async flush on close not permitted*/);
     }
   }
 
