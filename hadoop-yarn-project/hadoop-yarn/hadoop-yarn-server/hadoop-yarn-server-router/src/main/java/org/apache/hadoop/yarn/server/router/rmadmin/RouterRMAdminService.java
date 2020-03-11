@@ -28,9 +28,11 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -67,6 +69,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.router.security.authorize.RouterPolicyProvider;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -130,6 +133,11 @@ public class RouterRMAdminService extends AbstractService
     this.server = rpc.getServer(ResourceManagerAdministrationProtocol.class,
         this, listenerEndpoint, serverConf, null, numWorkerThreads);
 
+    if (conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, false)) {
+      refreshServiceAcls(conf, RouterPolicyProvider.getInstance());
+    }
+
     this.server.start();
     LOG.info("Router RMAdminService listening on address: "
         + this.server.getListenerAddress());
@@ -144,6 +152,16 @@ public class RouterRMAdminService extends AbstractService
     }
     userPipelineMap.clear();
     super.serviceStop();
+  }
+
+  void refreshServiceAcls(Configuration configuration,
+      PolicyProvider policyProvider) {
+    this.server.refreshServiceAcl(configuration, policyProvider);
+  }
+
+  @VisibleForTesting
+  public Server getServer() {
+    return this.server;
   }
 
   /**
