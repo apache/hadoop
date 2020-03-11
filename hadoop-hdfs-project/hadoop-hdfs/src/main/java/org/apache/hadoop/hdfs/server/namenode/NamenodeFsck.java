@@ -86,7 +86,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.Tracer;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -227,7 +227,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         conf.getLong(DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
           DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT);
     this.tracer = new Tracer.Builder("NamenodeFsck").
-        conf(TraceUtils.wrapHadoopConf("namenode.fsck.htrace.", conf)).
+        conf(TraceUtils.wrapHadoopConfOT("namenode.fsck.htrace.", conf)).
         build();
 
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {

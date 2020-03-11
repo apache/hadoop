@@ -80,6 +80,11 @@
          * commons-logging
       -->
     <dependency>
+      <groupId>io.opentracing</groupId>
+      <artifactId>opentracing-util</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.htrace</groupId>
       <artifactId>htrace-core4</artifactId>
       <scope>runtime</scope>
@@ -148,6 +153,10 @@
                       <exclude>org.apache.hadoop:hadoop-client-api</exclude>
                       <!-- Leave HTrace as an unshaded dependency on purpose, since a static class member is used to trace within a given JVM instance -->
                       <exclude>org.apache.htrace:htrace-core4</exclude>
+                      <!-- Leave OpenTracing as an unshaded dependency on purpose. -->
+                      <exclude>io.opentracing:opentracing-api</exclude>
+                      <exclude>io.opentracing:opentracing-util</exclude>
+                      <exclude>io.opentracing:opentracing-noop</exclude>
                       <!-- Leave slf4j unshaded so downstream users can configure logging. -->
                       <exclude>org.slf4j:slf4j-api</exclude>
                       <!-- Leave commons-logging unshaded so downstream users can configure logging. -->
@@ -250,6 +259,10 @@
                         <!-- Our non-shaded htrace and logging libraries -->
                         <exclude>org/apache/htrace/*</exclude>
                         <exclude>org/apache/htrace/**/*</exclude>
+                        <exclude>io/opentracing/*</exclude>
+                        <exclude>io/opentracing/**/*</exclude>
+                        <exclude>io/opentracing/noop/*</exclude>
+                        <exclude>io/opentracing/util/*</exclude>
                         <exclude>org/slf4j/*</exclude>
                         <exclude>org/slf4j/**/*</exclude>
                         <exclude>org/apache/commons/logging/*</exclude>

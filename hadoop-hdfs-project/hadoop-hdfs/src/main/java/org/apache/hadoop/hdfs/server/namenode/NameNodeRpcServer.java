@@ -547,6 +547,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     clientRpcServer.addSuppressedLoggingExceptions(StandbyException.class,
         UnresolvedPathException.class);
 
+
     clientRpcServer.setTracer(nn.tracer);
     if (serviceRpcServer != null) {
       serviceRpcServer.setTracer(nn.tracer);
@@ -554,6 +555,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     if (lifelineRpcServer != null) {
       lifelineRpcServer.setTracer(nn.tracer);
     }
+
     int[] auxiliaryPorts =
         conf.getInts(DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY);
     if (auxiliaryPorts != null && auxiliaryPorts.length != 0) {
