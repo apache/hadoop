@@ -360,7 +360,7 @@ public abstract class INodeAttributeProvider {
 
     /**
      * Checks permission on a file system object. Has to throw an Exception
-     * if the filesystem object is not accessessible by the calling Ugi.
+     * if the filesystem object is not accessible by the calling Ugi.
      * @param fsOwner Filesystem owner (The Namenode user)
      * @param supergroup super user geoup
      * @param callerUgi UserGroupInformation of the caller
