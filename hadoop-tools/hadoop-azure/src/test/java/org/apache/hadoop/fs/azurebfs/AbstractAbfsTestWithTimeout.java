@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.fs.azurebfs;
 
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.Path;
+import java.io.IOException;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -28,8 +28,8 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.Arrays;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_TIMEOUT;
 
@@ -91,10 +91,10 @@ public class AbstractAbfsTestWithTimeout extends Assert {
   }
 
   /**
-   * Validate Contents written on a file in Abfs
+   * Validate Contents written on a file in Abfs.
    *
-   * @param fs AzureBlobFileSystem
-   * @param path Path of the file
+   * @param fs                AzureBlobFileSystem
+   * @param path              Path of the file
    * @param originalByteArray original byte array
    * @return
    * @throws IOException
@@ -103,16 +103,20 @@ public class AbstractAbfsTestWithTimeout extends Assert {
       byte[] originalByteArray)
       throws IOException {
     FSDataInputStream in = fs.open(path);
-    byte[] contentByteArray = new byte[originalByteArray.length];
-    int seekPos = 0;
-    while (in.read() != -1) {
-      in.seek(seekPos);
-      contentByteArray[seekPos] = (byte) (in.read());
-      seekPos++;
+
+    int pos = 0;
+    int lenOfOriginalByteArray = originalByteArray.length;
+    byte valueOfContentAtPos = (byte) in.read();
+
+    while (valueOfContentAtPos != -1 && pos < lenOfOriginalByteArray) {
+      if (originalByteArray[pos] != valueOfContentAtPos)
+        return false;
+      valueOfContentAtPos = (byte) in.read();
+      pos++;
     }
-
-    return Arrays.equals(contentByteArray, originalByteArray);
-
+    if (valueOfContentAtPos != -1)
+      return false;
+    return true;
   }
 
 }

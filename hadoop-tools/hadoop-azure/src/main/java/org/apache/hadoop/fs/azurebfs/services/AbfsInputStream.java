@@ -256,7 +256,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   /**
-   * Increment Read Operations
+   * Increment Read Operations.
    */
   public void incrementReadOps() {
     statistics.incrementReadOps(1);

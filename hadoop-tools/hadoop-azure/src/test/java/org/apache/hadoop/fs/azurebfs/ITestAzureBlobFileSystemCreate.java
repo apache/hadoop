@@ -23,9 +23,6 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.util.EnumSet;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
-import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.CreateFlag;
@@ -60,59 +57,6 @@ public class ITestAzureBlobFileSystemCreate extends
       out.close();
     }
     assertIsFile(fs, TEST_FILE_PATH);
-  }
-
-  /**
-   * {@link AbfsOutputStream#incrementWriteOps()}
-   *
-   * @throws Exception
-   */
-  @Test
-  public void testWriteOpsMetric() throws Exception {
-    describe("Test to see correct population of write operations in Abfs");
-    final AzureBlobFileSystem fs = getFileSystem();
-    Path smallFile = new Path("testOneCall");
-    Path largeFile = new Path("testLargeCalls");
-    String testWriteOps = "test";
-    FileSystem.Statistics statistics = fs.getFsStatistics();
-    statistics.reset();
-
-    //Test for zero write operation
-    Assert.assertEquals(0, statistics.getWriteOps());
-
-    FSDataOutputStream outForOneCall = fs.create(smallFile);
-    statistics.reset();
-    //Writing "test" 1 time
-    outForOneCall
-        .write(testWriteOps.getBytes(), 0, testWriteOps.getBytes().length);
-
-    //Test for one write operation
-    Assert.assertEquals(1, statistics.getWriteOps());
-
-    outForOneCall.close();
-    //validating Content of file
-    Assert.assertEquals(true, validateContent(fs, smallFile,
-        testWriteOps.getBytes()));
-
-    String largeFileValidationString = "";
-    FSDataOutputStream outForLargeCalls = fs.create(largeFile);
-    statistics.reset();
-    //Writing "test" 1000 times
-    for (int i = 0; i < 1000; i++) {
-      outForLargeCalls.write(testWriteOps.getBytes(), 0,
-          testWriteOps.getBytes().length);
-
-      //Creating Validation string of "test" 1000 times
-      largeFileValidationString += testWriteOps;
-    }
-
-    //Test for thousand write operations
-    Assert.assertEquals(1000, statistics.getWriteOps());
-
-    outForLargeCalls.close();
-    //Validating if actually "test" is being written thousand times in largeFile
-    Assert.assertEquals(true, validateContent(fs, largeFile,
-        largeFileValidationString.getBytes()));
   }
 
   @Test
