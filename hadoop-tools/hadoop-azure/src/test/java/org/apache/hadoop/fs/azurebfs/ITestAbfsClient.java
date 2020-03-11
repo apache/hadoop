@@ -18,8 +18,19 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -28,16 +39,20 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.hamcrest.Matchers.is;
 
 /**
  * Test continuation token which has equal sign.
  */
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   private static final int LIST_MAX_RESULTS = 500;
+  private static final int LIST_MAX_RESULTS_SERVER = 5000;
 
   public ITestAbfsClient() throws Exception {
     super();
@@ -74,5 +89,72 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     intercept(AbfsRestOperationException.class,
             "UnknownHostException: " + fakeAccountName,
             () -> FileSystem.get(conf.getRawConfiguration()));
+  }
+
+  @Test
+  public void testListMaxResultsTestValidListMaxResults()
+      throws IOException, ExecutionException, InterruptedException {
+    final AzureBlobFileSystem fs = getFileSystem();
+    int fileCount = 50;
+    String directory = "testListMaxResultsTestValidListMaxResults1";
+    createDirectoryWithNFiles(directory, fileCount);
+
+    final int[] testData = {fileCount + 100, fileCount + 1, fileCount,
+        fileCount - 1, 1};
+    for (int i = 0; i < testData.length; i++) {
+      int maxResults = testData[i];
+      int expected = maxResults > fileCount ? fileCount : maxResults;
+      fs.getAbfsStore().getAbfsConfiguration().setListMaxResults(maxResults);
+      assertThat(getFileCount(directory), is(expected));
+    }
+
+    directory = "testListMaxResultsTestValidListMaxResults2";
+    createDirectoryWithNFiles(directory, LIST_MAX_RESULTS_SERVER + 200);
+    fs.getAbfsStore().getAbfsConfiguration()
+        .setListMaxResults(LIST_MAX_RESULTS_SERVER + 100);
+    assertThat(getFileCount(directory), is(LIST_MAX_RESULTS_SERVER));
+  }
+
+  @Test
+  public void testListMaxResultsTestInvalidListMaxResults() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AbfsClient abfsClient = fs.getAbfsClient();
+    String directory = "testListMaxResultsTestInvalidListMaxResults";
+    for (int i = -1; i < 1; i++) {
+      int listMaxResults = i;
+      intercept(AbfsRestOperationException.class, "Operation failed: \"One of "
+          + "the query parameters specified in the request URI is outside" + " "
+          + "the permissible range.", () -> {
+        abfsClient.listPath(directory, false, listMaxResults, null);
+      });
+    }
+  }
+
+  private int getFileCount(String directory) throws IOException {
+    return getFileSystem().getAbfsClient().listPath(directory, false,
+        getFileSystem().getAbfsStore().getAbfsConfiguration()
+            .getListMaxResults(), null).getResult().getListResultSchema()
+        .paths().size();
+  }
+
+  private void createDirectoryWithNFiles(String directory, int n)
+      throws ExecutionException, InterruptedException {
+    final List<Future<Void>> tasks = new ArrayList<>();
+    ExecutorService es = Executors.newFixedThreadPool(10);
+    for (int i = 0; i < n; i++) {
+      final Path fileName = new Path("/" + directory + "/test" + i);
+      Callable<Void> callable = new Callable<Void>() {
+        @Override
+        public Void call() throws Exception {
+          touch(fileName);
+          return null;
+        }
+      };
+      tasks.add(es.submit(callable));
+    }
+    for (Future<Void> task : tasks) {
+      task.get();
+    }
+    es.shutdownNow();
   }
 }
