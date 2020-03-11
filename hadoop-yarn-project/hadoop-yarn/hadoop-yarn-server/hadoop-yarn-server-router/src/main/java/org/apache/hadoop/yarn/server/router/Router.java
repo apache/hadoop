@@ -67,8 +67,10 @@ public class Router extends CompositeService {
   private Configuration conf;
   private AtomicBoolean isStopping = new AtomicBoolean(false);
   private JvmPauseMonitor pauseMonitor;
-  private RouterClientRMService clientRMProxyService;
-  private RouterRMAdminService rmAdminProxyService;
+  @VisibleForTesting
+  protected RouterClientRMService clientRMProxyService;
+  @VisibleForTesting
+  protected RouterRMAdminService rmAdminProxyService;
   private WebApp webApp;
   @VisibleForTesting
   protected String webAppAddress;
