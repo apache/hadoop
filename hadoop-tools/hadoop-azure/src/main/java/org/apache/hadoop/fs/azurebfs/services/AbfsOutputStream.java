@@ -140,11 +140,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   @Override
   public boolean hasCapability(String capability) {
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case StreamCapabilities.HSYNC:
-    case StreamCapabilities.HFLUSH:
-      return supportFlush;
-    default:
-      return false;
+      case StreamCapabilities.HSYNC:
+      case StreamCapabilities.HFLUSH:
+        return supportFlush;
+      default:
+        return false;
     }
   }
 
@@ -325,9 +325,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       public Void call() throws Exception {
         AbfsPerfTracker tracker = client.getAbfsPerfTracker();
         try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
-            "writeCurrentBufferToService", "append")) {
+                "writeCurrentBufferToService", "append")) {
           AbfsRestOperation op = client.append(path, offset, bytes, 0,
-              bytesLength);
+                  bytesLength);
           perfInfo.registerResult(op.getResult());
           byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
           buffersToBeReturned.decrementAndGet();
@@ -377,7 +377,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       final boolean retainUncommitedData, final boolean isClose) throws IOException {
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
-        "flushWrittenBytesToServiceInternal", "flush")) {
+            "flushWrittenBytesToServiceInternal", "flush")) {
       AbfsRestOperation op = client.flush(path, offset, retainUncommitedData, isClose);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
@@ -414,16 +414,15 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   private void waitForTaskToComplete() throws IOException {
     boolean completed;
-    for (completed = false; completionService.poll() != null; completed =
-        true) {
+    for (completed = false; completionService.poll() != null; completed = true) {
       // keep polling until there is no data
     }
+
     if (!completed) {
       try {
         completionService.take();
       } catch (InterruptedException e) {
-        lastError = (IOException) new InterruptedIOException(e.toString())
-            .initCause(e);
+        lastError = (IOException) new InterruptedIOException(e.toString()).initCause(e);
         throw lastError;
       }
     }
