@@ -1019,7 +1019,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
      * @throws IOException on I/O errors.
      */
     private void compareRoot(Path path, PrintStream out) throws IOException {
-      Path qualified = getFilesystem().qualify(path);
+      Path qualified = getFilesystem().makeQualified(path);
       FileStatus s3Status = null;
       try {
         s3Status = getFilesystem().getFileStatus(qualified);
@@ -1050,7 +1050,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
       } else {
         root = new Path(uri.getPath());
       }
-      root = getFilesystem().qualify(root);
+      root = getFilesystem().makeQualified(root);
       compareRoot(root, out);
       out.flush();
       return SUCCESS;
