@@ -46,7 +46,7 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
         + "Abfs");
 
     final AzureBlobFileSystem fs = getFileSystem();
-    Path smallOperaionsFile = new Path("testOneReadWriteOps");
+    Path smallOperationsFile = new Path("testOneReadWriteOps");
     Path largeOperationsFile = new Path("testLargeReadWriteOps");
     FileSystem.Statistics statistics = fs.getFsStatistics();
     String testReadWriteOps = "test this";
@@ -58,10 +58,10 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
     Assert.assertEquals("Mismatch in write operations", 0,
         statistics.getWriteOps());
 
-    FSDataOutputStream outForOneOperation = fs.create(smallOperaionsFile);
+    FSDataOutputStream outForOneOperation = fs.create(smallOperationsFile);
     statistics.reset();
     outForOneOperation.write(testReadWriteOps.getBytes());
-    FSDataInputStream inForOneCall = fs.open(smallOperaionsFile);
+    FSDataInputStream inForOneCall = fs.open(smallOperationsFile);
     inForOneCall.read(testReadWriteOps.getBytes(), 0,
         testReadWriteOps.getBytes().length);
 
@@ -72,9 +72,9 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
         statistics.getWriteOps());
 
     outForOneOperation.close();
-    //Validating if Content is being written in the smallFile
+    //Validating if content is being written in the smallOperationsFile
     Assert.assertEquals("Mismatch in content validation", true,
-        validateContent(fs, smallOperaionsFile,
+        validateContent(fs, smallOperationsFile,
             testReadWriteOps.getBytes()));
 
     FSDataOutputStream outForLargeOperations = fs.create(largeOperationsFile);
@@ -102,7 +102,7 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
         statistics.getWriteOps());
 
     outForLargeOperations.close();
-    //Validating if actually "test" is being written million times in largeOperationsFile
+    //Validating if content is being written in largeOperationsFile
     Assert.assertEquals("Mismatch in content validation", true,
         validateContent(fs, largeOperationsFile,
             largeOperationsValidationString.toString().getBytes()));
