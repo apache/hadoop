@@ -248,7 +248,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       ContractTestUtils.touch(fs, path);
     } else if (onMetadataStore) {
       S3AFileStatus status = new S3AFileStatus(100L, System.currentTimeMillis(),
-          fs.qualify(path), 512L, "hdfs", null, null);
+          fs.makeQualified(path), 512L, "hdfs", null, null);
       putFile(ms, status);
     }
   }
