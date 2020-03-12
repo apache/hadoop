@@ -42,8 +42,9 @@ public class FSConfigToCSConfigConverterMain {
         LOG.error(FATAL,
             "Error while starting FS configuration conversion, " +
                 "see previous error messages for details!");
-        System.exit(exitCode);
       }
+
+      System.exit(exitCode);
     } catch (Throwable t) {
       LOG.error(FATAL,
           "Error while starting FS configuration conversion!", t);
