@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -254,4 +255,117 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     }
   }
 
+  /**
+   * Verify that paths with a trailing "/" are fixed up.
+   */
+  @Test
+  public void testPathFixup() throws Throwable {
+    final S3AFileSystem fs = getFileSystem();
+    Path path = fs.makeQualified(new Path("path"));
+    String trailing = path.toUri().toString() + "/";
+    verifyNoTrailingSlash("path from string",
+        new Path(trailing));
+
+    // here the problem: the URI constructor doesn't strip trailing "/" chars
+    URI trailingURI = verifyTrailingSlash("trailingURI", new URI(trailing));
+    Path pathFromTrailingURI =
+        verifyTrailingSlash("pathFromTrailingURI", new Path(trailingURI));
+
+    // here is the fixup
+    verifyNoTrailingSlash(
+        "path from fs.makeQualified()",
+        fs.makeQualified(pathFromTrailingURI));
+  }
+
+  /**
+   * Verify that paths with a trailing "//" are fixed up.
+   */
+  @Test
+  public void testPathDoubleSlashFixup() throws Throwable {
+    final S3AFileSystem fs = getFileSystem();
+    Path path = fs.makeQualified(new Path("path"));
+    String trailing2 = path.toUri().toString() + "//";
+    verifyNoTrailingSlash("path from string",
+        new Path(trailing2));
+
+    // here the problem: the URI constructor doesn't strip trailing "/" chars
+    URI trailingURI = new URI(trailing2);
+    Path pathFromTrailingURI =
+        verifyTrailingSlash("pathFromTrailingURI", new Path(trailingURI));
+
+    // here is the fixup
+    verifyNoTrailingSlash(
+        "path from fs.makeQualified()",
+        fs.makeQualified(pathFromTrailingURI));
+  }
+
+  /**
+   * Verify that root path fixup does retain any trailing "/", because
+   * that matters.
+   */
+  @Test
+  public void testRootPathFixup() throws Throwable {
+    final S3AFileSystem fs = getFileSystem();
+    // fs.getURI() actually returns a path without any trailing /
+    String baseFsURI = fs.getUri().toString();
+    Path rootPath_from_FS_URI = verifyNoTrailingSlash("root", new Path(baseFsURI));
+
+    // add a single / to a string
+    String trailing = verifyTrailingSlash("FS URI",
+        baseFsURI + "/");
+    Path root_path_from_trailing_string =
+        verifyTrailingSlash("root path from string", new Path(trailing));
+
+    // now verify that the URI constructor retrains that /
+    URI trailingURI = verifyTrailingSlash("trailingURI", new URI(trailing));
+    Path pathFromTrailingURI =
+        verifyTrailingSlash("pathFromTrailingURI", new Path(trailingURI));
+
+    // Root path fixup is expected to retain that trailing /
+    Path pathFromQualify = verifyTrailingSlash(
+        "path from fs.makeQualified()",
+        fs.makeQualified(pathFromTrailingURI));
+    assertEquals(root_path_from_trailing_string, pathFromQualify);
+
+    // and if you fix up the root path without a string, you get
+    // back a root path without a string
+    Path pathFromRootQualify = verifyNoTrailingSlash(
+        "path from fs.makeQualified(" + baseFsURI +")",
+        fs.makeQualified(rootPath_from_FS_URI));
+
+    assertEquals(rootPath_from_FS_URI, pathFromRootQualify);
+    assertNotEquals(rootPath_from_FS_URI, root_path_from_trailing_string);
+  }
+
+  /**
+   * Verify that an object's string value path has a single trailing / symbol;
+   * returns the object.
+   * @param role role for error messages
+   * @param o object
+   * @param <T> type of object
+   * @return the object.
+   */
+  private static <T> T verifyTrailingSlash(String role, T o) {
+    String s = o.toString();
+    assertTrue(role + " lacks trailing slash " + s,
+        s.endsWith("/"));
+    assertFalse(role + " has double trailing slash " + s,
+        s.endsWith("//"));
+    return o;
+  }
+
+  /**
+   * Verify that an object's string value path has no trailing / symbol;
+   * returns the object.
+   * @param role role for error messages
+   * @param o object
+   * @param <T> type of object
+   * @return the object.
+   */
+  private static <T> T verifyNoTrailingSlash(String role, T o) {
+    String s = o.toString();
+    assertFalse(role + " has trailing slash " + s,
+        s.endsWith("/"));
+    return o;
+  }
 }

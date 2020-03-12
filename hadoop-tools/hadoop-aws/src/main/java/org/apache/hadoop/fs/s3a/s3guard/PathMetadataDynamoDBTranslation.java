@@ -318,8 +318,20 @@ public final class PathMetadataDynamoDBTranslation {
   static PrimaryKey pathToKey(Path path) {
     Preconditions.checkArgument(!path.isRoot(),
         "Root path is not mapped to any PrimaryKey");
-    return new PrimaryKey(PARENT, pathToParentKey(path.getParent()), CHILD,
-        path.getName());
+    String childName = path.getName();
+    PrimaryKey key = new PrimaryKey(PARENT,
+        pathToParentKey(path.getParent()), CHILD,
+        childName);
+    for (KeyAttribute attr : key.getComponents()) {
+      String name = attr.getName();
+      Object v = attr.getValue();
+      Preconditions.checkNotNull(v,
+          "Null value for DynamoDB attribute \"%s\"", name);
+      Preconditions.checkState(!((String)v).isEmpty(),
+          "Empty string value for DynamoDB attribute \"%s\"", name);
+    }
+    return key;
+
   }
 
   /**
