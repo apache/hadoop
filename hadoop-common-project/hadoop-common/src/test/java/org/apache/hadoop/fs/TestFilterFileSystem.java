@@ -27,7 +27,6 @@ import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.util.EnumSet;
 import java.util.Iterator;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
@@ -106,10 +105,6 @@ public class TestFilterFileSystem {
     public FileStatus[] listStatusBatch(Path f, byte[] token);
     public FileStatus[] listStatus(Path[] files);
     public FileStatus[] listStatus(Path[] files, PathFilter filter);
-    public RemoteIterator<PartialListing<LocatedFileStatus>> batchedListLocatedStatusIterator(
-        final List<Path> paths) throws IOException;
-    public RemoteIterator<PartialListing<FileStatus>> batchedListStatusIterator(
-        final List<Path> paths) throws IOException;
     public FileStatus[] globStatus(Path pathPattern);
     public FileStatus[] globStatus(Path pathPattern, PathFilter filter);
     public Iterator<LocatedFileStatus> listFiles(Path path,

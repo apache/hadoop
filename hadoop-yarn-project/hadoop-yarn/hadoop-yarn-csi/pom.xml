@@ -29,7 +29,6 @@
         <protobuf.version>3.6.1</protobuf.version>
         <guava.version>20.0</guava.version>
         <grpc.version>1.26.0</grpc.version>
-        <netty-all.version>4.1.27.Final</netty-all.version>
         <os-maven-plugin.version>1.5.0.Final</os-maven-plugin.version>
     </properties>
 
@@ -47,7 +46,6 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
-            <version>${netty-all.version}</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>

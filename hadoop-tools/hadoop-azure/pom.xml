@@ -288,6 +288,7 @@
       <artifactId>hamcrest-library</artifactId>
       <scope>test</scope>
     </dependency>
+
   </dependencies>
 
   <profiles>

@@ -25,7 +25,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.Permission;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,15 +39,20 @@ import org.junit.Test;
  */
 public class TestFSConfigToCSConfigConverterMain {
   private FSConfigConverterTestCommons converterTestCommons;
+  private SecurityManager originalSecurityManager;
 
   @Before
   public void setUp() throws Exception {
+    originalSecurityManager = System.getSecurityManager();
+    System.setSecurityManager(new ExitHandlerSecurityManager());
     converterTestCommons = new FSConfigConverterTestCommons();
     converterTestCommons.setUp();
   }
 
   @After
   public void tearDown() throws Exception {
+    QueueMetrics.clearQueueMetrics();
+    System.setSecurityManager(originalSecurityManager);
     converterTestCommons.tearDown();
   }
 
@@ -131,5 +138,20 @@ public class TestFSConfigToCSConfigConverterMain {
     String stdout = converterTestCommons.getStdOutContent().toString();
     assertTrue("Help was not displayed",
         stdout.contains("General options are:"));
+  }
+
+  class ExitHandlerSecurityManager extends SecurityManager {
+    @Override
+    public void checkExit(int status) {
+      if (status != 0) {
+        throw new IllegalStateException(
+            "Exit code is not 0, it was " + status);
+      }
+    }
+
+    @Override
+    public void checkPermission(Permission perm) {
+      // allow all permissions
+    }
   }
 }

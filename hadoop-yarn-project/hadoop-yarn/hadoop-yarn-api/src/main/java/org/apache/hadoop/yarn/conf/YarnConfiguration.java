@@ -1241,7 +1241,12 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_DELETE_THREAD_COUNT = 
     NM_PREFIX +  "delete.thread-count";
   public static final int DEFAULT_NM_DELETE_THREAD_COUNT = 4;
-  
+
+  public static final String NM_CONTAINER_EXECUTOR_EXIT_FILE_TIMEOUT =
+      NM_PREFIX + "container-executor.exit-code-file.timeout-ms";
+  public static final int DEFAULT_NM_CONTAINER_EXECUTOR_EXIT_FILE_TIMEOUT =
+      2000;
+
   /** Keytab for NM.*/
   public static final String NM_KEYTAB = NM_PREFIX + "keytab";
   

@@ -137,7 +137,7 @@ public final class AzureADAuthenticator {
     headers.put("Metadata", "true");
 
     LOG.debug("AADToken: starting to fetch token using MSI");
-    return getTokenCall(authEndpoint, qp.serialize(), headers, "GET");
+    return getTokenCall(authEndpoint, qp.serialize(), headers, "GET", true);
   }
 
   /**
@@ -258,8 +258,13 @@ public final class AzureADAuthenticator {
   }
 
   private static AzureADToken getTokenCall(String authEndpoint, String body,
-                                           Hashtable<String, String> headers, String httpMethod)
-          throws IOException {
+      Hashtable<String, String> headers, String httpMethod) throws IOException {
+    return getTokenCall(authEndpoint, body, headers, httpMethod, false);
+  }
+
+  private static AzureADToken getTokenCall(String authEndpoint, String body,
+      Hashtable<String, String> headers, String httpMethod, boolean isMsi)
+      throws IOException {
     AzureADToken token = null;
     ExponentialRetryPolicy retryPolicy
             = new ExponentialRetryPolicy(3, 0, 1000, 2);
@@ -272,7 +277,7 @@ public final class AzureADAuthenticator {
       httperror = 0;
       ex = null;
       try {
-        token = getTokenSingleCall(authEndpoint, body, headers, httpMethod);
+        token = getTokenSingleCall(authEndpoint, body, headers, httpMethod, isMsi);
       } catch (HttpException e) {
         httperror = e.httpErrorCode;
         ex = e;
@@ -288,8 +293,9 @@ public final class AzureADAuthenticator {
     return token;
   }
 
-  private static AzureADToken getTokenSingleCall(
-          String authEndpoint, String payload, Hashtable<String, String> headers, String httpMethod)
+  private static AzureADToken getTokenSingleCall(String authEndpoint,
+      String payload, Hashtable<String, String> headers, String httpMethod,
+      boolean isMsi)
           throws IOException {
 
     AzureADToken token = null;
@@ -336,7 +342,7 @@ public final class AzureADAuthenticator {
       if (httpResponseCode == HttpURLConnection.HTTP_OK
               && responseContentType.startsWith("application/json") && responseContentLength > 0) {
         InputStream httpResponseStream = conn.getInputStream();
-        token = parseTokenFromStream(httpResponseStream);
+        token = parseTokenFromStream(httpResponseStream, isMsi);
       } else {
         InputStream stream = conn.getErrorStream();
         if (stream == null) {
@@ -390,10 +396,12 @@ public final class AzureADAuthenticator {
     return token;
   }
 
-  private static AzureADToken parseTokenFromStream(InputStream httpResponseStream) throws IOException {
+  private static AzureADToken parseTokenFromStream(
+      InputStream httpResponseStream, boolean isMsi) throws IOException {
     AzureADToken token = new AzureADToken();
     try {
-      int expiryPeriod = 0;
+      int expiryPeriodInSecs = 0;
+      long expiresOnInSecs = -1;
 
       JsonFactory jf = new JsonFactory();
       JsonParser jp = jf.createJsonParser(httpResponseStream);
@@ -408,17 +416,38 @@ public final class AzureADAuthenticator {
           if (fieldName.equals("access_token")) {
             token.setAccessToken(fieldValue);
           }
+
           if (fieldName.equals("expires_in")) {
-            expiryPeriod = Integer.parseInt(fieldValue);
+            expiryPeriodInSecs = Integer.parseInt(fieldValue);
           }
+
+          if (fieldName.equals("expires_on")) {
+            expiresOnInSecs = Long.parseLong(fieldValue);
+          }
+
         }
         jp.nextToken();
       }
       jp.close();
-      long expiry = System.currentTimeMillis();
-      expiry = expiry + expiryPeriod * 1000L; // convert expiryPeriod to milliseconds and add
-      token.setExpiry(new Date(expiry));
-      LOG.debug("AADToken: fetched token with expiry " + token.getExpiry().toString());
+      if (expiresOnInSecs > 0) {
+        LOG.debug("Expiry based on expires_on: {}", expiresOnInSecs);
+        token.setExpiry(new Date(expiresOnInSecs * 1000));
+      } else {
+        if (isMsi) {
+          // Currently there is a known issue that MSI does not update expires_in
+          // for refresh and will have the value from first AAD token fetch request.
+          // Due to this known limitation, expires_in is not supported for MSI token fetch flow.
+          throw new UnsupportedOperationException("MSI Responded with invalid expires_on");
+        }
+
+        LOG.debug("Expiry based on expires_in: {}", expiryPeriodInSecs);
+        long expiry = System.currentTimeMillis();
+        expiry = expiry + expiryPeriodInSecs * 1000L; // convert expiryPeriod to milliseconds and add
+        token.setExpiry(new Date(expiry));
+      }
+
+      LOG.debug("AADToken: fetched token with expiry {}, expiresOn passed: {}",
+          token.getExpiry().toString(), expiresOnInSecs);
     } catch (Exception ex) {
       LOG.debug("AADToken: got exception when parsing json token " + ex.toString());
       throw ex;

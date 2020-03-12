@@ -2030,6 +2030,15 @@ public class DFSTestUtil {
     GenericTestUtils.setLogLevel(NameNode.blockStateChangeLog, level);
   }
 
+  public static void setNameNodeLogLevel(org.slf4j.event.Level level) {
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, level);
+    GenericTestUtils.setLogLevel(BlockManager.LOG, level);
+    GenericTestUtils.setLogLevel(LeaseManager.LOG, level);
+    GenericTestUtils.setLogLevel(NameNode.LOG, level);
+    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, level);
+    GenericTestUtils.setLogLevel(NameNode.blockStateChangeLog, level);
+  }
+
   /**
    * Get the NamenodeProtocol RPC proxy for the NN associated with this
    * DFSClient object
@@ -2312,16 +2321,13 @@ public class DFSTestUtil {
       public Boolean get() {
         try {
           final int currentValue = Integer.parseInt(jmx.getValue(metricName));
-          LOG.info("Waiting for " + metricName +
-                       " to reach value " + expectedValue +
-                       ", current value = " + currentValue);
           return currentValue == expectedValue;
         } catch (Exception e) {
           throw new RuntimeException(
               "Test failed due to unexpected exception", e);
         }
       }
-    }, 1000, 60000);
+    }, 50, 60000);
   }
 
   /**

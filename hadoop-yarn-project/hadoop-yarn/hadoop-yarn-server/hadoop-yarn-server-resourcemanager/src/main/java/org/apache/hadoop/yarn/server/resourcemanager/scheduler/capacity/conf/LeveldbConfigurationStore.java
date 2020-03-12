@@ -333,6 +333,7 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
   }
 
   @VisibleForTesting
+  @Override
   protected LinkedList<LogMutation> getLogs() throws Exception {
     return deserLogMutations(db.get(bytes(LOG_KEY)));
   }
@@ -344,11 +345,15 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
 
   @Override
   public void storeVersion() throws Exception {
-    String key = VERSION_KEY;
-    byte[] data = ((VersionPBImpl) CURRENT_VERSION_INFO).getProto()
+    storeVersion(CURRENT_VERSION_INFO);
+  }
+
+  @VisibleForTesting
+  protected void storeVersion(Version version) throws Exception {
+    byte[] data = ((VersionPBImpl) version).getProto()
         .toByteArray();
     try {
-      db.put(bytes(key), data);
+      db.put(bytes(VERSION_KEY), data);
     } catch (DBException e) {
       throw new IOException(e);
     }

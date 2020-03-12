@@ -32,6 +32,7 @@ public class DryRunResultHolder {
 
   private Set<String> warnings;
   private Set<String> errors;
+  private boolean verificationFailed;
 
   public DryRunResultHolder() {
     this.warnings = new HashSet<>();
@@ -44,6 +45,10 @@ public class DryRunResultHolder {
 
   public void addDryRunError(String message) {
     errors.add(message);
+  }
+
+  public void setVerificationFailed() {
+    verificationFailed = true;
   }
 
   public Set<String> getWarnings() {
@@ -64,6 +69,8 @@ public class DryRunResultHolder {
 
     LOG.info("Number of errors: {}", noOfErrors);
     LOG.info("Number of warnings: {}", noOfWarnings);
+    LOG.info("Verification result: {}",
+        verificationFailed ? "FAILED" : "PASSED");
 
     if (noOfErrors > 0) {
       LOG.info("");

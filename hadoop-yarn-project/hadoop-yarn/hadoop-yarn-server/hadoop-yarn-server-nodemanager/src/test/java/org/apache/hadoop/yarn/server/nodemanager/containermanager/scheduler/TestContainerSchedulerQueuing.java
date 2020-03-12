@@ -996,16 +996,14 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
     allRequests = StartContainersRequest.newInstance(list);
     containerManager.startContainers(allRequests);
 
-    BaseContainerManagerTest.waitForNMContainerState(containerManager,
-        createContainerId(0), ContainerState.DONE, 40);
-    Thread.sleep(5000);
-
     // Get container statuses. Container 0 should be killed, container 1
     // should be queued and container 2 should be running.
     int killedContainers = 0;
     List<ContainerId> statList = new ArrayList<ContainerId>();
     for (int i = 0; i < 6; i++) {
       statList.add(createContainerId(i));
+      BaseContainerManagerTest.waitForNMContainerState(containerManager,
+          statList.get(i), ContainerState.DONE, 40);
     }
     GetContainerStatusesRequest statRequest =
         GetContainerStatusesRequest.newInstance(statList);

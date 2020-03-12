@@ -42,7 +42,7 @@ public class TestableFederationInterceptorREST
   protected void registerBadSubCluster(SubClusterId badSC) {
 
     // Adding in the cache the bad SubCluster, in this way we can stop them
-    getOrCreateInterceptorForSubCluster(badSC, "test");
+    getOrCreateInterceptorForSubCluster(badSC, "1.2.3.4:4");
 
     badSubCluster.add(badSC);
     MockDefaultRequestInterceptorREST interceptor =

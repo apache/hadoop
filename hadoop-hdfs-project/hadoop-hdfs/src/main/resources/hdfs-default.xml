@@ -1137,6 +1137,24 @@
 </property>
 
 <property>
+  <name>dfs.namenode.redundancy.queue.restart.iterations</name>
+  <value>2400</value>
+  <description>When picking blocks from the low redundancy queues, reset the
+    bookmarked iterator after the set number of iterations to ensure any blocks
+    which were not processed on the first pass are retried before the iterators
+    would naturally reach their end point. This ensures blocks are retried
+    more frequently when there are many pending blocks or blocks are
+    continuously added to the queues preventing the iterator reaching its
+    natural endpoint.
+    The default setting of 2400 combined with the default of
+    dfs.namenode.redundancy.interval.seconds means the iterators will be reset
+    approximately every 2 hours.
+    Setting this parameter to zero disables the feature and the iterators will
+    be reset only when the end of all queues has been reached.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.accesstime.precision</name>
   <value>3600000</value>
   <description>The access time for HDFS file is precise upto this value. 
@@ -4499,6 +4517,23 @@
 </property>
 
 <property>
+  <name>dfs.datanode.replica.cache.root.dir</name>
+  <value></value>
+  <description>
+    Use this key to change root dir of replica cache.
+    The default root dir is currentDir.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.replica.cache.expiry.time</name>
+  <value>5m</value>
+  <description>
+    Living time of replica cached files in milliseconds.
+  </description>
+</property>
+
+<property>
   <name>dfs.ha.fencing.methods</name>
   <value></value>
   <description>
@@ -5737,6 +5772,14 @@
   </property>
 
   <property>
+    <name>dfs.namenode.blockreport.max.lock.hold.time</name>
+    <value>4</value>
+    <description>
+      The BlockReportProcessingThread max write lock hold time in ms.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.journalnode.edits.dir.perm</name>
     <value>700</value>
     <description>
@@ -5751,6 +5794,36 @@
     <value>1200</value>
     <description>
       Determines the namenode automatic lease recovery interval in seconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.gc.time.monitor.enable</name>
+    <value>true</value>
+    <description>
+      Enable the GcTimePercentage metrics in NameNode's JvmMetrics. It will
+      start a thread(GcTimeMonitor) computing the metric.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.gc.time.monitor.observation.window.ms</name>
+    <value>1m</value>
+    <description>
+      Determines the windows size of GcTimeMonitor. A window is a period of time
+      starts at now-windowSize and ends at now. The GcTimePercentage is the gc
+      time proportion of the window.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.gc.time.monitor.sleep.interval.ms</name>
+    <value>5s</value>
+    <description>
+      Determines the sleep interval in the window. The GcTimeMonitor wakes up in
+      the sleep interval periodically to compute the gc time proportion. The
+      shorter the interval the preciser the GcTimePercentage. The sleep interval
+      must be shorter than the window size.
     </description>
   </property>
 </configuration>

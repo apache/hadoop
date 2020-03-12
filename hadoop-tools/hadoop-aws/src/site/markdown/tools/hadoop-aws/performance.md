@@ -608,3 +608,19 @@ with HADOOP-15669.
 
 Other options may be added to `fs.s3a.ssl.channel.mode` in the future as
 further SSL optimizations are made.
+
+## Tuning FileSystem Initialization.
+
+When an S3A Filesystem instance is created and initialized, the client
+checks if the bucket provided is valid. This can be slow.
+You can ignore bucket validation by configuring `fs.s3a.bucket.probe` as follows:
+
+```xml
+<property>
+  <name>fs.s3a.bucket.probe</name>
+  <value>0</value>
+</property>
+```
+
+Note: if the bucket does not exist, this issue will surface when operations are performed
+on the filesystem; you will see `UnknownStoreException` stack traces.

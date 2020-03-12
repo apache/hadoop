@@ -73,6 +73,13 @@ public class ConversionOptions {
     }
   }
 
+  public void handleVerificationFailure(Throwable e, String msg) {
+    FSConfigToCSConfigArgumentHandler.logAndStdErr(e, msg);
+    if (dryRun) {
+      dryRunResultHolder.setVerificationFailed();
+    }
+  }
+
   public void handleParsingFinished() {
     if (dryRun) {
       dryRunResultHolder.printDryRunResults();
