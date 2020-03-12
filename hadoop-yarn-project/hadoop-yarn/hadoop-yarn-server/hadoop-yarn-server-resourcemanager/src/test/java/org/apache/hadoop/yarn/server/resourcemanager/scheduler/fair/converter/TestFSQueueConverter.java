@@ -296,7 +296,7 @@ public class TestFSQueueConverter {
         csConfig.get(PREFIX + "root.default.capacity"));
     assertEquals("root.admins capacity", "33.333",
         csConfig.get(PREFIX + "root.admins.capacity"));
-    assertEquals("root.users capacity", "66.667",
+    assertEquals("root.users capacity", "33.334",
         csConfig.get(PREFIX + "root.users.capacity"));
 
     // root.users
