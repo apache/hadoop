@@ -197,8 +197,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   /**
    * Increment Write Operations.
    */
-  public void incrementWriteOps() {
-    statistics.incrementWriteOps(1);
+  private void incrementWriteOps() {
+    if (statistics != null) {
+      statistics.incrementWriteOps(1);
+    }
   }
 
   /**

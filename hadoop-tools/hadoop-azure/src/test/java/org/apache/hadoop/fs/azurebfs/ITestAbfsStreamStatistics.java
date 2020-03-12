@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 
 /**
  * Test Abfs Stream.
@@ -36,7 +35,8 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
   }
 
   /***
-   * {@link AbfsInputStream#incrementReadOps()}.
+   * Testing {@code incrementReadOps()} in class {@code AbfsInputStream} and
+   * {@code incrementWriteOps()} in class {@code AbfsOutputStream}.
    *
    * @throws Exception
    */
@@ -77,35 +77,56 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
         validateContent(fs, smallOperationsFile,
             testReadWriteOps.getBytes()));
 
-    FSDataOutputStream outForLargeOperations = fs.create(largeOperationsFile);
-    statistics.reset();
-
+    FSDataOutputStream outForLargeOperations = null;
+    FSDataInputStream inForLargeOperations = null;
     StringBuilder largeOperationsValidationString = new StringBuilder();
-    for (int i = 0; i < 1000000; i++) {
-      outForLargeOperations.write(testReadWriteOps.getBytes());
+    try {
+      outForLargeOperations = fs.create(largeOperationsFile);
+      statistics.reset();
+      int largeValue = 1000000;
+      for (int i = 0; i < largeValue; i++) {
+        outForLargeOperations.write(testReadWriteOps.getBytes());
 
-      //Creating the String for content Validation
-      largeOperationsValidationString.append(testReadWriteOps);
+        //Creating the String for content Validation
+        largeOperationsValidationString.append(testReadWriteOps);
+      }
+
+      inForLargeOperations = fs.open(largeOperationsFile);
+      for (int i = 0; i < largeValue; i++)
+        inForLargeOperations
+            .read(testReadWriteOps.getBytes(), 0,
+                testReadWriteOps.getBytes().length);
+
+      //Test for one million read and write operations
+      assertReadWriteOps(largeValue, statistics);
+    } finally {
+      if (inForLargeOperations != null) {
+        inForLargeOperations.close();
+      }
+      if (outForLargeOperations != null) {
+        outForLargeOperations.close();
+      }
     }
 
-    FSDataInputStream inForLargeCalls = fs.open(largeOperationsFile);
-
-    for (int i = 0; i < 1000000; i++)
-      inForLargeCalls
-          .read(testReadWriteOps.getBytes(), 0,
-              testReadWriteOps.getBytes().length);
-
-    //Test for one million read and write operations
-    Assert.assertEquals("Mismatch in read operations", 1000000,
-        statistics.getReadOps());
-    Assert.assertEquals("Mismatch in write operations", 1000000,
-        statistics.getWriteOps());
-
-    outForLargeOperations.close();
     //Validating if content is being written in largeOperationsFile
-    Assert.assertEquals("Mismatch in content validation", true,
+    Assert.assertTrue("Mismatch in content validation",
         validateContent(fs, largeOperationsFile,
             largeOperationsValidationString.toString().getBytes()));
+
+  }
+
+  /**
+   * Method for Read and Write Ops Assertion.
+   *
+   * @param expectedReadWriteOps Expected Value
+   * @param statistics           fs stats to get Actual Values
+   */
+  private void assertReadWriteOps(long expectedReadWriteOps,
+      FileSystem.Statistics statistics) {
+    Assert.assertEquals("Mismatch in read operations", expectedReadWriteOps,
+        statistics.getReadOps());
+    Assert.assertEquals("Mismatch in write operations", expectedReadWriteOps,
+        statistics.getWriteOps());
 
   }
 }
