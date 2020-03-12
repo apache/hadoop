@@ -22,6 +22,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.conve
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigConverterTestCommons.YARN_SITE_XML;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigConverterTestCommons.setupFSConfigConversionFiles;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,11 +41,13 @@ import org.junit.Test;
 public class TestFSConfigToCSConfigConverterMain {
   private FSConfigConverterTestCommons converterTestCommons;
   private SecurityManager originalSecurityManager;
+  private ExitHandlerSecurityManager exitHandlerSecurityManager;
 
   @Before
   public void setUp() throws Exception {
     originalSecurityManager = System.getSecurityManager();
-    System.setSecurityManager(new ExitHandlerSecurityManager());
+    exitHandlerSecurityManager = new ExitHandlerSecurityManager();
+    System.setSecurityManager(exitHandlerSecurityManager);
     converterTestCommons = new FSConfigConverterTestCommons();
     converterTestCommons.setUp();
   }
@@ -82,6 +85,7 @@ public class TestFSConfigToCSConfigConverterMain {
 
     assertTrue("capacity-scheduler.xml was not generated", csConfigExists);
     assertTrue("yarn-site.xml was not generated", yarnSiteConfigExists);
+    assertEquals("Exit code", 0, exitHandlerSecurityManager.exitCode);
   }
 
   @Test
@@ -141,12 +145,15 @@ public class TestFSConfigToCSConfigConverterMain {
   }
 
   class ExitHandlerSecurityManager extends SecurityManager {
+    int exitCode = Integer.MIN_VALUE;
+
     @Override
     public void checkExit(int status) {
       if (status != 0) {
         throw new IllegalStateException(
             "Exit code is not 0, it was " + status);
       }
+      exitCode = status;
     }
 
     @Override
