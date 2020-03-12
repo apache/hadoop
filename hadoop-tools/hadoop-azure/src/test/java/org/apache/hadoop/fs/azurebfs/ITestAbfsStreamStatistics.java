@@ -53,8 +53,10 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
     statistics.reset();
 
     //Test for zero read and write operation
-    Assert.assertEquals("Zero read operations", 0, statistics.getReadOps());
-    Assert.assertEquals("Zero write operations", 0, statistics.getWriteOps());
+    Assert.assertEquals("Mismatch in read operations", 0,
+        statistics.getReadOps());
+    Assert.assertEquals("Mismatch in write operations", 0,
+        statistics.getWriteOps());
 
     FSDataOutputStream outForOneOperation = fs.create(smallOperaionsFile);
     statistics.reset();
@@ -64,14 +66,14 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
         testReadWriteOps.getBytes().length);
 
     //Test for one read and write operation
-    Assert.assertEquals("one read operation is performed", 1,
+    Assert.assertEquals("Mismatch in read operations", 1,
         statistics.getReadOps());
-    Assert.assertEquals("one write operation is performed", 1,
+    Assert.assertEquals("Mismatch in write operations", 1,
         statistics.getWriteOps());
 
     outForOneOperation.close();
-    //validating Content of file
-    Assert.assertEquals("one operation Content validation", true,
+    //Validating if Content is being written in the smallFile
+    Assert.assertEquals("Mismatch in content validation", true,
         validateContent(fs, smallOperaionsFile,
             testReadWriteOps.getBytes()));
 
@@ -94,14 +96,14 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
               testReadWriteOps.getBytes().length);
 
     //Test for one million read and write operations
-    Assert.assertEquals("Large read operations", 1000000,
+    Assert.assertEquals("Mismatch in read operations", 1000000,
         statistics.getReadOps());
-    Assert.assertEquals("Large write operations", 1000000,
+    Assert.assertEquals("Mismatch in write operations", 1000000,
         statistics.getWriteOps());
 
     outForLargeOperations.close();
     //Validating if actually "test" is being written million times in largeOperationsFile
-    Assert.assertEquals("Large File content validation", true,
+    Assert.assertEquals("Mismatch in content validation", true,
         validateContent(fs, largeOperationsFile,
             largeOperationsValidationString.toString().getBytes()));
 
