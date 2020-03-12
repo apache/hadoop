@@ -359,7 +359,7 @@ public class FSQueueConverter {
       // fix last value if total != 100.000
       if (!totalPct.equals(hundred)) {
         BigDecimal tmp = new BigDecimal(0);
-        for (int i = 0; i < children.size() - 2; i++) {
+        for (int i = 0; i < children.size() - 1; i++) {
           tmp = tmp.add(capacities.get(children.get(i).getQueueName()));
         }
 
