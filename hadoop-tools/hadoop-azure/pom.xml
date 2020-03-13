@@ -194,7 +194,7 @@
     <dependency>
       <groupId>org.wildfly.openssl</groupId>
       <artifactId>wildfly-openssl</artifactId>
-      <scope>compile</scope>
+      <scope>runtime</scope>
     </dependency>
 
     <!--com.fasterxml.jackson is used by WASB, not ABFS-->
@@ -283,6 +283,12 @@
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-library</artifactId>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
   <profiles>

@@ -207,40 +207,9 @@ public class CapacityScheduler extends
 
   private void validateConf(Configuration conf) {
     // validate scheduler memory allocation setting
-    int minMem = conf.getInt(
-      YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
-    int maxMem = conf.getInt(
-      YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
-
-    if (minMem <= 0 || minMem > maxMem) {
-      throw new YarnRuntimeException("Invalid resource scheduler memory"
-        + " allocation configuration"
-        + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB
-        + "=" + minMem
-        + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-        + "=" + maxMem + ", min and max should be greater than 0"
-        + ", max should be no smaller than min.");
-    }
-
+    CapacitySchedulerConfigValidator.validateMemoryAllocation(conf);
     // validate scheduler vcores allocation setting
-    int minVcores = conf.getInt(
-      YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
-    int maxVcores = conf.getInt(
-      YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
-
-    if (minVcores <= 0 || minVcores > maxVcores) {
-      throw new YarnRuntimeException("Invalid resource scheduler vcores"
-        + " allocation configuration"
-        + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES
-        + "=" + minVcores
-        + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
-        + "=" + maxVcores + ", min and max should be greater than 0"
-        + ", max should be no smaller than min.");
-    }
+    CapacitySchedulerConfigValidator.validateVCores(conf);
   }
 
   @Override
@@ -480,14 +449,17 @@ public class CapacityScheduler extends
     super.serviceStop();
   }
 
-  @Override
-  public void reinitialize(Configuration newConf, RMContext rmContext)
-      throws IOException {
+  public void reinitialize(Configuration newConf, RMContext rmContext,
+         boolean validation) throws IOException {
     writeLock.lock();
     try {
       Configuration configuration = new Configuration(newConf);
       CapacitySchedulerConfiguration oldConf = this.conf;
-      this.conf = csConfProvider.loadConfiguration(configuration);
+      if (validation) {
+        this.conf = new CapacitySchedulerConfiguration(newConf, false);
+      } else {
+        this.conf = csConfProvider.loadConfiguration(configuration);
+      }
       validateConf(this.conf);
       try {
         LOG.info("Re-initializing queues...");
@@ -501,17 +473,26 @@ public class CapacityScheduler extends
         throw new IOException("Failed to re-init queues : " + t.getMessage(),
             t);
       }
+      if (!validation) {
 
-      // update lazy preemption
-      this.isLazyPreemptionEnabled = this.conf.getLazyPreemptionEnabled();
+        // update lazy preemption
+        this.isLazyPreemptionEnabled = this.conf.getLazyPreemptionEnabled();
 
-      // Setup how many containers we can allocate for each round
-      offswitchPerHeartbeatLimit = this.conf.getOffSwitchPerHeartbeatLimit();
+        // Setup how many containers we can allocate for each round
+        offswitchPerHeartbeatLimit = this.conf.getOffSwitchPerHeartbeatLimit();
 
-      super.reinitialize(newConf, rmContext);
+        super.reinitialize(newConf, rmContext);
+      }
     } finally {
       writeLock.unlock();
     }
+
+  }
+
+  @Override
+  public void reinitialize(Configuration newConf, RMContext rmContext)
+      throws IOException {
+    reinitialize(newConf, rmContext, false);
   }
 
   long getAsyncScheduleInterval() {
@@ -714,19 +695,13 @@ public class CapacityScheduler extends
     Collection<String> placementRuleStrs = conf.getStringCollection(
         YarnConfiguration.QUEUE_PLACEMENT_RULES);
     List<PlacementRule> placementRules = new ArrayList<>();
-    Set<String> distingushRuleSet = new HashSet<>();
-    // fail the case if we get duplicate placementRule add in
-    for (String pls : placementRuleStrs) {
-      if (!distingushRuleSet.add(pls)) {
-        throw new IOException("Invalid PlacementRule inputs which "
-            + "contains duplicate rule strings");
-      }
-    }
+    Set<String> distinguishRuleSet = CapacitySchedulerConfigValidator
+            .validatePlacementRules(placementRuleStrs);
 
     // add UserGroupMappingPlacementRule if absent
-    distingushRuleSet.add(YarnConfiguration.USER_GROUP_PLACEMENT_RULE);
+    distinguishRuleSet.add(YarnConfiguration.USER_GROUP_PLACEMENT_RULE);
 
-    placementRuleStrs = new ArrayList<>(distingushRuleSet);
+    placementRuleStrs = new ArrayList<>(distinguishRuleSet);
 
     for (String placementRuleStr : placementRuleStrs) {
       switch (placementRuleStr) {

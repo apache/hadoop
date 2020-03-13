@@ -121,6 +121,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.SETECPOLICY, new Class[] {ECPolicyParam.class});
     PARAMS_DEF.put(Operation.GETECPOLICY, new Class[] {});
     PARAMS_DEF.put(Operation.UNSETECPOLICY, new Class[] {});
+    PARAMS_DEF.put(Operation.SATISFYSTORAGEPOLICY, new Class[] {});
   }
 
   public HttpFSParametersProvider() {

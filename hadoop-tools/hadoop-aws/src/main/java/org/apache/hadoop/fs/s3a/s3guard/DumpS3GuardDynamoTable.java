@@ -439,8 +439,8 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
   private Pair<Long, Long> scanMetastore(CsvFile csv) {
     S3GuardTableAccess tableAccess = new S3GuardTableAccess(getStore());
     ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
-    Iterable<DDBPathMetadata> results = tableAccess.scanMetadata(
-        builder);
+    Iterable<DDBPathMetadata> results =
+        getStore().wrapWithRetries(tableAccess.scanMetadata(builder));
     long live = 0;
     long tombstone = 0;
     for (DDBPathMetadata md : results) {

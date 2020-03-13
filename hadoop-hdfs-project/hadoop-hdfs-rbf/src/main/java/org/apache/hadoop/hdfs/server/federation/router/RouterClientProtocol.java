@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -853,6 +855,12 @@ public class RouterClientProtocol implements ClientProtocol {
     HdfsFileStatus[] combinedData = new HdfsFileStatus[nnListing.size()];
     combinedData = nnListing.values().toArray(combinedData);
     return new DirectoryListing(combinedData, remainingEntries);
+  }
+
+  @Override
+  public BatchedDirectoryListing getBatchedListing(String[] srcs,
+      byte[] startAfter, boolean needLocation) throws IOException {
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   @Override
@@ -1707,6 +1715,13 @@ public class RouterClientProtocol implements ClientProtocol {
   @Override
   public void unsetErasureCodingPolicy(String src) throws IOException {
     erasureCoding.unsetErasureCodingPolicy(src);
+  }
+
+  @Override
+  public ECTopologyVerifierResult getECTopologyResultForPolicies(
+      String... policyNames) throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED, true);
+    return erasureCoding.getECTopologyResultForPolicies(policyNames);
   }
 
   @Override

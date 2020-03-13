@@ -58,12 +58,12 @@ public class AboutBlock extends HtmlBlock {
         YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
     info("Cluster Status").
         __("Federation Enabled", isEnabled).
-        __("Applications Submitted", "N/A").
-        __("Applications Pending", "N/A").
-        __("Applications Running", "N/A").
-        __("Applications Failed", "N/A").
-        __("Applications Killed", "N/A").
-        __("Applications Completed", "N/A").
+        __("Applications Submitted", metrics.getAppsSubmitted()).
+        __("Applications Pending", metrics.getAppsPending()).
+        __("Applications Running", metrics.getAppsRunning()).
+        __("Applications Failed", metrics.getAppsFailed()).
+        __("Applications Killed", metrics.getAppsKilled()).
+        __("Applications Completed", metrics.getAppsCompleted()).
         __("Containers Allocated", metrics.getContainersAllocated()).
         __("Containers Reserved", metrics.getReservedContainers()).
         __("Containers Pending", metrics.getPendingContainers()).

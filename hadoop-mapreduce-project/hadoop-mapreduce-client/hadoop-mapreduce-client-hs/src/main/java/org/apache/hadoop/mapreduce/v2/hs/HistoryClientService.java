@@ -75,6 +75,7 @@ import org.apache.hadoop.mapreduce.v2.hs.webapp.HsWebApp;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
@@ -154,6 +155,9 @@ public class HistoryClientService extends AbstractService {
   @VisibleForTesting
   protected void initializeWebApp(Configuration conf) throws IOException {
     webApp = new HsWebApp(history);
+
+    setupFilters(conf);
+
     InetSocketAddress bindAddress = MRWebAppUtil.getJHSWebBindAddress(conf);
     ApplicationClientProtocol appClientProtocol =
         ClientRMProxy.createRMProxy(conf, ApplicationClientProtocol.class);
@@ -194,6 +198,17 @@ public class HistoryClientService extends AbstractService {
   @Private
   public InetSocketAddress getBindAddress() {
     return this.bindAddress;
+  }
+
+  private void setupFilters(Configuration conf) {
+    boolean enableCorsFilter =
+        conf.getBoolean(JHAdminConfig.MR_HISTORY_ENABLE_CORS_FILTER,
+            JHAdminConfig.DEFAULT_MR_HISTORY_ENABLE_CORS_FILTER);
+
+    if (enableCorsFilter) {
+      conf.setBoolean(HttpCrossOriginFilterInitializer.PREFIX
+          + HttpCrossOriginFilterInitializer.ENABLED_SUFFIX, true);
+    }
   }
 
   private class HSClientProtocolHandler implements HSClientProtocol {

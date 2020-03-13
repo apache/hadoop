@@ -36,7 +36,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.Permission;
@@ -177,7 +176,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         csContext.getRMContext().getHAServiceState()
             != HAServiceProtocol.HAServiceState.STANDBY) {
       // Ensure queue hierarchy in the new XML file is proper.
-      validateQueueHierarchy(queues, newQueues, newConf);
+      CapacitySchedulerConfigValidator
+              .validateQueueHierarchy(queues, newQueues, newConf);
     }
 
     // Add new queues and delete OldQeueus only after validation.
@@ -299,90 +299,6 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     return queue;
   }
 
-  /**
-   * Ensure all existing queues are present. Queues cannot be deleted if its not
-   * in Stopped state, Queue's cannot be moved from one hierarchy to other also.
-   * Previous child queue could be converted into parent queue if it is in
-   * STOPPED state.
-   *
-   * @param queues existing queues
-   * @param newQueues new queues
-   */
-  private void validateQueueHierarchy(Map<String, CSQueue> queues,
-      Map<String, CSQueue> newQueues, CapacitySchedulerConfiguration newConf)
-      throws IOException {
-    // check that all static queues are included in the newQueues list
-    for (Map.Entry<String, CSQueue> e : queues.entrySet()) {
-      if (!(AbstractAutoCreatedLeafQueue.class.isAssignableFrom(e.getValue()
-          .getClass()))) {
-        String queueName = e.getKey();
-        CSQueue oldQueue = e.getValue();
-        CSQueue newQueue = newQueues.get(queueName);
-        if (null == newQueue) {
-          // old queue doesn't exist in the new XML
-          String configPrefix = newConf.getQueuePrefix(
-              oldQueue.getQueuePath());
-          QueueState newQueueState = null;
-          try {
-            newQueueState = QueueState.valueOf(
-                newConf.get(configPrefix + "state"));
-          } catch (Exception ex) {
-            LOG.warn("Not a valid queue state for queue "
-                + oldQueue.getQueuePath());
-          }
-          if (oldQueue.getState() == QueueState.STOPPED ||
-              newQueueState == QueueState.STOPPED) {
-            LOG.info("Deleting Queue " + queueName + ", as it is not"
-                + " present in the modified capacity configuration xml");
-          } else{
-            throw new IOException(oldQueue.getQueuePath() + " cannot be"
-                + " deleted from the capacity scheduler configuration, as the"
-                + " queue is not yet in stopped state. Current State : "
-                + oldQueue.getState());
-          }
-        } else if (!oldQueue.getQueuePath().equals(newQueue.getQueuePath())) {
-          //Queue's cannot be moved from one hierarchy to other
-          throw new IOException(
-              queueName + " is moved from:" + oldQueue.getQueuePath() + " to:"
-                  + newQueue.getQueuePath()
-                  + " after refresh, which is not allowed.");
-        } else if (oldQueue instanceof ParentQueue
-            && !(oldQueue instanceof ManagedParentQueue)
-            && newQueue instanceof ManagedParentQueue) {
-          throw new IOException(
-              "Can not convert parent queue: " + oldQueue.getQueuePath()
-                  + " to auto create enabled parent queue since "
-                  + "it could have other pre-configured queues which is not "
-                  + "supported");
-        } else if (oldQueue instanceof ManagedParentQueue
-            && !(newQueue instanceof ManagedParentQueue)) {
-          throw new IOException(
-              "Cannot convert auto create enabled parent queue: " + oldQueue
-                  .getQueuePath() + " to leaf queue. Please check "
-                  + " parent queue's configuration "
-                  + CapacitySchedulerConfiguration
-                  .AUTO_CREATE_CHILD_QUEUE_ENABLED
-                  + " is set to true");
-        } else if (oldQueue instanceof LeafQueue
-            && newQueue instanceof ParentQueue) {
-          if (oldQueue.getState() == QueueState.STOPPED) {
-            LOG.info("Converting the leaf queue: " + oldQueue.getQueuePath()
-                + " to parent queue.");
-          } else{
-            throw new IOException(
-                "Can not convert the leaf queue: " + oldQueue.getQueuePath()
-                    + " to parent queue since "
-                    + "it is not yet in stopped state. Current State : "
-                    + oldQueue.getState());
-          }
-        } else if (oldQueue instanceof ParentQueue
-            && newQueue instanceof LeafQueue) {
-          LOG.info("Converting the parent queue: " + oldQueue.getQueuePath()
-              + " to leaf queue.");
-        }
-      }
-    }
-  }
 
   /**
    * Updates to our list of queues: Adds the new queues and deletes the removed

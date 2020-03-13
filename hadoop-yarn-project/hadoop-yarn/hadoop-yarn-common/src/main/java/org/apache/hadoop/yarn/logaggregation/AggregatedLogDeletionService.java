@@ -24,6 +24,7 @@ import java.util.TimerTask;
 
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
+import org.apache.hadoop.yarn.util.Apps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -43,7 +44,6 @@ import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -195,9 +195,7 @@ public class AggregatedLogDeletionService extends AbstractService {
         throw new IOException(e);
       }
       YarnApplicationState currentState = appReport.getYarnApplicationState();
-      return currentState == YarnApplicationState.FAILED
-          || currentState == YarnApplicationState.KILLED
-          || currentState == YarnApplicationState.FINISHED;
+      return Apps.isApplicationFinalState(currentState);
     }
 
     public ApplicationClientProtocol getRMClient() {

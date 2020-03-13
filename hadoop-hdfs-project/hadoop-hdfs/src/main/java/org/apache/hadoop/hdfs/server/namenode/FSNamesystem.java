@@ -91,13 +91,21 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LI
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
+import java.util.concurrent.atomic.AtomicLong;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.ACTIVE;
+import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.STANDBY;
 import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.OBSERVER;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
+
+import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
+import org.apache.hadoop.hdfs.protocol.HdfsPartialListing;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
 import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
@@ -108,6 +116,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.server.common.ECTopologyVerifier;
 import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksMBean;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
+import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.util.Time;
 import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.util.Time.monotonicNow;
@@ -127,6 +136,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.file.Files;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -136,6 +147,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -225,6 +237,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BatchedListingKeyProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
@@ -289,7 +302,7 @@ import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.CallerContext;
-import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.RetryCache;
 import org.apache.hadoop.ipc.Server;
@@ -491,6 +504,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   // A daemon to periodically clean up corrupt lazyPersist files
   // from the name space.
   Daemon lazyPersistFileScrubber = null;
+  /**
+   * Timestamp marking the end time of {@link #lazyPersistFileScrubber}'s full
+   * cycle. This value can be checked by the Junit tests to verify that the
+   * {@link #lazyPersistFileScrubber} has run at least one full iteration.
+   */
+  private final AtomicLong lazyPersistFileScrubberTS = new AtomicLong(0);
+
 
   // Executor to warm up EDEK cache
   private ExecutorService edekCacheLoader = null;
@@ -531,6 +551,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private final long minBlockSize;         // minimum block size
   final long maxBlocksPerFile;     // maximum # of blocks per file
+
+  // Maximum number of paths that can be listed per batched call.
+  private final int batchedListingLimit;
+
   private final int numCommittedAllowed;
 
   /** Lock to protect FSNamesystem. */
@@ -599,6 +623,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   private final Object metaSaveLock = new Object();
 
+  private final MessageDigest digest;
+
   /**
    * Notify that loading of this FSDirectory is complete, and
    * it is imageLoaded for use
@@ -648,6 +674,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @VisibleForTesting
   LeaseManager getLeaseManager() {
     return leaseManager;
+  }
+
+  /**
+   * Used as ad hoc to check the time stamp of the last full cycle of {@link
+   * #lazyPersistFileScrubber} daemon. This is used by the Junit tests to block
+   * until {@link #lazyPersistFileScrubberTS} is updated.
+   *
+   * @return the current {@link #lazyPersistFileScrubberTS} if {@link
+   *         #lazyPersistFileScrubber} is not null.
+   */
+  @VisibleForTesting
+  public long getLazyPersistFileScrubberTS() {
+    return lazyPersistFileScrubber == null ? -1
+        : lazyPersistFileScrubberTS.get();
   }
 
   public boolean isHaEnabled() {
@@ -822,6 +862,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             + DFS_CHECKSUM_TYPE_KEY + ": " + checksumTypeStr);
       }
 
+      try {
+        digest = MessageDigest.getInstance("MD5");
+      } catch (NoSuchAlgorithmException e) {
+        throw new IOException("Algorithm 'MD5' not found");
+      }
+
       this.serverDefaults = new FsServerDefaults(
           conf.getLongBytes(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT),
           conf.getInt(DFS_BYTES_PER_CHECKSUM_KEY, DFS_BYTES_PER_CHECKSUM_DEFAULT),
@@ -844,6 +890,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_DEFAULT);
       this.maxBlocksPerFile = conf.getLong(DFSConfigKeys.DFS_NAMENODE_MAX_BLOCKS_PER_FILE_KEY,
           DFSConfigKeys.DFS_NAMENODE_MAX_BLOCKS_PER_FILE_DEFAULT);
+      this.batchedListingLimit = conf.getInt(
+          DFSConfigKeys.DFS_NAMENODE_BATCHED_LISTING_LIMIT,
+          DFSConfigKeys.DFS_NAMENODE_BATCHED_LISTING_LIMIT_DEFAULT);
+      Preconditions.checkArgument(
+          batchedListingLimit > 0,
+          DFSConfigKeys.DFS_NAMENODE_BATCHED_LISTING_LIMIT +
+              " must be greater than zero");
       this.numCommittedAllowed = conf.getInt(
           DFSConfigKeys.DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY,
           DFSConfigKeys.DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_DEFAULT);
@@ -897,7 +950,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       alwaysUseDelegationTokensForTests = conf.getBoolean(
           DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
           DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_DEFAULT);
-      
+
       this.dtSecretManager = createDelegationTokenSecretManager(conf);
       this.dir = new FSDirectory(this, conf);
       this.snapshotManager = new SnapshotManager(conf, dir);
@@ -1057,6 +1110,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     Collection<String> alClasses =
         conf.getTrimmedStringCollection(DFS_NAMENODE_AUDIT_LOGGERS_KEY);
     List<AuditLogger> auditLoggers = Lists.newArrayList();
+    boolean topAuditLoggerAdded = false;
     if (alClasses != null && !alClasses.isEmpty()) {
       for (String className : alClasses) {
         try {
@@ -1065,9 +1119,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             logger = new FSNamesystemAuditLogger();
           } else {
             logger = (AuditLogger) Class.forName(className).newInstance();
+            if (TopAuditLogger.class.getName().equals(
+                    logger.getClass().getName())) {
+              topAuditLoggerAdded = true;
+            }
           }
           logger.initialize(conf);
           auditLoggers.add(logger);
+        } catch (InstantiationException e) {
+          LOG.error("{} instantiation failed.", className, e);
+          throw new RuntimeException(e);
         } catch (RuntimeException re) {
           throw re;
         } catch (Exception e) {
@@ -1084,7 +1145,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
 
     // Add audit logger to calculate top users
-    if (topConf.isEnabled) {
+    if (topConf.isEnabled && !topAuditLoggerAdded) {
       topMetrics = new TopMetrics(conf, topConf.nntopReportingPeriodsMs);
       if (DefaultMetricsSystem.instance().getSource(
           TOPMETRICS_METRICS_SOURCE_NAME) == null) {
@@ -1443,7 +1504,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /** Stop services required in standby state */
   void stopStandbyServices() throws IOException {
-    LOG.info("Stopping services started for standby state");
+    HAServiceState curState = getState() == OBSERVER? OBSERVER : STANDBY;
+    LOG.info("Stopping services started for {} state", curState);
     if (standbyCheckpointer != null) {
       standbyCheckpointer.stop();
     }
@@ -3692,6 +3754,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   @Override
   public INodeFile getBlockCollection(long id) {
+    assert hasReadLock() : "Accessing INode id = " + id + " without read lock";
     INode inode = getFSDirectory().getInode(id);
     return inode == null ? null : inode.asFile();
   }
@@ -3924,6 +3987,149 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     logAuditEvent(true, operationName, src);
     return dl;
+  }
+
+  public byte[] getSrcPathsHash(String[] srcs) {
+    synchronized (digest) {
+      for (String src : srcs) {
+        digest.update(src.getBytes(Charsets.UTF_8));
+      }
+      byte[] result = digest.digest();
+      digest.reset();
+      return result;
+    }
+  }
+
+  BatchedDirectoryListing getBatchedListing(String[] srcs, byte[] startAfter,
+      boolean needLocation) throws IOException {
+
+    if (srcs.length > this.batchedListingLimit) {
+      String msg = String.format("Too many source paths (%d > %d)",
+          srcs.length, batchedListingLimit);
+      throw new IllegalArgumentException(msg);
+    }
+
+    // Parse the startAfter key if present
+    int srcsIndex = 0;
+    byte[] indexStartAfter = new byte[0];
+
+    if (startAfter.length > 0) {
+      BatchedListingKeyProto startAfterProto =
+          BatchedListingKeyProto.parseFrom(startAfter);
+      // Validate that the passed paths match the checksum from key
+      Preconditions.checkArgument(
+          Arrays.equals(
+              startAfterProto.getChecksum().toByteArray(),
+              getSrcPathsHash(srcs)));
+      srcsIndex = startAfterProto.getPathIndex();
+      indexStartAfter = startAfterProto.getStartAfter().toByteArray();
+      // Special case: if the indexStartAfter key is an empty array, it
+      // means the last element we listed was a file, not a directory.
+      // Skip it so we don't list it twice.
+      if (indexStartAfter.length == 0) {
+        srcsIndex++;
+      }
+    }
+    final int startSrcsIndex = srcsIndex;
+    final String operationName = "listStatus";
+    final FSPermissionChecker pc = getPermissionChecker();
+
+    BatchedDirectoryListing bdl;
+
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      checkOperation(NameNode.OperationCategory.READ);
+
+      // List all directories from the starting index until we've reached
+      // ls limit OR finished listing all srcs.
+      LinkedHashMap<Integer, HdfsPartialListing> listings =
+          Maps.newLinkedHashMap();
+      DirectoryListing lastListing = null;
+      int numEntries = 0;
+      for (; srcsIndex < srcs.length; srcsIndex++) {
+        String src = srcs[srcsIndex];
+        HdfsPartialListing listing;
+        try {
+          DirectoryListing dirListing =
+              getListingInt(dir, pc, src, indexStartAfter, needLocation);
+          if (dirListing == null) {
+            throw new FileNotFoundException("Path " + src + " does not exist");
+          }
+          listing = new HdfsPartialListing(
+              srcsIndex, Lists.newArrayList(dirListing.getPartialListing()));
+          numEntries += listing.getPartialListing().size();
+          lastListing = dirListing;
+        } catch (Exception e) {
+          if (e instanceof AccessControlException) {
+            logAuditEvent(false, operationName, src);
+          }
+          listing = new HdfsPartialListing(
+              srcsIndex,
+              new RemoteException(
+                  e.getClass().getCanonicalName(),
+                  e.getMessage()));
+          lastListing = null;
+          LOG.info("Exception listing src {}", src, e);
+        }
+
+        listings.put(srcsIndex, listing);
+        // Null out the indexStartAfter after the first time.
+        // If we get a partial result, we're done iterating because we're also
+        // over the list limit.
+        if (indexStartAfter.length != 0) {
+          indexStartAfter = new byte[0];
+        }
+        // Terminate if we've reached the maximum listing size
+        if (numEntries >= dir.getListLimit()) {
+          break;
+        }
+      }
+
+      HdfsPartialListing[] partialListingArray =
+          listings.values().toArray(new HdfsPartialListing[] {});
+
+      // Check whether there are more dirs/files to be listed, and if so setting
+      // up the index to start within the first dir to be listed next time.
+      if (srcsIndex >= srcs.length) {
+        // If the loop finished normally, there are no more srcs and we're done.
+        bdl = new BatchedDirectoryListing(
+            partialListingArray,
+            false,
+            new byte[0]);
+      } else if (srcsIndex == srcs.length-1 &&
+          lastListing != null &&
+          !lastListing.hasMore()) {
+        // If we're on the last srcsIndex, then we might be done exactly on an
+        // lsLimit boundary.
+        bdl = new BatchedDirectoryListing(
+            partialListingArray,
+            false,
+            new byte[0]
+        );
+      } else {
+        byte[] lastName = lastListing != null && lastListing.getLastName() !=
+            null ? lastListing.getLastName() : new byte[0];
+        BatchedListingKeyProto proto = BatchedListingKeyProto.newBuilder()
+            .setChecksum(ByteString.copyFrom(getSrcPathsHash(srcs)))
+            .setPathIndex(srcsIndex)
+            .setStartAfter(ByteString.copyFrom(lastName))
+            .build();
+        byte[] returnedStartAfter = proto.toByteArray();
+
+        // Set the startAfter key if the last listing has more entries
+        bdl = new BatchedDirectoryListing(
+            partialListingArray,
+            true,
+            returnedStartAfter);
+      }
+    } finally {
+      readUnlock(operationName);
+    }
+    for (int i = startSrcsIndex; i < srcsIndex; i++) {
+      logAuditEvent(true, operationName, srcs[i]);
+    }
+    return bdl;
   }
 
   /////////////////////////////////////////////////////////
@@ -4228,18 +4434,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         try {
           if (!isInSafeMode()) {
             clearCorruptLazyPersistFiles();
+            // set the timeStamp of last Cycle.
+            lazyPersistFileScrubberTS.set(Time.monotonicNow());
           } else {
             if (FSNamesystem.LOG.isDebugEnabled()) {
-              FSNamesystem.LOG
-                  .debug("Namenode is in safemode, skipping scrubbing of corrupted lazy-persist files.");
+              FSNamesystem.LOG.debug("Namenode is in safemode, skipping "
+                  + "scrubbing of corrupted lazy-persist files.");
             }
           }
         } catch (Exception e) {
           FSNamesystem.LOG.warn(
               "LazyPersistFileScrubber encountered an exception while "
-                      + "scanning for lazyPersist files with missing blocks. "
-                      + "Scanning will retry in " + scrubIntervalSec +
-                      " seconds. Exception: ", e);
+                  + "scanning for lazyPersist files with missing blocks. "
+                  + "Scanning will retry in {} seconds.",
+              scrubIntervalSec, e);
         }
 
         try {
@@ -7808,6 +8016,48 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
+   * Verifies if the given policies are supported in the given cluster setup.
+   * If not policy is specified checks for all enabled policies.
+   * @param policyNames name of policies.
+   * @return the result if the given policies are supported in the cluster setup
+   * @throws IOException
+   */
+  public ECTopologyVerifierResult getECTopologyResultForPolicies(
+      String[] policyNames) throws IOException {
+    String operationName = "getECTopologyResultForPolicies";
+    checkSuperuserPrivilege(operationName);
+    checkOperation(OperationCategory.UNCHECKED);
+    ECTopologyVerifierResult result;
+    readLock();
+    try {
+      checkOperation(OperationCategory.UNCHECKED);
+      // If no policy name is specified return the result
+      // for all enabled policies.
+      if (policyNames == null || policyNames.length == 0) {
+        result = getEcTopologyVerifierResultForEnabledPolicies();
+      } else {
+        Collection<ErasureCodingPolicy> policies =
+            new ArrayList<ErasureCodingPolicy>();
+        for (int i = 0; i < policyNames.length; i++) {
+          policies.add(FSDirErasureCodingOp
+              .getErasureCodingPolicyByName(this, policyNames[i]));
+        }
+        int numOfDataNodes =
+            getBlockManager().getDatanodeManager().getNumOfDataNodes();
+        int numOfRacks =
+            getBlockManager().getDatanodeManager().getNetworkTopology()
+                .getNumOfRacks();
+        result = ECTopologyVerifier
+            .getECTopologyVerifierResult(numOfRacks, numOfDataNodes, policies);
+      }
+    } finally {
+      readUnlock();
+    }
+    logAuditEvent(true, operationName, null);
+    return result;
+  }
+
+  /**
    * Get the erasure coding policy information for specified path
    */
   ErasureCodingPolicy getErasureCodingPolicy(String src)
@@ -8212,20 +8462,25 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   @Override // NameNodeMXBean
   public String getVerifyECWithTopologyResult() {
-    int numOfDataNodes = getBlockManager().getDatanodeManager()
-        .getNumOfDataNodes();
-    int numOfRacks = getBlockManager().getDatanodeManager()
-        .getNetworkTopology().getNumOfRacks();
-    ErasureCodingPolicy[] enabledEcPolicies =
-        getErasureCodingPolicyManager().getCopyOfEnabledPolicies();
     ECTopologyVerifierResult result =
-        ECTopologyVerifier.getECTopologyVerifierResult(
-            numOfRacks, numOfDataNodes, enabledEcPolicies);
+        getEcTopologyVerifierResultForEnabledPolicies();
 
     Map<String, String> resultMap = new HashMap<String, String>();
     resultMap.put("isSupported", Boolean.toString(result.isSupported()));
     resultMap.put("resultMessage", result.getResultMessage());
     return JSON.toString(resultMap);
+  }
+
+  private ECTopologyVerifierResult getEcTopologyVerifierResultForEnabledPolicies() {
+    int numOfDataNodes =
+        getBlockManager().getDatanodeManager().getNumOfDataNodes();
+    int numOfRacks = getBlockManager().getDatanodeManager().getNetworkTopology()
+        .getNumOfRacks();
+    ErasureCodingPolicy[] enabledEcPolicies =
+        getErasureCodingPolicyManager().getCopyOfEnabledPolicies();
+    return ECTopologyVerifier
+        .getECTopologyVerifierResult(numOfRacks, numOfDataNodes,
+            Arrays.asList(enabledEcPolicies));
   }
 
   // This method logs operatoinName without super user privilege.

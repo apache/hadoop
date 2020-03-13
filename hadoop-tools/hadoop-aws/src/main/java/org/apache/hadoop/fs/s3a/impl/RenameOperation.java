@@ -50,7 +50,6 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.objectRepresentsDirectory;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_BLOCKSIZE;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.MAX_ENTRIES_TO_DELETE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.RENAME_PARALLEL_LIMIT;
 
 /**
@@ -99,7 +98,13 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
   /**
    * Counter of bytes copied.
    */
+
   private final AtomicLong bytesCopied = new AtomicLong();
+
+  /**
+   * Page size for bulk deletes.
+   */
+  private final int pageSize;
 
   /**
    * Rename tracker.
@@ -137,6 +142,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    * @param destKey destination key
    * @param destStatus destination status.
    * @param callbacks callback provider
+   * @param pageSize size of delete requests
    */
   public RenameOperation(
       final StoreContext storeContext,
@@ -146,7 +152,8 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
       final Path destPath,
       final String destKey,
       final S3AFileStatus destStatus,
-      final OperationCallbacks callbacks) {
+      final OperationCallbacks callbacks,
+      final int pageSize) {
     super(storeContext);
     this.sourcePath = sourcePath;
     this.sourceKey = sourceKey;
@@ -157,6 +164,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
     this.callbacks = callbacks;
     blocksize = storeContext.getConfiguration()
         .getLongBytes(FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE);
+    this.pageSize = pageSize;
   }
 
   /**
@@ -360,7 +368,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
         LOG.debug("Waiting for active copies to complete");
         completeActiveCopies("batch threshold reached");
       }
-      if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
+      if (keysToDelete.size() == pageSize) {
         // finish ongoing copies then delete all queued keys.
         // provided the parallel limit is a factor of the max entry
         // constant, this will not need to block for the copy, and

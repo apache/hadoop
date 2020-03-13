@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -148,6 +149,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigValidator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
@@ -2615,6 +2617,61 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       return Response.status(Status.BAD_REQUEST)
           .entity("Scheduler Configuration format only supported by " +
           "MutableConfScheduler.").build();
+    }
+  }
+
+  @POST
+  @Path(RMWSConsts.SCHEDULER_CONF_VALIDATE)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public synchronized Response validateAndGetSchedulerConfiguration(
+          SchedConfUpdateInfo mutationInfo,
+          @Context HttpServletRequest hsr) throws AuthorizationException {
+    // Only admin user is allowed to read scheduler conf,
+    // in order to avoid leaking sensitive info, such as ACLs
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, true);
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+    if (scheduler instanceof MutableConfScheduler && ((MutableConfScheduler)
+            scheduler).isConfigurationMutable()) {
+      try {
+        MutableConfigurationProvider mutableConfigurationProvider =
+                ((MutableConfScheduler) scheduler).getMutableConfProvider();
+        Configuration schedulerConf = mutableConfigurationProvider
+                .getConfiguration();
+        Configuration newSchedulerConf = mutableConfigurationProvider
+                .applyChanges(schedulerConf, mutationInfo);
+        Configuration yarnConf = ((CapacityScheduler) scheduler).getConf();
+
+        Configuration newConfig = new Configuration(yarnConf);
+        Iterator<Map.Entry<String, String>> iter = newSchedulerConf.iterator();
+        Entry<String, String> e = null;
+        while (iter.hasNext()) {
+          e = iter.next();
+          newConfig.set(e.getKey(), e.getValue());
+        }
+        CapacitySchedulerConfigValidator.validateCSConfiguration(yarnConf,
+                newConfig, rm.getRMContext());
+
+        return Response.status(Status.OK)
+                .entity(new ConfInfo(newSchedulerConf))
+                .build();
+      } catch (Exception e) {
+        String errorMsg = "CapacityScheduler configuration validation failed:"
+                  + e.toString();
+        LOG.warn(errorMsg);
+        return Response.status(Status.BAD_REQUEST)
+                  .entity(errorMsg)
+                  .build();
+      }
+    } else {
+      String errorMsg = "Configuration change validation only supported by " +
+              "MutableConfScheduler.";
+      LOG.warn(errorMsg);
+      return Response.status(Status.BAD_REQUEST)
+              .entity(errorMsg)
+              .build();
     }
   }
 

@@ -1088,6 +1088,8 @@ public class TestAppManager extends AppManagerTestBase{
         new RMAppMetrics(Resource.newInstance(1234, 56),
             10, 1, resourceSecondsMap, new HashMap<>());
     when(app.getRMAppMetrics()).thenReturn(metrics);
+    when(app.getDiagnostics()).thenReturn(new StringBuilder(
+        "Multiline\n\n\r\rDiagnostics=Diagn,ostic"));
 
     RMAppManager.ApplicationSummary.SummaryBuilder summary =
         new RMAppManager.ApplicationSummary().createAppSummary(app);
@@ -1110,6 +1112,8 @@ public class TestAppManager extends AppManagerTestBase{
     assertTrue(msg.contains("applicationType=MAPREDUCE"));
     assertTrue(msg.contains("applicationTags=tag1\\,tag2"));
     assertTrue(msg.contains("applicationNodeLabel=test"));
+    assertTrue(msg.contains("diagnostics=Multiline" + escaped
+        + "Diagnostics\\=Diagn\\,ostic"));
   }
 
   @Test
@@ -1207,13 +1211,14 @@ public class TestAppManager extends AppManagerTestBase{
       throws YarnException {
     String user = "user1";
     String expectedQueue = "user1Queue";
-    String userIdTag = USER_ID_PREFIX + "user2";
+    String userNameFromAppTag = "user2";
+    String userIdTag = USER_ID_PREFIX + userNameFromAppTag;
     setApplicationTags("tag1", userIdTag, "tag2");
-    verifyPlacementUsername(expectedQueue, user, user);
+    verifyPlacementUsername(expectedQueue, user, userNameFromAppTag, user);
   }
 
   /**
-   * Test case for when the application tag based placement is enabled and
+   * Test for the case when the application tag based placement is enabled and
    * the submitting user 'user1' is whitelisted and the user from the
    * application tag has access to queue.
    * Expected behaviour: the placement is done for user from the tag 'user2'
@@ -1222,16 +1227,18 @@ public class TestAppManager extends AppManagerTestBase{
   public void testGetUserNameForPlacementTagBasedPlacementEnabled()
           throws YarnException {
     String user = "user1";
+    String usernameFromAppTag = "user2";
     String expectedQueue = "user1Queue";
-    String expectedUser = "user2";
-    String userIdTag = USER_ID_PREFIX + expectedUser;
+    String expectedUser = usernameFromAppTag;
+    String userIdTag = USER_ID_PREFIX + usernameFromAppTag;
     setApplicationTags("tag1", userIdTag, "tag2");
     enableApplicationTagPlacement(true, user);
-    verifyPlacementUsername(expectedQueue, user, expectedUser);
+    verifyPlacementUsername(expectedQueue, user, usernameFromAppTag,
+            expectedUser);
   }
 
   /**
-   * Test case for when the application tag based placement is enabled.
+   * Test for the case when the application tag based placement is enabled.
    * And submitting user 'user1' is whitelisted and  there are multiple valid
    * username tags passed
    * Expected behaviour: the placement is done for the first valid username
@@ -1242,16 +1249,18 @@ public class TestAppManager extends AppManagerTestBase{
           throws YarnException {
     String user = "user1";
     String expectedQueue = "user1Queue";
-    String expectedUser = "user2";
+    String userNameFromAppTag = "user2";
+    String expectedUser = userNameFromAppTag;
     String userIdTag = USER_ID_PREFIX + expectedUser;
     String userIdTag2 = USER_ID_PREFIX + "user3";
     setApplicationTags("tag1", userIdTag, "tag2", userIdTag2);
     enableApplicationTagPlacement(true, user);
-    verifyPlacementUsername(expectedQueue, user, expectedUser);
+    verifyPlacementUsername(expectedQueue, user, userNameFromAppTag,
+            expectedUser);
   }
 
   /**
-   * Test case for when the application tag based placement is enabled.
+   * Test for the case when the application tag based placement is enabled.
    * And no username is set in the application tag
    * Expected behaviour: the placement is done for the submitting user 'user1'
    */
@@ -1260,13 +1269,14 @@ public class TestAppManager extends AppManagerTestBase{
           throws YarnException {
     String user = "user1";
     String expectedQueue = "user1Queue";
+    String userNameFromAppTag = null;
     setApplicationTags("tag1", "tag2");
     enableApplicationTagPlacement(true, user);
-    verifyPlacementUsername(expectedQueue, user, user);
+    verifyPlacementUsername(expectedQueue, user, userNameFromAppTag, user);
   }
 
   /**
-   * Test case for when the application tag based placement is enabled but
+   * Test for the case when the application tag based placement is enabled but
    * the user from the application tag 'user2' does not have access to the
    * queue.
    * Expected behaviour: the placement is done for the submitting user 'user1'
@@ -1276,14 +1286,15 @@ public class TestAppManager extends AppManagerTestBase{
           throws YarnException {
     String user = "user1";
     String expectedQueue = "user1Queue";
-    String userIdTag = USER_ID_PREFIX + "user2";
+    String userNameFromAppTag = "user2";
+    String userIdTag = USER_ID_PREFIX + userNameFromAppTag;
     setApplicationTags("tag1", userIdTag, "tag2");
     enableApplicationTagPlacement(false, user);
-    verifyPlacementUsername(expectedQueue, user, user);
+    verifyPlacementUsername(expectedQueue, user, userNameFromAppTag, user);
   }
 
   /**
-   * Test case for when the application tag based placement is enabled but
+   * Test for the case when the application tag based placement is enabled but
    * the submitting user 'user1' is not whitelisted and there is a valid
    * username tag passed.
    * Expected behaviour: the placement is done for the submitting user 'user1'
@@ -1293,14 +1304,15 @@ public class TestAppManager extends AppManagerTestBase{
           throws YarnException {
     String user = "user1";
     String expectedQueue = "user1Queue";
-    String userIdTag = USER_ID_PREFIX + "user2";
+    String userNameFromAppTag = "user2";
+    String userIdTag = USER_ID_PREFIX + userNameFromAppTag;
     setApplicationTags("tag1", userIdTag, "tag2");
     enableApplicationTagPlacement(true, "someUser");
-    verifyPlacementUsername(expectedQueue, user, user);
+    verifyPlacementUsername(expectedQueue, user, userNameFromAppTag, user);
   }
 
   /**
-   * Test case for when the application tag based placement is enabled but
+   * Test for the case when the application tag based placement is enabled but
    * there is no whitelisted user.
    * Expected behaviour: the placement is done for the submitting user 'user1'
    */
@@ -1309,15 +1321,16 @@ public class TestAppManager extends AppManagerTestBase{
           throws YarnException {
     String user = "user1";
     String expectedQueue = "user1Queue";
-    String userIdTag = USER_ID_PREFIX + "user2";
+    String userNameFromAppTag = "user2";
+    String userIdTag = USER_ID_PREFIX + userNameFromAppTag;
     setApplicationTags("tag1", userIdTag, "tag2");
     enableApplicationTagPlacement(false);
-    verifyPlacementUsername(expectedQueue, user, user);
+    verifyPlacementUsername(expectedQueue, user, userNameFromAppTag, user);
   }
 
 
   /**
-   * Test case for when the application tag based placement is enabled and
+   * Test for the case when the application tag based placement is enabled and
    * there is one wrongly qualified user
    * 'userid=' and a valid user 'userid=user2' passed
    * with application tag.
@@ -1329,16 +1342,18 @@ public class TestAppManager extends AppManagerTestBase{
           throws YarnException {
     String user = "user1";
     String expectedQueue = "user1Queue";
-    String expectedUser = "user2";
-    String userIdTag = USER_ID_PREFIX + expectedUser;
+    String userNameFromAppTag = "user2";
+    String expectedUser = userNameFromAppTag;
+    String userIdTag = USER_ID_PREFIX + userNameFromAppTag;
     String wrongUserIdTag = USER_ID_PREFIX;
     setApplicationTags("tag1", wrongUserIdTag, userIdTag, "tag2");
     enableApplicationTagPlacement(true, user);
-    verifyPlacementUsername(expectedQueue, user, expectedUser);
+    verifyPlacementUsername(expectedQueue, user, userNameFromAppTag,
+            expectedUser);
   }
 
   /**
-   * Test case for when the application tag based placement is enabled and
+   * Test for the case when the application tag based placement is enabled and
    * there is only one wrongly qualified user 'userid=' passed
    * with application tag.
    * Expected behaviour: the placement is done for the submitting user 'user1'
@@ -1348,10 +1363,33 @@ public class TestAppManager extends AppManagerTestBase{
           throws YarnException {
     String user = "user1";
     String expectedQueue = "user1Queue";
+    String userNameFromAppTag = "";
     String wrongUserIdTag = USER_ID_PREFIX;
     setApplicationTags("tag1", wrongUserIdTag, "tag2");
     enableApplicationTagPlacement(true, user);
-    verifyPlacementUsername(expectedQueue, user, user);
+    verifyPlacementUsername(expectedQueue, user, userNameFromAppTag, user);
+  }
+
+  /**
+   * Test for the case when the application tag based placement is enabled.
+   * And there is no placement rule defined for the user from the application tag
+   * Expected behaviour: the placement is done for the submitting user 'user1'
+   */
+  @Test
+  public void testGetUserNameForPlacementNoRuleDefined()
+          throws YarnException {
+    String user = "user1";
+    String expectedUser = user;
+    String userNameFromAppTag = "user2";
+    String wrongUserIdTag = USER_ID_PREFIX + userNameFromAppTag;
+    setApplicationTags("tag1", wrongUserIdTag, "tag2");
+    enableApplicationTagPlacement(true, user);
+    PlacementManager placementMgr = mock(PlacementManager.class);
+    when(placementMgr.placeApplication(asContext, userNameFromAppTag))
+            .thenReturn(null);
+    String userNameForPlacement = appMonitor
+            .getUserNameForPlacement(user, asContext, placementMgr);
+    Assert.assertEquals(expectedUser, userNameForPlacement);
   }
 
   private void enableApplicationTagPlacement(boolean userHasAccessToQueue,
@@ -1375,12 +1413,13 @@ public class TestAppManager extends AppManagerTestBase{
   }
 
   private void verifyPlacementUsername(final String queue,
-          final String submittingUser, final String expectedUser)
+          final String submittingUser, final String userNameFRomAppTag,
+          final String expectedUser)
           throws YarnException {
     PlacementManager placementMgr = mock(PlacementManager.class);
     ApplicationPlacementContext appContext
             = new ApplicationPlacementContext(queue);
-    when(placementMgr.placeApplication(asContext, submittingUser))
+    when(placementMgr.placeApplication(asContext, userNameFRomAppTag))
             .thenReturn(appContext);
     String userNameForPlacement = appMonitor
             .getUserNameForPlacement(submittingUser, asContext, placementMgr);

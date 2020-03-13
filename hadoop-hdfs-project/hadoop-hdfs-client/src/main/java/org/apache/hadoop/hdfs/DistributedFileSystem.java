@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import org.apache.commons.collections.list.TreeList;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -28,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
+import org.apache.hadoop.fs.BatchListingOperations;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
@@ -49,6 +51,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.InvalidPathHandleException;
+import org.apache.hadoop.fs.PartialListing;
 import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Options;
@@ -73,6 +76,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.impl.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -81,6 +85,8 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
+import org.apache.hadoop.hdfs.protocol.HdfsPartialListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -108,6 +114,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Progressable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import java.io.FileNotFoundException;
@@ -120,6 +128,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
@@ -133,7 +142,7 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase" })
 @InterfaceStability.Unstable
 public class DistributedFileSystem extends FileSystem
-    implements KeyProviderTokenIssuer {
+    implements KeyProviderTokenIssuer, BatchListingOperations {
   private Path workingDir;
   private URI uri;
 
@@ -213,7 +222,8 @@ public class DistributedFileSystem extends FileSystem
 
   @Override
   public Path getHomeDirectory() {
-    return makeQualified(DFSUtilClient.getHomeDirectory(getConf(), dfs.ugi));
+    return makeQualified(
+        new Path(DFSUtilClient.getHomeDirectory(getConf(), dfs.ugi)));
   }
 
   /**
@@ -321,7 +331,12 @@ public class DistributedFileSystem extends FileSystem
       public FSDataInputStream doCall(final Path p) throws IOException {
         final DFSInputStream dfsis =
             dfs.open(getPathName(p), bufferSize, verifyChecksum);
-        return dfs.createWrappedInputStream(dfsis);
+        try {
+          return dfs.createWrappedInputStream(dfsis);
+        } catch (IOException ex){
+          dfsis.close();
+          throw ex;
+        }
       }
       @Override
       public FSDataInputStream next(final FileSystem fs, final Path p)
@@ -502,7 +517,7 @@ public class DistributedFileSystem extends FileSystem
                 : EnumSet.of(CreateFlag.CREATE),
             true, replication, blockSize, progress, bufferSize, null,
             favoredNodes);
-        return dfs.createWrappedOutputStream(out, statistics);
+        return safelyCreateWrappedOutputStream(out);
       }
       @Override
       public HdfsDataOutputStream next(final FileSystem fs, final Path p)
@@ -534,7 +549,7 @@ public class DistributedFileSystem extends FileSystem
         final DFSOutputStream dfsos = dfs.create(getPathName(p), permission,
             cflags, replication, blockSize, progress, bufferSize,
             checksumOpt);
-        return dfs.createWrappedOutputStream(dfsos, statistics);
+        return safelyCreateWrappedOutputStream(dfsos);
       }
       @Override
       public FSDataOutputStream next(final FileSystem fs, final Path p)
@@ -582,7 +597,7 @@ public class DistributedFileSystem extends FileSystem
         final DFSOutputStream out = dfs.create(getPathName(f), permission,
             flag, true, replication, blockSize, progress, bufferSize,
             checksumOpt, favoredNodes, ecPolicyName, storagePolicy);
-        return dfs.createWrappedOutputStream(out, statistics);
+        return safelyCreateWrappedOutputStream(out);
       }
       @Override
       public HdfsDataOutputStream next(final FileSystem fs, final Path p)
@@ -611,7 +626,7 @@ public class DistributedFileSystem extends FileSystem
         getPathName(fixRelativePart(f)),
         absolutePermission, flag, true, replication, blockSize,
         progress, bufferSize, checksumOpt);
-    return dfs.createWrappedOutputStream(dfsos, statistics);
+    return safelyCreateWrappedOutputStream(dfsos);
   }
 
   /**
@@ -640,7 +655,7 @@ public class DistributedFileSystem extends FileSystem
         final DFSOutputStream out = dfs.create(getPathName(f), permission,
             flag, false, replication, blockSize, progress, bufferSize,
             checksumOpt, favoredNodes, ecPolicyName, storagePolicyName);
-        return dfs.createWrappedOutputStream(out, statistics);
+        return safelyCreateWrappedOutputStream(out);
       }
       @Override
       public HdfsDataOutputStream next(final FileSystem fs, final Path p)
@@ -677,7 +692,7 @@ public class DistributedFileSystem extends FileSystem
       public FSDataOutputStream doCall(final Path p) throws IOException {
         final DFSOutputStream dfsos = dfs.create(getPathName(p), permission,
             flag, false, replication, blockSize, progress, bufferSize, null);
-        return dfs.createWrappedOutputStream(dfsos, statistics);
+        return safelyCreateWrappedOutputStream(dfsos);
       }
 
       @Override
@@ -687,6 +702,20 @@ public class DistributedFileSystem extends FileSystem
             replication, blockSize, progress);
       }
     }.resolve(this, absF);
+  }
+
+  // Private helper to ensure the wrapped inner stream is closed safely
+  // upon IOException throw during wrap.
+  // Assuming the caller owns the inner stream which needs to be closed upon
+  // wrap failure.
+  private HdfsDataOutputStream safelyCreateWrappedOutputStream(
+      DFSOutputStream dfsos) throws IOException {
+    try {
+      return dfs.createWrappedOutputStream(dfsos, statistics);
+    } catch (IOException ex) {
+      dfsos.close();
+      throw ex;
+    }
   }
 
   @Override
@@ -1289,6 +1318,110 @@ public class DistributedFileSystem extends FileSystem
         return tmp;
       }
       throw new java.util.NoSuchElementException("No more entry in " + p);
+    }
+  }
+
+  @Override
+  public RemoteIterator<PartialListing<FileStatus>> batchedListStatusIterator(
+      final List<Path> paths) throws IOException {
+    List<Path> absPaths = Lists.newArrayListWithCapacity(paths.size());
+    for (Path p : paths) {
+      absPaths.add(fixRelativePart(p));
+    }
+    return new PartialListingIterator<>(absPaths, false);
+  }
+
+  @Override
+  public RemoteIterator<PartialListing<LocatedFileStatus>> batchedListLocatedStatusIterator(
+      final List<Path> paths) throws IOException {
+    List<Path> absPaths = Lists.newArrayListWithCapacity(paths.size());
+    for (Path p : paths) {
+      absPaths.add(fixRelativePart(p));
+    }
+    return new PartialListingIterator<>(absPaths, true);
+  }
+
+  private static final Logger LBI_LOG =
+      LoggerFactory.getLogger(PartialListingIterator.class);
+
+  private class PartialListingIterator<T extends FileStatus>
+      implements RemoteIterator<PartialListing<T>> {
+
+    private List<Path> paths;
+    private String[] srcs;
+    private boolean needLocation;
+    private BatchedDirectoryListing batchedListing;
+    private int listingIdx = 0;
+
+    PartialListingIterator(List<Path> paths, boolean needLocation)
+        throws IOException {
+      this.paths = paths;
+      this.srcs = new String[paths.size()];
+      for (int i = 0; i < paths.size(); i++) {
+        this.srcs[i] = getPathName(paths.get(i));
+      }
+      this.needLocation = needLocation;
+
+      // Do the first listing
+      statistics.incrementReadOps(1);
+      storageStatistics.incrementOpCounter(OpType.LIST_LOCATED_STATUS);
+      batchedListing = dfs.batchedListPaths(
+          srcs, HdfsFileStatus.EMPTY_NAME, needLocation);
+      LBI_LOG.trace("Got batchedListing: {}", batchedListing);
+      if (batchedListing == null) { // the directory does not exist
+        throw new FileNotFoundException("One or more paths do not exist.");
+      }
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+      if (batchedListing == null) {
+        return false;
+      }
+      // If we're done with the current batch, try to get the next batch
+      if (listingIdx >= batchedListing.getListings().length) {
+        if (!batchedListing.hasMore()) {
+          LBI_LOG.trace("No more elements");
+          return false;
+        }
+        batchedListing = dfs.batchedListPaths(
+            srcs, batchedListing.getStartAfter(), needLocation);
+        LBI_LOG.trace("Got batchedListing: {}", batchedListing);
+        listingIdx = 0;
+      }
+      return listingIdx < batchedListing.getListings().length;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public PartialListing<T> next() throws IOException {
+      if (!hasNext()) {
+        throw new NoSuchElementException("No more entries");
+      }
+      HdfsPartialListing listing = batchedListing.getListings()[listingIdx];
+      listingIdx++;
+
+      Path parent = paths.get(listing.getParentIdx());
+
+      if (listing.getException() != null) {
+        return new PartialListing<>(parent, listing.getException());
+      }
+
+      // Qualify paths for the client.
+      List<HdfsFileStatus> statuses = listing.getPartialListing();
+      List<T> qualifiedStatuses =
+          Lists.newArrayListWithCapacity(statuses.size());
+
+      for (HdfsFileStatus status : statuses) {
+        if (needLocation) {
+          qualifiedStatuses.add((T)((HdfsLocatedFileStatus) status)
+              .makeQualifiedLocated(getUri(), parent));
+        } else {
+          qualifiedStatuses.add((T)status.makeQualified(getUri(), parent));
+        }
+      }
+
+      return new PartialListing<>(parent, qualifiedStatuses);
     }
   }
 
@@ -3088,6 +3221,18 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
+   * Verifies if the given policies are supported in the given cluster setup.
+   * If not policy is specified checks for all enabled policies.
+   * @param policyNames name of policies.
+   * @return the result if the given policies are supported in the cluster setup
+   * @throws IOException
+   */
+  public ECTopologyVerifierResult getECTopologyResultForPolicies(
+      final String... policyNames) throws IOException {
+    return dfs.getECTopologyResultForPolicies(policyNames);
+  }
+
+  /**
    * Get the root directory of Trash for a path in HDFS.
    * 1. File in encryption zone returns /ez1/.Trash/username
    * 2. File not in encryption zone, or encountered exception when checking
@@ -3113,8 +3258,7 @@ public class DistributedFileSystem extends FileSystem
       EncryptionZone ez = dfs.getEZForPath(parentSrc);
       if ((ez != null)) {
         return this.makeQualified(
-            new Path(new Path(ez.getPath(), FileSystem.TRASH_PREFIX),
-                dfs.ugi.getShortUserName()));
+            new Path(DFSUtilClient.getEZTrashRoot(ez, dfs.ugi)));
       }
     } catch (IOException e) {
       DFSClient.LOG.warn("Exception in checking the encryption zone for the " +
@@ -3141,7 +3285,8 @@ public class DistributedFileSystem extends FileSystem
       // Get EZ Trash roots
       final RemoteIterator<EncryptionZone> it = dfs.listEncryptionZones();
       while (it.hasNext()) {
-        Path ezTrashRoot = new Path(it.next().getPath(),
+        EncryptionZone ez = it.next();
+        Path ezTrashRoot = new Path(ez.getPath(),
             FileSystem.TRASH_PREFIX);
         if (!exists(ezTrashRoot)) {
           continue;
@@ -3153,7 +3298,7 @@ public class DistributedFileSystem extends FileSystem
             }
           }
         } else {
-          Path userTrash = new Path(ezTrashRoot, dfs.ugi.getShortUserName());
+          Path userTrash = new Path(DFSUtilClient.getEZTrashRoot(ez, dfs.ugi));
           try {
             ret.add(getFileStatus(userTrash));
           } catch (FileNotFoundException ignored) {
@@ -3258,6 +3403,16 @@ public class DistributedFileSystem extends FileSystem
      */
     public HdfsDataOutputStreamBuilder noLocalWrite() {
       getFlags().add(CreateFlag.NO_LOCAL_WRITE);
+      return this;
+    }
+
+    /**
+     * Advise that a block replica NOT be written to the local rack DataNode.
+     *
+     * @see CreateFlag for the details.
+     */
+    public HdfsDataOutputStreamBuilder noLocalRack() {
+      getFlags().add(CreateFlag.NO_LOCAL_RACK);
       return this;
     }
 
@@ -3424,6 +3579,15 @@ public class DistributedFileSystem extends FileSystem
     if (cap.isPresent()) {
       return cap.get();
     }
+    // this switch is for features which are in the DFS client but not
+    // (yet/ever) in the WebHDFS API.
+    switch (validatePathCapabilityArgs(path, capability)) {
+    case CommonPathCapabilities.FS_EXPERIMENTAL_BATCH_LISTING:
+      return true;
+    default:
+      // fall through
+    }
+
     return super.hasPathCapability(p, capability);
   }
 }

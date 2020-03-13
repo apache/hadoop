@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.util.Apps;
 
 public class NotRunningJob implements MRClientProtocol {
 
@@ -138,9 +139,7 @@ public class NotRunningJob implements MRClientProtocol {
     jobReport.setUser(applicationReport.getUser());
     jobReport.setStartTime(applicationReport.getStartTime());
     YarnApplicationState state = applicationReport.getYarnApplicationState();
-    if (state == YarnApplicationState.KILLED
-        || state == YarnApplicationState.FAILED
-        || state == YarnApplicationState.FINISHED) {
+    if (Apps.isApplicationFinalState(state)) {
       jobReport.setDiagnostics(applicationReport.getDiagnostics());
     }
     jobReport.setJobName(applicationReport.getName());

@@ -105,6 +105,7 @@ import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -118,6 +119,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -244,6 +246,20 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private static volatile ThreadPoolExecutor STRIPED_READ_THREAD_POOL;
   private final int smallBufferSize;
   private final long serverDefaultsValidityPeriod;
+
+  /**
+   * Disabled stop DeadNodeDetectorThread for the testing when MiniDFSCluster
+   * start.
+   */
+  private static volatile boolean disabledStopDeadNodeDetectorThreadForTest =
+      false;
+
+  @VisibleForTesting
+  public static void setDisabledStopDeadNodeDetectorThreadForTest(
+      boolean disabledStopDeadNodeDetectorThreadForTest) {
+    DFSClient.disabledStopDeadNodeDetectorThreadForTest =
+        disabledStopDeadNodeDetectorThreadForTest;
+  }
 
   public DfsClientConf getConf() {
     return dfsClientConf;
@@ -575,10 +591,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       } catch (IOException e) {
         // Abort if the lease has already expired.
         final long elapsed = Time.monotonicNow() - getLastLeaseRenewal();
-        if (elapsed > HdfsConstants.LEASE_HARDLIMIT_PERIOD) {
+        if (elapsed > dfsClientConf.getleaseHardLimitPeriod()) {
           LOG.warn("Failed to renew lease for " + clientName + " for "
               + (elapsed/1000) + " seconds (>= hard-limit ="
-              + (HdfsConstants.LEASE_HARDLIMIT_PERIOD / 1000) + " seconds.) "
+              + (dfsClientConf.getleaseHardLimitPeriod() / 1000) + " seconds.) "
               + "Closing all files being written ...", e);
           closeAllFilesBeingWritten(true);
         } else {
@@ -635,7 +651,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       closeAllFilesBeingWritten(false);
       clientRunning = false;
       // close dead node detector thread
-      clientContext.stopDeadNodeDetectorThread();
+      if (!disabledStopDeadNodeDetectorThreadForTest) {
+        clientContext.stopDeadNodeDetectorThread();
+      }
+
       // close connections to the namenode
       closeConnectionToNamenode();
     }
@@ -840,6 +859,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
     checkOpen();
     namenode.reportBadBlocks(blocks);
+  }
+
+  public long getRefreshReadBlkLocationsInterval() {
+    return dfsClientConf.getRefreshReadBlockLocationsMS();
   }
 
   public LocatedBlocks getLocatedBlocks(String src, long start)
@@ -1548,7 +1571,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           DSQuotaExceededException.class,
           QuotaByStorageTypeExceededException.class,
           UnresolvedPathException.class,
-          SnapshotAccessControlException.class);
+          SnapshotAccessControlException.class,
+          ParentNotDirectoryException.class);
     }
   }
 
@@ -1676,6 +1700,24 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
+   * Get a batched listing for the indicated directories
+   *
+   * @see ClientProtocol#getBatchedListing(String[], byte[], boolean)
+   */
+  public BatchedDirectoryListing batchedListPaths(
+      String[] srcs, byte[] startAfter, boolean needLocation)
+      throws IOException {
+    checkOpen();
+    try {
+      return namenode.getBatchedListing(srcs, startAfter, needLocation);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          FileNotFoundException.class,
+          UnresolvedPathException.class);
+    }
+  }
+
+  /**
    * Get the file info for a specific file or directory.
    * @param src The string representation of the path to the file
    * @return object containing information regarding the file
@@ -1694,7 +1736,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  /**
+ /**
    * Get the file info for a specific file or directory.
    * @param src The string representation of the path to the file
    * @param needBlockToken Include block tokens in {@link LocatedBlocks}.
@@ -2786,6 +2828,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           SafeModeException.class,
           UnresolvedPathException.class,
           FileNotFoundException.class, NoECPolicySetException.class);
+    }
+  }
+
+  public ECTopologyVerifierResult getECTopologyResultForPolicies(
+      final String... policyNames) throws IOException {
+    checkOpen();
+    try {
+      return namenode.getECTopologyResultForPolicies(policyNames);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          SafeModeException.class);
     }
   }
 

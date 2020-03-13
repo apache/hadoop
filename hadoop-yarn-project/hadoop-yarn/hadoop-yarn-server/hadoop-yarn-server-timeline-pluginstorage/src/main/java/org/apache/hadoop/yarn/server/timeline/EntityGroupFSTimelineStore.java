@@ -42,7 +42,6 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
@@ -56,6 +55,7 @@ import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager.CheckAcl;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
+import org.apache.hadoop.yarn.util.Apps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,11 +104,6 @@ public class EntityGroupFSTimelineStore extends CompositeService
   private static final FsPermission DONE_DIR_PERMISSION =
       new FsPermission((short) 0700);
 
-  private static final EnumSet<YarnApplicationState>
-      APP_FINAL_STATES = EnumSet.of(
-      YarnApplicationState.FAILED,
-      YarnApplicationState.KILLED,
-      YarnApplicationState.FINISHED);
   // Active dir: <activeRoot>/appId/attemptId/cacheId.log
   // Done dir: <doneRoot>/cluster_ts/hash1/hash2/appId/attemptId/cacheId.log
   private static final String APP_DONE_DIR_PREFIX_FORMAT =
@@ -649,8 +644,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
     AppState appState = AppState.ACTIVE;
     try {
       ApplicationReport report = yarnClient.getApplicationReport(appId);
-      YarnApplicationState yarnState = report.getYarnApplicationState();
-      if (APP_FINAL_STATES.contains(yarnState)) {
+      if (Apps.isApplicationFinalState(report.getYarnApplicationState())) {
         appState = AppState.COMPLETED;
       }
     } catch (ApplicationNotFoundException e) {

@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -271,8 +272,8 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       final DirListingMetadata dlmIc = metadataStore.listChildren(cwdIncorrect);
       dlmC.setAuthoritative(true);
       dlmIc.setAuthoritative(true);
-      metadataStore.put(dlmC, null);
-      metadataStore.put(dlmIc, null);
+      metadataStore.put(dlmC, Collections.emptyList(), null);
+      metadataStore.put(dlmIc, Collections.emptyList(), null);
 
       // add a file raw so the listing will be different.
       touchRawAndWaitRaw(fileIc2);

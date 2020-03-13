@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
+import org.apache.hadoop.yarn.server.records.Version;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileUtil;
@@ -37,8 +38,6 @@ import org.iq80.leveldb.DBIterator;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -48,7 +47,8 @@ import static org.junit.Assert.assertNull;
 /**
  * Tests {@link LeveldbConfigurationStore}.
  */
-public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
+public class TestLeveldbConfigurationStore extends
+    PersistentConfigurationStoreBaseTest {
 
   public static final Logger LOG =
       LoggerFactory.getLogger(TestLeveldbConfigurationStore.class);
@@ -56,8 +56,6 @@ public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
       System.getProperty("test.build.data",
           System.getProperty("java.io.tmpdir")),
       TestLeveldbConfigurationStore.class.getName());
-
-  private ResourceManager rm;
 
   @Before
   public void setUp() throws Exception {
@@ -68,53 +66,21 @@ public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
     conf.set(YarnConfiguration.RM_SCHEDCONF_STORE_PATH, TEST_DIR.toString());
   }
 
-  @Test
-  public void testVersioning() throws Exception {
-    confStore.initialize(conf, schedConf, rmContext);
-    assertNull(confStore.getConfStoreVersion());
-    confStore.checkVersion();
-    assertEquals(LeveldbConfigurationStore.CURRENT_VERSION_INFO,
-        confStore.getConfStoreVersion());
-    confStore.close();
-  }
+  @Test(expected = YarnConfStoreVersionIncompatibleException.class)
+  public void testIncompatibleVersion() throws Exception {
+    try {
+      confStore.initialize(conf, schedConf, rmContext);
 
-  @Test
-  public void testPersistConfiguration() throws Exception {
-    schedConf.set("key", "val");
-    confStore.initialize(conf, schedConf, rmContext);
-    assertEquals("val", confStore.retrieve().get("key"));
-    confStore.close();
+      Version otherVersion = Version.newInstance(1, 1);
+      ((LeveldbConfigurationStore) confStore).storeVersion(otherVersion);
 
-    // Create a new configuration store, and check for old configuration
-    confStore = createConfStore();
-    schedConf.set("key", "badVal");
-    // Should ignore passed-in scheduler configuration.
-    confStore.initialize(conf, schedConf, rmContext);
-    assertEquals("val", confStore.retrieve().get("key"));
-    confStore.close();
-  }
-
-  @Test
-  public void testPersistUpdatedConfiguration() throws Exception {
-    confStore.initialize(conf, schedConf, rmContext);
-    assertNull(confStore.retrieve().get("key"));
-
-    Map<String, String> update = new HashMap<>();
-    update.put("key", "val");
-    YarnConfigurationStore.LogMutation mutation =
-        new YarnConfigurationStore.LogMutation(update, TEST_USER);
-    confStore.logMutation(mutation);
-    confStore.confirmMutation(mutation, true);
-    assertEquals("val", confStore.retrieve().get("key"));
-    confStore.close();
-
-    // Create a new configuration store, and check for updated configuration
-    confStore = createConfStore();
-    schedConf.set("key", "badVal");
-    // Should ignore passed-in scheduler configuration.
-    confStore.initialize(conf, schedConf, rmContext);
-    assertEquals("val", confStore.retrieve().get("key"));
-    confStore.close();
+      assertEquals("The configuration store should have stored the new" +
+              "version.", otherVersion,
+          confStore.getConfStoreVersion());
+      confStore.checkVersion();
+    } finally {
+      confStore.close();
+    }
   }
 
   @Test
@@ -122,11 +88,7 @@ public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
     conf.setLong(YarnConfiguration.RM_SCHEDCONF_MAX_LOGS, 0);
     confStore.initialize(conf, schedConf, rmContext);
 
-    Map<String, String> update = new HashMap<>();
-    update.put("key1", "val1");
-    YarnConfigurationStore.LogMutation mutation =
-        new YarnConfigurationStore.LogMutation(update, TEST_USER);
-    confStore.logMutation(mutation);
+    prepareLogMutation("key1", "val1");
 
     boolean logKeyPresent = false;
     DB db = ((LeveldbConfigurationStore) confStore).getDB();
@@ -141,55 +103,6 @@ public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
       }
     }
     assertFalse("Audit Log is not disabled", logKeyPresent);
-    confStore.close();
-  }
-
-  @Test
-  public void testMaxLogs() throws Exception {
-    conf.setLong(YarnConfiguration.RM_SCHEDCONF_MAX_LOGS, 2);
-    confStore.initialize(conf, schedConf, rmContext);
-    LinkedList<YarnConfigurationStore.LogMutation> logs =
-        ((LeveldbConfigurationStore) confStore).getLogs();
-    assertEquals(0, logs.size());
-
-    Map<String, String> update1 = new HashMap<>();
-    update1.put("key1", "val1");
-    YarnConfigurationStore.LogMutation mutation =
-        new YarnConfigurationStore.LogMutation(update1, TEST_USER);
-    confStore.logMutation(mutation);
-    logs = ((LeveldbConfigurationStore) confStore).getLogs();
-    assertEquals(1, logs.size());
-    assertEquals("val1", logs.get(0).getUpdates().get("key1"));
-    confStore.confirmMutation(mutation, true);
-    assertEquals(1, logs.size());
-    assertEquals("val1", logs.get(0).getUpdates().get("key1"));
-
-    Map<String, String> update2 = new HashMap<>();
-    update2.put("key2", "val2");
-    mutation = new YarnConfigurationStore.LogMutation(update2, TEST_USER);
-    confStore.logMutation(mutation);
-    logs = ((LeveldbConfigurationStore) confStore).getLogs();
-    assertEquals(2, logs.size());
-    assertEquals("val1", logs.get(0).getUpdates().get("key1"));
-    assertEquals("val2", logs.get(1).getUpdates().get("key2"));
-    confStore.confirmMutation(mutation, true);
-    assertEquals(2, logs.size());
-    assertEquals("val1", logs.get(0).getUpdates().get("key1"));
-    assertEquals("val2", logs.get(1).getUpdates().get("key2"));
-
-    // Next update should purge first update from logs.
-    Map<String, String> update3 = new HashMap<>();
-    update3.put("key3", "val3");
-    mutation = new YarnConfigurationStore.LogMutation(update3, TEST_USER);
-    confStore.logMutation(mutation);
-    logs = ((LeveldbConfigurationStore) confStore).getLogs();
-    assertEquals(2, logs.size());
-    assertEquals("val2", logs.get(0).getUpdates().get("key2"));
-    assertEquals("val3", logs.get(1).getUpdates().get("key3"));
-    confStore.confirmMutation(mutation, true);
-    assertEquals(2, logs.size());
-    assertEquals("val2", logs.get(0).getUpdates().get("key2"));
-    assertEquals("val3", logs.get(1).getUpdates().get("key3"));
     confStore.close();
   }
 
@@ -222,7 +135,7 @@ public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
         .getConfStore().retrieve().get("key"));
     // Next update is not persisted, it should not be recovered
     schedConfUpdateInfo.getGlobalParams().put("key", "badVal");
-    log = confProvider.logAndApplyMutation(user, schedConfUpdateInfo);
+    confProvider.logAndApplyMutation(user, schedConfUpdateInfo);
     rm1.close();
 
     // Start RM2 and verifies it starts with updated configuration
@@ -240,4 +153,10 @@ public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
   public YarnConfigurationStore createConfStore() {
     return new LeveldbConfigurationStore();
   }
+
+  @Override
+  Version getVersion() {
+    return LeveldbConfigurationStore.CURRENT_VERSION_INFO;
+  }
+
 }

@@ -29,6 +29,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public interface YarnWebServiceParams {
 
   // the params used in container-log related web services
+  String APP_ID = "appid";
+  String APPATTEMPT_ID = "appattemptid";
   String CONTAINER_ID = "containerid";
   String CONTAINER_LOG_FILE_NAME = "filename";
   String RESPONSE_CONTENT_FORMAT = "format";

@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
@@ -342,6 +343,8 @@ public class TestBlockManager {
   @Test
   public void testOneOfTwoRacksDecommissioned() throws Exception {
     addNodes(nodes);
+    NameNode.initMetrics(new Configuration(),
+        HdfsServerConstants.NamenodeRole.NAMENODE);
     for (int i = 0; i < NUM_TEST_ITERS; i++) {
       doTestOneOfTwoRacksDecommissioned(i);
     }

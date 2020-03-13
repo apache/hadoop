@@ -189,6 +189,8 @@ public class FSOperations {
     JSONArray entriesArray = new JSONArray();
     inner.put(HttpFSFileSystem.OWNER_JSON, aclStatus.getOwner());
     inner.put(HttpFSFileSystem.GROUP_JSON, aclStatus.getGroup());
+    inner.put(HttpFSFileSystem.PERMISSION_JSON,
+        HttpFSFileSystem.permissionToString(aclStatus.getPermission()));
     inner.put(HttpFSFileSystem.ACL_STICKY_BIT_JSON, aclStatus.isStickyBit());
     for ( AclEntry e : aclStatus.getEntries() ) {
       entriesArray.add(e.toString());
@@ -1980,6 +1982,33 @@ public class FSOperations {
         dfs.unsetErasureCodingPolicy(path);
       } else {
         throw new UnsupportedOperationException("unsetErasureCodingPolicy is "
+            + "not supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Executor that performs a satisfyStoragePolicy operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSSatisyStoragePolicy
+      implements FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+
+    public FSSatisyStoragePolicy(String path) {
+      this.path = new Path(path);
+    }
+
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        dfs.satisfyStoragePolicy(path);
+      } else {
+        throw new UnsupportedOperationException("satisfyStoragePolicy is "
             + "not supported for HttpFs on " + fs.getClass()
             + ". Please check your fs.defaultFS configuration");
       }

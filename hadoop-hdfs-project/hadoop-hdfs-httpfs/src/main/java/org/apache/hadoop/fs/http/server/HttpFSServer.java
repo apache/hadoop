@@ -957,7 +957,15 @@ public class HttpFSServer {
         AUDIT_LOG.info("[{}] to policy [{}]", path, policyName);
         response = Response.ok().build();
         break;
-      }
+    }
+    case SATISFYSTORAGEPOLICY: {
+      FSOperations.FSSatisyStoragePolicy command =
+          new FSOperations.FSSatisyStoragePolicy(path);
+      fsExecute(user, command);
+      AUDIT_LOG.info("satisfy storage policy for [{}]", path);
+      response = Response.ok().build();
+      break;
+    }
       default: {
         throw new IOException(
           MessageFormat.format("Invalid HTTP PUT operation [{0}]",

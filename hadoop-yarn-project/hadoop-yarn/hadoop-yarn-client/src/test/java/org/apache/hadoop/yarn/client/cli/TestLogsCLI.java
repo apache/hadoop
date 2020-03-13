@@ -840,7 +840,7 @@ public class TestLogsCLI {
       ClientResponse mockReponse = mock(ClientResponse.class);
       doReturn(Status.OK).when(mockReponse).getStatusInfo();
       doReturn(fis).when(mockReponse).getEntityInputStream();
-      doReturn(mockReponse).when(cli).getResponeFromNMWebService(
+      doReturn(mockReponse).when(cli).getResponseFromNMWebService(
           any(Configuration.class),
           any(Client.class),
           any(ContainerLogsRequest.class), anyString());

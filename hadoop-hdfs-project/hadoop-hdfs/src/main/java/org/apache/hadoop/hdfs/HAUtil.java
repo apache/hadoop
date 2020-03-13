@@ -43,6 +43,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -258,14 +259,29 @@ public class HAUtil {
    */
   public static InetSocketAddress getAddressOfActive(FileSystem fs)
       throws IOException {
+    InetSocketAddress inAddr = null;
     if (!(fs instanceof DistributedFileSystem)) {
       throw new IllegalArgumentException("FileSystem " + fs + " is not a DFS.");
     }
     // force client address resolution.
     fs.exists(new Path("/"));
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
-    DFSClient dfsClient = dfs.getClient();
-    return RPC.getServerAddress(dfsClient.getNamenode());
+    Configuration dfsConf = dfs.getConf();
+    URI dfsUri = dfs.getUri();
+    String nsId = dfsUri.getHost();
+    if (isHAEnabled(dfsConf, nsId)) {
+      List<ClientProtocol> namenodes =
+          getProxiesForAllNameNodesInNameservice(dfsConf, nsId);
+      for (ClientProtocol proxy : namenodes) {
+        if (proxy.getHAServiceState().equals(HAServiceState.ACTIVE)) {
+          inAddr = RPC.getServerAddress(proxy);
+        }
+      }
+    } else {
+      DFSClient dfsClient = dfs.getClient();
+      inAddr = RPC.getServerAddress(dfsClient.getNamenode());
+    }
+    return inAddr;
   }
   
   /**

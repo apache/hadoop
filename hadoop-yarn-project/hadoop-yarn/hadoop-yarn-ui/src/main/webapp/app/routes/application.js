@@ -28,6 +28,9 @@ export default AbstractRoute.extend({
       userInfo: this.store.findAll('cluster-user-info', {reload: true}).catch(function() {
         return null;
       }),
+      jhsHealth: this.store.queryRecord('jhs-health', {}).catch(function() {
+        return null;
+      }),
       timelineHealth: this.store.queryRecord('timeline-health', {}).catch(function() {
         return null;
       })
@@ -60,5 +63,6 @@ export default AbstractRoute.extend({
     this.store.unloadAll('ClusterInfo');
     this.store.unloadAll('cluster-user-info');
     this.store.unloadAll('timeline-health');
+    this.store.unloadAll('jhs-health');
   },
 });

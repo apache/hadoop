@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.server.webapp.LogServlet;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
+import org.apache.hadoop.yarn.server.webapp.WrappedLogMetaRequest;
 import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptsInfo;
@@ -225,7 +226,11 @@ public class AHSWebServices extends WebServices {
       @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
       @DefaultValue("false") boolean redirected_from_node) {
     initForReadableEndpoints(res);
-    return logServlet.getContainerLogsInfo(req, containerIdStr, nmId,
+
+    WrappedLogMetaRequest.Builder logMetaRequestBuilder =
+        LogServlet.createRequestFromContainerId(containerIdStr);
+
+    return logServlet.getContainerLogsInfo(req, logMetaRequestBuilder, nmId,
         redirected_from_node, null);
   }
 

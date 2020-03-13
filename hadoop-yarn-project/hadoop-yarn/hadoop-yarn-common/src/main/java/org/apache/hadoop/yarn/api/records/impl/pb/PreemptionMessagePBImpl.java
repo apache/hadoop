@@ -27,7 +27,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionMessageProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionMessageProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.StrictPreemptionContractProto;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable

@@ -80,6 +80,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.impl.FunctionsRaisingIOE;
+import org.apache.hadoop.fs.impl.WrappedIOException;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
 import org.apache.hadoop.fs.s3a.Constants;
@@ -202,6 +203,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
  * same region. The region may also be set explicitly by setting the config
  * parameter {@code fs.s3a.s3guard.ddb.region} to the corresponding region.
  */
+@SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DynamoDBMetadataStore implements MetadataStore,
@@ -323,8 +325,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
   /** Invoker for write operations. */
   private Invoker writeOp;
 
+  /** Invoker for scan operations. */
+  private Invoker scanOp;
+
   private final AtomicLong readThrottleEvents = new AtomicLong(0);
   private final AtomicLong writeThrottleEvents = new AtomicLong(0);
+  private final AtomicLong scanThrottleEvents = new AtomicLong(0);
   private final AtomicLong batchWriteCapacityExceededEvents = new AtomicLong(0);
 
   /**
@@ -422,11 +428,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // use the bucket as the DynamoDB table name if not specified in config
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY, bucket);
     initDataAccessRetries(conf);
-
-    // set up a full retry policy
-    invoker = new Invoker(new S3GuardDataAccessRetryPolicy(conf),
-        this::retryEvent
-    );
 
     this.ttlTimeProvider = ttlTp;
 
@@ -542,6 +543,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         = new S3GuardDataAccessRetryPolicy(config);
     readOp = new Invoker(throttledRetryRetryPolicy, this::readRetryEvent);
     writeOp = new Invoker(throttledRetryRetryPolicy, this::writeRetryEvent);
+    scanOp = new Invoker(throttledRetryRetryPolicy, this::scanRetryEvent);
   }
 
   @Override
@@ -809,33 +811,31 @@ public class DynamoDBMetadataStore implements MetadataStore,
     checkPath(path);
     LOG.debug("Listing table {} in region {}: {}", tableName, region, path);
 
+    final QuerySpec spec = new QuerySpec()
+        .withHashKey(pathToParentKeyAttribute(path))
+        .withConsistentRead(true); // strictly consistent read
+    final List<PathMetadata> metas = new ArrayList<>();
     // find the children in the table
-    return readOp.retry(
+    final ItemCollection<QueryOutcome> items = scanOp.retry(
         "listChildren",
         path.toString(),
         true,
-        () -> {
-          final QuerySpec spec = new QuerySpec()
-              .withHashKey(pathToParentKeyAttribute(path))
-              .withConsistentRead(true); // strictly consistent read
-          final ItemCollection<QueryOutcome> items = table.query(spec);
+        () -> table.query(spec));
+    // now wrap the result with retry logic
+    try {
+      for (Item item : wrapWithRetries(items)) {
+        metas.add(itemToPathMetadata(item, username));
+      }
+    } catch (WrappedIOException e) {
+      // failure in the iterators; unwrap.
+      throw e.getCause();
+    }
 
-          final List<PathMetadata> metas = new ArrayList<>();
-          for (Item item : items) {
-            DDBPathMetadata meta = itemToPathMetadata(item, username);
-            metas.add(meta);
-          }
-
-          // Minor race condition here - if the path is deleted between
-          // getting the list of items and the directory metadata we might
-          // get a null in DDBPathMetadata.
-          DDBPathMetadata dirPathMeta = get(path);
-
-          final DirListingMetadata dirListing =
-              getDirListingMetadataFromDirMetaAndList(path, metas,
-                  dirPathMeta);
-          return dirListing;
-        });
+    // Minor race condition here - if the path is deleted between
+    // getting the list of items and the directory metadata we might
+    // get a null in DDBPathMetadata.
+    return getDirListingMetadataFromDirMetaAndList(path, metas,
+        get(path));
   }
 
   DirListingMetadata getDirListingMetadataFromDirMetaAndList(Path path,
@@ -899,19 +899,18 @@ public class DynamoDBMetadataStore implements MetadataStore,
     List<DDBPathMetadata> sortedPaths = new ArrayList<>(pathsToCreate);
     sortedPaths.sort(PathOrderComparators.TOPMOST_PM_FIRST);
     // iterate through the paths.
-    for (DDBPathMetadata meta : sortedPaths) {
-      Preconditions.checkArgument(meta != null);
-      Path path = meta.getFileStatus().getPath();
+    for (DDBPathMetadata entry : sortedPaths) {
+      Preconditions.checkArgument(entry != null);
+      Path path = entry.getFileStatus().getPath();
       LOG.debug("Adding entry {}", path);
       if (path.isRoot()) {
         // this is a root entry: do not add it.
         break;
       }
-      // create the new entry
-      DDBPathMetadata entry = new DDBPathMetadata(meta);
       // add it to the ancestor state, failing if it is already there and
       // of a different type.
       DDBPathMetadata oldEntry = ancestorState.put(path, entry);
+      boolean addAncestors = true;
       if (oldEntry != null) {
         if (!oldEntry.getFileStatus().isDirectory()
             || !entry.getFileStatus().isDirectory()) {
@@ -928,12 +927,18 @@ public class DynamoDBMetadataStore implements MetadataStore,
           // a directory is already present. Log and continue.
           LOG.debug("Directory at {} being updated with value {}",
               path, entry);
+          // and we skip the the subsequent parent scan as we've already been
+          // here
+          addAncestors = false;
         }
       }
       // add the entry to the ancestry map as an explicitly requested entry.
       ancestry.put(path, Pair.of(EntryOrigin.Requested, entry));
+      // now scan up the ancestor tree to see if there are any
+      // immediately missing entries.
       Path parent = path.getParent();
-      while (!parent.isRoot() && !ancestry.containsKey(parent)) {
+      while (addAncestors
+          && !parent.isRoot() && !ancestry.containsKey(parent)) {
         if (!ancestorState.findEntry(parent, true)) {
           // there is no entry in the ancestor state.
           // look in the store
@@ -947,6 +952,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
             md = itemToPathMetadata(item, username);
             LOG.debug("Found existing entry for parent: {}", md);
             newEntry = Pair.of(EntryOrigin.Retrieved, md);
+            // and we break, assuming that if there is an entry, its parents
+            // are valid too.
+            addAncestors = false;
           } else {
             // A directory entry was not found in the DB. Create one.
             LOG.debug("auto-create ancestor path {} for child path {}",
@@ -1439,6 +1447,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * {@link #processBatchWriteRequest(DynamoDBMetadataStore.AncestorState, PrimaryKey[], Item[])}
    * is only tried once.
    * @param meta Directory listing metadata.
+   * @param unchangedEntries unchanged child entry paths
    * @param operationState operational state for a bulk update
    * @throws IOException IO problem
    */
@@ -1446,6 +1455,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Retries.RetryTranslated
   public void put(
       final DirListingMetadata meta,
+      final List<Path> unchangedEntries,
       @Nullable final BulkOperationState operationState) throws IOException {
     LOG.debug("Saving {} dir meta for {} to table {} in region {}: {}",
         meta.isAuthoritative() ? "auth" : "nonauth",
@@ -1463,8 +1473,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
     final List<DDBPathMetadata> metasToPut = fullPathsToPut(ddbPathMeta,
         ancestorState);
 
-    // next add all children of the directory
-    metasToPut.addAll(pathMetaToDDBPathMeta(meta.getListing()));
+    // next add all changed children of the directory
+    // ones that came from the previous listing are left as-is
+    final Collection<PathMetadata> children = meta.getListing()
+        .stream()
+        .filter(e -> !unchangedEntries.contains(e.getFileStatus().getPath()))
+        .collect(Collectors.toList());
+
+    metasToPut.addAll(pathMetaToDDBPathMeta(children));
 
     // sort so highest-level entries are written to the store first.
     // if a sequence fails, no orphan entries will have been written.
@@ -1870,7 +1886,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
           throughput.getWriteCapacityUnits() == 0
               ? BILLING_MODE_PER_REQUEST
               : BILLING_MODE_PROVISIONED);
-      map.put(TABLE, desc.toString());
+      map.put("sse", desc.getSSEDescription() == null
+          ? "DISABLED"
+          : desc.getSSEDescription().toString());
       map.put(MetadataStoreCapabilities.PERSISTS_AUTHORITATIVE_BIT,
           Boolean.toString(true));
     } else {
@@ -1974,6 +1992,22 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
+   * Callback on a scan operation retried.
+   * @param text text of the operation
+   * @param ex exception
+   * @param attempts number of attempts
+   * @param idempotent is the method idempotent (this is assumed to be true)
+   */
+  void scanRetryEvent(
+      String text,
+      IOException ex,
+      int attempts,
+      boolean idempotent) {
+    scanThrottleEvents.incrementAndGet();
+    retryEvent(text, ex, attempts, idempotent);
+  }
+
+  /**
    * Callback from {@link Invoker} when an operation is retried.
    * @param text text of the operation
    * @param ex exception
@@ -2029,14 +2063,38 @@ public class DynamoDBMetadataStore implements MetadataStore,
     return writeThrottleEvents.get();
   }
 
+  /**
+   * Get the count of scan throttle events.
+   * @return the current count of scan throttle events.
+   */
+  @VisibleForTesting
+  public long getScanThrottleEventCount() {
+    return scanThrottleEvents.get();
+  }
+
   @VisibleForTesting
   public long getBatchWriteCapacityExceededCount() {
     return batchWriteCapacityExceededEvents.get();
   }
 
-  @VisibleForTesting
+  /**
+   * Get the operation invoker for write operations.
+   * @return an invoker for retrying mutating operations on a store.
+   */
   public Invoker getInvoker() {
-    return invoker;
+    return writeOp;
+  }
+
+  /**
+   * Wrap an iterator returned from any scan with a retrying one.
+   * This includes throttle handling.
+   * Retries will update the relevant counters/metrics for scan operations.
+   * @param source source iterator
+   * @return a retrying iterator.
+   */
+  public <T> Iterable<T> wrapWithRetries(
+      final Iterable<T> source) {
+    return new RetryingCollection<>("scan dynamoDB table", scanOp, source);
   }
 
   /**

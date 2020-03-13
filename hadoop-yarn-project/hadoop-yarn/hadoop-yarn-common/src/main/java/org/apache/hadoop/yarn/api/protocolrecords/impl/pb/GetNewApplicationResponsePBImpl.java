@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetNewApplicationResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetNewApplicationResponseProtoOrBuilder;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable

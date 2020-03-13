@@ -486,11 +486,11 @@ running out of memory as it calculates the partitions.
 
 Any FileSystem that does not actually break files into blocks SHOULD
 return a number for this that results in efficient processing.
-A FileSystem MAY make this user-configurable (the S3 and Swift filesystem clients do this).
+A FileSystem MAY make this user-configurable (the object store connectors usually do this).
 
 ###  `long getDefaultBlockSize(Path p)`
 
-Get the "default" block size for a path —that is, the block size to be used
+Get the "default" block size for a path --that is, the block size to be used
 when writing objects to a path in the filesystem.
 
 #### Preconditions
@@ -539,14 +539,21 @@ on the filesystem.
 
 ### `boolean mkdirs(Path p, FsPermission permission)`
 
-Create a directory and all its parents
+Create a directory and all its parents.
 
 #### Preconditions
 
 
+The path must either be a directory or not exist
+ 
      if exists(FS, p) and not isDir(FS, p) :
          raise [ParentNotDirectoryException, FileAlreadyExistsException, IOException]
 
+No ancestor may be a file
+
+    forall d = ancestors(FS, p) : 
+        if exists(FS, d) and not isDir(FS, d) :
+            raise [ParentNotDirectoryException, FileAlreadyExistsException, IOException]
 
 #### Postconditions
 
@@ -586,6 +593,11 @@ Writing to or overwriting a directory must fail.
 
     if isDir(FS, p) : raise {FileAlreadyExistsException, FileNotFoundException, IOException}
 
+No ancestor may be a file
+
+    forall d = ancestors(FS, p) : 
+        if exists(FS, d) and not isDir(FS, d) :
+            raise [ParentNotDirectoryException, FileAlreadyExistsException, IOException]
 
 FileSystems may reject the request for other
 reasons, such as the FS being read-only  (HDFS),
@@ -593,7 +605,8 @@ the block size being below the minimum permitted (HDFS),
 the replication count being out of range (HDFS),
 quotas on namespace or filesystem being exceeded, reserved
 names, etc. All rejections SHOULD be `IOException` or a subclass thereof
-and MAY be a `RuntimeException` or subclass. For instance, HDFS may raise a `InvalidPathException`.
+and MAY be a `RuntimeException` or subclass.
+For instance, HDFS may raise an `InvalidPathException`.
 
 #### Postconditions
 
@@ -718,24 +731,29 @@ exists in the metadata, but no copies of any its blocks can be located;
 Creates a [`FSDataInputStreamBuilder`](fsdatainputstreambuilder.html)
 to construct a operation to open the file at `path` for reading.
 
-
 When `build()` is invoked on the returned `FSDataInputStreamBuilder` instance,
 the builder parameters are verified and
-`openFileWithOptions(Path, Set<String>, Configuration, int)` invoked.
+`openFileWithOptions(Path, OpenFileParameters)` invoked.
 
 This (protected) operation returns a `CompletableFuture<FSDataInputStream>`
 which, when its `get()` method is called, either returns an input
 stream of the contents of opened file, or raises an exception.
 
-The base implementation of the `openFileWithOptions(PathHandle, Set<String>, Configuration, int)`
+The base implementation of the `openFileWithOptions(PathHandle, OpenFileParameters)`
 ultimately invokes `open(Path, int)`.
 
 Thus the chain `openFile(path).build().get()` has the same preconditions
 and postconditions as `open(Path p, int bufferSize)`
 
+However, there is one difference which implementations are free to
+take advantage of: 
 
-The `openFile()` operation may check the state of the filesystem during this
-call, but as the state of the filesystem may change betwen this call and
+The returned stream MAY implement a lazy open where file non-existence or
+access permission failures may not surface until the first `read()` of the
+actual data.
+
+The `openFile()` operation may check the state of the filesystem during its
+invocation, but as the state of the filesystem may change betwen this call and
 the actual `build()` and `get()` operations, this file-specific
 preconditions (file exists, file is readable, etc) MUST NOT be checked here.
 
@@ -766,6 +784,10 @@ It SHOULD be possible to always open a file without specifying any options,
 so as to present a consistent model to users. However, an implementation MAY
 opt to require one or more mandatory options to be set.
 
+The returned stream may perform "lazy" evaluation of file access. This is
+relevant for object stores where the probes for existence are expensive, and,
+even with an asynchronous open, may be considered needless.
+ 
 ### `FSDataInputStreamBuilder openFile(PathHandle)`
 
 Creates a `FSDataInputStreamBuilder` to build an operation to open a file.
@@ -774,13 +796,13 @@ to construct a operation to open the file identified by the given `PathHandle` f
 
 When `build()` is invoked on the returned `FSDataInputStreamBuilder` instance,
 the builder parameters are verified and
-`openFileWithOptions(PathHandle, Set<String>, Configuration, int)` invoked.
+`openFileWithOptions(PathHandle, OpenFileParameters)` invoked.
 
 This (protected) operation returns a `CompletableFuture<FSDataInputStream>`
 which, when its `get()` method is called, either returns an input
 stream of the contents of opened file, or raises an exception.
 
-The base implementation of the `openFileWithOptions(Path,PathHandle, Set<String>, Configuration, int)` method
+The base implementation of the `openFileWithOptions(PathHandle, OpenFileParameters)` method
 returns a future which invokes `open(Path, int)`.
 
 Thus the chain `openFile(pathhandle).build().get()` has the same preconditions

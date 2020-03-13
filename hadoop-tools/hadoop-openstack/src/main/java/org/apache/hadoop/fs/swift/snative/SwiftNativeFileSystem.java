@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -46,6 +47,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -596,14 +598,12 @@ public class SwiftNativeFileSystem extends FileSystem {
       store.rename(makeAbsolute(src), makeAbsolute(dst));
       //success
       return true;
-    } catch (SwiftOperationFailedException e) {
+    } catch (SwiftOperationFailedException
+        | FileAlreadyExistsException
+        | FileNotFoundException
+        | ParentNotDirectoryException e) {
       //downgrade to a failure
-      return false;
-    } catch (FileAlreadyExistsException e) {
-      //downgrade to a failure
-      return false;
-    } catch (FileNotFoundException e) {
-      //downgrade to a failure
+      LOG.debug("rename({}, {}) failed",src, dst, e);
       return false;
     }
   }
@@ -731,6 +731,31 @@ public class SwiftNativeFileSystem extends FileSystem {
   public static long getBytesUploaded(FSDataOutputStream outputStream) {
     SwiftNativeOutputStream snos = getSwiftNativeOutputStream(outputStream);
     return snos.getBytesUploaded();
+  }
+
+  /**
+   * {@inheritDoc}
+   * @throws FileNotFoundException if the parent directory is not present -or
+   * is not a directory.
+   */
+  @Override
+  public FSDataOutputStream createNonRecursive(Path path,
+      FsPermission permission,
+      EnumSet<CreateFlag> flags,
+      int bufferSize,
+      short replication,
+      long blockSize,
+      Progressable progress) throws IOException {
+    Path parent = path.getParent();
+    if (parent != null) {
+      // expect this to raise an exception if there is no parent
+      if (!getFileStatus(parent).isDirectory()) {
+        throw new FileAlreadyExistsException("Not a directory: " + parent);
+      }
+    }
+    return create(path, permission,
+        flags.contains(CreateFlag.OVERWRITE), bufferSize,
+        replication, blockSize, progress);
   }
 
 }

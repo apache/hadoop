@@ -34,6 +34,8 @@ class QueuePlacementConverter {
   private static final String PRIMARY_GROUP = "%primary_group";
   private static final String SECONDARY_GROUP = "%secondary_group";
 
+  private static final String RULE_SEPARATOR = ",";
+
   Map<String, String> convertPlacementPolicy(PlacementManager placementManager,
       FSConfigToCSConfigRuleHandler ruleHandler, boolean userAsDefaultQueue) {
     StringBuilder mapping = new StringBuilder();
@@ -55,11 +57,11 @@ class QueuePlacementConverter {
 
         // nested rule
         if (userRule.getParentRule() != null) {
-          handleNestedRule(mapping, userRule);
+          handleNestedRule(mapping, userRule, ruleHandler);
         } else {
           if (!userAsDefaultQueue) {
             if (mapping.length() > 0) {
-              mapping.append(";");
+              mapping.append(RULE_SEPARATOR);
             }
             mapping.append("u:" + USER + ":" + USER);
           }
@@ -72,19 +74,18 @@ class QueuePlacementConverter {
             "yarn.scheduler.capacity.queue-mappings-override.enable", "false");
       } else if (rule instanceof PrimaryGroupPlacementRule) {
         if (mapping.length() > 0) {
-          mapping.append(";");
+          mapping.append(RULE_SEPARATOR);
         }
         mapping.append("u:" + USER + ":" + PRIMARY_GROUP);
       } else if (rule instanceof DefaultPlacementRule) {
         DefaultPlacementRule defaultRule = (DefaultPlacementRule) rule;
         if (mapping.length() > 0) {
-          mapping.append(";");
+          mapping.append(RULE_SEPARATOR);
         }
         mapping.append("u:" + USER + ":").append(defaultRule.defaultQueueName);
       } else if (rule instanceof SecondaryGroupExistingPlacementRule) {
-        // TODO: wait for YARN-9840
         if (mapping.length() > 0) {
-          mapping.append(";");
+          mapping.append(RULE_SEPARATOR);
         }
         mapping.append("u:" + USER + ":" + SECONDARY_GROUP);
       } else if (!(rule instanceof RejectPlacementRule)) {
@@ -101,22 +102,28 @@ class QueuePlacementConverter {
   }
 
   private void handleNestedRule(StringBuilder mapping,
-      UserPlacementRule userRule) {
+      UserPlacementRule userRule, FSConfigToCSConfigRuleHandler ruleHandler) {
     PlacementRule pr = userRule.getParentRule();
     if (mapping.length() > 0) {
-      mapping.append(";");
+      mapping.append(RULE_SEPARATOR);
     }
     if (pr instanceof PrimaryGroupPlacementRule) {
-      // TODO: wait for YARN-9841
-      mapping.append("u:" + USER + ":" + PRIMARY_GROUP + "." + USER);
+      String mappingString = "u:" + USER + ":" + PRIMARY_GROUP + "." + USER;
+      ruleHandler.handleDynamicMappedQueue(mappingString,
+          ((PrimaryGroupPlacementRule) pr).getCreateFlag());
+      mapping.append(mappingString);
     } else if (pr instanceof SecondaryGroupExistingPlacementRule) {
-      // TODO: wait for YARN-9865
+      String mappingString = "u:" + USER + ":" + SECONDARY_GROUP + "." + USER;
+      ruleHandler.handleDynamicMappedQueue(mappingString,
+          ((SecondaryGroupExistingPlacementRule) pr).getCreateFlag());
       mapping.append("u:" + USER + ":" + SECONDARY_GROUP + "." + USER);
     } else if (pr instanceof DefaultPlacementRule) {
       DefaultPlacementRule defaultRule = (DefaultPlacementRule) pr;
-      mapping.append("u:" + USER + ":")
-        .append(defaultRule.defaultQueueName)
-        .append("." + USER);
+      String mappingString =
+          "u:" + USER + ":" + defaultRule.defaultQueueName + "." + USER;
+      ruleHandler.handleDynamicMappedQueue(mappingString,
+          defaultRule.getCreateFlag());
+      mapping.append(mappingString);
     } else {
       throw new UnsupportedOperationException("Unsupported nested rule: "
           + pr.getClass().getCanonicalName());

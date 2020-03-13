@@ -432,7 +432,7 @@ jobAttempts:
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| id | string | The job attempt id |
+| id | int | The job attempt id |
 | nodeId | string | The node id of the node the attempt ran on |
 | nodeHttpAddress | string | The node http address of the node the attempt ran on |
 | logsLink | string | The http link to the job attempt logs |

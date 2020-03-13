@@ -41,6 +41,7 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.UnknownStoreException;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Destroy;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Init;
 import org.apache.hadoop.util.ExitUtil;
@@ -199,6 +200,7 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
             Init.NAME,
             "-" + READ_FLAG, "0",
             "-" + WRITE_FLAG, "0",
+            "-" + Init.SSE_FLAG,
             "-" + META_FLAG, "dynamodb://" + testTableName,
             testS3Url);
       }
@@ -230,8 +232,6 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
         info = exec(infocmd, BucketInfo.NAME,
             "-" + BucketInfo.GUARDED_FLAG,
             testS3Url);
-        assertTrue("No Dynamo diagnostics in output " + info,
-            info.contains(DESCRIPTION));
         assertTrue("No Dynamo diagnostics in output " + info,
             info.contains(DESCRIPTION));
       }
@@ -320,7 +320,7 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testCLIFsckFailInitializeFs() throws Exception {
-    intercept(FileNotFoundException.class, "does not exist",
+    intercept(UnknownStoreException.class,
         () -> run(S3GuardTool.Fsck.NAME, "-check",
             "s3a://this-bucket-does-not-exist-" + UUID.randomUUID()));
   }
@@ -353,4 +353,17 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
         "-" + Fsck.DDB_MS_CONSISTENCY_FLAG, "-" + Fsck.CHECK_FLAG,
         "s3a://" + getFileSystem().getBucket()));
   }
+
+  /**
+   * Test that when init, the CMK option can not live without SSE enabled.
+   */
+  @Test
+  public void testCLIInitParamCmkWithoutSse() throws Exception {
+    intercept(ExitUtil.ExitException.class, "can only be used with",
+        () -> run(S3GuardTool.Init.NAME,
+            "-" + S3GuardTool.CMK_FLAG,
+            "alias/" + UUID.randomUUID(),
+            "s3a://" + getFileSystem().getBucket() + "/" + UUID.randomUUID()));
+  }
+
 }

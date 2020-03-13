@@ -18,6 +18,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.DYNAMIC_MAX_ASSIGN;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.MAX_CAPACITY_PERCENTAGE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.MAX_RESOURCES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.MIN_RESOURCES;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.MAX_CHILD_CAPACITY;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.MAX_CHILD_QUEUE_LIMIT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.QUEUE_AUTO_CREATE;
@@ -25,6 +27,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.conve
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.SPECIFIED_NOT_FIRST;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.USER_MAX_APPS_DEFAULT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.USER_MAX_RUNNING_APPS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.FAIR_AS_DRF;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -68,6 +71,8 @@ public class TestFSConfigToCSConfigRuleHandler {
     ruleHandler.handleDynamicMaxAssign();
     ruleHandler.handleMaxCapacityPercentage("test");
     ruleHandler.handleMaxChildCapacity();
+    ruleHandler.handleMinResources();
+    ruleHandler.handleMaxResources();
     ruleHandler.handleQueueAutoCreate("test");
     ruleHandler.handleReservationSystem();
     ruleHandler.handleSpecifiedNotFirstRule();
@@ -80,12 +85,15 @@ public class TestFSConfigToCSConfigRuleHandler {
     Properties rules = new Properties();
     rules.put(DYNAMIC_MAX_ASSIGN, WARNING);
     rules.put(MAX_CAPACITY_PERCENTAGE, WARNING);
+    rules.put(MAX_RESOURCES, WARNING);
+    rules.put(MIN_RESOURCES, WARNING);
     rules.put(MAX_CHILD_CAPACITY, WARNING);
     rules.put(QUEUE_AUTO_CREATE, WARNING);
     rules.put(RESERVATION_SYSTEM, WARNING);
     rules.put(SPECIFIED_NOT_FIRST, WARNING);
     rules.put(USER_MAX_APPS_DEFAULT, WARNING);
     rules.put(USER_MAX_RUNNING_APPS, WARNING);
+    rules.put(FAIR_AS_DRF, WARNING);
 
     ruleHandler = new FSConfigToCSConfigRuleHandler(rules,
         createDefaultConversionOptions());
@@ -93,6 +101,8 @@ public class TestFSConfigToCSConfigRuleHandler {
     ruleHandler.handleDynamicMaxAssign();
     ruleHandler.handleMaxCapacityPercentage("test");
     ruleHandler.handleMaxChildCapacity();
+    ruleHandler.handleMinResources();
+    ruleHandler.handleMaxResources();
     ruleHandler.handleQueueAutoCreate("test");
     ruleHandler.handleReservationSystem();
     ruleHandler.handleSpecifiedNotFirstRule();
@@ -106,11 +116,15 @@ public class TestFSConfigToCSConfigRuleHandler {
     rules.put(DYNAMIC_MAX_ASSIGN, ABORT);
     rules.put(MAX_CAPACITY_PERCENTAGE, ABORT);
     rules.put(MAX_CHILD_CAPACITY, ABORT);
+    rules.put(MAX_RESOURCES, ABORT);
+    rules.put(MIN_RESOURCES, ABORT);
     rules.put(QUEUE_AUTO_CREATE, ABORT);
     rules.put(RESERVATION_SYSTEM, ABORT);
     rules.put(SPECIFIED_NOT_FIRST, ABORT);
     rules.put(USER_MAX_APPS_DEFAULT, ABORT);
     rules.put(USER_MAX_RUNNING_APPS, ABORT);
+    rules.put(USER_MAX_RUNNING_APPS, ABORT);
+    rules.put(FAIR_AS_DRF, ABORT);
     rules.put(MAX_CHILD_QUEUE_LIMIT, "1");
 
     ruleHandler = new FSConfigToCSConfigRuleHandler(rules,
@@ -121,11 +135,14 @@ public class TestFSConfigToCSConfigRuleHandler {
     expectAbort(() -> ruleHandler.handleDynamicMaxAssign());
     expectAbort(() -> ruleHandler.handleMaxCapacityPercentage("test"));
     expectAbort(() -> ruleHandler.handleMaxChildCapacity());
+    expectAbort(() -> ruleHandler.handleMaxResources());
+    expectAbort(() -> ruleHandler.handleMinResources());
     expectAbort(() -> ruleHandler.handleQueueAutoCreate("test"));
     expectAbort(() -> ruleHandler.handleReservationSystem());
     expectAbort(() -> ruleHandler.handleSpecifiedNotFirstRule());
     expectAbort(() -> ruleHandler.handleUserMaxApps());
     expectAbort(() -> ruleHandler.handleUserMaxAppsDefault());
+    expectAbort(() -> ruleHandler.handleFairAsDrf("test"));
   }
 
   @Test(expected = ConversionException.class)

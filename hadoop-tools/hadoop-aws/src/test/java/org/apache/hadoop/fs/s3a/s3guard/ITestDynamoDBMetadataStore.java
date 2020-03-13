@@ -28,6 +28,7 @@ import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.ListTagsOfResourceRequest;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
+import com.amazonaws.services.dynamodbv2.model.SSEDescription;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
 import com.amazonaws.services.dynamodbv2.model.Tag;
 import com.amazonaws.services.dynamodbv2.model.TagResourceRequest;
@@ -128,9 +130,13 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   private String bucket;
 
+  @SuppressWarnings("StaticNonFinalField")
   private static DynamoDBMetadataStore ddbmsStatic;
 
+  @SuppressWarnings("StaticNonFinalField")
   private static String testDynamoDBTableName;
+
+  private static final List<Path> UNCHANGED_ENTRIES = Collections.emptyList();
 
   /**
    * Create a path under the test path provided by
@@ -162,13 +168,17 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
     try{
       super.setUp();
-      tableHandler = getDynamoMetadataStore().getTableHandler();
     } catch (FileNotFoundException e){
       LOG.warn("MetadataStoreTestBase setup failed. Waiting for table to be "
-          + "deleted before trying again.");
-      ddbmsStatic.getTable().waitForDelete();
+          + "deleted before trying again.", e);
+      try {
+        ddbmsStatic.getTable().waitForDelete();
+      } catch (IllegalArgumentException | InterruptedException ex) {
+        LOG.warn("When awaiting a table to be cleaned up", e);
+      }
       super.setUp();
     }
+    tableHandler = getDynamoMetadataStore().getTableHandler();
   }
 
   @BeforeClass
@@ -427,9 +437,11 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
       ddbms.initialize(s3afs, new S3Guard.TtlTimeProvider(conf));
-      verifyTableInitialized(tableName, ddbms.getDynamoDB());
+      Table table = verifyTableInitialized(tableName, ddbms.getDynamoDB());
+      verifyTableSse(conf, table.getDescription());
       assertNotNull(ddbms.getTable());
       assertEquals(tableName, ddbms.getTable().getTableName());
+
       String expectedRegion = conf.get(S3GUARD_DDB_REGION_KEY,
           s3afs.getBucketLocation(bucket));
       assertEquals("DynamoDB table should be in configured region or the same" +
@@ -459,6 +471,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       fail("Should have failed because the table name is not set!");
     } catch (IllegalArgumentException ignored) {
     }
+
     // config table name
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
@@ -466,12 +479,26 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       fail("Should have failed because as the region is not set!");
     } catch (IllegalArgumentException ignored) {
     }
+
     // config region
     conf.set(S3GUARD_DDB_REGION_KEY, savedRegion);
+    doTestInitializeWithConfiguration(conf, tableName);
+
+    // config table server side encryption (SSE)
+    conf.setBoolean(S3GUARD_DDB_TABLE_SSE_ENABLED, true);
+    doTestInitializeWithConfiguration(conf, tableName);
+  }
+
+  /**
+   * Test initialize() using a Configuration object successfully.
+   */
+  private void doTestInitializeWithConfiguration(Configuration conf,
+      String tableName) throws IOException {
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
       ddbms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
-      verifyTableInitialized(tableName, ddbms.getDynamoDB());
+      Table table = verifyTableInitialized(tableName, ddbms.getDynamoDB());
+      verifyTableSse(conf, table.getDescription());
       assertNotNull(ddbms.getTable());
       assertEquals(tableName, ddbms.getTable().getTableName());
       assertEquals("Unexpected key schema found!",
@@ -575,7 +602,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     Collection<Path> pathsToDelete = null;
     if (oldMetas != null) {
       // put all metadata of old paths and verify
-      ms.put(new DirListingMetadata(oldDir, oldMetas, false), putState);
+      ms.put(new DirListingMetadata(oldDir, oldMetas, false), UNCHANGED_ENTRIES,
+          putState);
       assertEquals("Child count",
           0, ms.listChildren(newDir).withoutTombstones().numEntries());
       Assertions.assertThat(ms.listChildren(oldDir).getListing())
@@ -758,10 +786,16 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         .withTagKeys(VERSION_MARKER_TAG_NAME));
   }
 
-  private void deleteVersionMarkerItem(Table table) {
+  /**
+   * Deletes a version marker; spins briefly to await it disappearing.
+   * @param table table to delete the key
+   * @throws Exception failure
+   */
+  private void deleteVersionMarkerItem(Table table) throws Exception {
     table.deleteItem(VERSION_MARKER_PRIMARY_KEY);
-    assertNull("Version marker should be null after deleting it " +
-            "from the table.", table.getItem(VERSION_MARKER_PRIMARY_KEY));
+    eventually(30_000, 1_0, () ->
+        assertNull("Version marker should be null after deleting it " +
+            "from the table.", table.getItem(VERSION_MARKER_PRIMARY_KEY)));
   }
 
   /**
@@ -942,13 +976,13 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         grandchildPath,
         new ArrayList<>(), false);
     intercept(PathIOException.class, E_INCONSISTENT_UPDATE,
-        () -> ddbms.put(grandchildListing, bulkWrite));
+        () -> ddbms.put(grandchildListing, UNCHANGED_ENTRIES, bulkWrite));
 
     // but a directory update under another path is fine
     DirListingMetadata grandchild2Listing = new DirListingMetadata(
         grandchild2Path,
         new ArrayList<>(), false);
-    ddbms.put(grandchild2Listing, bulkWrite);
+    ddbms.put(grandchild2Listing, UNCHANGED_ENTRIES, bulkWrite);
     // and it creates a new entry for its parent
     verifyInAncestor(bulkWrite, child2, true);
   }
@@ -981,7 +1015,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String tableName = getTestTableName("testDeleteTable");
     Path testPath = new Path(new Path(fsUri), "/" + tableName);
     final S3AFileSystem s3afs = getFileSystem();
-    final Configuration conf = getTableCreationConfig();
+    // patch the filesystem config as this is one read in initialize()
+    final Configuration conf =  s3afs.getConf();
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     enableOnDemand(conf);
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
@@ -1079,7 +1114,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     assertEquals(auth, dlm.isAuthoritative());
 
     // Test with non-authoritative listing, empty dir
-    ms.put(dlm, null);
+    ms.put(dlm, UNCHANGED_ENTRIES, null);
     final PathMetadata pmdResultEmpty = ms.get(dirToPut, true);
     if(auth){
       assertEquals(Tristate.TRUE, pmdResultEmpty.isEmptyDirectory());
@@ -1089,7 +1124,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
     // Test with non-authoritative listing, non-empty dir
     dlm.put(new PathMetadata(basicFileStatus(fileToPut, 1, false)));
-    ms.put(dlm, null);
+    ms.put(dlm, UNCHANGED_ENTRIES, null);
     final PathMetadata pmdResultNotEmpty = ms.get(dirToPut, true);
     assertEquals(Tristate.FALSE, pmdResultNotEmpty.isEmptyDirectory());
   }
@@ -1106,6 +1141,25 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     assertEquals(tableName, td.getTableName());
     assertEquals("ACTIVE", td.getTableStatus());
     return table;
+  }
+
+  /**
+   * Verify the table is created with correct server side encryption (SSE).
+   */
+  private void verifyTableSse(Configuration conf, TableDescription td) {
+    SSEDescription sseDescription = td.getSSEDescription();
+    if (conf.getBoolean(S3GUARD_DDB_TABLE_SSE_ENABLED, false)) {
+      assertNotNull(sseDescription);
+      assertEquals("ENABLED", sseDescription.getStatus());
+      assertEquals("KMS", sseDescription.getSSEType());
+      // We do not test key ARN is the same as configured value,
+      // because in configuration, the ARN can be specified by alias.
+      assertNotNull(sseDescription.getKMSMasterKeyArn());
+    } else {
+      if (sseDescription != null) {
+        assertEquals("DISABLED", sseDescription.getStatus());
+      }
+    }
   }
 
   /**
