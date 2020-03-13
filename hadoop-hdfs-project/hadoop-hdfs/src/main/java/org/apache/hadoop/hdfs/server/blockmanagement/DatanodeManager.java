@@ -1780,6 +1780,7 @@ public class DatanodeManager {
         }
         slowDiskTracker.addSlowDiskReport(nodeReg.getIpcAddr(false), slowDisks);
       }
+      slowDiskTracker.checkAndUpdateReportIfNecessary();
     }
 
     if (!cmds.isEmpty()) {
