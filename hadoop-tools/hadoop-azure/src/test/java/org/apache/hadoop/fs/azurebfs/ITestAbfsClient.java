@@ -28,16 +28,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
@@ -89,49 +91,58 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testListMaxResultsTestValidListMaxResults()
+  public void testListPathWithValidListMaxResultsValues()
       throws IOException, ExecutionException, InterruptedException {
-    final AzureBlobFileSystem fs = getFileSystem();
-    int fileCount = 50;
-    String directory = "testListMaxResultsTestValidListMaxResults1";
+    final int fileCount = 10;
+    final String directory = "testWithValidListMaxResultsValues";
     createDirectoryWithNFiles(directory, fileCount);
-
     final int[] testData = {fileCount + 100, fileCount + 1, fileCount,
         fileCount - 1, 1};
     for (int i = 0; i < testData.length; i++) {
-      int maxResults = testData[i];
-      int expected = maxResults > fileCount ? fileCount : maxResults;
-      fs.getAbfsStore().getAbfsConfiguration().setListMaxResults(maxResults);
-      assertThat(getFileCount(directory), is(expected));
+      int listMaxResults = testData[i];
+      setListMaxResults(listMaxResults);
+      int expectedListResultsSize =
+          listMaxResults > fileCount ? fileCount : listMaxResults;
+      assertThat(listPath(directory).size(),
+          is(equalTo(expectedListResultsSize)));
     }
-
-    directory = "testListMaxResultsTestValidListMaxResults2";
-    createDirectoryWithNFiles(directory, LIST_MAX_RESULTS_SERVER + 200);
-    fs.getAbfsStore().getAbfsConfiguration()
-        .setListMaxResults(LIST_MAX_RESULTS_SERVER + 100);
-    assertThat(getFileCount(directory), is(LIST_MAX_RESULTS_SERVER));
   }
 
   @Test
-  public void testListMaxResultsTestInvalidListMaxResults() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final AbfsClient abfsClient = fs.getAbfsClient();
-    String directory = "testListMaxResultsTestInvalidListMaxResults";
+  public void testListPathWithValueGreaterThanServerMaximum()
+      throws IOException, ExecutionException, InterruptedException {
+    setListMaxResults(LIST_MAX_RESULTS_SERVER + 100);
+    final String directory = "testWithValueGreaterThanServerMaximum";
+    createDirectoryWithNFiles(directory, LIST_MAX_RESULTS_SERVER + 200);
+    assertThat(listPath(directory).size(),
+        is(equalTo(LIST_MAX_RESULTS_SERVER)));
+  }
+
+  @Test
+  public void testListPathWithInvalidListMaxResultsValues() throws Exception {
     for (int i = -1; i < 1; i++) {
-      int listMaxResults = i;
+      setListMaxResults(i);
       intercept(AbfsRestOperationException.class, "Operation failed: \"One of "
           + "the query parameters specified in the request URI is outside" + " "
-          + "the permissible range.", () -> {
-        abfsClient.listPath(directory, false, listMaxResults, null);
-      });
+          + "the permissible range.", () -> listPath("directory"));
     }
   }
 
-  private int getFileCount(String directory) throws IOException {
-    return getFileSystem().getAbfsClient().listPath(directory, false,
-        getFileSystem().getAbfsStore().getAbfsConfiguration()
-            .getListMaxResults(), null).getResult().getListResultSchema()
-        .paths().size();
+  private List<ListResultEntrySchema> listPath(String directory)
+      throws IOException {
+    return getFileSystem().getAbfsClient()
+        .listPath(directory, false, getListMaxResults(), null).getResult()
+        .getListResultSchema().paths();
+  }
+
+  private int getListMaxResults() throws IOException {
+    return getFileSystem().getAbfsStore().getAbfsConfiguration()
+        .getListMaxResults();
+  }
+
+  private void setListMaxResults(int listMaxResults) throws IOException {
+    getFileSystem().getAbfsStore().getAbfsConfiguration()
+        .setListMaxResults(listMaxResults);
   }
 
   private void createDirectoryWithNFiles(String directory, int n)

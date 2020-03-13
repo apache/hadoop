@@ -126,6 +126,7 @@ public class AbfsConfiguration{
   private int maxConcurrentWriteThreads;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_LIST_MAX_RESULTS,
+      MinValue = 1,
       DefaultValue = DEFAULT_AZURE_LIST_MAX_RESULTS)
   private int listMaxResults;
 
