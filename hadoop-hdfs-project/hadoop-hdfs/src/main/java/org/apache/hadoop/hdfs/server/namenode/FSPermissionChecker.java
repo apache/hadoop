@@ -282,26 +282,26 @@ public class FSPermissionChecker implements AccessControlEnforcer {
       if (this.authorizeWithContext && opType != null) {
         INodeAttributeProvider.AuthorizationContext.Builder builder =
             new INodeAttributeProvider.AuthorizationContext.Builder();
-        builder.fsOwner(fsOwner).
-            supergroup(supergroup).
-            callerUgi(callerUgi).
-            inodeAttrs(iNodeAttr). // single inode attr in the array
-            inodes(new INode[] { inode }). // single inode attr in the array
-            pathByNameArr(pathComponents).
-            snapshotId(snapshotId).
-            path(null).
-            ancestorIndex(-1).     // this will skip checkTraverse()
+        builder.fsOwner(fsOwner)
+            .supergroup(supergroup)
+            .callerUgi(callerUgi)
+            .inodeAttrs(iNodeAttr) // single inode attr in the array
+            .inodes(new INode[] { inode }) // single inode attr in the array
+            .pathByNameArr(pathComponents)
+            .snapshotId(snapshotId)
+            .path(null)
+            .ancestorIndex(-1)     // this will skip checkTraverse()
                                    // because not checking ancestor here
-            doCheckOwner(false).
-            ancestorAccess(null).
-            parentAccess(null).
-            access(access).        // the target access to be checked against
+            .doCheckOwner(false)
+            .ancestorAccess(null)
+            .parentAccess(null)
+            .access(access)        // the target access to be checked against
                                    // the inode
-            subAccess(null).       // passing null sub access avoids checking
+            .subAccess(null)       // passing null sub access avoids checking
                                    // children
-            ignoreEmptyDir(false).
-            operationName(opType).
-            callerContext(CallerContext.getCurrent());
+            .ignoreEmptyDir(false)
+            .operationName(opType)
+            .callerContext(CallerContext.getCurrent());
 
         enforcer.checkPermissionWithContext(builder.build());
       } else {
