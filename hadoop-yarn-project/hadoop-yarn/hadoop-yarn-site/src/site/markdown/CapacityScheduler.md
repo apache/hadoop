@@ -563,3 +563,44 @@ Updating a Container (Experimental - API may change in the future)
   The **DECREASE_RESOURCE** and **DEMOTE_EXECUTION_TYPE** container updates are automatic - the AM does not explicitly have to ask the NM to decrease the resources of the container. The other update types require the AM to explicitly ask the NM to update the container.
   
   If the **yarn.resourcemanager.auto-update.containers** configuration parameter is set to **true** (false by default), The RM will ensure that all container updates are automatic.
+
+Activities
+--------------------
+
+  Scheduling activities are activity messages used for debugging on some critical scheduling path, they can be recorded and exposed via RESTful API with minor impact on the scheduler performance.
+  Currently, there are two types of activities supported: **scheduler activities** and **application activities**.
+
+### Scheduler Activities
+
+  Scheduler activities include useful scheduling info in a scheduling cycle, which illustrate how the scheduler allocates a container.
+  Scheduler activities REST API (`http://rm-http-address:port/ws/v1/cluster/scheduler/activities`) provides a way to enable recording scheduler activities and fetch them from cache.
+  To eliminate the performance impact, scheduler automatically disables recording activities at the end of a scheduling cycle, you can query the RESTful API again to get the latest scheduler activities.
+
+  See the [YARN Resource Manager REST API](ResourceManagerRest.html#Scheduler_Activities_API) for query parameters, output structure and examples about scheduler activities.
+
+### Application Activities
+
+  Application activities include useful scheduling info for a specified application, which illustrate how the requirements are satisfied or just skipped.
+  Application activities REST API (`http://rm-http-address:port/ws/v1/cluster/scheduler/app-activities/{appid}`) provides a way to enable recording application activities for a specified application within a few seconds or fetch historical application activities from cache, available actions which include "refresh" and "get" can be specified by the "actions" parameter:
+
+  * Query with parameter "actions=refresh" will enable recording application activities for the specified application for a certain time (defaults to 3 seconds) and get a simple response like: {"appActivities":{"applicationId":"application_1562308866454_0001","diagnostic":"Successfully received action: refresh","timestamp":1562308869253,"dateTime":"Fri Jul 05 14:41:09 CST 2019"}}.
+  * Query with parameter "actions=get" will not enable recording but directly get historical application activities from cache.
+  * If no actions parameter is specified, default actions are "refresh,get", which means both "refresh" and "get" will be performed.
+
+  See the [YARN Resource Manager REST API](ResourceManagerRest.html#Application_Activities_API) for query parameters, output structure and examples about application activities.
+
+### Configuration
+
+  The CapacityScheduler supports the following parameters to control the cache size and the expiration of scheduler/application activities.
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.resourcemanager.activities-manager.cleanup-interval-ms` | The cleanup interval for activities in milliseconds. Defaults to 5000. |
+| `yarn.resourcemanager.activities-manager.scheduler-activities.ttl-ms` | Time to live for scheduler activities in milliseconds. Defaults to 600000. |
+| `yarn.resourcemanager.activities-manager.app-activities.ttl-ms` | Time to live for application activities in milliseconds. Defaults to 600000. |
+| `yarn.resourcemanager.activities-manager.app-activities.max-queue-length` | Max queue length for app activities. Defaults to 100. |
+
+### Web UI
+
+   Activities info is available in the application attempt page on RM Web UI, where outstanding requests are aggregated and displayed.
+   Simply click the refresh button to get the latest activities info.
