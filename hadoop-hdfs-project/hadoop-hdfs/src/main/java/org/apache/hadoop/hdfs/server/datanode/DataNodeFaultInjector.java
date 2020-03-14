@@ -134,4 +134,9 @@ public class DataNodeFaultInjector {
    * into an erasure coding reconstruction.
    */
   public void badDecoding(ByteBuffer[] outputs) {}
+
+  /**
+   * Used as a hook to inject intercept when re-register.
+   */
+  public void blockUtilSendFullBlockReport() {}
 }
