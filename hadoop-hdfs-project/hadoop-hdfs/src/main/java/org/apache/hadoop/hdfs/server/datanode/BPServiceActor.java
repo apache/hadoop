@@ -922,14 +922,17 @@ class BPServiceActor implements Runnable {
       // re-retrieve namespace info to make sure that, if the NN
       // was restarted, we still match its version (HDFS-2120)
       NamespaceInfo nsInfo = retrieveNamespaceInfo();
-      // and re-register
-      register(nsInfo);
-      scheduler.scheduleHeartbeat();
       // HDFS-9917,Standby NN IBR can be very huge if standby namenode is down
       // for sometime.
       if (state == HAServiceState.STANDBY || state == HAServiceState.OBSERVER) {
         ibrManager.clearIBRs();
       }
+      // HDFS-15113, register and trigger FBR after clean IBR to avoid missing
+      // some blocks report to Standby util next FBR.
+      // and re-register
+      register(nsInfo);
+      scheduler.scheduleHeartbeat();
+      DataNodeFaultInjector.get().blockUtilSendFullBlockReport();
     }
   }
 
