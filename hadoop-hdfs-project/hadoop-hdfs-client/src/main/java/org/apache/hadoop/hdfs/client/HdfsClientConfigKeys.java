@@ -150,7 +150,7 @@ public interface HdfsClientConfigKeys {
               TimeUnit.DAYS.toMillis(10); // 10 days
   String DFS_CLIENT_BLOCK_READER_REMOTE_BUFFER_SIZE_KEY =
       "dfs.client.block.reader.remote.buffer.size";
-  int DFS_CLIENT_BLOCK_READER_REMOTE_BUFFER_SIZE_DEFAULT = 8192;
+  int DFS_CLIENT_BLOCK_READER_REMOTE_BUFFER_SIZE_DEFAULT = 512;
 
   String DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY =
           "dfs.client.deadnode.detection.enabled";
