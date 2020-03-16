@@ -224,10 +224,10 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     for (int i = 0; i < numConcurrentObjects; i++) {
       Path testPath = new Path(testFilePath + i);
       testPaths[i] = testPath;
-      int finalI = i;
+      int numWritesToBeDone = i + 1;
       futureTasks.add(es.submit(() -> {
         try (FSDataOutputStream stream = fs.create(testPath)) {
-          makeNWriteToStream(stream, finalI + 1, b, es);
+          makeNWriteToStream(stream, numWritesToBeDone, b, es);
         }
         return null;
       }));
@@ -238,7 +238,8 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     es.shutdownNow();
     for (int i = 0; i < numConcurrentObjects; i++) {
       FileStatus fileStatus = fs.getFileStatus(testPaths[i]);
-      long expectedLength = TEST_BUFFER_SIZE * (i + 1);
+      int numWritesMadeOnStream = i + 1;
+      long expectedLength = TEST_BUFFER_SIZE * numWritesMadeOnStream;
       assertThat(fileStatus.getLen(), is(equalTo(expectedLength)));
     }
   }
