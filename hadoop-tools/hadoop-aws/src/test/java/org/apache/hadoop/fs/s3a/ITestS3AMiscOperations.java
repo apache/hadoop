@@ -24,6 +24,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.GetBucketEncryptionResult;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import org.junit.Assume;
@@ -44,6 +47,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
+import static org.hamcrest.Matchers.nullValue;
 
 /**
  * Tests of the S3A FileSystem which don't have a specific home and can share
@@ -151,10 +156,12 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
   /**
    * The assumption here is that 0-byte files uploaded in a single PUT
    * always have the same checksum, including stores with encryption.
+   * This will be skipped if the bucket has S3 default encryption enabled.
    * @throws Throwable on a failure
    */
   @Test
   public void testEmptyFileChecksums() throws Throwable {
+    Assume.assumeThat(getDefaultEncryption(), nullValue());
     final S3AFileSystem fs = getFileSystem();
     Path file1 = touchFile("file1");
     EtagChecksum checksum1 = fs.getFileChecksum(file1, 0);
@@ -207,12 +214,13 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
   /**
    * Verify that on an unencrypted store, the checksum of two non-empty
    * (single PUT) files is the same if the data is the same.
-   * This will fail if the bucket has S3 default encryption enabled.
+   * This will be skipped if the bucket has S3 default encryption enabled.
    * @throws Throwable failure
    */
   @Test
   public void testNonEmptyFileChecksumsUnencrypted() throws Throwable {
     Assume.assumeTrue(encryptionAlgorithm().equals(S3AEncryptionMethods.NONE));
+    Assume.assumeThat(getDefaultEncryption(), nullValue());
     final S3AFileSystem fs = getFileSystem();
     final EtagChecksum checksum1 =
         fs.getFileChecksum(mkFile("file5", HELLO), 0);
@@ -256,6 +264,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
   }
 
   /**
+<<<<<<< ours
    * Verify that paths with a trailing "/" are fixed up.
    */
   @Test
@@ -368,4 +377,25 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
         s.endsWith("/"));
     return o;
   }
+
+  /**
+   * Gets default encryption settings for the bucket or returns null if default
+   * encryption is disabled.
+   */
+  private GetBucketEncryptionResult getDefaultEncryption() {
+    S3AFileSystem fs = getFileSystem();
+    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("check default encryption");
+    GetBucketEncryptionResult encryptionResult;
+    try {
+      encryptionResult = s3.getBucketEncryption(fs.getBucket());
+    } catch (AmazonS3Exception e) {
+      if (e.getStatusCode() == SC_404) {
+        return null;
+      }
+      // there was an unexpected problem with the API call
+      throw e;
+    }
+    return encryptionResult;
+  }
+
 }
