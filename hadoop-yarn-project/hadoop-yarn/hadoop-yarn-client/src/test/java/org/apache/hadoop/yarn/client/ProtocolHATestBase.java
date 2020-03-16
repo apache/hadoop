@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.client;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
@@ -168,7 +170,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     keepRunning = true;
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
-    conf.setInt(YarnConfiguration.CLIENT_FAILOVER_MAX_ATTEMPTS, 5);
+    conf.setInt(YarnConfiguration.CLIENT_FAILOVER_MAX_ATTEMPTS, 10);
     conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + "," + RM2_NODE_ID);
     HATestUtil.setRpcAddressForRM(RM1_NODE_ID, RM1_PORT_BASE, conf);
     HATestUtil.setRpcAddressForRM(RM2_NODE_ID, RM2_PORT_BASE, conf);
@@ -222,22 +224,24 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     verifyClientConnection();
   }
 
-  protected void verifyClientConnection() {
-    int numRetries = 3;
-    while(numRetries-- > 0) {
-      Configuration conf = new YarnConfiguration(this.conf);
-      YarnClient client = createAndStartYarnClient(conf);
-      try {
-        Thread.sleep(100);
-        client.getApplications();
-        return;
-      } catch (Exception e) {
-        LOG.error(e.getMessage());
-      } finally {
-        client.stop();
-      }
+  protected void verifyClientConnection() throws InterruptedException {
+    try {
+      GenericTestUtils.waitFor(() -> {
+        Configuration yarnConf = new YarnConfiguration(conf);
+        YarnClient client = createAndStartYarnClient(yarnConf);
+        try {
+          client.getApplications();
+          return true;
+        } catch (YarnException | IOException ex) {
+          LOG.error(ex.getMessage());
+        } finally {
+          client.stop();
+        }
+        return false;
+      }, 50, 500);
+    } catch (TimeoutException e) {
+      fail("Client couldn't connect to the Active RM");
     }
-    fail("Client couldn't connect to the Active RM");
   }
 
   protected Thread createAndStartFailoverThread() {
@@ -327,11 +331,11 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     }
 
     private boolean waittingForFailOver() {
-      int maximumWaittingTime = 50;
+      int maximumWaittingTime = 200;
       int count = 0;
       while (!failoverTriggered.get() && count <= maximumWaittingTime) {
         try {
-          Thread.sleep(100);
+          Thread.sleep(25);
         } catch (InterruptedException e) {
           // DO NOTHING
         }
