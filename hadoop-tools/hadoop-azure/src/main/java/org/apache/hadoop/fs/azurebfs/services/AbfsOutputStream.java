@@ -93,26 +93,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       = new ElasticByteBufferPool();
   private static AtomicInteger buffersToBeReturned = new AtomicInteger(0);
 
-  public AbfsOutputStream(
-      final AbfsClient client,
-      final String path,
-      final long position,
-      final int bufferSize,
-      final boolean supportFlush,
-      final boolean disableOutputStreamFlush) {
-    this.client = client;
-    this.path = path;
-    this.position = position;
-    this.closed = false;
-    this.supportFlush = supportFlush;
-    this.disableOutputStreamFlush = disableOutputStreamFlush;
-    this.lastError = null;
-    this.lastFlushOffset = 0;
-    this.bufferSize = bufferSize;
-    this.buffer = BYTE_BUFFER_POOL.getBuffer(false, bufferSize).array();
-    this.bufferIndex = 0;
-    this.writeOperations = new ConcurrentLinkedDeque<>();
-
+  static {
     if (threadExecutor == null) {
       synchronized (INIT_LOCK) {
         if (threadExecutor == null) {
@@ -135,6 +116,27 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         }
       }
     }
+  }
+
+  public AbfsOutputStream(
+      final AbfsClient client,
+      final String path,
+      final long position,
+      final int bufferSize,
+      final boolean supportFlush,
+      final boolean disableOutputStreamFlush) {
+    this.client = client;
+    this.path = path;
+    this.position = position;
+    this.closed = false;
+    this.supportFlush = supportFlush;
+    this.disableOutputStreamFlush = disableOutputStreamFlush;
+    this.lastError = null;
+    this.lastFlushOffset = 0;
+    this.bufferSize = bufferSize;
+    this.buffer = BYTE_BUFFER_POOL.getBuffer(false, bufferSize).array();
+    this.bufferIndex = 0;
+    this.writeOperations = new ConcurrentLinkedDeque<>();
   }
 
   /**
