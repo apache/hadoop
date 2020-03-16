@@ -30,7 +30,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.io.IOException;
 
-import org.hamcrest.core.IsEqual;
 import org.hamcrest.core.IsNot;
 import org.junit.Test;
 
@@ -57,6 +56,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   private static final int ONE_MB = 1024 * 1024;
   private static final int FLUSH_TIMES = 200;
   private static final int THREAD_SLEEP_TIME = 1000;
+  private static final int CONCURRENT_STREAM_OBJS_TEST_OBJ_COUNT = 25;
 
   private static final int TEST_FILE_LENGTH = 1024 * 1024 * 8;
 
@@ -214,12 +214,12 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   public void testWriteWithMultipleOutputStreamAtTheSameTime()
       throws IOException, InterruptedException, ExecutionException {
     AzureBlobFileSystem fs = getFileSystem();
-    int numConcurrentObjects = 25;
     String testFilePath = methodName.getMethodName();
-    Path[] testPaths = new Path[numConcurrentObjects];
+    Path[] testPaths = new Path[CONCURRENT_STREAM_OBJS_TEST_OBJ_COUNT];
     createNStreamsAndWriteDifferentSizesConcurrently(fs, testFilePath,
-        numConcurrentObjects, testPaths);
-    assertSuccessfulWritesOnAllStreams(fs, numConcurrentObjects, testPaths);
+        CONCURRENT_STREAM_OBJS_TEST_OBJ_COUNT, testPaths);
+    assertSuccessfulWritesOnAllStreams(fs,
+        CONCURRENT_STREAM_OBJS_TEST_OBJ_COUNT, testPaths);
   }
 
   private void assertSuccessfulWritesOnAllStreams(final FileSystem fs,

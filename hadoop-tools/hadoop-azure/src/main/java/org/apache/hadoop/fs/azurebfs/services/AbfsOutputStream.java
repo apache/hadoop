@@ -79,13 +79,17 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private static ThreadPoolExecutor threadExecutor;
   private static ExecutorCompletionService<Void> completionService;
 
+  private static final int ONE_MB = 1024 * 1024;
+  private static final int HUNDRED_MB = 100 * ONE_MB;
+  private static final int MIN_MEMORY_THRESHOLD = HUNDRED_MB;
+
   /**
    * Queue storing buffers with the size of the Azure block ready for
    * reuse. The pool allows reusing the blocks instead of allocating new
    * blocks. After the data is sent to the service, the buffer is returned
    * back to the queue
    */
-  private static final ElasticByteBufferPool byteBufferPool
+  private static final ElasticByteBufferPool BYTE_BUFFER_POOL
       = new ElasticByteBufferPool();
   private static AtomicInteger buffersToBeReturned = new AtomicInteger(0);
 
@@ -105,7 +109,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.lastError = null;
     this.lastFlushOffset = 0;
     this.bufferSize = bufferSize;
-    this.buffer = byteBufferPool.getBuffer(false, bufferSize).array();
+    this.buffer = BYTE_BUFFER_POOL.getBuffer(false, bufferSize).array();
     this.bufferIndex = 0;
     this.writeOperations = new ConcurrentLinkedDeque<>();
 
@@ -309,17 +313,17 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     final long offset = position;
     position += bytesLength;
 
-    if (Runtime.getRuntime().freeMemory() < 100 * 1024 * 1024
+    if (Runtime.getRuntime().freeMemory() < MIN_MEMORY_THRESHOLD
         && buffersToBeReturned.get() > 0) {
       LOG.debug("Low memory");
       waitForTaskToComplete();
     }
-    if (byteBufferPool.size(false) < 1
+    if (BYTE_BUFFER_POOL.size(false) < 1
         && buffersToBeReturned.get() >= maxBufferCount) {
       waitForTaskToComplete();
     }
 
-    buffer = byteBufferPool.getBuffer(false, bufferSize).array();
+    buffer = BYTE_BUFFER_POOL.getBuffer(false, bufferSize).array();
     buffersToBeReturned.incrementAndGet();
 
     final Future<Void> job = completionService.submit(new Callable<Void>() {
@@ -331,7 +335,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
           AbfsRestOperation op = client.append(path, offset, bytes, 0,
                   bytesLength);
           perfInfo.registerResult(op.getResult());
-          byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
+          BYTE_BUFFER_POOL.putBuffer(ByteBuffer.wrap(bytes));
           buffersToBeReturned.decrementAndGet();
           perfInfo.registerSuccess(true);
           return null;
