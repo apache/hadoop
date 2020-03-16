@@ -42,8 +42,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsEqual.equalTo;
 
 /**
  * Test flush operation.
@@ -217,7 +217,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     int numConcurrentObjects = 25;
     String testFilePath = methodName.getMethodName();
     Path[] testPaths = new Path[numConcurrentObjects];
-    createNStreamsAndWriteDifferentSizesConcurrently(testFilePath,
+    createNStreamsAndWriteDifferentSizesConcurrently(fs, testFilePath,
         numConcurrentObjects, testPaths);
     assertSuccessfulWritesOnAllStreams(fs, numConcurrentObjects, testPaths);
   }
@@ -424,7 +424,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
         assertThat(
             "Bytes read unexpectedly match bytes written.",
             readBuffer,
-            IsNot.not(IsEqual.equalTo(writeBuffer)));
+            IsNot.not(equalTo(writeBuffer)));
       }
     } finally {
       stream.close();
@@ -443,7 +443,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
                 String.format("Bytes read unexpectedly match bytes written to %1$s",
                         filePath),
                 readBuffer,
-                IsNot.not(IsEqual.equalTo(writeBuffer)));
+                IsNot.not(equalTo(writeBuffer)));
       }
     }
   }
