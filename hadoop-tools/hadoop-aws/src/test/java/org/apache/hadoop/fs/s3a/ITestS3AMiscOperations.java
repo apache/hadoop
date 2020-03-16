@@ -23,9 +23,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetBucketEncryptionResult;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
@@ -47,7 +47,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.hamcrest.Matchers.nullValue;
 
 /**
@@ -161,7 +160,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
    */
   @Test
   public void testEmptyFileChecksums() throws Throwable {
-    Assume.assumeThat(getDefaultEncryption(), nullValue());
+    assumeNoDefaultEncryption();
     final S3AFileSystem fs = getFileSystem();
     Path file1 = touchFile("file1");
     EtagChecksum checksum1 = fs.getFileChecksum(file1, 0);
@@ -172,6 +171,20 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     assertNotEquals("file 1 checksum", 0, checksum1.getLength());
     assertEquals("checksums of empty files", checksum1,
         fs.getFileChecksum(touchFile("file2"), 0));
+  }
+
+  /**
+   * Skip a test if we can get the default encryption on a bucket and it is
+   * non-null.
+   */
+  private void assumeNoDefaultEncryption() throws IOException {
+    try {
+      Assume.assumeThat(getDefaultEncryption(), nullValue());
+    } catch (AccessDeniedException e) {
+      // if the user can't check the default encryption, assume that it is
+      // null and keep going
+      LOG.warn("User does not have permission to call getBucketEncryption()");
+    }
   }
 
   /**
@@ -220,7 +233,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
   @Test
   public void testNonEmptyFileChecksumsUnencrypted() throws Throwable {
     Assume.assumeTrue(encryptionAlgorithm().equals(S3AEncryptionMethods.NONE));
-    Assume.assumeThat(getDefaultEncryption(), nullValue());
+    assumeNoDefaultEncryption();
     final S3AFileSystem fs = getFileSystem();
     final EtagChecksum checksum1 =
         fs.getFileChecksum(mkFile("file5", HELLO), 0);
@@ -382,20 +395,16 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
    * Gets default encryption settings for the bucket or returns null if default
    * encryption is disabled.
    */
-  private GetBucketEncryptionResult getDefaultEncryption() {
+  private GetBucketEncryptionResult getDefaultEncryption() throws IOException {
     S3AFileSystem fs = getFileSystem();
     AmazonS3 s3 = fs.getAmazonS3ClientForTesting("check default encryption");
-    GetBucketEncryptionResult encryptionResult;
     try {
-      encryptionResult = s3.getBucketEncryption(fs.getBucket());
-    } catch (AmazonS3Exception e) {
-      if (e.getStatusCode() == SC_404) {
-        return null;
-      }
-      // there was an unexpected problem with the API call
-      throw e;
+      return Invoker.once("getBucketEncryption()",
+          fs.getBucket(),
+          () -> s3.getBucketEncryption(fs.getBucket()));
+    } catch (FileNotFoundException e) {
+      return null;
     }
-    return encryptionResult;
   }
 
 }
