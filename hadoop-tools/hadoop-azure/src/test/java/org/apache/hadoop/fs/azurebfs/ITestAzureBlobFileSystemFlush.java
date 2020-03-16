@@ -213,29 +213,18 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   @Test
   public void testWriteWithMultipleOutputStreamAtTheSameTime()
       throws IOException, InterruptedException, ExecutionException {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final String testFilePath = methodName.getMethodName();
-    final byte[] b = new byte[TEST_BUFFER_SIZE];
-    new Random().nextBytes(b);
-    final int numConcurrentObjects = 25;
-    final ExecutorService es = Executors.newFixedThreadPool(40);
-    final List<Future<Void>> futureTasks = new ArrayList<>();
-    final Path[] testPaths = new Path[numConcurrentObjects];
-    for (int i = 0; i < numConcurrentObjects; i++) {
-      Path testPath = new Path(testFilePath + i);
-      testPaths[i] = testPath;
-      int numWritesToBeDone = i + 1;
-      futureTasks.add(es.submit(() -> {
-        try (FSDataOutputStream stream = fs.create(testPath)) {
-          makeNWriteToStream(stream, numWritesToBeDone, b, es);
-        }
-        return null;
-      }));
-    }
-    for (Future<Void> futureTask : futureTasks) {
-      futureTask.get();
-    }
-    es.shutdownNow();
+    AzureBlobFileSystem fs = getFileSystem();
+    int numConcurrentObjects = 25;
+    String testFilePath = methodName.getMethodName();
+    Path[] testPaths = new Path[numConcurrentObjects];
+    createNStreamsAndWriteDifferentSizesConcurrently(testFilePath,
+        numConcurrentObjects, testPaths);
+    assertSuccessfulWritesOnAllStreams(fs, numConcurrentObjects, testPaths);
+  }
+
+  private void assertSuccessfulWritesOnAllStreams(final FileSystem fs,
+      final int numConcurrentObjects, final Path[] testPaths)
+      throws IOException {
     for (int i = 0; i < numConcurrentObjects; i++) {
       FileStatus fileStatus = fs.getFileStatus(testPaths[i]);
       int numWritesMadeOnStream = i + 1;
@@ -244,7 +233,31 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     }
   }
 
-  private void makeNWriteToStream(final FSDataOutputStream stream,
+  private void createNStreamsAndWriteDifferentSizesConcurrently(
+      final String testFilePath, final int numConcurrentObjects,
+      final Path[] testPaths) throws ExecutionException, InterruptedException {
+    final byte[] b = new byte[TEST_BUFFER_SIZE];
+    new Random().nextBytes(b);
+    final ExecutorService es = Executors.newFixedThreadPool(40);
+    final List<Future<Void>> futureTasks = new ArrayList<>();
+    for (int i = 0; i < numConcurrentObjects; i++) {
+      Path testPath = new Path(testFilePath + i);
+      testPaths[i] = testPath;
+      int numWritesToBeDone = i + 1;
+      futureTasks.add(es.submit(() -> {
+        try (FSDataOutputStream stream = fs.create(testPath)) {
+          makeNWritesToStream(stream, numWritesToBeDone, b, es);
+        }
+        return null;
+      }));
+    }
+    for (Future<Void> futureTask : futureTasks) {
+      futureTask.get();
+    }
+    es.shutdownNow();
+  }
+
+  private void makeNWritesToStream(final FSDataOutputStream stream,
       final int numWrites, final byte[] b, final ExecutorService es)
       throws IOException, ExecutionException, InterruptedException {
     final List<Future<Void>> futureTasks = new ArrayList<>();
