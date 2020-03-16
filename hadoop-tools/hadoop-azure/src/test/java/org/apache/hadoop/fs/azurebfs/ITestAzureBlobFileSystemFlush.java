@@ -234,8 +234,9 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   }
 
   private void createNStreamsAndWriteDifferentSizesConcurrently(
-      final String testFilePath, final int numConcurrentObjects,
-      final Path[] testPaths) throws ExecutionException, InterruptedException {
+      final FileSystem fs, final String testFilePath,
+      final int numConcurrentObjects, final Path[] testPaths)
+      throws ExecutionException, InterruptedException {
     final byte[] b = new byte[TEST_BUFFER_SIZE];
     new Random().nextBytes(b);
     final ExecutorService es = Executors.newFixedThreadPool(40);
