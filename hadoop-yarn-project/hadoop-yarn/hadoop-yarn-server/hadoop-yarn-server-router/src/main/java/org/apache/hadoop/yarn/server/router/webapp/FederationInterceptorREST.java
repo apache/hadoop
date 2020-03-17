@@ -100,6 +100,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStati
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterScalingInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterScalingMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
@@ -1146,6 +1147,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       String upscalingFactorInNodeResourceTypes,
       String downscalingFactorInNodeCount,
       NodeInstanceTypeList instanceTypeList) {
+    return null;
+  }
+
+  @Override
+  public ClusterScalingMetrics getClusterScalingMetrics(String apiVersion) {
     return null;
   }
 

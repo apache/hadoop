@@ -174,6 +174,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmi
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterScalingInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterScalingMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
@@ -449,6 +450,24 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         upscalingFactorInNodeResourceTypes,
         neededDownscalingNodeSize,
         instanceTypeList.rebuild());
+  }
+
+  @GET
+  @Path(RMWSConsts.SCALING_METRICS)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Override
+  public ClusterScalingMetrics getClusterScalingMetrics(
+      @HeaderParam(RMWSConsts.SCALING_CUSTOM_HEADER_KEY)
+      String apiVersion) {
+    initForReadableEndpoints();
+    String defaultVersion = RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1;
+    if (apiVersion != null && !apiVersion.equals(defaultVersion)) {
+      throw new BadRequestException("Requested "
+          + RMWSConsts.SCALING_CUSTOM_HEADER_KEY
+          + ": " + apiVersion + " is not supported!");
+    }
+    return new ClusterScalingMetrics(this.rm);
   }
 
   @GET

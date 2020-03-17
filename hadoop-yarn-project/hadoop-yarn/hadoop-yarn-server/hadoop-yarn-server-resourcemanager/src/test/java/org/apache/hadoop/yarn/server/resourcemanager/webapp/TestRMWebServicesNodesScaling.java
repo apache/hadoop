@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -508,6 +509,59 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
     assertTrue("Should be empty of downscalign",
         !decommissionCandidates.has("candidates"));
 
+    rm.stop();
+  }
+
+  @Test
+  public void testClusterScalingMetrics() throws JSONException, Exception {
+    rm.start();
+    ResourceScheduler scheduler = rm.getRMContext().getScheduler();
+    MockNM[] nms = new MockNM[1];
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * GB, 4);
+    nms[0] = nm1;
+    waitforNMRegistered(scheduler, 1, 5);
+
+    RMApp app1 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm)
+            .withAppName("app-1")
+            .withUser("user1")
+            .withAcls(null)
+            .withQueue("default")
+            .build());
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nms);
+
+    Resource cResource = Resources.createResource(2 * GB, 2);
+    am1.allocate("*", cResource, 4,
+        new ArrayList<ContainerId>(), null);
+
+    heartbeat(rm, nm1);
+
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("scaling-metrics")
+        .header(RMWSConsts.SCALING_CUSTOM_HEADER_KEY,
+            RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1)
+        .accept("application/json").get(ClientResponse.class);
+
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    JSONObject resourceRequests = json.getJSONObject("resourceRequests");
+    assertEquals(1, resourceRequests.length());
+    JSONObject resourceRequest = resourceRequests.
+        getJSONObject("resourceRequest");
+    assertEquals(2, resourceRequest.length());
+    JSONObject resource = resourceRequest.
+        getJSONObject("resource");
+    assertEquals(2, resource.length());
+    assertEquals("Incorrect resource memory", "2048",
+        resource.getString("memMB"));
+    assertEquals("Incorrect resource vCores", "2",
+        resource.getString("vcore"));
+    assertEquals("Incorrect resource count", "3",
+        resourceRequest.getString("count"));
     rm.stop();
   }
 

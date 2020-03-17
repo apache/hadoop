@@ -86,6 +86,8 @@ public final class RMWSConsts {
   public static final String DOWNSCALING_FACTOR_IN_NODE_COUNT =
       "downscaling-factor-in-node-count";
 
+  public static final String SCALING_METRICS = "/scaling-metrics";
+
   /**
    * Path for {@code RMWebServiceProtocol#getApps} and
    * {@code RMWebServiceProtocol#getApp}.

@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStati
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterScalingInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterScalingMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
@@ -131,6 +132,15 @@ public interface RMWebServiceProtocol {
       String upscalingFactorInNodeResourceTypes,
       String downscalingFactorInNodeCount,
       NodeInstanceTypeList instanceTypeList);
+
+  /**
+   * This method retrieves the cluster autoscale related metrics.
+   *
+   * @param apiVersion the version of api
+   * @return the cluster autoscale metrics.
+   */
+  ClusterScalingMetrics getClusterScalingMetrics(
+      String apiVersion);
 
   /**
    * This method retrieves the current scheduler status, and it is reachable by
