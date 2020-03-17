@@ -48,10 +48,10 @@ public final class TestAbfsOutputStream {
   private final String accountKey1 = globalKey + "." + accountName1;
   private final String accountValue1 = "one";
 
-  @Test
   /**
    * The test verifies OutputStream shortwrite case(2000bytes write followed by flush, hflush, hsync) is making correct HTTP calls to the server
    */
+  @Test
   public void verifyShortWriteRequest() throws Exception {
 
     AbfsClient client = mock(AbfsClient.class);
