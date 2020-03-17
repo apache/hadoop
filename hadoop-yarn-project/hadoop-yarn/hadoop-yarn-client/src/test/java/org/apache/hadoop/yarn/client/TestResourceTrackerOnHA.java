@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.yarn.client;
 
-import com.google.common.base.Supplier;
 import java.io.IOException;
 
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 
 import org.apache.hadoop.ipc.RPC;
@@ -35,16 +33,11 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.Timeout;
 
-public class TestResourceTrackerOnHA extends ProtocolHATestBase {
+public class TestResourceTrackerOnHA extends ProtocolHATestBase{
 
   private ResourceTracker resourceTracker = null;
-
-  @Rule
-  public Timeout timeout = new Timeout(180000);
 
   @Before
   public void initiate() throws Exception {
@@ -59,7 +52,7 @@ public class TestResourceTrackerOnHA extends ProtocolHATestBase {
     }
   }
 
-  @Test
+  @Test(timeout = 15000)
   public void testResourceTrackerOnHA() throws Exception {
     NodeId nodeId = NodeId.newInstance("localhost", 0);
     Resource resource = Resource.newInstance(2048, 4);
@@ -69,7 +62,7 @@ public class TestResourceTrackerOnHA extends ProtocolHATestBase {
         RegisterNodeManagerRequest.newInstance(nodeId, 0, resource,
             YarnVersionInfo.getVersion(), null, null);
     resourceTracker.registerNodeManager(request);
-    Assert.assertTrue(waitForNodeManagerToConnect(200, nodeId));
+    Assert.assertTrue(waitForNodeManagerToConnect(10000, nodeId));
 
     // restart the failover thread, and make sure nodeHeartbeat works
     failoverThread = createAndStartFailoverThread();
@@ -85,18 +78,14 @@ public class TestResourceTrackerOnHA extends ProtocolHATestBase {
     return ServerRMProxy.createRMProxy(this.conf, ResourceTracker.class);
   }
 
-  private boolean waitForNodeManagerToConnect(final int maxTime,
-      final NodeId nodeId)
+  private boolean waitForNodeManagerToConnect(int timeout, NodeId nodeId)
       throws Exception {
-    GenericTestUtils.waitFor(
-        new Supplier<Boolean>() {
-          @Override
-          public Boolean get() {
-            return TestResourceTrackerOnHA.this.getActiveRM().getRMContext()
-                .getRMNodes().containsKey(nodeId);
-          }
-        }, 20,
-        maxTime);
-    return true;
+    for (int i = 0; i < timeout / 100; i++) {
+      if (getActiveRM().getRMContext().getRMNodes().containsKey(nodeId)) {
+        return true;
+      }
+      Thread.sleep(100);
+    }
+    return false;
   }
 }
