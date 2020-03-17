@@ -28,6 +28,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -38,9 +39,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
-
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.is;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
@@ -103,8 +101,11 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       setListMaxResults(listMaxResults);
       int expectedListResultsSize =
           listMaxResults > fileCount ? fileCount : listMaxResults;
-      assertThat(listPath(directory).size(),
-          is(equalTo(expectedListResultsSize)));
+      Assertions.assertThat(listPath(directory)).describedAs(
+          "AbfsClient.listPath result should contain %d items when "
+              + "listMaxResults is %d and directory contains %d items",
+          expectedListResultsSize, listMaxResults, fileCount)
+          .hasSize(expectedListResultsSize);
     }
   }
 
@@ -114,8 +115,12 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     setListMaxResults(LIST_MAX_RESULTS_SERVER + 100);
     final String directory = "testWithValueGreaterThanServerMaximum";
     createDirectoryWithNFiles(directory, LIST_MAX_RESULTS_SERVER + 200);
-    assertThat(listPath(directory).size(),
-        is(equalTo(LIST_MAX_RESULTS_SERVER)));
+    Assertions.assertThat(listPath(directory)).describedAs(
+        "AbfsClient.listPath result will contain a maximum of %d items "
+            + "even if listMaxResults >= %d or directory "
+            + "contains more than %d items", LIST_MAX_RESULTS_SERVER,
+        LIST_MAX_RESULTS_SERVER, LIST_MAX_RESULTS_SERVER)
+        .hasSize(LIST_MAX_RESULTS_SERVER);
   }
 
   @Test
@@ -151,14 +156,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     ExecutorService es = Executors.newFixedThreadPool(10);
     for (int i = 0; i < n; i++) {
       final Path fileName = new Path("/" + directory + "/test" + i);
-      Callable<Void> callable = new Callable<Void>() {
-        @Override
-        public Void call() throws Exception {
-          touch(fileName);
-          return null;
-        }
-      };
-      tasks.add(es.submit(callable));
+      tasks.add(es.submit(() -> {
+        touch(fileName);
+        return null;
+      }));
     }
     for (Future<Void> task : tasks) {
       task.get();
