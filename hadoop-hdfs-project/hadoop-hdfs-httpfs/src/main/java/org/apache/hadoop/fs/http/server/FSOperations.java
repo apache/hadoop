@@ -1988,4 +1988,31 @@ public class FSOperations {
       return null;
     }
   }
+
+  /**
+   * Executor that performs a satisfyStoragePolicy operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSSatisyStoragePolicy
+      implements FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+
+    public FSSatisyStoragePolicy(String path) {
+      this.path = new Path(path);
+    }
+
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        dfs.satisfyStoragePolicy(path);
+      } else {
+        throw new UnsupportedOperationException("satisfyStoragePolicy is "
+            + "not supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      return null;
+    }
+  }
 }

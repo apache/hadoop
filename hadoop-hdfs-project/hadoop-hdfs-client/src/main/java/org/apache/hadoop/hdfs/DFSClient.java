@@ -247,6 +247,20 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private final int smallBufferSize;
   private final long serverDefaultsValidityPeriod;
 
+  /**
+   * Disabled stop DeadNodeDetectorThread for the testing when MiniDFSCluster
+   * start.
+   */
+  private static volatile boolean disabledStopDeadNodeDetectorThreadForTest =
+      false;
+
+  @VisibleForTesting
+  public static void setDisabledStopDeadNodeDetectorThreadForTest(
+      boolean disabledStopDeadNodeDetectorThreadForTest) {
+    DFSClient.disabledStopDeadNodeDetectorThreadForTest =
+        disabledStopDeadNodeDetectorThreadForTest;
+  }
+
   public DfsClientConf getConf() {
     return dfsClientConf;
   }
@@ -577,10 +591,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       } catch (IOException e) {
         // Abort if the lease has already expired.
         final long elapsed = Time.monotonicNow() - getLastLeaseRenewal();
-        if (elapsed > HdfsConstants.LEASE_HARDLIMIT_PERIOD) {
+        if (elapsed > dfsClientConf.getleaseHardLimitPeriod()) {
           LOG.warn("Failed to renew lease for " + clientName + " for "
               + (elapsed/1000) + " seconds (>= hard-limit ="
-              + (HdfsConstants.LEASE_HARDLIMIT_PERIOD / 1000) + " seconds.) "
+              + (dfsClientConf.getleaseHardLimitPeriod() / 1000) + " seconds.) "
               + "Closing all files being written ...", e);
           closeAllFilesBeingWritten(true);
         } else {
@@ -637,7 +651,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       closeAllFilesBeingWritten(false);
       clientRunning = false;
       // close dead node detector thread
-      clientContext.stopDeadNodeDetectorThread();
+      if (!disabledStopDeadNodeDetectorThreadForTest) {
+        clientContext.stopDeadNodeDetectorThread();
+      }
+
       // close connections to the namenode
       closeConnectionToNamenode();
     }
@@ -1554,7 +1571,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           DSQuotaExceededException.class,
           QuotaByStorageTypeExceededException.class,
           UnresolvedPathException.class,
-          SnapshotAccessControlException.class);
+          SnapshotAccessControlException.class,
+          ParentNotDirectoryException.class);
     }
   }
 

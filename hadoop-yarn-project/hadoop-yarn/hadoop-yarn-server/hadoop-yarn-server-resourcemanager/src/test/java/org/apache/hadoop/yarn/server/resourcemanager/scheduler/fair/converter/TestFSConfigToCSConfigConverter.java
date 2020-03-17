@@ -26,10 +26,14 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.conve
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.USER_MAX_APPS_DEFAULT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.USER_MAX_RUNNING_APPS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.RuleAction.ABORT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.RuleAction.WARNING;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -42,6 +46,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
@@ -84,6 +89,9 @@ public class TestFSConfigToCSConfigConverter {
 
   @Mock
   private DryRunResultHolder dryRunResultHolder;
+
+  @Mock
+  private QueuePlacementConverter placementConverter;
 
   private FSConfigToCSConfigConverter converter;
   private Configuration config;
@@ -293,19 +301,6 @@ public class TestFSConfigToCSConfigConverter {
   }
 
   @Test
-  public void testConvertFSConfigPctModeUsedAndClusterResourceNotDefined()
-      throws Exception {
-    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
-            .build();
-
-    expectedException.expect(ConversionException.class);
-    expectedException.expectMessage("cluster resource parameter" +
-        " is not defined via CLI");
-
-    converter.convert(params);
-  }
-
-  @Test
   public void testConvertFSConfigurationClusterResourceInvalid()
       throws Exception {
     FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
@@ -370,6 +365,41 @@ public class TestFSConfigToCSConfigConverter {
         ABORT, actions.get(RESERVATION_SYSTEM));
     assertEquals("queueAutoCreate",
         ABORT, actions.get(QUEUE_AUTO_CREATE));
+  }
+
+  @Test
+  public void testConvertFSConfigurationWithoutRulesFile() throws Exception {
+    ruleHandler = new FSConfigToCSConfigRuleHandler(
+        createDefaultConversionOptions());
+    createConverter();
+
+    FSConfigToCSConfigConverterParams params =
+        createDefaultParamsBuilder()
+            .withClusterResource(CLUSTER_RESOURCE_STRING)
+            .build();
+
+    converter.convert(params);
+
+    ruleHandler = converter.getRuleHandler();
+    Map<String, FSConfigToCSConfigRuleHandler.RuleAction> actions =
+        ruleHandler.getActions();
+
+    assertEquals("maxCapacityPercentage",
+        WARNING, actions.get(MAX_CAPACITY_PERCENTAGE));
+    assertEquals("maxChildCapacity",
+        WARNING, actions.get(MAX_CHILD_CAPACITY));
+    assertEquals("userMaxRunningApps",
+        WARNING, actions.get(USER_MAX_RUNNING_APPS));
+    assertEquals("userMaxAppsDefault",
+        WARNING, actions.get(USER_MAX_APPS_DEFAULT));
+    assertEquals("dynamicMaxAssign",
+        WARNING, actions.get(DYNAMIC_MAX_ASSIGN));
+    assertEquals("specifiedNotFirstRule",
+        WARNING, actions.get(SPECIFIED_NOT_FIRST));
+    assertEquals("reservationSystem",
+        WARNING, actions.get(RESERVATION_SYSTEM));
+    assertEquals("queueAutoCreate",
+        WARNING, actions.get(QUEUE_AUTO_CREATE));
   }
 
   @Test
@@ -547,6 +577,7 @@ public class TestFSConfigToCSConfigConverter {
     config.setBoolean(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE,
         userAsDefaultQueue);
 
+    converter.setConvertPlacementRules(true);
     converter.convert(config);
 
     Configuration convertedConf = getConvertedCSConfig();
@@ -612,6 +643,37 @@ public class TestFSConfigToCSConfigConverter {
       assertNull("Auto-create queue shouldn't be set",
           convertedConf.get(property));
     }
+  }
+
+  @Test
+  public void testPlacementRulesConversionDisabled() throws Exception {
+    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
+        .withFairSchedulerXmlConfig(FAIR_SCHEDULER_XML)
+        .withConvertPlacementRules(false)
+        .build();
+
+    converter.setPlacementConverter(placementConverter);
+    converter.convert(params);
+
+    verifyZeroInteractions(placementConverter);
+  }
+
+  @Test
+  public void testPlacementRulesConversionEnabled() throws Exception {
+    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
+        .withFairSchedulerXmlConfig(FAIR_SCHEDULER_XML)
+        .withConvertPlacementRules(true)
+        .build();
+
+    converter.setPlacementConverter(placementConverter);
+    converter.convert(params);
+
+    verify(placementConverter).convertPlacementPolicy(
+        any(PlacementManager.class),
+        any(FSConfigToCSConfigRuleHandler.class),
+        any(Boolean.class));
   }
 
   private Configuration getConvertedCSConfig() {

@@ -230,6 +230,8 @@ public enum Statistic {
       "S3Guard metadata store authoritative directories updated from S3"),
 
   STORE_IO_THROTTLED("store_io_throttled", "Requests throttled and retried"),
+  STORE_IO_THROTTLE_RATE("store_io_throttle_rate",
+      "Rate of S3 request throttling"),
 
   DELEGATION_TOKENS_ISSUED("delegation_tokens_issued",
       "Number of delegation tokens issued");

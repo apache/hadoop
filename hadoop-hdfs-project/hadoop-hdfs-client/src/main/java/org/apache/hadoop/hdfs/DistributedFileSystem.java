@@ -29,9 +29,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
+import org.apache.hadoop.fs.BatchListingOperations;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -140,7 +142,7 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase" })
 @InterfaceStability.Unstable
 public class DistributedFileSystem extends FileSystem
-    implements KeyProviderTokenIssuer {
+    implements KeyProviderTokenIssuer, BatchListingOperations {
   private Path workingDir;
   private URI uri;
 
@@ -220,7 +222,8 @@ public class DistributedFileSystem extends FileSystem
 
   @Override
   public Path getHomeDirectory() {
-    return makeQualified(DFSUtilClient.getHomeDirectory(getConf(), dfs.ugi));
+    return makeQualified(
+        new Path(DFSUtilClient.getHomeDirectory(getConf(), dfs.ugi)));
   }
 
   /**
@@ -328,7 +331,12 @@ public class DistributedFileSystem extends FileSystem
       public FSDataInputStream doCall(final Path p) throws IOException {
         final DFSInputStream dfsis =
             dfs.open(getPathName(p), bufferSize, verifyChecksum);
-        return dfs.createWrappedInputStream(dfsis);
+        try {
+          return dfs.createWrappedInputStream(dfsis);
+        } catch (IOException ex){
+          dfsis.close();
+          throw ex;
+        }
       }
       @Override
       public FSDataInputStream next(final FileSystem fs, final Path p)
@@ -509,7 +517,7 @@ public class DistributedFileSystem extends FileSystem
                 : EnumSet.of(CreateFlag.CREATE),
             true, replication, blockSize, progress, bufferSize, null,
             favoredNodes);
-        return dfs.createWrappedOutputStream(out, statistics);
+        return safelyCreateWrappedOutputStream(out);
       }
       @Override
       public HdfsDataOutputStream next(final FileSystem fs, final Path p)
@@ -541,7 +549,7 @@ public class DistributedFileSystem extends FileSystem
         final DFSOutputStream dfsos = dfs.create(getPathName(p), permission,
             cflags, replication, blockSize, progress, bufferSize,
             checksumOpt);
-        return dfs.createWrappedOutputStream(dfsos, statistics);
+        return safelyCreateWrappedOutputStream(dfsos);
       }
       @Override
       public FSDataOutputStream next(final FileSystem fs, final Path p)
@@ -589,7 +597,7 @@ public class DistributedFileSystem extends FileSystem
         final DFSOutputStream out = dfs.create(getPathName(f), permission,
             flag, true, replication, blockSize, progress, bufferSize,
             checksumOpt, favoredNodes, ecPolicyName, storagePolicy);
-        return dfs.createWrappedOutputStream(out, statistics);
+        return safelyCreateWrappedOutputStream(out);
       }
       @Override
       public HdfsDataOutputStream next(final FileSystem fs, final Path p)
@@ -618,7 +626,7 @@ public class DistributedFileSystem extends FileSystem
         getPathName(fixRelativePart(f)),
         absolutePermission, flag, true, replication, blockSize,
         progress, bufferSize, checksumOpt);
-    return dfs.createWrappedOutputStream(dfsos, statistics);
+    return safelyCreateWrappedOutputStream(dfsos);
   }
 
   /**
@@ -647,7 +655,7 @@ public class DistributedFileSystem extends FileSystem
         final DFSOutputStream out = dfs.create(getPathName(f), permission,
             flag, false, replication, blockSize, progress, bufferSize,
             checksumOpt, favoredNodes, ecPolicyName, storagePolicyName);
-        return dfs.createWrappedOutputStream(out, statistics);
+        return safelyCreateWrappedOutputStream(out);
       }
       @Override
       public HdfsDataOutputStream next(final FileSystem fs, final Path p)
@@ -684,7 +692,7 @@ public class DistributedFileSystem extends FileSystem
       public FSDataOutputStream doCall(final Path p) throws IOException {
         final DFSOutputStream dfsos = dfs.create(getPathName(p), permission,
             flag, false, replication, blockSize, progress, bufferSize, null);
-        return dfs.createWrappedOutputStream(dfsos, statistics);
+        return safelyCreateWrappedOutputStream(dfsos);
       }
 
       @Override
@@ -694,6 +702,20 @@ public class DistributedFileSystem extends FileSystem
             replication, blockSize, progress);
       }
     }.resolve(this, absF);
+  }
+
+  // Private helper to ensure the wrapped inner stream is closed safely
+  // upon IOException throw during wrap.
+  // Assuming the caller owns the inner stream which needs to be closed upon
+  // wrap failure.
+  private HdfsDataOutputStream safelyCreateWrappedOutputStream(
+      DFSOutputStream dfsos) throws IOException {
+    try {
+      return dfs.createWrappedOutputStream(dfsos, statistics);
+    } catch (IOException ex) {
+      dfsos.close();
+      throw ex;
+    }
   }
 
   @Override
@@ -3236,8 +3258,7 @@ public class DistributedFileSystem extends FileSystem
       EncryptionZone ez = dfs.getEZForPath(parentSrc);
       if ((ez != null)) {
         return this.makeQualified(
-            new Path(new Path(ez.getPath(), FileSystem.TRASH_PREFIX),
-                dfs.ugi.getShortUserName()));
+            new Path(DFSUtilClient.getEZTrashRoot(ez, dfs.ugi)));
       }
     } catch (IOException e) {
       DFSClient.LOG.warn("Exception in checking the encryption zone for the " +
@@ -3264,7 +3285,8 @@ public class DistributedFileSystem extends FileSystem
       // Get EZ Trash roots
       final RemoteIterator<EncryptionZone> it = dfs.listEncryptionZones();
       while (it.hasNext()) {
-        Path ezTrashRoot = new Path(it.next().getPath(),
+        EncryptionZone ez = it.next();
+        Path ezTrashRoot = new Path(ez.getPath(),
             FileSystem.TRASH_PREFIX);
         if (!exists(ezTrashRoot)) {
           continue;
@@ -3276,7 +3298,7 @@ public class DistributedFileSystem extends FileSystem
             }
           }
         } else {
-          Path userTrash = new Path(ezTrashRoot, dfs.ugi.getShortUserName());
+          Path userTrash = new Path(DFSUtilClient.getEZTrashRoot(ez, dfs.ugi));
           try {
             ret.add(getFileStatus(userTrash));
           } catch (FileNotFoundException ignored) {
@@ -3381,6 +3403,16 @@ public class DistributedFileSystem extends FileSystem
      */
     public HdfsDataOutputStreamBuilder noLocalWrite() {
       getFlags().add(CreateFlag.NO_LOCAL_WRITE);
+      return this;
+    }
+
+    /**
+     * Advise that a block replica NOT be written to the local rack DataNode.
+     *
+     * @see CreateFlag for the details.
+     */
+    public HdfsDataOutputStreamBuilder noLocalRack() {
+      getFlags().add(CreateFlag.NO_LOCAL_RACK);
       return this;
     }
 
@@ -3547,6 +3579,15 @@ public class DistributedFileSystem extends FileSystem
     if (cap.isPresent()) {
       return cap.get();
     }
+    // this switch is for features which are in the DFS client but not
+    // (yet/ever) in the WebHDFS API.
+    switch (validatePathCapabilityArgs(path, capability)) {
+    case CommonPathCapabilities.FS_EXPERIMENTAL_BATCH_LISTING:
+      return true;
+    default:
+      // fall through
+    }
+
     return super.hasPathCapability(p, capability);
   }
 }

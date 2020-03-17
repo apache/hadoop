@@ -1709,7 +1709,7 @@ public class TestDistributedFileSystem {
     HdfsDataOutputStreamBuilder builder = fs.createFile(testFilePath);
 
     builder.append().overwrite(false).newBlock().lazyPersist().noLocalWrite()
-        .ecPolicyName("ec-policy");
+        .ecPolicyName("ec-policy").noLocalRack();
     EnumSet<CreateFlag> flags = builder.getFlags();
     assertTrue(flags.contains(CreateFlag.APPEND));
     assertTrue(flags.contains(CreateFlag.CREATE));
@@ -1717,6 +1717,7 @@ public class TestDistributedFileSystem {
     assertTrue(flags.contains(CreateFlag.NO_LOCAL_WRITE));
     assertFalse(flags.contains(CreateFlag.OVERWRITE));
     assertFalse(flags.contains(CreateFlag.SYNC_BLOCK));
+    assertTrue(flags.contains(CreateFlag.NO_LOCAL_RACK));
 
     assertEquals("ec-policy", builder.getEcPolicyName());
     assertFalse(builder.shouldReplicate());

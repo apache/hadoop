@@ -1000,6 +1000,10 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     submissionContext.setMaxAppAttempts(YarnServiceConf
         .getInt(YarnServiceConf.AM_RESTART_MAX, DEFAULT_AM_RESTART_MAX, app
             .getConfiguration(), conf));
+    submissionContext.setAttemptFailuresValidityInterval(YarnServiceConf
+        .getLong(YarnServiceConf.AM_FAILURES_VALIDITY_INTERVAL,
+            DEFAULT_AM_FAILURES_VALIDITY_INTERVAL, app.getConfiguration(),
+            conf));
 
     setLogAggregationContext(app, conf, submissionContext);
 
