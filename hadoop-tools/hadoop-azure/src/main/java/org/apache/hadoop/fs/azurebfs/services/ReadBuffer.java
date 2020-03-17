@@ -17,10 +17,13 @@
  */
 
 package org.apache.hadoop.fs.azurebfs.services;
-
+import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
+import java.util.UUID;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
+
+import static org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus.READ_FAILED;
 
 class ReadBuffer {
 
@@ -39,6 +42,11 @@ class ReadBuffer {
   private boolean isFirstByteConsumed = false;
   private boolean isLastByteConsumed = false;
   private boolean isAnyByteConsumed = false;
+
+  private IOException errException = null;
+  // The unique queue request ID which identifies all the read buffers triggered from
+  // a single AbfsInputStream read request.
+  private UUID queueReadAheadRequestId = null;
 
   public AbfsInputStream getStream() {
     return stream;
@@ -88,12 +96,31 @@ class ReadBuffer {
     this.bufferindex = bufferindex;
   }
 
+  public IOException getErrException() {
+    return errException;
+  }
+
+  public void setErrException(final java.io.IOException errException) {
+    this.errException = errException;
+  }
+
+  public UUID getQueueReadAheadRequestId() {
+    return queueReadAheadRequestId;
+  }
+
+  public void setQueueReadAheadRequestId(final UUID queueReadAheadRequestId) {
+    this.queueReadAheadRequestId = queueReadAheadRequestId;
+  }
+
   public ReadBufferStatus getStatus() {
     return status;
   }
 
   public void setStatus(ReadBufferStatus status) {
     this.status = status;
+    if (status == READ_FAILED) {
+      bufferindex = -1;
+    }
   }
 
   public CountDownLatch getLatch() {

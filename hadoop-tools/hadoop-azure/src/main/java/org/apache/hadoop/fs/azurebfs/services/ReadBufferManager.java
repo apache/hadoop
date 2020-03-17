@@ -21,11 +21,15 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
+import java.util.UUID;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * The Read Buffer Manager for Rest AbfsClient.
@@ -90,8 +94,10 @@ final class ReadBufferManager {
    * @param stream          The {@link AbfsInputStream} for which to do the read-ahead
    * @param requestedOffset The offset in the file which shoukd be read
    * @param requestedLength The length to read
+   * @param queueReadAheadRequestId unique queue request ID
    */
-  void queueReadAhead(final AbfsInputStream stream, final long requestedOffset, final int requestedLength) {
+  void queueReadAhead(final AbfsInputStream stream, final long requestedOffset, final int requestedLength
+      , final UUID queueReadAheadRequestId) {
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("Start Queueing readAhead for {} offset {} length {}",
           stream.getPath(), requestedOffset, requestedLength);
@@ -101,6 +107,7 @@ final class ReadBufferManager {
       if (isAlreadyQueued(stream, requestedOffset)) {
         return; // already queued, do not queue again
       }
+
       if (freeList.isEmpty() && !tryEvict()) {
         return; // no buffers available, cannot queue anything
       }
@@ -112,6 +119,7 @@ final class ReadBufferManager {
       buffer.setRequestedLength(requestedLength);
       buffer.setStatus(ReadBufferStatus.NOT_AVAILABLE);
       buffer.setLatch(new CountDownLatch(1));
+      buffer.setQueueReadAheadRequestId(queueReadAheadRequestId);
 
       Integer bufferIndex = freeList.pop();  // will return a value, since we have checked size > 0 already
 
@@ -141,7 +149,8 @@ final class ReadBufferManager {
    * @param buffer   the buffer to read data into. Note that the buffer will be written into from offset 0.
    * @return the number of bytes read
    */
-  int getBlock(final AbfsInputStream stream, final long position, final int length, final byte[] buffer) {
+  int getBlock(final AbfsInputStream stream, final long position, final int length, final byte[] buffer,
+      final UUID queueReadAheadRequestId) throws IOException {
     // not synchronized, so have to be careful with locking
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("getBlock for file {}  position {}  thread {}",
@@ -152,7 +161,7 @@ final class ReadBufferManager {
 
     int bytesRead = 0;
     synchronized (this) {
-      bytesRead = getBlockFromCompletedQueue(stream, position, length, buffer);
+      bytesRead = getBlockFromCompletedQueue(stream, position, length, buffer, queueReadAheadRequestId);
     }
     if (bytesRead > 0) {
       if (LOGGER.isTraceEnabled()) {
@@ -253,7 +262,12 @@ final class ReadBufferManager {
   }
 
   private boolean evict(final ReadBuffer buf) {
-    freeList.push(buf.getBufferindex());
+    // As failed ReadBuffers (bufferIndx = -1) are saved in completedReadList,
+    // avoid adding it to freeList.
+    if (buf.getBufferindex() != -1) {
+      freeList.push(buf.getBufferindex());
+    }
+
     completedReadList.remove(buf);
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("Evicting buffer idx {}; was used for file {} offset {} length {}",
@@ -289,6 +303,19 @@ final class ReadBufferManager {
     return null;
   }
 
+  private ReadBuffer getBufferFromCompletedQueue(final AbfsInputStream stream, final long requestedOffset) {
+    for (ReadBuffer buffer : completedReadList) {
+      if ((buffer.getStream() == stream) && (requestedOffset >= buffer.getOffset())) {
+        if ((requestedOffset < buffer.getOffset() + buffer.getLength())
+        || requestedOffset < buffer.getOffset() + buffer.getRequestedLength()) {
+          return buffer;
+        }
+      }
+    }
+
+    return null;
+  }
+
   private void clearFromReadAheadQueue(final AbfsInputStream stream, final long requestedOffset) {
     ReadBuffer buffer = getFromList(readAheadQueue, stream, requestedOffset);
     if (buffer != null) {
@@ -299,11 +326,31 @@ final class ReadBufferManager {
   }
 
   private int getBlockFromCompletedQueue(final AbfsInputStream stream, final long position, final int length,
-                                         final byte[] buffer) {
-    ReadBuffer buf = getFromList(completedReadList, stream, position);
-    if (buf == null || position >= buf.getOffset() + buf.getLength()) {
+                                         final byte[] buffer, final UUID queueReadAheadRequestId)
+      throws IOException {
+    ReadBuffer buf = getBufferFromCompletedQueue(stream, position);
+
+    if (buf == null) {
       return 0;
     }
+
+    if (buf.getStatus() == ReadBufferStatus.READ_FAILED) {
+      // is this failure from the requests queued by current queueReadAheadRequestId ?
+      // if yes, return failure exception
+      // else return 0 so that the main thread can make an attempt to read requested offset.
+      if (buf.getQueueReadAheadRequestId().equals(queueReadAheadRequestId)) {
+        // is read ahead issued from current queue request ID
+        throw buf.getErrException();
+      } else {
+        return 0;
+      }
+    }
+
+    if ((buf.getStatus() != ReadBufferStatus.AVAILABLE)
+        || (position >= buf.getOffset() + buf.getLength())) {
+      return 0;
+    }
+
     int cursor = (int) (position - buf.getOffset());
     int availableLengthInBuffer = buf.getLength() - cursor;
     int lengthToCopy = Math.min(length, availableLengthInBuffer);
@@ -364,6 +411,7 @@ final class ReadBufferManager {
       LOGGER.trace("ReadBufferWorker completed file {} for offset {} bytes {}",
           buffer.getStream().getPath(),  buffer.getOffset(), bytesActuallyRead);
     }
+
     synchronized (this) {
       inProgressList.remove(buffer);
       if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
@@ -373,9 +421,13 @@ final class ReadBufferManager {
         completedReadList.add(buffer);
       } else {
         freeList.push(buffer.getBufferindex());
-        // buffer should go out of scope after the end of the calling method in ReadBufferWorker, and eligible for GC
+        // buffer will be deleted as per the eviction policy.
       }
+
+      buffer.setStatus(result);
+      completedReadList.add(buffer);
     }
+
     //outside the synchronized, since anyone receiving a wake-up from the latch must see safe-published results
     buffer.getLatch().countDown(); // wake up waiting threads (if any)
   }
@@ -391,5 +443,20 @@ final class ReadBufferManager {
    */
   private long currentTimeMillis() {
     return System.nanoTime() / 1000 / 1000;
+  }
+
+  @VisibleForTesting
+  int getThreshold_age_milliseconds() {
+    return THRESHOLD_AGE_MILLISECONDS;
+  }
+
+  @VisibleForTesting
+  int getCompletedReadListSize() {
+    return completedReadList.size();
+  }
+
+  @VisibleForTesting
+  void callTryEvict() {
+    tryEvict();
   }
 }

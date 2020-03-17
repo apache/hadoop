@@ -22,8 +22,13 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.util.UUID;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
@@ -35,6 +40,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
  * The AbfsInputStream for AbfsClient.
  */
 public class AbfsInputStream extends FSInputStream {
+  private static Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
+  
   private final AbfsClient client;
   private final Statistics statistics;
   private final String path;
@@ -182,18 +189,19 @@ public class AbfsInputStream extends FSInputStream {
       int receivedBytes;
 
       // queue read-aheads
+      UUID queueReadAheadRequestId = UUID.randomUUID();
       int numReadAheads = this.readAheadQueueDepth;
       long nextSize;
       long nextOffset = position;
       while (numReadAheads > 0 && nextOffset < contentLength) {
         nextSize = Math.min((long) bufferSize, contentLength - nextOffset);
-        ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize);
+        ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize, queueReadAheadRequestId);
         nextOffset = nextOffset + nextSize;
         numReadAheads--;
       }
 
       // try reading from buffers first
-      receivedBytes = ReadBufferManager.getBufferManager().getBlock(this, position, length, b);
+      receivedBytes = ReadBufferManager.getBufferManager().getBlock(this, position, length, b, queueReadAheadRequestId);
       if (receivedBytes > 0) {
         return receivedBytes;
       }
@@ -206,6 +214,7 @@ public class AbfsInputStream extends FSInputStream {
     }
   }
 
+  @VisibleForTesting
   int readRemote(long position, byte[] b, int offset, int length) throws IOException {
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
@@ -228,6 +237,7 @@ public class AbfsInputStream extends FSInputStream {
     final AbfsRestOperation op;
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
+      LOG.trace(String.format("Trigger client.read for path=%s position=%s offset=%s length=%s", path, position, offset, length));
       op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
@@ -237,6 +247,7 @@ public class AbfsInputStream extends FSInputStream {
           throw new FileNotFoundException(ere.getMessage());
         }
       }
+
       throw new IOException(ex);
     }
     long bytesRead = op.getResult().getBytesReceived();

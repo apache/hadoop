@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
@@ -64,6 +65,7 @@ class ReadBufferWorker implements Runnable {
           int bytesRead = buffer.getStream().readRemote(buffer.getOffset(), buffer.getBuffer(), 0, buffer.getRequestedLength());
           bufferManager.doneReading(buffer, ReadBufferStatus.AVAILABLE, bytesRead);  // post result back to ReadBufferManager
         } catch (Exception ex) {
+          buffer.setErrException(new IOException(ex));
           bufferManager.doneReading(buffer, ReadBufferStatus.READ_FAILED, 0);
         }
       }
