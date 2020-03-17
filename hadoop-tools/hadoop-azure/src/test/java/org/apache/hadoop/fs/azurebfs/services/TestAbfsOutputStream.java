@@ -21,9 +21,12 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
+
 import org.junit.Assert;
 import org.junit.Test;
+
 import org.mockito.ArgumentCaptor;
+
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.conf.Configuration;
 
@@ -36,6 +39,7 @@ import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.anyLong;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 public final class TestAbfsOutputStream {
