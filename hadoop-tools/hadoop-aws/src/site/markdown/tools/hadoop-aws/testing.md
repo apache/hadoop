@@ -168,6 +168,13 @@ You can also force all the tests to run with a specific SSE encryption method
 by configuring the property `fs.s3a.server-side-encryption-algorithm` in the s3a
 contract file.
 
+### <a name="default_encyption"></a> Default Encryption
+
+Buckets can be configured with [default encryption](https://docs.aws.amazon.com/AmazonS3/latest/dev/bucket-encryption.html)
+on the AWS side. Some S3AFileSystem tests are skipped when default encryption is
+enabled due to unpredictability in how [ETags](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html)
+are generated.
+
 ## <a name="running"></a> Running the Tests
 
 After completing the configuration, execute the test run through Maven.
