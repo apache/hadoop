@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -52,26 +52,38 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
     String testReadWriteOps = "test this";
     statistics.reset();
 
-    //Test for zero read and write operation
-    Assert.assertEquals("Mismatch in read operations", 0,
-        statistics.getReadOps());
-    Assert.assertEquals("Mismatch in write operations", 0,
-        statistics.getWriteOps());
+    //Test for zero write operation
+    assertReadWriteOps("write", 0, statistics.getWriteOps());
 
-    FSDataOutputStream outForOneOperation = fs.create(smallOperationsFile);
-    statistics.reset();
-    outForOneOperation.write(testReadWriteOps.getBytes());
-    FSDataInputStream inForOneCall = fs.open(smallOperationsFile);
-    inForOneCall.read(testReadWriteOps.getBytes(), 0,
-        testReadWriteOps.getBytes().length);
+    //Test for zero read operation
+    assertReadWriteOps("read", 0, statistics.getReadOps());
 
-    //Test for one read and write operation
-    Assert.assertEquals("Mismatch in read operations", 1,
-        statistics.getReadOps());
-    Assert.assertEquals("Mismatch in write operations", 1,
-        statistics.getWriteOps());
+    FSDataOutputStream outForOneOperation = null;
+    FSDataInputStream inForOneOperation = null;
+    try {
+      outForOneOperation = fs.create(smallOperationsFile);
+      statistics.reset();
+      outForOneOperation.write(testReadWriteOps.getBytes());
 
-    outForOneOperation.close();
+      //Test for a single write operation
+      assertReadWriteOps("write", 1, statistics.getWriteOps());
+
+      inForOneOperation = fs.open(smallOperationsFile);
+      inForOneOperation.read(testReadWriteOps.getBytes(), 0,
+          testReadWriteOps.getBytes().length);
+
+      //Test for a single read operation
+      assertReadWriteOps("read", 1, statistics.getReadOps());
+
+    } finally {
+      if (inForOneOperation != null) {
+        inForOneOperation.close();
+      }
+      if (outForOneOperation != null) {
+        outForOneOperation.close();
+      }
+    }
+
     //Validating if content is being written in the smallOperationsFile
     Assert.assertEquals("Mismatch in content validation", true,
         validateContent(fs, smallOperationsFile,
@@ -91,14 +103,18 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
         largeOperationsValidationString.append(testReadWriteOps);
       }
 
+      //Test for 1000000 write operations
+      assertReadWriteOps("write", largeValue, statistics.getWriteOps());
+
       inForLargeOperations = fs.open(largeOperationsFile);
       for (int i = 0; i < largeValue; i++)
         inForLargeOperations
             .read(testReadWriteOps.getBytes(), 0,
                 testReadWriteOps.getBytes().length);
 
-      //Test for one million read and write operations
-      assertReadWriteOps(largeValue, statistics);
+      //Test for 1000000 read operations
+      assertReadWriteOps("read", largeValue, statistics.getReadOps());
+
     } finally {
       if (inForLargeOperations != null) {
         inForLargeOperations.close();
@@ -116,17 +132,17 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
   }
 
   /**
-   * Method for Read and Write Ops Assertion.
+   * Generic method to assert both Read an write operations.
    *
-   * @param expectedReadWriteOps Expected Value
-   * @param statistics           fs stats to get Actual Values
+   * @param operation     what operation is being asserted
+   * @param expectedValue value which is expected
+   * @param actualValue   value which is actual
    */
-  private void assertReadWriteOps(long expectedReadWriteOps,
-      FileSystem.Statistics statistics) {
-    Assert.assertEquals("Mismatch in read operations", expectedReadWriteOps,
-        statistics.getReadOps());
-    Assert.assertEquals("Mismatch in write operations", expectedReadWriteOps,
-        statistics.getWriteOps());
 
+  private void assertReadWriteOps(String operation, long expectedValue,
+      long actualValue) {
+    Assert.assertEquals("Mismatch in " + operation + " operations",
+        expectedValue
+        , actualValue);
   }
 }
