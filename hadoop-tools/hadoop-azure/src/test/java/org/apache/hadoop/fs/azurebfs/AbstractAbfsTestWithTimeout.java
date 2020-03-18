@@ -102,21 +102,25 @@ public class AbstractAbfsTestWithTimeout extends Assert {
   protected boolean validateContent(AzureBlobFileSystem fs, Path path,
       byte[] originalByteArray)
       throws IOException {
-    FSDataInputStream in = fs.open(path);
-
     int pos = 0;
     int lenOfOriginalByteArray = originalByteArray.length;
-    byte valueOfContentAtPos = (byte) in.read();
 
-    while (valueOfContentAtPos != -1 && pos < lenOfOriginalByteArray) {
-      if (originalByteArray[pos] != valueOfContentAtPos)
+    try (FSDataInputStream in = fs.open(path)) {
+      byte valueOfContentAtPos = (byte) in.read();
+
+      while (valueOfContentAtPos != -1 && pos < lenOfOriginalByteArray) {
+        if (originalByteArray[pos] != valueOfContentAtPos) {
+          return false;
+        }
+        valueOfContentAtPos = (byte) in.read();
+        pos++;
+      }
+      if (valueOfContentAtPos != -1) {
         return false;
-      valueOfContentAtPos = (byte) in.read();
-      pos++;
+      }
+      return true;
     }
-    if (valueOfContentAtPos != -1)
-      return false;
-    return true;
+
   }
 
 }

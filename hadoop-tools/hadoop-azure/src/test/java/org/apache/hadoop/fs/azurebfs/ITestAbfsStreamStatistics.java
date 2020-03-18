@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * Test Abfs Stream.
@@ -33,6 +34,8 @@ import org.apache.hadoop.fs.Path;
 public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
   public ITestAbfsStreamStatistics() throws Exception {
   }
+
+  private static int LARGE_NUMBER_OF_OPS = 1000000;
 
   /***
    * Testing {@code incrementReadOps()} in class {@code AbfsInputStream} and
@@ -76,12 +79,8 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
       assertReadWriteOps("read", 1, statistics.getReadOps());
 
     } finally {
-      if (inForOneOperation != null) {
-        inForOneOperation.close();
-      }
-      if (outForOneOperation != null) {
-        outForOneOperation.close();
-      }
+      IOUtils.cleanupWithLogger(null, inForOneOperation,
+          outForOneOperation);
     }
 
     //Validating if content is being written in the smallOperationsFile
@@ -95,7 +94,7 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
     try {
       outForLargeOperations = fs.create(largeOperationsFile);
       statistics.reset();
-      int largeValue = 1000000;
+      int largeValue = LARGE_NUMBER_OF_OPS;
       for (int i = 0; i < largeValue; i++) {
         outForLargeOperations.write(testReadWriteOps.getBytes());
 
@@ -107,21 +106,18 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
       assertReadWriteOps("write", largeValue, statistics.getWriteOps());
 
       inForLargeOperations = fs.open(largeOperationsFile);
-      for (int i = 0; i < largeValue; i++)
+      for (int i = 0; i < largeValue; i++) {
         inForLargeOperations
             .read(testReadWriteOps.getBytes(), 0,
                 testReadWriteOps.getBytes().length);
+      }
 
       //Test for 1000000 read operations
       assertReadWriteOps("read", largeValue, statistics.getReadOps());
 
     } finally {
-      if (inForLargeOperations != null) {
-        inForLargeOperations.close();
-      }
-      if (outForLargeOperations != null) {
-        outForLargeOperations.close();
-      }
+      IOUtils.cleanupWithLogger(null, inForLargeOperations,
+          outForLargeOperations);
     }
 
     //Validating if content is being written in largeOperationsFile
@@ -141,8 +137,8 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
 
   private void assertReadWriteOps(String operation, long expectedValue,
       long actualValue) {
-    Assert.assertEquals("Mismatch in " + operation + " operations",
-        expectedValue
-        , actualValue);
+    Assert
+        .assertEquals("Mismatch in " + operation + " operations", expectedValue,
+            actualValue);
   }
 }
