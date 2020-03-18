@@ -1623,7 +1623,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
         + "not fix any issues.\n" +
         "  -" + DDB_MS_CONSISTENCY_FLAG + " Check the dynamodb metadata store "
         + "for internal consistency.\n" +
-        "  -" + FIX_FLAG + " Fix the found errors in the metadata store. Can " +
+        "  -" + FIX_FLAG + " Fix the errors found in the metadata store. Can " +
         "be used with " + CHECK_FLAG + " or " + DDB_MS_CONSISTENCY_FLAG + " flags. "
         + "\n\t\tFixes: \n" +
         "\t\t\t- Remove orphan entries from DDB." +
