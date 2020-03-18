@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,14 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
 
-import java.util.LinkedList;
-import java.util.Queue;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
-public class AbfsByteBufferPool {
-
-  private static final Queue<byte[]> queue = new LinkedList<>();
-
-
+/**
+ * Thrown in cases of error scenarios ByteArrayPool.
+ */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public final class AbfsByteArrayPoolException
+    extends AzureBlobFileSystemException {
+  public AbfsByteArrayPoolException(String msg) {
+    super(msg);
+  }
 }

@@ -48,7 +48,8 @@ public final class FileSystemConfigurations {
   public static final String AZURE_BLOCK_LOCATION_HOST_DEFAULT = "localhost";
 
   public static final int MAX_CONCURRENT_READ_THREADS = 12;
-  public static final int MAX_CONCURRENT_WRITE_THREADS = 8;
+  public static final int DEFAULT_WRITE_CONCURRENCY_FACTOR = 4;
+  public static final int DEFAULT_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE = 20;
   public static final boolean DEFAULT_READ_TOLERATE_CONCURRENT_APPEND = false;
   public static final boolean DEFAULT_AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION = false;
   public static final boolean DEFAULT_AZURE_SKIP_USER_GROUP_METADATA_DURING_INITIALIZATION = false;

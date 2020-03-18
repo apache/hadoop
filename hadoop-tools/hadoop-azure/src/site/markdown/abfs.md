@@ -661,7 +661,7 @@ Hflush() being the only documented API that can provide persistent data
 transfer, Flush() also attempting to persist buffered data will lead to
 performance issues.
 
-### <a name="flushconfigoptions"></a> Access Options
+### <a name="accessconfigoptions"></a> Access Options
 Config `fs.azure.enable.check.access` needs to be set true to enable
  the AzureBlobFileSystem.access().
 
@@ -710,6 +710,19 @@ logged with the last callee)
 Note that these performance numbers are also sent back to the ADLS Gen 2 API endpoints
 in the `x-ms-abfs-client-latency` HTTP headers in subsequent requests. Azure uses these
 settings to track their end-to-end latency.
+
+#### <a name="writeperfoptions"></a> 2. AbfsOutputStream Perf Options
+
+##### <a name="writeperfoptions"></a> 1. Concurrency Factor
+Config `fs.azure.write.concurrency.factor` can be used to tune the number of
+ threads in the AbfsOutputStream thread-pool. Number of threads will be
+  (available processors * Concurrency Factor). By default concurrency factor
+   will be 1.
+
+##### <a name="writeperfoptions"></a> 2. Write Memory Usage Percentage
+Config `fs.azure.max.write.memory.usage.percentage` can be used to tune the
+ maximum memory usage in percentage for the AbfsOutputStream. By default
+  write memory usage percentage             will be 20.
 
 ## <a name="troubleshooting"></a> Troubleshooting
 

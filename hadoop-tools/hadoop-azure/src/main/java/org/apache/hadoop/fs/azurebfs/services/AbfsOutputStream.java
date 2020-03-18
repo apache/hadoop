@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.nio.ByteBuffer;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutionException;
@@ -35,16 +34,15 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
@@ -56,6 +54,7 @@ import static org.apache.hadoop.io.IOUtils.wrapException;
  */
 public class AbfsOutputStream extends OutputStream implements Syncable, StreamCapabilities {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsOutputStream.class);
+
   private final AbfsClient client;
   private final String path;
   private long position;
@@ -71,80 +70,71 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private byte[] buffer;
   private int bufferIndex;
 
-  private static int maxConcurrentRequestcount;
-  private static int maxBufferCount;
+  private final ConcurrentLinkedDeque<WriteOperation> writeOperations;
 
-  private ConcurrentLinkedDeque<WriteOperation> writeOperations;
-  private static final Object INIT_LOCK = new Object();
   private static ThreadPoolExecutor threadExecutor;
   private static ExecutorCompletionService<Void> completionService;
-
-  private static final int ONE_MB = 1024 * 1024;
-  private static final int HUNDRED_MB = 100 * ONE_MB;
-  private static final int MIN_MEMORY_THRESHOLD = HUNDRED_MB;
-
   /**
-   * Queue storing buffers with the size of the Azure block ready for
+   * Pool storing buffers with the size of the Azure block ready for
    * reuse. The pool allows reusing the blocks instead of allocating new
    * blocks. After the data is sent to the service, the buffer is returned
    * back to the queue
    */
-  private static final ElasticByteBufferPool BYTE_BUFFER_POOL
-      = new ElasticByteBufferPool();
-  private static AtomicInteger buffersToBeReturned = new AtomicInteger(0);
-
-  static {
-    if (threadExecutor == null) {
-      synchronized (INIT_LOCK) {
-        if (threadExecutor == null) {
-          int availableProcessors = Runtime.getRuntime().availableProcessors();
-          maxConcurrentRequestcount = 4 * availableProcessors;
-          maxBufferCount = maxConcurrentRequestcount + availableProcessors + 1;
-          ThreadFactory deamonThreadFactory = new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable runnable) {
-              Thread deamonThread = Executors.defaultThreadFactory()
-                  .newThread(runnable);
-              deamonThread.setDaemon(true);
-              return deamonThread;
-            }
-          };
-          threadExecutor = new ThreadPoolExecutor(maxConcurrentRequestcount,
-              maxConcurrentRequestcount, 10L, TimeUnit.SECONDS,
-              new LinkedBlockingQueue<>(), deamonThreadFactory);
-          completionService = new ExecutorCompletionService<>(threadExecutor);
-        }
-      }
-    }
-  }
+  private static AbfsByteArrayPool byteArrayPool;
 
   public AbfsOutputStream(
       final AbfsClient client,
       final String path,
       final long position,
-      final int bufferSize,
-      final boolean supportFlush,
-      final boolean disableOutputStreamFlush) {
+      final AbfsConfiguration abfsConfiguration) {
     this.client = client;
     this.path = path;
     this.position = position;
     this.closed = false;
-    this.supportFlush = supportFlush;
-    this.disableOutputStreamFlush = disableOutputStreamFlush;
+    this.supportFlush = abfsConfiguration.isFlushEnabled();
+    this.disableOutputStreamFlush = abfsConfiguration.isOutputStreamFlushDisabled();
     this.lastError = null;
     this.lastFlushOffset = 0;
-    this.bufferSize = bufferSize;
-    this.buffer = BYTE_BUFFER_POOL.getBuffer(false, bufferSize).array();
+    this.bufferSize = abfsConfiguration.getWriteBufferSize();
     this.bufferIndex = 0;
     this.writeOperations = new ConcurrentLinkedDeque<>();
+
+    this.buffer = new byte[bufferSize];
+    init(abfsConfiguration);
+  }
+
+  private static synchronized void init(final AbfsConfiguration conf) {
+    if (threadExecutor != null) {
+      return;
+    }
+    int availableProcessors = Runtime.getRuntime().availableProcessors();
+    int maxConcurrentThreadCount =
+        conf.getWriteConcurrencyFactor() * availableProcessors;
+
+    byteArrayPool = new AbfsByteArrayPool(conf.getWriteBufferSize(),
+        maxConcurrentThreadCount, conf.getMaxWriteMemoryUsagePercentage());
+
+    ThreadFactory daemonThreadFactory = new ThreadFactory() {
+      @Override
+      public Thread newThread(Runnable runnable) {
+        Thread daemonThread = Executors.defaultThreadFactory()
+            .newThread(runnable);
+        daemonThread.setDaemon(true);
+        return daemonThread;
+      }
+    };
+    threadExecutor = new ThreadPoolExecutor(maxConcurrentThreadCount,
+        maxConcurrentThreadCount, 10L, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<>(), daemonThreadFactory);
+    completionService = new ExecutorCompletionService<>(threadExecutor);
   }
 
   /**
-   * Query the stream for a specific capability.
-   *
-   * @param capability string to query the stream support for.
-   * @return true for hsync and hflush.
-   */
+ * Query the stream for a specific capability.
+ *
+ * @param capability string to query the stream support for.
+ * @return true for hsync and hflush.
+ */
   @Override
   public boolean hasCapability(String capability) {
     switch (capability.toLowerCase(Locale.ENGLISH)) {
@@ -309,44 +299,28 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       return;
     }
 
-    final byte[] bytes = buffer;
+    final byte[] byteArray = buffer;
     final int bytesLength = bufferIndex;
     bufferIndex = 0;
     final long offset = position;
     position += bytesLength;
-
-    if (Runtime.getRuntime().freeMemory() < MIN_MEMORY_THRESHOLD
-        && buffersToBeReturned.get() > 0) {
-      LOG.debug("Low memory");
-      waitForTaskToComplete();
-    }
-    if (BYTE_BUFFER_POOL.size(false) < 1
-        && buffersToBeReturned.get() >= maxBufferCount) {
-      waitForTaskToComplete();
-    }
-
-    buffer = BYTE_BUFFER_POOL.getBuffer(false, bufferSize).array();
-    buffersToBeReturned.incrementAndGet();
-
+    buffer = byteArrayPool.get();
     final Future<Void> job = completionService.submit(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         AbfsPerfTracker tracker = client.getAbfsPerfTracker();
         try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
                 "writeCurrentBufferToService", "append")) {
-          AbfsRestOperation op = client.append(path, offset, bytes, 0,
+          AbfsRestOperation op = client.append(path, offset, byteArray, 0,
                   bytesLength);
           perfInfo.registerResult(op.getResult());
-          BYTE_BUFFER_POOL.putBuffer(ByteBuffer.wrap(bytes));
-          buffersToBeReturned.decrementAndGet();
+          byteArrayPool.release(byteArray);
           perfInfo.registerSuccess(true);
           return null;
         }
       }
     });
-
     writeOperations.add(new WriteOperation(job, offset, bytesLength));
-
     // Try to shrink the queue
     shrinkWriteOperationQueue();
   }
@@ -425,7 +399,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     for (completed = false; completionService.poll() != null; completed = true) {
       // keep polling until there is no data
     }
-
     if (!completed) {
       try {
         completionService.take();
@@ -454,7 +427,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   @VisibleForTesting
   public synchronized void waitForPendingUploads()
-      throws IOException, ExecutionException, InterruptedException {
+      throws ExecutionException, InterruptedException {
       writeOperations.getFirst().task.get();
   }
 }
