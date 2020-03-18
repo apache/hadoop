@@ -24,6 +24,7 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
@@ -499,6 +500,19 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       assertComparePairsSize(comparePairs, 1);
       checkForViolationInPairs(file, comparePairs,
           S3GuardFsck.Violation.ORPHAN_DDB_ENTRY);
+
+      // fix the violation
+      s3GuardFsck.fixViolations(
+          comparePairs.stream().filter(cP -> cP.getViolations()
+              .contains(S3GuardFsck.Violation.ORPHAN_DDB_ENTRY))
+              .collect(Collectors.toList())
+      );
+
+      // assert that the violation is fixed
+      final List<S3GuardFsck.ComparePair> fixedComparePairs =
+          s3GuardFsck.checkDdbInternalConsistency(cwd);
+      checkNoViolationInPairs(file, fixedComparePairs,
+          S3GuardFsck.Violation.ORPHAN_DDB_ENTRY);
     } finally {
       cleanup(file, cwd);
     }
@@ -596,14 +610,27 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
         .contains(violation);
   }
 
-  private void checkNoViolationInPairs(Path file2,
+  /**
+   * Check that there is no violation in the pair provided.
+   *
+   * @param file the path to filter to in the comparePairs list.
+   * @param comparePairs the list to validate.
+   * @param violation the violation that should not be in the list.
+   */
+  private void checkNoViolationInPairs(Path file,
       List<S3GuardFsck.ComparePair> comparePairs,
       S3GuardFsck.Violation violation) {
-    final S3GuardFsck.ComparePair file2Pair = comparePairs.stream()
-        .filter(p -> p.getPath().equals(file2))
+
+    if (comparePairs.size() == 0) {
+      LOG.info("Compare pairs is empty, so there's no violation. (As expected.)");
+      return;
+    }
+
+    final S3GuardFsck.ComparePair comparePair = comparePairs.stream()
+        .filter(p -> p.getPath().equals(file))
         .findFirst().get();
-    assertNotNull("The pair should not be null.", file2Pair);
-    Assertions.assertThat(file2Pair.getViolations())
+    assertNotNull("The pair should not be null.", comparePair);
+    Assertions.assertThat(comparePair.getViolations())
         .describedAs("Violations in the pair")
         .doesNotContain(violation);
   }
