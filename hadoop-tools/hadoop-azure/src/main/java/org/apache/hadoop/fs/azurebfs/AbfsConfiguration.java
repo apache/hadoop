@@ -125,6 +125,11 @@ public class AbfsConfiguration{
       DefaultValue = MAX_CONCURRENT_WRITE_THREADS)
   private int maxConcurrentWriteThreads;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_LIST_MAX_RESULTS,
+      MinValue = 1,
+      DefaultValue = DEFAULT_AZURE_LIST_MAX_RESULTS)
+  private int listMaxResults;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CONCURRENT_CONNECTION_VALUE_IN,
       MinValue = 1,
       DefaultValue = MAX_CONCURRENT_READ_THREADS)
@@ -432,6 +437,10 @@ public class AbfsConfiguration{
     return this.maxConcurrentReadThreads;
   }
 
+  public int getListMaxResults() {
+    return this.listMaxResults;
+  }
+
   public boolean getTolerateOobAppends() {
     return this.tolerateOobAppends;
   }
@@ -700,6 +709,11 @@ public class AbfsConfiguration{
   @VisibleForTesting
   void setDisableOutputStreamFlush(boolean disableOutputStreamFlush) {
     this.disableOutputStreamFlush = disableOutputStreamFlush;
+  }
+
+  @VisibleForTesting
+  void setListMaxResults(int listMaxResults) {
+    this.listMaxResults = listMaxResults;
   }
 
   private String getTrimmedPasswordString(String key, String defaultValue) throws IOException {
