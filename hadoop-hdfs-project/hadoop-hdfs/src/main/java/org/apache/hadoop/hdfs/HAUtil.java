@@ -57,10 +57,14 @@ import org.apache.hadoop.security.UserGroupInformation;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class HAUtil {
-  
+
+  public static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(HAUtil.class.getName());
+
   private static final String[] HA_SPECIAL_INDEPENDENT_KEYS = new String[]{
     DFS_NAMENODE_RPC_ADDRESS_KEY,
     DFS_NAMENODE_RPC_BIND_HOST_KEY,
@@ -273,8 +277,13 @@ public class HAUtil {
       List<ClientProtocol> namenodes =
           getProxiesForAllNameNodesInNameservice(dfsConf, nsId);
       for (ClientProtocol proxy : namenodes) {
-        if (proxy.getHAServiceState().equals(HAServiceState.ACTIVE)) {
-          inAddr = RPC.getServerAddress(proxy);
+        try {
+          if (proxy.getHAServiceState().equals(HAServiceState.ACTIVE)) {
+            inAddr = RPC.getServerAddress(proxy);
+          }
+        } catch (Exception e) {
+          //Ignore the exception while connecting to a namenode.
+          LOG.debug("Error while connecting to namenode", e);
         }
       }
     } else {
