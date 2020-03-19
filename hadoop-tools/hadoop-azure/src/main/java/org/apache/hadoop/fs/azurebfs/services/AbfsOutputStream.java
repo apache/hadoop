@@ -105,6 +105,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   private static synchronized void init(final AbfsConfiguration conf) {
     if (threadExecutor != null) {
+      byteArrayPool.resetBufferSize(conf.getWriteBufferSize());
       return;
     }
     int availableProcessors = Runtime.getRuntime().availableProcessors();

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import org.checkerframework.checker.units.qual.min;
+
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -26,7 +28,7 @@ import java.util.Queue;
  */
 public class AbfsByteArrayPool {
 
-  private final Queue<byte[]> queue = new LinkedList<>();
+  private Queue<byte[]> queue = new LinkedList<>();
   private int buffersToBeReturned;
 
   private int bufferSize;
@@ -75,21 +77,27 @@ public class AbfsByteArrayPool {
    *                  than the minimum required byte[] objects.
    * @return true if success
    */
-  public boolean release(byte[] byteArray) {
-    boolean status = false;
-    if (this.size() >= minBuffersRequiredInPool) {
-      status = true;
-    } else {
-      status = queue.add(byteArray);
+  public void release(byte[] byteArray) {
+    if (byteArray != null && byteArray.length != bufferSize
+        || this.size() >= minBuffersRequiredInPool) {
+      return;
     }
+    queue.add(byteArray);
     synchronized (this) {
       buffersToBeReturned--;
       notifyAll();
     }
-    return status;
   }
 
   private int size() {
     return queue.size();
+  }
+
+  public void resetBufferSize(int bufferSize) {
+    if (this.bufferSize == bufferSize) {
+      return;
+    }
+    queue = new LinkedList<>();
+    this.bufferSize = bufferSize;
   }
 }
