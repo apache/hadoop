@@ -79,6 +79,7 @@ public class SchedConfCLI extends Configured implements Tool {
   private static final String GET_SCHEDULER_CONF = "getConf";
   private static final String FORMAT_CONF = "formatConfig";
   private static final String HELP_CMD = "help";
+  private static final String SPLIT_BY_SLASH_COMMA = "(?<!\\\\)\\,";
 
   private static final String CONF_ERR_MSG = "Specify configuration key " +
       "value as confKey=confVal.";
@@ -410,7 +411,8 @@ public class SchedConfCLI extends Configured implements Tool {
       return;
     }
     HashMap<String, String> globalUpdates = new HashMap<>();
-    for (String globalUpdate : args.split(",")) {
+    for (String globalUpdate : args.split(SPLIT_BY_SLASH_COMMA)) {
+      globalUpdate = globalUpdate.replace("\\", "");
       putKeyValuePair(globalUpdates, globalUpdate);
     }
     updateInfo.setGlobalParams(globalUpdates);
@@ -421,8 +423,9 @@ public class SchedConfCLI extends Configured implements Tool {
     String queuePath = args[0];
     Map<String, String> queueConfigs = new HashMap<>();
     if (args.length > 1) {
-      String[] queueArgs = args[1].split(",");
+      String[] queueArgs = args[1].split(SPLIT_BY_SLASH_COMMA);
       for (int i = 0; i < queueArgs.length; ++i) {
+        queueArgs[i] = queueArgs[i].replace("\\", "");
         putKeyValuePair(queueConfigs, queueArgs[i]);
       }
     }
@@ -461,13 +464,22 @@ public class SchedConfCLI extends Configured implements Tool {
         + "Example (adding queues): yarn schedulerconf -add "
         + "\"root.a.a1:capacity=100,maximum-capacity=100;root.a.a2:capacity=0,"
         + "maximum-capacity=0\"\n"
+        + "Example (adding queues with comma in value): yarn schedulerconf "
+        + "-add \"root.default:acl_administer_queue=user1\\,user2 group1\\,"
+        + "group2,maximum-capacity=100;root.a.a2:capacity=0\"\n"
         + "Example (removing queues): yarn schedulerconf -remove \"root.a.a1;"
         + "root.a.a2\"\n"
         + "Example (updating queues): yarn schedulerconf -update \"root.a.a1"
         + ":capacity=25,maximum-capacity=25;root.a.a2:capacity=75,"
         + "maximum-capacity=75\"\n"
+        + "Example (updating queues with comma in value): yarn schedulerconf "
+        + "-update \"root.default:acl_administer_queue=user1\\,user2 group1\\,"
+        + "group2,maximum-capacity=25;root.a.a2:capacity=75\"\n"
         + "Example (global scheduler update): yarn schedulerconf "
         + "-global yarn.scheduler.capacity.maximum-applications=10000\n"
+        + "Example (global scheduler update with comma in value): yarn "
+        + "schedulerconf "
+        + "-global \"acl_administer_queue=user1\\,user2 group1\\,group2\"\n"
         + "Example (format scheduler configuration): yarn schedulerconf "
         + "-format\n"
         + "Example (get scheduler configuration): yarn schedulerconf "

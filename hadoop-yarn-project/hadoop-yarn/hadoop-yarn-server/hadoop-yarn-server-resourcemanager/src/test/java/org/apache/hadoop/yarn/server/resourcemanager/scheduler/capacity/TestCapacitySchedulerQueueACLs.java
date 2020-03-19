@@ -17,6 +17,7 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,8 +35,10 @@ public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {
         QUEUEA, QUEUEB });
 
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + QUEUEA, 50f);
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + QUEUEB, 50f);
+    setQueueCapacity(csConf, 50,
+        CapacitySchedulerConfiguration.ROOT + "." + QUEUEA);
+    setQueueCapacity(csConf, 50,
+        CapacitySchedulerConfiguration.ROOT + "." + QUEUEB);
 
     Map<QueueACL, AccessControlList> aclsOnQueueA =
         new HashMap<QueueACL, AccessControlList>();
@@ -70,5 +73,73 @@ public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
         CapacityScheduler.class.getName());
 
     return csConf;
+  }
+
+  @Override
+  public String getQueueD() {
+    return QUEUED;
+  }
+
+  @Override
+  public String getQueueD1() {
+    return QUEUED1;
+  }
+
+  /**
+   * Updates the configuration with the following queue hierarchy:
+   * root
+   *    |
+   *    D
+   *    |
+   *    D1.
+   * @param rootAcl administer queue and submit application ACL for root queue
+   * @param queueDAcl administer queue and submit application ACL for D queue
+   * @param queueD1Acl administer queue and submit application ACL for D1 queue
+   * @throws IOException
+   */
+  @Override
+  public void updateConfigWithDAndD1Queues(String rootAcl, String queueDAcl,
+              String queueD1Acl) throws IOException {
+    CapacitySchedulerConfiguration csConf =
+        (CapacitySchedulerConfiguration) getConf();
+    csConf.clear();
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] {QUEUED, QUEUEA, QUEUEB});
+
+    String dPath = CapacitySchedulerConfiguration.ROOT + "." + QUEUED;
+    String d1Path = dPath + "." + QUEUED1;
+    csConf.setQueues(dPath, new String[] {QUEUED1});
+    setQueueCapacity(csConf, 100, d1Path);
+    setQueueCapacity(csConf, 30, CapacitySchedulerConfiguration.ROOT
+                                     + "." + QUEUEA);
+    setQueueCapacity(csConf, 50, CapacitySchedulerConfiguration.ROOT
+                                     + "." + QUEUEB);
+    setQueueCapacity(csConf, 20, dPath);
+
+    if (rootAcl != null) {
+      setAdminAndSubmitACL(csConf, rootAcl,
+          CapacitySchedulerConfiguration.ROOT);
+    }
+
+    if (queueDAcl != null) {
+      setAdminAndSubmitACL(csConf, queueDAcl, dPath);
+    }
+
+    if (queueD1Acl != null) {
+      setAdminAndSubmitACL(csConf, queueD1Acl, d1Path);
+    }
+    resourceManager.getResourceScheduler()
+        .reinitialize(csConf, resourceManager.getRMContext());
+  }
+
+  private void setQueueCapacity(CapacitySchedulerConfiguration csConf,
+               float capacity, String queuePath) {
+    csConf.setCapacity(queuePath, capacity);
+  }
+
+  private void setAdminAndSubmitACL(CapacitySchedulerConfiguration csConf,
+               String queueAcl, String queuePath) {
+    csConf.setAcl(queuePath, QueueACL.ADMINISTER_QUEUE, queueAcl);
+    csConf.setAcl(queuePath, QueueACL.SUBMIT_APPLICATIONS, queueAcl);
   }
 }

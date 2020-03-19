@@ -19,6 +19,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.QUEUE_MAPPING;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -180,7 +181,8 @@ public class TestQueuePlacementConverter {
     Map<String, String> properties = convert(false);
 
     verifyMapping(properties, "u:%user:%primary_group.%user");
-    verifyZeroInteractions(ruleHandler);
+    verify(ruleHandler).handleDynamicMappedQueue(
+        eq("u:%user:%primary_group.%user"), eq(false));
   }
 
   @Test
@@ -194,7 +196,8 @@ public class TestQueuePlacementConverter {
     Map<String, String> properties = convert(false);
 
     verifyMapping(properties, "u:%user:%secondary_group.%user");
-    verifyZeroInteractions(ruleHandler);
+    verify(ruleHandler).handleDynamicMappedQueue(
+        eq("u:%user:%secondary_group.%user"), eq(false));
   }
 
   @Test
@@ -209,7 +212,8 @@ public class TestQueuePlacementConverter {
     Map<String, String> properties = convert(false);
 
     verifyMapping(properties, "u:%user:abc.%user");
-    verifyZeroInteractions(ruleHandler);
+    verify(ruleHandler).handleDynamicMappedQueue(
+        eq("u:%user:abc.%user"), eq(false));
   }
 
   @Test

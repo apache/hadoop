@@ -80,6 +80,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.impl.FunctionsRaisingIOE;
+import org.apache.hadoop.fs.impl.WrappedIOException;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
 import org.apache.hadoop.fs.s3a.Constants;
@@ -324,8 +325,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
   /** Invoker for write operations. */
   private Invoker writeOp;
 
+  /** Invoker for scan operations. */
+  private Invoker scanOp;
+
   private final AtomicLong readThrottleEvents = new AtomicLong(0);
   private final AtomicLong writeThrottleEvents = new AtomicLong(0);
+  private final AtomicLong scanThrottleEvents = new AtomicLong(0);
   private final AtomicLong batchWriteCapacityExceededEvents = new AtomicLong(0);
 
   /**
@@ -423,11 +428,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // use the bucket as the DynamoDB table name if not specified in config
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY, bucket);
     initDataAccessRetries(conf);
-
-    // set up a full retry policy
-    invoker = new Invoker(new S3GuardDataAccessRetryPolicy(conf),
-        this::retryEvent
-    );
 
     this.ttlTimeProvider = ttlTp;
 
@@ -543,6 +543,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         = new S3GuardDataAccessRetryPolicy(config);
     readOp = new Invoker(throttledRetryRetryPolicy, this::readRetryEvent);
     writeOp = new Invoker(throttledRetryRetryPolicy, this::writeRetryEvent);
+    scanOp = new Invoker(throttledRetryRetryPolicy, this::scanRetryEvent);
   }
 
   @Override
@@ -810,33 +811,31 @@ public class DynamoDBMetadataStore implements MetadataStore,
     checkPath(path);
     LOG.debug("Listing table {} in region {}: {}", tableName, region, path);
 
+    final QuerySpec spec = new QuerySpec()
+        .withHashKey(pathToParentKeyAttribute(path))
+        .withConsistentRead(true); // strictly consistent read
+    final List<PathMetadata> metas = new ArrayList<>();
     // find the children in the table
-    return readOp.retry(
+    final ItemCollection<QueryOutcome> items = scanOp.retry(
         "listChildren",
         path.toString(),
         true,
-        () -> {
-          final QuerySpec spec = new QuerySpec()
-              .withHashKey(pathToParentKeyAttribute(path))
-              .withConsistentRead(true); // strictly consistent read
-          final ItemCollection<QueryOutcome> items = table.query(spec);
+        () -> table.query(spec));
+    // now wrap the result with retry logic
+    try {
+      for (Item item : wrapWithRetries(items)) {
+        metas.add(itemToPathMetadata(item, username));
+      }
+    } catch (WrappedIOException e) {
+      // failure in the iterators; unwrap.
+      throw e.getCause();
+    }
 
-          final List<PathMetadata> metas = new ArrayList<>();
-          for (Item item : items) {
-            DDBPathMetadata meta = itemToPathMetadata(item, username);
-            metas.add(meta);
-          }
-
-          // Minor race condition here - if the path is deleted between
-          // getting the list of items and the directory metadata we might
-          // get a null in DDBPathMetadata.
-          DDBPathMetadata dirPathMeta = get(path);
-
-          final DirListingMetadata dirListing =
-              getDirListingMetadataFromDirMetaAndList(path, metas,
-                  dirPathMeta);
-          return dirListing;
-        });
+    // Minor race condition here - if the path is deleted between
+    // getting the list of items and the directory metadata we might
+    // get a null in DDBPathMetadata.
+    return getDirListingMetadataFromDirMetaAndList(path, metas,
+        get(path));
   }
 
   DirListingMetadata getDirListingMetadataFromDirMetaAndList(Path path,
@@ -1993,6 +1992,22 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
+   * Callback on a scan operation retried.
+   * @param text text of the operation
+   * @param ex exception
+   * @param attempts number of attempts
+   * @param idempotent is the method idempotent (this is assumed to be true)
+   */
+  void scanRetryEvent(
+      String text,
+      IOException ex,
+      int attempts,
+      boolean idempotent) {
+    scanThrottleEvents.incrementAndGet();
+    retryEvent(text, ex, attempts, idempotent);
+  }
+
+  /**
    * Callback from {@link Invoker} when an operation is retried.
    * @param text text of the operation
    * @param ex exception
@@ -2048,14 +2063,38 @@ public class DynamoDBMetadataStore implements MetadataStore,
     return writeThrottleEvents.get();
   }
 
+  /**
+   * Get the count of scan throttle events.
+   * @return the current count of scan throttle events.
+   */
+  @VisibleForTesting
+  public long getScanThrottleEventCount() {
+    return scanThrottleEvents.get();
+  }
+
   @VisibleForTesting
   public long getBatchWriteCapacityExceededCount() {
     return batchWriteCapacityExceededEvents.get();
   }
 
-  @VisibleForTesting
+  /**
+   * Get the operation invoker for write operations.
+   * @return an invoker for retrying mutating operations on a store.
+   */
   public Invoker getInvoker() {
-    return invoker;
+    return writeOp;
+  }
+
+  /**
+   * Wrap an iterator returned from any scan with a retrying one.
+   * This includes throttle handling.
+   * Retries will update the relevant counters/metrics for scan operations.
+   * @param source source iterator
+   * @return a retrying iterator.
+   */
+  public <T> Iterable<T> wrapWithRetries(
+      final Iterable<T> source) {
+    return new RetryingCollection<>("scan dynamoDB table", scanOp, source);
   }
 
   /**

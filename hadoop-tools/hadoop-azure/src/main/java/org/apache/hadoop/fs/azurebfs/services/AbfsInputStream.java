@@ -25,16 +25,22 @@ import java.net.HttpURLConnection;
 
 import com.google.common.base.Preconditions;
 
+import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+
+import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
  * The AbfsInputStream for AbfsClient.
  */
-public class AbfsInputStream extends FSInputStream {
+public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
+        StreamCapabilities {
+
   private final AbfsClient client;
   private final Statistics statistics;
   private final String path;
@@ -389,5 +395,24 @@ public class AbfsInputStream extends FSInputStream {
   @Override
   public boolean markSupported() {
     return false;
+  }
+
+  @Override
+  public synchronized void unbuffer() {
+    buffer = null;
+    // Preserve the original position returned by getPos()
+    fCursor = fCursor - limit + bCursor;
+    fCursorAfterLastRead = -1;
+    bCursor = 0;
+    limit = 0;
+  }
+
+  @Override
+  public boolean hasCapability(String capability) {
+    return StreamCapabilities.UNBUFFER.equals(toLowerCase(capability));
+  }
+
+  byte[] getBuffer() {
+    return buffer;
   }
 }

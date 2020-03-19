@@ -1152,6 +1152,15 @@
   </property>
 
   <property>
+    <description>
+      How long the container executor should wait for the exit code file to
+      appear after a reacquired container has exited.
+    </description>
+    <name>yarn.nodemanager.container-executor.exit-code-file.timeout-ms</name>
+    <value>2000</value>
+  </property>
+
+  <property>
     <description>Max number of OPPORTUNISTIC containers to queue at the
       nodemanager.</description>
     <name>yarn.nodemanager.opportunistic-containers-max-queue-length</name>

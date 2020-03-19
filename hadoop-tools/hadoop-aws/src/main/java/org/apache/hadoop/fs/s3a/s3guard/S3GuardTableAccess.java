@@ -36,6 +36,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -44,6 +45,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.C
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.PARENT;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.TABLE_VERSION;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.itemToPathMetadata;
+import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.pathToKey;
 
 /**
  * Package-scoped accessor to table state in S3Guard.
@@ -70,6 +72,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.i
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@Retries.OnceRaw
 class S3GuardTableAccess {
 
   private static final Logger LOG =
@@ -107,6 +110,7 @@ class S3GuardTableAccess {
    * @param spec query spec.
    * @return the outcome.
    */
+  @Retries.OnceRaw
   ItemCollection<QueryOutcome> query(QuerySpec spec) {
     return table.query(spec);
   }
@@ -118,22 +122,31 @@ class S3GuardTableAccess {
    * @param spec query spec.
    * @return an iterator over path entries.
    */
+  @Retries.OnceRaw
   Iterable<DDBPathMetadata> queryMetadata(QuerySpec spec) {
     return new DDBPathMetadataCollection<>(query(spec));
   }
 
+  @Retries.OnceRaw
   ItemCollection<ScanOutcome> scan(ExpressionSpecBuilder spec) {
     return table.scan(spec.buildForScan());
   }
 
+  @Retries.OnceRaw
   Iterable<DDBPathMetadata> scanMetadata(ExpressionSpecBuilder spec) {
     return new DDBPathMetadataCollection<>(scan(spec));
   }
 
+  @Retries.OnceRaw
   void delete(Collection<Path> paths) {
     paths.stream()
         .map(PathMetadataDynamoDBTranslation::pathToKey)
         .forEach(table::deleteItem);
+  }
+
+  @Retries.OnceRaw
+  void delete(Path path) {
+    table.deleteItem(pathToKey(path));
   }
 
   /**
@@ -191,11 +204,13 @@ class S3GuardTableAccess {
     }
 
     @Override
+    @Retries.OnceRaw
     public boolean hasNext() {
       return it.hasNext();
     }
 
     @Override
+    @Retries.OnceRaw
     public DDBPathMetadata next() {
       Item item = it.next();
       Pair<String, String> key = primaryKey(item);

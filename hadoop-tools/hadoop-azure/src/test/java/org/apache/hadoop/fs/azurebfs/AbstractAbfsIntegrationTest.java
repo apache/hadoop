@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -73,6 +74,7 @@ public abstract class AbstractAbfsIntegrationTest extends
   private String accountName;
   private String testUrl;
   private AuthType authType;
+  private boolean useConfiguredFileSystem = false;
 
   protected AbstractAbfsIntegrationTest() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
@@ -134,7 +136,9 @@ public abstract class AbstractAbfsIntegrationTest extends
     createFileSystem();
 
     // Only live account without namespace support can run ABFS&WASB compatibility tests
-    if (!isIPAddress && !abfs.getIsNamespaceEnabled()) {
+    if (!isIPAddress
+        && (abfsConfig.getAuthType(accountName) != AuthType.SAS)
+        && !abfs.getIsNamespaceEnabled()) {
       final URI wasbUri = new URI(abfsUrlToWasbUrl(getTestUrl()));
       final AzureNativeFileSystemStore azureNativeFileSystemStore =
           new AzureNativeFileSystemStore();
@@ -167,19 +171,21 @@ public abstract class AbstractAbfsIntegrationTest extends
         return;
       }
 
-      final AzureBlobFileSystemStore abfsStore = abfs.getAbfsStore();
-      abfsStore.deleteFilesystem();
+      // Delete all uniquely created filesystem from the account
+      if (!useConfiguredFileSystem) {
+        final AzureBlobFileSystemStore abfsStore = abfs.getAbfsStore();
+        abfsStore.deleteFilesystem();
 
-      AbfsRestOperationException ex = intercept(
-              AbfsRestOperationException.class,
-              new Callable<Hashtable<String, String>>() {
-                @Override
-                public Hashtable<String, String> call() throws Exception {
-                  return abfsStore.getFilesystemProperties();
-                }
-              });
-      if (FILE_SYSTEM_NOT_FOUND.getStatusCode() != ex.getStatusCode()) {
-        LOG.warn("Deleted test filesystem may still exist: {}", abfs, ex);
+        AbfsRestOperationException ex = intercept(AbfsRestOperationException.class,
+            new Callable<Hashtable<String, String>>() {
+              @Override
+              public Hashtable<String, String> call() throws Exception {
+                return abfsStore.getFilesystemProperties();
+              }
+            });
+        if (FILE_SYSTEM_NOT_FOUND.getStatusCode() != ex.getStatusCode()) {
+          LOG.warn("Deleted test filesystem may still exist: {}", abfs, ex);
+        }
       }
     } catch (Exception e) {
       LOG.warn("During cleanup: {}", e, e);
@@ -187,6 +193,32 @@ public abstract class AbstractAbfsIntegrationTest extends
       IOUtils.closeStream(abfs);
       abfs = null;
     }
+  }
+
+
+  public void loadConfiguredFileSystem() throws Exception {
+      // disable auto-creation of filesystem
+      abfsConfig.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
+          false);
+
+      // AbstractAbfsIntegrationTest always uses a new instance of FileSystem,
+      // need to disable that and force filesystem provided in test configs.
+      String[] authorityParts =
+          (new URI(rawConfig.get(FS_AZURE_CONTRACT_TEST_URI))).getRawAuthority().split(
+        AbfsHttpConstants.AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER, 2);
+      this.fileSystemName = authorityParts[0];
+
+      // Reset URL with configured filesystem
+      final String abfsUrl = this.getFileSystemName() + "@" + this.getAccountName();
+      URI defaultUri = null;
+
+      defaultUri = new URI(abfsScheme, abfsUrl, null, null, null);
+
+      this.testUrl = defaultUri.toString();
+      abfsConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
+          defaultUri.toString());
+
+    useConfiguredFileSystem = true;
   }
 
   public AzureBlobFileSystem getFileSystem() throws IOException {

@@ -1000,6 +1000,26 @@ options are covered in [Testing](./testing.md).
   converged to Integer.MAX_VALUE milliseconds
   </description>
 </property>
+
+<property>
+  <name>fs.s3a.bucket.probe</name>
+  <value>2</value>
+  <description>
+     The value can be 0, 1 or 2 (default).
+     When set to 0, bucket existence checks won't be done
+     during initialization thus making it faster.
+     Though it should be noted that when the bucket is not available in S3,
+     or if fs.s3a.endpoint points to the wrong instance of a private S3 store
+     consecutive calls like listing, read, write etc. will fail with
+     an UnknownStoreException.
+     When set to 1, the bucket existence check will be done using the
+     V1 API of the S3 protocol which doesn't verify the client's permissions
+     to list or read data in the bucket.
+     When set to 2, the bucket existence check will be done using the
+     V2 API of the S3 protocol which does verify that the
+     client has permission to read the bucket.
+  </description>
+</property>
 ```
 
 ## <a name="retry_and_recovery"></a>Retry and Recovery
