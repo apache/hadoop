@@ -93,12 +93,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.disableOutputStreamFlush = abfsConfiguration.isOutputStreamFlushDisabled();
     this.lastError = null;
     this.lastFlushOffset = 0;
-    this.bufferSize = abfsConfiguration.getWriteBufferSize();
     this.bufferIndex = 0;
     this.writeOperations = new ConcurrentLinkedDeque<>();
 
-    this.buffer = new byte[bufferSize];
     init(abfsConfiguration);
+    this.buffer = new byte[bufferSize];
   }
 
   private static synchronized void init(final AbfsConfiguration conf) {
@@ -120,6 +119,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     if (bufferSize == conf.getWriteBufferSize()) {
       return;
     }
+    bufferSize = conf.getWriteBufferSize();
     writeBufferPool = new AbfsWriteBufferPool(conf.getWriteBufferSize(),
         maxConcurrentThreadCount, conf.getMaxWriteMemoryUsagePercentage());
   }
