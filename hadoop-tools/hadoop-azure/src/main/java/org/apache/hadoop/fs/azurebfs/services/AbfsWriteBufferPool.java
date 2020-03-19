@@ -80,11 +80,9 @@ public class AbfsWriteBufferPool {
     if (numBuffersInUse < 0) {
       numBuffersInUse = 0;
     }
-    if (byteArray.length != bufferSize
-        || freeBuffers.size() >= minFreeBuffers) {
-      return;
+    if (byteArray.length == bufferSize && freeBuffers.size() < minFreeBuffers) {
+      freeBuffers.add(byteArray);
     }
-    freeBuffers.add(byteArray);
     notifyAll();
   }
 }

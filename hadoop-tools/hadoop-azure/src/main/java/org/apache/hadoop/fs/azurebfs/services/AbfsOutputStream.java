@@ -315,10 +315,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
     final byte[] byteArray = buffer;
     final int bytesLength = bufferIndex;
+    buffer = writeBufferPool.get();
     bufferIndex = 0;
     final long offset = position;
     position += bytesLength;
-    buffer = writeBufferPool.get();
     final Future<Void> job = completionService.submit(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
