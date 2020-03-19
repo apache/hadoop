@@ -18,30 +18,27 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import org.checkerframework.checker.units.qual.min;
-
 import java.util.LinkedList;
 import java.util.Queue;
 
 /**
  * Pool for byte[]
  */
-public class AbfsByteArrayPool {
+public class AbfsWriteBufferPool {
 
-  private Queue<byte[]> queue = new LinkedList<>();
-  private int buffersToBeReturned;
-
+  private Queue<byte[]> freeBuffers = new LinkedList<>();
+  private int numBuffersInUse;
+  private int maxBuffersInUse;
+  private int minFreeBuffers;
   private int bufferSize;
-  private int maxBuffersInMemory;
-  private int minBuffersRequiredInPool;
 
-  public AbfsByteArrayPool(final int bufferSize,
+  public AbfsWriteBufferPool(final int bufferSize,
       final int maxConcurrentThreadCount,
       final int maxWriteMemUsagePercentage) {
     this.bufferSize = bufferSize;
-    this.buffersToBeReturned = 0;
+    this.numBuffersInUse = 0;
     int availableProcessors = Runtime.getRuntime().availableProcessors();
-    this.minBuffersRequiredInPool = maxConcurrentThreadCount + 1;
+    this.minFreeBuffers = maxConcurrentThreadCount + 1;
 
     double maxAvailableMemory = Runtime.getRuntime().maxMemory();
     double maxMemoryAllowedForPool =
@@ -49,55 +46,45 @@ public class AbfsByteArrayPool {
     double bufferCountByMemory = maxMemoryAllowedForPool / bufferSize;
     double bufferCountByConcurrency =
         maxConcurrentThreadCount + availableProcessors + 1;
-    maxBuffersInMemory = (int) Math
+    maxBuffersInUse = (int) Math
         .ceil(Math.min(bufferCountByMemory, bufferCountByConcurrency));
   }
 
   /**
    * @return byte[] from the pool if available otherwise new byte[] is returned.
+   * Waits if pool is empty and already maximum number of objects present in
+   * memory.
    */
   public synchronized byte[] get() {
-    while (this.size() < 1 && buffersToBeReturned >= maxBuffersInMemory) {
+    while (freeBuffers.isEmpty() && numBuffersInUse >= maxBuffersInUse) {
       try {
         wait();
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
     }
-    buffersToBeReturned++;
-    if (queue.isEmpty()) {
+    numBuffersInUse++;
+    if (freeBuffers.isEmpty()) {
       return new byte[bufferSize];
     }
-    return queue.remove();
+    return freeBuffers.remove();
   }
 
   /**
    * @param byteArray The byte[] to be returned back to the pool. byteArray
    *                  is returned to the pool only if the pool contains less
    *                  than the minimum required byte[] objects.
-   * @return true if success
    */
-  public void release(byte[] byteArray) {
-    if (byteArray != null && byteArray.length != bufferSize
-        || this.size() >= minBuffersRequiredInPool) {
+  public synchronized void release(byte[] byteArray) {
+    numBuffersInUse--;
+    if (numBuffersInUse < 0) {
+      numBuffersInUse = 0;
+    }
+    if (byteArray.length != bufferSize
+        || freeBuffers.size() >= minFreeBuffers) {
       return;
     }
-    queue.add(byteArray);
-    synchronized (this) {
-      buffersToBeReturned--;
-      notifyAll();
-    }
-  }
-
-  private int size() {
-    return queue.size();
-  }
-
-  public void resetBufferSize(int bufferSize) {
-    if (this.bufferSize == bufferSize) {
-      return;
-    }
-    queue = new LinkedList<>();
-    this.bufferSize = bufferSize;
+    freeBuffers.add(byteArray);
+    notifyAll();
   }
 }

@@ -467,7 +467,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   }
 
   public OutputStream openFileForWrite(final Path path, final boolean overwrite) throws
-      AzureBlobFileSystemException {
+          AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("openFileForWrite", "getPathStatus")) {
       LOG.debug("openFileForWrite filesystem: {} path: {} overwrite: {}",
               client.getFileSystem(),
