@@ -66,6 +66,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private static int bufferSize;
   private byte[] buffer;
   private int bufferIndex;
+  private static int maxConcurrentThreadCount;
 
   private final ConcurrentLinkedDeque<WriteOperation> writeOperations;
 
@@ -101,11 +102,32 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   }
 
   private static synchronized void init(final AbfsConfiguration conf) {
-    final int maxConcurrentThreadCount = initByteArrayPool(conf);
+    initMaxThreadCount(conf);
+    initWriteBufferPool(conf);
+    initThreadPool();
+  }
+
+  private static void initMaxThreadCount(final AbfsConfiguration conf) {
+    if (maxConcurrentThreadCount > 0) {
+      return;
+    }
+    int availableProcessors = Runtime.getRuntime().availableProcessors();
+    maxConcurrentThreadCount =
+        conf.getWriteConcurrencyFactor() * availableProcessors;
+  }
+
+  private static void initWriteBufferPool(final AbfsConfiguration conf) {
+    if (bufferSize == conf.getWriteBufferSize()) {
+      return;
+    }
+    writeBufferPool = new AbfsWriteBufferPool(conf.getWriteBufferSize(),
+        maxConcurrentThreadCount, conf.getMaxWriteMemoryUsagePercentage());
+  }
+
+  private static void initThreadPool() {
     if (threadExecutor != null) {
       return;
     }
-
     ThreadFactory daemonThreadFactory = new ThreadFactory() {
       @Override
       public Thread newThread(Runnable runnable) {
@@ -119,18 +141,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         maxConcurrentThreadCount, 10L, TimeUnit.SECONDS,
         new LinkedBlockingQueue<>(), daemonThreadFactory);
     completionService = new ExecutorCompletionService<>(threadExecutor);
-  }
-
-  private static int initByteArrayPool(final AbfsConfiguration conf) {
-    if (bufferSize == conf.getWriteBufferSize()) {
-      return -1;
-    }
-    int availableProcessors = Runtime.getRuntime().availableProcessors();
-    int maxConcurrentThreadCount =
-        conf.getWriteConcurrencyFactor() * availableProcessors;
-    writeBufferPool = new AbfsWriteBufferPool(conf.getWriteBufferSize(),
-        maxConcurrentThreadCount, conf.getMaxWriteMemoryUsagePercentage());
-    return maxConcurrentThreadCount;
   }
 
   /**
