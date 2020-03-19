@@ -5777,6 +5777,16 @@
     </description>
   </property>
 
+
+  <property>
+    <name>dfs.namenode.corrupt.block.delete.immediately.enabled</name>
+    <value>true</value>
+    <description>
+      Whether the corrupt replicas should be deleted immediately, irrespective
+      of other replicas on stale storages..
+    </description>
+  </property>
+
   <property>
     <name>dfs.journalnode.edits.dir.perm</name>
     <value>700</value>

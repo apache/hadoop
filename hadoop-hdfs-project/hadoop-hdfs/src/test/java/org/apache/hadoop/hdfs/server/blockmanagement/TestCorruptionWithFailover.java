@@ -27,6 +27,8 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED;
+
 /**
  * Tests corruption of replicas in case of failover.
  */
@@ -35,6 +37,8 @@ public class TestCorruptionWithFailover {
   @Test
   public void testCorruptReplicaAfterFailover() throws Exception {
     Configuration conf = new Configuration();
+    conf.setBoolean(DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED,
+        false);
     // Enable data to be written, to less replicas in case of pipeline failure.
     conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
         MIN_REPLICATION, 2);
