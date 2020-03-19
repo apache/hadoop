@@ -104,7 +104,6 @@ final class ReadBufferManager {
       if (isAlreadyQueued(stream, requestedOffset)) {
         return; // already queued, do not queue again
       }
-
       if (freeList.isEmpty() && !tryEvict()) {
         return; // no buffers available, cannot queue anything
       }

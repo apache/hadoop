@@ -238,7 +238,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     final AbfsRestOperation op;
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
-      LOG.trace(String.format("Trigger client.read for path=%s position=%s offset=%s length=%s", path, position, offset, length));
+      LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
       op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
