@@ -27,7 +27,6 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
-import java.util.UUID;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -94,10 +93,8 @@ final class ReadBufferManager {
    * @param stream          The {@link AbfsInputStream} for which to do the read-ahead
    * @param requestedOffset The offset in the file which shoukd be read
    * @param requestedLength The length to read
-   * @param queueReadAheadRequestId unique queue request ID
    */
-  void queueReadAhead(final AbfsInputStream stream, final long requestedOffset, final int requestedLength
-      , final UUID queueReadAheadRequestId) {
+  void queueReadAhead(final AbfsInputStream stream, final long requestedOffset, final int requestedLength) {
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("Start Queueing readAhead for {} offset {} length {}",
           stream.getPath(), requestedOffset, requestedLength);
@@ -119,7 +116,6 @@ final class ReadBufferManager {
       buffer.setRequestedLength(requestedLength);
       buffer.setStatus(ReadBufferStatus.NOT_AVAILABLE);
       buffer.setLatch(new CountDownLatch(1));
-      buffer.setQueueReadAheadRequestId(queueReadAheadRequestId);
 
       Integer bufferIndex = freeList.pop();  // will return a value, since we have checked size > 0 already
 
@@ -149,8 +145,8 @@ final class ReadBufferManager {
    * @param buffer   the buffer to read data into. Note that the buffer will be written into from offset 0.
    * @return the number of bytes read
    */
-  int getBlock(final AbfsInputStream stream, final long position, final int length, final byte[] buffer,
-      final UUID queueReadAheadRequestId) throws IOException {
+  int getBlock(final AbfsInputStream stream, final long position, final int length, final byte[] buffer)
+      throws java.io.IOException {
     // not synchronized, so have to be careful with locking
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("getBlock for file {}  position {}  thread {}",
@@ -161,7 +157,7 @@ final class ReadBufferManager {
 
     int bytesRead = 0;
     synchronized (this) {
-      bytesRead = getBlockFromCompletedQueue(stream, position, length, buffer, queueReadAheadRequestId);
+      bytesRead = getBlockFromCompletedQueue(stream, position, length, buffer);
     }
     if (bytesRead > 0) {
       if (LOGGER.isTraceEnabled()) {
@@ -303,6 +299,12 @@ final class ReadBufferManager {
     return null;
   }
 
+  /**
+   * Returns buffers that failed or passed from completed queue
+   * @param stream
+   * @param requestedOffset
+   * @return
+   */
   private ReadBuffer getBufferFromCompletedQueue(final AbfsInputStream stream, final long requestedOffset) {
     for (ReadBuffer buffer : completedReadList) {
       if ((buffer.getStream() == stream) && (requestedOffset >= buffer.getOffset())) {
@@ -326,8 +328,7 @@ final class ReadBufferManager {
   }
 
   private int getBlockFromCompletedQueue(final AbfsInputStream stream, final long position, final int length,
-                                         final byte[] buffer, final UUID queueReadAheadRequestId)
-      throws IOException {
+                                         final byte[] buffer) throws IOException {
     ReadBuffer buf = getBufferFromCompletedQueue(stream, position);
 
     if (buf == null) {
@@ -335,10 +336,12 @@ final class ReadBufferManager {
     }
 
     if (buf.getStatus() == ReadBufferStatus.READ_FAILED) {
-      // is this failure from the requests queued by current queueReadAheadRequestId ?
-      // if yes, return failure exception
-      // else return 0 so that the main thread can make an attempt to read requested offset.
-      if (buf.getQueueReadAheadRequestId().equals(queueReadAheadRequestId)) {
+      // Eviction of a read buffer is triggered only when a queue request comes in
+      // and each eviction attempt tries to find one eligible buffer.
+      // Hence there are chances that an old read-ahead buffer with exception is still
+      // available. To prevent new read requests to fail due to such old buffers,
+      // return exception only from buffers that failed within last THRESHOLD_AGE_MILLISECONDS
+      if ((currentTimeMillis() - (buf.getTimeStamp()) < THRESHOLD_AGE_MILLISECONDS)) {
         // is read ahead issued from current queue request ID
         throw buf.getErrException();
       } else {
@@ -416,7 +419,6 @@ final class ReadBufferManager {
       inProgressList.remove(buffer);
       if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
         buffer.setStatus(ReadBufferStatus.AVAILABLE);
-        buffer.setTimeStamp(currentTimeMillis());
         buffer.setLength(bytesActuallyRead);
         completedReadList.add(buffer);
       } else {
@@ -425,6 +427,7 @@ final class ReadBufferManager {
       }
 
       buffer.setStatus(result);
+      buffer.setTimeStamp(currentTimeMillis());
       completedReadList.add(buffer);
     }
 

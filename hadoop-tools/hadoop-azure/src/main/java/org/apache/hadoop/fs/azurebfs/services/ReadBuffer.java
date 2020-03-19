@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
-import java.util.UUID;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 
@@ -44,9 +43,6 @@ class ReadBuffer {
   private boolean isAnyByteConsumed = false;
 
   private IOException errException = null;
-  // The unique queue request ID which identifies all the read buffers triggered from
-  // a single AbfsInputStream read request.
-  private UUID queueReadAheadRequestId = null;
 
   public AbfsInputStream getStream() {
     return stream;
@@ -102,14 +98,6 @@ class ReadBuffer {
 
   public void setErrException(final java.io.IOException errException) {
     this.errException = errException;
-  }
-
-  public UUID getQueueReadAheadRequestId() {
-    return queueReadAheadRequestId;
-  }
-
-  public void setQueueReadAheadRequestId(final UUID queueReadAheadRequestId) {
-    this.queueReadAheadRequestId = queueReadAheadRequestId;
   }
 
   public ReadBufferStatus getStatus() {

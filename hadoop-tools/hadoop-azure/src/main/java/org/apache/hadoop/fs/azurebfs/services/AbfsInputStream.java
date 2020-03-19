@@ -22,9 +22,7 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.util.UUID;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
@@ -194,19 +192,18 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       int receivedBytes;
 
       // queue read-aheads
-      UUID queueReadAheadRequestId = UUID.randomUUID();
       int numReadAheads = this.readAheadQueueDepth;
       long nextSize;
       long nextOffset = position;
       while (numReadAheads > 0 && nextOffset < contentLength) {
         nextSize = Math.min((long) bufferSize, contentLength - nextOffset);
-        ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize, queueReadAheadRequestId);
+        ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize);
         nextOffset = nextOffset + nextSize;
         numReadAheads--;
       }
 
       // try reading from buffers first
-      receivedBytes = ReadBufferManager.getBufferManager().getBlock(this, position, length, b, queueReadAheadRequestId);
+      receivedBytes = ReadBufferManager.getBufferManager().getBlock(this, position, length, b);
       if (receivedBytes > 0) {
         return receivedBytes;
       }
@@ -219,7 +216,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
   }
 
-  @VisibleForTesting
   int readRemote(long position, byte[] b, int offset, int length) throws IOException {
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
