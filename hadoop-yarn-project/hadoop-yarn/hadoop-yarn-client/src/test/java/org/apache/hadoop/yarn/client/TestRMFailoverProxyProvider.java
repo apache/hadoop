@@ -1,5 +1,3 @@
-
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -47,6 +45,12 @@ import static org.mockito.Mockito.when;
  * {@link AutoRefreshRMFailoverProxyProvider}.
  */
 public class TestRMFailoverProxyProvider {
+
+  // Default port of yarn RM
+  private static final int RM1_PORT = 8032;
+  private static final int RM2_PORT = 8031;
+  private static final int RM3_PORT = 8033;
+
   private Configuration conf;
 
   @Before
@@ -89,10 +93,8 @@ public class TestRMFailoverProxyProvider {
 
     // generate two address with different ports.
     // Default port of yarn RM
-    int port1 = 8032;
-    int port2 = 8031;
-    InetSocketAddress mockAdd1 = new InetSocketAddress(port1);
-    InetSocketAddress mockAdd2 = new InetSocketAddress(port2);
+    InetSocketAddress mockAdd1 = new InetSocketAddress(RM1_PORT);
+    InetSocketAddress mockAdd2 = new InetSocketAddress(RM2_PORT);
 
     // Mock RMProxy methods
     when(mockRMProxy.getRMAddress(any(YarnConfiguration.class),
@@ -216,14 +218,10 @@ public class TestRMFailoverProxyProvider {
     AutoRefreshRMFailoverProxyProvider<RMProxy> fpp =
         new AutoRefreshRMFailoverProxyProvider<RMProxy>();
 
-    // generate two address with different ports.
-    // Default port of yarn RM
-    int port1 = 8032;
-    int port2 = 8031;
-    int port3 = 8033;
-    InetSocketAddress mockAdd1 = new InetSocketAddress(port1);
-    InetSocketAddress mockAdd2 = new InetSocketAddress(port2);
-    InetSocketAddress mockAdd3 = new InetSocketAddress(port3);
+    // generate three address with different ports.
+    InetSocketAddress mockAdd1 = new InetSocketAddress(RM1_PORT);
+    InetSocketAddress mockAdd2 = new InetSocketAddress(RM2_PORT);
+    InetSocketAddress mockAdd3 = new InetSocketAddress(RM3_PORT);
 
 
     // Mock RMProxy methods

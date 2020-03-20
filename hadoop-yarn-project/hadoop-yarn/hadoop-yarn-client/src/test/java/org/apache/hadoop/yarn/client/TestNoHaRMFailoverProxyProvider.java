@@ -1,5 +1,3 @@
-
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with this
@@ -49,7 +47,12 @@ import static org.mockito.Mockito.when;
  * {@link AutoRefreshNoHARMFailoverProxyProvider}.
  */
 public class TestNoHaRMFailoverProxyProvider {
-  private final int numNodeManagers = 1;
+
+  // Default port of yarn RM
+  private static final int RM1_PORT = 8032;
+  private static final int RM2_PORT = 8031;
+
+  private static final int NUMNODEMANAGERS = 1;
   private Configuration conf;
 
   @Before
@@ -64,7 +67,7 @@ public class TestNoHaRMFailoverProxyProvider {
   @Test
   public void testRestartedRM() throws Exception {
     MiniYARNCluster cluster =
-        new MiniYARNCluster("testRestartedRMNegative", numNodeManagers, 1, 1);
+        new MiniYARNCluster("testRestartedRMNegative", NUMNODEMANAGERS, 1, 1);
     YarnClient rmClient = YarnClient.createYarnClient();
     try {
       cluster.init(conf);
@@ -76,7 +79,7 @@ public class TestNoHaRMFailoverProxyProvider {
       List <NodeReport> nodeReports = rmClient.getNodeReports();
       assertEquals(
           "The proxy didn't get expected number of node reports",
-          numNodeManagers, nodeReports.size());
+          NUMNODEMANAGERS, nodeReports.size());
     } finally {
       if (rmClient != null) {
         rmClient.stop();
@@ -95,7 +98,7 @@ public class TestNoHaRMFailoverProxyProvider {
         AutoRefreshNoHARMFailoverProxyProvider.class,
         RMFailoverProxyProvider.class);
     MiniYARNCluster cluster =
-        new MiniYARNCluster("testRestartedRMNegative", numNodeManagers, 1, 1);
+        new MiniYARNCluster("testRestartedRMNegative", NUMNODEMANAGERS, 1, 1);
     YarnClient rmClient = null;
     try {
       cluster.init(conf);
@@ -107,7 +110,7 @@ public class TestNoHaRMFailoverProxyProvider {
       List <NodeReport> nodeReports = rmClient.getNodeReports();
       assertEquals(
           "The proxy didn't get expected number of node reports",
-          numNodeManagers, nodeReports.size());
+          NUMNODEMANAGERS, nodeReports.size());
     } finally {
       if (rmClient != null) {
         rmClient.stop();
@@ -124,27 +127,14 @@ public class TestNoHaRMFailoverProxyProvider {
    */
   @Test
   public void testDefaultFPPGetOneProxy() throws Exception {
-    class MockProxy extends Proxy implements Closeable {
-      protected MockProxy(InvocationHandler h) {
-        super(h);
-      }
-
-      @Override
-      public void close() throws IOException {
-      }
-    }
-
     // Create a proxy and mock a RMProxy
-    Proxy mockProxy1 = new MockProxy((proxy, method, args) -> null);
+    Proxy mockProxy1 = new Proxy((proxy, method, args) -> null);
     Class protocol = ApplicationClientProtocol.class;
     RMProxy mockRMProxy = mock(RMProxy.class);
     DefaultNoHARMFailoverProxyProvider <RMProxy> fpp =
         new DefaultNoHARMFailoverProxyProvider<RMProxy>();
 
-    // Default port of yarn RM
-    int port1 = 8032;
-
-    InetSocketAddress mockAdd1 = new InetSocketAddress(port1);
+    InetSocketAddress mockAdd1 = new InetSocketAddress(RM1_PORT);
 
     // Mock RMProxy methods
     when(mockRMProxy.getRMAddress(any(YarnConfiguration.class),
@@ -200,34 +190,21 @@ public class TestNoHaRMFailoverProxyProvider {
    */
   @Test
   public void testAutoRefreshIPChange() throws Exception {
-    class MockProxy extends Proxy implements Closeable {
-      protected MockProxy(InvocationHandler h) {
-        super(h);
-      }
-
-      @Override
-      public void close() throws IOException {
-      }
-    }
-
     conf.setClass(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,
         AutoRefreshNoHARMFailoverProxyProvider.class,
         RMFailoverProxyProvider.class);
 
     // Create two proxies and mock a RMProxy
-    Proxy mockProxy1 = new MockProxy((proxy, method, args) -> null);
-    Proxy mockProxy2 = new MockProxy((proxy, method, args) -> null);
+    Proxy mockProxy1 = new Proxy((proxy, method, args) -> null);
+    Proxy mockProxy2 = new Proxy((proxy, method, args) -> null);
     Class protocol = ApplicationClientProtocol.class;
     RMProxy mockRMProxy = mock(RMProxy.class);
     AutoRefreshNoHARMFailoverProxyProvider<RMProxy> fpp =
         new AutoRefreshNoHARMFailoverProxyProvider<RMProxy>();
 
     // generate two address with different ports.
-    // Default port of yarn RM
-    int port1 = 8032;
-    int port2 = 8031;
-    InetSocketAddress mockAdd1 = new InetSocketAddress(port1);
-    InetSocketAddress mockAdd2 = new InetSocketAddress(port2);
+    InetSocketAddress mockAdd1 = new InetSocketAddress(RM1_PORT);
+    InetSocketAddress mockAdd2 = new InetSocketAddress(RM2_PORT);
 
     // Mock RMProxy methods
     when(mockRMProxy.getRMAddress(any(YarnConfiguration.class),
