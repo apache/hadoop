@@ -29,7 +29,7 @@ fi
 
 docker build -t hadoop-build -f $DOCKER_FILE $DOCKER_DIR
 
-USER_NAME=${USER}
+USER_NAME=${SUDO_USER:=$USER}
 USER_ID=$(id -u "${USER_NAME}")
 
 if [ "$(uname -s)" = "Darwin" ]; then
@@ -66,7 +66,7 @@ if [ "$(uname -s)" = "Linux" ]; then
   fi
 fi
 
-docker build --no-cache  -t "hadoop-build-${USER_ID}" - <<UserSpecificDocker
+docker build  -t "hadoop-build-${USER_ID}" - <<UserSpecificDocker
 FROM hadoop-build
 RUN rm -f /var/log/faillog /var/log/lastlog
 RUN groupadd --non-unique -g ${GROUP_ID} ${USER_NAME}
