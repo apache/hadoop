@@ -23,13 +23,13 @@ DOCKER_DIR=dev-support/docker
 DOCKER_FILE="${DOCKER_DIR}/Dockerfile"
 
 CPU_ARCH=$(echo "$MACHTYPE" | cut -d- -f1)
-if [ "$CPU_ARCH" = "aarch64" ]; then
-  DOCKER_FILE="${DOCKER_DIR}/Dockerfile_aarch64"
+if [ "$CPU_ARCH" = "aarch64" ] || [ "$CPU_ARCH" = "arm" ]; then
+  DOCKER_FILE="${DOCKER_DIR}/Dockerfile_arm"
 fi
 
 docker build -t hadoop-build -f $DOCKER_FILE $DOCKER_DIR
 
-USER_NAME=${SUDO_USER:=$USER}
+USER_NAME=${USER}
 USER_ID=$(id -u "${USER_NAME}")
 
 if [ "$(uname -s)" = "Darwin" ]; then
@@ -66,7 +66,7 @@ if [ "$(uname -s)" = "Linux" ]; then
   fi
 fi
 
-docker build -t "hadoop-build-${USER_ID}" - <<UserSpecificDocker
+docker build --no-cache  -t "hadoop-build-${USER_ID}" - <<UserSpecificDocker
 FROM hadoop-build
 RUN rm -f /var/log/faillog /var/log/lastlog
 RUN groupadd --non-unique -g ${GROUP_ID} ${USER_NAME}
