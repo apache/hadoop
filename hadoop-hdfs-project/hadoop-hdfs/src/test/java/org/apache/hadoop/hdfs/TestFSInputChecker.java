@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -86,36 +87,36 @@ public class TestFSInputChecker {
     int offset;
     for(offset=0; offset<BLOCK_SIZE+BYTES_PER_SUM;
                   offset += BYTES_PER_SUM ) {
-      assertEquals(stm.getPos(), offset);
+      assertThat(stm.getPos()).isEqualTo(offset);
       stm.readFully(actual, offset, BYTES_PER_SUM);
     }
     stm.readFully(actual, offset, FILE_SIZE-BLOCK_SIZE-BYTES_PER_SUM);
-    assertEquals(stm.getPos(), FILE_SIZE);
+    assertThat(stm.getPos()).isEqualTo(FILE_SIZE);
     checkAndEraseData(actual, 0, expected, "Read Sanity Test");
     
     // test reads that cross checksum boundary
     stm.seek(0L);
-    assertEquals(stm.getPos(), 0L);
+    assertThat(stm.getPos()).isEqualTo(0L);
     stm.readFully(actual, 0, HALF_CHUNK_SIZE);
-    assertEquals(stm.getPos(), HALF_CHUNK_SIZE);
+    assertThat(stm.getPos()).isEqualTo(HALF_CHUNK_SIZE);
     stm.readFully(actual, HALF_CHUNK_SIZE, BLOCK_SIZE-HALF_CHUNK_SIZE);
-    assertEquals(stm.getPos(), BLOCK_SIZE);
+    assertThat(stm.getPos()).isEqualTo(BLOCK_SIZE);
     stm.readFully(actual, BLOCK_SIZE, BYTES_PER_SUM+HALF_CHUNK_SIZE);
-    assertEquals(stm.getPos(), BLOCK_SIZE+BYTES_PER_SUM+HALF_CHUNK_SIZE);
+    assertThat(stm.getPos()).isEqualTo(BLOCK_SIZE+BYTES_PER_SUM+HALF_CHUNK_SIZE);
     stm.readFully(actual, 2*BLOCK_SIZE-HALF_CHUNK_SIZE, 
         FILE_SIZE-(2*BLOCK_SIZE-HALF_CHUNK_SIZE));
-    assertEquals(stm.getPos(), FILE_SIZE);
+    assertThat(stm.getPos()).isEqualTo(FILE_SIZE);
     checkAndEraseData(actual, 0, expected, "Read Sanity Test");
     
     // test read that cross block boundary
     stm.seek(0L);
     stm.readFully(actual, 0, BYTES_PER_SUM+HALF_CHUNK_SIZE);
-    assertEquals(stm.getPos(), BYTES_PER_SUM+HALF_CHUNK_SIZE);
+    assertThat(stm.getPos()).isEqualTo(BYTES_PER_SUM+HALF_CHUNK_SIZE);
     stm.readFully(actual, BYTES_PER_SUM+HALF_CHUNK_SIZE, BYTES_PER_SUM);
-    assertEquals(stm.getPos(), BLOCK_SIZE+HALF_CHUNK_SIZE);
+    assertThat(stm.getPos()).isEqualTo(BLOCK_SIZE+HALF_CHUNK_SIZE);
     stm.readFully(actual, BLOCK_SIZE+HALF_CHUNK_SIZE,
         FILE_SIZE-BLOCK_SIZE-HALF_CHUNK_SIZE);
-    assertEquals(stm.getPos(), FILE_SIZE);
+    assertThat(stm.getPos()).isEqualTo(FILE_SIZE);
     checkAndEraseData(actual, 0, expected, "Read Sanity Test");
   }
   
@@ -201,8 +202,8 @@ public class TestFSInputChecker {
       IOUtils.skipFully(stm, 10);
       fail("expected to get a PrematureEOFException");
     } catch (EOFException e) {
-      assertEquals(e.getMessage(), "Premature EOF from inputStream " +
-          "after skipping 0 byte(s).");
+      assertThat(e.getMessage()).isEqualTo("Premature EOF from inputStream " +
+              "after skipping 0 byte(s).");
     }
     
     stm.seek(0);
@@ -210,16 +211,16 @@ public class TestFSInputChecker {
       IOUtils.skipFully(stm, FILE_SIZE + 10);
       fail("expected to get a PrematureEOFException");
     } catch (EOFException e) {
-      assertEquals(e.getMessage(), "Premature EOF from inputStream " +
-          "after skipping " + FILE_SIZE + " byte(s).");
+      assertThat(e.getMessage()).isEqualTo("Premature EOF from inputStream " +
+              "after skipping " + FILE_SIZE + " byte(s).");
     }
     stm.seek(10);
     try {
       IOUtils.skipFully(stm, FILE_SIZE);
       fail("expected to get a PrematureEOFException");
     } catch (EOFException e) {
-      assertEquals(e.getMessage(), "Premature EOF from inputStream " +
-          "after skipping " + (FILE_SIZE - 10) + " byte(s).");
+      assertThat(e.getMessage()).isEqualTo("Premature EOF from inputStream " +
+              "after skipping " + (FILE_SIZE - 10) + " byte(s).");
     }
   }
 

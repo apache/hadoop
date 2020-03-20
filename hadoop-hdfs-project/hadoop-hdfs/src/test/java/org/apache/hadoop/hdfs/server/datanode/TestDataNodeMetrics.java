@@ -82,7 +82,7 @@ public class TestDataNodeMetrics {
       DFSTestUtil.createFile(fs, new Path("/tmp.txt"),
           LONG_FILE_LEN, (short)1, 1L);
       List<DataNode> datanodes = cluster.getDataNodes();
-      assertEquals(datanodes.size(), 1);
+      assertEquals(1, datanodes.size());
       DataNode datanode = datanodes.get(0);
       MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
       assertCounter("BytesWritten", LONG_FILE_LEN, rb);
@@ -107,7 +107,7 @@ public class TestDataNodeMetrics {
           (long)1, (short)1, 1L);
       DFSTestUtil.readFile(fs, tmpfile);
       List<DataNode> datanodes = cluster.getDataNodes();
-      assertEquals(datanodes.size(), 1);
+      assertEquals(1, datanodes.size());
       DataNode datanode = datanodes.get(0);
       MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
       // Expect 2 packets, 1 for the 1 byte read, 1 for the empty packet
@@ -277,7 +277,7 @@ public class TestDataNodeMetrics {
     try {
       final FileSystem fs = cluster.getFileSystem();
       List<DataNode> datanodes = cluster.getDataNodes();
-      assertEquals(datanodes.size(), 1);
+      assertEquals(1, datanodes.size());
       final DataNode datanode = datanodes.get(0);
       MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
       final long LONG_FILE_LEN = 1024 * 1024 * 10;
@@ -321,7 +321,7 @@ public class TestDataNodeMetrics {
     try {
       FileSystem fs = cluster.getFileSystem();
       List<DataNode> datanodes = cluster.getDataNodes();
-      assertEquals(datanodes.size(), 1);
+      assertEquals(1, datanodes.size());
       DataNode datanode = datanodes.get(0);
 
       MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
@@ -351,13 +351,13 @@ public class TestDataNodeMetrics {
     try {
       FileSystem fs = cluster.getFileSystem();
       List<DataNode> datanodes = cluster.getDataNodes();
-      assertEquals(datanodes.size(), 1);
+      assertEquals(1, datanodes.size());
       DataNode datanode = datanodes.get(0);
 
       MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
       long dataNodeActiveXceiversCount = MetricsAsserts.getIntGauge(
               "DataNodeActiveXceiversCount", rb);
-      assertEquals(dataNodeActiveXceiversCount, 0);
+      assertEquals(0, dataNodeActiveXceiversCount);
 
       Path path = new Path("/counter.txt");
       DFSTestUtil.createFile(fs, path, 204800000, (short) 3, Time

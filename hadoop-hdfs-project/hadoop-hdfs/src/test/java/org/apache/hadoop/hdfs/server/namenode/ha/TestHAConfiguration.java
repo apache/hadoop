@@ -168,7 +168,7 @@ public class TestHAConfiguration {
     NameNode.initializeGenericKeys(conf, "ns1", "nn1");
     List<Configuration> others = HAUtil.getConfForOtherNodes(conf);
     Configuration nn2Conf = others.get(0);
-    assertEquals(nn2Conf.get(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY),"nn2");
+    assertEquals("nn2", nn2Conf.get(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY));
     assertTrue(!conf.get(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY)
         .equals(nn2Conf.get(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY)));
     assertNull(nn2Conf.get(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY));

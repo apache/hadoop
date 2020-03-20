@@ -1288,15 +1288,15 @@ public class TestDistributedFileSystem {
         //verify checksum
         final FileChecksum barcs = hdfs.getFileChecksum(bar);
         final int barhashcode = barcs.hashCode();
-        assertEquals(hdfsfoocs.hashCode(), barhashcode);
-        assertEquals(hdfsfoocs, barcs);
+        assertEquals(barhashcode, hdfsfoocs.hashCode());
+        assertEquals(barcs, hdfsfoocs);
 
         //webhdfs
-        assertEquals(webhdfsfoocs.hashCode(), barhashcode);
-        assertEquals(webhdfsfoocs, barcs);
+        assertEquals(barhashcode, webhdfsfoocs.hashCode());
+        assertEquals(barcs, webhdfsfoocs);
 
-        assertEquals(webhdfs_qfoocs.hashCode(), barhashcode);
-        assertEquals(webhdfs_qfoocs, barcs);
+        assertEquals(barhashcode, webhdfs_qfoocs.hashCode());
+        assertEquals(barcs, webhdfs_qfoocs);
       }
 
       hdfs.setPermission(dir, new FsPermission((short)0));
@@ -1493,7 +1493,7 @@ public class TestDistributedFileSystem {
       outputStream.close();
       assertEquals(StorageType.ARCHIVE, DFSTestUtil.getAllBlocks(fs, file1)
           .get(0).getStorageTypes()[0]);
-      assertEquals(fs.getStoragePolicy(file1).getName(), "COLD");
+      assertEquals("COLD", fs.getStoragePolicy(file1).getName());
 
       // Check with storage policy not specified.
       outputStream = fs.createFile(file2).build();
@@ -1501,7 +1501,7 @@ public class TestDistributedFileSystem {
       outputStream.close();
       assertEquals(StorageType.SSD, DFSTestUtil.getAllBlocks(fs, file2).get(0)
           .getStorageTypes()[0]);
-      assertEquals(fs.getStoragePolicy(file2).getName(), "ALL_SSD");
+      assertEquals("ALL_SSD", fs.getStoragePolicy(file2).getName());
 
       // Check with default storage policy.
       outputStream = fs.createFile(new Path("/default")).build();
@@ -1510,7 +1510,7 @@ public class TestDistributedFileSystem {
       assertEquals(StorageType.DISK,
           DFSTestUtil.getAllBlocks(fs, new Path("/default")).get(0)
               .getStorageTypes()[0]);
-      assertEquals(fs.getStoragePolicy(new Path("/default")).getName(), "HOT");
+      assertEquals("HOT", fs.getStoragePolicy(new Path("/default")).getName());
     }
   }
 

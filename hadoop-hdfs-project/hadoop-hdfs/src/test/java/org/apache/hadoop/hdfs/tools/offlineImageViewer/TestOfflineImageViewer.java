@@ -796,8 +796,8 @@ public class TestOfflineImageViewer {
     entryBuilder1.setParentId(1)
         .setCorruption(c1)
         .setParentPath("/dir1/dir2/");
-    assertEquals(entryBuilder1.build(),
-        "MissingChild,342,false,/dir1/dir2/,1,,,3");
+    assertEquals("MissingChild,342,false,/dir1/dir2/,1,,,3",
+            entryBuilder1.build());
 
     corrDetector = new PBImageCorruptionDetector(null, "\t", "");
     PBImageCorruption c2 = new PBImageCorruption(781, false, true, 0);
@@ -807,8 +807,8 @@ public class TestOfflineImageViewer {
         .setCorruption(c2)
         .setName("folder")
         .setNodeType("Node");
-    assertEquals(entryBuilder2.build(),
-        "CorruptNode\t781\ttrue\t/dir3/\tMissing\tfolder\tNode\t0");
+    assertEquals("CorruptNode\t781\ttrue\t/dir3/\tMissing\tfolder\tNode\t0",
+            entryBuilder2.build());
   }
 
   @Test
@@ -912,7 +912,7 @@ public class TestOfflineImageViewer {
         it.remove();
       }
     }
-    assertEquals(writtenFiles.keySet(), fileNames);
+    assertEquals(fileNames, writtenFiles.keySet());
   }
 
   private void testPBCorruptionDetector(String db)

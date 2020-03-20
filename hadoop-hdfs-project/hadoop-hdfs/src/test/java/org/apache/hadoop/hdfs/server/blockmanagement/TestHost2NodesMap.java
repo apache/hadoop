@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -58,8 +58,8 @@ public class TestHost2NodesMap {
 
   @Test
   public void testGetDatanodeByHost() throws Exception {
-    assertEquals(map.getDatanodeByHost("1.1.1.1"), dataNodes[0]);
-    assertEquals(map.getDatanodeByHost("2.2.2.2"), dataNodes[1]);
+    assertThat(map.getDatanodeByHost("1.1.1.1")).isEqualTo(dataNodes[0]);
+    assertThat(map.getDatanodeByHost("2.2.2.2")).isEqualTo(dataNodes[1]);
     DatanodeDescriptor node = map.getDatanodeByHost("3.3.3.3");
     assertTrue(node == dataNodes[2] || node == dataNodes[3]);
     assertNull(map.getDatanodeByHost("4.4.4.4"));
@@ -80,12 +80,12 @@ public class TestHost2NodesMap {
     
     assertTrue(map.remove(dataNodes[2]));
     assertNull(map.getDatanodeByHost("1.1.1.1"));
-    assertEquals(map.getDatanodeByHost("2.2.2.2"), dataNodes[1]);
-    assertEquals(map.getDatanodeByHost("3.3.3.3"), dataNodes[3]);
+    assertThat(map.getDatanodeByHost("2.2.2.2")).isEqualTo(dataNodes[1]);
+    assertThat(map.getDatanodeByHost("3.3.3.3")).isEqualTo(dataNodes[3]);
     
     assertTrue(map.remove(dataNodes[3]));
     assertNull(map.getDatanodeByHost("1.1.1.1"));
-    assertEquals(map.getDatanodeByHost("2.2.2.2"), dataNodes[1]);
+    assertThat(map.getDatanodeByHost("2.2.2.2")).isEqualTo(dataNodes[1]);
     assertNull(map.getDatanodeByHost("3.3.3.3"));
     
     assertFalse(map.remove(null));

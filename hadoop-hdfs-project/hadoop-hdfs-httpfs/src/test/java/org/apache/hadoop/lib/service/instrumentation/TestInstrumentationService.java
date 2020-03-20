@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.service.instrumentation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -51,22 +52,22 @@ public class TestInstrumentationService extends HTestCase {
   @Test
   public void cron() {
     InstrumentationService.Cron cron = new InstrumentationService.Cron();
-    assertEquals(cron.start, 0);
-    assertEquals(cron.lapStart, 0);
-    assertEquals(cron.own, 0);
-    assertEquals(cron.total, 0);
+    assertThat(cron.start).isEqualTo(0);
+    assertThat(cron.lapStart).isEqualTo(0);
+    assertThat(cron.own).isEqualTo(0);
+    assertThat(cron.total).isEqualTo(0);
     long begin = Time.now();
-    assertEquals(cron.start(), cron);
-    assertEquals(cron.start(), cron);
+    assertThat(cron.start()).isEqualTo(cron);
+    assertThat(cron.start()).isEqualTo(cron);
     assertEquals(cron.start, begin, 20);
     assertEquals(cron.start, cron.lapStart);
     sleep(100);
-    assertEquals(cron.stop(), cron);
+    assertThat(cron.stop()).isEqualTo(cron);
     long end = Time.now();
     long delta = end - begin;
     assertEquals(cron.own, delta, 20);
-    assertEquals(cron.total, 0);
-    assertEquals(cron.lapStart, 0);
+    assertThat(cron.total).isEqualTo(0);
+    assertThat(cron.lapStart).isEqualTo(0);
     sleep(100);
     long reStart = Time.now();
     cron.start();
@@ -77,8 +78,8 @@ public class TestInstrumentationService extends HTestCase {
     long reEnd = Time.now();
     delta += reEnd - reStart;
     assertEquals(cron.own, delta, 20);
-    assertEquals(cron.total, 0);
-    assertEquals(cron.lapStart, 0);
+    assertThat(cron.total).isEqualTo(0);
+    assertThat(cron.lapStart).isEqualTo(0);
     cron.end();
     assertEquals(cron.total, reEnd - begin, 20);
 
@@ -215,21 +216,21 @@ public class TestInstrumentationService extends HTestCase {
     assertEquals(values[InstrumentationService.Timer.AVG_OWN], avgOwn, 20);
 
     JSONObject json = (JSONObject) new JSONParser().parse(timer.toJSONString());
-    assertEquals(json.size(), 4);
-    assertEquals(json.get("lastTotal"), values[InstrumentationService.Timer.LAST_TOTAL]);
-    assertEquals(json.get("lastOwn"), values[InstrumentationService.Timer.LAST_OWN]);
-    assertEquals(json.get("avgTotal"), values[InstrumentationService.Timer.AVG_TOTAL]);
-    assertEquals(json.get("avgOwn"), values[InstrumentationService.Timer.AVG_OWN]);
+    assertThat(json.size()).isEqualTo(4);
+    assertThat(json.get("lastTotal")).isEqualTo(values[InstrumentationService.Timer.LAST_TOTAL]);
+    assertThat(json.get("lastOwn")).isEqualTo(values[InstrumentationService.Timer.LAST_OWN]);
+    assertThat(json.get("avgTotal")).isEqualTo(values[InstrumentationService.Timer.AVG_TOTAL]);
+    assertThat(json.get("avgOwn")).isEqualTo(values[InstrumentationService.Timer.AVG_OWN]);
 
     StringWriter writer = new StringWriter();
     timer.writeJSONString(writer);
     writer.close();
     json = (JSONObject) new JSONParser().parse(writer.toString());
-    assertEquals(json.size(), 4);
-    assertEquals(json.get("lastTotal"), values[InstrumentationService.Timer.LAST_TOTAL]);
-    assertEquals(json.get("lastOwn"), values[InstrumentationService.Timer.LAST_OWN]);
-    assertEquals(json.get("avgTotal"), values[InstrumentationService.Timer.AVG_TOTAL]);
-    assertEquals(json.get("avgOwn"), values[InstrumentationService.Timer.AVG_OWN]);
+    assertThat(json.size()).isEqualTo(4);
+    assertThat(json.get("lastTotal")).isEqualTo(values[InstrumentationService.Timer.LAST_TOTAL]);
+    assertThat(json.get("lastOwn")).isEqualTo(values[InstrumentationService.Timer.LAST_OWN]);
+    assertThat(json.get("avgTotal")).isEqualTo(values[InstrumentationService.Timer.AVG_TOTAL]);
+    assertThat(json.get("avgOwn")).isEqualTo(values[InstrumentationService.Timer.AVG_OWN]);
   }
 
   @Test
@@ -269,9 +270,9 @@ public class TestInstrumentationService extends HTestCase {
     sampler.writeJSONString(writer);
     writer.close();
     json = (JSONObject) new JSONParser().parse(writer.toString());
-    assertEquals(json.size(), 2);
-    assertEquals(json.get("sampler"), sampler.getRate());
-    assertEquals(json.get("size"), 4L);
+    assertThat(json.size()).isEqualTo(2);
+    assertThat(json.get("sampler")).isEqualTo(sampler.getRate());
+    assertThat(json.get("size")).isEqualTo(4L);
   }
 
   @Test
@@ -287,15 +288,15 @@ public class TestInstrumentationService extends HTestCase {
     };
 
     JSONObject json = (JSONObject) new JSONParser().parse(variableHolder.toJSONString());
-    assertEquals(json.size(), 1);
-    assertEquals(json.get("value"), "foo");
+    assertThat(json.size()).isEqualTo(1);
+    assertThat(json.get("value")).isEqualTo("foo");
 
     StringWriter writer = new StringWriter();
     variableHolder.writeJSONString(writer);
     writer.close();
     json = (JSONObject) new JSONParser().parse(writer.toString());
-    assertEquals(json.size(), 1);
-    assertEquals(json.get("value"), "foo");
+    assertThat(json.size()).isEqualTo(1);
+    assertThat(json.get("value")).isEqualTo("foo");
   }
 
   @Test

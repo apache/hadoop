@@ -110,34 +110,34 @@ public class TestXAttrWithSnapshot {
 
     // Verify that current path reflects xattrs, snapshot doesn't
     Map<String, byte[]> xattrs = hdfs.getXAttrs(path);
-    assertEquals(xattrs.size(), 2);
+    assertEquals(2, xattrs.size());
     assertArrayEquals(value1, xattrs.get(name1));
     assertArrayEquals(value2, xattrs.get(name2));
 
     xattrs = hdfs.getXAttrs(snapshotPath);
-    assertEquals(xattrs.size(), 0);
+    assertEquals(0, xattrs.size());
 
     // Modify each xattr and make sure it's reflected
     hdfs.setXAttr(path, name1, value2, EnumSet.of(XAttrSetFlag.REPLACE));
     xattrs = hdfs.getXAttrs(path);
-    assertEquals(xattrs.size(), 2);
+    assertEquals(2, xattrs.size());
     assertArrayEquals(value2, xattrs.get(name1));
     assertArrayEquals(value2, xattrs.get(name2));
 
     hdfs.setXAttr(path, name2, value1, EnumSet.of(XAttrSetFlag.REPLACE));
     xattrs = hdfs.getXAttrs(path);
-    assertEquals(xattrs.size(), 2);
+    assertEquals(2, xattrs.size());
     assertArrayEquals(value2, xattrs.get(name1));
     assertArrayEquals(value1, xattrs.get(name2));
 
     // Paranoia checks
     xattrs = hdfs.getXAttrs(snapshotPath);
-    assertEquals(xattrs.size(), 0);
+    assertEquals(0, xattrs.size());
 
     hdfs.removeXAttr(path, name1);
     hdfs.removeXAttr(path, name2);
     xattrs = hdfs.getXAttrs(path);
-    assertEquals(xattrs.size(), 0);
+    assertEquals(0, xattrs.size());
   }
 
   /**
@@ -153,22 +153,22 @@ public class TestXAttrWithSnapshot {
 
     // Verify that current path reflects xattrs, snapshot doesn't
     Map<String, byte[]> xattrs = hdfs.getXAttrs(path);
-    assertEquals(xattrs.size(), 2);
+    assertEquals(2, xattrs.size());
     assertArrayEquals(value1, xattrs.get(name1));
     assertArrayEquals(value2, xattrs.get(name2));
 
     xattrs = hdfs.getXAttrs(snapshotPath);
-    assertEquals(xattrs.size(), 0);
+    assertEquals(0, xattrs.size());
 
     // Remove xattrs and verify one-by-one
     hdfs.removeXAttr(path, name2);
     xattrs = hdfs.getXAttrs(path);
-    assertEquals(xattrs.size(), 1);
+    assertEquals(1, xattrs.size());
     assertArrayEquals(value1, xattrs.get(name1));
 
     hdfs.removeXAttr(path, name1);
     xattrs = hdfs.getXAttrs(path);
-    assertEquals(xattrs.size(), 0);
+    assertEquals(0, xattrs.size());
   }
 
   /**
@@ -186,12 +186,12 @@ public class TestXAttrWithSnapshot {
 
     // Both original and snapshot have same XAttrs.
     Map<String, byte[]> xattrs = hdfs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertEquals(2, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     Assert.assertArrayEquals(value2, xattrs.get(name2));
 
     xattrs = hdfs.getXAttrs(snapshotPath);
-    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertEquals(2, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     Assert.assertArrayEquals(value2, xattrs.get(name2));
 
@@ -208,12 +208,12 @@ public class TestXAttrWithSnapshot {
   private static void doSnapshotRootChangeAssertions(Path path,
       Path snapshotPath) throws Exception {
     Map<String, byte[]> xattrs = hdfs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertEquals(2, xattrs.size());
     Assert.assertArrayEquals(newValue1, xattrs.get(name1));
     Assert.assertArrayEquals(value2, xattrs.get(name2));
 
     xattrs = hdfs.getXAttrs(snapshotPath);
-    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertEquals(2, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     Assert.assertArrayEquals(value2, xattrs.get(name2));
   }
@@ -233,12 +233,12 @@ public class TestXAttrWithSnapshot {
 
     // Both original and snapshot have same XAttrs.
     Map<String, byte[]> xattrs = hdfs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertEquals(2, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     Assert.assertArrayEquals(value2, xattrs.get(name2));
 
     xattrs = hdfs.getXAttrs(snapshotPath);
-    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertEquals(2, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     Assert.assertArrayEquals(value2, xattrs.get(name2));
 

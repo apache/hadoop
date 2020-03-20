@@ -59,13 +59,13 @@ public class TestDataNodeUUID {
 
     //Assert that Node iD is null
     String nullString = null;
-    assertEquals(dn.getDatanodeUuid(), nullString);
+    assertEquals(nullString, dn.getDatanodeUuid());
 
     // CheckDataNodeUUID will create an UUID if UUID is null
     dn.checkDatanodeUuid();
 
     // Make sure that we have a valid DataNodeUUID at that point of time.
-    assertNotEquals(dn.getDatanodeUuid(), nullString);
+    assertNotEquals(nullString, dn.getDatanodeUuid());
   }
 
   @Test(timeout = 10000)

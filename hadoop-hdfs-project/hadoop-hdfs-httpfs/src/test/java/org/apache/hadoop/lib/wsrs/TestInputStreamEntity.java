@@ -35,14 +35,14 @@ public class TestInputStreamEntity {
     InputStreamEntity i = new InputStreamEntity(is);
     i.write(baos);
     baos.close();
-    assertEquals(new String(baos.toByteArray()), "abc");
+    assertEquals("abc", new String(baos.toByteArray()));
 
     is = new ByteArrayInputStream("abc".getBytes());
     baos = new ByteArrayOutputStream();
     i = new InputStreamEntity(is, 1, 1);
     i.write(baos);
     baos.close();
-    assertEquals(baos.toByteArray()[0], 'b');
+    assertEquals('b', baos.toByteArray()[0]);
   }
 
 }

@@ -19,7 +19,7 @@
 package org.apache.hadoop.lib.lang;
 
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertNull;
 
 import org.apache.hadoop.test.HTestCase;
@@ -39,26 +39,26 @@ public class TestXException extends HTestCase {
   @Test
   public void testXException() throws Exception {
     XException ex = new XException(TestERROR.TC);
-    assertEquals(ex.getError(), TestERROR.TC);
-    assertEquals(ex.getMessage(), "TC: {0}");
+    assertThat(ex.getError()).isEqualTo(TestERROR.TC);
+    assertThat(ex.getMessage()).isEqualTo("TC: {0}");
     assertNull(ex.getCause());
 
     ex = new XException(TestERROR.TC, "msg");
-    assertEquals(ex.getError(), TestERROR.TC);
-    assertEquals(ex.getMessage(), "TC: msg");
+    assertThat(ex.getError()).isEqualTo(TestERROR.TC);
+    assertThat(ex.getMessage()).isEqualTo("TC: msg");
     assertNull(ex.getCause());
 
     Exception cause = new Exception();
     ex = new XException(TestERROR.TC, cause);
-    assertEquals(ex.getError(), TestERROR.TC);
-    assertEquals(ex.getMessage(), "TC: " + cause.toString());
-    assertEquals(ex.getCause(), cause);
+    assertThat(ex.getError()).isEqualTo(TestERROR.TC);
+    assertThat(ex.getMessage()).isEqualTo("TC: " + cause.toString());
+    assertThat(ex.getCause()).isEqualTo(cause);
 
     XException xcause = ex;
     ex = new XException(xcause);
-    assertEquals(ex.getError(), TestERROR.TC);
-    assertEquals(ex.getMessage(), xcause.getMessage());
-    assertEquals(ex.getCause(), xcause);
+    assertThat(ex.getError()).isEqualTo(TestERROR.TC);
+    assertThat(ex.getMessage()).isEqualTo(xcause.getMessage());
+    assertThat(ex.getCause()).isEqualTo(xcause);
   }
 
 }

@@ -155,7 +155,7 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
     Assert.assertTrue("Recovery is not expected.", isReady);
 
     FileStatus fileStatus = fSys.getFileStatus(file);
-    Assert.assertEquals(fileStatus.getLen(), newLength);
+    Assert.assertEquals(newLength, fileStatus.getLen());
     AppendTestUtil.checkFullFile(fSys, file, newLength, data, file.toString());
 
     ContentSummary cs = fSys.getContentSummary(dir);

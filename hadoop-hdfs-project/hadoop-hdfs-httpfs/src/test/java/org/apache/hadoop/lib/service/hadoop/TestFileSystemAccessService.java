@@ -45,6 +45,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class TestFileSystemAccessService extends HFSTestCase {
 
   private void createHadoopConf(Configuration hadoopConf) throws Exception {
@@ -161,7 +163,7 @@ public class TestFileSystemAccessService extends HFSTestCase {
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
     FileSystemAccessService fsAccess = (FileSystemAccessService) server.get(FileSystemAccess.class);
-    Assert.assertEquals(fsAccess.serviceHadoopConf.get("foo"), "FOO");
+    assertThat(fsAccess.serviceHadoopConf.get("foo")).isEqualTo("FOO");
     server.destroy();
   }
 
@@ -189,7 +191,7 @@ public class TestFileSystemAccessService extends HFSTestCase {
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
     FileSystemAccessService fsAccess = (FileSystemAccessService) server.get(FileSystemAccess.class);
-    Assert.assertEquals(fsAccess.serviceHadoopConf.get("foo"), "BAR");
+    assertThat(fsAccess.serviceHadoopConf.get("foo")).isEqualTo("BAR");
     server.destroy();
   }
 
@@ -383,7 +385,7 @@ public class TestFileSystemAccessService extends HFSTestCase {
       });
       Assert.fail();
     } catch (FileSystemAccessException ex) {
-      Assert.assertEquals(ex.getError(), FileSystemAccessException.ERROR.H03);
+      assertThat(ex.getError()).isEqualTo(FileSystemAccessException.ERROR.H03);
     } catch (Exception ex) {
       Assert.fail();
     }

@@ -73,7 +73,7 @@ public class TestXAttrFeature {
 
     XAttr r1 = feature.getXAttr(name1);
     assertTrue(a1.equals(r1));
-    assertEquals(feature.getXAttrs().size(), 1);
+    assertEquals(1, feature.getXAttrs().size());
 
     // more XAttrs in the feature
     XAttr a2 = XAttrHelper.buildXAttr(name2, value2);

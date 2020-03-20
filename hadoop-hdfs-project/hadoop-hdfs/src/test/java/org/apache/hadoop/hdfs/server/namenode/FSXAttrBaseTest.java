@@ -155,13 +155,13 @@ public class FSXAttrBaseTest {
     fs.setXAttr(usePath, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
 
     Map<String, byte[]> xattrs = fs.getXAttrs(usePath);
-    Assert.assertEquals(xattrs.size(), 1);
+    Assert.assertEquals(1, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     
     fs.removeXAttr(usePath, name1);
     
     xattrs = fs.getXAttrs(usePath);
-    Assert.assertEquals(xattrs.size(), 0);
+    Assert.assertEquals(0, xattrs.size());
     
     // Create xattr which already exists.
     fs.setXAttr(usePath, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
@@ -222,7 +222,7 @@ public class FSXAttrBaseTest {
     fs.setXAttr(path, name1, newValue1, EnumSet.of(XAttrSetFlag.REPLACE));
     
     Map<String, byte[]> xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 1);
+    Assert.assertEquals(1, xattrs.size());
     Assert.assertArrayEquals(newValue1, xattrs.get(name1));
     
     fs.removeXAttr(path, name1);
@@ -239,21 +239,21 @@ public class FSXAttrBaseTest {
     fs.setXAttr(path, name2, value2, EnumSet.of(XAttrSetFlag.CREATE));
     fs.setXAttr(path, name2, null, EnumSet.of(XAttrSetFlag.REPLACE));
     xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertEquals(2, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     Assert.assertArrayEquals(new byte[0], xattrs.get(name2));
     
     restart(false);
     initFileSystem();
     xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertEquals(2, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     Assert.assertArrayEquals(new byte[0], xattrs.get(name2));
     
     restart(true);
     initFileSystem();
     xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertEquals(2, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     Assert.assertArrayEquals(new byte[0], xattrs.get(name2));
     
@@ -277,7 +277,7 @@ public class FSXAttrBaseTest {
         XAttrSetFlag.REPLACE));
         
     Map<String, byte[]> xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 1);
+    Assert.assertEquals(1, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     fs.removeXAttr(path, name1);
     
@@ -323,7 +323,7 @@ public class FSXAttrBaseTest {
     // Set xattr without XAttrSetFlag
     fs.setXAttr(path, name1, value1);
     xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 1);
+    Assert.assertEquals(1, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     fs.removeXAttr(path, name1);
     
@@ -333,7 +333,7 @@ public class FSXAttrBaseTest {
         XAttrSetFlag.REPLACE));
     
     xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 1);
+    Assert.assertEquals(1, xattrs.size());
     Assert.assertArrayEquals(newValue1, xattrs.get(name1));
     
     fs.removeXAttr(path, name1);
@@ -574,19 +574,19 @@ public class FSXAttrBaseTest {
     fs.removeXAttr(path, name2);
     
     Map<String, byte[]> xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 1);
+    Assert.assertEquals(1, xattrs.size());
     Assert.assertArrayEquals(new byte[0], xattrs.get(name3));
     
     restart(false);
     initFileSystem();
     xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 1);
+    Assert.assertEquals(1, xattrs.size());
     Assert.assertArrayEquals(new byte[0], xattrs.get(name3));
     
     restart(true);
     initFileSystem();
     xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 1);
+    Assert.assertEquals(1, xattrs.size());
     Assert.assertArrayEquals(new byte[0], xattrs.get(name3));
     
     fs.removeXAttr(path, name3);
@@ -760,7 +760,7 @@ public class FSXAttrBaseTest {
     Path renamePath = new Path(path.toString() + "-rename");
     fs.rename(path, renamePath);
     Map<String, byte[]> xattrs = fs.getXAttrs(renamePath);
-    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertEquals(2, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     Assert.assertArrayEquals(value2, xattrs.get(name2));
     fs.removeXAttr(renamePath, name1);
@@ -919,7 +919,7 @@ public class FSXAttrBaseTest {
     fs.setXAttr(path, name2, value2, EnumSet.of(XAttrSetFlag.CREATE));
     
     Map<String, byte[]> xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertEquals(2, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     Assert.assertArrayEquals(value2, xattrs.get(name2));
   }
@@ -986,7 +986,7 @@ public class FSXAttrBaseTest {
     {
       // getXAttrs
       final Map<String, byte[]> xattrs = fs.getXAttrs(rawPath);
-      Assert.assertEquals(xattrs.size(), 1);
+      Assert.assertEquals(1, xattrs.size());
       Assert.assertArrayEquals(value1, xattrs.get(raw1));
       fs.removeXAttr(rawPath, raw1);
     }
@@ -998,7 +998,7 @@ public class FSXAttrBaseTest {
           XAttrSetFlag.REPLACE));
 
       final Map<String,byte[]> xattrs = fs.getXAttrs(rawPath);
-      Assert.assertEquals(xattrs.size(), 1);
+      Assert.assertEquals(1, xattrs.size());
       Assert.assertArrayEquals(newValue1, xattrs.get(raw1));
 
       fs.removeXAttr(rawPath, raw1);

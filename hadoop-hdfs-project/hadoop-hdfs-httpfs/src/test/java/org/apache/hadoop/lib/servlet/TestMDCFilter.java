@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.servlet;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -56,10 +57,10 @@ public class TestMDCFilter extends HTestCase {
       @Override
       public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse)
         throws IOException, ServletException {
-        assertEquals(MDC.get("hostname"), null);
-        assertEquals(MDC.get("user"), null);
-        assertEquals(MDC.get("method"), "METHOD");
-        assertEquals(MDC.get("path"), "/pathinfo");
+        assertNull(MDC.get("hostname"));
+        assertNull(MDC.get("user"));
+        assertThat(MDC.get("method")).isEqualTo("METHOD");
+        assertThat(MDC.get("path")).isEqualTo("/pathinfo");
         invoked.set(true);
       }
     };
@@ -87,10 +88,10 @@ public class TestMDCFilter extends HTestCase {
       @Override
       public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse)
         throws IOException, ServletException {
-        assertEquals(MDC.get("hostname"), null);
-        assertEquals(MDC.get("user"), "name");
-        assertEquals(MDC.get("method"), "METHOD");
-        assertEquals(MDC.get("path"), "/pathinfo");
+        assertNull(MDC.get("hostname"));
+        assertThat(MDC.get("user")).isEqualTo("name");
+        assertThat(MDC.get("method")).isEqualTo("METHOD");
+        assertThat(MDC.get("path")).isEqualTo("/pathinfo");
         invoked.set(true);
       }
     };
@@ -104,10 +105,10 @@ public class TestMDCFilter extends HTestCase {
       @Override
       public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse)
         throws IOException, ServletException {
-        assertEquals(MDC.get("hostname"), "HOST");
-        assertEquals(MDC.get("user"), "name");
-        assertEquals(MDC.get("method"), "METHOD");
-        assertEquals(MDC.get("path"), "/pathinfo");
+        assertThat(MDC.get("hostname")).isEqualTo("HOST");
+        assertThat(MDC.get("user")).isEqualTo("name");
+        assertThat(MDC.get("method")).isEqualTo("METHOD");
+        assertThat(MDC.get("path")).isEqualTo("/pathinfo");
         invoked.set(true);
       }
     };

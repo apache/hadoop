@@ -105,7 +105,7 @@ public class TestXAttrsWithHA {
     cluster.transitionToActive(1);
     
     Map<String, byte[]> xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertEquals(2, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     Assert.assertArrayEquals(value2, xattrs.get(name2));
     

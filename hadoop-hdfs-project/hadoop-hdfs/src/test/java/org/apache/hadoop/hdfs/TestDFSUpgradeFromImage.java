@@ -160,7 +160,7 @@ public class TestDFSUpgradeFromImage {
       ReferenceFileInfo info = refIter.next();
       // The paths are expected to be listed in the same order 
       // as they are traversed here.
-      assertEquals(info.path, path);
+      assertEquals(path, info.path);
       assertEquals("Checking checksum for " + path, info.checksum, checksum);
     }
   }
@@ -671,7 +671,7 @@ public class TestDFSUpgradeFromImage {
     assertEquals(1, batch.getEvents().length);
     assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
     ce = (Event.CreateEvent) batch.getEvents()[0];
-    assertEquals(ce.getPath(), "/input");
+    assertEquals("/input", ce.getPath());
 
     // mkdir /input/dir1~5
     for (int i = 1; i <= 5; i++) {
@@ -679,7 +679,7 @@ public class TestDFSUpgradeFromImage {
       assertEquals(1, batch.getEvents().length);
       assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
       ce = (Event.CreateEvent) batch.getEvents()[0];
-      assertEquals(ce.getPath(), "/input/dir" + i);
+      assertEquals("/input/dir" + i, ce.getPath());
     }
     // copyFromLocal randome_file_1~2 /input/dir1~2
     for (int i = 1; i <= 2; i++) {
@@ -701,7 +701,7 @@ public class TestDFSUpgradeFromImage {
       assertTrue(batch.getEvents()[0].getEventType() ==
           Event.EventType.RENAME);
       re = (Event.RenameEvent) batch.getEvents()[0];
-      assertEquals(re.getDstPath(), "/input/dir" + i + "/randome_file_" + i);
+      assertEquals("/input/dir" + i + "/randome_file_" + i, re.getDstPath());
     }
 
     // mv /input/dir1/randome_file_1 /input/dir3/randome_file_3
@@ -710,15 +710,15 @@ public class TestDFSUpgradeFromImage {
     assertEquals(1, batch.getEvents().length);
     assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.RENAME);
     re = (Event.RenameEvent) batch.getEvents()[0];
-    assertEquals(re.getDstPath(), "/input/dir3/randome_file_3");
+    assertEquals("/input/dir3/randome_file_3", re.getDstPath());
 
 
     // rmdir /input/dir1
     batch = TestDFSInotifyEventInputStream.waitForNextEvents(ieis);
     assertEquals(1, batch.getEvents().length);
     assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.UNLINK);
-    assertEquals(((Event.UnlinkEvent) batch.getEvents()[0]).getPath(),
-        "/input/dir1");
+    assertEquals("/input/dir1",
+            ((Event.UnlinkEvent) batch.getEvents()[0]).getPath());
     long lastTxID = batch.getTxid();
 
     // Start inotify from the tx before rename /input/dir1/randome_file_1
@@ -727,7 +727,7 @@ public class TestDFSUpgradeFromImage {
     assertEquals(1, batch.getEvents().length);
     assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.RENAME);
     re = (Event.RenameEvent) batch.getEvents()[0];
-    assertEquals(re.getDstPath(), "/input/dir3/randome_file_3");
+    assertEquals("/input/dir3/randome_file_3", re.getDstPath());
 
     // Try to read beyond available edits
     ieis = cluster.getFileSystem().getInotifyEventStream(lastTxID + 1);

@@ -109,6 +109,8 @@ import javax.ws.rs.core.MediaType;
 
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 /**
  * Main test class for HttpFSServer.
  */
@@ -368,14 +370,14 @@ public class TestHttpFSServer extends HFSTestCase {
         MessageFormat.format("/webhdfs/v1?user.name={0}&op=instrumentation",
                              "nobody"));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(),
-                        HttpURLConnection.HTTP_UNAUTHORIZED);
+    assertThat(conn.getResponseCode()).isEqualTo(
+            HttpURLConnection.HTTP_UNAUTHORIZED);
 
     url = new URL(TestJettyHelper.getJettyURL(),
         MessageFormat.format("/webhdfs/v1?user.name={0}&op=instrumentation",
                              HadoopUsersConfTestHelper.getHadoopUsers()[0]));
     conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
     BufferedReader reader = new BufferedReader(
         new InputStreamReader(conn.getInputStream()));
     String line = reader.readLine();
@@ -387,8 +389,8 @@ public class TestHttpFSServer extends HFSTestCase {
             "/webhdfs/v1/foo?user.name={0}&op=instrumentation",
             HadoopUsersConfTestHelper.getHadoopUsers()[0]));
     conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(),
-                        HttpURLConnection.HTTP_BAD_REQUEST);
+    assertThat(conn.getResponseCode()).isEqualTo(
+            HttpURLConnection.HTTP_BAD_REQUEST);
   }
 
   @Test
@@ -403,7 +405,7 @@ public class TestHttpFSServer extends HFSTestCase {
         MessageFormat.format("/webhdfs/v1/?user.name={0}&op=liststatus",
                              user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
     BufferedReader reader = new BufferedReader(
         new InputStreamReader(conn.getInputStream()));
     reader.readLine();
@@ -423,7 +425,7 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod("PUT");
     conn.connect();
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
 
     getStatus("/tmp/sub-tmp", "LISTSTATUS");
   }
@@ -444,7 +446,7 @@ public class TestHttpFSServer extends HFSTestCase {
         MessageFormat.format(
             "/webhdfs/v1/tmp?user.name={0}&op=liststatus&filter=f*", user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
     BufferedReader reader = new BufferedReader(
         new InputStreamReader(conn.getInputStream()));
     reader.readLine();
@@ -1114,8 +1116,8 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setDoInput(true);
     conn.setDoOutput(true);
     conn.setRequestMethod("PUT");
-    Assert.assertEquals(conn.getResponseCode(),
-        HttpURLConnection.HTTP_BAD_REQUEST);
+    assertThat(conn.getResponseCode()).isEqualTo(
+            HttpURLConnection.HTTP_BAD_REQUEST);
   }
 
   @Test
@@ -1173,7 +1175,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod("PUT");
     conn.connect();
 
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
 
     //needed to make the given dir snapshottable
     Path snapshottablePath = new Path("/tmp/tmp-snap-test");
@@ -1216,7 +1218,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod("PUT");
     conn.connect();
     // Should return HTTP_OK
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
     // FileStatus should have snapshot enabled bit set
     Assert.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
     // Clean up
@@ -1249,7 +1251,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod("PUT");
     conn.connect();
     // Should return HTTP_OK
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
     // FileStatus should not have snapshot enabled bit set
     Assert.assertFalse(dfs.getFileStatus(path).isSnapshotEnabled());
     // Clean up
@@ -1285,8 +1287,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod("PUT");
     conn.connect();
     // Should not return HTTP_OK
-    Assert.assertNotEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
-    // FileStatus should still have snapshot enabled bit set
+    Assert.assertNotEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);    // FileStatus should still have snapshot enabled bit set
     Assert.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
     // Clean up
     dfs.deleteSnapshot(path, "snap-02");
@@ -1303,7 +1304,7 @@ public class TestHttpFSServer extends HFSTestCase {
     final HttpURLConnection conn = snapshotTestPreconditions("PUT",
         "CREATESNAPSHOT",
         "snapshotname=snap-with-name");
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
     final BufferedReader reader =
         new BufferedReader(new InputStreamReader(conn.getInputStream()));
     String result = reader.readLine();
@@ -1325,7 +1326,7 @@ public class TestHttpFSServer extends HFSTestCase {
     final HttpURLConnection conn = snapshotTestPreconditions("PUT",
         "CREATESNAPSHOT",
         "");
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
     final BufferedReader reader = new BufferedReader(
         new InputStreamReader(conn.getInputStream()));
     String result = reader.readLine();
@@ -1351,12 +1352,12 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn = snapshotTestPreconditions("PUT",
         "CREATESNAPSHOT",
         "snapshotname=snap-to-rename");
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
     conn = snapshotTestPreconditions("PUT",
         "RENAMESNAPSHOT",
         "oldsnapshotname=snap-to-rename" +
             "&snapshotname=snap-renamed");
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
     //Validates the snapshot is properly renamed under .snapshot folder
     String result = getStatus("/tmp/tmp-snap-test/.snapshot",
         "LISTSTATUS");
@@ -1383,11 +1384,11 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn = snapshotTestPreconditions("PUT",
         "CREATESNAPSHOT",
         "snapshotname=snap-to-delete");
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
     conn = snapshotTestPreconditions("DELETE",
         "DELETESNAPSHOT",
         "snapshotname=snap-to-delete");
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
     //Validates the snapshot is not under .snapshot folder anymore
     String result = getStatus("/tmp/tmp-snap-test/.snapshot",
         "LISTSTATUS");
@@ -1442,7 +1443,7 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn = sendRequestGetSnapshotDiff(pathStr,
         "snap1", "snap2");
     // Should return HTTP_OK
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
     // Verify the response
     BufferedReader reader =
         new BufferedReader(new InputStreamReader(conn.getInputStream()));
@@ -1494,7 +1495,7 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn = sendRequestToHttpFSServer("/",
         "GETSNAPSHOTTABLEDIRECTORYLIST", "");
     // Should return HTTP_OK
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
     // Verify the response
     BufferedReader reader =
         new BufferedReader(new InputStreamReader(conn.getInputStream()));

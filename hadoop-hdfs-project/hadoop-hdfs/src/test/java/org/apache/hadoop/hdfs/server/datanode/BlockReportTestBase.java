@@ -780,7 +780,7 @@ public abstract class BlockReportTestBase {
     cluster.startDataNodes(conf, 1, true, null, null);
     cluster.waitClusterUp();
     ArrayList<DataNode> datanodes = cluster.getDataNodes();
-    assertEquals(datanodes.size(), 2);
+    assertEquals(2, datanodes.size());
 
     if (LOG.isDebugEnabled()) {
       int lastDn = datanodes.size() - 1;

@@ -392,7 +392,7 @@ public class TestParam {
   @Test
   public void testXAttrNameParam() {
     final XAttrNameParam p = new XAttrNameParam("user.a1");
-    Assert.assertEquals(p.getXAttrName(), "user.a1");
+    Assert.assertEquals("user.a1", p.getXAttrName());
   }
   
   @Test
@@ -405,9 +405,9 @@ public class TestParam {
   @Test
   public void testXAttrEncodingParam() {
     final XAttrEncodingParam p = new XAttrEncodingParam(XAttrCodec.BASE64);
-    Assert.assertEquals(p.getEncoding(), XAttrCodec.BASE64);
+    Assert.assertEquals(XAttrCodec.BASE64, p.getEncoding());
     final XAttrEncodingParam p1 = new XAttrEncodingParam(p.getValueString());
-    Assert.assertEquals(p1.getEncoding(), XAttrCodec.BASE64);
+    Assert.assertEquals(XAttrCodec.BASE64, p1.getEncoding());
   }
   
   @Test
@@ -415,9 +415,9 @@ public class TestParam {
     EnumSet<XAttrSetFlag> flag = EnumSet.of(
         XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE);
     final XAttrSetFlagParam p = new XAttrSetFlagParam(flag);
-    Assert.assertEquals(p.getFlag(), flag);
+    Assert.assertEquals(flag, p.getFlag());
     final XAttrSetFlagParam p1 = new XAttrSetFlagParam(p.getValueString());
-    Assert.assertEquals(p1.getFlag(), flag);
+    Assert.assertEquals(flag, p1.getFlag());
   }
   
   @Test

@@ -198,7 +198,7 @@ public class TestStartup {
       // test/data/dfs/nameN/current/{fsimage,edits,...}
       File nameDir = new File(uri.getPath());
       File dfsDir = nameDir.getParentFile();
-      assertEquals(dfsDir.getName(), "dfs"); // make sure we got right dir
+      assertEquals("dfs", dfsDir.getName()); // make sure we got right dir
       // Set the md5 file to all zeros
       File imageFile = new File(nameDir,
           Storage.STORAGE_DIR_CURRENT + "/"
@@ -396,7 +396,7 @@ public class TestStartup {
       // now verify that image and edits are created in the different directories
       FSImage image = nn.getFSImage();
       StorageDirectory sd = image.getStorage().getStorageDir(0); //only one
-      assertEquals(sd.getStorageDirType(), NameNodeDirType.IMAGE_AND_EDITS);
+      assertEquals(NameNodeDirType.IMAGE_AND_EDITS, sd.getStorageDirType());
       image.getStorage();
       File imf = NNStorage.getStorageFile(sd, NameNodeFile.IMAGE, 0);
       image.getStorage();
@@ -597,7 +597,7 @@ public class TestStartup {
       FileStatus fs1 = fs.getFileStatus(f1);
       assertTrue(fs1.isErasureCoded());
       ErasureCodingPolicy fs1Policy = fs.getErasureCodingPolicy(f1);
-      assertEquals(fs1Policy, defaultPolicy);
+      assertEquals(defaultPolicy, fs1Policy);
     } finally {
       cluster.close();
     }
@@ -615,7 +615,7 @@ public class TestStartup {
           .getNamesystem().getErasureCodingPolicyManager().getEnabledPolicies();
       DistributedFileSystem fs = cluster.getFileSystem();
       // make sure the ec policy of the file is still correct
-      assertEquals(fs.getErasureCodingPolicy(f1), defaultPolicy);
+      assertEquals(defaultPolicy, fs.getErasureCodingPolicy(f1));
       // make sure after fsimage fallback, enabled ec policies are not cleared.
       assertTrue(ecPolicies.length == 1);
     } finally {

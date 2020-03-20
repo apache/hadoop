@@ -1025,7 +1025,7 @@ public class TestDataNodeHotSwapVolumes {
             new File(removeDataDir).getAbsolutePath()
         ));
       }
-      assertEquals(dn.getStorage().getBPStorage(bpid).getNumStorageDirs(), 1);
+      assertEquals(1, dn.getStorage().getBPStorage(bpid).getNumStorageDirs());
     }
 
     // Bring the removed directory back. It only successes if all metadata about

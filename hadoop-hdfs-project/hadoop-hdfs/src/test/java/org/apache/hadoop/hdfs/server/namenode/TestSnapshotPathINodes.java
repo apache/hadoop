@@ -196,7 +196,7 @@ public class TestSnapshotPathINodes {
         components, false);
     // Length of inodes should be (components.length - 1), since we will ignore
     // ".snapshot" 
-    assertEquals(nodesInPath.length(), components.length - 1);
+    assertEquals(components.length - 1, nodesInPath.length());
     // SnapshotRootIndex should be 3: {root, Testsnapshot, sub1, s1, file1}
     final Snapshot snapshot = getSnapshot(nodesInPath, "s1", 3);
     assertSnapshot(nodesInPath, true, snapshot, 3);
@@ -212,7 +212,7 @@ public class TestSnapshotPathINodes {
     
     // Call getExistingPathINodes and request only one INode.
     nodesInPath = INodesInPath.resolve(fsdir.rootDir, components, false);
-    assertEquals(nodesInPath.length(), components.length - 1);
+    assertEquals(components.length - 1, nodesInPath.length());
     assertSnapshot(nodesInPath, true, snapshot, 3);
     // Check the INode for file1 (snapshot file)
     assertINodeFile(nodesInPath.getLastINode(), file1);
@@ -223,7 +223,7 @@ public class TestSnapshotPathINodes {
     nodesInPath = INodesInPath.resolve(fsdir.rootDir, components, false);
     // The number of INodes returned should still be components.length
     // since we put a null in the inode array for ".snapshot"
-    assertEquals(nodesInPath.length(), components.length);
+    assertEquals(components.length, nodesInPath.length());
     assertEquals(".snapshot",
         DFSUtil.bytes2String(nodesInPath.getLastLocalName()));
     assertNull(nodesInPath.getLastINode());
@@ -235,7 +235,7 @@ public class TestSnapshotPathINodes {
     assertSnapshot(nodesInPath, true, snapshot, -1);
     // The last INode should be null, the last but 1 should be sub1
     assertNull(nodesInPath.getLastINode());
-    assertEquals(nodesInPath.getINode(-2).getFullPathName(), sub1.toString());
+    assertEquals(sub1.toString(), nodesInPath.getINode(-2).getFullPathName());
     assertTrue(nodesInPath.getINode(-2).isDirectory());
     
     String[] invalidPathComponent = {"invalidDir", "foo", ".snapshot", "bar"};
@@ -276,7 +276,7 @@ public class TestSnapshotPathINodes {
           components, false);
       // Length of inodes should be (components.length - 1), since we will ignore
       // ".snapshot" 
-      assertEquals(nodesInPath.length(), components.length - 1);
+      assertEquals(components.length - 1, nodesInPath.length());
       // SnapshotRootIndex should be 3: {root, Testsnapshot, sub1, s2, file1}
       snapshot = getSnapshot(nodesInPath, "s2", 3);
       assertSnapshot(nodesInPath, true, snapshot, 3);
@@ -292,19 +292,19 @@ public class TestSnapshotPathINodes {
     INodesInPath nodesInPath = INodesInPath.resolve(fsdir.rootDir,
         components, false);
     // The length of inodes should be equal to components.length
-    assertEquals(nodesInPath.length(), components.length);
+    assertEquals(components.length, nodesInPath.length());
     // The number of non-null elements should be components.length - 1 since
     // file1 has been deleted
-    assertEquals(getNumNonNull(nodesInPath), components.length - 1);
+    assertEquals(components.length - 1, getNumNonNull(nodesInPath));
     // The returned nodesInPath should be non-snapshot
     assertSnapshot(nodesInPath, false, snapshot, -1);
     // The last INode should be null, and the one before should be associated
     // with sub1
     assertNull(nodesInPath.getINode(components.length - 1));
-    assertEquals(nodesInPath.getINode(components.length - 2).getFullPathName(),
-        sub1.toString());
-    assertEquals(nodesInPath.getINode(components.length - 3).getFullPathName(),
-        dir.toString());
+    assertEquals(sub1.toString(),
+            nodesInPath.getINode(components.length - 2).getFullPathName());
+    assertEquals(dir.toString(),
+            nodesInPath.getINode(components.length - 3).getFullPathName());
     hdfs.deleteSnapshot(sub1, "s2");
     hdfs.disallowSnapshot(sub1);
   }
@@ -341,10 +341,10 @@ public class TestSnapshotPathINodes {
           components, false);
       // Length of inodes should be (components.length - 1), since we will ignore
       // ".snapshot" 
-      assertEquals(nodesInPath.length(), components.length - 1);
+      assertEquals(components.length - 1, nodesInPath.length());
       // The number of non-null inodes should be components.length - 2, since
       // snapshot of file3 does not exist
-      assertEquals(getNumNonNull(nodesInPath), components.length - 2);
+      assertEquals(components.length - 2, getNumNonNull(nodesInPath));
       s4 = getSnapshot(nodesInPath, "s4", 3);
 
       // SnapshotRootIndex should still be 3: {root, Testsnapshot, sub1, s4, null}
@@ -359,18 +359,18 @@ public class TestSnapshotPathINodes {
     INodesInPath nodesInPath = INodesInPath.resolve(fsdir.rootDir,
         components, false);
     // The number of inodes should be equal to components.length
-    assertEquals(nodesInPath.length(), components.length);
+    assertEquals(components.length, nodesInPath.length());
 
     // The returned nodesInPath should be non-snapshot
     assertSnapshot(nodesInPath, false, s4, -1);
 
     // The last INode should be associated with file3
-    assertEquals(nodesInPath.getINode(components.length - 1).getFullPathName(),
-        file3.toString());
-    assertEquals(nodesInPath.getINode(components.length - 2).getFullPathName(),
-        sub1.toString());
-    assertEquals(nodesInPath.getINode(components.length - 3).getFullPathName(),
-        dir.toString());
+    assertEquals(file3.toString(),
+            nodesInPath.getINode(components.length - 1).getFullPathName());
+    assertEquals(sub1.toString(),
+            nodesInPath.getINode(components.length - 2).getFullPathName());
+    assertEquals(dir.toString(),
+            nodesInPath.getINode(components.length - 3).getFullPathName());
     hdfs.deleteSnapshot(sub1, "s4");
     hdfs.disallowSnapshot(sub1);
   }
@@ -385,11 +385,11 @@ public class TestSnapshotPathINodes {
     INodesInPath nodesInPath = INodesInPath.resolve(fsdir.rootDir,
         components, false);
     // The number of inodes should be equal to components.length
-    assertEquals(nodesInPath.length(), components.length);
+    assertEquals(components.length, nodesInPath.length());
 
     // The last INode should be associated with file1
-    assertEquals(nodesInPath.getINode(components.length - 1).getFullPathName(),
-        file1.toString());
+    assertEquals(file1.toString(),
+            nodesInPath.getINode(components.length - 1).getFullPathName());
     // record the modification time of the inode
     final long modTime = nodesInPath.getINode(nodesInPath.length() - 1)
         .getModificationTime();
@@ -409,7 +409,7 @@ public class TestSnapshotPathINodes {
         components, false);
     // Length of ssInodes should be (components.length - 1), since we will
     // ignore ".snapshot" 
-    assertEquals(ssNodesInPath.length(), components.length - 1);
+    assertEquals(components.length - 1, ssNodesInPath.length());
     final Snapshot s3 = getSnapshot(ssNodesInPath, "s3", 3);
     assertSnapshot(ssNodesInPath, true, s3, 3);
     // Check the INode for snapshot of file1
@@ -427,11 +427,11 @@ public class TestSnapshotPathINodes {
         components, false);
     assertSnapshot(newNodesInPath, false, s3, -1);
     // The number of inodes should be equal to components.length
-    assertEquals(newNodesInPath.length(), components.length);
+    assertEquals(components.length, newNodesInPath.length());
     // The last INode should be associated with file1
     final int last = components.length - 1;
-    assertEquals(newNodesInPath.getINode(last).getFullPathName(),
-        file1.toString());
+    assertEquals(file1.toString(),
+            newNodesInPath.getINode(last).getFullPathName());
     // The modification time of the INode for file3 should have been changed
     Assert.assertFalse(modTime == newNodesInPath.getINode(last).getModificationTime());
     hdfs.deleteSnapshot(sub1, "s3");

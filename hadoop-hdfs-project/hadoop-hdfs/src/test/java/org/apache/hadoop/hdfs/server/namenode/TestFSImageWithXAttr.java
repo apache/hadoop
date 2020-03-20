@@ -79,7 +79,7 @@ public class TestFSImageWithXAttr {
     restart(fs, persistNamespace);
     
     Map<String, byte[]> xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 3);
+    Assert.assertEquals(3, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     Assert.assertArrayEquals(value2, xattrs.get(name2));
     Assert.assertArrayEquals(value3, xattrs.get(name3));
@@ -89,7 +89,7 @@ public class TestFSImageWithXAttr {
     restart(fs, persistNamespace);
     
     xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 3);
+    Assert.assertEquals(3, xattrs.size());
     Assert.assertArrayEquals(newValue1, xattrs.get(name1));
     Assert.assertArrayEquals(value2, xattrs.get(name2));
     Assert.assertArrayEquals(value3, xattrs.get(name3));
@@ -100,7 +100,7 @@ public class TestFSImageWithXAttr {
 
     restart(fs, persistNamespace);
     xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 0);
+    Assert.assertEquals(0, xattrs.size());
   }
 
   @Test

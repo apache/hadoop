@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -85,7 +86,7 @@ public class TestHTestCase extends HTestCase {
       }
     });
     long end = Time.now();
-    assertEquals(waited, -1);
+    assertThat(waited).isEqualTo(-1);
     assertEquals(end - start, 200, 50);
   }
 
@@ -100,7 +101,7 @@ public class TestHTestCase extends HTestCase {
       }
     });
     long end = Time.now();
-    assertEquals(waited, -1);
+    assertThat(waited).isEqualTo(-1);
     assertEquals(end - start, 200 * getWaitForRatio(), 50 * getWaitForRatio());
   }
 
@@ -140,9 +141,9 @@ public class TestHTestCase extends HTestCase {
     server.start();
     URL url = new URL(TestJettyHelper.getJettyURL(), "/bar");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
     BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-    assertEquals(reader.readLine(), "foo");
+    assertThat(reader.readLine()).isEqualTo("foo");
     reader.close();
   }
 
