@@ -143,6 +143,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_ATOMIC_RENAME_DIRECTORIES)
   private String azureAtomicDirs;
 
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APPEND_BLOB_KEY,
+      DefaultValue = DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES)
+  private String azureAppendBlobDirs;
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
       DefaultValue = DEFAULT_AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION)
   private boolean createRemoteFileSystemDuringInitialization;
@@ -162,6 +166,10 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_DISABLE_OUTPUTSTREAM_FLUSH,
       DefaultValue = DEFAULT_DISABLE_OUTPUTSTREAM_FLUSH)
   private boolean disableOutputStreamFlush;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_APPEND_WITH_FLUSH,
+      DefaultValue = DEFAULT_ENABLE_APPEND_WITH_FLUSH)
+  private boolean enableAppendWithFlush;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_AUTOTHROTTLING,
       DefaultValue = DEFAULT_ENABLE_AUTOTHROTTLING)
@@ -449,6 +457,10 @@ public class AbfsConfiguration{
     return this.azureAtomicDirs;
   }
 
+  public String getAppendBlobDirs() {
+    return this.azureAppendBlobDirs;
+  }
+
   public boolean getCreateRemoteFileSystemDuringInitialization() {
     // we do not support creating the filesystem when AuthType is SAS
     return this.createRemoteFileSystemDuringInitialization
@@ -469,6 +481,10 @@ public class AbfsConfiguration{
 
   public boolean isOutputStreamFlushDisabled() {
     return this.disableOutputStreamFlush;
+  }
+
+  public boolean isAppendWithFlushEnabled() {
+    return this.enableAppendWithFlush;
   }
 
   public boolean isAutoThrottlingEnabled() {
