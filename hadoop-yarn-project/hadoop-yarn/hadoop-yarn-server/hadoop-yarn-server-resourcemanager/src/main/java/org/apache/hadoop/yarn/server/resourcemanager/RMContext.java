@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesMa
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.monitor.RMAppLifetimeMonitor;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpired;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
@@ -84,7 +84,7 @@ public interface RMContext extends ApplicationMasterServiceContext {
 
   AMLivelinessMonitor getAMFinishingMonitor();
 
-  ContainerAllocationExpirer getContainerAllocationExpirer();
+  ContainerAllocationExpired getContainerAllocationExpirer();
   
   DelegationTokenRenewer getDelegationTokenRenewer();
 

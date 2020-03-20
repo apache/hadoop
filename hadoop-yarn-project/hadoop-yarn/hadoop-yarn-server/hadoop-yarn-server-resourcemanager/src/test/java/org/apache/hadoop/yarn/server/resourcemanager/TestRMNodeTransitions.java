@@ -52,7 +52,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer
     .AllocationExpirationInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpired;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
@@ -119,7 +119,7 @@ public class TestRMNodeTransitions {
     InlineDispatcher rmDispatcher = new InlineDispatcher();
     
     rmContext =
-        new RMContextImpl(rmDispatcher, mock(ContainerAllocationExpirer.class),
+        new RMContextImpl(rmDispatcher, mock(ContainerAllocationExpired.class),
           null, null, mock(DelegationTokenRenewer.class), null, null, null,
           null, null);
     NodesListManager nodesListManager = mock(NodesListManager.class);
@@ -962,8 +962,8 @@ public class TestRMNodeTransitions {
 
   @Test
   public void testContainerExpire() throws Exception {
-    ContainerAllocationExpirer mockExpirer =
-        mock(ContainerAllocationExpirer.class);
+    ContainerAllocationExpired mockExpirer =
+        mock(ContainerAllocationExpired.class);
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
     ApplicationAttemptId appAttemptId =

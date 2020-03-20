@@ -77,7 +77,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpired;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.AllocationExpirationInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
@@ -146,7 +146,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   /* Container Queue Information for the node.. Used by Distributed Scheduler */
   private OpportunisticContainersStatus opportunisticContainersStatus;
 
-  private final ContainerAllocationExpirer containerAllocationExpirer;
+  private final ContainerAllocationExpired containerAllocationExpired;
   /* set of containers that have just launched */
   private final Set<ContainerId> launchedContainers =
     new HashSet<ContainerId>();
@@ -412,7 +412,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
     this.nodeUpdateQueue = new ConcurrentLinkedQueue<UpdatedContainerInfo>();
 
-    this.containerAllocationExpirer = context.getContainerAllocationExpirer();
+    this.containerAllocationExpired = context.getContainerAllocationExpirer();
   }
 
   @Override
@@ -1432,8 +1432,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           // Just launched container. RM knows about it the first time.
           launchedContainers.add(containerId);
           newlyLaunchedContainers.add(remoteContainer);
-          // Unregister from containerAllocationExpirer.
-          containerAllocationExpirer
+          // Unregister from containerAllocationExpired.
+          containerAllocationExpired
               .unregister(new AllocationExpirationInfo(containerId));
         }
 
@@ -1462,8 +1462,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         if (completedContainers.add(containerId)) {
           newlyCompletedContainers.add(remoteContainer);
         }
-        // Unregister from containerAllocationExpirer.
-        containerAllocationExpirer
+        // Unregister from containerAllocationExpired.
+        containerAllocationExpired
             .unregister(new AllocationExpirationInfo(containerId));
       }
     }

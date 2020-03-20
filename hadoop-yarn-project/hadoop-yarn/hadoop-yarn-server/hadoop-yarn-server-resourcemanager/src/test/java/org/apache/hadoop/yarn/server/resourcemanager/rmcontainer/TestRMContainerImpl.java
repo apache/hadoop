@@ -98,7 +98,7 @@ public class TestRMContainerImpl {
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
         appId, 1);
     ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 1);
-    ContainerAllocationExpirer expirer = mock(ContainerAllocationExpirer.class);
+    ContainerAllocationExpired expirer = mock(ContainerAllocationExpired.class);
 
     Resource resource = BuilderUtils.newResource(512, 1);
     Priority priority = BuilderUtils.newPriority(5);
@@ -204,7 +204,7 @@ public class TestRMContainerImpl {
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
         appId, 1);
     ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 1);
-    ContainerAllocationExpirer expirer = mock(ContainerAllocationExpirer.class);
+    ContainerAllocationExpired expirer = mock(ContainerAllocationExpired.class);
 
     Resource resource = BuilderUtils.newResource(512, 1);
     Priority priority = BuilderUtils.newPriority(5);
@@ -405,7 +405,7 @@ public class TestRMContainerImpl {
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
         appId, 1);
     ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 1);
-    ContainerAllocationExpirer expirer = mock(ContainerAllocationExpirer.class);
+    ContainerAllocationExpired expirer = mock(ContainerAllocationExpired.class);
 
     Resource resource = BuilderUtils.newResource(512, 1);
     Priority priority = BuilderUtils.newPriority(5);
@@ -580,7 +580,7 @@ public class TestRMContainerImpl {
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
         appId, 1);
     ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 1);
-    ContainerAllocationExpirer expirer = mock(ContainerAllocationExpirer.class);
+    ContainerAllocationExpired expirer = mock(ContainerAllocationExpired.class);
 
     Resource resource = BuilderUtils.newResource(512, 1);
     Priority priority = BuilderUtils.newPriority(5);

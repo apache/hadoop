@@ -36,7 +36,7 @@ public enum SchedulerEventType {
   APP_ATTEMPT_ADDED,
   APP_ATTEMPT_REMOVED,
 
-  // Source: ContainerAllocationExpirer
+  // Source: ContainerAllocationExpired
   CONTAINER_EXPIRED,
 
   // Source: SchedulerAppAttempt::pullNewlyUpdatedContainer.

@@ -19,11 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpired;
 
 /**
  * The {@link SchedulerEvent} which notifies that a {@link ContainerId}
- * has expired, sent by {@link ContainerAllocationExpirer} 
+ * has expired, sent by {@link ContainerAllocationExpired}
  *
  */
 public class ContainerExpiredSchedulerEvent extends SchedulerEvent {

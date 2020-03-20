@@ -43,6 +43,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -90,7 +91,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEve
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
@@ -246,8 +246,8 @@ public class TestRMAppAttemptTransitions {
     UserGroupInformation.setConfiguration(conf);
     InlineDispatcher rmDispatcher = new InlineDispatcher();
   
-    ContainerAllocationExpirer containerAllocationExpirer =
-        mock(ContainerAllocationExpirer.class);
+    ContainerAllocationExpired containerAllocationExpired =
+        mock(ContainerAllocationExpired.class);
     amLivelinessMonitor = mock(AMLivelinessMonitor.class);
     amFinishingMonitor = mock(AMLivelinessMonitor.class);
     writer = mock(RMApplicationHistoryWriter.class);
@@ -255,7 +255,7 @@ public class TestRMAppAttemptTransitions {
     when(amRMTokenManager.getMasterKey()).thenReturn(masterKeyData);
     rmContext =
         new RMContextImpl(rmDispatcher,
-          containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
+                containerAllocationExpired, amLivelinessMonitor, amFinishingMonitor,
           null, amRMTokenManager,
           new RMContainerTokenSecretManager(conf),
           nmTokenManager,
