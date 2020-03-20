@@ -1165,7 +1165,7 @@ Compares S3 with MetadataStore, and returns a failure status if any
 rules or invariants are violated. Only works with DynamoDB metadata stores.
 
 ```bash
-hadoop s3guard fsck [-check | -internal] (s3a://BUCKET | s3a://PATH_PREFIX)
+hadoop s3guard fsck [-check | -internal] [-fix] (s3a://BUCKET | s3a://PATH_PREFIX)
 ```
 
 `-check` operation checks the metadata store from the S3 perspective, but
@@ -1174,6 +1174,12 @@ The consistency issues will be logged in ERROR loglevel.
 
 `-internal` operation checks the internal consistency of the metadata store,
 but does not fix any issues.
+
+`-fix` operation fixes consistency issues between the metadatastore and the S3
+bucket. This parameter is optional, and can be used together with check or
+internal parameters, but not alone.
+The following fix is implemented:
+- Remove orphan entries from DDB
 
 The errors found will be logged at the ERROR log level.
 

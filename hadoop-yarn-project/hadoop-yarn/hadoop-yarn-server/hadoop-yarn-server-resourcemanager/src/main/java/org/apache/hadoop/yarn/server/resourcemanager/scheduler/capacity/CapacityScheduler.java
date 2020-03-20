@@ -2044,6 +2044,7 @@ public class CapacityScheduler extends
         super.completedContainer(container, SchedulerUtils
             .createAbnormalContainerStatus(container.getContainerId(),
                 SchedulerUtils.LOST_CONTAINER), RMContainerEventType.KILL);
+        node.releaseContainer(container.getContainerId(), true);
       }
 
       // Remove reservations, if any
