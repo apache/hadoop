@@ -1,0 +1,21 @@
+--- configure.ac~	2018-11-08 10:03:56.000000000 -0800
++++ configure.ac	2019-02-12 14:57:56.000000000 -0800
+@@ -1563,7 +1563,6 @@
+ common/Makefile
+ plugins/Makefile
+ lib/Makefile
+-utils/Makefile
+ sample/Makefile
+ java/Makefile
+ java/CyrusSasl/Makefile
+--- Makefile.am~	2018-11-08 10:03:56.000000000 -0800
++++ Makefile.am	2019-02-12 15:00:47.000000000 -0800
+@@ -70,7 +70,7 @@
+ INSTALLOSX = 
+ endif
+ 
+-SUBDIRS=include sasldb common lib plugins utils $(PWC) $(SAM) $(JAV) $(SAD)
++SUBDIRS=include sasldb common lib plugins $(PWC) $(SAM) $(JAV) $(SAD)
+ EXTRA_DIST=config doc docsrc win32 mac dlcompat-20010505 NTMakefile \
+     INSTALL.TXT libsasl2.pc.in
+ 

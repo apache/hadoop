@@ -19,7 +19,7 @@
 #include "rpc_engine.h"
 #include "rpc_connection.h"
 #include "common/logging.h"
-#include "common/optional_wrapper.h"
+#include "hdfspp/optional_wrapper.h"
 
 #include "sasl_engine.h"
 #include "sasl_protocol.h"

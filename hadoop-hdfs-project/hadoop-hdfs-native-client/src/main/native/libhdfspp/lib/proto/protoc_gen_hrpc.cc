@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-#include "protobuf/cpp_helpers.h"
-
 #include <google/protobuf/compiler/code_generator.h>
 #include <google/protobuf/compiler/plugin.h>
 #include <google/protobuf/descriptor.h>
@@ -34,6 +32,48 @@ using ::google::protobuf::compiler::CodeGenerator;
 using ::google::protobuf::compiler::GeneratorContext;
 using ::google::protobuf::io::Printer;
 using ::google::protobuf::io::ZeroCopyOutputStream;
+
+/**
+ * The next two functions are derived from the original implementation of
+ * the protobuf library from Google.
+ **/
+
+static inline std::string StripProto(const std::string &str) {
+  static const std::string kExtension = ".proto";
+  if (str.size() >= kExtension.size() &&
+      str.compare(str.size() - kExtension.size(), kExtension.size(),
+                  kExtension) == 0) {
+    return str.substr(0, str.size() - kExtension.size());
+  } else {
+    return str;
+  }
+}
+
+static inline std::string ToCamelCase(const std::string &input) {
+  bool cap_next_letter = true;
+  std::string result;
+  // Note:  I distrust ctype.h due to locales.
+  for (size_t i = 0; i < input.size(); i++) {
+    if ('a' <= input[i] && input[i] <= 'z') {
+      if (cap_next_letter) {
+        result += input[i] + ('A' - 'a');
+      } else {
+        result += input[i];
+      }
+      cap_next_letter = false;
+    } else if ('A' <= input[i] && input[i] <= 'Z') {
+      // Capital letters are left as-is.
+      result += input[i];
+      cap_next_letter = false;
+    } else if ('0' <= input[i] && input[i] <= '9') {
+      result += input[i];
+      cap_next_letter = true;
+    } else {
+      cap_next_letter = true;
+    }
+  }
+  return result;
+}
 
 class StubGenerator : public CodeGenerator {
 public:

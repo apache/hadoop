@@ -58,13 +58,10 @@
 #ifndef INCLUDE_HDFSPP_IOSERVICE_H_
 #define INCLUDE_HDFSPP_IOSERVICE_H_
 
+#define ASIO_STANDALONE 1
+#include <asio/io_service.hpp>
 #include <functional>
 #include <memory>
-
-// forward decl
-namespace asio {
-  class io_service;
-}
 
 namespace hdfs {
 

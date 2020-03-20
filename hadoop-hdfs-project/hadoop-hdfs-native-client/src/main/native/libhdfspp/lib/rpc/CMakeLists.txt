@@ -24,8 +24,5 @@ if (CMAKE_USING_GSASL)
  list(APPEND rpc_object_items gsasl_engine.cc)
 endif (CMAKE_USING_GSASL)
 
-add_library(rpc_obj OBJECT ${rpc_object_items})
-
-
-add_dependencies(rpc_obj proto)
-add_library(rpc $<TARGET_OBJECTS:rpc_obj>)
+add_library(rpc OBJECT ${rpc_object_items})
+add_dependencies(rpc proto)

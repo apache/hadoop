@@ -68,7 +68,7 @@ public:
   ::asio::ip::tcp::endpoint current_endpoint_;
   std::vector<::asio::ip::tcp::endpoint> additional_endpoints_;
   Socket socket_;
-  ::asio::deadline_timer connect_timer_;
+  ::asio::steady_timer connect_timer_;
 
   void ConnectComplete(const ::asio::error_code &ec, const ::asio::ip::tcp::endpoint &remote);
 };

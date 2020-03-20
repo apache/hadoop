@@ -20,7 +20,7 @@
 #include "common/util.h"
 #include "common/logging.h"
 #include "common/namenode_info.h"
-#include "common/optional_wrapper.h"
+#include "hdfspp/optional_wrapper.h"
 
 #include <algorithm>
 
@@ -50,6 +50,10 @@ RpcEngine::RpcEngine(std::shared_ptr<IoService> io_service, const Options &optio
   if (options.authentication == Options::kKerberos) {
     auth_info_.setMethod(AuthInfo::kKerberos);
   }
+}
+
+RpcEngine::~RpcEngine() {
+  // PASS
 }
 
 void RpcEngine::Connect(const std::string &cluster_name,

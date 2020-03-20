@@ -16,29 +16,33 @@
 # limitations under the License.
 #
 
-set(PROTOBUF_IMPORT_DIRS ${PROTO_HDFS_DIR} ${PROTO_HADOOP_DIR})
+include(CMakeParseArguments)
+include(ProtobufGenerate)
+
+# Paths to find the imported files
+set(PROTOBUF_IMPORT_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
 
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
-  ${PROTO_HDFS_DIR}/datatransfer.proto
-  ${PROTO_HDFS_DIR}/ClientDatanodeProtocol.proto
-  ${PROTO_HDFS_DIR}/ClientNamenodeProtocol.proto
-  ${PROTO_HDFS_DIR}/acl.proto
-  ${PROTO_HDFS_DIR}/datatransfer.proto
-  ${PROTO_HDFS_DIR}/encryption.proto
-  ${PROTO_HDFS_DIR}/erasurecoding.proto
-  ${PROTO_HDFS_DIR}/hdfs.proto
-  ${PROTO_HDFS_DIR}/inotify.proto
-  ${PROTO_HDFS_DIR}/xattr.proto
-  ${PROTO_HDFS_DIR}/ReconfigurationProtocol.proto
-  ${PROTO_HADOOP_DIR}/IpcConnectionContext.proto
-  ${PROTO_HADOOP_DIR}/ProtobufRpcEngine.proto
-  ${PROTO_HADOOP_DIR}/RpcHeader.proto
-  ${PROTO_HADOOP_DIR}/Security.proto
-  ${PROTO_HADOOP_DIR}/HAServiceProtocol.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/datatransfer.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/ClientDatanodeProtocol.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/ClientNamenodeProtocol.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/acl.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/datatransfer.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/encryption.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/erasurecoding.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/hdfs.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/inotify.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/xattr.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/ReconfigurationProtocol.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/IpcConnectionContext.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/ProtobufRpcEngine.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/RpcHeader.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/Security.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/HAServiceProtocol.proto
 )
 
 add_executable(protoc-gen-hrpc protoc_gen_hrpc.cc)
-target_link_libraries(protoc-gen-hrpc ${PROTOBUF_PROTOC_LIBRARY} ${PROTOBUF_LIBRARY})
+target_link_libraries(protoc-gen-hrpc protoc protobuf)
 
 function(GEN_HRPC SRCS)
   if(NOT ARGN)
@@ -78,11 +82,8 @@ function(GEN_HRPC SRCS)
 endfunction()
 
 gen_hrpc(HRPC_SRCS
-  ${PROTO_HDFS_DIR}/ClientNamenodeProtocol.proto
+  ${CMAKE_CURRENT_SOURCE_DIR}/ClientNamenodeProtocol.proto
 )
 
-add_library(proto_obj OBJECT ${PROTO_SRCS} ${PROTO_HDRS} ${HRPC_SRCS})
-if(HADOOP_BUILD)
-  add_dependencies(proto_obj copy_hadoop_files)
-endif(HADOOP_BUILD)
-add_library(proto $<TARGET_OBJECTS:proto_obj>)
+add_library(proto OBJECT ${PROTO_SRCS} ${PROTO_HDRS} ${HRPC_SRCS})
+add_dependencies(proto protobuf)

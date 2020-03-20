@@ -1,0 +1,11 @@
+--- Makefile.shared~	2018-11-20 05:45:20.000000000 -0800
++++ Makefile.shared	2019-02-12 10:43:46.000000000 -0800
+@@ -250,7 +250,7 @@
+ 	if [ -n "$$SHLIB_SOVER_NODOT" ]; then \
+ 		SHAREDFLAGS="$$SHAREDFLAGS -compatibility_version $$SHLIB_SOVER_NODOT"; \
+ 	fi; \
+-	SHAREDFLAGS="$$SHAREDFLAGS -install_name $(INSTALLTOP)/$(LIBDIR)/$$SHLIB$(SHLIB_EXT)"; \
++	SHAREDFLAGS="$$SHAREDFLAGS -install_name @rpath/$$SHLIB$(SHLIB_EXT)"; \
+ 	$(LINK_SO_A)
+ link_app.darwin:	# is there run-path on darwin?
+ 	$(LINK_APP)

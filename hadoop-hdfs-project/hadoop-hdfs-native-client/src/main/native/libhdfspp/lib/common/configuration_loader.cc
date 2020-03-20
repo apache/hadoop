@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "configuration_loader.h"
+#include "hdfspp/configuration_loader.h"
 #include "common/logging.h"
 
 #include <fstream>

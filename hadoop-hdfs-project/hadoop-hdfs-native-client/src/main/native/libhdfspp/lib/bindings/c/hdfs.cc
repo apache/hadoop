@@ -19,8 +19,8 @@
 #include "hdfspp/hdfspp.h"
 #include "hdfspp/hdfs_ext.h"
 
-#include "common/hdfs_configuration.h"
-#include "common/configuration_loader.h"
+#include "hdfspp/hdfs_configuration.h"
+#include "hdfspp/configuration_loader.h"
 #include "common/logging.h"
 #include "fs/filesystem.h"
 #include "fs/filehandle.h"
