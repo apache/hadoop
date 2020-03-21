@@ -50,6 +50,7 @@ public final class FileSystemConfigurations {
 
   public static final int MAX_CONCURRENT_READ_THREADS = 12;
   public static final int DEFAULT_WRITE_CONCURRENCY_FACTOR = 4;
+  public static final boolean DEFAULT_AZURE_SHOULD_USE_OLD_ABFSOUTPUTSTREAM = false;
   public static final int MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE = 20;
   public static final int MAX_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE = 90;
   public static final int DEFAULT_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE = MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE;

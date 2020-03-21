@@ -120,6 +120,10 @@ public class AbfsConfiguration{
       DefaultValue = AZURE_BLOCK_LOCATION_HOST_DEFAULT)
   private String azureBlockLocationHost;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_SHOULD_USE_OLD_ABFSOUTPUTSTREAM,
+      DefaultValue = DEFAULT_AZURE_SHOULD_USE_OLD_ABFSOUTPUTSTREAM)
+  private boolean shouldUseOlderAbfsOutputStream;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_CONCURRENCY_FACTOR,
       MinValue = 1,
       DefaultValue = DEFAULT_WRITE_CONCURRENCY_FACTOR)

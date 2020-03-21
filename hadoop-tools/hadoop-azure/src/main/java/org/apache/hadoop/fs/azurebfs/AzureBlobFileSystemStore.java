@@ -79,7 +79,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsAclHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
-import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStreamOld;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPermission;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
@@ -110,6 +110,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PAT
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_SHOULD_USE_OLD_ABFSOUTPUTSTREAM;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_SHOULD_USE_OLD_ABFSOUTPUTSTREAM;
 
 /**
  * Provides the bridging logic between Hadoop's abstract filesystem and Azure Storage.
@@ -408,7 +410,11 @@ public class AzureBlobFileSystemStore implements Closeable {
               isNamespaceEnabled ? getOctalNotation(umask) : null);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
 
-      return new AbfsOutputStream(
+
+      boolean shouldUseOldAbfsOutputStream =
+          abfsConfiguration.getBoolean(AZURE_SHOULD_USE_OLD_ABFSOUTPUTSTREAM,
+              DEFAULT_AZURE_SHOULD_USE_OLD_ABFSOUTPUTSTREAM);
+      return new AbfsOutputStreamOld(
               client,
               AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
               0,
@@ -492,7 +498,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 
       perfInfo.registerSuccess(true);
 
-      return new AbfsOutputStream(
+      return new AbfsOutputStreamOld(
               client,
               AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
               offset,

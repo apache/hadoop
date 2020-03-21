@@ -34,7 +34,7 @@ import org.hamcrest.core.IsNot;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStreamOld;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -303,7 +303,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
       stream.write(buffer);
 
       // Write asynchronously uploads data, so we must wait for completion
-      AbfsOutputStream abfsStream = (AbfsOutputStream) stream
+      AbfsOutputStreamOld abfsStream = (AbfsOutputStreamOld) stream
           .getWrappedStream();
       abfsStream.waitForPendingUploads();
 
