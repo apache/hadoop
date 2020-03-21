@@ -20,7 +20,7 @@ public class TestRolloverSignerSecretProvider {
 
   @Test
   public void testGetAndRollSecrets() throws Exception {
-    long rolloverFrequency = 5 * 1000; // rollover every 5 sec
+    long rolloverFrequency = 2 * 1000; // rollover every 2 sec
     byte[] secret1 = "doctor".getBytes();
     byte[] secret2 = "who".getBytes();
     byte[] secret3 = "tardis".getBytes();
@@ -36,7 +36,9 @@ public class TestRolloverSignerSecretProvider {
       Assert.assertEquals(2, allSecrets.length);
       Assert.assertArrayEquals(secret1, allSecrets[0]);
       Assert.assertNull(allSecrets[1]);
-      Thread.sleep(rolloverFrequency + 2000);
+      synchronized (secretProvider.monitor){
+        secretProvider.monitor.wait();
+      }
 
       currentSecret = secretProvider.getCurrentSecret();
       allSecrets = secretProvider.getAllSecrets();
@@ -44,7 +46,9 @@ public class TestRolloverSignerSecretProvider {
       Assert.assertEquals(2, allSecrets.length);
       Assert.assertArrayEquals(secret2, allSecrets[0]);
       Assert.assertArrayEquals(secret1, allSecrets[1]);
-      Thread.sleep(rolloverFrequency + 2000);
+      synchronized (secretProvider.monitor){
+        secretProvider.monitor.wait();
+      }
 
       currentSecret = secretProvider.getCurrentSecret();
       allSecrets = secretProvider.getAllSecrets();
@@ -61,9 +65,9 @@ public class TestRolloverSignerSecretProvider {
 
     private byte[][] newSecretSequence;
     private int newSecretSequenceIndex;
+    final Object monitor = new Object();
 
-    public TRolloverSignerSecretProvider(byte[][] newSecretSequence)
-        throws Exception {
+    TRolloverSignerSecretProvider(byte[][] newSecretSequence) {
       super();
       this.newSecretSequence = newSecretSequence;
       this.newSecretSequenceIndex = 0;
@@ -71,6 +75,9 @@ public class TestRolloverSignerSecretProvider {
 
     @Override
     protected byte[] generateNewSecret() {
+      synchronized (monitor){
+        monitor.notify();
+      }
       return newSecretSequence[newSecretSequenceIndex++];
     }
 
