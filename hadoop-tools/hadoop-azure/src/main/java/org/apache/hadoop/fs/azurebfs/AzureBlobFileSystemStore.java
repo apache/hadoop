@@ -79,6 +79,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsAclHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStreamOld;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPermission;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
@@ -410,15 +411,16 @@ public class AzureBlobFileSystemStore implements Closeable {
               isNamespaceEnabled ? getOctalNotation(umask) : null);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
 
-
-      boolean shouldUseOldAbfsOutputStream =
-          abfsConfiguration.getBoolean(AZURE_SHOULD_USE_OLD_ABFSOUTPUTSTREAM,
-              DEFAULT_AZURE_SHOULD_USE_OLD_ABFSOUTPUTSTREAM);
-      return new AbfsOutputStreamOld(
-              client,
-              AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
-              0,
-              abfsConfiguration);
+      if (abfsConfiguration.shouldUseOlderAbfsOutputStream()) {
+        return new AbfsOutputStreamOld(client,
+            AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), 0,
+            abfsConfiguration.getWriteBufferSize(),
+            abfsConfiguration.isFlushEnabled(),
+            abfsConfiguration.isOutputStreamFlushDisabled());
+      }
+      return new AbfsOutputStream(client,
+          AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), 0,
+          abfsConfiguration);
     }
   }
 
@@ -498,11 +500,16 @@ public class AzureBlobFileSystemStore implements Closeable {
 
       perfInfo.registerSuccess(true);
 
-      return new AbfsOutputStreamOld(
-              client,
-              AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
-              offset,
-              abfsConfiguration);
+      if (abfsConfiguration.shouldUseOlderAbfsOutputStream()) {
+        return new AbfsOutputStreamOld(client,
+            AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), 0,
+            abfsConfiguration.getWriteBufferSize(),
+            abfsConfiguration.isFlushEnabled(),
+            abfsConfiguration.isOutputStreamFlushDisabled());
+      }
+      return new AbfsOutputStream(client,
+          AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), 0,
+          abfsConfiguration);
     }
   }
 

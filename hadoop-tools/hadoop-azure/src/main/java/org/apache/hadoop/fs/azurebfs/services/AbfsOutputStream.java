@@ -47,7 +47,7 @@ import static org.apache.hadoop.io.IOUtils.wrapException;
 /**
  * The BlobFsOutputStream for Rest AbfsClient.
  */
-public class AbfsOutputStreamV2 extends OutputStream implements Syncable, StreamCapabilities {
+public class AbfsOutputStream extends OutputStream implements Syncable, StreamCapabilities {
 
   private final AbfsClient client;
   private final String path;
@@ -76,7 +76,7 @@ public class AbfsOutputStreamV2 extends OutputStream implements Syncable, Stream
    */
   private static AbfsByteBufferPool bufferPool;
 
-  public AbfsOutputStreamV2(
+  public AbfsOutputStream(
       final AbfsClient client,
       final String path,
       final long position,

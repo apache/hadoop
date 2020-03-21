@@ -403,6 +403,10 @@ public class AbfsConfiguration{
     return this.rawConfig;
   }
 
+  public boolean shouldUseOlderAbfsOutputStream() {
+    return this.shouldUseOlderAbfsOutputStream;
+  }
+
   public int getWriteBufferSize() {
     return this.writeBufferSize;
   }
@@ -723,6 +727,12 @@ public class AbfsConfiguration{
   @VisibleForTesting
   void setDisableOutputStreamFlush(boolean disableOutputStreamFlush) {
     this.disableOutputStreamFlush = disableOutputStreamFlush;
+  }
+
+  @VisibleForTesting
+  void setShouldUseOlderAbfsOutputStream(
+      boolean shouldUseOlderAbfsOutputStream) {
+    this.shouldUseOlderAbfsOutputStream = shouldUseOlderAbfsOutputStream;
   }
 
   @VisibleForTesting

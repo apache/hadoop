@@ -211,7 +211,17 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   }
 
   @Test
-  public void testWriteWithMultipleOutputStreamAtTheSameTime()
+  public void testWriteWithMultipleOutputStreamAtTheSameTimeWithOldAndNewAbfsOutputStream()
+      throws IOException, ExecutionException, InterruptedException {
+    getFileSystem().getAbfsStore().getAbfsConfiguration()
+        .setShouldUseOlderAbfsOutputStream(true);
+    testWriteWithMultipleOutputStreamAtTheSameTime();
+    getFileSystem().getAbfsStore().getAbfsConfiguration()
+        .setShouldUseOlderAbfsOutputStream(false);
+    testWriteWithMultipleOutputStreamAtTheSameTime();
+  }
+
+  private void testWriteWithMultipleOutputStreamAtTheSameTime()
       throws IOException, InterruptedException, ExecutionException {
     AzureBlobFileSystem fs = getFileSystem();
     String testFilePath = methodName.getMethodName();
