@@ -20,7 +20,7 @@ public class TestRolloverSignerSecretProvider {
 
   @Test
   public void testGetAndRollSecrets() throws Exception {
-    long rolloverFrequency = 15 * 1000; // rollover every 15 sec
+    long rolloverFrequency = 5 * 1000; // rollover every 5 sec
     byte[] secret1 = "doctor".getBytes();
     byte[] secret2 = "who".getBytes();
     byte[] secret3 = "tardis".getBytes();
@@ -52,7 +52,6 @@ public class TestRolloverSignerSecretProvider {
       Assert.assertEquals(2, allSecrets.length);
       Assert.assertArrayEquals(secret3, allSecrets[0]);
       Assert.assertArrayEquals(secret2, allSecrets[1]);
-      Thread.sleep(rolloverFrequency + 2000);
     } finally {
       secretProvider.destroy();
     }
