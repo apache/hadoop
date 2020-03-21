@@ -79,8 +79,10 @@ public class ITestAbfsByteBufferPool {
     int expectedPoolCapacity = maxConcurrentThreadCount + 1;
     for (int i = 0; i < expectedPoolCapacity * 2; i++) {
       pool.release(new byte[bufferSize]);
-      assertThat(pool.getFreeBuffers()).describedAs("")
-          .hasSize(Math.min(i + 1, expectedPoolCapacity));
+      assertThat(pool.getFreeBuffers()).describedAs(
+          "Pool size should never exceed the expected capacity irrespective "
+              + "of the number of objects released to the pool")
+          .hasSizeLessThanOrEqualTo(expectedPoolCapacity);
     }
   }
 
@@ -119,13 +121,24 @@ public class ITestAbfsByteBufferPool {
 
     for (int i = 0; i < expectedMaxBuffersInUse; i++) {
       byte[] byteBuffer = pool.get();
-      assertThat(byteBuffer.length).isEqualTo(bufferSize);
+      assertThat(byteBuffer.length).describedAs("Pool has to return an object "
+          + "immediately, until maximum buffers are in use.")
+          .isEqualTo(bufferSize);
     }
+
+    byte[] byteBuffer = pool.get();
+    pool.getFreeBuffers().add(new byte[bufferSize]);
+    assertThat(byteBuffer.length).describedAs("Pool has to return an object "
+        + "immediately, if thre is free buffers available in the pool.")
+        .isEqualTo(bufferSize);
 
     Thread getThread = new Thread(() -> pool.get());
     getThread.start();
     Thread.sleep(5000);
-    assertThat(getThread.getState()).isEqualTo(State.WAITING);
+    assertThat(getThread.getState()).describedAs("When maximum number of "
+        + "buffers are in use and no free buffers available in the pool the "
+        + "get call is blocked until an object is released to the pool.")
+        .isEqualTo(State.WAITING);
     getThread.interrupt();
 
     Callable<byte[]> callable = () -> pool.get();
@@ -133,8 +146,9 @@ public class ITestAbfsByteBufferPool {
     getThread = new Thread(futureTask);
     getThread.start();
     pool.release(new byte[bufferSize]);
-    byte[] byteBuffer = (byte[]) futureTask.get();
-    assertThat(byteBuffer.length).isEqualTo(bufferSize);
+    byteBuffer = (byte[]) futureTask.get();
+    assertThat(byteBuffer.length).describedAs("The blocked get call unblocks "
+        + "when an object is released back to the pool.").isEqualTo(bufferSize);
   }
 
   @Test
@@ -166,14 +180,13 @@ public class ITestAbfsByteBufferPool {
           .describedAs("Max buffers in use should be always greater than 1")
           .isGreaterThan(1)
           .describedAs("Max buffers in use should be equal to as expected")
-          .isEqualTo(expectedMaxBuffersInUse)
-          .describedAs("Max buffers in use should be <= number of "
+          .isEqualTo(expectedMaxBuffersInUse).describedAs(
+          "Max buffers in use should be <= number of "
               + "buffers calculated by memory percentage")
-          .isLessThanOrEqualTo(
-          (int) Math.ceil(Math.max(2, bufferCountByMemory)))
+          .isLessThanOrEqualTo((int) Math.ceil(bufferCountByMemory))
           .describedAs("Max buffers in use should <= number of buffers "
-              + "calculated by concurrency").isLessThanOrEqualTo(
-          (int) Math.ceil(Math.max(2, bufferCountByMemory)));
+              + "calculated by concurrency")
+          .isLessThanOrEqualTo((int) Math.ceil(bufferCountByMemory));
     }
   }
 }
