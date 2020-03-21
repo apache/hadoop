@@ -440,6 +440,25 @@ public class JsonUtilClient {
         .directoryCount(directoryCount)
         .erasureCodingPolicy(ecPolicy);
     builder = buildQuotaUsage(builder, m, ContentSummary.Builder.class);
+    if (m.get("snapshotLength") != null) {
+      long snapshotLength = ((Number) m.get("snapshotLength")).longValue();
+      builder.snapshotLength(snapshotLength);
+    }
+    if (m.get("snapshotFileCount") != null) {
+      long snapshotFileCount =
+          ((Number) m.get("snapshotFileCount")).longValue();
+      builder.snapshotFileCount(snapshotFileCount);
+    }
+    if (m.get("snapshotDirectoryCount") != null) {
+      long snapshotDirectoryCount =
+          ((Number) m.get("snapshotDirectoryCount")).longValue();
+      builder.snapshotDirectoryCount(snapshotDirectoryCount);
+    }
+    if (m.get("snapshotSpaceConsumed") != null) {
+      long snapshotSpaceConsumed =
+          ((Number) m.get("snapshotSpaceConsumed")).longValue();
+      builder.snapshotSpaceConsumed(snapshotSpaceConsumed);
+    }
     return builder.build();
   }
 
