@@ -38,6 +38,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  */
 public class ITestAbfsByteBufferPool {
 
+  private static final int TWO_MB = 2 * 1024 * 1024;
+
   @Test
   public void testWithInvalidMaxWriteMemUsagePercentage() throws Exception {
     List<Integer> invalidMaxWriteMemUsagePercentageList = Arrays
@@ -45,10 +47,10 @@ public class ITestAbfsByteBufferPool {
             MAX_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE + 1, -100, 101);
     for (int val : invalidMaxWriteMemUsagePercentageList) {
       intercept(IllegalArgumentException.class, String
-              .format("maxConcurrentThreadCount should be in range (%s - %s)",
+              .format("maxWriteMemUsagePercentage should be in range (%s - %s)",
                   MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE,
                   MAX_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE),
-          () -> new AbfsByteBufferPool(2, 2, val));
+          () -> new AbfsByteBufferPool(TWO_MB, 2, val));
     }
   }
 
@@ -60,25 +62,24 @@ public class ITestAbfsByteBufferPool {
               .format("maxConcurrentThreadCount cannot be < 1",
                   MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE,
                   MAX_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE),
-          () -> new AbfsByteBufferPool(2, val, 20));
+          () -> new AbfsByteBufferPool(TWO_MB, val, 20));
     }
   }
 
   @Test(expected = NullPointerException.class)
   public void testReleaseNull() {
-    AbfsByteBufferPool pool = new AbfsByteBufferPool(2, 5, 30);
+    AbfsByteBufferPool pool = new AbfsByteBufferPool(TWO_MB, 5, 30);
     pool.release(null);
   }
 
   @Test
   public void testReleaseMoreThanPoolCapacity() {
-    int bufferSize = 2;
     int maxConcurrentThreadCount = 3;
-    AbfsByteBufferPool pool = new AbfsByteBufferPool(bufferSize,
+    AbfsByteBufferPool pool = new AbfsByteBufferPool(TWO_MB,
         maxConcurrentThreadCount, 25);
     int expectedPoolCapacity = maxConcurrentThreadCount + 1;
     for (int i = 0; i < expectedPoolCapacity * 2; i++) {
-      pool.release(new byte[bufferSize]);
+      pool.release(new byte[TWO_MB]);
       assertThat(pool.getFreeBuffers()).describedAs(
           "Pool size should never exceed the expected capacity irrespective "
               + "of the number of objects released to the pool")
@@ -95,42 +96,39 @@ public class ITestAbfsByteBufferPool {
 
   @Test
   public void testReleaseWithDifferentBufferSize() throws Exception {
-    int bufferSize = 2;
     String errorString = "Buffer size has to be %s";
-    AbfsByteBufferPool pool = new AbfsByteBufferPool(bufferSize, 3, 25);
+    AbfsByteBufferPool pool = new AbfsByteBufferPool(TWO_MB, 3, 25);
     for (int i = 1; i < 2; i++) {
       int finalI = i;
       intercept(IllegalArgumentException.class,
-          String.format(errorString, bufferSize),
-          () -> pool.release(new byte[bufferSize + finalI]));
+          String.format(errorString, TWO_MB),
+          () -> pool.release(new byte[TWO_MB + finalI]));
       intercept(IllegalArgumentException.class,
-          String.format(errorString, bufferSize),
-          () -> pool.release(new byte[bufferSize - finalI]));
+          String.format(errorString, TWO_MB),
+          () -> pool.release(new byte[TWO_MB - finalI]));
     }
   }
 
   @Test
   public void testGet() throws Exception {
-    int bufferSize = 2;
     int maxConcurrentThreadCount = 3;
     int expectedMaxBuffersInUse =
         maxConcurrentThreadCount + Runtime.getRuntime().availableProcessors()
             + 1;
-    AbfsByteBufferPool pool = new AbfsByteBufferPool(bufferSize,
+    AbfsByteBufferPool pool = new AbfsByteBufferPool(TWO_MB,
         maxConcurrentThreadCount, 90);
 
     for (int i = 0; i < expectedMaxBuffersInUse; i++) {
       byte[] byteBuffer = pool.get();
       assertThat(byteBuffer.length).describedAs("Pool has to return an object "
-          + "immediately, until maximum buffers are in use.")
-          .isEqualTo(bufferSize);
+          + "immediately, until maximum buffers are in use.").isEqualTo(TWO_MB);
     }
 
+    pool.release(new byte[2 * 1024 * 1024]);
     byte[] byteBuffer = pool.get();
-    pool.getFreeBuffers().add(new byte[bufferSize]);
     assertThat(byteBuffer.length).describedAs("Pool has to return an object "
-        + "immediately, if thre is free buffers available in the pool.")
-        .isEqualTo(bufferSize);
+        + "immediately, if there are free buffers available in the pool.")
+        .isEqualTo(TWO_MB);
 
     Thread getThread = new Thread(() -> pool.get());
     getThread.start();
@@ -145,10 +143,10 @@ public class ITestAbfsByteBufferPool {
     FutureTask futureTask = new FutureTask(callable);
     getThread = new Thread(futureTask);
     getThread.start();
-    pool.release(new byte[bufferSize]);
+    pool.release(new byte[TWO_MB]);
     byteBuffer = (byte[]) futureTask.get();
     assertThat(byteBuffer.length).describedAs("The blocked get call unblocks "
-        + "when an object is released back to the pool.").isEqualTo(bufferSize);
+        + "when an object is released back to the pool.").isEqualTo(TWO_MB);
   }
 
   @Test
@@ -157,15 +155,14 @@ public class ITestAbfsByteBufferPool {
         new Object[][] {{1, 1, 20}, {1, 100000, 90}, {1, 2, 30},
             {100, 100, 90}});
     for (int i = 0; i < testData.size(); i++) {
-      int bufferSize = (int) testData.get(i)[0];
+      int bufferSize = (int) testData.get(i)[0] * 1024 * 1024;
       int maxConcurrentThreadCount = (int) testData.get(i)[1];
       int maxWriteMemUsagePercentage = (int) testData.get(i)[2];
       AbfsByteBufferPool pool = new AbfsByteBufferPool(bufferSize,
           maxConcurrentThreadCount, maxWriteMemUsagePercentage);
 
       double maxMemoryAllowedForPoolMB =
-          Runtime.getRuntime().maxMemory() / (1024 * 1024)
-              * maxWriteMemUsagePercentage / 100;
+          Runtime.getRuntime().maxMemory() * maxWriteMemUsagePercentage / 100;
       double bufferCountByMemory = maxMemoryAllowedForPoolMB / bufferSize;
       double bufferCountByConcurrency =
           maxConcurrentThreadCount + Runtime.getRuntime().availableProcessors()

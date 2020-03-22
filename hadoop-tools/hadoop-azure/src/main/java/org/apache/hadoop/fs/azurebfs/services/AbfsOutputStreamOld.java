@@ -36,19 +36,25 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.io.IOUtils.wrapException;
 
 /**
  * The BlobFsOutputStream for Rest AbfsClient.
  */
-public class AbfsOutputStreamOld extends OutputStream implements Syncable, StreamCapabilities {
+public class AbfsOutputStreamOld extends OutputStream implements Syncable,
+    StreamCapabilities {
+  private static final Logger LOG = LoggerFactory
+      .getLogger(AbfsOutputStreamOld.class);
   private final AbfsClient client;
   private final String path;
   private long position;
@@ -138,6 +144,7 @@ public class AbfsOutputStreamOld extends OutputStream implements Syncable, Strea
    */
   @Override
   public void write(final int byteVal) throws IOException {
+    LOG.info("SIMPLE WRITE: ");
     write(new byte[]{(byte) (byteVal & 0xFF)});
   }
 
@@ -154,6 +161,7 @@ public class AbfsOutputStreamOld extends OutputStream implements Syncable, Strea
   @Override
   public synchronized void write(final byte[] data, final int off, final int length)
       throws IOException {
+    LOG.info("WRITE: "+this+"\t"+stats()+", data: "+data.length+", off: "+off+", len: "+length);
     maybeThrowLastError();
 
     Preconditions.checkArgument(data != null, "null data");
@@ -183,6 +191,9 @@ public class AbfsOutputStreamOld extends OutputStream implements Syncable, Strea
     }
   }
 
+  private String stats(){
+    return ", bufSize: "+bufferSize+", writeOpsSize: "+writeOperations.size();
+  }
   /**
    * Throw the last error recorded if not null.
    * After the stream is closed, this is always set to
@@ -204,6 +215,7 @@ public class AbfsOutputStreamOld extends OutputStream implements Syncable, Strea
    */
   @Override
   public void flush() throws IOException {
+    LOG.info("flush: ");
     if (!disableOutputStreamFlush) {
       flushInternalAsync();
     }
@@ -215,6 +227,7 @@ public class AbfsOutputStreamOld extends OutputStream implements Syncable, Strea
    */
   @Override
   public void hsync() throws IOException {
+    LOG.info("hsync: "+this+"\t"+stats());
     if (supportFlush) {
       flushInternal(false);
     }
@@ -226,6 +239,7 @@ public class AbfsOutputStreamOld extends OutputStream implements Syncable, Strea
    */
   @Override
   public void hflush() throws IOException {
+    LOG.info("hflush: "+this+"\t"+stats());
     if (supportFlush) {
       flushInternal(false);
     }
@@ -241,6 +255,7 @@ public class AbfsOutputStreamOld extends OutputStream implements Syncable, Strea
    */
   @Override
   public synchronized void close() throws IOException {
+    LOG.info("CLOSE: "+this+"\t"+stats());
     if (closed) {
       return;
     }
@@ -305,6 +320,7 @@ public class AbfsOutputStreamOld extends OutputStream implements Syncable, Strea
           perfInfo.registerResult(op.getResult());
           byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
           perfInfo.registerSuccess(true);
+          LOG.info("CALL: "+this+"\t"+stats());
           return null;
         }
       }

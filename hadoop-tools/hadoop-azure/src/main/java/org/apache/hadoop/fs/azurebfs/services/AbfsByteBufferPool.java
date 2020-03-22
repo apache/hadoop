@@ -18,11 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.concurrent.ArrayBlockingQueue;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE;
@@ -61,7 +60,7 @@ public class AbfsByteBufferPool {
             >= MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE
             && maxWriteMemUsagePercentage
             <= MAX_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE,
-        "maxConcurrentThreadCount should be in range (%s - %s)",
+        "maxWriteMemUsagePercentage should be in range (%s - %s)",
         MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE,
         MAX_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE);
     Preconditions.checkArgument(maxConcurrentThreadCount > 0,
@@ -70,10 +69,9 @@ public class AbfsByteBufferPool {
     this.numBuffersInUse = 0;
     freeBuffers = new ArrayBlockingQueue<>(maxConcurrentThreadCount + 1);
 
-    double maxMemoryAllowedForPoolInMBs =
-        Runtime.getRuntime().maxMemory() / (1024 * 1024)
-            * maxWriteMemUsagePercentage / 100;
-    double bufferCountByMemory = maxMemoryAllowedForPoolInMBs / bufferSize;
+    double maxMemoryAllowedForPool =
+        Runtime.getRuntime().maxMemory() * maxWriteMemUsagePercentage / 100;
+    double bufferCountByMemory = maxMemoryAllowedForPool / bufferSize;
     double bufferCountByConcurrency =
         maxConcurrentThreadCount + Runtime.getRuntime().availableProcessors()
             + 1;

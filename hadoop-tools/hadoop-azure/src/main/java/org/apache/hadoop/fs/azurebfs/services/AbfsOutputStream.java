@@ -323,11 +323,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       }
     });
 
-    buffer = bufferPool.get();
     writeOperations.add(new WriteOperation(job, offset, bytesLength));
 
     // Try to shrink the queue
     shrinkWriteOperationQueue();
+    buffer = bufferPool.get();
   }
 
   private synchronized void flushWrittenBytesToService(boolean isClose) throws IOException {

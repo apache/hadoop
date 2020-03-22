@@ -30,6 +30,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.io.IOException;
 
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.assertj.core.api.Assertions;
 import org.hamcrest.core.IsNot;
 import org.junit.Test;
 
@@ -211,17 +213,30 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   }
 
   @Test
-  public void testWriteWithMultipleOutputStreamAtTheSameTimeWithOldAndNewAbfsOutputStream()
-      throws IOException, ExecutionException, InterruptedException {
+  public void testShouldUseOlderAbfsOutputStreamConf() throws IOException {
+    AzureBlobFileSystem fs = getFileSystem();
+    Path testPath = new Path(methodName.getMethodName() + "1");
     getFileSystem().getAbfsStore().getAbfsConfiguration()
         .setShouldUseOlderAbfsOutputStream(true);
-    testWriteWithMultipleOutputStreamAtTheSameTime();
+    try (FSDataOutputStream stream = fs.create(testPath)) {
+      Assertions.assertThat(stream.getWrappedStream()).describedAs("When the "
+          + "shouldUseOlderAbfsOutputStream is set the wrapped stream inside "
+          + "the FSDataOutputStream object should be of class "
+          + "AbfsOutputStreamOld.").isInstanceOf(AbfsOutputStreamOld.class);
+    }
+    testPath = new Path(methodName.getMethodName());
     getFileSystem().getAbfsStore().getAbfsConfiguration()
         .setShouldUseOlderAbfsOutputStream(false);
-    testWriteWithMultipleOutputStreamAtTheSameTime();
+    try (FSDataOutputStream stream = fs.create(testPath)) {
+      Assertions.assertThat(stream.getWrappedStream()).describedAs("When the "
+          + "shouldUseOlderAbfsOutputStream is set the wrapped stream inside "
+          + "the FSDataOutputStream object should be of class "
+          + "AbfsOutputStream.").isInstanceOf(AbfsOutputStream.class);
+    }
   }
 
-  private void testWriteWithMultipleOutputStreamAtTheSameTime()
+  @Test
+  public void testWriteWithMultipleOutputStreamAtTheSameTime()
       throws IOException, InterruptedException, ExecutionException {
     AzureBlobFileSystem fs = getFileSystem();
     String testFilePath = methodName.getMethodName();
@@ -270,7 +285,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
   private void makeNWritesToStream(final FSDataOutputStream stream,
       final int numWrites, final byte[] b, final ExecutorService es)
-      throws IOException, ExecutionException, InterruptedException {
+      throws ExecutionException, InterruptedException {
     final List<Future<Void>> futureTasks = new ArrayList<>();
     for (int i = 0; i < numWrites; i++) {
       futureTasks.add(es.submit(() -> {
@@ -281,7 +296,6 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     for (Future<Void> futureTask : futureTasks) {
       futureTask.get();
     }
-    stream.hflush();
   }
 
   @Test
@@ -313,7 +327,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
       stream.write(buffer);
 
       // Write asynchronously uploads data, so we must wait for completion
-      AbfsOutputStreamOld abfsStream = (AbfsOutputStreamOld) stream
+      AbfsOutputStream abfsStream = (AbfsOutputStream) stream
           .getWrappedStream();
       abfsStream.waitForPendingUploads();
 
