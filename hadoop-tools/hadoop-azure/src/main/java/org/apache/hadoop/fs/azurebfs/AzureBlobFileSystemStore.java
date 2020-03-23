@@ -412,8 +412,10 @@ public class AzureBlobFileSystemStore implements Closeable {
     }
   }
 
-  public OutputStream createFile(final Path path, final boolean overwrite, final FsPermission permission,
-                                 final FsPermission umask) throws AzureBlobFileSystemException {
+  public OutputStream createFile(final Path path,
+      final FileSystem.Statistics statistics,
+      final boolean overwrite, final FsPermission permission,
+      final FsPermission umask) throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("createFile", "createPath")) {
       boolean isNamespaceEnabled = getIsNamespaceEnabled();
       LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} isNamespaceEnabled: {}",
@@ -436,6 +438,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 
       return new AbfsOutputStream(
           client,
+          statistics,
           AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
           0,
           abfsConfiguration.getWriteBufferSize(),
@@ -496,7 +499,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     }
   }
 
-  public OutputStream openFileForWrite(final Path path, final boolean overwrite) throws
+  public OutputStream openFileForWrite(final Path path, final FileSystem.Statistics statistics, final boolean overwrite) throws
           AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("openFileForWrite", "getPathStatus")) {
       LOG.debug("openFileForWrite filesystem: {} path: {} overwrite: {}",
@@ -529,6 +532,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 
       return new AbfsOutputStream(
           client,
+          statistics,
           AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
           offset,
           abfsConfiguration.getWriteBufferSize(),
