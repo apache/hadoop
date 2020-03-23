@@ -1675,6 +1675,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     int numNonAMContainerPreempted = 0;
     Map<String, Long> resourceSecondsMap = new HashMap<>();
     Map<String, Long> preemptedSecondsMap = new HashMap<>();
+    int totalAllocatedContainers = 0;
     this.readLock.lock();
     try {
       for (RMAppAttempt attempt : attempts.values()) {
@@ -1704,6 +1705,8 @@ public class RMAppImpl implements RMApp, Recoverable {
             value += entry.getValue();
             preemptedSecondsMap.put(entry.getKey(), value);
           }
+          totalAllocatedContainers +=
+              attemptMetrics.getTotalAllocatedContainers();
         }
       }
     } finally {
@@ -1711,7 +1714,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     }
 
     return new RMAppMetrics(resourcePreempted, numNonAMContainerPreempted,
-        numAMContainerPreempted, resourceSecondsMap, preemptedSecondsMap);
+        numAMContainerPreempted, resourceSecondsMap, preemptedSecondsMap,
+        totalAllocatedContainers);
   }
 
   @Private
