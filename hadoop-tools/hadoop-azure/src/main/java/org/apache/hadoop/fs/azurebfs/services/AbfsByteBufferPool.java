@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.util.concurrent.ArrayBlockingQueue;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+
+import java.util.concurrent.ArrayBlockingQueue;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE;
@@ -109,8 +109,9 @@ public class AbfsByteBufferPool {
    * @param byteArray The buffer to be offered back to the pool.
    */
   public synchronized void release(byte[] byteArray) {
-    Preconditions.checkArgument(byteArray.length == bufferSize,
-        "Buffer size has" + " to be %s", bufferSize);
+    if (byteArray.length == bufferSize) {
+      return;
+    }
     numBuffersInUse--;
     if (numBuffersInUse < 0) {
       numBuffersInUse = 0;

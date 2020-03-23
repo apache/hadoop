@@ -84,7 +84,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       final AbfsClient client,
       final String path,
       final long position,
-      final int bufferSize,
       final boolean supportFlush,
       final boolean disableOutputStreamFlush,
       final boolean supportAppendWithFlush,
@@ -101,11 +100,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.appendBlob = appendBlob;
     this.lastError = null;
     this.lastFlushOffset = 0;
-    this.bufferSize = bufferSize;
-    this.buffer = new byte[abfsConfiguration.getWriteBufferSize()];
     this.bufferIndex = 0;
 
     init(abfsConfiguration);
+    buffer = new byte[bufferSize];
   }
 
   private static synchronized void init(final AbfsConfiguration conf) {
@@ -113,13 +111,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       return;
     }
 
-    int availableProcessors = Runtime.getRuntime().availableProcessors();
-    maxConcurrentThreadCount =
-        conf.getWriteConcurrencyFactor() * availableProcessors;
-
-    bufferSize = conf.getWriteBufferSize();
-    byteBufferPool = new AbfsByteBufferPool(bufferSize, maxConcurrentThreadCount,
-        conf.getMaxWriteMemoryUsagePercentage());
+    initWriteBufferPool(conf);
 
     ThreadFactory daemonThreadFactory = new ThreadFactory() {
       @Override
@@ -136,14 +128,18 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   }
 
   @VisibleForTesting
-  public static void initWriteBufferPool(final AbfsConfiguration conf) {
-    if (bufferSize == conf.getWriteBufferSize()) {
+  public static void initWriteBufferPool(AbfsConfiguration conf) {
+    if(bufferSize == conf.getWriteBufferSize()){
       return;
     }
     bufferSize = conf.getWriteBufferSize();
-    byteBufferPool = new AbfsByteBufferPool(conf.getWriteBufferSize(),
+    int availableProcessors = Runtime.getRuntime().availableProcessors();
+    maxConcurrentThreadCount =
+        conf.getWriteConcurrencyFactor() * availableProcessors;
+    byteBufferPool = new AbfsByteBufferPool(bufferSize,
         maxConcurrentThreadCount, conf.getMaxWriteMemoryUsagePercentage());
   }
+
   /**
    * Query the stream for a specific capability.
    *

@@ -329,10 +329,14 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
       stream.write(buffer);
 
       // Write asynchronously uploads data, so we must wait for completion
-      AbfsOutputStream abfsStream = (AbfsOutputStream) stream
-          .getWrappedStream();
-      abfsStream.waitForPendingUploads();
-
+      if(stream.getWrappedStream() instanceof AbfsOutputStream) {
+        AbfsOutputStream abfsStream = (AbfsOutputStream) stream.getWrappedStream();
+        abfsStream.waitForPendingUploads();
+      }else{
+        AbfsOutputStreamOld abfsStream =
+            (AbfsOutputStreamOld) stream.getWrappedStream();
+        abfsStream.waitForPendingUploads();
+      }
       // Flush commits the data so it can be read.
       stream.flush();
 
