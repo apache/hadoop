@@ -1086,7 +1086,7 @@ public class TestAppManager extends AppManagerTestBase{
     resourceSecondsMap.put(ResourceInformation.VCORES.getName(), 64L);
     RMAppMetrics metrics =
         new RMAppMetrics(Resource.newInstance(1234, 56),
-            10, 1, resourceSecondsMap, new HashMap<>());
+            10, 1, resourceSecondsMap, new HashMap<>(), 1234);
     when(app.getRMAppMetrics()).thenReturn(metrics);
     when(app.getDiagnostics()).thenReturn(new StringBuilder(
         "Multiline\n\n\r\rDiagnostics=Diagn,ostic"));
@@ -1114,6 +1114,7 @@ public class TestAppManager extends AppManagerTestBase{
     assertTrue(msg.contains("applicationNodeLabel=test"));
     assertTrue(msg.contains("diagnostics=Multiline" + escaped
         + "Diagnostics\\=Diagn\\,ostic"));
+    assertTrue(msg.contains("totalAllocatedContainers=1234"));
   }
 
   @Test

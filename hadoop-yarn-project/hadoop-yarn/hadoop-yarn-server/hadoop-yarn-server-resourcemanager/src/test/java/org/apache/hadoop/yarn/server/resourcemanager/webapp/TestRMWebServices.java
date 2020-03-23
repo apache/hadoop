@@ -928,7 +928,7 @@ public class TestRMWebServices extends JerseyTestBase {
 
     RMApp app = mock(RMApp.class);
     RMAppMetrics appMetrics = new RMAppMetrics(Resource.newInstance(0, 0),
-        0, 0, new HashMap<>(), new HashMap<>());
+        0, 0, new HashMap<>(), new HashMap<>(), 0);
     when(app.getDiagnostics()).thenReturn(
         new StringBuilder("java.lang.Exception: \u0001"));
     when(app.getApplicationId()).thenReturn(applicationId);

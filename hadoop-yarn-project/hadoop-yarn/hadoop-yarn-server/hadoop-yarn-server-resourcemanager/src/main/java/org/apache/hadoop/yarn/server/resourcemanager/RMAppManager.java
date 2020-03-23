@@ -228,7 +228,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
                   ? ""
                   : app.getApplicationSubmissionContext()
                       .getNodeLabelExpression())
-          .add("diagnostics", app.getDiagnostics());
+          .add("diagnostics", app.getDiagnostics())
+          .add("totalAllocatedContainers",
+              metrics.getTotalAllocatedContainers());
       return summary;
     }
 
