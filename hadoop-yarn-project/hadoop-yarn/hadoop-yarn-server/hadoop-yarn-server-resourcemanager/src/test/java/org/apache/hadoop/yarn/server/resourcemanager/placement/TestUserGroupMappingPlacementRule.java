@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.Queu
 import org.apache.hadoop.yarn.server.resourcemanager.placement.TestUserGroupMappingPlacementRule.QueueMappingTestData.QueueMappingTestDataBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.PrimaryGroupMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
@@ -74,6 +75,9 @@ public class TestUserGroupMappingPlacementRule {
     ParentQueue bsubgroup2 = mock(ParentQueue.class);
     when(bsubgroup2.getQueueName()).thenReturn("bsubgroup2");
 
+    ManagedParentQueue managedParent = mock(ManagedParentQueue.class);
+    when(managedParent.getQueueName()).thenReturn("managedParent");
+
     LeafQueue a = mock(LeafQueue.class);
     when(a.getQueueName()).thenReturn("a");
     when(a.getParent()).thenReturn(agroup);
@@ -88,6 +92,7 @@ public class TestUserGroupMappingPlacementRule {
     when(queueManager.getQueue("agroup")).thenReturn(agroup);
     when(queueManager.getQueue("bsubgroup2")).thenReturn(bsubgroup2);
     when(queueManager.getQueue("asubgroup2")).thenReturn(asubgroup2);
+    when(queueManager.getQueue("managedParent")).thenReturn(managedParent);
 
     rule.setQueueManager(queueManager);
     ApplicationSubmissionContext asc = Records.newRecord(
@@ -236,7 +241,72 @@ public class TestUserGroupMappingPlacementRule {
                 .inputUser("a")
                 .expectedQueue("q1")
                 .build());
-    
+
+    // "agroup" queue exists
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+                .queueMapping(QueueMappingBuilder.create()
+                                .type(MappingType.USER)
+                                .source("%user")
+                                .queue("%primary_group")
+                                .parentQueue("bsubgroup2")
+                                .build())
+                .inputUser("a")
+                .expectedQueue("agroup")
+                .build());
+
+    // "abcgroup" queue doesn't exist, %primary_group queue, not managed parent
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+                .queueMapping(QueueMappingBuilder.create()
+                                .type(MappingType.USER)
+                                .source("%user")
+                                .queue("%primary_group")
+                                .parentQueue("bsubgroup2")
+                                .build())
+                .inputUser("abc")
+                .expectedQueue("default")
+                .build());
+
+    // "abcgroup" queue doesn't exist, %primary_group queue, managed parent
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+                .queueMapping(QueueMappingBuilder.create()
+                                .type(MappingType.USER)
+                                .source("%user")
+                                .queue("%primary_group")
+                                .parentQueue("managedParent")
+                                .build())
+                .inputUser("abc")
+                .expectedQueue("abcgroup")
+                .build());
+
+    // "abcgroup" queue doesn't exist, %secondary_group queue
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+                .queueMapping(QueueMappingBuilder.create()
+                                .type(MappingType.USER)
+                                .source("%user")
+                                .queue("%secondary_group")
+                                .parentQueue("bsubgroup2")
+                                .build())
+                .inputUser("abc")
+                .expectedQueue("default")
+                .build());
+
+    // "asubgroup2" queue exists, %secondary_group queue
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+                .queueMapping(QueueMappingBuilder.create()
+                                .type(MappingType.USER)
+                                .source("%user")
+                                .queue("%secondary_group")
+                                .parentQueue("bsubgroup2")
+                                .build())
+                .inputUser("a")
+                .expectedQueue("asubgroup2")
+                .build());
+
     // specify overwritten, and see if user specified a queue, and it will be
     // overridden
    verifyQueueMapping(
