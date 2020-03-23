@@ -110,12 +110,15 @@ public class AbstractAbfsTestWithTimeout extends Assert {
 
       while (valueOfContentAtPos != -1 && pos < lenOfOriginalByteArray) {
         if (originalByteArray[pos] != valueOfContentAtPos) {
+          assertEquals("Mismatch in content validation at position {}", pos,
+              originalByteArray[pos], valueOfContentAtPos);
           return false;
         }
         valueOfContentAtPos = (byte) in.read();
         pos++;
       }
       if (valueOfContentAtPos != -1) {
+        assertEquals("Expected end of file", -1, valueOfContentAtPos);
         return false;
       }
       return true;

@@ -36,10 +36,10 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
-import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.io.ElasticByteBufferPool;
+import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
@@ -51,7 +51,6 @@ import static org.apache.hadoop.io.IOUtils.wrapException;
  */
 public class AbfsOutputStream extends OutputStream implements Syncable, StreamCapabilities {
   private final AbfsClient client;
-  private final Statistics statistics;
   private final String path;
   private long position;
   private boolean closed;
@@ -81,6 +80,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
    */
   private final ElasticByteBufferPool byteBufferPool
           = new ElasticByteBufferPool();
+
+  private final Statistics statistics;
 
   public AbfsOutputStream(
       final AbfsClient client,

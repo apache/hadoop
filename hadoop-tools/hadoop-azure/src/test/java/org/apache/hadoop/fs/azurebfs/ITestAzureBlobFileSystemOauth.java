@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
-import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -31,6 +30,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
@@ -146,6 +146,8 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
       abfsStore.openFileForWrite(EXISTED_FILE_PATH, fs.getFsStatistics(), true);
     } catch (AbfsRestOperationException e) {
       assertEquals(AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH, e.getErrorCode());
+    } finally {
+      abfsStore.close();
     }
 
   }

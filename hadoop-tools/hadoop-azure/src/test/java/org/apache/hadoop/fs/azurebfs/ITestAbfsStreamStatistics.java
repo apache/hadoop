@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import org.junit.Assert;
 import org.junit.Test;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -34,6 +36,9 @@ import org.apache.hadoop.io.IOUtils;
 public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
   public ITestAbfsStreamStatistics() throws Exception {
   }
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ITestAbfsStreamStatistics.class);
 
   private static int LARGE_NUMBER_OF_OPS = 1000000;
 
@@ -71,20 +76,29 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
       //Test for a single write operation
       assertReadWriteOps("write", 1, statistics.getWriteOps());
 
+      //Flushing output stream to see content to read
+      outForOneOperation.hflush();
       inForOneOperation = fs.open(smallOperationsFile);
-      inForOneOperation.read(testReadWriteOps.getBytes(), 0,
+      statistics.reset();
+      int result = inForOneOperation.read(testReadWriteOps.getBytes(), 0,
           testReadWriteOps.getBytes().length);
 
-      //Test for a single read operation
-      assertReadWriteOps("read", 1, statistics.getReadOps());
+      LOG.info("Result of Read operation : {}", result);
+      /*
+      Testing if 2 read_ops value is coming after reading full content from a
+      file (3 if anything to read from Buffer too).
+      Reason: read() call gives read_ops=1,
+      reading from AbfsClient(http GET) gives read_ops=2.
+       */
+      assertReadWriteOps("read", 2, statistics.getReadOps());
 
     } finally {
-      IOUtils.cleanupWithLogger(null, inForOneOperation,
+      IOUtils.cleanupWithLogger(LOG, inForOneOperation,
           outForOneOperation);
     }
 
     //Validating if content is being written in the smallOperationsFile
-    Assert.assertEquals("Mismatch in content validation", true,
+    assertTrue("Mismatch in content validation",
         validateContent(fs, smallOperationsFile,
             testReadWriteOps.getBytes()));
 
@@ -101,6 +115,8 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
         //Creating the String for content Validation
         largeOperationsValidationString.append(testReadWriteOps);
       }
+      LOG.info("Number of bytes of Large data written: {}",
+          largeOperationsValidationString.toString().getBytes().length);
 
       //Test for 1000000 write operations
       assertReadWriteOps("write", largeValue, statistics.getWriteOps());
@@ -116,12 +132,11 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
       assertReadWriteOps("read", largeValue, statistics.getReadOps());
 
     } finally {
-      IOUtils.cleanupWithLogger(null, inForLargeOperations,
+      IOUtils.cleanupWithLogger(LOG, inForLargeOperations,
           outForLargeOperations);
     }
-
     //Validating if content is being written in largeOperationsFile
-    Assert.assertTrue("Mismatch in content validation",
+    assertTrue("Mismatch in content validation",
         validateContent(fs, largeOperationsFile,
             largeOperationsValidationString.toString().getBytes()));
 
@@ -137,8 +152,7 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
 
   private void assertReadWriteOps(String operation, long expectedValue,
       long actualValue) {
-    Assert
-        .assertEquals("Mismatch in " + operation + " operations", expectedValue,
-            actualValue);
+    assertEquals("Mismatch in " + operation + " operations", expectedValue,
+        actualValue);
   }
 }
