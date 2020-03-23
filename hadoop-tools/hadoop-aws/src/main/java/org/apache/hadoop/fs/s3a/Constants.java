@@ -35,6 +35,11 @@ public final class Constants {
   private Constants() {
   }
 
+  /**
+   * default hadoop temp dir on local system: {@value}.
+   */
+  public static final String HADOOP_TMP_DIR = "hadoop.tmp.dir";
+
   /** The minimum multipart size which S3 supports. */
   public static final int MULTIPART_MIN_SIZE = 5 * 1024 * 1024;
 
@@ -368,6 +373,17 @@ public final class Constants {
   @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_TABLE_NAME_KEY =
       "fs.s3a.s3guard.ddb.table";
+
+  /**
+   * Test table name to use during DynamoDB integration test.
+   *
+   * The table will be modified, and deleted in the end of the tests.
+   * If this value is not set, the integration tests that would be destructive
+   * won't run.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TEST_TABLE_NAME_KEY =
+      "fs.s3a.s3guard.ddb.test.table";
 
   /**
    * Whether to create the DynamoDB table if the table does not exist.

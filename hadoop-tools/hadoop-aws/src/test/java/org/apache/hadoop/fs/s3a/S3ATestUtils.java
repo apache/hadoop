@@ -25,9 +25,6 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.s3a.s3guard.DynamoDBClientFactory;
-import org.apache.hadoop.fs.s3a.s3guard.DynamoDBLocalClientFactory;
-import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 
 import org.hamcrest.core.Is;
 import org.junit.Assert;
@@ -37,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -378,9 +376,6 @@ public final class S3ATestUtils {
       case TEST_S3GUARD_IMPLEMENTATION_LOCAL:
         implClass = S3GUARD_METASTORE_LOCAL;
         break;
-      case TEST_S3GUARD_IMPLEMENTATION_DYNAMODBLOCAL:
-        conf.setClass(S3Guard.S3GUARD_DDB_CLIENT_FACTORY_IMPL,
-            DynamoDBLocalClientFactory.class, DynamoDBClientFactory.class);
       case TEST_S3GUARD_IMPLEMENTATION_DYNAMO:
         implClass = S3GUARD_METASTORE_DYNAMO;
         break;
@@ -513,6 +508,29 @@ public final class S3ATestUtils {
       conf.unset(option);
     }
     removeBucketOverrides(bucket, conf, options);
+  }
+
+  /**
+   * Patch a configuration for testing.
+   * This includes possibly enabling s3guard, setting up the local
+   * FS temp dir and anything else needed for test runs.
+   * @param conf configuration to patch
+   * @return the now-patched configuration
+   */
+  public static Configuration prepareTestConfiguration(final Configuration conf) {
+    // patch in S3Guard options
+    maybeEnableS3Guard(conf);
+    // set hadoop temp dir to a default value
+    String testUniqueForkId =
+        System.getProperty(TEST_UNIQUE_FORK_ID);
+    String tmpDir = conf.get(HADOOP_TMP_DIR, "target/build/test");
+    if (testUniqueForkId != null) {
+      // patch temp dir for the specific branch
+      tmpDir = tmpDir + File.pathSeparatorChar + testUniqueForkId;
+      conf.set(HADOOP_TMP_DIR, tmpDir);
+    }
+    conf.set(BUFFER_DIR, tmpDir);
+    return conf;
   }
 
   /**
