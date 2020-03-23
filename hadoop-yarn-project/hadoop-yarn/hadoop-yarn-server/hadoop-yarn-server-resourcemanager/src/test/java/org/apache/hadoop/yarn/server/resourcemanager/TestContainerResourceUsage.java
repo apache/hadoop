@@ -227,6 +227,8 @@ public class TestContainerResourceUsage {
         memorySeconds, metricsBefore.getMemorySeconds());
     Assert.assertEquals("Unexpected VcoreSeconds value",
         vcoreSeconds, metricsBefore.getVcoreSeconds());
+    Assert.assertEquals("Unexpected totalAllocatedContainers value",
+        NUM_CONTAINERS + 1, metricsBefore.getTotalAllocatedContainers());
 
     // create new RM to represent RM restart. Load up the state store.
     MockRM rm1 = new MockRM(conf, memStore);
@@ -240,6 +242,9 @@ public class TestContainerResourceUsage {
         metricsBefore.getVcoreSeconds(), metricsAfter.getVcoreSeconds());
     Assert.assertEquals("Memory seconds were not the same after RM Restart",
         metricsBefore.getMemorySeconds(), metricsAfter.getMemorySeconds());
+    Assert.assertEquals("TotalAllocatedContainers was not the same after " +
+        "RM Restart", metricsBefore.getTotalAllocatedContainers(),
+        metricsAfter.getTotalAllocatedContainers());
 
     rm0.stop();
     rm0.close();
