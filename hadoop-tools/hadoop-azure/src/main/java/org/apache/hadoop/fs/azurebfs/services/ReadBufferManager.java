@@ -306,13 +306,15 @@ final class ReadBufferManager {
    */
   private ReadBuffer getBufferFromCompletedQueue(final AbfsInputStream stream, final long requestedOffset) {
     for (ReadBuffer buffer : completedReadList) {
-      if ((buffer.getStream() == stream) && (requestedOffset >= buffer.getOffset())) {
-        if ((requestedOffset < buffer.getOffset() + buffer.getLength())
-        || requestedOffset < buffer.getOffset() + buffer.getRequestedLength()) {
+      // Buffer is returned if the requestedOffset is at or above buffer's
+      // offset but less than buffer's length or the actual requestedLength
+      if ((buffer.getStream() == stream)
+          && (requestedOffset >= buffer.getOffset())
+          && ((requestedOffset < buffer.getOffset() + buffer.getLength())
+          || (requestedOffset < buffer.getOffset() + buffer.getRequestedLength()))) {
           return buffer;
         }
       }
-    }
 
     return null;
   }
@@ -335,13 +337,9 @@ final class ReadBufferManager {
     }
 
     if (buf.getStatus() == ReadBufferStatus.READ_FAILED) {
-      // Eviction of a read buffer is triggered only when a queue request comes in
-      // and each eviction attempt tries to find one eligible buffer.
-      // Hence there are chances that an old read-ahead buffer with exception is still
-      // available. To prevent new read requests to fail due to such old buffers,
+      // To prevent new read requests to fail due to old read-ahead attempts,
       // return exception only from buffers that failed within last THRESHOLD_AGE_MILLISECONDS
       if ((currentTimeMillis() - (buf.getTimeStamp()) < THRESHOLD_AGE_MILLISECONDS)) {
-        // is read ahead issued from current queue request ID
         throw buf.getErrException();
       } else {
         return 0;
@@ -413,7 +411,6 @@ final class ReadBufferManager {
       LOGGER.trace("ReadBufferWorker completed file {} for offset {} bytes {}",
           buffer.getStream().getPath(),  buffer.getOffset(), bytesActuallyRead);
     }
-
     synchronized (this) {
       inProgressList.remove(buffer);
       if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
