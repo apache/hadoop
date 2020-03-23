@@ -80,6 +80,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStreamOld;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPermission;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
@@ -416,33 +417,40 @@ public class AzureBlobFileSystemStore implements Closeable {
                                  final FsPermission umask) throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("createFile", "createPath")) {
       boolean isNamespaceEnabled = getIsNamespaceEnabled();
-      LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} isNamespaceEnabled: {}",
-              client.getFileSystem(),
-              path,
-              overwrite,
-              permission.toString(),
-              umask.toString(),
-              isNamespaceEnabled);
+      LOG.debug(
+          "createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} isNamespaceEnabled: {}",
+          client.getFileSystem(), path, overwrite, permission.toString(), umask.toString(),
+          isNamespaceEnabled);
 
-        boolean appendBlob = false;
-        if (isAppendBlobKey(path.toString())) {
-          appendBlob = true;
-        }
+      boolean appendBlob = false;
+      if (isAppendBlobKey(path.toString())) {
+        appendBlob = true;
+      }
 
-      client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), true, overwrite,
+      client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
+          true, overwrite,
           isNamespaceEnabled ? getOctalNotation(permission) : null,
-          isNamespaceEnabled ? getOctalNotation(umask) : null,
-          appendBlob);
+          isNamespaceEnabled ? getOctalNotation(umask) : null, appendBlob);
 
-      return new AbfsOutputStream(
-          client,
-          AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
-          0,
+      if (abfsConfiguration.shouldUseOlderAbfsOutputStream()) {
+        return new AbfsOutputStreamOld(
+            client,
+            AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
+            0,
+            abfsConfiguration.getWriteBufferSize(),
+            abfsConfiguration.isFlushEnabled(),
+            abfsConfiguration.isOutputStreamFlushDisabled(),
+            abfsConfiguration.isAppendWithFlushEnabled(),
+            appendBlob);
+      }
+      return new AbfsOutputStream(client,
+          AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), 0,
           abfsConfiguration.getWriteBufferSize(),
           abfsConfiguration.isFlushEnabled(),
           abfsConfiguration.isOutputStreamFlushDisabled(),
           abfsConfiguration.isAppendWithFlushEnabled(),
-          appendBlob);
+          appendBlob,
+          abfsConfiguration);
     }
   }
 
@@ -527,6 +535,16 @@ public class AzureBlobFileSystemStore implements Closeable {
         appendBlob = true;
       }
 
+      if(abfsConfiguration.shouldUseOlderAbfsOutputStream()) {
+        return new AbfsOutputStreamOld(client,
+            AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
+            offset,
+            abfsConfiguration.getWriteBufferSize(),
+            abfsConfiguration.isFlushEnabled(),
+            abfsConfiguration.isOutputStreamFlushDisabled(),
+            abfsConfiguration.isAppendWithFlushEnabled(),
+            appendBlob);
+      }
       return new AbfsOutputStream(
           client,
           AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
@@ -535,7 +553,8 @@ public class AzureBlobFileSystemStore implements Closeable {
           abfsConfiguration.isFlushEnabled(),
           abfsConfiguration.isOutputStreamFlushDisabled(),
           abfsConfiguration.isAppendWithFlushEnabled(),
-          appendBlob);
+          appendBlob,
+          abfsConfiguration);
     }
   }
 

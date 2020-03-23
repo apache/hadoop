@@ -68,7 +68,7 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false);
+    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false, abfsConf);
     final byte[] b = new byte[writeSize];
     new Random().nextBytes(b);
     out.write(b);
@@ -118,7 +118,7 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false);
+    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false, abfsConf);
     final byte[] b = new byte[writeSize];
     new Random().nextBytes(b);
 
@@ -165,7 +165,7 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false);
+    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false, abfsConf);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
 
@@ -223,7 +223,7 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false);
+    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false, abfsConf);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
 
@@ -270,7 +270,7 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false);
+    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false, abfsConf);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
 
@@ -317,7 +317,7 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false);
+    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false, abfsConf);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
 
@@ -374,7 +374,7 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false);
+    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, bufferSize, true, false, true, false, abfsConf);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
 
