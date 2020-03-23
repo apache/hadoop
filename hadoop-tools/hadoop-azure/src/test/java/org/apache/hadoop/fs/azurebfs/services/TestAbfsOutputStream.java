@@ -327,9 +327,9 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, true, false, true, false, abfsConf);
     abfsConf.setWriteBufferSize(bufferSize);
-    out.initWriteBufferPool(abfsConf);
+    AbfsOutputStream.initWriteBufferPool(abfsConf);
+    AbfsOutputStream out = new AbfsOutputStream(client, path, 0, true, false, true, false, abfsConf);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
 
@@ -385,6 +385,7 @@ public final class TestAbfsOutputStream {
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
+    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean())).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(client, path, 0, true, false, true, false, abfsConf);
     abfsConf.setWriteBufferSize(bufferSize);

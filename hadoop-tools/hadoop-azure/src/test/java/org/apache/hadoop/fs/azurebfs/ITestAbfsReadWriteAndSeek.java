@@ -67,11 +67,11 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
 
     abfsConfiguration.setWriteBufferSize(bufferSize);
     abfsConfiguration.setReadBufferSize(bufferSize);
+    AbfsOutputStream.initWriteBufferPool(abfsConfiguration);
 
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);
     try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
-      AbfsOutputStream.initWriteBufferPool(abfsConfiguration);
       stream.write(b);
     }
 

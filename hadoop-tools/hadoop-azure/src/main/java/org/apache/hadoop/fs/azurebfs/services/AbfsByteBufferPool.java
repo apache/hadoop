@@ -45,6 +45,8 @@ public class AbfsByteBufferPool {
   private int maxBuffersInUse;
   private int bufferSize;
 
+  private static final Object LOCK = new Object();
+
   /**
    * @param bufferSize                 Size of the byte[] to be returned.
    * @param maxConcurrentThreadCount   Maximum number of threads that will be
@@ -87,7 +89,7 @@ public class AbfsByteBufferPool {
    * Waits if pool is empty and already maximum number of buffers are in use.
    */
   public byte[] get() {
-    synchronized (this) {
+    synchronized (LOCK) {
       numBuffersInUse++;
       byte[] byteArray = freeBuffers.poll();
       if (byteArray != null) {
@@ -108,15 +110,17 @@ public class AbfsByteBufferPool {
   /**
    * @param byteArray The buffer to be offered back to the pool.
    */
-  public synchronized void release(byte[] byteArray) {
-    if (byteArray.length == bufferSize) {
-      return;
+  public void release(byte[] byteArray) {
+    synchronized(LOCK) {
+      Preconditions.checkArgument(byteArray.length == bufferSize,
+          "Buffer size has" + " to be %s (Received buffer length: %s)",
+          bufferSize, byteArray.length);
+      numBuffersInUse--;
+      if (numBuffersInUse < 0) {
+        numBuffersInUse = 0;
+      }
+      freeBuffers.offer(byteArray);
     }
-    numBuffersInUse--;
-    if (numBuffersInUse < 0) {
-      numBuffersInUse = 0;
-    }
-    freeBuffers.offer(byteArray);
   }
 
   @VisibleForTesting
