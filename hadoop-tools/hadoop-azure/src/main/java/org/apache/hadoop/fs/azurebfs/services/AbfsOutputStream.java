@@ -29,7 +29,6 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.Callable;
@@ -42,7 +41,6 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
@@ -110,7 +108,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     init(abfsConfiguration);
   }
 
-
   private static synchronized void init(final AbfsConfiguration conf) {
     if (threadExecutor != null) {
       return;
@@ -119,7 +116,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     int availableProcessors = Runtime.getRuntime().availableProcessors();
     maxConcurrentThreadCount =
         conf.getWriteConcurrencyFactor() * availableProcessors;
-
 
     bufferSize = conf.getWriteBufferSize();
     byteBufferPool = new AbfsByteBufferPool(bufferSize, maxConcurrentThreadCount,
@@ -286,7 +282,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
     try {
       flushInternal(true);
-      threadExecutor.shutdown();
     } catch (IOException e) {
       // Problems surface in try-with-resources clauses if
       // the exception thrown in a close == the one already thrown
@@ -299,9 +294,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       bufferIndex = 0;
       closed = true;
       writeOperations.clear();
-      if (!threadExecutor.isShutdown()) {
-        threadExecutor.shutdownNow();
-      }
     }
   }
 
@@ -332,6 +324,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         client.append(path, offset, byteArray, 0,
             bytesLength, flush, isClose);
         lastTotalAppendOffset += bytesLength;
+      byteBufferPool.release(byteArray);
         if (flush) {
           lastFlushOffset = lastTotalAppendOffset;
         }

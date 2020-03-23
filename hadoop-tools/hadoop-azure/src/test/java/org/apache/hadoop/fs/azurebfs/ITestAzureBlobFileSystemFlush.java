@@ -287,7 +287,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
   private void makeNWritesToStream(final FSDataOutputStream stream,
       final int numWrites, final byte[] b, final ExecutorService es)
-      throws ExecutionException, InterruptedException {
+      throws ExecutionException, InterruptedException, IOException {
     final List<Future<Void>> futureTasks = new ArrayList<>();
     for (int i = 0; i < numWrites; i++) {
       futureTasks.add(es.submit(() -> {
