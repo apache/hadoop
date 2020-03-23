@@ -24,6 +24,8 @@ import java.util.Map;
 
 import org.junit.Assume;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -34,6 +36,7 @@ import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET;
@@ -52,6 +55,8 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
   private static final Path FILE_PATH = new Path("/testFile");
   private static final Path EXISTED_FILE_PATH = new Path("/existedFile");
   private static final Path EXISTED_FOLDER_PATH = new Path("/existedFolder");
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ITestAbfsStreamStatistics.class);
 
   public ITestAzureBlobFileSystemOauth() throws Exception {
     Assume.assumeTrue(this.getAuthType() == AuthType.OAuth);
@@ -147,7 +152,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     } catch (AbfsRestOperationException e) {
       assertEquals(AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH, e.getErrorCode());
     } finally {
-      abfsStore.close();
+      IOUtils.cleanupWithLogger(LOG, abfsStore);
     }
 
   }

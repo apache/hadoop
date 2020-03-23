@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import org.junit.Test;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
