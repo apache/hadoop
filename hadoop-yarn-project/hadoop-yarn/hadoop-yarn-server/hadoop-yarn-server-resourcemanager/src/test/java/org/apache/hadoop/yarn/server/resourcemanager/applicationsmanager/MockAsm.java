@@ -196,7 +196,7 @@ public abstract class MockAsm extends MockApps {
     @Override
     public RMAppMetrics getRMAppMetrics() {
       return new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, new HashMap<String, Long>(),
-          new HashMap<String, Long>());
+          new HashMap<String, Long>(), 0);
     }
 
     @Override

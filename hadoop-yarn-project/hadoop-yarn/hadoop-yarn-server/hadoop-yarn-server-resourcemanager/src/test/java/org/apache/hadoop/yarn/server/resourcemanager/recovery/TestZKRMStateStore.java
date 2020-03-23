@@ -561,7 +561,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
             store.getCredentialsFromAppAttempt(mockAttempt),
             startTime, RMAppAttemptState.FINISHED, "testUrl", 
             "test", FinalApplicationStatus.SUCCEEDED, 100, 
-            finishTime, new HashMap<String, Long>(), new HashMap<String, Long>());
+            finishTime, new HashMap<String, Long>(), new HashMap<String, Long>(), 0);
     store.updateApplicationAttemptState(newAttemptState);
     assertEquals("RMStateStore should have been in fenced state",
             true, store.isFencedState());
@@ -811,7 +811,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     return ApplicationAttemptStateData.newInstance(attemptId,
         container, null, startTime, RMAppAttemptState.FINISHED,
         "myTrackingUrl", "attemptDiagnostics", FinalApplicationStatus.SUCCEEDED,
-        amExitStatus, 0, resourceSecondsMap, preemptedResoureSecondsMap);
+        amExitStatus, 0, resourceSecondsMap, preemptedResoureSecondsMap, 0);
   }
 
   private ApplicationAttemptId storeAttempt(RMStateStore store,

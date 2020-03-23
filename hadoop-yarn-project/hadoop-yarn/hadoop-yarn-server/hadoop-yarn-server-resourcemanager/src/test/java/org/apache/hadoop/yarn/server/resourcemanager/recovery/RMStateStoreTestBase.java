@@ -369,7 +369,7 @@ public class RMStateStoreTestBase {
             oldAttemptState.getStartTime(), RMAppAttemptState.FINISHED,
             "myTrackingUrl", "attemptDiagnostics",
             FinalApplicationStatus.SUCCEEDED, 100,
-            oldAttemptState.getFinishTime(), new HashMap<String, Long>(), new HashMap<String, Long>());
+            oldAttemptState.getFinishTime(), new HashMap<String, Long>(), new HashMap<String, Long>(), 0);
     store.updateApplicationAttemptState(newAttemptState);
 
     // test updating the state of an app/attempt whose initial state was not
@@ -393,7 +393,7 @@ public class RMStateStoreTestBase {
             oldAttemptState.getStartTime(), RMAppAttemptState.FINISHED,
             "myTrackingUrl", "attemptDiagnostics",
             FinalApplicationStatus.SUCCEEDED, 111,
-            oldAttemptState.getFinishTime(), new HashMap<String, Long>(), new HashMap<String, Long>());
+            oldAttemptState.getFinishTime(), new HashMap<String, Long>(), new HashMap<String, Long>(), 0);
     store.updateApplicationAttemptState(dummyAttempt);
 
     // let things settle down
