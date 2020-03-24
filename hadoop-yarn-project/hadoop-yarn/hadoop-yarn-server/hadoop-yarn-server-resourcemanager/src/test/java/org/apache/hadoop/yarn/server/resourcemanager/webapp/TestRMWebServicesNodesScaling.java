@@ -36,6 +36,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 import javax.ws.rs.core.MediaType;
 
@@ -91,7 +95,10 @@ import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
@@ -101,6 +108,7 @@ import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 public class TestRMWebServicesNodesScaling extends JerseyTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -113,7 +121,34 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
 
   private static String userName;
 
-  private static class WebServletModule extends ServletModule {
+  @Rule
+  public ScaleEnableWatcher scaleEnableWatcher
+      = new ScaleEnableWatcher();
+
+  @Retention(value = RetentionPolicy.RUNTIME)
+  @Target(value = {ElementType.METHOD})
+  public @interface ScaleEnable {
+    boolean value() default YarnConfiguration.DEFAULT_CLUSTER_SCALING_RECOMMENDATION_ENABLE;
+  }
+
+  private class ScaleEnableWatcher extends TestWatcher {
+    private ScaleEnable scaleEnable;
+
+    @Override
+    protected void starting(Description description) {
+      scaleEnable = description.getAnnotation(ScaleEnable.class);
+    }
+
+    public boolean getClusterScalingRecommendationEnable() {
+      if(scaleEnable == null) {
+        return true;
+      }
+      return scaleEnable.value();
+    }
+  }
+
+
+  private class WebServletModule extends ServletModule {
     @Override
     protected void configureServlets() {
       bind(JAXBContextResolver.class);
@@ -125,10 +160,13 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
       }
 
       conf = new YarnConfiguration(setupMultiNodeLookupConfiguration());
+      conf.setBoolean(YarnConfiguration.CLUSTER_SCALING_RECOMMENDATION_ENABLE,
+          scaleEnableWatcher.getClusterScalingRecommendationEnable());
       conf.set(YarnConfiguration.YARN_ADMIN_ACL, userName);
-      bind(RMWebServices.class);
       bind(GenericExceptionHandler.class);
       rm = new MockRM(conf);
+      RMWebServices rmWebService = new RMWebServices(rm, conf);
+      bind(RMWebServices.class).toInstance(rmWebService);
       rm.getRMContext().getContainerTokenSecretManager().rollMasterKey();
       rm.getRMContext().getNMTokenSecretManager().rollMasterKey();
       rm.disableDrainEventsImplicitly();
@@ -170,12 +208,6 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
       csConf.setInt("yarn.scheduler.maximum-allocation-vcores", 100);
       return csConf;
     }
-
-  }
-
-  static {
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
   }
 
   @Before
@@ -562,6 +594,46 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
         resource.getString("vcore"));
     assertEquals("Incorrect resource count", "3",
         resourceRequest.getString("count"));
+    rm.stop();
+  }
+
+  private void validateErrorResponse(ClientResponse response, String api)
+      throws Exception {
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    String expectedErrMsg = "Cluster Autoscaling Recommendation Engine API" +
+        " is not enabled. Please enable " +
+        YarnConfiguration.CLUSTER_SCALING_RECOMMENDATION_ENABLE;
+    String actualErrorMsg = json.getJSONObject("RemoteException")
+        .getString("message");
+    assertTrue("Wrong Error Message when accessing "+ api,
+        actualErrorMsg.contains(expectedErrMsg));
+  }
+
+  @Test
+  @ScaleEnable(false)
+  public void testDisableRecommendationEngine() throws Exception {
+    rm.start();
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("scaling-metrics")
+        .accept("application/json").get(ClientResponse.class);
+    validateErrorResponse(response, "/scaling-metrics");
+
+    NodeInstanceTypeList niTypeList = new NodeInstanceTypeList();
+    niTypeList.getInstanceTypes().addAll(fakeInstanceTypes(1));
+    String niTypeListStr = toJson(niTypeList, NodeInstanceTypeList.class);
+    response = r.path("ws").path("v1").path("cluster")
+        .path("scaling")
+        .queryParam(RMWSConsts.UPSCALING_FACTOR_IN_NODE_RESOURCE_TYPES_KEY,
+            ResourceInformation.MEMORY_URI)
+        .header(RMWSConsts.SCALING_CUSTOM_HEADER_KEY,
+            RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1)
+        .entity(niTypeListStr, MediaType.APPLICATION_JSON)
+        .accept("application/json").post(ClientResponse.class);
+    validateErrorResponse(response, "/scaling");
     rm.stop();
   }
 

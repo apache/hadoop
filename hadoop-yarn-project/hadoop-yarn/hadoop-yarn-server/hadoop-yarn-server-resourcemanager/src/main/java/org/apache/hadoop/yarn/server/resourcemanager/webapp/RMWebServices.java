@@ -270,6 +270,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   private AtomicLong getAppsSuccessTimes = new AtomicLong(0);
   private AtomicLong hitAppsCacheTimes = new AtomicLong(0);
   private boolean enableAppsCache = false;
+  private boolean clusterScalingRecommendationEnable;
 
   public final static String DELEGATION_TOKEN_HEADER =
       "Hadoop-YARN-RM-Delegation-Token";
@@ -300,6 +301,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           YarnConfiguration.DEFAULT_APPS_CACHE_EXPIRE, TimeUnit.MILLISECONDS);
       appsLRUCache = new LRUCache<>(cacheSize, appsCacheTimeMs);
     }
+    this.clusterScalingRecommendationEnable = conf.getBoolean(
+        YarnConfiguration.CLUSTER_SCALING_RECOMMENDATION_ENABLE,
+        YarnConfiguration.DEFAULT_CLUSTER_SCALING_RECOMMENDATION_ENABLE);
   }
 
   RMWebServices(ResourceManager rm, Configuration conf,
@@ -425,31 +429,36 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @QueryParam(RMWSConsts.DOWNSCALING_FACTOR_IN_NODE_COUNT)
           String downscalingFactorInNodeCount,
       NodeInstanceTypeList instanceTypeList) {
-    initForReadableEndpoints();
-    String defaultVersion = RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1;
-    if (apiVersion != null && !apiVersion.equals(defaultVersion)) {
-      throw new BadRequestException("Requested " + RMWSConsts.SCALING_CUSTOM_HEADER_KEY +
-          ": " + apiVersion + " is not supported!");
-    }
-    if (instanceTypeList == null) {
-      throw new BadRequestException("Node instance types are needed!");
-    }
-
-    int neededDownscalingNodeSize = -1;
-    if (downscalingFactorInNodeCount != null) {
-      try {
-        neededDownscalingNodeSize = Integer.valueOf(downscalingFactorInNodeCount);
-      } catch (NumberFormatException e) {
-        throw new BadRequestException("Invalid '" +
-            RMWSConsts.DOWNSCALING_FACTOR_IN_NODE_COUNT + "' value: " +
-            downscalingFactorInNodeCount);
+    if (this.clusterScalingRecommendationEnable) {
+      initForReadableEndpoints();
+      String defaultVersion = RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1;
+      if (apiVersion != null && !apiVersion.equals(defaultVersion)) {
+        throw new BadRequestException("Requested " + RMWSConsts.SCALING_CUSTOM_HEADER_KEY +
+            ": " + apiVersion + " is not supported!");
       }
-    }
+      if (instanceTypeList == null) {
+        throw new BadRequestException("Node instance types are needed!");
+      }
 
-    return new ClusterScalingInfo(this.rm,
-        upscalingFactorInNodeResourceTypes,
-        neededDownscalingNodeSize,
-        instanceTypeList.rebuild());
+      int neededDownscalingNodeSize = -1;
+      if (downscalingFactorInNodeCount != null) {
+        try {
+          neededDownscalingNodeSize = Integer.valueOf(downscalingFactorInNodeCount);
+        } catch (NumberFormatException e) {
+          throw new BadRequestException("Invalid '" +
+              RMWSConsts.DOWNSCALING_FACTOR_IN_NODE_COUNT + "' value: " +
+              downscalingFactorInNodeCount);
+        }
+      }
+      return new ClusterScalingInfo(this.rm,
+          upscalingFactorInNodeResourceTypes,
+          neededDownscalingNodeSize,
+          instanceTypeList.rebuild());
+    } else {
+      throw new BadRequestException("Cluster Autoscaling Recommendation" +
+          " Engine API is not enabled. Please enable " +
+          YarnConfiguration.CLUSTER_SCALING_RECOMMENDATION_ENABLE);
+    }
   }
 
   @GET
@@ -460,14 +469,20 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public ClusterScalingMetrics getClusterScalingMetrics(
       @HeaderParam(RMWSConsts.SCALING_CUSTOM_HEADER_KEY)
       String apiVersion) {
-    initForReadableEndpoints();
-    String defaultVersion = RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1;
-    if (apiVersion != null && !apiVersion.equals(defaultVersion)) {
-      throw new BadRequestException("Requested "
-          + RMWSConsts.SCALING_CUSTOM_HEADER_KEY
-          + ": " + apiVersion + " is not supported!");
+    if (this.clusterScalingRecommendationEnable) {
+      initForReadableEndpoints();
+      String defaultVersion = RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1;
+      if (apiVersion != null && !apiVersion.equals(defaultVersion)) {
+        throw new BadRequestException("Requested "
+            + RMWSConsts.SCALING_CUSTOM_HEADER_KEY
+            + ": " + apiVersion + " is not supported!");
+      }
+      return new ClusterScalingMetrics(this.rm);
+    } else {
+      throw new BadRequestException("Cluster Autoscaling Recommendation" +
+          " Engine API is not enabled. Please enable " +
+          YarnConfiguration.CLUSTER_SCALING_RECOMMENDATION_ENABLE);
     }
-    return new ClusterScalingMetrics(this.rm);
   }
 
   @GET

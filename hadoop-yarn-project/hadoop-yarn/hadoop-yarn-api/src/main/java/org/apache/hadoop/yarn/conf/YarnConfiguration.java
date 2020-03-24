@@ -1532,6 +1532,11 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_MAX_LOG_AGGREGATION_DIAGNOSTICS_IN_MEMORY =
       10;
 
+  public static final String CLUSTER_SCALING_RECOMMENDATION_ENABLE =
+      YARN_PREFIX + "cluster.scaling.recommendation.enable";
+  public static final boolean DEFAULT_CLUSTER_SCALING_RECOMMENDATION_ENABLE =
+      false;
+
   /** Whether to enable log aggregation */
   public static final String LOG_AGGREGATION_ENABLED = YARN_PREFIX
       + "log-aggregation-enable";
