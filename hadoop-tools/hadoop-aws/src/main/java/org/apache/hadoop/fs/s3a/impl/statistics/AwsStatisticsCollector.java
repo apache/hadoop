@@ -51,7 +51,7 @@ public class AwsStatisticsCollector extends RequestMetricCollector {
   private final StatisticsFromAwsSdk collector;
 
   /**
-   * instantiate.
+   * Instantiate.
    * @param collector final destination of updates
    */
   public AwsStatisticsCollector(final StatisticsFromAwsSdk collector) {
@@ -64,35 +64,37 @@ public class AwsStatisticsCollector extends RequestMetricCollector {
       final Response<?> response) {
 
     TimingInfo timingInfo = request.getAWSRequestMetrics().getTimingInfo();
-    counter(timingInfo, RequestCount.name(),
-        collector::updateAwsRequestCount);
+
     counter(timingInfo, HttpClientRetryCount.name(),
         collector::updateAwsRetryCount);
+    counter(timingInfo, RequestCount.name(),
+        collector::updateAwsRequestCount);
     counter(timingInfo, ThrottleException.name(),
         collector::updateAwsThrottleExceptionsCount);
-    timing(timingInfo, HttpRequestTime.name(),
-        collector::addAwsRequestTime);
+
     timing(timingInfo, ClientExecuteTime.name(),
         collector::addAwsClientExecuteTime);
+    timing(timingInfo, HttpRequestTime.name(),
+        collector::addAwsRequestTime);
     timing(timingInfo, RequestMarshallTime.name(),
         collector::addRequestMarshallTime);
     timing(timingInfo, RequestSigningTime.name(),
         collector::addRequestSigningTime);
     timing(timingInfo, ResponseProcessingTime.name(),
         collector::addResponseProcessingTime);
-
   }
 
   /**
    * Process a timing.
-   * @param t timing info
+   * @param timingInfo timing info
    * @param subMeasurementName sub measurement
    * @param durationConsumer consumer
    */
-  private void timing(TimingInfo t,
+  private void timing(
+      TimingInfo timingInfo,
       String subMeasurementName,
       Consumer<Duration> durationConsumer) {
-    TimingInfo t1 = t.getSubMeasurement(subMeasurementName);
+    TimingInfo t1 = timingInfo.getSubMeasurement(subMeasurementName);
     if (t1 != null && t1.getTimeTakenMillisIfKnown() != null) {
       durationConsumer.accept(Duration.ofMillis(
           t1.getTimeTakenMillisIfKnown().longValue()));
@@ -101,14 +103,15 @@ public class AwsStatisticsCollector extends RequestMetricCollector {
 
   /**
    * Process a counter.
-   * @param t timing info
+   * @param timingInfo timing info
    * @param subMeasurementName sub measurement
    * @param consumer consumer
    */
-  private void counter(TimingInfo t,
+  private void counter(
+      TimingInfo timingInfo,
       String subMeasurementName,
       LongConsumer consumer) {
-    Number n = t.getCounter(subMeasurementName);
+    Number n = timingInfo.getCounter(subMeasurementName);
     if (n != null) {
       consumer.accept(n.longValue());
     }

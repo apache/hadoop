@@ -62,6 +62,7 @@ public class InconsistentS3ClientFactory extends DefaultS3ClientFactory {
           .setPathStyleAccess(true)
           .build());
     }
+    setEndpoint(s3, endpoint);
     return s3;
   }
 }

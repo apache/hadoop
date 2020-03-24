@@ -23,10 +23,13 @@ import java.net.URI;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.metrics.RequestMetricCollector;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.util.AwsHostNameUtils;
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 
 import org.apache.commons.lang3.StringUtils;
@@ -81,14 +84,12 @@ public class DefaultS3ClientFactory extends Configured
         ? new AwsStatisticsCollector(statisticsFromAwsSdk)
         : null;
 
-    return configureAmazonS3Client(
-        newAmazonS3Client(
-            credentials,
-            awsConf,
-            metrics,
-            conf.getTrimmed(ENDPOINT, ""),
-            conf.getBoolean(PATH_STYLE_ACCESS, false)),
-        conf);
+    return newAmazonS3Client(
+        credentials,
+        awsConf,
+        metrics,
+        conf.getTrimmed(ENDPOINT, ""),
+        conf.getBoolean(PATH_STYLE_ACCESS, false));
   }
 
   /**
@@ -114,26 +115,29 @@ public class DefaultS3ClientFactory extends Configured
     if (metrics != null) {
       b.withMetricsCollector(metrics);
     }
+
+    // endpoint set up is a PITA
+    AwsClientBuilder.EndpointConfiguration epr
+        = createEndpointConfiguration(endpoint);
+    if (epr != null) {
+      b.withEndpointConfiguration(epr);
+    }
     return b.build();
   }
 
   /**
-   * Configure S3 client from the Hadoop configuration.
+   * Patch a classically-constructed s3 instance's endpoint.
+   * @param s3 S3 client
+   * @param endpoint possibly empty endpoint.
    *
-   * This includes: endpoint, Path Access and possibly other
-   * options.
-   *
-   * @param conf Hadoop configuration
-   * @return S3 client
    * @throws IllegalArgumentException if misconfigured
    */
-  private static AmazonS3 configureAmazonS3Client(AmazonS3 s3,
-      Configuration conf)
+  protected static AmazonS3 setEndpoint(AmazonS3 s3,
+      String endpoint)
       throws IllegalArgumentException {
-    String endPoint = conf.getTrimmed(ENDPOINT, "");
-    if (!endPoint.isEmpty()) {
+    if (!endpoint.isEmpty()) {
      try {
-        s3.setEndpoint(endPoint);
+        s3.setEndpoint(endpoint);
       } catch (IllegalArgumentException e) {
         String msg = "Incorrect endpoint: " + e.getMessage();
         LOG.error(msg);
@@ -141,5 +145,22 @@ public class DefaultS3ClientFactory extends Configured
       }
     }
     return s3;
+  }
+
+  /**
+   * Given an endpoint string, return an endpoint config, or null, if none
+   * is needed.
+   * @param endpoint possibly empty endpoint.
+   * @return a configuration for the S3 client builder.
+   */
+  @VisibleForTesting
+  static AwsClientBuilder.EndpointConfiguration createEndpointConfiguration(
+      final String endpoint) {
+    if (endpoint.isEmpty()) {
+      return null;
+    }
+
+    String region= AwsHostNameUtils.parseRegionName(endpoint, "s3");;
+    return new AwsClientBuilder.EndpointConfiguration(endpoint, region);
   }
 }
