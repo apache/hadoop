@@ -101,7 +101,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     int currentLen = len;
     int lastReadBytes;
     int totalReadBytes = 0;
-    incrementReadOps();
     do {
       lastReadBytes = readOneBlock(b, currentOff, currentLen);
       if (lastReadBytes > 0) {
@@ -202,7 +201,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       // try reading from buffers first
       receivedBytes = ReadBufferManager.getBufferManager().getBlock(this, position, length, b);
       if (receivedBytes > 0) {
-        incrementReadOps();
         return receivedBytes;
       }
 
@@ -238,7 +236,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
-      incrementReadOps();
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
         AbfsRestOperationException ere = (AbfsRestOperationException) ex;
@@ -253,15 +250,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IOException("Unexpected Content-Length");
     }
     return (int) bytesRead;
-  }
-
-  /**
-   * Increment Read Operations.
-   */
-  private void incrementReadOps() {
-    if (statistics != null) {
-      statistics.incrementReadOps(1);
-    }
   }
 
   /**
