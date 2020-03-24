@@ -463,6 +463,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   // Batch size for open files response
   private final int maxListOpenFilesResponses;
 
+  private final boolean allowOwnerSetQuota;
+
   // Scan interval is not configurable.
   private static final long DELEGATION_TOKEN_REMOVER_SCAN_INTERVAL =
     TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS);
@@ -977,7 +979,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           DFSConfigKeys.DFS_NAMENODE_LIST_OPENFILES_NUM_RESPONSES +
               " must be a positive integer."
       );
-
+      this.allowOwnerSetQuota = conf.getBoolean(
+          DFSConfigKeys.DFS_PERMISSIONS_ALLOW_OWNER_SET_QUOTA_KEY,
+          DFSConfigKeys.DFS_PERMISSIONS_ALLOW_OWNER_SET_QUOTA_DEFAULT);
       this.blockDeletionIncrement = conf.getInt(
           DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY,
           DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_INCREMENT_DEFAULT);
@@ -3468,12 +3472,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
     try {
-      checkSuperuserPrivilege(pc);
+      if(!allowOwnerSetQuota) {
+        checkSuperuserPrivilege(pc);
+      }
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
         checkNameNodeSafeMode("Cannot set quota on " + src);
-        FSDirAttrOp.setQuota(dir, pc, src, nsQuota, ssQuota, type);
+        FSDirAttrOp.setQuota(dir, pc, src, nsQuota, ssQuota, type,
+            allowOwnerSetQuota);
       } finally {
         writeUnlock(operationName);
       }

@@ -327,6 +327,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_PERMISSIONS_SUPERUSERGROUP_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;
   public static final String  DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT = "supergroup";
+  public static final String DFS_PERMISSIONS_ALLOW_OWNER_SET_QUOTA_KEY
+      = "dfs.permissions.allow.owner.set.quota";
+  public static final boolean DFS_PERMISSIONS_ALLOW_OWNER_SET_QUOTA_DEFAULT
+      = false;
   public static final String  DFS_NAMENODE_ACLS_ENABLED_KEY = "dfs.namenode.acls.enabled";
   public static final boolean DFS_NAMENODE_ACLS_ENABLED_DEFAULT = true;
   public static final String DFS_NAMENODE_POSIX_ACL_INHERITANCE_ENABLED_KEY =
