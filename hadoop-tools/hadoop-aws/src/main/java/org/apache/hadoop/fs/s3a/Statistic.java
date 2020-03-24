@@ -167,7 +167,7 @@ public enum Statistic {
       StreamStatisticNames.STREAM_SEEK_BYTES_SKIPPED,
       "Count of bytes skipped during forward seek operation"),
   STREAM_SEEK_OPERATIONS(
-      StreamStatisticNames.STREAM_READ_OPERATIONS,
+      StreamStatisticNames.STREAM_SEEK_OPERATIONS,
       "Number of seek operations during stream IO."),
   STREAM_CLOSE_BYTES_READ(
       StreamStatisticNames.STREAM_CLOSE_BYTES_READ,
@@ -278,7 +278,15 @@ public enum Statistic {
 
   DELEGATION_TOKENS_ISSUED(
       StoreStatisticNames.DELEGATION_TOKENS_ISSUED,
-      "Number of delegation tokens issued");
+      "Number of delegation tokens issued"),
+
+  STORE_IO_REQUEST(StoreStatisticNames.STORE_IO_REQUEST,
+      "requests made of the remote store"),
+
+  STORE_IO_RETRY(StoreStatisticNames.STORE_IO_RETRY,
+      "retried requests made of the remote store"),
+
+      ;
 
   private static final Map<String, Statistic> SYMBOL_MAP =
       new HashMap<>(Statistic.values().length);

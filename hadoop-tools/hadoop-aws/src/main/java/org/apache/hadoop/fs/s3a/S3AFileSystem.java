@@ -679,7 +679,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         S3ClientFactory.class);
 
     s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
-        .createS3Client(getUri(), bucket, credentials, uaSuffix);
+        .createS3Client(getUri(), bucket, credentials, uaSuffix,
+            statisticsContext.newStatisticsFromAwsSdk());
   }
 
   /**
@@ -1775,6 +1776,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     if (isThrottleException(ex)) {
       operationThrottled(false);
     } else {
+      incrementStatistic(STORE_IO_RETRY);
       incrementStatistic(IGNORED_ERRORS);
     }
   }

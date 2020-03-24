@@ -29,10 +29,12 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.s3a.impl.statistics.ChangeTrackerStatistics;
 import org.apache.hadoop.fs.s3a.impl.statistics.CommitterStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.CountersAndGauges;
 import org.apache.hadoop.fs.s3a.impl.statistics.CountingChangeTracker;
 import org.apache.hadoop.fs.s3a.impl.statistics.DelegationTokenStatistics;
 import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.StatisticsFromAwsSdk;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
@@ -54,6 +56,7 @@ import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 
 import java.io.Closeable;
 import java.net.URI;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -75,7 +78,8 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class S3AInstrumentation implements Closeable, MetricsSource {
+public class S3AInstrumentation implements Closeable, MetricsSource,
+    CountersAndGauges {
   private static final Logger LOG = LoggerFactory.getLogger(
       S3AInstrumentation.class);
 
@@ -204,6 +208,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       S3GUARD_METADATASTORE_THROTTLED,
       S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED,
       STORE_IO_THROTTLED,
+      STORE_IO_REQUEST,
+      STORE_IO_RETRY,
       DELEGATION_TOKENS_ISSUED,
       FILES_DELETE_REJECTED
   };
@@ -1579,6 +1585,65 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      */
     public Map<String, Long> getMap() {
       return map;
+    }
+  }
+
+  public StatisticsFromAwsSdk newStatisticsFromAwsSdk() {
+    return new StatisticsFromAwsSdkImpl(this);
+  }
+
+  /**
+   * Hook up AWS SDK Statistics to the S3 counters.
+   */
+  private static final class StatisticsFromAwsSdkImpl implements
+      StatisticsFromAwsSdk {
+
+    private final CountersAndGauges countersAndGauges;
+
+    private StatisticsFromAwsSdkImpl(final CountersAndGauges countersAndGauges) {
+      this.countersAndGauges = countersAndGauges;
+    }
+
+    @Override
+    public void updateAwsRequestCount(final long count) {
+      countersAndGauges.incrementCounter(STORE_IO_REQUEST, count);
+    }
+
+    @Override
+    public void updateAwsRetryCount(final long count) {
+      countersAndGauges.incrementCounter(STORE_IO_RETRY, count);
+
+    }
+
+    @Override
+    public void updateAwsThrottleExceptionsCount(final long count) {
+      countersAndGauges.incrementCounter(STORE_IO_THROTTLED, count);
+      countersAndGauges.addValueToQuantiles(STORE_IO_THROTTLE_RATE, count);
+    }
+
+    @Override
+    public void addAwsRequestTime(final Duration duration) {
+
+    }
+
+    @Override
+    public void addAwsClientExecuteTime(final Duration duration) {
+
+    }
+
+    @Override
+    public void addRequestMarshallTime(final Duration duration) {
+
+    }
+
+    @Override
+    public void addRequestSigningTime(final Duration duration) {
+
+    }
+
+    @Override
+    public void addResponseProcessingTime(final Duration duration) {
+
     }
   }
 }

@@ -126,9 +126,18 @@ public class StoreStatisticNames {
   public static final String DELEGATION_TOKENS_ISSUED
       = "delegation_tokens_issued";
 
-  /** "Requests throttled and retried: {@value}. */
+  /** Requests throttled and retried: {@value}. */
   public static final String STORE_IO_THROTTLED
       = "store_io_throttled";
 
+  /** Requests made of a store: {@value}. */
+  public static final String STORE_IO_REQUEST
+    =  "store_io_request";
+
+  /**
+   * IO retried: {@value}.
+   */
+  public static final String STORE_IO_RETRY
+      = "store_io_retry";
 
 }

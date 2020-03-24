@@ -23,9 +23,10 @@ import java.net.URI;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.metrics.RequestMetricCollector;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.S3ClientOptions;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.slf4j.Logger;
 
 import org.apache.commons.lang3.StringUtils;
@@ -33,6 +34,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.s3a.impl.statistics.AwsStatisticsCollector;
+import org.apache.hadoop.fs.s3a.impl.statistics.StatisticsFromAwsSdk;
 
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
@@ -55,7 +58,8 @@ public class DefaultS3ClientFactory extends Configured
   public AmazonS3 createS3Client(URI name,
       final String bucket,
       final AWSCredentialsProvider credentials,
-      final String userAgentSuffix) throws IOException {
+      final String userAgentSuffix,
+      final StatisticsFromAwsSdk statisticsFromAwsSdk) throws IOException {
     Configuration conf = getConf();
     final ClientConfiguration awsConf = S3AUtils
         .createAwsConf(conf, bucket, Constants.AWS_SERVICE_IDENTIFIER_S3);
@@ -72,8 +76,19 @@ public class DefaultS3ClientFactory extends Configured
     if (!StringUtils.isEmpty(userAgentSuffix)) {
       awsConf.setUserAgentSuffix(userAgentSuffix);
     }
+    // optional metrics
+    RequestMetricCollector metrics = statisticsFromAwsSdk != null
+        ? new AwsStatisticsCollector(statisticsFromAwsSdk)
+        : null;
+
     return configureAmazonS3Client(
-        newAmazonS3Client(credentials, awsConf), conf);
+        newAmazonS3Client(
+            credentials,
+            awsConf,
+            metrics,
+            conf.getTrimmed(ENDPOINT, ""),
+            conf.getBoolean(PATH_STYLE_ACCESS, false)),
+        conf);
   }
 
   /**
@@ -81,11 +96,25 @@ public class DefaultS3ClientFactory extends Configured
    * Override this to provide an extended version of the client
    * @param credentials credentials to use
    * @param awsConf  AWS configuration
-   * @return  new AmazonS3 client
+   * @param metrics metrics collector or null
+   * @param endpoint endpoint string; may be ""
+   * @param pathStyleAccess enable path style access?
+   * @return new AmazonS3 client
    */
   protected AmazonS3 newAmazonS3Client(
-      AWSCredentialsProvider credentials, ClientConfiguration awsConf) {
-    return new AmazonS3Client(credentials, awsConf);
+      AWSCredentialsProvider credentials,
+      ClientConfiguration awsConf,
+      final RequestMetricCollector metrics,
+      final String endpoint,
+      final boolean pathStyleAccess) {
+    AmazonS3ClientBuilder b = AmazonS3Client.builder();
+    b.withCredentials(credentials);
+    b.withClientConfiguration(awsConf);
+    b.withPathStyleAccessEnabled(pathStyleAccess);
+    if (metrics != null) {
+      b.withMetricsCollector(metrics);
+    }
+    return b.build();
   }
 
   /**
@@ -103,44 +132,13 @@ public class DefaultS3ClientFactory extends Configured
       throws IllegalArgumentException {
     String endPoint = conf.getTrimmed(ENDPOINT, "");
     if (!endPoint.isEmpty()) {
-      try {
+     try {
         s3.setEndpoint(endPoint);
       } catch (IllegalArgumentException e) {
-        String msg = "Incorrect endpoint: "  + e.getMessage();
+        String msg = "Incorrect endpoint: " + e.getMessage();
         LOG.error(msg);
         throw new IllegalArgumentException(msg, e);
       }
-    }
-    return applyS3ClientOptions(s3, conf);
-  }
-
-  /**
-   * Perform any tuning of the {@code S3ClientOptions} settings based on
-   * the Hadoop configuration.
-   * This is different from the general AWS configuration creation as
-   * it is unique to S3 connections.
-   *
-   * The {@link Constants#PATH_STYLE_ACCESS} option enables path-style access
-   * to S3 buckets if configured.  By default, the
-   * behavior is to use virtual hosted-style access with URIs of the form
-   * {@code http://bucketname.s3.amazonaws.com}
-   * Enabling path-style access and a
-   * region-specific endpoint switches the behavior to use URIs of the form
-   * {@code http://s3-eu-west-1.amazonaws.com/bucketname}.
-   * It is common to use this when connecting to private S3 servers, as it
-   * avoids the need to play with DNS entries.
-   * @param s3 S3 client
-   * @param conf Hadoop configuration
-   * @return the S3 client
-   */
-  private static AmazonS3 applyS3ClientOptions(AmazonS3 s3,
-      Configuration conf) {
-    final boolean pathStyleAccess = conf.getBoolean(PATH_STYLE_ACCESS, false);
-    if (pathStyleAccess) {
-      LOG.debug("Enabling path style access!");
-      s3.setS3ClientOptions(S3ClientOptions.builder()
-          .setPathStyleAccess(true)
-          .build());
     }
     return s3;
   }

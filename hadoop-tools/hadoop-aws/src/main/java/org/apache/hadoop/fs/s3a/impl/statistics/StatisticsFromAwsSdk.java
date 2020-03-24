@@ -18,5 +18,28 @@
 
 package org.apache.hadoop.fs.s3a.impl.statistics;
 
-public interface AwsSdkStatistitics {
+import java.time.Duration;
+
+/**
+ * interface to receive statistics events from the AWS SDK
+ * by way of {@link AwsStatisticsCollector}.
+ */
+public interface StatisticsFromAwsSdk {
+
+  void updateAwsRequestCount(long count);
+
+  void updateAwsRetryCount(long count);
+
+  void updateAwsThrottleExceptionsCount(long count);
+
+  void addAwsRequestTime(Duration duration);
+
+  void addAwsClientExecuteTime(Duration duration);
+
+  void addRequestMarshallTime(Duration duration);
+
+  void addRequestSigningTime(Duration duration);
+
+  void addResponseProcessingTime(Duration duration);
 }
+

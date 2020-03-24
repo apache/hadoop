@@ -172,6 +172,11 @@ public class IntegratedS3AStatisticsContext implements S3AStatisticsContext {
     return getInstrumentation().newDelegationTokenStatistics();
   }
 
+  @Override
+  public StatisticsFromAwsSdk newStatisticsFromAwsSdk() {
+    return getInstrumentation().newStatisticsFromAwsSdk();
+  }
+
   /**
    * This is the interface which an integration source must implement
    * for the integration.

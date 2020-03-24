@@ -18,13 +18,12 @@
 
 package org.apache.hadoop.fs.s3a.impl.statistics;
 
-import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
 
 /**
  * This is the statistics context for ongoing operations in S3A.
  */
-public interface S3AStatisticsContext {
+public interface S3AStatisticsContext extends CountersAndGauges {
 
   MetastoreInstrumentation getMetastoreInstrumentation();
 
@@ -53,38 +52,9 @@ public interface S3AStatisticsContext {
   DelegationTokenStatistics newDelegationTokenStatistics();
 
   /**
-   * Increment a specific counter.
-   * No-op if not defined.
-   * @param op operation
-   * @param count increment value
+   * Create a StatisticsFromAwsSdk instance.
+   * @return an instance of StatisticsFromAwsSdk
    */
-  void incrementCounter(Statistic op, long count);
-
-  /**
-   * Increment a specific gauge.
-   * No-op if not defined.
-   * @param op operation
-   * @param count increment value
-   * @throws ClassCastException if the metric is of the wrong type
-   */
-  void incrementGauge(Statistic op, long count);
-
-  /**
-   * Decrement a specific gauge.
-   * No-op if not defined.
-   * @param op operation
-   * @param count increment value
-   * @throws ClassCastException if the metric is of the wrong type
-   */
-  void decrementGauge(Statistic op, long count);
-
-  /**
-   * Add a value to a quantiles statistic. No-op if the quantile
-   * isn't found.
-   * @param op operation to look up.
-   * @param value value to add.
-   * @throws ClassCastException if the metric is not a Quantiles.
-   */
-  void addValueToQuantiles(Statistic op, long value);
+  StatisticsFromAwsSdk newStatisticsFromAwsSdk();
 
 }

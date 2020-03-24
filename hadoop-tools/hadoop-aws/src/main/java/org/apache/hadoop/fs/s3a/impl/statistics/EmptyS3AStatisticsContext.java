@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.impl.statistics;
 
 import java.io.IOException;
+import java.time.Duration;
 
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
@@ -58,6 +59,11 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
   @Override
   public DelegationTokenStatistics newDelegationTokenStatistics() {
     return new EmptyDelegationTokenStatistics();
+  }
+
+  @Override
+  public StatisticsFromAwsSdk newStatisticsFromAwsSdk() {
+    return new EmptyStatisticsFromAwsSdk();
   }
 
   @Override
@@ -386,4 +392,49 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     }
   }
+
+  public static final class EmptyStatisticsFromAwsSdk implements
+      StatisticsFromAwsSdk {
+
+    @Override
+    public void updateAwsRequestCount(final long longValue) {
+
+    }
+
+    @Override
+    public void updateAwsRetryCount(final long longValue) {
+
+    }
+
+    @Override
+    public void updateAwsThrottleExceptionsCount(final long longValue) {
+
+    }
+
+    @Override
+    public void addAwsRequestTime(final Duration ofMillis) {
+
+    }
+
+    @Override
+    public void addAwsClientExecuteTime(final Duration ofMillis) {
+
+    }
+
+    @Override
+    public void addRequestMarshallTime(final Duration duration) {
+
+    }
+
+    @Override
+    public void addRequestSigningTime(final Duration duration) {
+
+    }
+
+    @Override
+    public void addResponseProcessingTime(final Duration duration) {
+
+    }
+  }
+
 }

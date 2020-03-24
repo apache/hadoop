@@ -27,7 +27,7 @@ public class CountingChangeTracker implements
     ChangeTrackerStatistics {
 
   /**
-   * The counter which is update on every mismatch.
+   * The counter which is updated on every mismatch.
    */
   private final AtomicLong counter;
 

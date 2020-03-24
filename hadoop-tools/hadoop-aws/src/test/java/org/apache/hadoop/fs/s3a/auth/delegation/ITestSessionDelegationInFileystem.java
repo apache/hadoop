@@ -562,7 +562,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     factory.setConf(conf);
     String host = landsat.getHost();
     AmazonS3 s3 = factory.createS3Client(landsat, host, testing,
-        "ITestSessionDelegationInFileystem");
+        "ITestSessionDelegationInFileystem", null);
 
     return Invoker.once("HEAD", host,
         () -> s3.getObjectMetadata(host, landsat.getPath().substring(1)));

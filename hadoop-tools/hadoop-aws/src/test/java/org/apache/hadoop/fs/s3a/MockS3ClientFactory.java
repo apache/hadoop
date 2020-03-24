@@ -24,9 +24,12 @@ import java.net.URI;
 import java.util.ArrayList;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.metrics.RequestMetricCollector;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.MultipartUploadListing;
 import com.amazonaws.services.s3.model.Region;
+
+import org.apache.hadoop.fs.s3a.impl.statistics.StatisticsFromAwsSdk;
 
 /**
  * An {@link S3ClientFactory} that returns Mockito mocks of the {@link AmazonS3}
@@ -38,7 +41,8 @@ public class MockS3ClientFactory implements S3ClientFactory {
   public AmazonS3 createS3Client(URI name,
       final String bucket,
       final AWSCredentialsProvider credentialSet,
-      final String userAgentSuffix) {
+      final String userAgentSuffix,
+      final StatisticsFromAwsSdk statisticsFromAwsSdks) {
     AmazonS3 s3 = mock(AmazonS3.class);
     when(s3.doesBucketExist(bucket)).thenReturn(true);
     when(s3.doesBucketExistV2(bucket)).thenReturn(true);
