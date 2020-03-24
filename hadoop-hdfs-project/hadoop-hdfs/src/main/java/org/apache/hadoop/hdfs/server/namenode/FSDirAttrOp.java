@@ -232,11 +232,21 @@ public class FSDirAttrOp {
    * Note: This does not support ".inodes" relative path.
    */
   static void setQuota(FSDirectory fsd, FSPermissionChecker pc, String src,
-      long nsQuota, long ssQuota, StorageType type) throws IOException {
+      long nsQuota, long ssQuota, StorageType type, boolean allowOwner)
+      throws IOException {
 
     fsd.writeLock();
     try {
       INodesInPath iip = fsd.resolvePath(pc, src, DirOp.WRITE);
+      if (fsd.isPermissionEnabled() && !pc.isSuperUser() && allowOwner) {
+        INodeDirectory parentDir= iip.getLastINode().getParent();
+        if (parentDir == null ||
+            !parentDir.getUserName().equals(pc.getUser())) {
+          throw new AccessControlException(
+              "Access denied for user " + pc.getUser() +
+              ". Superuser or owner of parent folder privilege is required");
+        }
+      }
       INodeDirectory changed =
           unprotectedSetQuota(fsd, iip, nsQuota, ssQuota, type);
       if (changed != null) {
