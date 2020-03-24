@@ -5834,4 +5834,13 @@
       must be shorter than the window size.
     </description>
   </property>
+
+  <property>
+    <name>dfs.permissions.allow.owner.set.quota</name>
+    <value>false</value>
+    <description>
+      Whether the owner(not superuser) of a directory can set quota of his sub
+      directories when permissions is enabled. Default value is false;
+    </description>
+  </property>
 </configuration>
