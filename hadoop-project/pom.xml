@@ -240,6 +240,7 @@
     <jmh.version>1.20</jmh.version>
     <gcs.version>1.9.0.3.0.0.0-SNAPSHOT</gcs.version>
     <knox.version>1.0.0.3.0.100.0-SNAPSHOT</knox.version>
+    <ranger.version>2.0.0.7.1.1.0-SNAPSHOT</ranger.version>
     <t9000-core.version>1.0.0.7.3.1.0-SNAPSHOT</t9000-core.version>
   </properties>
 
@@ -2238,6 +2239,37 @@
           <exclusion>
             <groupId>com.google.cloud.bigdataoss</groupId>
             <artifactId>util-hadoop</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.ranger</groupId>
+        <artifactId>ranger-raz-hook-abfs</artifactId>
+        <version>${ranger.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-azure</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-bundle</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jul-to-slf4j</artifactId>
           </exclusion>
         </exclusions>
       </dependency>

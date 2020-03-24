@@ -131,5 +131,9 @@
       <groupId>org.apache.knox</groupId>
       <artifactId>gateway-cloud-bindings</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.ranger</groupId>
+      <artifactId>ranger-raz-hook-abfs</artifactId>
+    </dependency>
   </dependencies>
 </project>
