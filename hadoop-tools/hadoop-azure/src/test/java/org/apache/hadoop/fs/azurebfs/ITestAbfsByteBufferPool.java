@@ -55,11 +55,11 @@ public class ITestAbfsByteBufferPool {
   }
 
   @Test
-  public void testWithInvalidMaxConcurrentThreadCount() throws Exception {
-    List<Integer> invalidMaxConcurrentThreadCount = Arrays.asList(0, -1);
-    for (int val : invalidMaxConcurrentThreadCount) {
+  public void testWithInvalidMaxFreeBuffers() throws Exception {
+    List<Integer> invalidMaxFreeBuffers = Arrays.asList(0, -1);
+    for (int val : invalidMaxFreeBuffers) {
       intercept(IllegalArgumentException.class, String
-              .format("maxConcurrentThreadCount cannot be < 1",
+              .format("maxFreeBuffers cannot be < 1",
                   MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE,
                   MAX_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE),
           () -> new AbfsByteBufferPool(TWO_MB, val, 20));
@@ -74,10 +74,10 @@ public class ITestAbfsByteBufferPool {
 
   @Test
   public void testReleaseMoreThanPoolCapacity() {
-    int maxConcurrentThreadCount = 3;
+    int maxFreeBuffers = 4;
     AbfsByteBufferPool pool = new AbfsByteBufferPool(TWO_MB,
-        maxConcurrentThreadCount, 25);
-    int expectedPoolCapacity = maxConcurrentThreadCount + 1;
+        maxFreeBuffers, 25);
+    int expectedPoolCapacity = maxFreeBuffers;
     for (int i = 0; i < expectedPoolCapacity * 2; i++) {
       pool.release(new byte[TWO_MB]);
       assertThat(pool.getFreeBuffers()).describedAs(
@@ -111,12 +111,11 @@ public class ITestAbfsByteBufferPool {
 
   @Test
   public void testGet() throws Exception {
-    int maxConcurrentThreadCount = 3;
+    int maxFreeBuffers = 4;
     int expectedMaxBuffersInUse =
-        maxConcurrentThreadCount + Runtime.getRuntime().availableProcessors()
-            + 1;
+        maxFreeBuffers + Runtime.getRuntime().availableProcessors();
     AbfsByteBufferPool pool = new AbfsByteBufferPool(TWO_MB,
-        maxConcurrentThreadCount, 90);
+        maxFreeBuffers, 90);
 
     for (int i = 0; i < expectedMaxBuffersInUse; i++) {
       byte[] byteBuffer = pool.get();
@@ -156,19 +155,19 @@ public class ITestAbfsByteBufferPool {
             {100, 100, 90}});
     for (int i = 0; i < testData.size(); i++) {
       int bufferSize = (int) testData.get(i)[0] * 1024 * 1024;
-      int maxConcurrentThreadCount = (int) testData.get(i)[1];
+      int maxFreeBuffers = (int) testData.get(i)[1];
       int maxWriteMemUsagePercentage = (int) testData.get(i)[2];
       AbfsByteBufferPool pool = new AbfsByteBufferPool(bufferSize,
-          maxConcurrentThreadCount, maxWriteMemUsagePercentage);
+          maxFreeBuffers, maxWriteMemUsagePercentage);
 
       double maxMemoryAllowedForPoolMB =
           Runtime.getRuntime().maxMemory() * maxWriteMemUsagePercentage / 100;
       double bufferCountByMemory = maxMemoryAllowedForPoolMB / bufferSize;
-      double bufferCountByConcurrency =
-          maxConcurrentThreadCount + Runtime.getRuntime().availableProcessors()
-              + 1;
+      double bufferCountByMaxFreeBuffers =
+          maxFreeBuffers + Runtime.getRuntime().availableProcessors();
+
       int expectedMaxBuffersInUse = (int) Math
-          .ceil(Math.min(bufferCountByMemory, bufferCountByConcurrency));
+          .ceil(Math.min(bufferCountByMemory, bufferCountByMaxFreeBuffers));
       if (expectedMaxBuffersInUse < 2) {
         expectedMaxBuffersInUse = 2;
       }
@@ -182,7 +181,7 @@ public class ITestAbfsByteBufferPool {
               + "buffers calculated by memory percentage")
           .isLessThanOrEqualTo((int) Math.ceil(bufferCountByMemory))
           .describedAs("Max buffers in use should <= number of buffers "
-              + "calculated by concurrency")
+              + "calculated by maxFreeBuffers")
           .isLessThanOrEqualTo((int) Math.ceil(bufferCountByMemory));
     }
   }

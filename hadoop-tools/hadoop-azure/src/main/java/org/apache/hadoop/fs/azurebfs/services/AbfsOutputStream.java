@@ -67,7 +67,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private static int bufferSize;
   private byte[] buffer;
   private int bufferIndex;
-  private static int maxConcurrentThreadCount;
 
   private final ConcurrentLinkedDeque<WriteOperation> writeOperations = new ConcurrentLinkedDeque<>();
   private static ThreadPoolExecutor threadExecutor;
@@ -122,6 +121,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         return daemonThread;
       }
     };
+    int maxConcurrentThreadCount =
+        conf.getWriteConcurrencyFactor() * Runtime.getRuntime()
+            .availableProcessors();
     threadExecutor = new ThreadPoolExecutor(maxConcurrentThreadCount,
         maxConcurrentThreadCount, 10L, TimeUnit.SECONDS,
         new LinkedBlockingQueue<>(), daemonThreadFactory);
@@ -129,15 +131,15 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   @VisibleForTesting
   public static void initWriteBufferPool(AbfsConfiguration conf) {
-    if(bufferSize == conf.getWriteBufferSize()){
+    if (bufferSize == conf.getWriteBufferSize()) {
       return;
     }
     bufferSize = conf.getWriteBufferSize();
-    int availableProcessors = Runtime.getRuntime().availableProcessors();
-    maxConcurrentThreadCount =
-        conf.getWriteConcurrencyFactor() * availableProcessors;
-    byteBufferPool = new AbfsByteBufferPool(bufferSize,
-        maxConcurrentThreadCount, conf.getMaxWriteMemoryUsagePercentage());
+    int corePoolSize =
+        1 + ( conf.getWriteConcurrencyFactor() * Runtime.getRuntime()
+            .availableProcessors());
+    byteBufferPool = new AbfsByteBufferPool(bufferSize, corePoolSize,
+        conf.getMaxWriteMemoryUsagePercentage());
   }
 
   /**

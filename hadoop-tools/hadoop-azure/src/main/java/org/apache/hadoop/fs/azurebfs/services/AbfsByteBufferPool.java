@@ -31,6 +31,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.M
  */
 public class AbfsByteBufferPool {
 
+  private static final Object LOCK = new Object();
   /**
    * Queue holding the free buffers.
    */
@@ -45,18 +46,15 @@ public class AbfsByteBufferPool {
   private int maxBuffersInUse;
   private int bufferSize;
 
-  private static final Object LOCK = new Object();
-
   /**
    * @param bufferSize                 Size of the byte[] to be returned.
-   * @param maxConcurrentThreadCount   Maximum number of threads that will be
-   *                                   using the pool.
+   * @param maxFreeBuffers             Maximum number of buffers that cab
+   *                                   reside in the pool.
    * @param maxWriteMemUsagePercentage Maximum percentage of memory that can
    *                                   be used by the pool from the max
    *                                   available memory.
    */
-  public AbfsByteBufferPool(final int bufferSize,
-      final int maxConcurrentThreadCount,
+  public AbfsByteBufferPool(final int bufferSize, final int maxFreeBuffers,
       final int maxWriteMemUsagePercentage) {
     Preconditions.checkArgument(maxWriteMemUsagePercentage
             >= MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE
@@ -65,20 +63,20 @@ public class AbfsByteBufferPool {
         "maxWriteMemUsagePercentage should be in range (%s - %s)",
         MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE,
         MAX_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE);
-    Preconditions.checkArgument(maxConcurrentThreadCount > 0,
-        "maxConcurrentThreadCount cannot be < 1");
+    Preconditions.checkArgument(maxFreeBuffers > 0,
+        "maxFreeBuffers cannot be < 1");
     this.bufferSize = bufferSize;
     this.numBuffersInUse = 0;
-    freeBuffers = new ArrayBlockingQueue<>(maxConcurrentThreadCount + 1);
+    freeBuffers = new ArrayBlockingQueue<>(maxFreeBuffers);
 
     double maxMemoryAllowedForPool =
         Runtime.getRuntime().maxMemory() * maxWriteMemUsagePercentage / 100;
     double bufferCountByMemory = maxMemoryAllowedForPool / bufferSize;
-    double bufferCountByConcurrency =
-        maxConcurrentThreadCount + Runtime.getRuntime().availableProcessors()
-            + 1;
+    double bufferCountByMaxFreeBuffers =
+        maxFreeBuffers + Runtime.getRuntime().availableProcessors();
+
     maxBuffersInUse = (int) Math
-        .ceil(Math.min(bufferCountByMemory, bufferCountByConcurrency));
+        .ceil(Math.min(bufferCountByMemory, bufferCountByMaxFreeBuffers));
     if (maxBuffersInUse < 2) {
       maxBuffersInUse = 2;
     }
@@ -111,7 +109,7 @@ public class AbfsByteBufferPool {
    * @param byteArray The buffer to be offered back to the pool.
    */
   public void release(byte[] byteArray) {
-    synchronized(LOCK) {
+    synchronized (LOCK) {
       Preconditions.checkArgument(byteArray.length == bufferSize,
           "Buffer size has" + " to be %s (Received buffer length: %s)",
           bufferSize, byteArray.length);
@@ -119,8 +117,8 @@ public class AbfsByteBufferPool {
       if (numBuffersInUse < 0) {
         numBuffersInUse = 0;
       }
-      freeBuffers.offer(byteArray);
     }
+    freeBuffers.offer(byteArray);
   }
 
   @VisibleForTesting
