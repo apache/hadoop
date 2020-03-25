@@ -165,6 +165,8 @@ public class DataNodeMetrics {
   private MutableCounterLong sumOfActorCommandQueueLength;
   @Metric("Num of processed commands of all BPServiceActors")
   private MutableCounterLong numProcessedCommands;
+  @Metric("Rate of processed commands of all BPServiceActors")
+  private MutableRate processedCommandsOp;
 
   final MetricsRegistry registry = new MetricsRegistry("datanode");
   final String name;
@@ -552,5 +554,13 @@ public class DataNodeMetrics {
 
   public void incrNumProcessedCommands() {
     numProcessedCommands.incr();
+  }
+
+  /**
+   * Add processedCommandsOp metrics.
+   * @param latency milliseconds of process commands
+   */
+  public void addNumProcessedCommands(long latency) {
+    processedCommandsOp.add(latency);
   }
 }
