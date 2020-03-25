@@ -729,6 +729,14 @@
   </property>
 
   <property>
+    <description>When HA is not enabled, the class to be used by Clients, AMs and
+      NMs to retry connecting to the Active RM. It should extend
+      org.apache.hadoop.yarn.client.RMFailoverProxyProvider</description>
+    <name>yarn.client.failover-no-ha-proxy-provider</name>
+    <value>org.apache.hadoop.yarn.client.DefaultNoHARMFailoverProxyProvider</value>
+  </property>
+
+  <property>
     <description>When HA is enabled, the max number of times
       FailoverProxyProvider should attempt failover. When set,
       this overrides the yarn.resourcemanager.connect.max-wait.ms. When
