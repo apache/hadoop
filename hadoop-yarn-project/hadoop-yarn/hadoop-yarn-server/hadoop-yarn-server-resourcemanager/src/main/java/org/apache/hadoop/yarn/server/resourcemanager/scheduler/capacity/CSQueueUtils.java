@@ -36,24 +36,25 @@ public class CSQueueUtils {
   /*
    * Used only by tests
    */
-  public static void checkMaxCapacity(String queueName, 
+  public static void checkMaxCapacity(String queuePath,
       float capacity, float maximumCapacity) {
     if (maximumCapacity < 0.0f || maximumCapacity > 1.0f) {
       throw new IllegalArgumentException(
           "Illegal value  of maximumCapacity " + maximumCapacity + 
-          " used in call to setMaxCapacity for queue " + queueName);
+          " used in call to setMaxCapacity for queue " + queuePath);
     }
     }
 
   /*
    * Used only by tests
    */
-  public static void checkAbsoluteCapacity(String queueName,
+  public static void checkAbsoluteCapacity(String queuePath,
       float absCapacity, float absMaxCapacity) {
     if (absMaxCapacity < (absCapacity - EPSILON)) {
       throw new IllegalArgumentException("Illegal call to setMaxCapacity. "
-          + "Queue '" + queueName + "' has " + "an absolute capacity (" + absCapacity
-          + ") greater than " + "its absolute maximumCapacity (" + absMaxCapacity
+          + "Queue '" + queuePath + "' has "
+          + "an absolute capacity (" + absCapacity
+          + ") greater than its absolute maximumCapacity (" + absMaxCapacity
           + ")");
   }
   }

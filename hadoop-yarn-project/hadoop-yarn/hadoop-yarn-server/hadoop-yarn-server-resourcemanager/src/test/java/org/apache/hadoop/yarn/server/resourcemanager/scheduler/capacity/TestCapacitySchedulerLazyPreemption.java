@@ -156,7 +156,8 @@ public class TestCapacitySchedulerLazyPreemption
 
     PreemptionManager pm = cs.getPreemptionManager();
     Map<ContainerId, RMContainer> killableContainers =
-        waitKillableContainersSize(pm, "a", RMNodeLabelsManager.NO_LABEL, 1);
+        waitKillableContainersSize(
+            pm, "root.a", RMNodeLabelsManager.NO_LABEL, 1);
     Assert.assertEquals(1, killableContainers.size());
     Assert.assertEquals(killableContainers.entrySet().iterator().next().getKey()
         .getApplicationAttemptId(), am1.getApplicationAttemptId());
@@ -267,7 +268,8 @@ public class TestCapacitySchedulerLazyPreemption
 
     PreemptionManager pm = cs.getPreemptionManager();
     Map<ContainerId, RMContainer> killableContainers =
-        waitKillableContainersSize(pm, "a", RMNodeLabelsManager.NO_LABEL, 1);
+        waitKillableContainersSize(
+            pm, "root.a", RMNodeLabelsManager.NO_LABEL, 1);
     Assert.assertEquals(killableContainers.entrySet().iterator().next().getKey()
         .getApplicationAttemptId(), am1.getApplicationAttemptId());
 
@@ -379,7 +381,8 @@ public class TestCapacitySchedulerLazyPreemption
 
     PreemptionManager pm = cs.getPreemptionManager();
     Map<ContainerId, RMContainer> killableContainers =
-        waitKillableContainersSize(pm, "a", RMNodeLabelsManager.NO_LABEL, 1);
+        waitKillableContainersSize(
+            pm, "root.a", RMNodeLabelsManager.NO_LABEL, 1);
     Assert.assertEquals(killableContainers.entrySet().iterator().next().getKey()
         .getApplicationAttemptId(), am1.getApplicationAttemptId());
 
@@ -484,7 +487,7 @@ public class TestCapacitySchedulerLazyPreemption
     editPolicy.editSchedule();
 
     PreemptionManager pm = cs.getPreemptionManager();
-    waitKillableContainersSize(pm, "a", RMNodeLabelsManager.NO_LABEL, 1);
+    waitKillableContainersSize(pm, "root.a", RMNodeLabelsManager.NO_LABEL, 1);
 
     // Check killable containers and to-be-preempted containers in edit policy
     Assert.assertEquals(0, editPolicy.getToPreemptContainers().size());
@@ -513,7 +516,8 @@ public class TestCapacitySchedulerLazyPreemption
 
     // Check if previous killable containers included by new killable containers
     Map<ContainerId, RMContainer> killableContainers =
-        waitKillableContainersSize(pm, "a", RMNodeLabelsManager.NO_LABEL, 2);
+        waitKillableContainersSize(
+            pm, "root.a", RMNodeLabelsManager.NO_LABEL, 2);
     Assert.assertTrue(
         Sets.difference(previousKillableContainers, killableContainers.keySet())
             .isEmpty());

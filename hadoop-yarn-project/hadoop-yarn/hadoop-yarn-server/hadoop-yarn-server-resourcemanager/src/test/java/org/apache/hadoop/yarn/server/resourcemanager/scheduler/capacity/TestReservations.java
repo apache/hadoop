@@ -29,7 +29,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
@@ -92,11 +91,11 @@ public class TestReservations {
   // CapacitySchedulerConfiguration csConf;
   CapacitySchedulerContext csContext;
 
-  private final ResourceCalculator resourceCalculator = new DefaultResourceCalculator();
+  private final ResourceCalculator resourceCalculator =
+      new DefaultResourceCalculator();
 
   CSQueue root;
-  Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
-  Map<String, CSQueue> oldQueues = new HashMap<String, CSQueue>();
+  private CSQueueStore queues = new CSQueueStore();
 
   final static int GB = 1024;
   final static String DEFAULT_RACK = "/default";
@@ -546,7 +545,7 @@ public class TestReservations {
     // Test that with reservations-continue-look-all-nodes feature off
     // we don't unreserve and show we could get stuck
 
-    queues = new HashMap<String, CSQueue>();
+    queues = new CSQueueStore();
     // test that the deadlock occurs when turned off
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
     csConf.setBoolean(CapacitySchedulerConfiguration.RESERVE_CONT_LOOK_ALL_NODES,
@@ -1188,7 +1187,7 @@ public class TestReservations {
 
     csConf.setBoolean(
         CapacitySchedulerConfiguration.RESERVE_CONT_LOOK_ALL_NODES, false);
-    Map<String, CSQueue> newQueues = new HashMap<String, CSQueue>();
+    CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(csContext,
         csConf, null, CapacitySchedulerConfiguration.ROOT, newQueues, queues,
         TestUtils.spyHook);

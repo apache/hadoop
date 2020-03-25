@@ -72,6 +72,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
@@ -1158,7 +1160,13 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       RMContainer rmContainer = scheduler.getRMContainer(containerId);
 
       //verify queue name when rmContainer is recovered
-      Assert.assertEquals(app1.getQueue(), rmContainer.getQueueName());
+      if (scheduler instanceof CapacityScheduler) {
+        Assert.assertEquals(
+            CapacitySchedulerConfiguration.ROOT + "." + app1.getQueue(),
+            rmContainer.getQueueName());
+      } else {
+        Assert.assertEquals(app1.getQueue(), rmContainer.getQueueName());
+      }
 
     } finally {
       rm1.stop();

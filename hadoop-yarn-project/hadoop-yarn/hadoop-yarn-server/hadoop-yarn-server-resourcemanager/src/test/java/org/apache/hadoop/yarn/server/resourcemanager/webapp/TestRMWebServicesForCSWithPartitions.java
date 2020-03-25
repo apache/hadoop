@@ -100,6 +100,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   private static final String LABEL_LX = "Lx";
   private static final ImmutableSet<String> CLUSTER_LABELS =
       ImmutableSet.of(LABEL_LX, LABEL_LY, DEFAULT_PARTITION);
+  private static final String DOT = ".";
   private static MockRM rm;
   static private CapacitySchedulerConfiguration csConf;
   static private YarnConfiguration conf;
@@ -310,7 +311,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       verifyNumberOfAllocations(schedulerActivitiesJson, 1);
       // verify queue Qb
       Predicate<JSONObject> findQueueBPred =
-          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME).equals(QUEUE_B);
+          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
+              .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_B);
       List<JSONObject> queueBObj = ActivitiesTestUtils.findInAllocations(
           getFirstSubNodeFromJson(schedulerActivitiesJson,
               FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueBPred);
@@ -322,7 +324,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
           queueBObj.get(0).optString(FN_ACT_DIAGNOSTIC));
       // verify queue Qa
       Predicate<JSONObject> findQueueAPred =
-          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME).equals(QUEUE_A);
+          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
+              .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_A);
       List<JSONObject> queueAObj = ActivitiesTestUtils.findInAllocations(
           getFirstSubNodeFromJson(schedulerActivitiesJson,
               FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueAPred);
@@ -334,7 +337,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
           queueAObj.get(0).optString(FN_ACT_DIAGNOSTIC));
       // verify queue Qc
       Predicate<JSONObject> findQueueCPred =
-          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME).equals(QUEUE_C);
+          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
+              .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_C);
       List<JSONObject> queueCObj = ActivitiesTestUtils.findInAllocations(
           getFirstSubNodeFromJson(schedulerActivitiesJson,
               FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueCPred);

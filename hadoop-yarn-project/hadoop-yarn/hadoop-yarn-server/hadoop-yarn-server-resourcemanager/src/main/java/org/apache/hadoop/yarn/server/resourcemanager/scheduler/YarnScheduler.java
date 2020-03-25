@@ -312,14 +312,14 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    *          Submitted Application priority.
    * @param user
    *          User who submitted the Application
-   * @param queueName
+   * @param queuePath
    *          Name of the Queue
    * @param applicationId
    *          Application ID
    * @return Updated Priority from scheduler
    */
   public Priority checkAndGetApplicationPriority(Priority priorityRequestedByApp,
-      UserGroupInformation user, String queueName, ApplicationId applicationId)
+      UserGroupInformation user, String queuePath, ApplicationId applicationId)
       throws YarnException;
 
   /**
