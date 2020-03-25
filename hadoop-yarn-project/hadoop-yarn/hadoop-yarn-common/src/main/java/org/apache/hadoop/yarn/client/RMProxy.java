@@ -150,29 +150,6 @@ public class RMProxy<T> {
       });
   }
 
-
-  /**
-   * Helper method to create non-HA RMFailoverProxyProvider.
-   */
-  private <T> RMFailoverProxyProvider<T> createNonHaRMFailoverProxyProvider(
-      Configuration conf, Class<T> protocol) {
-    Class<? extends RMFailoverProxyProvider<T>> defaultProviderClass;
-    try {
-      defaultProviderClass = (Class<? extends RMFailoverProxyProvider<T>>)
-          Class.forName(
-              YarnConfiguration.DEFAULT_CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER);
-    } catch (Exception e) {
-      throw new YarnRuntimeException("Invalid default failover provider class" +
-          YarnConfiguration.DEFAULT_CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER, e);
-    }
-
-    RMFailoverProxyProvider<T> provider = ReflectionUtils.newInstance(
-        conf.getClass(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,
-            defaultProviderClass, RMFailoverProxyProvider.class), conf);
-    provider.init(conf, (RMProxy<T>) this, protocol);
-    return provider;
-  }
-
   /**
    * Helper method to create non-HA RMFailoverProxyProvider.
    */

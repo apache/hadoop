@@ -95,4 +95,5 @@ public class DefaultNoHARMFailoverProxyProvider<T>
   public void close() throws IOException {
     RPC.stopProxy(proxy);
   }
+  
 }
