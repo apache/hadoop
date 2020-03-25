@@ -3376,6 +3376,15 @@
 </property>
 
 <property>
+  <name>dfs.storage.policy.permissions.superuser-only</name>
+  <value>false</value>
+  <description>
+    Allow only superuser role to change the storage policy on files and
+    directories.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.legacy-oiv-image.dir</name>
   <value></value>
   <description>Determines where to save the namespace in the old fsimage format
