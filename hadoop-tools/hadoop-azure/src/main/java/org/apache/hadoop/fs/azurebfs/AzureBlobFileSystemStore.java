@@ -39,6 +39,7 @@ import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -48,6 +49,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -100,6 +102,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsPermission;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
+import org.apache.hadoop.fs.azurebfs.services.SelfRenewingLease;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfTracker;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfInfo;
@@ -145,8 +148,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int GET_SET_AGGREGATE_COUNT = 2;
 
+  private final Map<SelfRenewingLease,Object> leaseRefs;
+
   private final AbfsConfiguration abfsConfiguration;
   private final Set<String> azureAtomicRenameDirSet;
+  private Set<String> azureSingleWriterDirSet;
   private Trilean isNamespaceEnabled;
   private final AuthType authType;
   private final UserGroupInformation userGroupInformation;
@@ -166,6 +172,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     String[] authorityParts = authorityParts(uri);
     final String fileSystemName = authorityParts[0];
     final String accountName = authorityParts[1];
+
+    leaseRefs = Collections.synchronizedMap(new WeakHashMap<>());
 
     try {
       this.abfsConfiguration = new AbfsConfiguration(configuration, accountName);
@@ -195,6 +203,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
+    updateSingleWriterDirs();
     this.authType = abfsConfiguration.getAuthType(accountName);
     boolean usingOauth = (authType == AuthType.OAuth);
     boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : isSecureScheme;
@@ -246,6 +255,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   @Override
   public void close() throws IOException {
+    for (SelfRenewingLease lease : leaseRefs.keySet()) {
+      if (lease == null) {
+        continue;
+      }
+      try {
+        lease.free();
+      } catch (Exception e) {
+        LOG.debug("Got exception freeing lease {}", lease.getLeaseID(), e);
+      }
+    }
     IOUtils.cleanupWithLogger(LOG, client);
   }
 
@@ -454,13 +473,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final FsPermission umask) throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("createFile", "createPath")) {
       boolean isNamespaceEnabled = getIsNamespaceEnabled();
-      LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} isNamespaceEnabled: {}",
+      boolean enableSingleWriter = isSingleWriterKey(path.toString());
+      LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} " +
+              "isNamespaceEnabled: {} enableSingleWriter: {}",
               client.getFileSystem(),
               path,
               overwrite,
               permission,
               umask,
-              isNamespaceEnabled);
+              isNamespaceEnabled,
+              enableSingleWriter);
 
       String relativePath = getRelativePath(path);
       boolean isAppendBlob = false;
@@ -501,7 +523,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           statistics,
           relativePath,
           0,
-          populateAbfsOutputStreamContext(isAppendBlob));
+          leaseRefs,
+          populateAbfsOutputStreamContext(isAppendBlob, enableSingleWriter));
     }
   }
 
@@ -573,7 +596,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return op;
   }
 
-  private AbfsOutputStreamContext populateAbfsOutputStreamContext(boolean isAppendBlob) {
+  private AbfsOutputStreamContext populateAbfsOutputStreamContext(boolean isAppendBlob,
+      boolean enableSingleWriter) {
     int bufferSize = abfsConfiguration.getWriteBufferSize();
     if (isAppendBlob && bufferSize > FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE) {
       bufferSize = FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
@@ -587,6 +611,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withAppendBlob(isAppendBlob)
             .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteMaxConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConfiguration.getMaxWriteRequestsToQueue())
+            .withSingleWriterEnabled(enableSingleWriter)
             .build();
   }
 
@@ -675,10 +700,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   public OutputStream openFileForWrite(final Path path, final FileSystem.Statistics statistics, final boolean overwrite) throws
           AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("openFileForWrite", "getPathStatus")) {
-      LOG.debug("openFileForWrite filesystem: {} path: {} overwrite: {}",
+      boolean enableSingleWriter = isSingleWriterKey(path.toString());
+      LOG.debug("openFileForWrite filesystem: {} path: {} overwrite: {} enableSingleWriter: {}",
               client.getFileSystem(),
               path,
-              overwrite);
+              overwrite,
+              enableSingleWriter);
 
       String relativePath = getRelativePath(path);
 
@@ -710,8 +737,39 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           statistics,
           relativePath,
           offset,
-          populateAbfsOutputStreamContext(isAppendBlob));
+          leaseRefs,
+          populateAbfsOutputStreamContext(isAppendBlob, enableSingleWriter));
     }
+  }
+
+  public String acquireLease(final Path path, final int duration) throws AzureBlobFileSystemException {
+    LOG.debug("lease path: {}", path);
+
+    final AbfsRestOperation op =
+        client.acquireLease(getRelativePath(path), duration);
+
+    return op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_LEASE_ID);
+  }
+
+  public void renewLease(final Path path, final String leaseId) throws AzureBlobFileSystemException {
+    LOG.debug("lease path: {}, renew lease id: {}", path, leaseId);
+
+    final AbfsRestOperation op =
+        client.renewLease(getRelativePath(path), leaseId);
+  }
+
+  public void releaseLease(final Path path, final String leaseId) throws AzureBlobFileSystemException {
+    LOG.debug("lease path: {}, release lease id: {}", path, leaseId);
+
+    final AbfsRestOperation op =
+        client.releaseLease(getRelativePath(path), leaseId);
+  }
+
+  public void breakLease(final Path path) throws AzureBlobFileSystemException {
+    LOG.debug("lease path: {}", path);
+
+    final AbfsRestOperation op =
+        client.breakLease(getRelativePath(path));
   }
 
   public void rename(final Path source, final Path destination) throws
@@ -1347,6 +1405,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return isKeyForDirectorySet(key, azureAtomicRenameDirSet);
   }
 
+  public boolean isSingleWriterKey(String key) {
+    if (azureSingleWriterDirSet.isEmpty()) {
+      return false;
+    }
+    return isKeyForDirectorySet(key, azureSingleWriterDirSet);
+  }
+
   /**
    * A on-off operation to initialize AbfsClient for AzureBlobFileSystem
    * Operations.
@@ -1636,4 +1701,21 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     this.isNamespaceEnabled = isNamespaceEnabled;
   }
 
+  void updateSingleWriterDirs() {
+    this.azureSingleWriterDirSet = new HashSet<>(Arrays.asList(
+        abfsConfiguration.getAzureSingleWriterDirs().split(AbfsHttpConstants.COMMA)));
+    // remove the empty string, since isKeyForDirectory returns true for empty strings
+    // and we don't want to default to enabling single writer dirs
+    this.azureSingleWriterDirSet.remove("");
+  }
+
+  @VisibleForTesting
+  boolean areLeasesFreed() {
+    for (SelfRenewingLease lease : leaseRefs.keySet()) {
+      if (lease != null && !lease.isFreed()) {
+        return false;
+      }
+    }
+    return true;
+  }
 }

@@ -15,31 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.fs.azurebfs.services;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
- * The REST operation type (Read, Append, Other ).
+ * ABFS error constants.
  */
-public enum AbfsRestOperationType {
-    CreateFileSystem,
-    GetFileSystemProperties,
-    SetFileSystemProperties,
-    ListPaths,
-    DeleteFileSystem,
-    CreatePath,
-    RenamePath,
-    GetAcl,
-    GetPathProperties,
-    GetPathStatus,
-    SetAcl,
-    SetOwner,
-    SetPathProperties,
-    SetPermissions,
-    Append,
-    Flush,
-    ReadFile,
-    DeletePath,
-    CheckAccess,
-    LeasePath,
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public final class AbfsErrors {
+  public static final String ERR_WRITE_WITHOUT_LEASE = "Attempted to write to file without lease";
+  public static final String ERR_LEASE_EXPIRED = "A lease ID was specified, but the lease for " +
+      "the resource has expired.";
+  public static final String ERR_PARALLEL_ACCESS_DETECTED = "Parallel access to the create path " +
+      "detected. Failing request to honor single writer semantics";
+  public static final String ERR_ACQUIRING_LEASE = "Unable to acquire lease";
+  public static final String ERR_LEASE_PRESENT = "There is already a lease present.";
 }

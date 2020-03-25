@@ -87,6 +87,9 @@ public final class ConfigurationKeys {
   /** Provides a config to provide comma separated path prefixes on which Appendblob based files are created
    *  Default is empty. **/
   public static final String FS_AZURE_APPEND_BLOB_KEY = "fs.azure.appendblob.directories";
+  /** Provides a config to provide comma separated path prefixes which support single writers.
+   *  Default is empty. **/
+  public static final String FS_AZURE_SINGLE_WRITER_KEY = "fs.azure.singlewriter.directories";
   public static final String FS_AZURE_READ_AHEAD_QUEUE_DEPTH = "fs.azure.readaheadqueue.depth";
   public static final String FS_AZURE_ALWAYS_READ_BUFFER_SIZE = "fs.azure.read.alwaysReadBufferSize";
   public static final String FS_AZURE_READ_AHEAD_BLOCK_SIZE = "fs.azure.read.readahead.blocksize";

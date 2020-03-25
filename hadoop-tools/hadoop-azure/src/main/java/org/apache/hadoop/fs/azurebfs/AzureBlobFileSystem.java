@@ -505,6 +505,55 @@ public class AzureBlobFileSystem extends FileSystem {
     }
   }
 
+  public String acquireLease(final Path f, final int duration) throws IOException {
+    LOG.debug("AzureBlobFileSystem.acquireLease path: {}", f);
+
+    Path qualifiedPath = makeQualified(f);
+
+    try {
+      return abfsStore.acquireLease(qualifiedPath, duration);
+    } catch(AzureBlobFileSystemException ex) {
+      checkException(f, ex);
+      return null;
+    }
+  }
+
+  public void renewLease(final Path f, final String leaseId) throws IOException {
+    LOG.debug("AzureBlobFileSystem.renewLease path: {} id: {}", f, leaseId);
+
+    Path qualifiedPath = makeQualified(f);
+
+    try {
+      abfsStore.renewLease(qualifiedPath, leaseId);
+    } catch(AzureBlobFileSystemException ex) {
+      checkException(f, ex);
+    }
+  }
+
+  public void releaseLease(final Path f, final String leaseId) throws IOException {
+    LOG.debug("AzureBlobFileSystem.releaseLease path: {} id: {}", f, leaseId);
+
+    Path qualifiedPath = makeQualified(f);
+
+    try {
+      abfsStore.releaseLease(qualifiedPath, leaseId);
+    } catch(AzureBlobFileSystemException ex) {
+      checkException(f, ex);
+    }
+  }
+
+  public void breakLease(final Path f) throws IOException {
+    LOG.debug("AzureBlobFileSystem.breakLease path: {}", f);
+
+    Path qualifiedPath = makeQualified(f);
+
+    try {
+      abfsStore.breakLease(qualifiedPath);
+    } catch(AzureBlobFileSystemException ex) {
+      checkException(f, ex);
+    }
+  }
+
   /**
    * Qualify a path to one which uses this FileSystem and, if relative,
    * made absolute.

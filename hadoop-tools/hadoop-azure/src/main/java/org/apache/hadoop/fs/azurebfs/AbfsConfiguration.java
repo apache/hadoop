@@ -208,6 +208,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES)
   private String azureAppendBlobDirs;
 
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SINGLE_WRITER_KEY,
+      DefaultValue = DEFAULT_FS_AZURE_SINGLE_WRITER_DIRECTORIES)
+  private String azureSingleWriterDirs;
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
       DefaultValue = DEFAULT_AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION)
   private boolean createRemoteFileSystemDuringInitialization;
@@ -634,6 +638,10 @@ public class AbfsConfiguration{
     return this.azureAppendBlobDirs;
   }
 
+  public String getAzureSingleWriterDirs() {
+    return this.azureSingleWriterDirs;
+  }
+
   public boolean getCreateRemoteFileSystemDuringInitialization() {
     // we do not support creating the filesystem when AuthType is SAS
     return this.createRemoteFileSystemDuringInitialization
@@ -931,6 +939,11 @@ public class AbfsConfiguration{
   @VisibleForTesting
   void setDisableOutputStreamFlush(boolean disableOutputStreamFlush) {
     this.disableOutputStreamFlush = disableOutputStreamFlush;
+  }
+
+  @VisibleForTesting
+  void setAzureSingleWriterDirs(String dirs) {
+    this.azureSingleWriterDirs = dirs;
   }
 
   @VisibleForTesting

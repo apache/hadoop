@@ -39,6 +39,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private int maxWriteRequestsToQueue;
 
+  private boolean enableSingleWriter;
+
   public AbfsOutputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
   }
@@ -94,6 +96,11 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsOutputStreamContext withSingleWriterEnabled(final boolean enableSingleWriter) {
+    this.enableSingleWriter = enableSingleWriter;
+    return this;
+  }
+
   public int getWriteBufferSize() {
     return writeBufferSize;
   }
@@ -124,5 +131,9 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public boolean isEnableSmallWriteOptimization() {
     return this.enableSmallWriteOptimization;
+  }
+
+  public boolean isEnableSingleWriter() {
+    return this.enableSingleWriter;
   }
 }
