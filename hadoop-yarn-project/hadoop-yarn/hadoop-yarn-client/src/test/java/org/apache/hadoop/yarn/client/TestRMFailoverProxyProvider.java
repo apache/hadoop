@@ -53,6 +53,16 @@ public class TestRMFailoverProxyProvider {
 
   private Configuration conf;
 
+  class TestProxy extends Proxy implements Closeable {
+    protected TestProxy(InvocationHandler h) {
+      super(h);
+    }
+
+    @Override
+    public void close() throws IOException {
+    }
+  }
+
   @Before
   public void setUp() throws IOException, YarnException {
     conf = new YarnConfiguration();
@@ -295,12 +305,3 @@ public class TestRMFailoverProxyProvider {
   }
 }
 
-class TestProxy extends Proxy implements Closeable {
-  protected TestProxy(InvocationHandler h) {
-    super(h);
-  }
-
-    @Override
-    public void close() throws IOException {
-  }
-}
