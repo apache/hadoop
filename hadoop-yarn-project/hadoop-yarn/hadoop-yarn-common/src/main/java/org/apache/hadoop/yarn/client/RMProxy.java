@@ -171,7 +171,7 @@ public class RMProxy<T> {
     provider.init(conf, (RMProxy<T>) this, protocol);
     return provider;
   }
-  
+
   /**
    * Helper method to create FailoverProxyProvider.
    */
