@@ -128,7 +128,7 @@ public class TestNoHaRMFailoverProxyProvider {
   @Test
   public void testDefaultFPPGetOneProxy() throws Exception {
     // Create a proxy and mock a RMProxy
-    Proxy mockProxy1 = new Proxy((proxy, method, args) -> null);
+    Proxy mockProxy1 = new TestProxy((proxy, method, args) -> null);
     Class protocol = ApplicationClientProtocol.class;
     RMProxy mockRMProxy = mock(RMProxy.class);
     DefaultNoHARMFailoverProxyProvider <RMProxy> fpp =
@@ -195,8 +195,8 @@ public class TestNoHaRMFailoverProxyProvider {
         RMFailoverProxyProvider.class);
 
     // Create two proxies and mock a RMProxy
-    Proxy mockProxy1 = new Proxy((proxy, method, args) -> null);
-    Proxy mockProxy2 = new Proxy((proxy, method, args) -> null);
+    Proxy mockProxy1 = new TestProxy((proxy, method, args) -> null);
+    Proxy mockProxy2 = new TestProxy((proxy, method, args) -> null);
     Class protocol = ApplicationClientProtocol.class;
     RMProxy mockRMProxy = mock(RMProxy.class);
     AutoRefreshNoHARMFailoverProxyProvider<RMProxy> fpp =
@@ -258,5 +258,15 @@ public class TestNoHaRMFailoverProxyProvider {
     assertNotEquals("AutoRefreshNoHARMFailoverProxyProvider " +
         "shouldn't generate same proxy after failover",
         actualProxy1.proxy, actualProxy2.proxy);
+  }
+}
+
+class TestProxy extends Proxy implements Closeable {
+  protected TestProxy(InvocationHandler h) {
+    super(h);
+  }
+
+    @Override
+    public void close() throws IOException {
   }
 }

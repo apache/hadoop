@@ -73,8 +73,8 @@ public class TestRMFailoverProxyProvider {
     conf.set(YarnConfiguration.RM_HA_IDS, "rm0, rm1");
 
     // Create two proxies and mock a RMProxy
-    Proxy mockProxy2 = new Proxy((proxy, method, args) -> null);
-    Proxy mockProxy1 = new Proxy((proxy, method, args) -> null);
+    Proxy mockProxy2 = new TestProxy((proxy, method, args) -> null);
+    Proxy mockProxy1 = new TestProxy((proxy, method, args) -> null);
 
     Class protocol = ApplicationClientProtocol.class;
     RMProxy mockRMProxy = mock(RMProxy.class);
@@ -190,9 +190,9 @@ public class TestRMFailoverProxyProvider {
     conf.set(YarnConfiguration.RM_HA_IDS, "rm0, rm1");
 
     // Create three proxies and mock a RMProxy
-    Proxy mockProxy1 = new Proxy((proxy, method, args) -> null);
-    Proxy mockProxy2 = new Proxy((proxy, method, args) -> null);
-    Proxy mockProxy3 = new Proxy((proxy, method, args) -> null);
+    Proxy mockProxy1 = new TestProxy((proxy, method, args) -> null);
+    Proxy mockProxy2 = new TestProxy((proxy, method, args) -> null);
+    Proxy mockProxy3 = new TestProxy((proxy, method, args) -> null);
     Class protocol = ApplicationClientProtocol.class;
     RMProxy mockRMProxy = mock(RMProxy.class);
     AutoRefreshRMFailoverProxyProvider<RMProxy> fpp =
@@ -292,5 +292,15 @@ public class TestRMFailoverProxyProvider {
     verify(mockRMProxy, times(1))
         .getProxy(any(YarnConfiguration.class), any(Class.class),
         eq(mockAdd3));
+  }
+}
+
+class TestProxy extends Proxy implements Closeable {
+  protected TestProxy(InvocationHandler h) {
+    super(h);
+  }
+
+    @Override
+    public void close() throws IOException {
   }
 }
