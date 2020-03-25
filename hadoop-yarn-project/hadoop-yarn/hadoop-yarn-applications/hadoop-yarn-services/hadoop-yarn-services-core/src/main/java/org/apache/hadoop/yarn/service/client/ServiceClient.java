@@ -817,6 +817,21 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
           + appDir);
       ret = EXIT_NOT_FOUND;
     }
+
+    // Delete Public Resource Dir
+    Path publicResourceDir = new Path(fs.getBasePath(), serviceName);
+    if (fileSystem.exists(publicResourceDir)) {
+      if (fileSystem.delete(publicResourceDir, true)) {
+        LOG.info("Successfully deleted public resource dir for "
+            + serviceName + ": " + publicResourceDir);
+      } else {
+        String message = "Failed to delete public resource dir for service "
+            + serviceName + " at:  " + publicResourceDir;
+        LOG.info(message);
+        throw new YarnException(message);
+      }
+    }
+
     try {
       deleteZKNode(serviceName);
       // don't set destroySucceed to false if no ZK node exists because not
@@ -985,6 +1000,10 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     submissionContext.setMaxAppAttempts(YarnServiceConf
         .getInt(YarnServiceConf.AM_RESTART_MAX, DEFAULT_AM_RESTART_MAX, app
             .getConfiguration(), conf));
+    submissionContext.setAttemptFailuresValidityInterval(YarnServiceConf
+        .getLong(YarnServiceConf.AM_FAILURES_VALIDITY_INTERVAL,
+            DEFAULT_AM_FAILURES_VALIDITY_INTERVAL, app.getConfiguration(),
+            conf));
 
     setLogAggregationContext(app, conf, submissionContext);
 
@@ -1203,6 +1222,9 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       jvmOpts += DEFAULT_AM_JVM_XMX;
     }
 
+    // validate possible command injection.
+    ServiceApiUtil.validateJvmOpts(jvmOpts);
+
     CLI.setJVMOpts(jvmOpts);
     if (hasSliderAMLog4j) {
       CLI.sysprop(SYSPROP_LOG4J_CONFIGURATION, YARN_SERVICE_LOG4J_FILENAME);
@@ -1312,7 +1334,8 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
             new Path(remoteConfPath, YarnServiceConstants.YARN_SERVICE_LOG4J_FILENAME);
         copy(conf, localFilePath, remoteFilePath);
         LocalResource localResource =
-            fs.createAmResource(remoteConfPath, LocalResourceType.FILE);
+            fs.createAmResource(remoteConfPath, LocalResourceType.FILE,
+            LocalResourceVisibility.APPLICATION);
         localResources.put(localFilePath.getName(), localResource);
         hasAMLog4j = true;
       } else {
@@ -1462,7 +1485,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
         return;
       }
       LocalResource keytabRes = fileSystem.createAmResource(keytabOnhdfs,
-          LocalResourceType.FILE);
+          LocalResourceType.FILE, LocalResourceVisibility.PRIVATE);
       localResource.put(String.format(YarnServiceConstants.KEYTAB_LOCATION,
           service.getName()), keytabRes);
       LOG.info("Adding " + service.getName() + "'s keytab for "

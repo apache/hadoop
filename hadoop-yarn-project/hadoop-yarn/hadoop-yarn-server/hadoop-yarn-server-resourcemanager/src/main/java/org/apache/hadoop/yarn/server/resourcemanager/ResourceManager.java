@@ -101,12 +101,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.MemoryPlacementConstraintManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManagerService;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.MultiNodeSortingManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
@@ -136,7 +139,6 @@ import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.charset.Charset;
 import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
@@ -243,6 +245,8 @@ public class ResourceManager extends CompositeService
     return rmLoginUGI.getShortUserName();
   }
 
+  private RMInfo rmStatusInfoBean;
+
   @VisibleForTesting
   protected static void setClusterTimeStamp(long timestamp) {
     clusterTimeStamp = timestamp;
@@ -266,6 +270,10 @@ public class ResourceManager extends CompositeService
     UserGroupInformation.setConfiguration(conf);
     this.rmContext = new RMContextImpl();
     rmContext.setResourceManager(this);
+    rmContext.setYarnConfiguration(conf);
+
+    rmStatusInfoBean = new RMInfo(this);
+    rmStatusInfoBean.register();
 
     // Set HA configuration should be done before login
     this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
@@ -327,8 +335,6 @@ public class ResourceManager extends CompositeService
         rmContext.setLeaderElectorService(elector);
       }
     }
-
-    rmContext.setYarnConfiguration(conf);
 
     createAndInitActiveServices(false);
 
@@ -1232,8 +1238,7 @@ public class ResourceManager extends CompositeService
 
       if (null == onDiskPath) {
         String war = "hadoop-yarn-ui-" + VersionInfo.getVersion() + ".war";
-        URLClassLoader cl = (URLClassLoader) ClassLoader.getSystemClassLoader();
-        URL url = cl.findResource(war);
+        URL url = getClass().getClassLoader().getResource(war);
 
         if (null == url) {
           onDiskPath = getWebAppsPath("ui2");
@@ -1410,6 +1415,7 @@ public class ResourceManager extends CompositeService
     }
     transitionToStandby(false);
     rmContext.setHAServiceState(HAServiceState.STOPPING);
+    rmStatusInfoBean.unregister();
   }
   
   protected ResourceTrackerService createResourceTrackerService() {
@@ -1554,6 +1560,8 @@ public class ResourceManager extends CompositeService
       if (argv.length >= 1) {
         if (argv[0].equals("-format-state-store")) {
           deleteRMStateStore(conf);
+        } else if (argv[0].equals("-format-conf-store")) {
+          deleteRMConfStore(conf);
         } else if (argv[0].equals("-remove-application-from-state-store")
             && argv.length == 2) {
           removeApplication(conf, argv[1]);
@@ -1646,6 +1654,45 @@ public class ResourceManager extends CompositeService
     }
   }
 
+  /**
+   * Deletes the YarnConfigurationStore
+   *
+   * @param conf
+   * @throws Exception
+   */
+  @VisibleForTesting
+  static void deleteRMConfStore(Configuration conf) throws Exception {
+    ResourceManager rm = new ResourceManager();
+    rm.conf = conf;
+    ResourceScheduler scheduler = rm.createScheduler();
+    RMContextImpl rmContext = new RMContextImpl();
+    rmContext.setResourceManager(rm);
+
+    boolean isConfigurationMutable = false;
+    String confProviderStr = conf.get(
+        YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.DEFAULT_CONFIGURATION_STORE);
+    switch (confProviderStr) {
+      case YarnConfiguration.MEMORY_CONFIGURATION_STORE:
+      case YarnConfiguration.LEVELDB_CONFIGURATION_STORE:
+      case YarnConfiguration.ZK_CONFIGURATION_STORE:
+      case YarnConfiguration.FS_CONFIGURATION_STORE:
+        isConfigurationMutable = true;
+        break;
+      default:
+    }
+
+    if (scheduler instanceof MutableConfScheduler && isConfigurationMutable) {
+      YarnConfigurationStore confStore = YarnConfigurationStoreFactory
+          .getStore(conf);
+      confStore.initialize(conf, conf, rmContext);
+      confStore.format();
+    } else {
+      System.out.println("Scheduler Configuration format only " +
+          "supported by MutableConfScheduler.");
+    }
+  }
+
   @VisibleForTesting
   static void removeApplication(Configuration conf, String applicationId)
       throws Exception {
@@ -1666,7 +1713,10 @@ public class ResourceManager extends CompositeService
   private static void printUsage(PrintStream out) {
     out.println("Usage: yarn resourcemanager [-format-state-store]");
     out.println("                            "
-        + "[-remove-application-from-state-store <appId>]" + "\n");
+        + "[-remove-application-from-state-store <appId>]");
+    out.println("                            "
+        + "[-format-conf-store]" + "\n");
+
   }
 
   protected RMAppLifetimeMonitor createRMAppLifetimeMonitor() {

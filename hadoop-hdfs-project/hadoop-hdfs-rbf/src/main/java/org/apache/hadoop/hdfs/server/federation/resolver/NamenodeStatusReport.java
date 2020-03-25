@@ -34,6 +34,7 @@ public class NamenodeStatusReport {
   private String serviceAddress = "";
   private String lifelineAddress = "";
   private String webAddress = "";
+  private String webScheme = "";
 
   /** Namenode state. */
   private HAServiceState status = HAServiceState.STANDBY;
@@ -76,12 +77,13 @@ public class NamenodeStatusReport {
   private boolean haStateValid = false;
 
   public NamenodeStatusReport(String ns, String nn, String rpc, String service,
-      String lifeline, String web) {
+      String lifeline, String webScheme, String web) {
     this.nameserviceId = ns;
     this.namenodeId = nn;
     this.rpcAddress = rpc;
     this.serviceAddress = service;
     this.lifelineAddress = lifeline;
+    this.webScheme = webScheme;
     this.webAddress = web;
   }
 
@@ -197,6 +199,15 @@ public class NamenodeStatusReport {
    */
   public String getWebAddress() {
     return this.webAddress;
+  }
+
+  /**
+   * Get the scheme of web address.
+   *
+   * @return The scheme of web address.
+   */
+  public String getWebScheme() {
+    return this.webScheme;
   }
 
   /**

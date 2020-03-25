@@ -109,6 +109,11 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String IPC_COST_PROVIDER_KEY = "cost-provider.impl";
   public static final String IPC_BACKOFF_ENABLE = "backoff.enable";
   public static final boolean IPC_BACKOFF_ENABLE_DEFAULT = false;
+  // Callqueue overflow trigger failover for stateless servers.
+  public static final String IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE =
+      "callqueue.overflow.trigger.failover";
+  public static final boolean IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE_DEFAULT =
+      false;
 
   /**
    * IPC scheduler priority levels.
@@ -421,4 +426,13 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
       "dfs.client.ignore.namenode.default.kms.uri";
   public static final boolean
       DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI_DEFAULT = false;
+
+  /**
+   * Whether or not ThreadMXBean is used for getting thread info in JvmMetrics,
+   * ThreadGroup approach is preferred for better performance.
+   */
+  public static final String HADOOP_METRICS_JVM_USE_THREAD_MXBEAN =
+      "hadoop.metrics.jvm.use-thread-mxbean";
+  public static final boolean HADOOP_METRICS_JVM_USE_THREAD_MXBEAN_DEFAULT =
+      false;
 }

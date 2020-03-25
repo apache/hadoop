@@ -65,7 +65,6 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.XAttr;
@@ -81,6 +80,7 @@ import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -1244,7 +1244,7 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETHOMEDIRECTORY: {
-      String userHome = DFSUtilClient.getHomeDirectory(conf, ugi).toString();
+      String userHome = DFSUtilClient.getHomeDirectory(conf, ugi);
       final String js = JsonUtil.toJsonString("Path", userHome);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
@@ -1285,7 +1285,7 @@ public class NamenodeWebHdfsMethods {
       return Response.ok().build();
     }
     case GETTRASHROOT: {
-      final String trashPath = getTrashRoot(fullpath, conf);
+      final String trashPath = getTrashRoot(conf, fullpath);
       final String jsonStr = JsonUtil.toJsonString("Path", trashPath);
       return Response.ok(jsonStr).type(MediaType.APPLICATION_JSON).build();
     }
@@ -1345,11 +1345,39 @@ public class NamenodeWebHdfsMethods {
     }
   }
 
-  private static String getTrashRoot(String fullPath,
-      Configuration conf) throws IOException {
-    FileSystem fs = FileSystem.get(conf != null ? conf : new Configuration());
-    return fs.getTrashRoot(
-        new org.apache.hadoop.fs.Path(fullPath)).toUri().getPath();
+  private String getTrashRoot(Configuration conf, String fullPath)
+      throws IOException {
+    UserGroupInformation ugi= UserGroupInformation.getCurrentUser();
+    String parentSrc = getParent(fullPath);
+    EncryptionZone ez = getRpcClientProtocol().getEZForPath(
+        parentSrc != null ? parentSrc : fullPath);
+    String trashRoot;
+    if (ez != null) {
+      trashRoot = DFSUtilClient.getEZTrashRoot(ez, ugi);
+    } else {
+      trashRoot = DFSUtilClient.getTrashRoot(conf, ugi);
+    }
+    return trashRoot;
+  }
+
+  /**
+   * Returns the parent of a path in the same way as Path#getParent.
+   * @return the parent of a path or null if at root
+   */
+  public String getParent(String path) {
+    int lastSlash = path.lastIndexOf('/');
+    int start = 0;
+    if ((path.length() == start) || // empty path
+        (lastSlash == start && path.length() == start + 1)) { // at root
+      return null;
+    }
+    String parent;
+    if (lastSlash == -1) {
+      parent = org.apache.hadoop.fs.Path.CUR_DIR;
+    } else {
+      parent = path.substring(0, lastSlash == start ? start + 1 : lastSlash);
+    }
+    return parent;
   }
 
   private static DirectoryListing getDirectoryListing(final ClientProtocol cp,

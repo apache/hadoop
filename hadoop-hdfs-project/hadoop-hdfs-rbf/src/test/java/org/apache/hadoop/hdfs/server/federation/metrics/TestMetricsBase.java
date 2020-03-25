@@ -19,20 +19,26 @@ package org.apache.hadoop.hdfs.server.federation.metrics;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMESERVICES;
+import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.ROUTERS;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.clearAllRecords;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.createMockMountTable;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.createMockRegistrationForNamenode;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.synchronizeRecords;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.waitStateStore;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
+import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.RouterServiceState;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
@@ -41,14 +47,18 @@ import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetRouterRegistrationRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetRouterRegistrationResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.NamenodeHeartbeatRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.NamenodeHeartbeatResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RouterHeartbeatRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
 import org.apache.hadoop.util.Time;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Test the basic metrics functionality.
@@ -192,5 +202,61 @@ public class TestMetricsBase {
 
   protected StateStoreService getStateStore() {
     return stateStore;
+  }
+
+  @Test
+  public void testObserverMetrics() throws Exception {
+    mockObserver();
+
+    RBFMetrics metrics = router.getMetrics();
+    String jsonString = metrics.getNameservices();
+    JSONObject jsonObject = new JSONObject(jsonString);
+    Map<String, String> map = getNameserviceStateMap(jsonObject);
+    assertTrue("Cannot find ns0 in: " + jsonString, map.containsKey("ns0"));
+    assertEquals("OBSERVER", map.get("ns0"));
+  }
+
+  public static Map<String, String> getNameserviceStateMap(
+      JSONObject jsonObject) throws JSONException {
+    Map<String, String> map = new TreeMap<>();
+    Iterator<?> keys = jsonObject.keys();
+    while (keys.hasNext()) {
+      String key = (String) keys.next();
+      JSONObject json = jsonObject.getJSONObject(key);
+      String nsId = json.getString("nameserviceId");
+      String state = json.getString("state");
+      map.put(nsId, state);
+    }
+    return map;
+  }
+
+  private void mockObserver() throws IOException {
+    String ns = "ns0";
+    String nn = "nn0";
+    createRegistration(ns, nn, ROUTERS[1],
+        FederationNamenodeServiceState.OBSERVER);
+
+    // Load data into cache and calculate quorum
+    assertTrue(stateStore.loadCache(MembershipStore.class, true));
+    membershipStore.loadCache(true);
+    MembershipNamenodeResolver resolver =
+        (MembershipNamenodeResolver) router.getNamenodeResolver();
+    resolver.loadCache(true);
+  }
+
+  private MembershipState createRegistration(String ns, String nn,
+      String routerId, FederationNamenodeServiceState state)
+      throws IOException {
+    MembershipState record =
+        MembershipState.newInstance(routerId, ns, nn, "testcluster",
+            "testblock-" + ns, "testrpc-" + ns + nn, "testservice-" + ns + nn,
+            "testlifeline-" + ns + nn, "http", "testweb-" + ns + nn,
+            state, false);
+    NamenodeHeartbeatRequest request =
+        NamenodeHeartbeatRequest.newInstance(record);
+    NamenodeHeartbeatResponse response =
+        membershipStore.namenodeHeartbeat(request);
+    assertTrue(response.getResult());
+    return record;
   }
 }

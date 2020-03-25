@@ -40,6 +40,7 @@ public class TestMembershipState {
   private static final String LIFELINE_ADDRESS = "lifelineaddress";
   private static final String WEB_ADDRESS = "webaddress";
   private static final boolean SAFE_MODE = false;
+  private static final String SCHEME = "http";
 
   private static final long DATE_CREATED = 100;
   private static final long DATE_MODIFIED = 200;
@@ -68,7 +69,7 @@ public class TestMembershipState {
     MembershipState record = MembershipState.newInstance(
         ROUTER, NAMESERVICE, NAMENODE, CLUSTER_ID,
         BLOCKPOOL_ID, RPC_ADDRESS, SERVICE_ADDRESS, LIFELINE_ADDRESS,
-        WEB_ADDRESS, STATE, SAFE_MODE);
+        SCHEME, WEB_ADDRESS, STATE, SAFE_MODE);
     record.setDateCreated(DATE_CREATED);
     record.setDateModified(DATE_MODIFIED);
 
@@ -98,6 +99,7 @@ public class TestMembershipState {
     assertEquals(CLUSTER_ID, record.getClusterId());
     assertEquals(BLOCKPOOL_ID, record.getBlockPoolId());
     assertEquals(RPC_ADDRESS, record.getRpcAddress());
+    assertEquals(SCHEME, record.getWebScheme());
     assertEquals(WEB_ADDRESS, record.getWebAddress());
     assertEquals(STATE, record.getState());
     assertEquals(SAFE_MODE, record.getIsSafeMode());

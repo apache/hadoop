@@ -247,7 +247,7 @@ public abstract class YarnClientUtils {
                   StandardCharsets.US_ASCII);
             } catch (GSSException | IllegalAccessException
                 | NoSuchFieldException | ClassNotFoundException e) {
-              LOG.error("Error: {}", e);
+              LOG.error("Error: ", e);
               throw new AuthenticationException(e);
             }
           }

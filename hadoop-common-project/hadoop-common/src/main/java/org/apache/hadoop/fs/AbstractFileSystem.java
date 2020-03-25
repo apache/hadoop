@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,6 +44,7 @@ import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -60,6 +60,8 @@ import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+
 /**
  * This class provides an interface for implementors of a Hadoop file system
  * (analogous to the VFS of Unix). Applications do not access this class;
@@ -72,7 +74,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public abstract class AbstractFileSystem {
+public abstract class AbstractFileSystem implements PathCapabilities {
   static final Logger LOG = LoggerFactory.getLogger(AbstractFileSystem.class);
 
   /** Recording statistics per a file system class. */
@@ -1353,22 +1355,32 @@ public abstract class AbstractFileSystem {
    * setting up the expectation that the {@code get()} call
    * is needed to evaluate the result.
    * @param path path to the file
-   * @param mandatoryKeys set of options declared as mandatory.
-   * @param options options set during the build sequence.
-   * @param bufferSize buffer size
+   * @param parameters open file parameters from the builder.
    * @return a future which will evaluate to the opened file.
    * @throws IOException failure to resolve the link.
    * @throws IllegalArgumentException unknown mandatory key
    */
   public CompletableFuture<FSDataInputStream> openFileWithOptions(Path path,
-      Set<String> mandatoryKeys,
-      Configuration options,
-      int bufferSize) throws IOException {
-    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(mandatoryKeys,
+      final OpenFileParameters parameters) throws IOException {
+    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
+        parameters.getMandatoryKeys(),
         Collections.emptySet(),
         "for " + path);
     return LambdaUtils.eval(
-        new CompletableFuture<>(), () -> open(path, bufferSize));
+        new CompletableFuture<>(), () ->
+            open(path, parameters.getBufferSize()));
   }
 
+  public boolean hasPathCapability(final Path path,
+      final String capability)
+      throws IOException {
+    switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
+    case CommonPathCapabilities.FS_SYMLINKS:
+      // delegate to the existing supportsSymlinks() call.
+      return supportsSymlinks();
+    default:
+      // the feature is not implemented.
+      return false;
+    }
+  }
 }

@@ -659,7 +659,8 @@ public class TestFileTruncate {
 
     NameNodeAdapter.getLeaseManager(cluster.getNamesystem())
         .setLeasePeriod(HdfsConstants.LEASE_SOFTLIMIT_PERIOD,
-            HdfsConstants.LEASE_HARDLIMIT_PERIOD);
+            conf.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
+                DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000);
 
     checkFullFile(p, newLength, contents);
     fs.delete(p, false);
@@ -1281,5 +1282,41 @@ public class TestFileTruncate {
       cluster.restartDataNode(dn, false, true);
       cluster.waitActive();
     }
+  }
+
+  /**
+   * QuotaUsage in Truncate with Snapshot.
+   */
+  @Test
+  public void testQuotaOnTruncateWithSnapshot() throws Exception {
+    Path root = new Path("/");
+    Path dirPath = new Path(root, "dir");
+    assertTrue(fs.mkdirs(dirPath));
+    Path filePath = new Path(dirPath, "file");
+    DFSTestUtil.createFile(fs, filePath, 10, (short) 3, 0);
+
+    // verify quotausage and content summary after creating snapshot
+    fs.allowSnapshot(dirPath);
+    fs.createSnapshot(dirPath, "s1");
+    assertEquals(fs.getContentSummary(root).getSpaceConsumed(),
+        fs.getQuotaUsage(root).getSpaceConsumed());
+
+    // truncating the file size to 5bytes
+    boolean blockrecovery = fs.truncate(filePath, 5);
+    if (!blockrecovery) {
+      checkBlockRecovery(filePath, fs, 300, 100L);
+    }
+
+    // verify quotausage and content summary after truncating file which exists
+    // in snapshot
+    assertEquals(fs.getContentSummary(root).getSpaceConsumed(),
+        fs.getQuotaUsage(root).getSpaceConsumed());
+
+    // verify quotausage and content summary after deleting snapshot
+    // now the quota of the file shouldn't present in quotausage and content
+    // summary
+    fs.deleteSnapshot(dirPath, "s1");
+    assertEquals(fs.getContentSummary(root).getSpaceConsumed(),
+        fs.getQuotaUsage(root).getSpaceConsumed());
   }
 }

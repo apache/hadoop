@@ -38,6 +38,7 @@ import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -76,6 +77,8 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.resourcetypes.ResourceTypesTestHelper;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMWithAMS;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
@@ -689,7 +692,13 @@ public class TestSchedulerUtils {
     Map<ApplicationAccessType, String> acls =
             new HashMap<ApplicationAccessType, String>(2);
     acls.put(ApplicationAccessType.VIEW_APP, "*");
-    RMApp app = rm.submitApp(1024, "appname", "appuser", acls);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+            .withAppName("appname")
+            .withUser("appuser")
+            .withAcls(acls)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
 
     nm1.nodeHeartbeat(true);
 
@@ -976,6 +985,147 @@ public class TestSchedulerUtils {
 
     // Only print, don't throw exception
     System.err.println("Failed to wait scheduler application attempt stopped.");
+  }
+
+  @Test
+  public void testEnforcePartitionExclusivity() {
+    String enforcedExclusiveLabel = "x";
+    Set<String> enforcedExclusiveLabelSet =
+        Collections.singleton(enforcedExclusiveLabel);
+    String dummyLabel = "y";
+    String appLabel = "appLabel";
+    ResourceRequest rr = BuilderUtils.newResourceRequest(
+        mock(Priority.class), ResourceRequest.ANY, mock(Resource.class), 1);
+
+    // RR label unset and app label does not match. Nothing should happen.
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        null);
+    Assert.assertNull(rr.getNodeLabelExpression());
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        appLabel);
+    Assert.assertNull(rr.getNodeLabelExpression());
+
+    // RR label and app label do not match. Nothing should happen.
+    rr.setNodeLabelExpression(dummyLabel);
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        null);
+    Assert.assertEquals(dummyLabel, rr.getNodeLabelExpression());
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        appLabel);
+    Assert.assertEquals(dummyLabel, rr.getNodeLabelExpression());
+
+    // RR label matches but app label does not. RR label should be set
+    // to app label
+    rr.setNodeLabelExpression(enforcedExclusiveLabel);
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        null);
+    Assert.assertNull(rr.getNodeLabelExpression());
+    rr.setNodeLabelExpression(enforcedExclusiveLabel);
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        appLabel);
+    Assert.assertEquals(appLabel, rr.getNodeLabelExpression());
+
+    // RR label unset and app label matches. RR label should be set
+    // to app label
+    rr.setNodeLabelExpression(null);
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        enforcedExclusiveLabel);
+    Assert.assertEquals(enforcedExclusiveLabel, rr.getNodeLabelExpression());
+
+    // RR label does not match and app label matches. RR label should be set
+    // to app label
+    rr.setNodeLabelExpression(dummyLabel);
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        enforcedExclusiveLabel);
+    Assert.assertEquals(enforcedExclusiveLabel, rr.getNodeLabelExpression());
+
+    // RR label and app label matches. Nothing should happen.
+    rr.setNodeLabelExpression(enforcedExclusiveLabel);
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        enforcedExclusiveLabel);
+    Assert.assertEquals(enforcedExclusiveLabel, rr.getNodeLabelExpression());
+
+    // Unconfigured label: nothing should happen.
+    rr.setNodeLabelExpression(null);
+    SchedulerUtils.enforcePartitionExclusivity(rr, null,
+        appLabel);
+    Assert.assertNull(rr.getNodeLabelExpression());
+    rr.setNodeLabelExpression(dummyLabel);
+    SchedulerUtils.enforcePartitionExclusivity(rr, null,
+        appLabel);
+    Assert.assertEquals(dummyLabel, rr.getNodeLabelExpression());
+    rr.setNodeLabelExpression(enforcedExclusiveLabel);
+    SchedulerUtils.enforcePartitionExclusivity(rr, null,
+        appLabel);
+    Assert.assertEquals(enforcedExclusiveLabel, rr.getNodeLabelExpression());
+  }
+
+  @Test
+  public void testEnforcePartitionExclusivityMultipleLabels() {
+    String enforcedLabel1 = "x";
+    String enforcedLabel2 = "y";
+    Set<String> enforcedExclusiveLabelSet = new HashSet<>();
+    enforcedExclusiveLabelSet.add(enforcedLabel1);
+    enforcedExclusiveLabelSet.add(enforcedLabel2);
+    String dummyLabel = "dummyLabel";
+    String appLabel = "appLabel";
+    ResourceRequest rr = BuilderUtils.newResourceRequest(
+        mock(Priority.class), ResourceRequest.ANY, mock(Resource.class), 1);
+
+    // RR label unset and app label does not match. Nothing should happen.
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        null);
+    Assert.assertNull(rr.getNodeLabelExpression());
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        appLabel);
+    Assert.assertNull(rr.getNodeLabelExpression());
+
+    // RR label and app label do not match. Nothing should happen.
+    rr.setNodeLabelExpression(dummyLabel);
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        null);
+    Assert.assertEquals(dummyLabel, rr.getNodeLabelExpression());
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        appLabel);
+    Assert.assertEquals(dummyLabel, rr.getNodeLabelExpression());
+
+    // RR label matches but app label does not. RR label should be set
+    // to app label
+    rr.setNodeLabelExpression(enforcedLabel1);
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        null);
+    Assert.assertNull(rr.getNodeLabelExpression());
+    rr.setNodeLabelExpression(enforcedLabel2);
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        appLabel);
+    Assert.assertEquals(appLabel, rr.getNodeLabelExpression());
+
+    // RR label unset and app label matches. RR label should be set
+    // to app label
+    rr.setNodeLabelExpression(null);
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        enforcedLabel1);
+    Assert.assertEquals(enforcedLabel1, rr.getNodeLabelExpression());
+
+    // RR label does not match and app label matches. RR label should be set
+    // to app label
+    rr.setNodeLabelExpression(dummyLabel);
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        enforcedLabel2);
+    Assert.assertEquals(enforcedLabel2, rr.getNodeLabelExpression());
+
+    // RR label and app label matches. Nothing should happen.
+    rr.setNodeLabelExpression(enforcedLabel1);
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        enforcedLabel1);
+    Assert.assertEquals(enforcedLabel1, rr.getNodeLabelExpression());
+
+    // RR label and app label don't match, but they're both enforced labels.
+    // RR label should be set to app label.
+    rr.setNodeLabelExpression(enforcedLabel2);
+    SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
+        enforcedLabel1);
+    Assert.assertEquals(enforcedLabel1, rr.getNodeLabelExpression());
   }
 
   public static SchedulerApplication<SchedulerApplicationAttempt>

@@ -51,7 +51,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -3350,6 +3349,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         handleStartElement();
         break;
       case XMLStreamConstants.CHARACTERS:
+      case XMLStreamConstants.CDATA:
         if (parseToken) {
           char[] text = reader.getTextCharacters();
           token.append(text, reader.getTextStart(), reader.getTextLength());

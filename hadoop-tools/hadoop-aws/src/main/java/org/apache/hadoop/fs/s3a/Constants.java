@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import java.util.concurrent.TimeUnit;
 
@@ -153,6 +154,12 @@ public final class Constants {
       "fs.s3a.connection.ssl.enabled";
   public static final boolean DEFAULT_SECURE_CONNECTIONS = true;
 
+  // use OpenSSL or JSEE for secure connections
+  public static final String SSL_CHANNEL_MODE =  "fs.s3a.ssl.channel.mode";
+  public static final DelegatingSSLSocketFactory.SSLChannelMode
+      DEFAULT_SSL_CHANNEL_MODE =
+          DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE;
+
   //use a custom endpoint?
   public static final String ENDPOINT = "fs.s3a.endpoint";
 
@@ -167,9 +174,41 @@ public final class Constants {
   public static final String PROXY_DOMAIN = "fs.s3a.proxy.domain";
   public static final String PROXY_WORKSTATION = "fs.s3a.proxy.workstation";
 
-  // number of times we should retry errors
+  /**
+   * Number of times the AWS client library should retry errors before
+   * escalating to the S3A code: {@value}.
+   */
   public static final String MAX_ERROR_RETRIES = "fs.s3a.attempts.maximum";
-  public static final int DEFAULT_MAX_ERROR_RETRIES = 20;
+
+  /**
+   * Default number of times the AWS client library should retry errors before
+   * escalating to the S3A code: {@value}.
+   */
+  public static final int DEFAULT_MAX_ERROR_RETRIES = 10;
+
+  /**
+   * Experimental/Unstable feature: should the AWS client library retry
+   * throttle responses before escalating to the S3A code: {@value}.
+   *
+   * When set to false, the S3A connector sees all S3 throttle events,
+   * And so can update it counters and the metrics, and use its own retry
+   * policy.
+   * However, this may have adverse effects on some operations where the S3A
+   * code cannot retry as efficiently as the AWS client library.
+   *
+   * This only applies to S3 operations, not to DynamoDB or other services.
+   */
+  @InterfaceStability.Unstable
+  public static final String EXPERIMENTAL_AWS_INTERNAL_THROTTLING =
+      "fs.s3a.experimental.aws.s3.throttling";
+
+  /**
+   * Default value of {@link #EXPERIMENTAL_AWS_INTERNAL_THROTTLING},
+   * value: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final boolean EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT =
+      true;
 
   // seconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT =
@@ -179,6 +218,11 @@ public final class Constants {
   // seconds until we give up on a connection to s3
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
   public static final int DEFAULT_SOCKET_TIMEOUT = 200000;
+
+  // milliseconds until a request is timed-out
+  public static final String REQUEST_TIMEOUT =
+      "fs.s3a.connection.request.timeout";
+  public static final int DEFAULT_REQUEST_TIMEOUT = 0;
 
   // socket send buffer to be used in Amazon client
   public static final String SOCKET_SEND_BUFFER = "fs.s3a.socket.send.buffer";
@@ -212,6 +256,33 @@ public final class Constants {
   //enable multiobject-delete calls?
   public static final String ENABLE_MULTI_DELETE =
       "fs.s3a.multiobjectdelete.enable";
+
+  /**
+   * Number of objects to delete in a single multi-object delete {@value}.
+   * Max: 1000.
+   *
+   * A bigger value it means fewer POST requests when deleting a directory
+   * tree with many objects.
+   * However, as you are limited to only a a few thousand requests per
+   * second against a single partition of an S3 bucket,
+   * a large page size can easily overload the bucket and so trigger
+   * throttling.
+   *
+   * Furthermore, as the reaction to this request is being throttled
+   * is simply to retry it -it can take a while for the situation to go away.
+   * While a large value may give better numbers on tests and benchmarks
+   * where only a single operations being executed, once multiple
+   * applications start working with the same bucket these large
+   * deletes can be highly disruptive.
+   */
+  public static final String BULK_DELETE_PAGE_SIZE =
+      "fs.s3a.bulk.delete.page.size";
+
+  /**
+   * Default Number of objects to delete in a single multi-object
+   * delete: {@value}.
+   */
+  public static final int BULK_DELETE_PAGE_SIZE_DEFAULT = 250;
 
   // comma separated list of directories
   public static final String BUFFER_DIR = "fs.s3a.buffer.dir";
@@ -343,8 +414,46 @@ public final class Constants {
   public static final String SERVER_SIDE_ENCRYPTION_KEY =
       "fs.s3a.server-side-encryption.key";
 
-  //override signature algorithm used for signing requests
+  /**
+   * List of custom Signers. The signer class will be loaded, and the signer
+   * name will be associated with this signer class in the S3 SDK.
+   * Examples
+   * CustomSigner {@literal ->} 'CustomSigner:org.apache...CustomSignerClass'
+   * CustomSigners {@literal ->} 'CSigner1:CSigner1Class,CSigner2:CSigner2Class'
+   * Initializer {@literal ->} 'CSigner1:CSigner1Class:CSigner1InitializerClass'
+   * With Existing {@literal ->} 'AWS4Signer,CSigner1,CSigner2:CSigner2Class'
+   */
+  public static final String CUSTOM_SIGNERS = "fs.s3a.custom.signers";
+
+  /**
+   * There's 3 parameters that can be used to specify a non-default signing
+   * algorithm.<br>
+   * fs.s3a.signing-algorithm - This property has existed for the longest time.
+   * If specified, without either of the other 2 properties being specified,
+   * this signing algorithm will be used for S3 and DDB (S3Guard). <br>
+   * The other 2 properties override this value for S3 or DDB. <br>
+   * fs.s3a.s3.signing-algorithm - Allows overriding the S3 Signing algorithm.
+   * This does not affect DDB. Specifying this property without specifying
+   * fs.s3a.signing-algorithm will only update the signing algorithm for S3
+   * requests, and the default will be used for DDB.<br>
+   * fs.s3a.ddb.signing-algorithm - Allows overriding the DDB Signing algorithm.
+   * This does not affect S3. Specifying this property without specifying
+   * fs.s3a.signing-algorithm will only update the signing algorithm for
+   * DDB requests, and the default will be used for S3.
+   */
   public static final String SIGNING_ALGORITHM = "fs.s3a.signing-algorithm";
+
+  public static final String SIGNING_ALGORITHM_S3 =
+      "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_S3.toLowerCase()
+          + ".signing-algorithm";
+
+  public static final String SIGNING_ALGORITHM_DDB =
+      "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_DDB.toLowerCase()
+          + "signing-algorithm";
+
+  public static final String SIGNING_ALGORITHM_STS =
+      "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_STS.toLowerCase()
+          + "signing-algorithm";
 
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
@@ -371,6 +480,20 @@ public final class Constants {
   public static final String METADATASTORE_AUTHORITATIVE =
       "fs.s3a.metadatastore.authoritative";
   public static final boolean DEFAULT_METADATASTORE_AUTHORITATIVE = false;
+
+  /**
+   * Bucket validation parameter which can be set by client. This will be
+   * used in {@code S3AFileSystem.initialize(URI, Configuration)}.
+   * Value: {@value}
+   */
+  public static final String S3A_BUCKET_PROBE = "fs.s3a.bucket.probe";
+
+  /**
+   * Default value of bucket validation parameter. An existence of bucket
+   * will be validated using {@code S3AFileSystem.verifyBucketExistsV2()}.
+   * Value: {@value}
+   */
+  public static final int S3A_BUCKET_PROBE_DEFAULT = 2;
 
   /**
    * How long a directory listing in the MS is considered as authoritative.
@@ -524,6 +647,25 @@ public final class Constants {
   public static final long S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT = 0;
 
   /**
+   * Whether server-side encryption (SSE) is enabled or disabled on the table.
+   * By default it's disabled, meaning SSE is set to AWS owned CMK.
+   * @see com.amazonaws.services.dynamodbv2.model.SSESpecification#setEnabled
+   */
+  public static final String S3GUARD_DDB_TABLE_SSE_ENABLED =
+      "fs.s3a.s3guard.ddb.table.sse.enabled";
+
+  /**
+   * The KMS Master Key (CMK) used for the KMS encryption on the table.
+   *
+   * To specify a CMK, this config value can be its key ID, Amazon Resource
+   * Name (ARN), alias name, or alias ARN. Users only provide this config
+   * if the key is different from the default DynamoDB KMS Master Key, which is
+   * alias/aws/dynamodb.
+   */
+  public static final String S3GUARD_DDB_TABLE_SSE_CMK =
+      "fs.s3a.s3guard.ddb.table.sse.cmk";
+
+  /**
    * The maximum put or delete requests per BatchWriteItem request.
    *
    * Refer to Amazon API reference for this limit.
@@ -595,6 +737,14 @@ public final class Constants {
       = "org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore";
 
   /**
+   * The warn level if S3Guard is disabled.
+   */
+  public static final String S3GUARD_DISABLED_WARN_LEVEL
+      = "org.apache.hadoop.fs.s3a.s3guard.disabled.warn.level";
+  public static final String DEFAULT_S3GUARD_DISABLED_WARN_LEVEL =
+      "INFORM";
+
+  /**
    * Inconsistency (visibility delay) injection settings.
    */
   @InterfaceStability.Unstable
@@ -656,8 +806,7 @@ public final class Constants {
   /**
    * Default throttled retry limit: {@value}.
    */
-  public static final int RETRY_THROTTLE_LIMIT_DEFAULT =
-      DEFAULT_MAX_ERROR_RETRIES;
+  public static final int RETRY_THROTTLE_LIMIT_DEFAULT = 20;
 
   /**
    * Interval between retry attempts on throttled requests: {@value}.
@@ -761,4 +910,41 @@ public final class Constants {
    * Default change detection require version: true.
    */
   public static final boolean CHANGE_DETECT_REQUIRE_VERSION_DEFAULT = true;
+
+  /**
+   * Number of times to retry any repeatable S3 client request on failure,
+   * excluding throttling requests: {@value}.
+   */
+  public static final String S3GUARD_CONSISTENCY_RETRY_LIMIT =
+      "fs.s3a.s3guard.consistency.retry.limit";
+
+  /**
+   * Default retry limit: {@value}.
+   */
+  public static final int S3GUARD_CONSISTENCY_RETRY_LIMIT_DEFAULT = 7;
+
+  /**
+   * Initial retry interval: {@value}.
+   */
+  public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL =
+      "fs.s3a.s3guard.consistency.retry.interval";
+
+  /**
+   * Default initial retry interval: {@value}.
+   * The consistency retry probe uses exponential backoff, because
+   * each probe can cause the S3 load balancers to retain any 404 in
+   * its cache for longer. See HADOOP-16490.
+   */
+  public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL_DEFAULT =
+      "2s";
+
+  public static final String AWS_SERVICE_IDENTIFIER_S3 = "S3";
+  public static final String AWS_SERVICE_IDENTIFIER_DDB = "DDB";
+  public static final String AWS_SERVICE_IDENTIFIER_STS = "STS";
+
+  /**
+   * How long to wait for the thread pool to terminate when cleaning up.
+   * Value: {@value} seconds.
+   */
+  public static final int THREAD_POOL_SHUTDOWN_DELAY_SECONDS = 30;
 }

@@ -161,6 +161,11 @@ public class MembershipNamenodeResolver
             UpdateNamenodeRegistrationRequest.newInstance(
                 record.getNameserviceId(), record.getNamenodeId(), ACTIVE);
         membership.updateNamenodeRegistration(updateRequest);
+
+        cacheNS.remove(nsId);
+        // Invalidating the full cacheBp since getting the blockpool id from
+        // namespace id is quite costly.
+        cacheBP.clear();
       }
     } catch (StateStoreUnavailableException e) {
       LOG.error("Cannot update {} as active, State Store unavailable", address);
@@ -260,7 +265,8 @@ public class MembershipNamenodeResolver
         routerId, report.getNameserviceId(), report.getNamenodeId(),
         report.getClusterId(), report.getBlockPoolId(), report.getRpcAddress(),
         report.getServiceAddress(), report.getLifelineAddress(),
-        report.getWebAddress(), report.getState(), report.getSafemode());
+        report.getWebScheme(), report.getWebAddress(), report.getState(),
+        report.getSafemode());
 
     if (report.statsValid()) {
       MembershipStats stats = MembershipStats.newInstance();

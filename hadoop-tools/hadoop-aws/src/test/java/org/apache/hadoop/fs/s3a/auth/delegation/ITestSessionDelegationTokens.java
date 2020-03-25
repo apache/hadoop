@@ -118,7 +118,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     EncryptionSecrets encryptionSecrets = new EncryptionSecrets(
         S3AEncryptionMethods.SSE_KMS, KMS_KEY);
     Token<AbstractS3ATokenIdentifier> dt
-        = delegationTokens.createDelegationToken(encryptionSecrets);
+        = delegationTokens.createDelegationToken(encryptionSecrets, null);
     final SessionTokenIdentifier origIdentifier
         = (SessionTokenIdentifier) dt.decodeIdentifier();
     assertEquals("kind in " + dt, getTokenKind(), dt.getKind());
@@ -173,7 +173,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     EncryptionSecrets secrets = new EncryptionSecrets(
         S3AEncryptionMethods.SSE_KMS, KMS_KEY);
     Token<AbstractS3ATokenIdentifier> originalDT
-        = delegationTokens.createDelegationToken(secrets);
+        = delegationTokens.createDelegationToken(secrets, null);
     assertEquals("Token kind mismatch", getTokenKind(), originalDT.getKind());
 
     // decode to get the binding info
@@ -195,12 +195,12 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
           awsSessionCreds);
 
       Token<AbstractS3ATokenIdentifier> boundDT =
-          dt2.getBoundOrNewDT(secrets);
+          dt2.getBoundOrNewDT(secrets, null);
       assertEquals("Delegation Tokens", originalDT, boundDT);
       // simulate marshall and transmission
       creds = roundTrip(origCreds, conf);
       SessionTokenIdentifier reissued
-          = (SessionTokenIdentifier) dt2.createDelegationToken(secrets)
+          = (SessionTokenIdentifier) dt2.createDelegationToken(secrets, null)
           .decodeIdentifier();
       reissued.validate();
       String userAgentField = dt2.getUserAgentField();
@@ -212,6 +212,31 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     // now use those chained credentials to create a new FS instance
     // and then get a session DT from it and expect equality
     verifyCredentialPropagation(fs, creds, new Configuration(conf));
+  }
+
+  @Test
+  public void testCreateWithRenewer() throws Throwable {
+    describe("Create a Delegation Token, round trip then reuse");
+
+    final S3AFileSystem fs = getFileSystem();
+    final Configuration conf = fs.getConf();
+    final Text renewer = new Text("yarn");
+
+    assertNull("Current User has delegation token",
+        delegationTokens.selectTokenFromFSOwner());
+    EncryptionSecrets secrets = new EncryptionSecrets(
+        S3AEncryptionMethods.SSE_KMS, KMS_KEY);
+    Token<AbstractS3ATokenIdentifier> dt
+        = delegationTokens.createDelegationToken(secrets, renewer);
+    assertEquals("Token kind mismatch", getTokenKind(), dt.getKind());
+
+    // decode to get the binding info
+    SessionTokenIdentifier issued =
+        requireNonNull(
+            (SessionTokenIdentifier) dt.decodeIdentifier(),
+            () -> "no identifier in " + dt);
+    issued.validate();
+    assertEquals("Token renewer mismatch", renewer, issued.getRenewer());
   }
 
   /**
@@ -238,12 +263,15 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
         TemporaryAWSCredentialsProvider.NAME);
     session.setSecretsInConfiguration(conf);
     try(S3ADelegationTokens delegationTokens2 = new S3ADelegationTokens()) {
-      delegationTokens2.bindToFileSystem(fs.getCanonicalUri(), fs);
+      delegationTokens2.bindToFileSystem(
+          fs.getCanonicalUri(),
+          fs.createStoreContext(),
+          fs.createDelegationOperations());
       delegationTokens2.init(conf);
       delegationTokens2.start();
 
       final Token<AbstractS3ATokenIdentifier> newDT
-          = delegationTokens2.getBoundOrNewDT(new EncryptionSecrets());
+          = delegationTokens2.getBoundOrNewDT(new EncryptionSecrets(), null);
       delegationTokens2.resetTokenBindingToDT(newDT);
       final AbstractS3ATokenIdentifier boundId
           = delegationTokens2.getDecodedIdentifier().get();

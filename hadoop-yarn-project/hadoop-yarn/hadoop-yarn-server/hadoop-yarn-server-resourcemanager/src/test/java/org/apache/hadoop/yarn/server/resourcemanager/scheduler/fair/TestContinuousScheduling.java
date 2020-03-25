@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -335,9 +337,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
         for (int j = 0; j < 100; j++) {
           for (FSSchedulerNode node : clusterNodeTracker.getAllNodes()) {
             int i = ThreadLocalRandom.current().nextInt(-30, 30);
-            synchronized (scheduler) {
               node.deductUnallocatedResource(Resource.newInstance(i * 1024, i));
-            }
           }
         }
       }
@@ -385,8 +385,8 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
         true);
     ask1.add(request1);
     ask1.add(request2);
-    scheduler.allocate(id11, ask1, null, new ArrayList<ContainerId>(), null, null,
-        NULL_UPDATE_REQUESTS);
+    scheduler.allocate(id11, ask1, null, new ArrayList<ContainerId>(), null,
+        null, NULL_UPDATE_REQUESTS);
 
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
@@ -395,6 +395,11 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     // time
     mockClock.tickSec(delayThresholdTimeMs / 1000);
     scheduler.attemptScheduling(node);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      public Boolean get() {
+        return fsAppAttempt.getLastScheduledContainer().size() != 0;
+      }
+    }, 10, 4000);
     Map<SchedulerRequestKey, Long> lastScheduledContainer =
         fsAppAttempt.getLastScheduledContainer();
     long initSchedulerTime =

@@ -22,6 +22,7 @@ import static org.apache.hadoop.service.Service.STATE.INITED;
 import static org.apache.hadoop.service.Service.STATE.STARTED;
 import static org.apache.hadoop.service.Service.STATE.STOPPED;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -60,10 +61,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -95,6 +97,7 @@ import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceFile;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -240,13 +243,20 @@ public class TestAuxServices {
     @Override
     public ByteBuffer getMetaData() {
       ClassLoader loader = Thread.currentThread().getContextClassLoader();
-      URL[] urls = ((URLClassLoader)loader).getURLs();
-      List<String> urlString = new ArrayList<String>();
-      for (URL url : urls) {
-        urlString.add(url.toString());
+      try {
+        URL[] urls = ((URLClassLoader) loader).getURLs();
+        String joinedString = Arrays.stream(urls)
+            .map(URL::toString)
+            .collect(Collectors.joining(","));
+        return ByteBuffer.wrap(joinedString.getBytes());
+      } catch (ClassCastException e) {
+        // In Java 11+, Thread.currentThread().getContextClassLoader()
+        // returns jdk.internal.loader.ClassLoaders$AppClassLoader
+        // by default and it cannot cast to URLClassLoader.
+        // This exception does not happen when the custom class loader is
+        // used from AuxiliaryServiceWithCustomClassLoader.
+        return super.meta;
       }
-      String joinedString = StringUtils.join(",", urlString);
-      return ByteBuffer.wrap(joinedString.getBytes());
     }
   }
 
@@ -483,6 +493,45 @@ public class TestAuxServices {
     } finally {
       if (testJar != null) {
         testJar.delete();
+      }
+    }
+  }
+
+  @Test (timeout = 15000)
+  public void testReuseLocalizedAuxiliaryJar() throws Exception {
+    File testJar = null;
+    AuxServices aux = null;
+    Configuration conf = new YarnConfiguration();
+    FileSystem fs = FileSystem.get(conf);
+    String root = "target/LocalDir";
+    try {
+      testJar = JarFinder.makeClassLoaderTestJar(this.getClass(), rootDir,
+          "test-runjar.jar", 2048, ServiceB.class.getName(), LightService
+          .class.getName());
+      Context mockContext = mock(Context.class);
+      LocalDirsHandlerService mockDirsHandler = mock(
+          LocalDirsHandlerService.class);
+      Path rootAuxServiceDirPath = new Path(root, "nmAuxService");
+      when(mockDirsHandler.getLocalPathForWrite(anyString())).thenReturn(
+          rootAuxServiceDirPath);
+      when(mockContext.getLocalDirsHandler()).thenReturn(mockDirsHandler);
+      aux = new AuxServices(MOCK_AUX_PATH_HANDLER, mockContext,
+          MOCK_DEL_SERVICE);
+      // First Time the jar gets localized
+      Path path = aux.maybeDownloadJars("ServiceB", ServiceB.class.getName(),
+          testJar.getAbsolutePath(), AuxServiceFile.TypeEnum.STATIC, conf);
+
+      // Validate the path on reuse of localized jar
+      path = aux.maybeDownloadJars("ServiceB", ServiceB.class.getName(),
+          testJar.getAbsolutePath(), AuxServiceFile.TypeEnum.STATIC, conf);
+      assertFalse("Failed to reuse the localized jar",
+          path.toString().endsWith("/*"));
+    } finally {
+      if (testJar != null) {
+        testJar.delete();
+      }
+      if (fs.exists(new Path(root))) {
+        fs.delete(new Path(root), true);
       }
     }
   }

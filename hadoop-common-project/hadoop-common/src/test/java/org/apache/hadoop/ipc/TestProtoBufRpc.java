@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.ipc;
 
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -36,7 +36,6 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -44,10 +43,10 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.concurrent.TimeoutException;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Test for testing protocol buffer based RPC mechanism.
@@ -143,19 +142,19 @@ public class TestProtoBufRpc extends TestRpcBase {
     EchoRequestProto echoRequest = EchoRequestProto.newBuilder()
         .setMessage("hello").build();
     EchoResponseProto echoResponse = client.echo(null, echoRequest);
-    Assert.assertEquals(echoResponse.getMessage(), "hello");
+    assertThat(echoResponse.getMessage()).isEqualTo("hello");
     
     // Test error method - error should be thrown as RemoteException
     try {
       client.error(null, newEmptyRequest());
-      Assert.fail("Expected exception is not thrown");
+      fail("Expected exception is not thrown");
     } catch (ServiceException e) {
       RemoteException re = (RemoteException)e.getCause();
       RpcServerException rse = (RpcServerException) re
           .unwrapRemoteException(RpcServerException.class);
-      Assert.assertNotNull(rse);
-      Assert.assertTrue(re.getErrorCode().equals(
-          RpcErrorCodeProto.ERROR_RPC_SERVER));
+      assertThat(rse).isNotNull();
+      assertThat(re.getErrorCode())
+          .isEqualTo(RpcErrorCodeProto.ERROR_RPC_SERVER);
     }
   }
   
@@ -169,7 +168,7 @@ public class TestProtoBufRpc extends TestRpcBase {
     // Test echo method
     EchoResponseProto echoResponse = client.echo2(null,
         newEchoRequest("hello"));
-    Assert.assertEquals(echoResponse.getMessage(), "hello");
+    assertThat(echoResponse.getMessage()).isEqualTo("hello");
     
     // Ensure RPC metrics are updated
     MetricsRecordBuilder rpcMetrics = getMetrics(server.getRpcMetrics().name());
@@ -188,13 +187,13 @@ public class TestProtoBufRpc extends TestRpcBase {
     try {
       client.error2(null, newEmptyRequest());
     } catch (ServiceException se) {
-      Assert.assertTrue(se.getCause() instanceof RemoteException);
+      assertThat(se.getCause()).isInstanceOf(RemoteException.class);
       RemoteException re = (RemoteException) se.getCause();
-      Assert.assertTrue(re.getClassName().equals(
-          URISyntaxException.class.getName()));
-      Assert.assertTrue(re.getMessage().contains("testException"));
-      Assert.assertTrue(
-          re.getErrorCode().equals(RpcErrorCodeProto.ERROR_APPLICATION));
+      assertThat(re.getClassName())
+          .isEqualTo(URISyntaxException.class.getName());
+      assertThat(re.getMessage()).contains("testException");
+      assertThat(re.getErrorCode())
+          .isEqualTo(RpcErrorCodeProto.ERROR_APPLICATION);
     }
   }
   
@@ -205,12 +204,12 @@ public class TestProtoBufRpc extends TestRpcBase {
     // short message goes through
     EchoResponseProto echoResponse = client.echo2(null,
         newEchoRequest(shortString));
-    Assert.assertEquals(shortString, echoResponse.getMessage());
+    assertThat(echoResponse.getMessage()).isEqualTo(shortString);
     
     final String longString = StringUtils.repeat("X", 4096);
     try {
       client.echo2(null, newEchoRequest(longString));
-      Assert.fail("expected extra-long RPC to fail");
+      fail("expected extra-long RPC to fail");
     } catch (ServiceException se) {
       // expected
     }
@@ -231,7 +230,7 @@ public class TestProtoBufRpc extends TestRpcBase {
 
     // Ensure RPC metrics are updated
     RpcMetrics rpcMetrics = server.getRpcMetrics();
-    assertTrue(rpcMetrics.getProcessingSampleCount() > 999L);
+    assertThat(rpcMetrics.getProcessingSampleCount()).isGreaterThan(999L);
     long before = rpcMetrics.getRpcSlowCalls();
 
     // make a really slow call. Sleep sleeps for 1000ms
@@ -255,7 +254,7 @@ public class TestProtoBufRpc extends TestRpcBase {
 
     // Ensure RPC metrics are updated
     RpcMetrics rpcMetrics = server.getRpcMetrics();
-    assertTrue(rpcMetrics.getProcessingSampleCount() > 999L);
+    assertThat(rpcMetrics.getProcessingSampleCount()).isGreaterThan(999L);
     long before = rpcMetrics.getRpcSlowCalls();
 
     // make a really slow call. Sleep sleeps for 1000ms
@@ -264,6 +263,6 @@ public class TestProtoBufRpc extends TestRpcBase {
     long after = rpcMetrics.getRpcSlowCalls();
 
     // make sure we never called into Log slow RPC routine.
-    assertEquals(before, after);
+    assertThat(before).isEqualTo(after);
   }
 }

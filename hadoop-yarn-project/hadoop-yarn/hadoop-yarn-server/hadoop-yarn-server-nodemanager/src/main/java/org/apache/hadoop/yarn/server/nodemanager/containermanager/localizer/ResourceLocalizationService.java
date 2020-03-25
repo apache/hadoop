@@ -995,8 +995,10 @@ public class ResourceLocalizationService extends CompositeService
                 getLocalResourcesTracker(LocalResourceVisibility.APPLICATION, user, applicationId);
               final String diagnostics = "Failed to download resource " +
                   assoc.getResource() + " " + e.getCause();
-              tracker.handle(new ResourceFailedLocalizationEvent(
-                  assoc.getResource().getRequest(), diagnostics));
+              if(tracker != null) {
+                tracker.handle(new ResourceFailedLocalizationEvent(
+                    assoc.getResource().getRequest(), diagnostics));
+              }
               publicRsrc.handle(new ResourceFailedLocalizationEvent(
                   assoc.getResource().getRequest(), diagnostics));
               LOG.error(diagnostics);
@@ -1698,5 +1700,15 @@ public class ResourceLocalizationService extends CompositeService
     localDirPathFsPermissionsMap.put(fileDir, defaultPermission);
     localDirPathFsPermissionsMap.put(sysDir, nmPrivatePermission);
     return localDirPathFsPermissionsMap;
+  }
+
+  public LocalizedResource getLocalizedResource(LocalResourceRequest req,
+      String user, ApplicationId appId) {
+    LocalResourcesTracker tracker =
+        getLocalResourcesTracker(req.getVisibility(), user, appId);
+    if (tracker == null) {
+      return null;
+    }
+    return tracker.getLocalizedResource(req);
   }
 }

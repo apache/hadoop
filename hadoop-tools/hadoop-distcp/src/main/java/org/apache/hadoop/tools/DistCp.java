@@ -84,7 +84,7 @@ public class DistCp extends Configured implements Tool {
     if (context.shouldUseSnapshotDiff()) {
       // When "-diff" or "-rdiff" is passed, do sync() first, then
       // create copyListing based on snapshot diff.
-      DistCpSync distCpSync = new DistCpSync(context, getConf());
+      DistCpSync distCpSync = new DistCpSync(context, job.getConfiguration());
       if (distCpSync.sync()) {
         createInputFileListingWithDiff(job, distCpSync);
       } else {

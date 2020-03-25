@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+syntax = "proto2";
 option java_package = "org.apache.hadoop.hdfs.federation.protocol.proto";
 option java_outer_classname = "HdfsServerFederationProtos";
 option java_generic_services = true;
@@ -68,6 +68,7 @@ message NamenodeMembershipRecordProto {
   optional bool isSafeMode = 14;
 
   optional NamenodeMembershipStatsRecordProto stats = 15;
+  optional string webScheme = 16;
 }
 
 message FederationNamespaceInfoProto {
@@ -239,6 +240,13 @@ message RefreshMountTableEntriesRequestProto {
 
 message RefreshMountTableEntriesResponseProto {
   optional bool result = 1;
+}
+
+message RefreshSuperUserGroupsConfigurationRequestProto {
+}
+
+message RefreshSuperUserGroupsConfigurationResponseProto {
+  optional bool status = 1;
 }
 
 /////////////////////////////////////////////////

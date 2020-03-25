@@ -45,15 +45,33 @@ public final class ConfigurationKeys {
   public static final String AZURE_CONCURRENT_CONNECTION_VALUE_OUT = "fs.azure.concurrentRequestCount.out";
   public static final String AZURE_CONCURRENT_CONNECTION_VALUE_IN = "fs.azure.concurrentRequestCount.in";
   public static final String AZURE_TOLERATE_CONCURRENT_APPEND = "fs.azure.io.read.tolerate.concurrent.append";
+  public static final String AZURE_LIST_MAX_RESULTS = "fs.azure.list.max.results";
   public static final String AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION = "fs.azure.createRemoteFileSystemDuringInitialization";
   public static final String AZURE_SKIP_USER_GROUP_METADATA_DURING_INITIALIZATION = "fs.azure.skipUserGroupMetadataDuringInitialization";
   public static final String FS_AZURE_ENABLE_AUTOTHROTTLING = "fs.azure.enable.autothrottling";
   public static final String FS_AZURE_ALWAYS_USE_HTTPS = "fs.azure.always.use.https";
   public static final String FS_AZURE_ATOMIC_RENAME_KEY = "fs.azure.atomic.rename.key";
+  public static final String FS_AZURE_APPEND_BLOB_KEY = "fs.azure.appendblob.key";
   public static final String FS_AZURE_READ_AHEAD_QUEUE_DEPTH = "fs.azure.readaheadqueue.depth";
+  /** Provides a config control to enable or disable ABFS Flush operations -
+   *  HFlush and HSync. Default is true. **/
   public static final String FS_AZURE_ENABLE_FLUSH = "fs.azure.enable.flush";
+  /** Provides a config control to disable or enable OutputStream Flush API
+   *  operations in AbfsOutputStream. Flush() will trigger actions that
+   *  guarantee that buffered data is persistent with a perf cost while the API
+   *  documentation does not have such expectations of data being persisted.
+   *  Default value of this config is true. **/
+  public static final String FS_AZURE_DISABLE_OUTPUTSTREAM_FLUSH = "fs.azure.disable.outputstream.flush";
+  /** Provides a config control to enable OutputStream AppendWithFlush API
+   *  operations in AbfsOutputStream.
+   *  Default value of this config is true. **/
+  public static final String FS_AZURE_ENABLE_APPEND_WITH_FLUSH = "fs.azure.enable.appendwithflush";
   public static final String FS_AZURE_USER_AGENT_PREFIX_KEY = "fs.azure.user.agent.prefix";
   public static final String FS_AZURE_SSL_CHANNEL_MODE_KEY = "fs.azure.ssl.channel.mode";
+  /** Provides a config to enable/disable the checkAccess API.
+   *  By default this will be
+   *  FileSystemConfigurations.DEFAULT_ENABLE_CHECK_ACCESS. **/
+  public static final String FS_AZURE_ENABLE_CHECK_ACCESS = "fs.azure.enable.check.access";
   public static final String FS_AZURE_USE_UPN = "fs.azure.use.upn";
   /** User principal names (UPNs) have the format “{alias}@{domain}”. If true,
    *  only {alias} is included when a UPN would otherwise appear in the output
@@ -94,12 +112,20 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT = "fs.azure.account.oauth2.client.endpoint";
   /** Key for oauth msi tenant id: {@value}. */
   public static final String FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT = "fs.azure.account.oauth2.msi.tenant";
+  /** Key for oauth msi endpoint: {@value}. */
+  public static final String FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT = "fs.azure.account.oauth2.msi.endpoint";
+  /** Key for oauth msi Authority: {@value}. */
+  public static final String FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY = "fs.azure.account.oauth2.msi.authority";
   /** Key for oauth user name: {@value}. */
   public static final String FS_AZURE_ACCOUNT_OAUTH_USER_NAME = "fs.azure.account.oauth2.user.name";
   /** Key for oauth user password: {@value}. */
   public static final String FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD = "fs.azure.account.oauth2.user.password";
   /** Key for oauth refresh token: {@value}. */
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN = "fs.azure.account.oauth2.refresh.token";
+  /** Key for oauth AAD refresh token endpoint: {@value}. */
+  public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT = "fs.azure.account.oauth2.refresh.token.endpoint";
+  /** Key for enabling the tracking of ABFS API latency and sending the latency numbers to the ABFS API service */
+  public static final String FS_AZURE_ABFS_LATENCY_TRACK = "fs.azure.abfs.latency.track";
 
   public static String accountProperty(String property, String account) {
     return property + "." + account;
@@ -108,7 +134,8 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ENABLE_DELEGATION_TOKEN = "fs.azure.enable.delegation.token";
   public static final String FS_AZURE_DELEGATION_TOKEN_PROVIDER_TYPE = "fs.azure.delegation.token.provider.type";
 
-  public static final String ABFS_EXTERNAL_AUTHORIZATION_CLASS = "abfs.external.authorization.class";
+  /** Key for SAS token provider **/
+  public static final String FS_AZURE_SAS_TOKEN_PROVIDER_TYPE = "fs.azure.sas.token.provider.type";
 
   private ConfigurationKeys() {}
 }

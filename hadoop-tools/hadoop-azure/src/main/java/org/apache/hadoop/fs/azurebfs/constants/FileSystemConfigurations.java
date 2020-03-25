@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azurebfs.constants;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.azurebfs.utils.SSLSocketFactoryEx;
+import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 /**
  * Responsible to keep all the Azure Blob File System related configurations.
@@ -46,6 +46,7 @@ public final class FileSystemConfigurations {
   public static final int MAX_BUFFER_SIZE = 100 * ONE_MB;  // 100 MB
   public static final long MAX_AZURE_BLOCK_SIZE = 256 * 1024 * 1024L; // changing default abfs blocksize to 256MB
   public static final String AZURE_BLOCK_LOCATION_HOST_DEFAULT = "localhost";
+  public static final int DEFAULT_AZURE_LIST_MAX_RESULTS = 500;
 
   public static final int MAX_CONCURRENT_READ_THREADS = 12;
   public static final int MAX_CONCURRENT_WRITE_THREADS = 8;
@@ -54,18 +55,23 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_AZURE_SKIP_USER_GROUP_METADATA_DURING_INITIALIZATION = false;
 
   public static final String DEFAULT_FS_AZURE_ATOMIC_RENAME_DIRECTORIES = "/hbase";
+  public static final String DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES = "";
 
   public static final int DEFAULT_READ_AHEAD_QUEUE_DEPTH = -1;
   public static final boolean DEFAULT_ENABLE_FLUSH = true;
+  public static final boolean DEFAULT_DISABLE_OUTPUTSTREAM_FLUSH = true;
+  public static final boolean DEFAULT_ENABLE_APPEND_WITH_FLUSH = true;
   public static final boolean DEFAULT_ENABLE_AUTOTHROTTLING = true;
 
-  public static final SSLSocketFactoryEx.SSLChannelMode DEFAULT_FS_AZURE_SSL_CHANNEL_MODE
-      = SSLSocketFactoryEx.SSLChannelMode.Default;
+  public static final DelegatingSSLSocketFactory.SSLChannelMode DEFAULT_FS_AZURE_SSL_CHANNEL_MODE
+      = DelegatingSSLSocketFactory.SSLChannelMode.Default;
 
   public static final boolean DEFAULT_ENABLE_DELEGATION_TOKEN = false;
   public static final boolean DEFAULT_ENABLE_HTTPS = true;
 
   public static final boolean DEFAULT_USE_UPN = false;
+  public static final boolean DEFAULT_ENABLE_CHECK_ACCESS = false;
+  public static final boolean DEFAULT_ABFS_LATENCY_TRACK = false;
 
   private FileSystemConfigurations() {}
 }

@@ -1316,6 +1316,7 @@ public class TestContainer {
         new HashMap<>();
     private final Map<ContainerEventType, ContainerState> eventToFinalState =
         new HashMap<>();
+    private final ContainerExecutor exec;
 
     WrappedContainer(int appId, long timestamp, int id, String user)
         throws IOException {
@@ -1352,6 +1353,7 @@ public class TestContainer {
           container.sendLaunchEvent();
         }
       };
+      exec = mock(ContainerExecutor.class);
       dispatcher.register(LocalizationEventType.class, localizerBus);
       dispatcher.register(ContainersLauncherEventType.class, launcherBus);
       dispatcher.register(ContainersMonitorEventType.class, monitorBus);
@@ -1411,6 +1413,9 @@ public class TestContainer {
         localResources = Collections.<String, LocalResource> emptyMap();
       }
       when(ctxt.getLocalResources()).thenReturn(localResources);
+
+      when(exec.getLocalResources(any())).thenReturn(localResources);
+      when(context.getContainerExecutor()).thenReturn(exec);
 
       if (withServiceData) {
         Random r = new Random();

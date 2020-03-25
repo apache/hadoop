@@ -36,6 +36,8 @@ import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.util.*;
 
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+
 /**
  * This is an implementation of the Hadoop Archive 
  * Filesystem. This archive Filesystem has index files
@@ -899,7 +901,22 @@ public class HarFileSystem extends FileSystem {
     throws IOException {
     throw new IOException("Har: setPermission not allowed");
   }
-  
+
+  /**
+   * Declare that this filesystem connector is always read only.
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    switch (validatePathCapabilityArgs(path, capability)) {
+    case CommonPathCapabilities.FS_READ_ONLY_CONNECTOR:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   /**
    * Hadoop archives input stream. This input stream fakes EOF 
    * since archive files are part of bigger part files.

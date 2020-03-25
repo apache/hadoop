@@ -37,8 +37,10 @@ public final class AbfsHttpConstants {
   public static final String SET_PROPERTIES_ACTION = "setProperties";
   public static final String SET_ACCESS_CONTROL = "setAccessControl";
   public static final String GET_ACCESS_CONTROL = "getAccessControl";
+  public static final String CHECK_ACCESS = "checkAccess";
   public static final String GET_STATUS = "getStatus";
   public static final String DEFAULT_TIMEOUT = "90";
+  public static final String APPEND_BLOB_TYPE = "appendblob";
   public static final String TOKEN_VERSION = "2";
 
   public static final String JAVA_VERSION = "java.version";

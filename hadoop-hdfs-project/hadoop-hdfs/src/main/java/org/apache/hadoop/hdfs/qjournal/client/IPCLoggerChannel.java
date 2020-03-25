@@ -27,6 +27,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -270,12 +272,14 @@ public class IPCLoggerChannel implements AsyncLogger {
    */
   @VisibleForTesting
   protected ExecutorService createParallelExecutor() {
-    return Executors.newCachedThreadPool(
-        new ThreadFactoryBuilder()
-            .setDaemon(true)
+    int numThreads =
+        conf.getInt(DFSConfigKeys.DFS_QJOURNAL_PARALLEL_READ_NUM_THREADS_KEY,
+            DFSConfigKeys.DFS_QJOURNAL_PARALLEL_READ_NUM_THREADS_DEFAULT);
+    return new ThreadPoolExecutor(1, numThreads, 60L, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<>(),
+        new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("Logger channel (from parallel executor) to " + addr)
-            .setUncaughtExceptionHandler(
-                UncaughtExceptionHandlers.systemExit())
+            .setUncaughtExceptionHandler(UncaughtExceptionHandlers.systemExit())
             .build());
   }
   

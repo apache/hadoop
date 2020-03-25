@@ -157,7 +157,7 @@ public class JsonUtil {
     return m;
   }
 
-  private static Map<String, Object> getEcPolicyAsMap(
+  public static Map<String, Object> getEcPolicyAsMap(
       final ErasureCodingPolicy ecPolicy) {
     /** Convert an ErasureCodingPolicy to a map. */
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
@@ -358,6 +358,11 @@ public class JsonUtil {
     // For ContentSummary we don't need this since we already have
     // separate count for file and directory.
     m.putAll(toJsonMap(contentsummary, false));
+    m.put("snapshotLength", contentsummary.getSnapshotLength());
+    m.put("snapshotFileCount", contentsummary.getSnapshotFileCount());
+    m.put("snapshotDirectoryCount",
+        contentsummary.getSnapshotDirectoryCount());
+    m.put("snapshotSpaceConsumed", contentsummary.getSnapshotSpaceConsumed());
     return toJsonString(ContentSummary.class, m);
   }
 

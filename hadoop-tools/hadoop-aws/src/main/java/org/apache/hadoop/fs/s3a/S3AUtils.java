@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
+import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
@@ -81,10 +82,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
  * Utility methods for S3A code.
@@ -246,6 +250,18 @@ public final class S3AUtils {
 
       // the object isn't there
       case 404:
+        if (isUnknownBucket(ase)) {
+          // this is a missing bucket
+          ioe = new UnknownStoreException(path, ase);
+        } else {
+          // a normal unknown object
+          ioe = new FileNotFoundException(message);
+          ioe.initCause(ase);
+        }
+        break;
+
+      // this also surfaces sometimes and is considered to
+      // be ~ a not found exception.
       case 410:
         ioe = new FileNotFoundException(message);
         ioe.initCause(ase);
@@ -1202,14 +1218,59 @@ public final class S3AUtils {
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
    * @return new AWS client configuration
    * @throws IOException problem creating AWS client configuration
+   *
+   * @deprecated use {@link #createAwsConf(Configuration, String, String)}
    */
+  @Deprecated
   public static ClientConfiguration createAwsConf(Configuration conf,
       String bucket)
+      throws IOException {
+    return createAwsConf(conf, bucket, null);
+  }
+
+  /**
+   * Create a new AWS {@code ClientConfiguration}. All clients to AWS services
+   * <i>MUST</i> use this or the equivalents for the specific service for
+   * consistent setup of connectivity, UA, proxy settings.
+   *
+   * @param conf The Hadoop configuration
+   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
+   * @param awsServiceIdentifier a string representing the AWS service (S3,
+   * DDB, etc) for which the ClientConfiguration is being created.
+   * @return new AWS client configuration
+   * @throws IOException problem creating AWS client configuration
+   */
+  public static ClientConfiguration createAwsConf(Configuration conf,
+      String bucket, String awsServiceIdentifier)
       throws IOException {
     final ClientConfiguration awsConf = new ClientConfiguration();
     initConnectionSettings(conf, awsConf);
     initProxySupport(conf, bucket, awsConf);
     initUserAgent(conf, awsConf);
+    if (StringUtils.isNotEmpty(awsServiceIdentifier)) {
+      String configKey = null;
+      switch (awsServiceIdentifier) {
+      case AWS_SERVICE_IDENTIFIER_S3:
+        configKey = SIGNING_ALGORITHM_S3;
+        break;
+      case AWS_SERVICE_IDENTIFIER_DDB:
+        configKey = SIGNING_ALGORITHM_DDB;
+        break;
+      case AWS_SERVICE_IDENTIFIER_STS:
+        configKey = SIGNING_ALGORITHM_STS;
+        break;
+      default:
+        // Nothing to do. The original signer override is already setup
+      }
+      if (configKey != null) {
+        String signerOverride = conf.getTrimmed(configKey, "");
+        if (!signerOverride.isEmpty()) {
+          LOG.debug("Signer override for {}} = {}", awsServiceIdentifier,
+              signerOverride);
+          awsConf.setSignerOverride(signerOverride);
+        }
+      }
+    }
     return awsConf;
   }
 
@@ -1218,14 +1279,15 @@ public final class S3AUtils {
    *
    * @param conf Hadoop configuration
    * @param awsConf AWS SDK configuration
+   *
+   * @throws IOException if there was an error initializing the protocol
+   *                     settings
    */
   public static void initConnectionSettings(Configuration conf,
-      ClientConfiguration awsConf) {
+      ClientConfiguration awsConf) throws IOException {
     awsConf.setMaxConnections(intOption(conf, MAXIMUM_CONNECTIONS,
         DEFAULT_MAXIMUM_CONNECTIONS, 1));
-    boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS,
-        DEFAULT_SECURE_CONNECTIONS);
-    awsConf.setProtocol(secureConnections ?  Protocol.HTTPS : Protocol.HTTP);
+    initProtocolSettings(conf, awsConf);
     awsConf.setMaxErrorRetry(intOption(conf, MAX_ERROR_RETRIES,
         DEFAULT_MAX_ERROR_RETRIES, 0));
     awsConf.setConnectionTimeout(intOption(conf, ESTABLISH_TIMEOUT,
@@ -1236,11 +1298,41 @@ public final class S3AUtils {
         DEFAULT_SOCKET_SEND_BUFFER, 2048);
     int sockRecvBuffer = intOption(conf, SOCKET_RECV_BUFFER,
         DEFAULT_SOCKET_RECV_BUFFER, 2048);
+    long requestTimeoutMillis = conf.getTimeDuration(REQUEST_TIMEOUT,
+        DEFAULT_REQUEST_TIMEOUT, TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+
+    if (requestTimeoutMillis > Integer.MAX_VALUE) {
+      LOG.debug("Request timeout is too high({} ms). Setting to {} ms instead",
+          requestTimeoutMillis, Integer.MAX_VALUE);
+      requestTimeoutMillis = Integer.MAX_VALUE;
+    }
+    awsConf.setRequestTimeout((int) requestTimeoutMillis);
     awsConf.setSocketBufferSizeHints(sockSendBuffer, sockRecvBuffer);
     String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM, "");
     if (!signerOverride.isEmpty()) {
      LOG.debug("Signer override = {}", signerOverride);
       awsConf.setSignerOverride(signerOverride);
+    }
+  }
+
+  /**
+   * Initializes the connection protocol settings when connecting to S3 (e.g.
+   * either HTTP or HTTPS). If secure connections are enabled, this method
+   * will load the configured SSL providers.
+   *
+   * @param conf Hadoop configuration
+   * @param awsConf AWS SDK configuration
+   *
+   * @throws IOException if there is an error initializing the configured
+   *                     {@link javax.net.ssl.SSLSocketFactory}
+   */
+  private static void initProtocolSettings(Configuration conf,
+      ClientConfiguration awsConf) throws IOException {
+    boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS,
+        DEFAULT_SECURE_CONNECTIONS);
+    awsConf.setProtocol(secureConnections ?  Protocol.HTTPS : Protocol.HTTP);
+    if (secureConnections) {
+      NetworkBinding.bindSSLChannelMode(conf, awsConf);
     }
   }
 
@@ -1545,26 +1637,17 @@ public final class S3AUtils {
   /**
    * Close the Closeable objects and <b>ignore</b> any Exception or
    * null pointers.
-   * (This is the SLF4J equivalent of that in {@code IOUtils}).
+   * This is obsolete: use
+   * {@link org.apache.hadoop.io.IOUtils#cleanupWithLogger(Logger, Closeable...)}
    * @param log the log to log at debug level. Can be null.
    * @param closeables the objects to close
    */
+  @Deprecated
   public static void closeAll(Logger log,
       Closeable... closeables) {
-    if (log == null) {
-      log = LOG;
-    }
-    for (Closeable c : closeables) {
-      if (c != null) {
-        try {
-          log.debug("Closing {}", c);
-          c.close();
-        } catch (Exception e) {
-          log.debug("Exception in closing {}", c, e);
-        }
-      }
-    }
+    cleanupWithLogger(log, closeables);
   }
+
   /**
    * Close the Closeable objects and <b>ignore</b> any Exception or
    * null pointers.

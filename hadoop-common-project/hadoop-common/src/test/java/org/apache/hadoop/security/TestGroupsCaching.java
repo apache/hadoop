@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -42,11 +43,10 @@ import static org.junit.Assert.fail;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.security.Groups;
-import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestGroupsCaching {
   public static final Logger TESTLOG =
@@ -67,7 +67,7 @@ public class TestGroupsCaching {
 
   public static class FakeGroupMapping extends ShellBasedUnixGroupsMapping {
     // any to n mapping
-    private static Set<String> allGroups = new HashSet<String>();
+    private static Set<String> allGroups = new LinkedHashSet<String>();
     private static Set<String> blackList = new HashSet<String>();
     private static int requestCount = 0;
     private static long getGroupsDelayMs = 0;
@@ -494,7 +494,7 @@ public class TestGroupsCaching {
     // Now get the cache entry - it should return immediately
     // with the old value and the cache will not have completed
     // a request to getGroups yet.
-    assertEquals(groups.getGroups("me").size(), 2);
+    assertThat(groups.getGroups("me").size()).isEqualTo(2);
     assertEquals(startingRequestCount, FakeGroupMapping.getRequestCount());
 
     // Now sleep for over the delay time and the request count should
@@ -502,7 +502,7 @@ public class TestGroupsCaching {
     Thread.sleep(110);
     assertEquals(startingRequestCount + 1, FakeGroupMapping.getRequestCount());
     // Another call to get groups should give 3 groups instead of 2
-    assertEquals(groups.getGroups("me").size(), 3);
+    assertThat(groups.getGroups("me").size()).isEqualTo(3);
   }
 
   @Test
@@ -532,7 +532,7 @@ public class TestGroupsCaching {
 
     // Now get the cache entry - it should block and return the new
     // 3 group value
-    assertEquals(groups.getGroups("me").size(), 3);
+    assertThat(groups.getGroups("me").size()).isEqualTo(3);
     assertEquals(startingRequestCount + 1, FakeGroupMapping.getRequestCount());
   }
 
@@ -567,7 +567,7 @@ public class TestGroupsCaching {
     // Now get the cache entry - it should return immediately
     // with the old value and the cache will not have completed
     // a request to getGroups yet.
-    assertEquals(groups.getGroups("me").size(), 2);
+    assertThat(groups.getGroups("me").size()).isEqualTo(2);
     assertEquals(startingRequestCount, FakeGroupMapping.getRequestCount());
     // Resume the getGroups operation and the cache can get refreshed
     FakeGroupMapping.resume();
@@ -577,14 +577,14 @@ public class TestGroupsCaching {
     waitForGroupCounters(groups, 0, 0, 0, 1);
     FakeGroupMapping.setThrowException(false);
     assertEquals(startingRequestCount + 1, FakeGroupMapping.getRequestCount());
-    assertEquals(groups.getGroups("me").size(), 2);
+    assertThat(groups.getGroups("me").size()).isEqualTo(2);
 
     // Now the 3rd call to getGroups above will have kicked off
     // another refresh that updates the cache, since it no longer gives
     // exception, we now expect the counter for success is 1.
     waitForGroupCounters(groups, 0, 0, 1, 1);
     assertEquals(startingRequestCount + 2, FakeGroupMapping.getRequestCount());
-    assertEquals(groups.getGroups("me").size(), 3);
+    assertThat(groups.getGroups("me").size()).isEqualTo(3);
   }
 
 
@@ -613,7 +613,7 @@ public class TestGroupsCaching {
     // be triggered which will fail to update the key, but the keys old value
     // will be retrievable until it is evicted after about 10 seconds.
     for(int i=0; i<9; i++) {
-      assertEquals(groups.getGroups("me").size(), 2);
+      assertThat(groups.getGroups("me").size()).isEqualTo(2);
       timer.advance(1 * 1000);
     }
     // Wait until the 11th second. The call to getGroups should throw
@@ -631,7 +631,7 @@ public class TestGroupsCaching {
     // Finally check groups are retrieve again after FakeGroupMapping
     // stops throw exceptions
     FakeGroupMapping.setThrowException(false);
-    assertEquals(groups.getGroups("me").size(), 2);
+    assertThat(groups.getGroups("me").size()).isEqualTo(2);
   }
 
   @Test
@@ -725,14 +725,14 @@ public class TestGroupsCaching {
     FakeGroupMapping.clearBlackList();
 
     // First populate the cash
-    assertEquals(groups.getGroups("me").size(), 2);
+    assertThat(groups.getGroups("me").size()).isEqualTo(2);
 
     // Advance the timer so a refresh is required
     timer.advance(2 * 1000);
 
     // This call should throw an exception
     FakeGroupMapping.setThrowException(true);
-    assertEquals(groups.getGroups("me").size(), 2);
+    assertThat(groups.getGroups("me").size()).isEqualTo(2);
   }
 
   @Test

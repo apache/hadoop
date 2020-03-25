@@ -352,7 +352,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   /**
    * Populate the map with the State Store versions.
    *
-   * @param innerInfo Map with the information.
+   * @param map Map with the information.
    * @param version State Store versions.
    */
   private static void setStateStoreVersions(
@@ -594,7 +594,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
 
   @Override
   public String getHostAndPort() {
-    InetSocketAddress address = this.router.getHttpServerAddress();
+    InetSocketAddress address = this.router.getRpcServerAddress();
     if (address != null) {
       try {
         String hostname = InetAddress.getLocalHost().getHostName();

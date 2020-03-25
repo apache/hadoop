@@ -95,4 +95,14 @@ public class DataNodeFaultInjector {
    * process.
    */
   public void stripedBlockReconstruction() throws IOException {}
+
+  /**
+   * Used as a hook to inject intercept when BPOfferService hold lock.
+   */
+  public void delayWhenOfferServiceHoldLock() {}
+
+  /**
+   * Used as a hook to inject intercept when re-register.
+   */
+  public void blockUtilSendFullBlockReport() {}
 }

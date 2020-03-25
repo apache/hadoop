@@ -23,7 +23,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -543,6 +546,24 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_NODES_INCLUDE_FILE_PATH = 
     RM_PREFIX + "nodes.include-path";
   public static final String DEFAULT_RM_NODES_INCLUDE_FILE_PATH = "";
+
+  /** Enable submission pre-processor.*/
+  public static final String RM_SUBMISSION_PREPROCESSOR_ENABLED =
+      RM_PREFIX + "submission-preprocessor.enabled";
+  public static final boolean DEFAULT_RM_SUBMISSION_PREPROCESSOR_ENABLED =
+      false;
+
+  /** Path to file with hosts for the submission processor to handle.*/
+  public static final String RM_SUBMISSION_PREPROCESSOR_FILE_PATH =
+      RM_PREFIX + "submission-preprocessor.file-path";
+  public static final String DEFAULT_RM_SUBMISSION_PREPROCESSOR_FILE_PATH =
+      "";
+
+  /** Submission processor refresh interval.*/
+  public static final String RM_SUBMISSION_PREPROCESSOR_REFRESH_INTERVAL_MS =
+      RM_PREFIX + "submission-preprocessor.file-refresh-interval-ms";
+  public static final int
+      DEFAULT_RM_SUBMISSION_PREPROCESSOR_REFRESH_INTERVAL_MS = 0;
   
   /** Path to file with nodes to exclude.*/
   public static final String RM_NODES_EXCLUDE_FILE_PATH = 
@@ -708,6 +729,19 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "delegation-token.max-conf-size-bytes";
   public static final int DEFAULT_RM_DELEGATION_TOKEN_MAX_CONF_SIZE_BYTES =
       12800;
+
+  public static final String RM_DT_RENEWER_THREAD_TIMEOUT =
+      RM_PREFIX + "delegation-token-renewer.thread-timeout";
+  public static final long DEFAULT_RM_DT_RENEWER_THREAD_TIMEOUT =
+      TimeUnit.SECONDS.toMillis(60); // 60 Seconds
+  public static final String RM_DT_RENEWER_THREAD_RETRY_INTERVAL =
+      RM_PREFIX + "delegation-token-renewer.thread-retry-interval";
+  public static final long DEFAULT_RM_DT_RENEWER_THREAD_RETRY_INTERVAL =
+      TimeUnit.SECONDS.toMillis(60); // 60 Seconds
+  public static final String RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS =
+      RM_PREFIX + "delegation-token-renewer.thread-retry-max-attempts";
+  public static final int DEFAULT_RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS =
+      10;
 
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
   public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
@@ -1211,7 +1245,12 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_DELETE_THREAD_COUNT = 
     NM_PREFIX +  "delete.thread-count";
   public static final int DEFAULT_NM_DELETE_THREAD_COUNT = 4;
-  
+
+  public static final String NM_CONTAINER_EXECUTOR_EXIT_FILE_TIMEOUT =
+      NM_PREFIX + "container-executor.exit-code-file.timeout-ms";
+  public static final int DEFAULT_NM_CONTAINER_EXECUTOR_EXIT_FILE_TIMEOUT =
+      2000;
+
   /** Keytab for NM.*/
   public static final String NM_KEYTAB = NM_PREFIX + "keytab";
   
@@ -1464,6 +1503,12 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "remote-app-log-dir-include-older";
   public static final boolean DEFAULT_NM_REMOTE_APP_LOG_DIR_INCLUDE_OLDER =
       true;
+
+  /**
+   * Specifies the group of the aggregated log directory.
+   */
+  public static final String NM_REMOTE_APP_LOG_DIR_GROUPNAME =
+      NM_PREFIX + "remote-app-log-dir.groupname";
 
   public static final String YARN_LOG_SERVER_URL =
     YARN_PREFIX + "log.server.url";
@@ -1837,6 +1882,14 @@ public class YarnConfiguration extends Configuration {
       "container-monitor.procfs-tree.smaps-based-rss.enabled";
   public static final boolean DEFAULT_PROCFS_USE_SMAPS_BASED_RSS_ENABLED =
       false;
+  private static final String APPLICATION_TAG_BASED_PLACEMENT_PREFIX =
+      RM_PREFIX + "application-tag-based-placement";
+  public static final String APPLICATION_TAG_BASED_PLACEMENT_ENABLED =
+          APPLICATION_TAG_BASED_PLACEMENT_PREFIX + ".enable";
+  public static final boolean DEFAULT_APPLICATION_TAG_BASED_PLACEMENT_ENABLED =
+          false;
+  public static final String APPLICATION_TAG_BASED_PLACEMENT_USER_WHITELIST =
+          APPLICATION_TAG_BASED_PLACEMENT_PREFIX + ".username.whitelist";
 
   /** Enable/disable container metrics. */
   @Private
@@ -1921,28 +1974,52 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_MIN_PER_DISK_FREE_SPACE_MB =
       NM_DISK_HEALTH_CHECK_PREFIX + "min-free-space-per-disk-mb";
   /**
+   * The minimum space that must be available on an offline
+   * disk for it to be marked as online.  The value should not be less
+   * than NM_MIN_PER_DISK_FREE_SPACE_MB.  If its value is less than
+   * NM_MIN_PER_DISK_FREE_SPACE_MB or is not set, it will be set to the
+   * same value as NM_MIN_PER_DISK_FREE_SPACE_MB.
+   * This applies to nm-local-dirs and nm-log-dirs.
+   */
+  public static final String NM_WM_HIGH_PER_DISK_FREE_SPACE_MB =
+      NM_DISK_HEALTH_CHECK_PREFIX +
+          "min-free-space-per-disk-watermark-high-mb";
+  /**
    * By default, all of the disk can be used before it is marked as offline.
    */
   public static final long DEFAULT_NM_MIN_PER_DISK_FREE_SPACE_MB = 0;
 
+  /** The health checker scripts. */
+  public static final String NM_HEALTH_CHECK_SCRIPTS =
+      NM_PREFIX + "health-checker.scripts";
+  public static final String[] DEFAULT_NM_HEALTH_CHECK_SCRIPTS = {"script"};
+
   /** Frequency of running node health script.*/
   public static final String NM_HEALTH_CHECK_INTERVAL_MS = 
-    NM_PREFIX + "health-checker.interval-ms";
+      NM_PREFIX + "health-checker.interval-ms";
   public static final long DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
+  /** Health check time out period for all scripts.*/
+  public static final String NM_HEALTH_CHECK_TIMEOUT_MS =
+      NM_PREFIX + "health-checker.timeout-ms";
+  public static final long DEFAULT_NM_HEALTH_CHECK_TIMEOUT_MS =
+      2 * DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS;
+
   /** Health check script time out period.*/  
-  public static final String NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS = 
-    NM_PREFIX + "health-checker.script.timeout-ms";
-  public static final long DEFAULT_NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS = 
-    2 * DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS;
+  public static final String NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS_TEMPLATE =
+      NM_PREFIX + "health-checker.%s.timeout-ms";
   
   /** The health check script to run.*/
-  public static final String NM_HEALTH_CHECK_SCRIPT_PATH = 
-    NM_PREFIX + "health-checker.script.path";
+  public static final String NM_HEALTH_CHECK_SCRIPT_PATH_TEMPLATE =
+      NM_PREFIX + "health-checker.%s.path";
   
   /** The arguments to pass to the health check script.*/
-  public static final String NM_HEALTH_CHECK_SCRIPT_OPTS = 
-    NM_PREFIX + "health-checker.script.opts";
+  public static final String NM_HEALTH_CHECK_SCRIPT_OPTS_TEMPLATE =
+      NM_PREFIX + "health-checker.%s.opts";
+
+  /** Frequency of running node health script. */
+  public static final String NM_HEALTH_CHECK_SCRIPT_INTERVAL_MS_TEMPLATE =
+      NM_PREFIX + "health-checker.%s.interval-ms";
 
   /** The JVM options used on forking ContainerLocalizer process
       by container executor. */
@@ -1968,6 +2045,7 @@ public class YarnConfiguration extends Configuration {
    *   <li>default</li>
    *   <li>docker</li>
    *   <li>javasandbox</li>
+   *   <li>runc</li>
    * </ul>
    */
   public static final String LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES =
@@ -1983,6 +2061,200 @@ public class YarnConfiguration extends Configuration {
   /** Default runtime to be used. */
   public static final String LINUX_CONTAINER_RUNTIME_TYPE =
       LINUX_CONTAINER_RUNTIME_PREFIX + "type";
+
+  public static final String RUNC_CONTAINER_RUNTIME_PREFIX =
+      LINUX_CONTAINER_RUNTIME_PREFIX + "runc.";
+
+  /**
+   * The runc image tag to manifest plugin class that should be used.
+   */
+  public static final String NM_RUNC_IMAGE_TAG_TO_MANIFEST_PLUGIN =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "image-tag-to-manifest-plugin";
+
+   /** Default runc image tag to manifest plugin class. */
+  public static final String DEFAULT_NM_RUNC_IMAGE_TAG_TO_MANIFEST_PLUGIN =
+      "org.apache.hadoop.yarn.server.nodemanager.containermanager" +
+      ".linux.runtime.runc.ImageTagToManifestPlugin";
+
+  /**
+   * The runc manifest to resources plugin class that should be used.
+   */
+  public static final String NM_RUNC_MANIFEST_TO_RESOURCES_PLUGIN =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "manifest-to-resources-plugin";
+
+  /** Default runc manifest to resources plugin plugin class. */
+  public static final String DEFAULT_NM_RUNC_MANIFEST_TO_RESOURCES_PLUGIN =
+      "org.apache.hadoop.yarn.server.nodemanager.containermanager" +
+      ".linux.runtime.runc.HdfsManifestToResourcesPlugin";
+
+  /**
+   * The HDFS location under which the oci image manifests, layers,
+   * and configs directories exist.
+   */
+  public static final String NM_RUNC_IMAGE_TOPLEVEL_DIR =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "image-toplevel-dir";
+
+  /**
+   * Default HDFS location under which the oci image manifests, layers,
+   * and configs directories exist.
+   */
+  public static final String DEFAULT_NM_RUNC_IMAGE_TOPLEVEL_DIR =
+      "/runc-root";
+
+  /**
+   * Target count of layer mounts that we should keep on disk at one time.
+   */
+  public static final String NM_RUNC_LAYER_MOUNTS_TO_KEEP =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "layer-mounts-to-keep";
+
+  public static final int DEFAULT_NM_RUNC_LAYER_MOUNTS_TO_KEEP = 100;
+
+  /**
+   * The interval in seconds between executions of reaping layer mounts.
+   */
+  public static final String NM_REAP_RUNC_LAYER_MOUNTS_INTERVAL =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "layer-mounts-interval-secs";
+
+  public static final int DEFAULT_NM_REAP_RUNC_LAYER_MOUNTS_INTERVAL = 600;
+
+  /** Default runc image to be used. */
+  public static final String NM_RUNC_IMAGE_NAME =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "image-name";
+
+  /** Allow privileged containers. Use with extreme care. */
+  public static final String NM_RUNC_ALLOW_PRIVILEGED_CONTAINERS =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "privileged-containers.allowed";
+
+  /** Privileged containers are disabled by default. */
+  public static final boolean DEFAULT_NM_RUNC_ALLOW_PRIVILEGED_CONTAINERS =
+      false;
+
+  /** The set of networks allowed when launching containers using the
+   * RuncContainerRuntime.
+   */
+  public static final String NM_RUNC_ALLOWED_CONTAINER_NETWORKS =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "allowed-container-networks";
+
+  /** The default set of networks allowed when launching containers using the
+   * RuncContainerRuntime.
+   */
+  public static final String[] DEFAULT_NM_RUNC_ALLOWED_CONTAINER_NETWORKS =
+      {"host", "none", "bridge"};
+
+  /** The set of runtimes allowed when launching containers using the
+   * RuncContainerRuntime.
+   */
+  public static final String NM_RUNC_ALLOWED_CONTAINER_RUNTIMES =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "allowed-container-runtimes";
+
+  /** The default set of runtimes allowed when launching containers using the
+   * RuncContainerRuntime.
+   */
+  public static final String[] DEFAULT_NM_RUNC_ALLOWED_CONTAINER_RUNTIMES =
+      {"runc"};
+
+  /** ACL list for users allowed to run privileged containers. */
+  public static final String NM_RUNC_PRIVILEGED_CONTAINERS_ACL =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "privileged-containers.acl";
+
+  /** Default list for users allowed to run privileged containers is empty. */
+  public static final String DEFAULT_NM_RUNC_PRIVILEGED_CONTAINERS_ACL = "";
+
+  /** Allow host pid namespace for containers. Use with care. */
+  public static final String NM_RUNC_ALLOW_HOST_PID_NAMESPACE =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "host-pid-namespace.allowed";
+
+  /** Host pid namespace for containers is disabled by default. */
+  public static final boolean DEFAULT_NM_RUNC_ALLOW_HOST_PID_NAMESPACE =
+      false;
+
+  /** The default list of read-only mounts to be bind-mounted into all
+   *  runC containers that use RuncContainerRuntime.
+   */
+  public static final String NM_RUNC_DEFAULT_RO_MOUNTS =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "default-ro-mounts";
+
+  /** The default list of read-write mounts to be bind-mounted into all
+   *  runC containers that use RuncContainerRuntime.
+   */
+  public static final String NM_RUNC_DEFAULT_RW_MOUNTS =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "default-rw-mounts";
+
+  /** Path to the seccomp profile to use with Runc containers. */
+  public static final String NM_RUNC_SECCOMP_PROFILE =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "seccomp-profile";
+
+  /** Prefix for image tag to manifest hash plugin used with the
+   * RuncContainerRuntime.
+   */
+  private static final String IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "image-tag-to-manifest-plugin.";
+
+  /**
+   * The HDFS location where the runC image tag to hash file exists.
+   */
+  public static final String NM_HDFS_RUNC_IMAGE_TAG_TO_HASH_FILE =
+      IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX + "hdfs-hash-file";
+
+  /**
+   * The local file system location where the runC image tag to hash file exists.
+   */
+  public static final String NM_LOCAL_RUNC_IMAGE_TAG_TO_HASH_FILE =
+      IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX + "local-hash-file";
+
+  /**
+   * The interval in seconds between refreshing the hdfs image tag to
+   * hash cache.
+   */
+  public static final String NM_RUNC_CACHE_REFRESH_INTERVAL =
+      IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX + "cache-refresh-interval-secs";
+
+  /**
+   * The default interval in seconds between refreshing the hdfs image tag to
+   * hash cache.
+   */
+  public static final int DEFAULT_NM_RUNC_CACHE_REFRESH_INTERVAL = 60;
+
+  /**
+   * The number of manifests to cache in the image tag to hash cache.
+   */
+  public static final String NM_RUNC_NUM_MANIFESTS_TO_CACHE =
+      IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX + "num-manifests-to-cache";
+
+  /**
+   * The default number of manifests to cache in the image tag to hash cache.
+   */
+  public static final int DEFAULT_NUM_MANIFESTS_TO_CACHE = 10;
+
+  /** Prefix for hdfs manifest hash to local resources plugin used with the
+   * RuncContainerRuntime.
+   */
+  private static final String HDFS_MANIFEST_TO_RESOURCES_PLUGIN_PREFIX =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "hdfs-manifest-to-resources-plugin.";
+
+  /**
+   * The timeout value in seconds for the values in the stat cache.
+   */
+  public static final String NM_RUNC_STAT_CACHE_TIMEOUT =
+      HDFS_MANIFEST_TO_RESOURCES_PLUGIN_PREFIX
+          + "stat-cache-timeout-interval-secs";
+
+  /**
+   * The default timeout value in seconds for the values in the stat cache.
+   */
+  public static final int DEFAULT_NM_RUNC_STAT_CACHE_TIMEOUT = 60 * 60;
+
+  /**
+   * The size of the stat cache which stores stats of the layers and config.
+   */
+  public static final String NM_RUNC_STAT_CACHE_SIZE =
+      HDFS_MANIFEST_TO_RESOURCES_PLUGIN_PREFIX + "stat-cache-size";
+
+  /**
+   * The default size of the stat cache which stores stats of the
+   * layers and config.
+   */
+  public static final int DEFAULT_RUNC_STAT_CACHE_SIZE = 500;
 
   public static final String DOCKER_CONTAINER_RUNTIME_PREFIX =
       LINUX_CONTAINER_RUNTIME_PREFIX + "docker.";
@@ -2486,6 +2758,20 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "dispatcher.drain-events.timeout";
 
   public static final long DEFAULT_DISPATCHER_DRAIN_EVENTS_TIMEOUT = 300000;
+
+  /**
+   * The threshold used to trigger the logging of event types and counts
+   *  in RM's main event dispatcher. Default value is 5000,
+   *  which means RM will print events info when the queue size cumulatively
+   *  reaches 5000 every time. Such info can be used to reveal what
+   *  kind of events that RM is stuck at processing mostly,
+   *  it can help to narrow down certain performance issues.
+   */
+  public static final String
+          YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD =
+          YARN_PREFIX + "dispatcher.print-events-info.threshold";
+  public static final int
+          DEFAULT_YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD = 5000;
 
   /**
    * CLASSPATH for YARN applications. A comma-separated list of CLASSPATH
@@ -3755,6 +4041,26 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NODELABEL_CONFIGURATION_TYPE =
       CENTRALIZED_NODELABEL_CONFIGURATION_TYPE;
 
+  public static final String EXCLUSIVE_ENFORCED_PARTITIONS_SUFFIX
+      = "exclusive-enforced-partitions";
+
+  public static final String EXCLUSIVE_ENFORCED_PARTITIONS = NODE_LABELS_PREFIX
+      + EXCLUSIVE_ENFORCED_PARTITIONS_SUFFIX;
+
+  @Private
+  public static Set<String> getExclusiveEnforcedPartitions(
+      Configuration conf) {
+    Set<String> exclusiveEnforcedPartitions = new HashSet<>();
+    String[] configuredPartitions = conf.getStrings(
+        EXCLUSIVE_ENFORCED_PARTITIONS);
+    if (configuredPartitions != null) {
+      for (String partition : configuredPartitions) {
+        exclusiveEnforcedPartitions.add(partition);
+      }
+    }
+    return exclusiveEnforcedPartitions;
+  }
+
   public static final String MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY =
       YARN_PREFIX + "cluster.max-application-priority";
 
@@ -3932,6 +4238,14 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_DISPLAY_APPS_FOR_LOGGED_IN_USER =
       false;
 
+  public static final String FILTER_INVALID_XML_CHARS =
+      "yarn.webapp.filter-invalid-xml-chars";
+  public static final boolean DEFAULT_FILTER_INVALID_XML_CHARS = false;
+
+  public static final String ENABLE_REST_APP_SUBMISSIONS =
+      "yarn.webapp.enable-rest-app-submissions";
+  public static final boolean DEFAULT_ENABLE_REST_APP_SUBMISSIONS = true;
+
   // RM and NM CSRF props
   public static final String REST_CSRF = "webapp.rest-csrf.";
   public static final String RM_CSRF_PREFIX = RM_PREFIX + REST_CSRF;
@@ -4076,6 +4390,13 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String NM_CONTAINERS_LAUNCHER_CLASS =
       NM_PREFIX + "containers-launcher.class";
+
+  // Configuration for the prefix of the tag which contains workflow ID,
+  // followed by the prefix.
+  public static final String YARN_WORKFLOW_ID_TAG_PREFIX =
+      YARN_PREFIX + "workflow-id.tag-prefix";
+  public static final String DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX =
+      "workflowid:";
 
   public YarnConfiguration() {
     super();

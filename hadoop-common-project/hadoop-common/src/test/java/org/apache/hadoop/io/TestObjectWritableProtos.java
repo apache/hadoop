@@ -24,8 +24,8 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
 
-import com.google.protobuf.DescriptorProtos;
-import com.google.protobuf.Message;
+import org.apache.hadoop.thirdparty.protobuf.DescriptorProtos;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 
 /**
  * Test case for the use of Protocol Buffers within ObjectWritable.

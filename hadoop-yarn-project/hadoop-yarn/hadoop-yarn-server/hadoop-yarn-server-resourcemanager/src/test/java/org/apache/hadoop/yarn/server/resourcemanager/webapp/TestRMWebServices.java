@@ -22,20 +22,30 @@ import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseS
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.StringReader;
 import java.security.Principal;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -44,22 +54,36 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.*;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerConfigValidator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.MutableCSConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -71,6 +95,8 @@ import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
+import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Assert;
@@ -685,12 +711,14 @@ public class TestRMWebServices extends JerseyTestBase {
     // verify we don't get any apps when querying
     HttpServletRequest mockHsr = mock(HttpServletRequest.class);
     AppsInfo appsInfo = webSvc.getApps(mockHsr, null, emptySet, null,
-        null, null, null, null, null, null, null, emptySet, emptySet, null);
+        null, null, null, null, null, null, null, emptySet, emptySet, null,
+        null);
     assertTrue(appsInfo.getApps().isEmpty());
 
     // verify we don't get an NPE when specifying a final status query
     appsInfo = webSvc.getApps(mockHsr, null, emptySet, "FAILED",
-        null, null, null, null, null, null, null, emptySet, emptySet, null);
+        null, null, null, null, null, null, null, emptySet, emptySet, null,
+        null);
     assertTrue(appsInfo.getApps().isEmpty());
   }
 
@@ -870,6 +898,91 @@ public class TestRMWebServices extends JerseyTestBase {
     verifyClusterUserInfo(userInfo, "yarn", "admin");
   }
 
+  @Test
+  public void testInvalidXMLChars() throws Exception {
+    ResourceManager mockRM = mock(ResourceManager.class);
+
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationReport appReport = ApplicationReport.newInstance(
+        applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
+        "user", "queue", "appname", "host", 124, null,
+        YarnApplicationState.FAILED, "java.lang.Exception: \u0001", "url",
+        0, 0, 0, FinalApplicationStatus.FAILED, null, "N/A", 0.53789f, "YARN",
+        null, null, false, Priority.newInstance(0), "high-mem", "high-mem");
+    List<ApplicationReport> appReports = new ArrayList<ApplicationReport>();
+    appReports.add(appReport);
+
+    GetApplicationsResponse response = mock(GetApplicationsResponse.class);
+    when(response.getApplicationList()).thenReturn(appReports);
+    ClientRMService clientRMService = mock(ClientRMService.class);
+    when(clientRMService.getApplications(any(GetApplicationsRequest.class)))
+        .thenReturn(response);
+    when(mockRM.getClientRMService()).thenReturn(clientRMService);
+
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getDispatcher()).thenReturn(mock(Dispatcher.class));
+
+    ApplicationSubmissionContext applicationSubmissionContext = mock(
+        ApplicationSubmissionContext.class);
+    when(applicationSubmissionContext.getUnmanagedAM()).thenReturn(true);
+
+    RMApp app = mock(RMApp.class);
+    RMAppMetrics appMetrics = new RMAppMetrics(Resource.newInstance(0, 0),
+        0, 0, new HashMap<>(), new HashMap<>());
+    when(app.getDiagnostics()).thenReturn(
+        new StringBuilder("java.lang.Exception: \u0001"));
+    when(app.getApplicationId()).thenReturn(applicationId);
+    when(app.getUser()).thenReturn("user");
+    when(app.getName()).thenReturn("appname");
+    when(app.getQueue()).thenReturn("queue");
+    when(app.getRMAppMetrics()).thenReturn(appMetrics);
+    when(app.getApplicationSubmissionContext()).thenReturn(
+        applicationSubmissionContext);
+
+    ConcurrentMap<ApplicationId, RMApp> applications =
+        new ConcurrentHashMap<>();
+    applications.put(applicationId, app);
+
+    when(rmContext.getRMApps()).thenReturn(applications);
+    when(mockRM.getRMContext()).thenReturn(rmContext);
+
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.FILTER_INVALID_XML_CHARS, true);
+    RMWebServices webSvc = new RMWebServices(mockRM, conf, mock(
+        HttpServletResponse.class));
+
+    HttpServletRequest mockHsr = mock(HttpServletRequest.class);
+    when(mockHsr.getHeader(HttpHeaders.ACCEPT)).
+         thenReturn(MediaType.APPLICATION_XML);
+    Set<String> emptySet = Collections.unmodifiableSet(Collections.emptySet());
+
+    AppsInfo appsInfo = webSvc.getApps(mockHsr, null, emptySet, null,
+        null, null, null, null, null, null, null, emptySet, emptySet,
+        null, null);
+
+    assertEquals("Incorrect Number of Apps", 1, appsInfo.getApps().size());
+    assertEquals("Invalid XML Characters Present",
+        "java.lang.Exception: \uFFFD", appsInfo.getApps().get(0).getNote());
+  }
+
+  @Test
+  public void testDisableRestAppSubmission() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.ENABLE_REST_APP_SUBMISSIONS, false);
+    RMWebServices webSvc = new RMWebServices(mock(ResourceManager.class), conf,
+        mock(HttpServletResponse.class));
+    HttpServletRequest request = mock(HttpServletRequest.class);
+
+    Response response = webSvc.createNewApplication(request);
+    assertEquals(Status.FORBIDDEN.getStatusCode(), response.getStatus());
+    assertEquals("App submission via REST is disabled.", response.getEntity());
+
+    response = webSvc.submitApplication(
+        mock(ApplicationSubmissionContextInfo.class), request);
+    assertEquals(Status.FORBIDDEN.getStatusCode(), response.getStatus());
+    assertEquals("App submission via REST is disabled.", response.getEntity());
+  }
+
   public void verifyClusterUserInfo(ClusterUserInfo userInfo,
             String rmLoginUser, String requestedUser) {
     assertEquals("rmLoginUser doesn't match: ",
@@ -877,4 +990,112 @@ public class TestRMWebServices extends JerseyTestBase {
     assertEquals("requestedUser doesn't match: ",
             requestedUser, userInfo.getRequestedUser());
   }
+
+  @Test
+  public void testValidateAndGetSchedulerConfigurationInvalidScheduler()
+          throws AuthorizationException {
+    ResourceScheduler scheduler = new CapacityScheduler();
+    RMWebServices webService = prepareWebServiceForValidation(scheduler);
+    SchedConfUpdateInfo mutationInfo = new SchedConfUpdateInfo();
+    HttpServletRequest mockHsr = prepareServletRequestForValidation();
+    Response response = webService
+            .validateAndGetSchedulerConfiguration(mutationInfo, mockHsr);
+    Assert.assertEquals(Status.BAD_REQUEST
+            .getStatusCode(), response.getStatus());
+    Assert.assertTrue(response.getEntity().toString()
+            .contains("Configuration change validation only supported by"
+                    +" MutableConfScheduler."));
+  }
+
+  @Test
+  public void testValidateAndGetSchedulerConfigurationInvalidConfig()
+          throws IOException {
+    Configuration config = CapacitySchedulerConfigGeneratorForTest
+            .createBasicCSConfiguration();
+    ResourceScheduler scheduler = prepareCSForValidation(config);
+
+    SchedConfUpdateInfo mutationInfo = new SchedConfUpdateInfo();
+    ArrayList<String> queuesToRemove = new ArrayList();
+    queuesToRemove.add("root.test1");
+    mutationInfo.setRemoveQueueInfo(queuesToRemove);
+
+    RMWebServices webService = prepareWebServiceForValidation(scheduler);
+    HttpServletRequest mockHsr = prepareServletRequestForValidation();
+
+    Response response = webService
+            .validateAndGetSchedulerConfiguration(mutationInfo, mockHsr);
+    Assert.assertEquals(Status.BAD_REQUEST
+            .getStatusCode(), response.getStatus());
+    Assert.assertTrue(response.getEntity().toString()
+            .contains("Illegal capacity of 0.5 for children of queue"));
+  }
+
+  @Test
+  public void testValidateAndGetSchedulerConfigurationValidScheduler()
+          throws IOException {
+    Configuration config = CapacitySchedulerConfigGeneratorForTest
+            .createBasicCSConfiguration();
+    config.set("yarn.scheduler.capacity.root.test1.state", "STOPPED");
+    config.set("yarn.scheduler.capacity.queue-mappings",
+            "u:test2:test2");
+    ResourceScheduler scheduler = prepareCSForValidation(config);
+
+    SchedConfUpdateInfo mutationInfo = new SchedConfUpdateInfo();
+    ArrayList<String> queuesToRemove = new ArrayList();
+    queuesToRemove.add("root.test1");
+    mutationInfo.setRemoveQueueInfo(queuesToRemove);
+    ArrayList<QueueConfigInfo> updateQueueInfo = new ArrayList<>();
+    String queueToUpdate = "root.test2";
+    Map<String, String> propertiesToUpdate = new HashMap<>();
+    propertiesToUpdate.put("capacity", "100");
+    updateQueueInfo.add(new QueueConfigInfo(queueToUpdate, propertiesToUpdate));
+    mutationInfo.setUpdateQueueInfo(updateQueueInfo);
+
+    RMWebServices webService = prepareWebServiceForValidation(scheduler);
+    HttpServletRequest mockHsr = prepareServletRequestForValidation();
+
+    Response response = webService
+            .validateAndGetSchedulerConfiguration(mutationInfo, mockHsr);
+    Assert.assertEquals(Status.OK
+            .getStatusCode(), response.getStatus());
+  }
+
+  private CapacityScheduler prepareCSForValidation(Configuration config)
+          throws IOException {
+    CapacityScheduler scheduler = mock(CapacityScheduler.class);
+    when(scheduler.isConfigurationMutable())
+            .thenReturn(true);
+    MutableCSConfigurationProvider configurationProvider =
+            mock(MutableCSConfigurationProvider.class);
+    when(scheduler.getMutableConfProvider())
+            .thenReturn(configurationProvider);
+
+    when(configurationProvider.getConfiguration()).thenReturn(config);
+    when(scheduler.getConf()).thenReturn(config);
+    when(configurationProvider
+            .applyChanges(any(), any())).thenCallRealMethod();
+    return scheduler;
+  }
+
+  private HttpServletRequest prepareServletRequestForValidation() {
+    HttpServletRequest mockHsr = mock(HttpServletRequest.class);
+    when(mockHsr.getUserPrincipal()).thenReturn(() -> "yarn");
+    return mockHsr;
+  }
+
+  private RMWebServices prepareWebServiceForValidation(
+          ResourceScheduler scheduler) {
+    ResourceManager mockRM = mock(ResourceManager.class);
+    ApplicationACLsManager acLsManager = mock(ApplicationACLsManager.class);
+    RMWebServices webService = new RMWebServices(mockRM, new Configuration(),
+            mock(HttpServletResponse.class));
+    when(mockRM.getResourceScheduler()).thenReturn(scheduler);
+    when(acLsManager.areACLsEnabled()).thenReturn(false);
+    when(mockRM.getApplicationACLsManager()).thenReturn(acLsManager);
+    RMContext context = TestCapacitySchedulerConfigValidator.prepareRMContext();
+    when(mockRM.getRMContext()).thenReturn(context);
+
+    return  webService;
+  }
+
 }

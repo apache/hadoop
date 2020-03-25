@@ -33,7 +33,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
@@ -184,6 +186,30 @@ public class FsDatasetCache {
     this.memCacheStats = cacheLoader.initialize(this.getDnConf());
   }
 
+  /**
+   * For persistent memory cache, create cache subdirectory specified with
+   * blockPoolId to store cache data.
+   * Recover the status of cache in persistent memory, if any.
+   */
+  public void initCache(String bpid) throws IOException {
+    if (cacheLoader.isTransientCache()) {
+      return;
+    }
+    PmemVolumeManager.getInstance().createBlockPoolDir(bpid);
+    if (getDnConf().getPmemCacheRecoveryEnabled()) {
+      final Map<ExtendedBlockId, MappableBlock> keyToMappableBlock =
+          PmemVolumeManager.getInstance().recoverCache(bpid, cacheLoader);
+      Set<Map.Entry<ExtendedBlockId, MappableBlock>> entrySet
+          = keyToMappableBlock.entrySet();
+      for (Map.Entry<ExtendedBlockId, MappableBlock> entry : entrySet) {
+        mappableBlockMap.put(entry.getKey(),
+            new Value(keyToMappableBlock.get(entry.getKey()), State.CACHED));
+        numBlocksCached.addAndGet(1);
+        dataset.datanode.getMetrics().incrBlocksCached(1);
+      }
+    }
+  }
+
   DNConf getDnConf() {
     return this.dataset.datanode.getDnConf();
   }
@@ -191,7 +217,7 @@ public class FsDatasetCache {
   /**
    * Get the cache path if the replica is cached into persistent memory.
    */
-  String getReplicaCachePath(String bpid, long blockId) {
+  String getReplicaCachePath(String bpid, long blockId) throws IOException {
     if (cacheLoader.isTransientCache() ||
         !isCached(bpid, blockId)) {
       return null;
@@ -267,8 +293,8 @@ public class FsDatasetCache {
     Value prevValue = mappableBlockMap.get(key);
     boolean deferred = false;
 
-    if (!dataset.datanode.getShortCircuitRegistry().
-            processBlockMunlockRequest(key)) {
+    if (cacheLoader.isTransientCache() && !dataset.datanode.
+        getShortCircuitRegistry().processBlockMunlockRequest(key)) {
       deferred = true;
     }
     if (prevValue == null) {
@@ -438,7 +464,11 @@ public class FsDatasetCache {
         }
         LOG.debug("Successfully cached {}.  We are now caching {} bytes in"
             + " total.", key, newUsedBytes);
-        dataset.datanode.getShortCircuitRegistry().processBlockMlockEvent(key);
+        // Only applicable to DRAM cache.
+        if (cacheLoader.isTransientCache()) {
+          dataset.datanode.
+              getShortCircuitRegistry().processBlockMlockEvent(key);
+        }
         numBlocksCached.addAndGet(1);
         dataset.datanode.getMetrics().incrBlocksCached(1);
         success = true;
@@ -476,6 +506,11 @@ public class FsDatasetCache {
     }
 
     private boolean shouldDefer() {
+      // Currently, defer condition is just checked for DRAM cache case.
+      if (!cacheLoader.isTransientCache()) {
+        return false;
+      }
+
       /* If revocationTimeMs == 0, this is an immediate uncache request.
        * No clients were anchored at the time we made the request. */
       if (revocationTimeMs == 0) {

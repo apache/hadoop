@@ -183,6 +183,8 @@ public class CapacityScheduler extends
 
   private CapacitySchedulerQueueManager queueManager;
 
+  private WorkflowPriorityMappingsManager workflowPriorityMappingsMgr;
+
   // timeout to join when we stop this service
   protected final long THREAD_JOIN_TIMEOUT_MS = 1000;
 
@@ -205,40 +207,9 @@ public class CapacityScheduler extends
 
   private void validateConf(Configuration conf) {
     // validate scheduler memory allocation setting
-    int minMem = conf.getInt(
-      YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
-    int maxMem = conf.getInt(
-      YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
-
-    if (minMem <= 0 || minMem > maxMem) {
-      throw new YarnRuntimeException("Invalid resource scheduler memory"
-        + " allocation configuration"
-        + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB
-        + "=" + minMem
-        + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-        + "=" + maxMem + ", min and max should be greater than 0"
-        + ", max should be no smaller than min.");
-    }
-
+    CapacitySchedulerConfigValidator.validateMemoryAllocation(conf);
     // validate scheduler vcores allocation setting
-    int minVcores = conf.getInt(
-      YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
-    int maxVcores = conf.getInt(
-      YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
-
-    if (minVcores <= 0 || minVcores > maxVcores) {
-      throw new YarnRuntimeException("Invalid resource scheduler vcores"
-        + " allocation configuration"
-        + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES
-        + "=" + minVcores
-        + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
-        + "=" + maxVcores + ", min and max should be greater than 0"
-        + ", max should be no smaller than min.");
-    }
+    CapacitySchedulerConfigValidator.validateVCores(conf);
   }
 
   @Override
@@ -321,7 +292,7 @@ public class CapacityScheduler extends
 
   @VisibleForTesting
   void initScheduler(Configuration configuration) throws
-      IOException {
+      IOException, YarnException {
     writeLock.lock();
     try {
       String confProviderStr = configuration.get(
@@ -363,6 +334,8 @@ public class CapacityScheduler extends
       this.queueManager = new CapacitySchedulerQueueManager(yarnConf,
           this.labelManager, this.appPriorityACLManager);
       this.queueManager.setCapacitySchedulerContext(this);
+
+      this.workflowPriorityMappingsMgr = new WorkflowPriorityMappingsManager();
 
       this.activitiesManager = new ActivitiesManager(rmContext);
       activitiesManager.init(conf);
@@ -476,14 +449,17 @@ public class CapacityScheduler extends
     super.serviceStop();
   }
 
-  @Override
-  public void reinitialize(Configuration newConf, RMContext rmContext)
-      throws IOException {
+  public void reinitialize(Configuration newConf, RMContext rmContext,
+         boolean validation) throws IOException {
     writeLock.lock();
     try {
       Configuration configuration = new Configuration(newConf);
       CapacitySchedulerConfiguration oldConf = this.conf;
-      this.conf = csConfProvider.loadConfiguration(configuration);
+      if (validation) {
+        this.conf = new CapacitySchedulerConfiguration(newConf, false);
+      } else {
+        this.conf = csConfProvider.loadConfiguration(configuration);
+      }
       validateConf(this.conf);
       try {
         LOG.info("Re-initializing queues...");
@@ -497,17 +473,26 @@ public class CapacityScheduler extends
         throw new IOException("Failed to re-init queues : " + t.getMessage(),
             t);
       }
+      if (!validation) {
 
-      // update lazy preemption
-      this.isLazyPreemptionEnabled = this.conf.getLazyPreemptionEnabled();
+        // update lazy preemption
+        this.isLazyPreemptionEnabled = this.conf.getLazyPreemptionEnabled();
 
-      // Setup how many containers we can allocate for each round
-      offswitchPerHeartbeatLimit = this.conf.getOffSwitchPerHeartbeatLimit();
+        // Setup how many containers we can allocate for each round
+        offswitchPerHeartbeatLimit = this.conf.getOffSwitchPerHeartbeatLimit();
 
-      super.reinitialize(newConf, rmContext);
+        super.reinitialize(newConf, rmContext);
+      }
     } finally {
       writeLock.unlock();
     }
+
+  }
+
+  @Override
+  public void reinitialize(Configuration newConf, RMContext rmContext)
+      throws IOException {
+    reinitialize(newConf, rmContext, false);
   }
 
   long getAsyncScheduleInterval() {
@@ -710,19 +695,13 @@ public class CapacityScheduler extends
     Collection<String> placementRuleStrs = conf.getStringCollection(
         YarnConfiguration.QUEUE_PLACEMENT_RULES);
     List<PlacementRule> placementRules = new ArrayList<>();
-    Set<String> distingushRuleSet = new HashSet<>();
-    // fail the case if we get duplicate placementRule add in
-    for (String pls : placementRuleStrs) {
-      if (!distingushRuleSet.add(pls)) {
-        throw new IOException("Invalid PlacementRule inputs which "
-            + "contains duplicate rule strings");
-      }
-    }
+    Set<String> distinguishRuleSet = CapacitySchedulerConfigValidator
+            .validatePlacementRules(placementRuleStrs);
 
     // add UserGroupMappingPlacementRule if absent
-    distingushRuleSet.add(YarnConfiguration.USER_GROUP_PLACEMENT_RULE);
+    distinguishRuleSet.add(YarnConfiguration.USER_GROUP_PLACEMENT_RULE);
 
-    placementRuleStrs = new ArrayList<>(distingushRuleSet);
+    placementRuleStrs = new ArrayList<>(distinguishRuleSet);
 
     for (String placementRuleStr : placementRuleStrs) {
       switch (placementRuleStr) {
@@ -764,14 +743,19 @@ public class CapacityScheduler extends
 
   @Lock(CapacityScheduler.class)
   private void initializeQueues(CapacitySchedulerConfiguration conf)
-    throws IOException {
+    throws YarnException {
+    try {
+      this.queueManager.initializeQueues(conf);
 
-    this.queueManager.initializeQueues(conf);
+      updatePlacementRules();
 
-    updatePlacementRules();
+      this.workflowPriorityMappingsMgr.initialize(this);
 
-    // Notify Preemption Manager
-    preemptionManager.refreshQueues(null, this.getRootQueue());
+      // Notify Preemption Manager
+      preemptionManager.refreshQueues(null, this.getRootQueue());
+    } catch (Exception e) {
+      throw new YarnException("Failed to initialize queues", e);
+    }
   }
 
   @Lock(CapacityScheduler.class)
@@ -779,6 +763,8 @@ public class CapacityScheduler extends
   throws IOException {
     this.queueManager.reinitializeQueues(newConf);
     updatePlacementRules();
+
+    this.workflowPriorityMappingsMgr.initialize(this);
 
     // Notify Preemption Manager
     preemptionManager.refreshQueues(null, this.getRootQueue());
@@ -985,6 +971,17 @@ public class CapacityScheduler extends
                   message));
           return;
         }
+      }
+
+      try {
+        priority = workflowPriorityMappingsMgr.mapWorkflowPriorityForApp(
+            applicationId, queue, user, priority);
+      } catch (YarnException e) {
+        String message = "Failed to submit application " + applicationId +
+            " submitted by user " + user + " reason: " + e.getMessage();
+        this.rmContext.getDispatcher().getEventHandler().handle(new RMAppEvent(
+            applicationId, RMAppEventType.APP_REJECTED, message));
+        return;
       }
 
       // Submit to the queue
@@ -2047,6 +2044,7 @@ public class CapacityScheduler extends
         super.completedContainer(container, SchedulerUtils
             .createAbnormalContainerStatus(container.getContainerId(),
                 SchedulerUtils.LOST_CONTAINER), RMContainerEventType.KILL);
+        node.releaseContainer(container.getContainerId(), true);
       }
 
       // Remove reservations, if any
@@ -2451,6 +2449,11 @@ public class CapacityScheduler extends
         for (RMContainer rmContainer : app.getLiveContainers()) {
           source.detachContainer(getClusterResource(), app, rmContainer);
           // attach the Container to another queue
+          dest.attachContainer(getClusterResource(), app, rmContainer);
+        }
+        // Move all reserved containers
+        for (RMContainer rmContainer : app.getReservedContainers()) {
+          source.detachContainer(getClusterResource(), app, rmContainer);
           dest.attachContainer(getClusterResource(), app, rmContainer);
         }
         if (!app.isStopped()) {
@@ -3043,6 +3046,10 @@ public class CapacityScheduler extends
   @Override
   public CapacitySchedulerQueueManager getCapacitySchedulerQueueManager() {
     return this.queueManager;
+  }
+
+  public WorkflowPriorityMappingsManager getWorkflowPriorityMappingsManager() {
+    return this.workflowPriorityMappingsMgr;
   }
 
   /**

@@ -62,7 +62,7 @@ public final class BlockOutputStreamEntry extends OutputStream {
   @SuppressWarnings("parameternumber")
   private BlockOutputStreamEntry(BlockID blockID, String key,
       XceiverClientManager xceiverClientManager,
-      Pipeline pipeline, String requestId, int chunkSize,
+      XceiverClientSpi xceiverClient, String requestId, int chunkSize,
       long length, long streamBufferFlushSize, long streamBufferMaxSize,
       long watchTimeout, BufferPool bufferPool,
       ChecksumType checksumType, int bytesPerChecksum,
@@ -84,6 +84,31 @@ public final class BlockOutputStreamEntry extends OutputStream {
     this.bytesPerChecksum = bytesPerChecksum;
   }
 
+  /**
+   * For testing purpose, taking a some random created stream instance.
+   *
+   * @param outputStream a existing writable output stream
+   * @param length the length of data to write to the stream
+   */
+  BlockOutputStreamEntry(OutputStream outputStream, long length,
+                         Checksum checksum) {
+    this.outputStream = outputStream;
+    this.blockID = null;
+    this.key = null;
+    this.xceiverClientManager = null;
+    this.xceiverClient = null;
+    this.requestId = null;
+    this.chunkSize = -1;
+    this.token = null;
+    this.length = length;
+    this.currentPosition = 0;
+    streamBufferFlushSize = 0;
+    streamBufferMaxSize = 0;
+    bufferList = null;
+    watchTimeout = 0;
+    this.checksum = checksum;
+  }
+
   long getLength() {
     return length;
   }
@@ -96,12 +121,6 @@ public final class BlockOutputStreamEntry extends OutputStream {
     return length - currentPosition;
   }
 
-  /**
-   * BlockOutputStream is initialized in this function. This makes sure that
-   * xceiverClient initialization is not done during preallocation and only
-   * done when data is written.
-   * @throws IOException if xceiverClient initialization fails
-   */
   private void checkStream() throws IOException {
     if (this.outputStream == null) {
       if (getToken() != null) {
@@ -114,7 +133,6 @@ public final class BlockOutputStreamEntry extends OutputStream {
               bytesPerChecksum);
     }
   }
-
 
   @Override
   public void write(int b) throws IOException {
@@ -187,7 +205,7 @@ public final class BlockOutputStreamEntry extends OutputStream {
     }
   }
 
-  void cleanup(boolean invalidateClient) throws IOException {
+  void cleanup() throws IOException{
     checkStream();
     BlockOutputStream out = (BlockOutputStream) this.outputStream;
     out.cleanup(invalidateClient);
@@ -210,7 +228,7 @@ public final class BlockOutputStreamEntry extends OutputStream {
     private BlockID blockID;
     private String key;
     private XceiverClientManager xceiverClientManager;
-    private Pipeline pipeline;
+    private XceiverClientSpi xceiverClient;
     private String requestId;
     private int chunkSize;
     private long length;
@@ -295,7 +313,7 @@ public final class BlockOutputStreamEntry extends OutputStream {
 
     public BlockOutputStreamEntry build() {
       return new BlockOutputStreamEntry(blockID, key,
-          xceiverClientManager, pipeline, requestId, chunkSize,
+          xceiverClientManager, xceiverClient, requestId, chunkSize,
           length, streamBufferFlushSize, streamBufferMaxSize, watchTimeout,
           bufferPool, checksumType, bytesPerChecksum, token);
     }
@@ -318,8 +336,8 @@ public final class BlockOutputStreamEntry extends OutputStream {
     return xceiverClientManager;
   }
 
-  public Pipeline getPipeline() {
-    return pipeline;
+  public XceiverClientSpi getXceiverClient() {
+    return xceiverClient;
   }
 
   public int getChunkSize() {

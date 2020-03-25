@@ -62,7 +62,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
  * A JournalManager that writes to a set of remote JournalNodes,
@@ -579,6 +579,8 @@ public class QuorumJournalManager implements JournalManager {
         LOG.debug(msg.toString());
       }
     }
+    // Cancel any outstanding calls to JN's.
+    q.cancelCalls();
 
     int maxAllowedTxns = !onlyDurableTxns ? highestTxnCount :
         responseCounts.get(responseCounts.size() - loggers.getMajoritySize());

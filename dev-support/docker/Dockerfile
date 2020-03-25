@@ -106,12 +106,12 @@ ENV CMAKE_HOME /opt/cmake
 ENV PATH "${PATH}:/opt/cmake/bin"
 
 ######
-# Install Google Protobuf 2.5.0 (2.6.0 ships with Xenial)
+# Install Google Protobuf 3.7.1 (2.6.0 ships with Xenial)
 ######
 # hadolint ignore=DL3003
 RUN mkdir -p /opt/protobuf-src \
     && curl -L -s -S \
-      https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz \
+      https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
       -o /opt/protobuf.tar.gz \
     && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
     && cd /opt/protobuf-src \
@@ -147,9 +147,9 @@ ENV FINDBUGS_HOME /usr
 # Install shellcheck (0.4.6, the latest as of 2017-09-26)
 ####
 # hadolint ignore=DL3008
-RUN add-apt-repository -y ppa:jonathonf/ghc-8.0.2 \
+RUN add-apt-repository -y ppa:hvr/ghc \
     && apt-get -q update \
-    && apt-get -q install -y --no-install-recommends shellcheck \
+    && apt-get -q install -y --no-install-recommends shellcheck ghc-8.0.2 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -174,16 +174,23 @@ RUN pip2 install pylint==1.9.2
 RUN pip2 install python-dateutil==2.7.3
 
 ###
-# Install node.js for web UI framework (4.2.6 ships with Xenial)
+# Install node.js 8.17.0 for web UI framework (4.2.6 ships with Xenial)
 ###
-# hadolint ignore=DL3008, DL3016
-RUN apt-get -q update \
-    && apt-get install -y --no-install-recommends nodejs npm \
+RUN curl -L -s -S https://deb.nodesource.com/setup_8.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs=8.17.0-1nodesource1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && ln -s /usr/bin/nodejs /usr/bin/node \
-    && npm install npm@latest -g \
-    && npm install -g jshint
+    && npm install -g bower@1.8.8
+
+###
+## Install Yarn 1.12.1 for web UI framework
+####
+RUN curl -s -S https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
+    && echo 'deb https://dl.yarnpkg.com/debian/ stable main' > /etc/apt/sources.list.d/yarn.list \
+    && apt-get -q update \
+    && apt-get install -y --no-install-recommends yarn=1.21.1-1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 ###
 # Install hadolint
@@ -200,7 +207,6 @@ RUN curl -L -s -S \
 ###
 ENV MAVEN_OPTS -Xms256m -Xmx1536m
 
-
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
 # So tell Yetus not to read the rest of the file:
@@ -208,9 +214,10 @@ ENV MAVEN_OPTS -Xms256m -Xmx1536m
 ###
 
 # Hugo static website generator (for new hadoop site and Ozone docs)
-RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.30.2/hugo_0.30.2_Linux-64bit.deb \
+RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.58.3/hugo_0.58.3_Linux-64bit.deb \
     && dpkg --install hugo.deb \
     && rm hugo.deb
+
 
 # Add a welcome message and environment checks.
 COPY hadoop_env_checks.sh /root/hadoop_env_checks.sh

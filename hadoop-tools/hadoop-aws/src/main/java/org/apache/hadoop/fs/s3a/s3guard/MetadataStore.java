@@ -22,6 +22,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -30,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
@@ -75,14 +77,16 @@ public interface MetadataStore extends Closeable {
    * the lastUpdated field of the record has to be updated to <pre>now</pre>.
    *
    * @param path the path to delete
+   * @param operationState (nullable) operational state for a bulk update
    * @throws IOException if there is an error
    */
-  void delete(Path path)
+  void delete(Path path,
+      @Nullable BulkOperationState operationState)
       throws IOException;
 
   /**
    * Removes the record of exactly one path.  Does not leave a tombstone (see
-   * {@link MetadataStore#delete(Path)}. It is currently
+   * {@link MetadataStore#delete(Path, BulkOperationState)}. It is currently
    * intended for testing only, and a need to use it as part of normal
    * FileSystem usage is not anticipated.
    *
@@ -105,9 +109,26 @@ public interface MetadataStore extends Closeable {
    * the lastUpdated field of all records have to be updated to <pre>now</pre>.
    *
    * @param path the root of the sub-tree to delete
+   * @param operationState (nullable) operational state for a bulk update
    * @throws IOException if there is an error
    */
-  void deleteSubtree(Path path)
+  @Retries.RetryTranslated
+  void deleteSubtree(Path path,
+      @Nullable BulkOperationState operationState)
+      throws IOException;
+
+  /**
+   * Delete the paths.
+   * There's no attempt to order the paths: they are
+   * deleted in the order passed in.
+   * @param paths paths to delete.
+   * @param operationState Nullable operation state
+   * @throws IOException failure
+   */
+
+  @RetryTranslated
+  void deletePaths(Collection<Path> paths,
+      @Nullable BulkOperationState operationState)
       throws IOException;
 
   /**
@@ -143,6 +164,7 @@ public interface MetadataStore extends Closeable {
    *     in the MetadataStore.
    * @throws IOException if there is an error
    */
+  @Retries.RetryTranslated
   DirListingMetadata listChildren(Path path) throws IOException;
 
   /**
@@ -244,11 +266,19 @@ public interface MetadataStore extends Closeable {
    * missing metadata updates (create, delete) made to the same path by
    * another process.
    *
+   * To optimize updates and avoid overwriting existing entries which
+   * may contain extra data, entries in the list of unchangedEntries may
+   * be excluded. That is: the listing metadata has the full list of
+   * what it believes are children, but implementations can opt to ignore
+   * some.
    * @param meta Directory listing metadata.
+   * @param unchangedEntries list of entries in the dir listing which have
+   * not changed since the directory was list scanned on s3guard.
    * @param operationState operational state for a bulk update
    * @throws IOException if there is an error
    */
   void put(DirListingMetadata meta,
+      final List<Path> unchangedEntries,
       @Nullable BulkOperationState operationState) throws IOException;
 
   /**
@@ -307,12 +337,13 @@ public interface MetadataStore extends Closeable {
    * additional keyPrefix parameter to filter the pruned keys with a prefix.
    *
    * @param pruneMode Prune Mode
-   * @param cutoff Oldest time to allow (UTC)
+   * @param cutoff Oldest time in milliseconds to allow (UTC)
    * @param keyPrefix The prefix for the keys that should be removed
    * @throws IOException if there is an error
    * @throws UnsupportedOperationException if not implemented
+   * @return the number of pruned entries
    */
-  void prune(PruneMode pruneMode, long cutoff, String keyPrefix)
+  long prune(PruneMode pruneMode, long cutoff, String keyPrefix)
       throws IOException, UnsupportedOperationException;
 
   /**
@@ -330,6 +361,23 @@ public interface MetadataStore extends Closeable {
    * @throws IOException if there is an error
    */
   void updateParameters(Map<String, String> parameters) throws IOException;
+
+  /**
+   * Mark all directories created/touched in an operation as authoritative.
+   * The metastore can now update that path with any authoritative
+   * flags it chooses.
+   * The store may assume that therefore the operation state is complete.
+   * This holds for rename and needs to be documented for import.
+   * @param dest destination path.
+   * @param operationState active state.
+   * @throws IOException failure.
+   * @return the number of directories marked.
+   */
+  default int markAsAuthoritative(Path dest,
+      BulkOperationState operationState)
+      throws IOException {
+    return 0;
+  }
 
   /**
    * Modes of operation for prune.
@@ -368,7 +416,7 @@ public interface MetadataStore extends Closeable {
   default BulkOperationState initiateBulkWrite(
       BulkOperationState.OperationType operation,
       Path dest) throws IOException {
-    return null;
+    return new BulkOperationState(operation);
   }
 
   /**
@@ -380,4 +428,11 @@ public interface MetadataStore extends Closeable {
    */
   void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider);
 
+  /**
+   * Get any S3GuardInstrumentation for this store...must not be null.
+   * @return any store instrumentation.
+   */
+  default MetastoreInstrumentation getInstrumentation() {
+    return new MetastoreInstrumentationImpl();
+  }
 }

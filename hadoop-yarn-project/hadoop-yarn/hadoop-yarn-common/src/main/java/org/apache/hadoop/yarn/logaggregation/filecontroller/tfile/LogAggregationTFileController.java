@@ -27,6 +27,8 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.util.Pair;
@@ -264,7 +266,10 @@ public class LogAggregationTFileController
     String nodeId = logRequest.getNodeId();
     ApplicationId appId = logRequest.getAppId();
     String appOwner = logRequest.getAppOwner();
-    boolean getAllContainers = (containerIdStr == null);
+    ApplicationAttemptId appAttemptId = logRequest.getAppAttemptId();
+    boolean getAllContainers = (containerIdStr == null &&
+        appAttemptId == null);
+    boolean getOnlyOneContainer = containerIdStr != null;
     String nodeIdStr = (nodeId == null) ? null
         : LogAggregationUtils.getNodeString(nodeId);
     RemoteIterator<FileStatus> nodeFiles = LogAggregationUtils
@@ -297,7 +302,8 @@ public class LogAggregationTFileController
           LogKey key = new LogKey();
           valueStream = reader.next(key);
           while (valueStream != null) {
-            if (getAllContainers || (key.toString().equals(containerIdStr))) {
+            if (getAllContainers || (key.toString().equals(containerIdStr)) ||
+                belongsToAppAttempt(appAttemptId, key.toString())) {
               ContainerLogMeta containerLogMeta = new ContainerLogMeta(
                   key.toString(), thisNodeFile.getPath().getName());
               while (true) {
@@ -314,7 +320,7 @@ public class LogAggregationTFileController
                 }
               }
               containersLogMeta.add(containerLogMeta);
-              if (!getAllContainers) {
+              if (getOnlyOneContainer) {
                 break;
               }
             }

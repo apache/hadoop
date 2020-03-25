@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
@@ -69,6 +68,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSetUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicyForPendingApps;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.IteratorSelector;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.server.utils.Lock.NoLock;
@@ -128,10 +128,6 @@ public class LeafQueue extends AbstractCSQueue {
 
   List<AppPriorityACLGroup> priorityAcls =
       new ArrayList<AppPriorityACLGroup>();
-
-  // -1 indicates lifetime is disabled
-  private volatile long maxApplicationLifetime = -1;
-  private volatile long defaultApplicationLifetime = -1;
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public LeafQueue(CapacitySchedulerContext cs,
@@ -255,19 +251,6 @@ public class LeafQueue extends AbstractCSQueue {
       defaultAppPriorityPerQueue = Priority.newInstance(
           conf.getDefaultApplicationPriorityConfPerQueue(getQueuePath()));
 
-      maxApplicationLifetime =
-          conf.getMaximumLifetimePerQueue((getQueuePath()));
-      defaultApplicationLifetime =
-          conf.getDefaultLifetimePerQueue((getQueuePath()));
-      if (maxApplicationLifetime > 0 &&
-          defaultApplicationLifetime > maxApplicationLifetime) {
-        throw new YarnRuntimeException(
-            "Default lifetime" + defaultApplicationLifetime
-                + " can't exceed maximum lifetime " + maxApplicationLifetime);
-      }
-      defaultApplicationLifetime = defaultApplicationLifetime > 0
-          ? defaultApplicationLifetime : maxApplicationLifetime;
-
       // Validate leaf queue's user's weights.
       int queueUL = Math.min(100, conf.getUserLimit(getQueuePath()));
       for (Entry<String, Float> e : getUserWeights().entrySet()) {
@@ -328,9 +311,9 @@ public class LeafQueue extends AbstractCSQueue {
               + reservationsContinueLooking + "\n" + "preemptionDisabled = "
               + getPreemptionDisabled() + "\n" + "defaultAppPriorityPerQueue = "
               + defaultAppPriorityPerQueue + "\npriority = " + priority
-              + "\nmaxLifetime = " + maxApplicationLifetime + " seconds"
-              + "\ndefaultLifetime = "
-              + defaultApplicationLifetime + " seconds");
+              + "\nmaxLifetime = " + getMaximumApplicationLifetime()
+              + " seconds" + "\ndefaultLifetime = "
+              + getDefaultApplicationLifetime() + " seconds");
     } finally {
       writeLock.unlock();
     }
@@ -804,7 +787,8 @@ public class LeafQueue extends AbstractCSQueue {
       }
 
       for (Iterator<FiCaSchedulerApp> fsApp =
-           getPendingAppsOrderingPolicy().getAssignmentIterator();
+           getPendingAppsOrderingPolicy()
+               .getAssignmentIterator(IteratorSelector.EMPTY_ITERATOR_SELECTOR);
            fsApp.hasNext(); ) {
         FiCaSchedulerApp application = fsApp.next();
         ApplicationId applicationId = application.getApplicationId();
@@ -1095,8 +1079,10 @@ public class LeafQueue extends AbstractCSQueue {
 
     Map<String, CachedUserLimit> userLimits = new HashMap<>();
     boolean needAssignToQueueCheck = true;
+    IteratorSelector sel = new IteratorSelector();
+    sel.setPartition(candidates.getPartition());
     for (Iterator<FiCaSchedulerApp> assignmentIterator =
-         orderingPolicy.getAssignmentIterator();
+         orderingPolicy.getAssignmentIterator(sel);
          assignmentIterator.hasNext(); ) {
       FiCaSchedulerApp application = assignmentIterator.next();
 
@@ -2016,6 +2002,7 @@ public class LeafQueue extends AbstractCSQueue {
       allocateResource(clusterResource, application, rmContainer.getContainer()
           .getResource(), node.getPartition(), rmContainer);
       LOG.info("movedContainer" + " container=" + rmContainer.getContainer()
+          + " containerState="+ rmContainer.getState()
           + " resource=" + rmContainer.getContainer().getResource()
           + " queueMoveIn=" + this + " usedCapacity=" + getUsedCapacity()
           + " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() + " used="
@@ -2035,6 +2022,7 @@ public class LeafQueue extends AbstractCSQueue {
       releaseResource(clusterResource, application, rmContainer.getContainer()
           .getResource(), node.getPartition(), rmContainer);
       LOG.info("movedContainer" + " container=" + rmContainer.getContainer()
+          + " containerState="+ rmContainer.getState()
           + " resource=" + rmContainer.getContainer().getResource()
           + " queueMoveOut=" + this + " usedCapacity=" + getUsedCapacity()
           + " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() + " used="
@@ -2201,14 +2189,6 @@ public class LeafQueue extends AbstractCSQueue {
     CachedUserLimit(Resource userLimit) {
       this.userLimit = userLimit;
     }
-  }
-
-  public long getMaximumApplicationLifetime() {
-    return maxApplicationLifetime;
-  }
-
-  public long getDefaultApplicationLifetime() {
-    return defaultApplicationLifetime;
   }
 
   private void updateQueuePreemptionMetrics(RMContainer rmc) {

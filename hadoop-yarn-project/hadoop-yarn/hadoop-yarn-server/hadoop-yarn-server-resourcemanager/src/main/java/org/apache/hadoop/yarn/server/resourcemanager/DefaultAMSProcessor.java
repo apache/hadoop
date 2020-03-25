@@ -76,6 +76,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerNodeReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -118,6 +119,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
   private ResourceProfilesManager resourceProfilesManager;
   private boolean timelineServiceV2Enabled;
   private boolean nodelabelsEnabled;
+  private Set<String> exclusiveEnforcedPartitions;
 
   @Override
   public void init(ApplicationMasterServiceContext amsContext,
@@ -128,6 +130,8 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
         timelineServiceV2Enabled(rmContext.getYarnConfiguration());
     this.nodelabelsEnabled = YarnConfiguration
         .areNodeLabelsEnabled(rmContext.getYarnConfiguration());
+    this.exclusiveEnforcedPartitions = YarnConfiguration
+        .getExclusiveEnforcedPartitions(rmContext.getYarnConfiguration());
   }
 
   @Override
@@ -235,6 +239,10 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
       if (null == req.getNodeLabelExpression()
           && ResourceRequest.ANY.equals(req.getResourceName())) {
         req.setNodeLabelExpression(asc.getNodeLabelExpression());
+      }
+      if (ResourceRequest.ANY.equals(req.getResourceName())) {
+        SchedulerUtils.enforcePartitionExclusivity(req,
+            exclusiveEnforcedPartitions, asc.getNodeLabelExpression());
       }
     }
 
@@ -349,6 +357,9 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
     response.setContainersFromPreviousAttempts(
         allocation.getPreviousAttemptContainers());
+
+    response.setRejectedSchedulingRequests(allocation.getRejectedRequest());
+
   }
 
   private void handleInvalidResourceException(InvalidResourceRequestException e,

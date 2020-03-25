@@ -626,7 +626,7 @@ points for third-parties to integrate their authentication and authorization
 services into the ABFS client.
 
 * `CustomDelegationTokenManager` : adds ability to issue Hadoop Delegation Tokens.
-* `AbfsAuthorizer` permits client-side authorization of file operations.
+* `SASTokenProvider`: allows for custom provision of Azure Storage Shared Access Signature (SAS) tokens.
 * `CustomTokenProviderAdaptee`: allows for custom provision of
 Azure OAuth tokens.
 * `KeyProvider`.
@@ -643,6 +643,77 @@ Consult the javadocs for `org.apache.hadoop.fs.azurebfs.constants.ConfigurationK
 `org.apache.hadoop.fs.azurebfs.AbfsConfiguration` for the full list
 of configuration options and their default values.
 
+### <a name="appendblobkeyconfigoptions"></a> Append Blob Directories Options
+#### Config `fs.azure.appendblob.key` provides
+an option for using append blob for the files prefixed by the config value.
+
+### <a name="flushconfigoptions"></a> Flush Options
+
+#### <a name="abfsflushconfigoptions"></a> 1. Azure Blob File System Flush Options
+Config `fs.azure.enable.flush` provides an option to render ABFS flush APIs -
+ HFlush() and HSync() to be no-op. By default, this
+config will be set to true.
+
+Both the APIs will ensure that data is persisted.
+
+#### <a name="outputstreamflushconfigoptions"></a> 2. OutputStream Flush Options
+Config `fs.azure.disable.outputstream.flush` provides an option to render
+OutputStream Flush() API to be a no-op in AbfsOutputStream. By default, this
+config will be set to true.
+
+Hflush() being the only documented API that can provide persistent data
+transfer, Flush() also attempting to persist buffered data will lead to
+performance issues.
+
+### <a name="flushconfigoptions"></a> Access Options
+Config `fs.azure.enable.check.access` needs to be set true to enable
+ the AzureBlobFileSystem.access().
+
+### <a name="perfoptions"></a> Perf Options
+
+#### <a name="abfstracklatencyoptions"></a> 1. HTTP Request Tracking Options
+If you set `fs.azure.abfs.latency.track` to `true`, the module starts tracking the
+performance metrics of ABFS HTTP traffic. To obtain these numbers on your machine
+or cluster, you will also need to enable debug logging for the `AbfsPerfTracker`
+class in your `log4j` config. A typical perf log line appears like:
+
+```
+h=KARMA t=2019-10-25T20:21:14.518Z a=abfstest01.dfs.core.windows.net
+c=abfs-testcontainer-84828169-6488-4a62-a875-1e674275a29f cr=delete ce=deletePath
+r=Succeeded l=32 ls=32 lc=1 s=200 e= ci=95121dae-70a8-4187-b067-614091034558
+ri=97effdcf-201f-0097-2d71-8bae00000000 ct=0 st=0 rt=0 bs=0 br=0 m=DELETE
+u=https%3A%2F%2Fabfstest01.dfs.core.windows.net%2Ftestcontainer%2Ftest%3Ftimeout%3D90%26recursive%3Dtrue
+```
+
+The fields have the following definitions:
+
+`h`: host name
+`t`: time when this request was logged
+`a`: Azure storage account name
+`c`: container name
+`cr`: name of the caller method
+`ce`: name of the callee method
+`r`: result (Succeeded/Failed)
+`l`: latency (time spent in callee)
+`ls`: latency sum (aggregate time spent in caller; logged when there are multiple
+callees; logged with the last callee)
+`lc`: latency count (number of callees; logged when there are multiple callees;
+logged with the last callee)
+`s`: HTTP Status code
+`e`: Error code
+`ci`: client request ID
+`ri`: server request ID
+`ct`: connection time in milliseconds
+`st`: sending time in milliseconds
+`rt`: receiving time in milliseconds
+`bs`: bytes sent
+`br`: bytes received
+`m`: HTTP method (GET, PUT etc)
+`u`: Encoded HTTP URL
+
+Note that these performance numbers are also sent back to the ADLS Gen 2 API endpoints
+in the `x-ms-abfs-client-latency` HTTP headers in subsequent requests. Azure uses these
+settings to track their end-to-end latency.
 
 ## <a name="troubleshooting"></a> Troubleshooting
 
@@ -789,6 +860,37 @@ Likely causes are configuration and networking:
 signon page for humans, even though it is a machine calling.
 1. The URL is wrong —it is pointing at a web page unrelated to OAuth2.0
 1. There's a proxy server in the way trying to return helpful instructions.
+
+### `java.io.IOException: The ownership on the staging directory /tmp/hadoop-yarn/staging/user1/.staging is not as expected. It is owned by <principal_id>. The directory must be owned by the submitter user1 or user1`
+
+When using [Azure Managed Identities](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview), the files/directories in ADLS Gen2 by default will be owned by the service principal object id i.e. principal ID & submitting jobs as the local OS user 'user1' results in the above exception.
+
+The fix is to mimic the ownership to the local OS user, by adding the below properties to`core-site.xml`.
+
+```xml
+<property>
+  <name>fs.azure.identity.transformer.service.principal.id</name>
+  <value>service principal object id</value>
+  <description>
+  An Azure Active Directory object ID (oid) used as the replacement for names contained
+  in the list specified by “fs.azure.identity.transformer.service.principal.substitution.list”.
+  Notice that instead of setting oid, you can also set $superuser here.
+  </description>
+</property>
+<property>
+  <name>fs.azure.identity.transformer.service.principal.substitution.list</name>
+  <value>user1</value>
+  <description>
+  A comma separated list of names to be replaced with the service principal ID specified by
+  “fs.azure.identity.transformer.service.principal.id”.  This substitution occurs
+  when setOwner, setAcl, modifyAclEntries, or removeAclEntries are invoked with identities
+  contained in the substitution list. Notice that when in non-secure cluster, asterisk symbol *
+  can be used to match all user/group.
+  </description>
+</property>
+```
+
+Once the above properties are configured, `hdfs dfs -ls abfs://container1@abfswales1.dfs.core.windows.net/` shows the ADLS Gen2 files/directories are now owned by 'user1'.
 
 ## <a name="testing"></a> Testing ABFS
 

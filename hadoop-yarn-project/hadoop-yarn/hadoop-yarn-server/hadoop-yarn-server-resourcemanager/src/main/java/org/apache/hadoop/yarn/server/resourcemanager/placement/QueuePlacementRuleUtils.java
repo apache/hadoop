@@ -36,11 +36,14 @@ public final class QueuePlacementRuleUtils {
 
   public static final String PRIMARY_GROUP_MAPPING = "%primary_group";
 
+  public static final String SECONDARY_GROUP_MAPPING = "%secondary_group";
+
   private QueuePlacementRuleUtils() {
   }
 
-  private static void validateQueueMappingUnderParentQueue(CSQueue parentQueue,
-      String parentQueueName, String leafQueueName) throws IOException {
+  public static void validateQueueMappingUnderParentQueue(
+            CSQueue parentQueue, String parentQueueName,
+            String leafQueueName) throws IOException {
     if (parentQueue == null) {
       throw new IOException(
           "mapping contains invalid or non-leaf queue [" + leafQueueName
@@ -100,7 +103,8 @@ public final class QueuePlacementRuleUtils {
 
   public static boolean isStaticQueueMapping(QueueMappingEntity mapping) {
     return !mapping.getQueue().contains(CURRENT_USER_MAPPING) && !mapping
-        .getQueue().contains(PRIMARY_GROUP_MAPPING);
+        .getQueue().contains(PRIMARY_GROUP_MAPPING)
+        && !mapping.getQueue().contains(SECONDARY_GROUP_MAPPING);
   }
 
   public static QueuePath extractQueuePath(String queueName)

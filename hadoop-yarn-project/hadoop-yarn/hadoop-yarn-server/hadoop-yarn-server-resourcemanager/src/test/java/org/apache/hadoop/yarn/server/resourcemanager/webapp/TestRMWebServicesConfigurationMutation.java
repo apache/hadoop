@@ -60,6 +60,7 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ORDERING_POLICY;
 
 /**
  * Test scheduler configuration mutation via REST API.
@@ -190,6 +191,67 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
   }
 
   @Test
+  public void testFormatSchedulerConf() throws Exception {
+    CapacitySchedulerConfiguration newConf = getSchedulerConf();
+    assertNotNull(newConf);
+    assertEquals(3, newConf.getQueues("root").length);
+
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    Map<String, String> nearEmptyCapacity = new HashMap<>();
+    nearEmptyCapacity.put(CapacitySchedulerConfiguration.CAPACITY, "1E-4");
+    QueueConfigInfo d = new QueueConfigInfo("root.formattest",
+        nearEmptyCapacity);
+    updateInfo.getAddQueueInfo().add(d);
+
+    Map<String, String> stoppedParam = new HashMap<>();
+    stoppedParam.put(CapacitySchedulerConfiguration.STATE,
+        QueueState.STOPPED.toString());
+    QueueConfigInfo stoppedInfo = new QueueConfigInfo("root.formattest",
+        stoppedParam);
+    updateInfo.getUpdateQueueInfo().add(stoppedInfo);
+
+    // Add a queue root.formattest to the existing three queues
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-conf").queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(YarnWebServiceUtils.toJson(updateInfo,
+        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class);
+    newConf = getSchedulerConf();
+    assertNotNull(newConf);
+    assertEquals(4, newConf.getQueues("root").length);
+
+    // Format the scheduler config and validate root.formattest is not present
+    response = r.path("ws").path("v1").path("cluster")
+        .queryParam("user.name", userName)
+        .path(RMWSConsts.FORMAT_SCHEDULER_CONF)
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    newConf = getSchedulerConf();
+    assertEquals(3, newConf.getQueues("root").length);
+  }
+
+  private long getConfigVersion() throws Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .queryParam("user.name", userName)
+        .path(RMWSConsts.SCHEDULER_CONF_VERSION)
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+
+    JSONObject json = response.getEntity(JSONObject.class);
+    return Long.parseLong(json.get("versionID").toString());
+  }
+
+  @Test
+  public void testSchedulerConfigVersion() throws Exception {
+    assertEquals(1, getConfigVersion());
+    testAddNestedQueue();
+    assertEquals(2, getConfigVersion());
+  }
+
+  @Test
   public void testAddNestedQueue() throws Exception {
     CapacitySchedulerConfiguration orgConf = getSchedulerConf();
     assertNotNull(orgConf);
@@ -273,6 +335,105 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
   }
 
   @Test
+  public void testUnsetParentQueueOrderingPolicy() throws Exception {
+    WebResource r = resource();
+    ClientResponse response;
+
+    // Update ordering policy of Leaf Queue root.b to fair
+    SchedConfUpdateInfo updateInfo1 = new SchedConfUpdateInfo();
+    Map<String, String> updateParam = new HashMap<>();
+    updateParam.put(CapacitySchedulerConfiguration.ORDERING_POLICY,
+        "fair");
+    QueueConfigInfo aUpdateInfo = new QueueConfigInfo("root.b", updateParam);
+    updateInfo1.getUpdateQueueInfo().add(aUpdateInfo);
+    response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-conf").queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(YarnWebServiceUtils.toJson(updateInfo1,
+        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    CapacitySchedulerConfiguration newCSConf =
+        ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
+    String bOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
+        + "root.b" + CapacitySchedulerConfiguration.DOT + ORDERING_POLICY;
+    assertEquals("fair", newCSConf.get(bOrderingPolicy));
+
+    stopQueue("root.b");
+
+    // Add root.b.b1 which makes root.b a Parent Queue
+    SchedConfUpdateInfo updateInfo2 = new SchedConfUpdateInfo();
+    Map<String, String> capacity = new HashMap<>();
+    capacity.put(CapacitySchedulerConfiguration.CAPACITY, "100");
+    QueueConfigInfo b1 = new QueueConfigInfo("root.b.b1", capacity);
+    updateInfo2.getAddQueueInfo().add(b1);
+    response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-conf").queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(YarnWebServiceUtils.toJson(updateInfo2,
+        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class);
+
+    // Validate unset ordering policy of root.b after converted to
+    // Parent Queue
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    newCSConf = ((CapacityScheduler) rm.getResourceScheduler())
+        .getConfiguration();
+    bOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
+        + "root.b" + CapacitySchedulerConfiguration.DOT + ORDERING_POLICY;
+    assertNull("Failed to unset Parent Queue OrderingPolicy",
+        newCSConf.get(bOrderingPolicy));
+  }
+
+  @Test
+  public void testUnsetLeafQueueOrderingPolicy() throws Exception {
+    WebResource r = resource();
+    ClientResponse response;
+
+    // Update ordering policy of Parent Queue root.c to priority-utilization
+    SchedConfUpdateInfo updateInfo1 = new SchedConfUpdateInfo();
+    Map<String, String> updateParam = new HashMap<>();
+    updateParam.put(CapacitySchedulerConfiguration.ORDERING_POLICY,
+        "priority-utilization");
+    QueueConfigInfo aUpdateInfo = new QueueConfigInfo("root.c", updateParam);
+    updateInfo1.getUpdateQueueInfo().add(aUpdateInfo);
+    response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-conf").queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(YarnWebServiceUtils.toJson(updateInfo1,
+        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    CapacitySchedulerConfiguration newCSConf =
+        ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
+    String cOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
+        + "root.c" + CapacitySchedulerConfiguration.DOT + ORDERING_POLICY;
+    assertEquals("priority-utilization", newCSConf.get(cOrderingPolicy));
+
+    stopQueue("root.c.c1");
+
+    // Remove root.c.c1 which makes root.c a Leaf Queue
+    SchedConfUpdateInfo updateInfo2 = new SchedConfUpdateInfo();
+    updateInfo2.getRemoveQueueInfo().add("root.c.c1");
+    response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-conf").queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(YarnWebServiceUtils.toJson(updateInfo2,
+        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+
+    // Validate unset ordering policy of root.c after converted to
+    // Leaf Queue
+    newCSConf = ((CapacityScheduler) rm.getResourceScheduler())
+        .getConfiguration();
+    cOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
+        + "root.c" + CapacitySchedulerConfiguration.DOT + ORDERING_POLICY;
+    assertNull("Failed to unset Leaf Queue OrderingPolicy",
+        newCSConf.get(cOrderingPolicy));
+  }
+
+  @Test
   public void testRemoveQueue() throws Exception {
     WebResource r = resource();
 
@@ -293,8 +454,73 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
         ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
+    assertEquals("Failed to remove the queue",
+        1, newCSConf.getQueues("root.a").length);
+    assertEquals("Failed to remove the right queue",
+        "a1", newCSConf.getQueues("root.a")[0]);
+  }
+
+  @Test
+  public void testStopWithRemoveQueue() throws Exception {
+    WebResource r = resource();
+
+    ClientResponse response;
+
+    // Set state of queues to STOPPED.
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    Map<String, String> stoppedParam = new HashMap<>();
+    stoppedParam.put(CapacitySchedulerConfiguration.STATE,
+        QueueState.STOPPED.toString());
+    QueueConfigInfo stoppedInfo = new QueueConfigInfo("root.a.a2",
+        stoppedParam);
+    updateInfo.getUpdateQueueInfo().add(stoppedInfo);
+
+    updateInfo.getRemoveQueueInfo().add("root.a.a2");
+    response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-conf").queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(YarnWebServiceUtils.toJson(updateInfo,
+        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class);
+
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    CapacitySchedulerConfiguration newCSConf =
+        ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
     assertEquals(1, newCSConf.getQueues("root.a").length);
     assertEquals("a1", newCSConf.getQueues("root.a")[0]);
+  }
+
+  @Test
+  public void testStopWithConvertLeafToParentQueue() throws Exception {
+    WebResource r = resource();
+    ClientResponse response;
+
+    // Set state of queues to STOPPED.
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    Map<String, String> stoppedParam = new HashMap<>();
+    stoppedParam.put(CapacitySchedulerConfiguration.STATE,
+        QueueState.STOPPED.toString());
+    QueueConfigInfo stoppedInfo = new QueueConfigInfo("root.b",
+        stoppedParam);
+    updateInfo.getUpdateQueueInfo().add(stoppedInfo);
+
+    Map<String, String> b1Capacity = new HashMap<>();
+    b1Capacity.put(CapacitySchedulerConfiguration.CAPACITY, "100");
+    QueueConfigInfo b1 = new QueueConfigInfo("root.b.b1", b1Capacity);
+    updateInfo.getAddQueueInfo().add(b1);
+
+    response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-conf").queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(YarnWebServiceUtils.toJson(updateInfo,
+            SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class);
+
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    CapacitySchedulerConfiguration newCSConf =
+        ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
+    assertEquals(1, newCSConf.getQueues("root.b").length);
+    assertEquals("b1", newCSConf.getQueues("root.b")[0]);
   }
 
   @Test
@@ -535,6 +761,32 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertEquals(CapacitySchedulerConfiguration
         .DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS,
         newCSConf.getMaximumSystemApplications());
+  }
+
+  @Test
+  public void testValidateWithClusterMaxAllocation() throws Exception {
+    WebResource r = resource();
+    int clusterMax = YarnConfiguration.
+        DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB * 2;
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        clusterMax);
+
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    Map<String, String> updateParam = new HashMap<>();
+    updateParam.put(CapacitySchedulerConfiguration.MAXIMUM_APPLICATIONS_SUFFIX,
+        "100");
+    QueueConfigInfo aUpdateInfo = new QueueConfigInfo("root.a", updateParam);
+    updateInfo.getUpdateQueueInfo().add(aUpdateInfo);
+
+    ClientResponse response =
+        r.path("ws").path("v1").path("cluster")
+            .path(RMWSConsts.SCHEDULER_CONF_VALIDATE)
+            .queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity(YarnWebServiceUtils.toJson(updateInfo,
+                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
   }
 
   @Override

@@ -104,7 +104,7 @@ public class DFSck extends Configured implements Tool {
           "every block\n"
       + "\t-storagepolicies\tprint out storage policy summary for the blocks\n"
       + "\t-maintenance\tprint out maintenance state node details\n"
-      + "\t-showprogress\tshow progress in output. Default is OFF (no progress)\n"
+      + "\t-showprogress\tDeprecated. Progress is now shown by default\n"
       + "\t-blockId\tprint out which file this blockId belongs to, locations"
       + " (nodes, racks) of this block, and other diagnostics info"
       + " (under replicated, corrupted or not, etc)\n"

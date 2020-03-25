@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import javax.crypto.SecretKey;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.StorageType;
@@ -905,8 +905,8 @@ class DataXceiver extends Receiver implements Runnable {
       // receive the block and mirror to the next target
       if (blockReceiver != null) {
         String mirrorAddr = (mirrorSock == null) ? null : mirrorNode;
-        blockReceiver.receiveBlock(mirrorOut, mirrorIn, replyOut,
-            mirrorAddr, null, targets, false);
+        blockReceiver.receiveBlock(mirrorOut, mirrorIn, replyOut, mirrorAddr,
+            dataXceiverServer.getWriteThrottler(), targets, false);
 
         // send close-ack for transfer-RBW/Finalized 
         if (isTransfer) {

@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getServiceState;
+import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -31,13 +33,16 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.ServiceFailedException;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -48,9 +53,12 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.TestFsck;
 import org.apache.hadoop.hdfs.tools.GetGroups;
+import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -77,7 +85,12 @@ public class TestObserverNode {
   @BeforeClass
   public static void startUpCluster() throws Exception {
     conf = new Configuration();
-    qjmhaCluster = HATestUtil.setUpObserverCluster(conf, 1, 0, true);
+    conf.setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, true);
+    // Set observer probe retry period to 0. Required by the tests that restart
+    // Observer and immediately try to read from it.
+    conf.setTimeDuration(
+        OBSERVER_PROBE_RETRY_PERIOD_KEY, 0, TimeUnit.MILLISECONDS);
+    qjmhaCluster = HATestUtil.setUpObserverCluster(conf, 1, 1, true);
     dfsCluster = qjmhaCluster.getDfsCluster();
   }
 
@@ -363,6 +376,119 @@ public class TestObserverNode {
     LOG.info("result=" + result);
     assertTrue(result.contains("Status: HEALTHY"));
   }
+
+  /**
+   * Test that, if a write happens happens to go to Observer,
+   * Observer would throw {@link ObserverRetryOnActiveException},
+   * to inform client to retry on Active
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testObserverRetryActiveException() throws Exception {
+    boolean thrownRetryException = false;
+    try {
+      // Force a write on Observer, which should throw
+      // retry on active exception.
+      dfsCluster.getNameNode(2)
+          .getRpcServer()
+          .mkdirs("/testActiveRetryException",
+              FsPermission.createImmutable((short) 0755), true);
+    } catch (ObserverRetryOnActiveException orae) {
+      thrownRetryException = true;
+    }
+    assertTrue(thrownRetryException);
+  }
+
+  /**
+   * Test that for open call, if access time update is required,
+   * the open call should go to active, instead of observer.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testAccessTimeUpdateRedirectToActive() throws Exception {
+    // Create a new pat to not mess up other tests
+    Path tmpTestPath = new Path("/TestObserverNodeAccessTime");
+    dfs.create(tmpTestPath, (short)1).close();
+    assertSentTo(0);
+    dfs.open(tmpTestPath).close();
+    assertSentTo(2);
+    // Set access time to a time in the far past.
+    // So that next read call is guaranteed to
+    // have passed access time period.
+    dfs.setTimes(tmpTestPath, 0, 0);
+    // Verify that aTime update redirects on Active
+    dfs.open(tmpTestPath).close();
+    assertSentTo(0);
+  }
+
+
+  /**
+   * Test that if client connects to Active it does not try to find Observer
+   * on next calls during some period of time.
+   */
+  @Test
+  public void testStickyActive() throws Exception {
+    Path testFile = new Path(testPath, "testStickyActive");
+    Configuration newConf = new Configuration(conf);
+    // Observer probe retry period set to 5 sec
+    newConf.setLong(OBSERVER_PROBE_RETRY_PERIOD_KEY, 5000);
+    // Disable cache, so that a new client actually gets created with new conf.
+    newConf.setBoolean("fs.hdfs.impl.disable.cache", true);
+    DistributedFileSystem newFs = (DistributedFileSystem) FileSystem.get(newConf);
+    newFs.create(testFile, (short)1).close();
+    assertSentTo(0);
+    dfsCluster.rollEditLogAndTail(0);
+    // No Observers present, should still go to Active
+    dfsCluster.transitionToStandby(2);
+    assertEquals("NN[2] should be standby", HAServiceState.STANDBY,
+        getServiceState(dfsCluster.getNameNode(2)));
+    newFs.open(testFile).close();
+    assertSentTo(0);
+    // Restore Observer
+    int newObserver = 1;
+    dfsCluster.transitionToObserver(newObserver);
+    assertEquals("NN[" + newObserver + "] should be observer",
+        HAServiceState.OBSERVER,
+        getServiceState(dfsCluster.getNameNode(newObserver)));
+    long startTime = Time.monotonicNow();
+    try {
+      while(Time.monotonicNow() - startTime <= 5000) {
+        newFs.open(testFile).close();
+        // Client should still talk to Active
+        assertSentTo(0);
+        Thread.sleep(200);
+      }
+    } catch(AssertionError ae) {
+      if(Time.monotonicNow() - startTime <= 5000) {
+        throw ae;
+      }
+      assertSentTo(newObserver);
+    } finally {
+      dfsCluster.transitionToStandby(1);
+      dfsCluster.transitionToObserver(2);
+    }
+  }
+
+  @Test
+  public void testFsckDelete() throws Exception {
+    setObserverRead(true);
+    DFSTestUtil.createFile(dfs, testPath, 512, (short) 1, 0);
+    DFSTestUtil.waitForReplication(dfs, testPath, (short) 1, 5000);
+    ExtendedBlock block = DFSTestUtil.getFirstBlock(dfs, testPath);
+    int dnToCorrupt = DFSTestUtil.firstDnWithBlock(dfsCluster, block);
+    FSNamesystem ns = dfsCluster.getNameNode(0).getNamesystem();
+    // corrupt Replicas are detected on restarting datanode
+    dfsCluster.corruptReplica(dnToCorrupt, block);
+    dfsCluster.restartDataNode(dnToCorrupt);
+    DFSTestUtil.waitCorruptReplicas(dfs, ns, testPath, block, 1);
+    final String result = TestFsck.runFsck(conf, 1, true, "/", "-delete");
+    // filesystem should be in corrupt state
+    LOG.info("result=" + result);
+    assertTrue(result.contains("The filesystem under path '/' is CORRUPT"));
+  }
+
 
   private void assertSentTo(int nnIdx) throws IOException {
     assertTrue("Request was not sent to the expected namenode " + nnIdx,

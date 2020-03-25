@@ -102,9 +102,9 @@ public class ITestS3Select extends AbstractS3SelectTest {
   @Override
   public void setup() throws Exception {
     super.setup();
-    Assume.assumeTrue("S3 Select is not enabled",
-        getFileSystem().hasCapability(S3_SELECT_CAPABILITY));
     csvPath = path(getMethodName() + ".csv");
+    Assume.assumeTrue("S3 Select is not enabled",
+        getFileSystem().hasPathCapability(csvPath, S3_SELECT_CAPABILITY));
     selectConf = new Configuration(false);
     selectConf.setBoolean(SELECT_ERRORS_INCLUDE_SQL, true);
     createStandardCsvFile(getFileSystem(), csvPath, ALL_QUOTES);
@@ -256,6 +256,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
     ContractTestUtils.touch(fs, path);
     parseToLines(fs.openFile(path)
             .must(SELECT_SQL, SELECT_EVERYTHING)
+            .withFileStatus(fs.getFileStatus(path))
             .build()
             .get(),
         0);
@@ -548,14 +549,14 @@ public class ITestS3Select extends AbstractS3SelectTest {
     FutureDataInputStreamBuilder builder =
         getFileSystem().openFile(dir)
             .must(SELECT_SQL, SELECT_ODD_ENTRIES);
-    interceptFuture(PathIOException.class,
+    interceptFuture(FileNotFoundException.class,
         "", builder.build());
 
     // try the parent
     builder = getFileSystem().openFile(dir.getParent())
             .must(SELECT_SQL,
                 SELECT_ODD_ENTRIES);
-    interceptFuture(PathIOException.class,
+    interceptFuture(FileNotFoundException.class,
         "", builder.build());
   }
 
@@ -565,7 +566,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
     FutureDataInputStreamBuilder builder =
         getFileSystem().openFile(path("/"))
             .must(SELECT_SQL, SELECT_ODD_ENTRIES);
-    interceptFuture(PathIOException.class,
+    interceptFuture(FileNotFoundException.class,
         "", builder.build());
   }
 

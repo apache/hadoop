@@ -103,6 +103,11 @@
       <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -123,7 +128,9 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <forkMode>always</forkMode>
+          <testFailureIgnore>${ignoreTestFailure}</testFailureIgnore>
+          <forkCount>1</forkCount>
+          <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
           <argLine>-Xmx1024m</argLine>
           <includes>

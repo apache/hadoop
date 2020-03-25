@@ -106,7 +106,7 @@ public class TestPartialDeleteFailures {
     MultiObjectDeleteException ex = createDeleteException(ACCESS_DENIED,
         rejected);
     Pair<List<Path>, List<Path>> pair =
-        new MultiObjectDeleteSupport(context)
+        new MultiObjectDeleteSupport(context, null)
           .splitUndeletedKeys(ex, keys);
     List<Path> undeleted = pair.getLeft();
     List<Path> deleted = pair.getRight();
@@ -180,7 +180,7 @@ public class TestPartialDeleteFailures {
         = new OperationTrackingStore();
     StoreContext storeContext = createMockStoreContext(true, store);
     MultiObjectDeleteSupport deleteSupport
-        = new MultiObjectDeleteSupport(storeContext);
+        = new MultiObjectDeleteSupport(storeContext, null);
     Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>>
         triple = deleteSupport.processDeleteFailure(ex, keyList);
     Assertions.assertThat(triple.getRight())
@@ -250,6 +250,7 @@ public class TestPartialDeleteFailures {
     public String getBucketLocation() throws IOException {
       return null;
     }
+
   }
   /**
    * MetadataStore which tracks what is deleted and added.
@@ -309,6 +310,7 @@ public class TestPartialDeleteFailures {
 
     @Override
     public void put(final DirListingMetadata meta,
+        final List<Path> unchangedEntries,
         final BulkOperationState operationState) {
       created.add(meta.getPath());
     }
@@ -318,12 +320,20 @@ public class TestPartialDeleteFailures {
     }
 
     @Override
-    public void delete(final Path path) {
+    public void delete(final Path path,
+        final BulkOperationState operationState) {
       deleted.add(path);
     }
 
     @Override
-    public void deleteSubtree(final Path path) {
+    public void deletePaths(final Collection<Path> paths,
+        @Nullable final BulkOperationState operationState) throws IOException {
+      deleted.addAll(paths);
+    }
+
+    @Override
+    public void deleteSubtree(final Path path,
+        final BulkOperationState operationState) {
 
     }
 
@@ -338,10 +348,10 @@ public class TestPartialDeleteFailures {
     }
 
     @Override
-    public void prune(final PruneMode pruneMode,
+    public long prune(final PruneMode pruneMode,
         final long cutoff,
         final String keyPrefix) {
-
+      return 0;
     }
 
     @Override

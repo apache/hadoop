@@ -18,19 +18,16 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+import org.apache.commons.lang3.SerializationException;
+import org.apache.commons.lang3.SerializationUtils;
+
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.commons.io.IOUtils;
 
 /**
  * This class is used to store assigned resource to a single container by
@@ -91,16 +88,11 @@ public class ResourceMappings {
     @SuppressWarnings("unchecked")
     public static AssignedResources fromBytes(byte[] bytes)
         throws IOException {
-      ObjectInputStream ois = null;
-      List<Serializable> resources;
+      final List<Serializable> resources;
       try {
-        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-        ois = new ObjectInputStream(bis);
-        resources = (List<Serializable>) ois.readObject();
-      } catch (ClassNotFoundException e) {
+        resources = SerializationUtils.deserialize(bytes);
+      } catch (SerializationException e) {
         throw new IOException(e);
-      } finally {
-        IOUtils.closeQuietly(ois);
       }
       AssignedResources ar = new AssignedResources();
       ar.updateAssignedResources(resources);
@@ -108,15 +100,11 @@ public class ResourceMappings {
     }
 
     public byte[] toBytes() throws IOException {
-      ObjectOutputStream oos = null;
-      byte[] bytes;
+      final byte[] bytes;
       try {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        oos = new ObjectOutputStream(bos);
-        oos.writeObject(resources);
-        bytes = bos.toByteArray();
-      } finally {
-        IOUtils.closeQuietly(oos);
+        bytes = SerializationUtils.serialize((Serializable) resources);
+      } catch (SerializationException e) {
+        throw new IOException(e);
       }
       return bytes;
     }

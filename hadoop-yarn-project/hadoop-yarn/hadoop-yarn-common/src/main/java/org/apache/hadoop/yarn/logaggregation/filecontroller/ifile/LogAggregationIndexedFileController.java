@@ -44,15 +44,19 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import org.apache.commons.lang3.SerializationUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.HarFs;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -67,9 +71,9 @@ import org.apache.hadoop.io.file.tfile.SimpleBufferedOutputStream;
 import org.apache.hadoop.io.file.tfile.Compression.Algorithm;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
@@ -108,6 +112,7 @@ public class LogAggregationIndexedFileController
       "indexedFile.fs.retry-interval-ms";
   private static final String LOG_ROLL_OVER_MAX_FILE_SIZE_GB =
       "indexedFile.log.roll-over.max-file-size-gb";
+  private static final int LOG_ROLL_OVER_MAX_FILE_SIZE_GB_DEFAULT = 10;
 
   @VisibleForTesting
   public static final String CHECK_SUM_FILE_SUFFIX = "-checksum";
@@ -135,16 +140,6 @@ public class LogAggregationIndexedFileController
 
   @Override
   public void initInternal(Configuration conf) {
-    // Currently, we need the underlying File System to support append
-    // operation. Will remove this check after we finish
-    // LogAggregationIndexedFileController for non-append mode.
-    boolean append = conf.getBoolean(LOG_AGGREGATION_FS_SUPPORT_APPEND, true);
-    if (!append) {
-      throw new YarnRuntimeException("The configuration:"
-          + LOG_AGGREGATION_FS_SUPPORT_APPEND + " is set as False. We can only"
-          + " use LogAggregationIndexedFileController when the FileSystem "
-          + "support append operations.");
-    }
     String compressName = conf.get(
         YarnConfiguration.NM_LOG_AGG_COMPRESSION_TYPE,
         YarnConfiguration.DEFAULT_NM_LOG_AGG_COMPRESSION_TYPE);
@@ -190,9 +185,16 @@ public class LogAggregationIndexedFileController
             indexedLogsMeta.setCompressName(compressName);
           }
           Path aggregatedLogFile = null;
+          Pair<Path, Boolean> initializationResult = null;
+          boolean createdNew;
+
           if (context.isLogAggregationInRolling()) {
-            aggregatedLogFile = initializeWriterInRolling(
+            // In rolling log aggregation we need special initialization
+            // done in initializeWriterInRolling.
+            initializationResult = initializeWriterInRolling(
                 remoteLogFile, appId, nodeId);
+            aggregatedLogFile = initializationResult.getLeft();
+            createdNew = initializationResult.getRight();
           } else {
             aggregatedLogFile = remoteLogFile;
             fsDataOStream = fc.create(remoteLogFile,
@@ -203,22 +205,30 @@ public class LogAggregationIndexedFileController
             }
             fsDataOStream.write(uuid);
             fsDataOStream.flush();
+            createdNew = true;
           }
 
-          long aggregatedLogFileLength = fc.getFileStatus(
-              aggregatedLogFile).getLen();
-          // append a simple character("\n") to move the writer cursor, so
-          // we could get the correct position when we call
-          // fsOutputStream.getStartPos()
-          final byte[] dummyBytes = "\n".getBytes(Charset.forName("UTF-8"));
-          fsDataOStream.write(dummyBytes);
-          fsDataOStream.flush();
-
-          if (fsDataOStream.getPos() >= (aggregatedLogFileLength
-              + dummyBytes.length)) {
+          // If we have created a new file, we know that the offset is zero.
+          // Otherwise we should get this information through getFileStatus.
+          if (createdNew) {
             currentOffSet = 0;
           } else {
-            currentOffSet = aggregatedLogFileLength;
+            long aggregatedLogFileLength = fc.getFileStatus(
+                aggregatedLogFile).getLen();
+            // append a simple character("\n") to move the writer cursor, so
+            // we could get the correct position when we call
+            // fsOutputStream.getStartPos()
+            final byte[] dummyBytes = "\n".getBytes(Charset.forName("UTF-8"));
+            fsDataOStream.write(dummyBytes);
+            fsDataOStream.flush();
+
+            if (fsDataOStream.getPos() < (aggregatedLogFileLength
+                + dummyBytes.length)) {
+              currentOffSet = fc.getFileStatus(
+                      aggregatedLogFile).getLen();
+            } else {
+              currentOffSet = 0;
+            }
           }
           return null;
         }
@@ -228,8 +238,22 @@ public class LogAggregationIndexedFileController
     }
   }
 
-  private Path initializeWriterInRolling(final Path remoteLogFile,
-      final ApplicationId appId, final String nodeId) throws Exception {
+  /**
+   * Initializes the write for the log aggregation controller in the
+   * rolling case. It sets up / modifies checksum and meta files if needed.
+   *
+   * @param remoteLogFile the Path of the remote log file
+   * @param appId the application id
+   * @param nodeId the node id
+   * @return a Pair of Path and Boolean - the Path is path of the
+   *         aggregated log file, while the Boolean is whether a new
+   *         file was created or not
+   * @throws Exception
+   */
+  private Pair<Path, Boolean> initializeWriterInRolling(
+      final Path remoteLogFile, final ApplicationId appId,
+      final String nodeId) throws Exception {
+    boolean createdNew = false;
     Path aggregatedLogFile = null;
     // check uuid
     // if we can not find uuid, we would load the uuid
@@ -289,6 +313,7 @@ public class LogAggregationIndexedFileController
       // writes the uuid
       fsDataOStream.write(uuid);
       fsDataOStream.flush();
+      createdNew = true;
     } else {
       aggregatedLogFile = currentRemoteLogFile;
       fsDataOStream = fc.create(currentRemoteLogFile,
@@ -297,8 +322,13 @@ public class LogAggregationIndexedFileController
     }
     // recreate checksum file if needed before aggregate the logs
     if (overwriteCheckSum) {
-      final long currentAggregatedLogFileLength = fc
-          .getFileStatus(aggregatedLogFile).getLen();
+      long currentAggregatedLogFileLength;
+      if (createdNew) {
+        currentAggregatedLogFileLength = 0;
+      } else {
+        currentAggregatedLogFileLength = fc
+            .getFileStatus(aggregatedLogFile).getLen();
+      }
       FSDataOutputStream checksumFileOutputStream = null;
       try {
         checksumFileOutputStream = fc.create(remoteLogCheckSumFile,
@@ -315,7 +345,8 @@ public class LogAggregationIndexedFileController
         IOUtils.cleanupWithLogger(LOG, checksumFileOutputStream);
       }
     }
-    return aggregatedLogFile;
+
+    return Pair.of(aggregatedLogFile, createdNew);
   }
 
   @Override
@@ -580,7 +611,6 @@ public class LogAggregationIndexedFileController
     return findLogs;
   }
 
-  // TODO: fix me if the remote file system does not support append operation.
   @Override
   public List<ContainerLogMeta> readAggregatedLogsMeta(
       ContainerLogsRequest logRequest) throws IOException {
@@ -590,6 +620,7 @@ public class LogAggregationIndexedFileController
     String nodeId = logRequest.getNodeId();
     ApplicationId appId = logRequest.getAppId();
     String appOwner = logRequest.getAppOwner();
+    ApplicationAttemptId appAttemptId = logRequest.getAppAttemptId();
     boolean getAllContainers = (containerIdStr == null ||
         containerIdStr.isEmpty());
     String nodeIdStr = (nodeId == null || nodeId.isEmpty()) ? null
@@ -635,8 +666,13 @@ public class LogAggregationIndexedFileController
         if (getAllContainers) {
           for (Entry<String, List<IndexedFileLogMeta>> log : logMeta
               .getLogMetas().entrySet()) {
+            String currentContainerIdStr = log.getKey();
+            if (appAttemptId != null &&
+                !belongsToAppAttempt(appAttemptId, currentContainerIdStr)) {
+              continue;
+            }
             ContainerLogMeta meta = new ContainerLogMeta(
-                log.getKey().toString(), curNodeId);
+                log.getKey(), curNodeId);
             for (IndexedFileLogMeta aMeta : log.getValue()) {
               meta.addLogMeta(aMeta.getFileName(), Long.toString(
                   aMeta.getFileSize()),
@@ -1139,8 +1175,24 @@ public class LogAggregationIndexedFileController
   @Private
   @VisibleForTesting
   public long getRollOverLogMaxSize(Configuration conf) {
-    return 1024L * 1024 * 1024 * conf.getInt(
-        LOG_ROLL_OVER_MAX_FILE_SIZE_GB, 10);
+    boolean supportAppend = false;
+    try {
+      FileSystem fs = FileSystem.get(remoteRootLogDir.toUri(), conf);
+      if (fs instanceof LocalFileSystem || fs.hasPathCapability(
+          remoteRootLogDir, CommonPathCapabilities.FS_APPEND)) {
+        supportAppend = true;
+      }
+    } catch (Exception ioe) {
+      LOG.warn("Unable to determine if the filesystem supports " +
+          "append operation", ioe);
+    }
+    if (supportAppend) {
+      return 1024L * 1024 * 1024 * conf.getInt(
+          LOG_ROLL_OVER_MAX_FILE_SIZE_GB,
+          LOG_ROLL_OVER_MAX_FILE_SIZE_GB_DEFAULT);
+    } else {
+      return 0L;
+    }
   }
 
   private abstract class FSAction<T> {

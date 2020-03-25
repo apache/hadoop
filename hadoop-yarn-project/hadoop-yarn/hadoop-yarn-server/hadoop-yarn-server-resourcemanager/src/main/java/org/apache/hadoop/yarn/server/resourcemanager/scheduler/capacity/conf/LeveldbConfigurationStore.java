@@ -68,11 +68,13 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
   private static final String DB_NAME = "yarn-conf-store";
   private static final String LOG_KEY = "log";
   private static final String VERSION_KEY = "version";
+  private static final String CONF_VERSION_NAME = "conf-version-store";
+  private static final String CONF_VERSION_KEY = "conf-version";
 
   private DB db;
+  private DB versiondb;
   private long maxLogs;
   private Configuration conf;
-  private LogMutation pendingMutation;
   @VisibleForTesting
   protected static final Version CURRENT_VERSION_INFO = Version
       .newInstance(0, 1);
@@ -98,8 +100,15 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
     }
   }
 
+  @Override
+  public void format() throws Exception {
+    close();
+    FileSystem fs = FileSystem.getLocal(conf);
+    fs.delete(getStorageDir(DB_NAME), true);
+  }
+
   private void initDatabase(Configuration config) throws Exception {
-    Path storeRoot = createStorageDir();
+    Path storeRoot = createStorageDir(DB_NAME);
     Options options = new Options();
     options.createIfMissing(false);
     options.comparator(new DBComparator() {
@@ -135,6 +144,29 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
       }
     });
 
+    Path confVersion = createStorageDir(CONF_VERSION_NAME);
+    Options confOptions = new Options();
+    confOptions.createIfMissing(false);
+    LOG.info("Using conf version at " + confVersion);
+    File confVersionFile = new File(confVersion.toString());
+    try {
+      versiondb = JniDBFactory.factory.open(confVersionFile, confOptions);
+    } catch (NativeDB.DBException e) {
+      if (e.isNotFound() || e.getMessage().contains(" does not exist ")) {
+        LOG.info("Creating conf version at " + confVersionFile);
+        confOptions.createIfMissing(true);
+        try {
+          versiondb = JniDBFactory.factory.open(confVersionFile, confOptions);
+          versiondb.put(bytes(CONF_VERSION_KEY), bytes(String.valueOf(0)));
+        } catch (DBException dbErr) {
+          throw new IOException(dbErr.getMessage(), dbErr);
+        }
+      } else {
+        throw e;
+      }
+    }
+
+
     LOG.info("Using conf database at " + storeRoot);
     File dbfile = new File(storeRoot.toString());
     try {
@@ -151,6 +183,9 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
             initBatch.put(bytes(kv.getKey()), bytes(kv.getValue()));
           }
           db.write(initBatch);
+          long configVersion = getConfigVersion() + 1L;
+          versiondb.put(bytes(CONF_VERSION_KEY),
+              bytes(String.valueOf(configVersion)));
         } catch (DBException dbErr) {
           throw new IOException(dbErr.getMessage(), dbErr);
         }
@@ -160,20 +195,20 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
     }
   }
 
-  private Path createStorageDir() throws IOException {
-    Path root = getStorageDir();
+  private Path createStorageDir(String storageName) throws IOException {
+    Path root = getStorageDir(storageName);
     FileSystem fs = FileSystem.getLocal(conf);
     fs.mkdirs(root, new FsPermission((short) 0700));
     return root;
   }
 
-  private Path getStorageDir() throws IOException {
+  private Path getStorageDir(String storageName) throws IOException {
     String storePath = conf.get(YarnConfiguration.RM_SCHEDCONF_STORE_PATH);
     if (storePath == null) {
       throw new IOException("No store location directory configured in " +
           YarnConfiguration.RM_SCHEDCONF_STORE_PATH);
     }
-    return new Path(storePath, DB_NAME);
+    return new Path(storePath, storageName);
   }
 
   @Override
@@ -181,21 +216,26 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
     if (db != null) {
       db.close();
     }
+    if (versiondb != null) {
+      versiondb.close();
+    }
   }
 
   @Override
   public void logMutation(LogMutation logMutation) throws IOException {
-    LinkedList<LogMutation> logs = deserLogMutations(db.get(bytes(LOG_KEY)));
-    logs.add(logMutation);
-    if (logs.size() > maxLogs) {
-      logs.removeFirst();
+    if (maxLogs > 0) {
+      LinkedList<LogMutation> logs = deserLogMutations(db.get(bytes(LOG_KEY)));
+      logs.add(logMutation);
+      if (logs.size() > maxLogs) {
+        logs.removeFirst();
+      }
+      db.put(bytes(LOG_KEY), serLogMutations(logs));
     }
-    db.put(bytes(LOG_KEY), serLogMutations(logs));
-    pendingMutation = logMutation;
   }
 
   @Override
-  public void confirmMutation(boolean isValid) throws IOException {
+  public void confirmMutation(LogMutation pendingMutation,
+      boolean isValid) throws IOException {
     WriteBatch updateBatch = db.createWriteBatch();
     if (isValid) {
       for (Map.Entry<String, String> changes :
@@ -206,9 +246,11 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
           updateBatch.put(bytes(changes.getKey()), bytes(changes.getValue()));
         }
       }
+      long configVersion = getConfigVersion() + 1L;
+      versiondb.put(bytes(CONF_VERSION_KEY),
+          bytes(String.valueOf(configVersion)));
     }
     db.write(updateBatch);
-    pendingMutation = null;
   }
 
   private byte[] serLogMutations(LinkedList<LogMutation> mutations) throws
@@ -252,6 +294,13 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
   }
 
   @Override
+  public long getConfigVersion() {
+    String version = new String(versiondb.get(bytes(CONF_VERSION_KEY)),
+        StandardCharsets.UTF_8);
+    return Long.parseLong(version);
+  }
+
+  @Override
   public List<LogMutation> getConfirmedConfHistory(long fromId) {
     return null; // unimplemented
   }
@@ -284,17 +333,27 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
   }
 
   @VisibleForTesting
+  @Override
   protected LinkedList<LogMutation> getLogs() throws Exception {
     return deserLogMutations(db.get(bytes(LOG_KEY)));
   }
 
+  @VisibleForTesting
+  protected DB getDB() {
+    return db;
+  }
+
   @Override
   public void storeVersion() throws Exception {
-    String key = VERSION_KEY;
-    byte[] data = ((VersionPBImpl) CURRENT_VERSION_INFO).getProto()
+    storeVersion(CURRENT_VERSION_INFO);
+  }
+
+  @VisibleForTesting
+  protected void storeVersion(Version version) throws Exception {
+    byte[] data = ((VersionPBImpl) version).getProto()
         .toByteArray();
     try {
-      db.put(bytes(key), data);
+      db.put(bytes(VERSION_KEY), data);
     } catch (DBException e) {
       throw new IOException(e);
     }

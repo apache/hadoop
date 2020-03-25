@@ -42,19 +42,34 @@ The following configuration parameters can be used to modify the disk checks:
 | `yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage` | Float between 0-100 | The maximum percentage of disk space that may be utilized before a disk is marked as unhealthy by the disk checker service. This check is run for every disk used by the NodeManager. The default value is 90 i.e. 90% of the disk can be used. |
 | `yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb` | Integer | The minimum amount of free space that must be available on the disk for the disk checker service to mark the disk as healthy. This check is run for every disk used by the NodeManager. The default value is 0 i.e. the entire disk can be used. |
 
-###External Health Script
+### External Health Script
 
-Users may specify their own health checker script that will be invoked by the health checker service. Users may specify a timeout as well as options to be passed to the script. If the script exits with a non-zero exit code, times out or results in an exception being thrown, the node is marked as unhealthy. Please note that if the script cannot be executed due to permissions or an incorrect path, etc, then it counts as a failure and the node will be reported as unhealthy. Please note that speifying a health check script is not mandatory. If no script is specified, only the disk checker status will be used to determine the health of the node.
+Users may specify their own health checker scripts that will be invoked by the health checker service. Users may specify a timeout as well as options to be passed to the script. If the script times out, results in an exception being thrown or outputs a line which begins with the string ERROR, the node is marked as unhealthy. Please note that:
 
-The following configuration parameters can be used to set the health script:
+  * Exit code other than 0 is **not** considered to be a failure because it might have been caused by a syntax error. Therefore the node will **not** be marked as unhealthy.
+
+  * If the script cannot be executed due to permissions or an incorrect path, etc, then it counts as a failure and the node will be reported as unhealthy.
+
+  * Specifying a health check script is not mandatory. If no script is specified, only the disk checker status will be used to determine the health of the node.
+
+Users can specify up to 4 scripts to run individually with the `yarn.nodemanager.health-checker.scripts` configuration. Also these options can be configured for all scripts (global configurations):
 
 | Configuration Name | Allowed Values | Description |
 |:---- |:---- |:---- |
-| `yarn.nodemanager.health-checker.interval-ms` | Postive integer | The interval, in milliseconds, at which health checker service runs; the default value is 10 minutes. |
-| `yarn.nodemanager.health-checker.script.timeout-ms` | Postive integer | The timeout for the health script that's executed; the default value is 20 minutes. |
-| `yarn.nodemanager.health-checker.script.path` | String | Absolute path to the health check script to be run. |
-| `yarn.nodemanager.health-checker.script.opts` | String | Arguments to be passed to the script when the script is executed. |
+|`yarn.nodemanager.health-checker.script`| String | The keywords for the health checker scripts separated by a comma. The default is "script". |
+| `yarn.nodemanager.health-checker.interval-ms` | Positive integer | The interval, in milliseconds, at which health checker service runs; the default value is 10 minutes. |
+| `yarn.nodemanager.health-checker.timeout-ms` | Positive integer | The timeout for the health script that's executed; the default value is 20 minutes. |
 
+The following options can be set for every health checker script. The %s symbol is substituted with each keyword provided in `yarn.nodemanager.health-checker.script`.
+
+| Configuration Name | Allowed Values | Description |
+|:---- |:---- |:---- |
+| `yarn.nodemanager.health-checker.%s.path` | String | Absolute path to the health check script to be run. Mandatory argument for each script. |
+| `yarn.nodemanager.health-checker.%s.opts` | String | Arguments to be passed to the script when the script is executed. Mandatory argument for each script. |
+| `yarn.nodemanager.health-checker.%s.interval-ms` | Positive integer | The interval, in milliseconds, at which health checker service runs.  |
+| `yarn.nodemanager.health-checker.%s.timeout-ms` | Positive integer | The timeout for the health script that's executed. |
+
+The interval and timeout options are not required to be specified. In that case the global configurations will be used.
 
 NodeManager Restart
 -------------------

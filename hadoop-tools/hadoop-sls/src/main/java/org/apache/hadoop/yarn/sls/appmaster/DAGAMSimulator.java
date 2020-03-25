@@ -52,12 +52,15 @@ import java.util.Map;
  * AMSimulator that simulates DAG - it requests for containers
  * based on the delay specified. It finishes when all the tasks
  * are completed.
- *
  * Vocabulary Used:
- * pending -> requests which are NOT yet sent to RM.
- * scheduled -> requests which are sent to RM but not yet assigned.
- * assigned -> requests which are assigned to a container.
- * completed -> request corresponding to which container has completed.
+ * <dl>
+ * <dt>Pending</dt><dd>requests which are NOT yet sent to RM.</dd>
+ * <dt>Scheduled</dt>
+ * <dd>requests which are sent to RM but not yet assigned.</dd>
+ * <dt>Assigned</dt><dd>requests which are assigned to a container.</dd>
+ * <dt>Completed</dt>
+ * <dd>request corresponding to which container has completed.</dd>
+ * </dl>
  * Containers are requested based on the request delay.
  */
 

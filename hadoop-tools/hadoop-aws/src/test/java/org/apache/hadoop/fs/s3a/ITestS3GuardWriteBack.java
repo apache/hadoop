@@ -24,7 +24,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
-import org.junit.Assume;
+import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
+
 import org.junit.Test;
 
 import java.io.IOException;
@@ -32,12 +33,20 @@ import java.net.URI;
 import java.util.Arrays;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Test cases that validate S3Guard's behavior for writing things like
  * directory listings back to the MetadataStore.
  */
 public class ITestS3GuardWriteBack extends AbstractS3ATestBase {
+
+  @Override
+  public void setup() throws Exception {
+    assumeTrue("dirListingUnion always writes back records",
+        !S3Guard.DIR_MERGE_UPDATES_ALL_RECORDS_NONAUTH);
+    super.setup();
+  }
 
   /**
    * In listStatus(), when S3Guard is enabled, the full listing for a
@@ -49,7 +58,7 @@ public class ITestS3GuardWriteBack extends AbstractS3ATestBase {
    */
   @Test
   public void testListStatusWriteBack() throws Exception {
-    Assume.assumeTrue(getFileSystem().hasMetadataStore());
+    assumeTrue(getFileSystem().hasMetadataStore());
 
     Path directory = path("ListStatusWriteBack");
 
@@ -132,6 +141,7 @@ public class ITestS3GuardWriteBack extends AbstractS3ATestBase {
 
     conf.set(Constants.S3_METADATA_STORE_IMPL, metastore);
     conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritativeMeta);
+    conf.unset(AUTHORITATIVE_PATH);
     S3AUtils.setBucketOption(conf, host,
         METADATASTORE_AUTHORITATIVE,
         Boolean.toString(authoritativeMeta));

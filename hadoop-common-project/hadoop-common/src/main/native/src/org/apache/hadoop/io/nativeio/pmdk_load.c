@@ -59,11 +59,11 @@ static const char* load_functions() {
 void load_pmdk_lib(char* err, size_t err_len) {
   const char* errMsg;
   const char* library = NULL;
-#ifdef UNIX
-  Dl_info dl_info;
-#else
-  LPTSTR filename = NULL;
-#endif
+  #ifdef UNIX
+    Dl_info dl_info;
+  #else
+    LPTSTR filename = NULL;
+  #endif
 
   err[0] = '\0';
 
@@ -88,15 +88,15 @@ void load_pmdk_lib(char* err, size_t err_len) {
     snprintf(err, err_len, "Loading functions from PMDK failed: %s", errMsg);
   }
 
-#ifdef UNIX
-  if(dladdr(pmdkLoader->pmem_map_file, &dl_info)) {
-    library = dl_info.dli_fname;
-  }
-#else
-  if (GetModuleFileName(pmdkLoader->libec, filename, 256) > 0) {
-    library = filename;
-  }
-#endif
+  #ifdef UNIX
+    if (dladdr(pmdkLoader->pmem_map_file, &dl_info)) {
+      library = dl_info.dli_fname;
+    }
+  #else
+    if (GetModuleFileName(pmdkLoader->libec, filename, 256) > 0) {
+      library = filename;
+    }
+  #endif
 
   if (library == NULL) {
     library = HADOOP_PMDK_LIBRARY;
