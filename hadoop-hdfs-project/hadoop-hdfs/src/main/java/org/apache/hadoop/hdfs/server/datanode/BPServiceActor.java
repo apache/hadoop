@@ -702,15 +702,7 @@ class BPServiceActor implements Runnable {
             if (state == HAServiceState.ACTIVE) {
               handleRollingUpgradeStatus(resp);
             }
-
-            long startProcessCommands = monotonicNow();
             commandProcessingThread.enqueue(resp.getCommands());
-            long endProcessCommands = monotonicNow();
-            if (endProcessCommands - startProcessCommands > 2000) {
-              LOG.info("Took " + (endProcessCommands - startProcessCommands)
-                  + "ms to process " + resp.getCommands().length
-                  + " commands from NN");
-            }
           }
         }
         if (!dn.areIBRDisabledForTests() &&
@@ -1353,6 +1345,7 @@ class BPServiceActor implements Runnable {
      */
     private boolean processCommand(DatanodeCommand[] cmds) {
       if (cmds != null) {
+        long startProcessCommands = monotonicNow();
         for (DatanodeCommand cmd : cmds) {
           try {
             if (!bpos.processCommandFromActor(cmd, actor)) {
@@ -1370,6 +1363,14 @@ class BPServiceActor implements Runnable {
           } catch (IOException ioe) {
             LOG.warn("Error processing datanode Command", ioe);
           }
+        }
+        long processCommandsMs = monotonicNow() - startProcessCommands;
+        if (cmds.length > 0) {
+          dn.getMetrics().addNumProcessedCommands(processCommandsMs);
+        }
+        if (processCommandsMs > dnConf.getProcessCommandsThresholdMs()) {
+          LOG.info("Took {} ms to process {} commands from NN",
+              processCommandsMs, cmds.length);
         }
       }
       return true;

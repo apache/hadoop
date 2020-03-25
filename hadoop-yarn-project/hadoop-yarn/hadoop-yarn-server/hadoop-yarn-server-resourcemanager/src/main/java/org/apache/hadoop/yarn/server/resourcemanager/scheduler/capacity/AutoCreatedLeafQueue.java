@@ -56,7 +56,7 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
       ManagedParentQueue managedParentQueue = (ManagedParentQueue) parent;
 
       super.reinitialize(newlyParsedQueue, clusterResource, managedParentQueue
-          .getLeafQueueConfigs(newlyParsedQueue.getQueueName()));
+          .getLeafQueueConfigs(newlyParsedQueue.getQueueShortName()));
 
       //Reset capacities to 0 since reinitialize above
       // queueCapacities to initialize to configured capacity which might

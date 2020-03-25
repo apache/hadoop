@@ -30,6 +30,9 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_PERMISSIONS_SUPERUSER_ONLY_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_PERMISSIONS_SUPERUSER_ONLY_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT;
@@ -92,6 +95,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LI
 import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.commons.text.CaseUtils;
 import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
@@ -449,6 +454,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private final int maxCorruptFileBlocksReturn;
   private final boolean isPermissionEnabled;
+  private final boolean isStoragePolicyEnabled;
+  private final boolean isStoragePolicySuperuserOnly;
   private final UserGroupInformation fsOwner;
   private final String supergroup;
   private final boolean standbyShouldCheckpoint;
@@ -825,13 +832,22 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                                  DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
       this.isPermissionEnabled = conf.getBoolean(DFS_PERMISSIONS_ENABLED_KEY,
                                                  DFS_PERMISSIONS_ENABLED_DEFAULT);
+
+      this.isStoragePolicyEnabled =
+          conf.getBoolean(DFS_STORAGE_POLICY_ENABLED_KEY,
+              DFS_STORAGE_POLICY_ENABLED_DEFAULT);
+      this.isStoragePolicySuperuserOnly =
+          conf.getBoolean(DFS_STORAGE_POLICY_PERMISSIONS_SUPERUSER_ONLY_KEY,
+              DFS_STORAGE_POLICY_PERMISSIONS_SUPERUSER_ONLY_DEFAULT);
+
       this.snapshotDiffReportLimit =
           conf.getInt(DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT,
               DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT);
 
-      LOG.info("fsOwner             = " + fsOwner);
-      LOG.info("supergroup          = " + supergroup);
-      LOG.info("isPermissionEnabled = " + isPermissionEnabled);
+      LOG.info("fsOwner                = " + fsOwner);
+      LOG.info("supergroup             = " + supergroup);
+      LOG.info("isPermissionEnabled    = " + isPermissionEnabled);
+      LOG.info("isStoragePolicyEnabled = " + isStoragePolicyEnabled);
 
       // block allocation has to be persisted in HA using a shared edits directory
       // so that the standby has up-to-date namespace information
@@ -2327,6 +2343,27 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
+   * Verify storage policies are enabled and if only super user is allowed to
+   * set storage policies.
+   *
+   * @param operationNameReadable Name of storage policy for exception text
+   * @param checkSuperUser Whether to check for super user privilege
+   * @throws IOException
+   */
+  private void checkStoragePolicyEnabled(final String operationNameReadable,
+      boolean checkSuperUser) throws IOException {
+    if (!isStoragePolicyEnabled) {
+      throw new IOException(String.format(
+          "Failed to %s since %s is set to false.", operationNameReadable,
+          DFS_STORAGE_POLICY_ENABLED_KEY));
+    }
+    if (checkSuperUser && isStoragePolicySuperuserOnly) {
+      checkSuperuserPrivilege(
+          CaseUtils.toCamelCase(operationNameReadable, false));
+    }
+  }
+
+  /**
    * Set the storage policy for a file or a directory.
    *
    * @param src file/directory path
@@ -2335,10 +2372,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void setStoragePolicy(String src, String policyName) throws IOException {
     final String operationName = "setStoragePolicy";
-    FileStatus auditStat;
     checkOperation(OperationCategory.WRITE);
+    checkStoragePolicyEnabled("set storage policy", true);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
+    FileStatus auditStat;
     try {
       writeLock();
       try {
@@ -2366,9 +2404,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void satisfyStoragePolicy(String src, boolean logRetryCache)
       throws IOException {
     final String operationName = "satisfyStoragePolicy";
+    checkOperation(OperationCategory.WRITE);
+    // make sure storage policy is enabled, otherwise
+    // there is no need to satisfy storage policy.
+    checkStoragePolicyEnabled("satisfy storage policy", false);
     FileStatus auditStat;
     validateStoragePolicySatisfy();
-    checkOperation(OperationCategory.WRITE);
     try {
       writeLock();
       try {
@@ -2389,13 +2430,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private void validateStoragePolicySatisfy()
       throws UnsupportedActionException, IOException {
-    // make sure storage policy is enabled, otherwise
-    // there is no need to satisfy storage policy.
-    if (!dir.isStoragePolicyEnabled()) {
-      throw new IOException(String.format(
-          "Failed to satisfy storage policy since %s is set to false.",
-          DFS_STORAGE_POLICY_ENABLED_KEY));
-    }
     // checks sps status
     boolean disabled = (blockManager.getSPSManager() == null);
     if (disabled) {
@@ -2418,10 +2452,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void unsetStoragePolicy(String src) throws IOException {
     final String operationName = "unsetStoragePolicy";
-    FileStatus auditStat;
     checkOperation(OperationCategory.WRITE);
+    checkStoragePolicyEnabled("unset storage policy", true);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
+    FileStatus auditStat;
     try {
       writeLock();
       try {

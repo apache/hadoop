@@ -31,9 +31,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -187,7 +185,7 @@ public class TestParentQueue {
         try {
           throw new Exception();
         } catch (Exception e) {
-          LOG.info("FOOBAR q.assignContainers q=" + queue.getQueueName() + 
+          LOG.info("FOOBAR q.assignContainers q=" + queue.getQueuePath() +
               " alloc=" + allocation + " node=" + node.getNodeName());
         }
         final Resource allocatedResource = Resources.createResource(allocation);
@@ -251,8 +249,8 @@ public class TestParentQueue {
   public void testSingleLevelQueues() throws Exception {
     // Setup queue configs
     setupSingleLevelQueues(csConf);
-    
-    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+
+    CSQueueStore queues = new CSQueueStore();
     CSQueue root =
         CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues, 
@@ -375,7 +373,7 @@ public class TestParentQueue {
     final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + "b";
     csConf.setCapacity(Q_B, 70.5F);
 
-    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+    CSQueueStore queues = new CSQueueStore();
     boolean exceptionOccurred = false;
     try {
       CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
@@ -496,8 +494,8 @@ public class TestParentQueue {
     
     // Setup queue configs
     setupMultiLevelQueues(csConf);
-    
-    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+
+    CSQueueStore queues = new CSQueueStore();
     CSQueue root =
         CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues,
@@ -662,8 +660,8 @@ public class TestParentQueue {
     csConf.setCapacity(Q_B + "." + B1, 0);
     csConf.setCapacity(Q_B + "." + B2, 0);
     csConf.setCapacity(Q_B + "." + B3, 0);
-    
-    Map<String, CSQueue> queues = new HashMap<String, CSQueue>(); 
+
+    CSQueueStore queues = new CSQueueStore();
     CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues,
         TestUtils.spyHook);
@@ -680,7 +678,7 @@ public class TestParentQueue {
     final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
     csConf.setCapacity(Q_A, 60);
 
-    Map<String, CSQueue> queues = new HashMap<String, CSQueue>(); 
+    CSQueueStore queues = new CSQueueStore();
     CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues,
         TestUtils.spyHook);
@@ -701,7 +699,7 @@ public class TestParentQueue {
     final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
     csConf.setCapacity(Q_A, 60);
 
-    Map<String, CSQueue> queues = new HashMap<String, CSQueue>(); 
+    CSQueueStore queues = new CSQueueStore();
     try {
       CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
@@ -717,7 +715,7 @@ public class TestParentQueue {
     // Setup queue configs
     setupSingleLevelQueues(csConf);
 
-    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+    CSQueueStore queues = new CSQueueStore();
     CSQueue root =
         CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues,
@@ -799,7 +797,7 @@ public class TestParentQueue {
     // Setup queue configs
     setupMultiLevelQueues(csConf);
     //B3
-    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+    CSQueueStore queues = new CSQueueStore();
     CSQueue root = 
         CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues,
@@ -901,7 +899,7 @@ public class TestParentQueue {
     final String Q_C11= Q_C + "." + C1 +  "." + C11;
     csConf.setAcl(Q_C11, QueueACL.SUBMIT_APPLICATIONS, "*");
 
-    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+    CSQueueStore queues = new CSQueueStore();
     CSQueue root = 
         CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues,
@@ -929,27 +927,32 @@ public class TestParentQueue {
 
     // c has no SA, but QA
     assertTrue(c.hasAccess(QueueACL.ADMINISTER_QUEUE, user));
-    assertTrue(hasQueueACL(aclInfos,  QueueACL.ADMINISTER_QUEUE, "c"));
+    assertTrue(hasQueueACL(aclInfos,  QueueACL.ADMINISTER_QUEUE, "root.c"));
     assertFalse(c.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
-    assertFalse(hasQueueACL(aclInfos, QueueACL.SUBMIT_APPLICATIONS, "c"));
+    assertFalse(hasQueueACL(aclInfos, QueueACL.SUBMIT_APPLICATIONS, "root.c"));
 
     //Queue c1 has QA, no SA (gotten perm from parent)
     assertTrue(c1.hasAccess(QueueACL.ADMINISTER_QUEUE, user)); 
-    assertTrue(hasQueueACL(aclInfos,  QueueACL.ADMINISTER_QUEUE, "c1"));
+    assertTrue(hasQueueACL(aclInfos,  QueueACL.ADMINISTER_QUEUE, "root.c.c1"));
     assertFalse(c1.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user)); 
-    assertFalse(hasQueueACL(aclInfos, QueueACL.SUBMIT_APPLICATIONS, "c1"));
+    assertFalse(hasQueueACL(
+        aclInfos, QueueACL.SUBMIT_APPLICATIONS, "root.c.c1"));
 
     //Queue c11 has permissions from parent queue and SA
     assertTrue(c11.hasAccess(QueueACL.ADMINISTER_QUEUE, user));
-    assertTrue(hasQueueACL(aclInfos,  QueueACL.ADMINISTER_QUEUE, "c11"));
+    assertTrue(hasQueueACL(
+        aclInfos,  QueueACL.ADMINISTER_QUEUE, "root.c.c1.c11"));
     assertTrue(c11.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
-    assertTrue(hasQueueACL(aclInfos, QueueACL.SUBMIT_APPLICATIONS, "c11"));
+    assertTrue(
+        hasQueueACL(aclInfos, QueueACL.SUBMIT_APPLICATIONS, "root.c.c1.c11"));
 
     //Queue c111 has SA and AQ, both from parent
     assertTrue(c111.hasAccess(QueueACL.ADMINISTER_QUEUE, user));
-    assertTrue(hasQueueACL(aclInfos,  QueueACL.ADMINISTER_QUEUE, "c111"));
+    assertTrue(hasQueueACL(
+        aclInfos,  QueueACL.ADMINISTER_QUEUE, "root.c.c1.c11.c111"));
     assertTrue(c111.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
-    assertTrue(hasQueueACL(aclInfos, QueueACL.SUBMIT_APPLICATIONS, "c111"));
+    assertTrue(hasQueueACL(
+        aclInfos, QueueACL.SUBMIT_APPLICATIONS, "root.c.c1.c11.c111"));
 
     reset(c);
   }
@@ -960,7 +963,7 @@ public class TestParentQueue {
     // Setup queue configs
     setupSingleLevelQueuesWithAbsoluteResource(csConf);
 
-    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+    CSQueueStore queues = new CSQueueStore();
     CSQueue root = CapacitySchedulerQueueManager.parseQueue(csContext, csConf,
         null, CapacitySchedulerConfiguration.ROOT, queues, queues,
         TestUtils.spyHook);

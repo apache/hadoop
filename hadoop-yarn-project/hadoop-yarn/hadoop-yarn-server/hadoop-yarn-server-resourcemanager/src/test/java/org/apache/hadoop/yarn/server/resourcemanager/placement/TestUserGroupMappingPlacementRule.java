@@ -71,21 +71,21 @@ public class TestUserGroupMappingPlacementRule {
         mock(CapacitySchedulerQueueManager.class);
 
     ParentQueue agroup = mock(ParentQueue.class);
-    when(agroup.getQueueName()).thenReturn("agroup");
+    when(agroup.getQueuePath()).thenReturn("root.agroup");
     ParentQueue bsubgroup2 = mock(ParentQueue.class);
-    when(bsubgroup2.getQueueName()).thenReturn("bsubgroup2");
+    when(bsubgroup2.getQueuePath()).thenReturn("root.bsubgroup2");
 
     ManagedParentQueue managedParent = mock(ManagedParentQueue.class);
-    when(managedParent.getQueueName()).thenReturn("managedParent");
+    when(managedParent.getQueueName()).thenReturn("root.managedParent");
 
     LeafQueue a = mock(LeafQueue.class);
-    when(a.getQueueName()).thenReturn("a");
+    when(a.getQueuePath()).thenReturn("root.agroup.a");
     when(a.getParent()).thenReturn(agroup);
     LeafQueue b = mock(LeafQueue.class);
-    when(b.getQueueName()).thenReturn("b");
+    when(b.getQueuePath()).thenReturn("root.bsubgroup2.b");
     when(b.getParent()).thenReturn(bsubgroup2);
     LeafQueue asubgroup2 = mock(LeafQueue.class);
-    when(asubgroup2.getQueueName()).thenReturn("asubgroup2");
+    when(asubgroup2.getQueuePath()).thenReturn("root.asubgroup2");
 
     when(queueManager.getQueue("a")).thenReturn(a);
     when(queueManager.getQueue("b")).thenReturn(b);
@@ -93,6 +93,24 @@ public class TestUserGroupMappingPlacementRule {
     when(queueManager.getQueue("bsubgroup2")).thenReturn(bsubgroup2);
     when(queueManager.getQueue("asubgroup2")).thenReturn(asubgroup2);
     when(queueManager.getQueue("managedParent")).thenReturn(managedParent);
+
+    when(queueManager.getQueue("root.agroup")).thenReturn(agroup);
+    when(queueManager.getQueue("root.bsubgroup2")).thenReturn(bsubgroup2);
+    when(queueManager.getQueue("root.asubgroup2")).thenReturn(asubgroup2);
+    when(queueManager.getQueue("root.agroup.a")).thenReturn(a);
+    when(queueManager.getQueue("root.bsubgroup2.b")).thenReturn(b);
+    when(queueManager.getQueue("root.managedParent")).thenReturn(managedParent);
+
+    when(queueManager.getQueueByFullName("root.agroup")).thenReturn(agroup);
+    when(queueManager.getQueueByFullName("root.bsubgroup2"))
+        .thenReturn(bsubgroup2);
+    when(queueManager.getQueueByFullName("root.asubgroup2"))
+        .thenReturn(asubgroup2);
+    when(queueManager.getQueueByFullName("root.agroup.a")).thenReturn(a);
+    when(queueManager.getQueueByFullName("root.bsubgroup2.b")).thenReturn(b);
+    when(queueManager.getQueueByFullName("root.managedParent"))
+        .thenReturn(managedParent);
+
 
     rule.setQueueManager(queueManager);
     ApplicationSubmissionContext asc = Records.newRecord(
@@ -116,7 +134,7 @@ public class TestUserGroupMappingPlacementRule {
                                 .source("%user")
                                 .queue("%secondary_group").build())
                 .inputUser("a")
-                .expectedQueue("asubgroup2")
+                .expectedQueue("root.asubgroup2")
                 .build());
 
     // PrimaryGroupMapping.class returns only primary group, no secondary groups
@@ -205,7 +223,7 @@ public class TestUserGroupMappingPlacementRule {
                                 .queue("%primary_group")
                                 .build())
                 .inputUser("a")
-                .expectedQueue("agroup")
+                .expectedQueue("root.agroup")
                 .build());
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
@@ -217,7 +235,7 @@ public class TestUserGroupMappingPlacementRule {
                                 .build())
                 .inputUser("a")
                 .expectedQueue("a")
-                .expectedParentQueue("agroup")
+                .expectedParentQueue("root.agroup")
                 .build());
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
@@ -229,7 +247,7 @@ public class TestUserGroupMappingPlacementRule {
                                 .build())
                 .inputUser("b")
                 .expectedQueue("b")
-                .expectedParentQueue("bsubgroup2")
+                .expectedParentQueue("root.bsubgroup2")
                 .build());
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
@@ -252,7 +270,7 @@ public class TestUserGroupMappingPlacementRule {
                                 .parentQueue("bsubgroup2")
                                 .build())
                 .inputUser("a")
-                .expectedQueue("agroup")
+                .expectedQueue("root.agroup")
                 .build());
 
     // "abcgroup" queue doesn't exist, %primary_group queue, not managed parent
@@ -278,7 +296,7 @@ public class TestUserGroupMappingPlacementRule {
                                 .parentQueue("managedParent")
                                 .build())
                 .inputUser("abc")
-                .expectedQueue("abcgroup")
+                .expectedQueue("root.abcgroup")
                 .build());
 
     // "abcgroup" queue doesn't exist, %secondary_group queue
@@ -304,7 +322,7 @@ public class TestUserGroupMappingPlacementRule {
                                 .parentQueue("bsubgroup2")
                                 .build())
                 .inputUser("a")
-                .expectedQueue("asubgroup2")
+                .expectedQueue("root.asubgroup2")
                 .build());
 
     // specify overwritten, and see if user specified a queue, and it will be

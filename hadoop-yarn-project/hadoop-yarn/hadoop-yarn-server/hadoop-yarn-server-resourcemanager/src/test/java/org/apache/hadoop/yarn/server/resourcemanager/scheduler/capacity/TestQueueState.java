@@ -111,8 +111,8 @@ public class TestQueueState {
       Assert.fail("Should throw an Exception.");
     } catch (Exception ex) {
       Assert.assertTrue(ex.getCause().getMessage().contains(
-          "The parent queue:q1 cannot be STOPPED as the child" +
-          " queue:q2 is in RUNNING state."));
+          "The parent queue:root.q1 cannot be STOPPED as the child" +
+          " queue:root.q1.q2 is in RUNNING state."));
     }
   }
 

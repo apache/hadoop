@@ -492,7 +492,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     } catch (Exception e) {
       Assert.assertTrue("Yarn Exception should be thrown",
           e instanceof YarnException);
-      Assert.assertEquals("Specified queue=a2 can't satisfy "
+      Assert.assertEquals("Specified queue=root.a.a2 can't satisfy "
           + "following apps label expressions =[x] accessible "
           + "node labels =[y]", e.getMessage());
     }

@@ -29,7 +29,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 public final class CapacitySchedulerConfigValidator {
@@ -42,7 +41,7 @@ public final class CapacitySchedulerConfigValidator {
 
   public static boolean validateCSConfiguration(
           final Configuration oldConf, final Configuration newConf,
-         final RMContext rmContext) throws IOException {
+          final RMContext rmContext) throws IOException {
     //TODO: extract all the validation steps and replace reinitialize with
     //the specific validation steps
     CapacityScheduler newCs = new CapacityScheduler();
@@ -112,16 +111,16 @@ public final class CapacitySchedulerConfigValidator {
    * @param queues existing queues
    * @param newQueues new queues
    */
-  public static void validateQueueHierarchy(Map<String, CSQueue> queues,
-         Map<String, CSQueue> newQueues, CapacitySchedulerConfiguration newConf)
-         throws IOException {
+  public static void validateQueueHierarchy(
+      CSQueueStore queues,
+      CSQueueStore newQueues,
+      CapacitySchedulerConfiguration newConf) throws IOException {
     // check that all static queues are included in the newQueues list
-    for (Map.Entry<String, CSQueue> e : queues.entrySet()) {
-      if (!(AbstractAutoCreatedLeafQueue.class.isAssignableFrom(e.getValue()
-              .getClass()))) {
-        String queueName = e.getKey();
-        CSQueue oldQueue = e.getValue();
-        CSQueue newQueue = newQueues.get(queueName);
+    for (CSQueue oldQueue : queues.getQueues()) {
+      if (!(AbstractAutoCreatedLeafQueue.class.isAssignableFrom(
+          oldQueue.getClass()))) {
+        String queuePath = oldQueue.getQueuePath();
+        CSQueue newQueue = newQueues.get(queuePath);
         String configPrefix = newConf.getQueuePrefix(
             oldQueue.getQueuePath());
         String state = newConf.get(configPrefix + "state");
@@ -137,55 +136,55 @@ public final class CapacitySchedulerConfigValidator {
         if (null == newQueue) {
           // old queue doesn't exist in the new XML
           if (oldQueue.getState() == QueueState.STOPPED ||
-                  newQueueState == QueueState.STOPPED) {
-            LOG.info("Deleting Queue " + queueName + ", as it is not"
-                    + " present in the modified capacity configuration xml");
-          } else{
+              newQueueState == QueueState.STOPPED) {
+            LOG.info("Deleting Queue " + queuePath + ", as it is not"
+                + " present in the modified capacity configuration xml");
+          } else {
             throw new IOException(oldQueue.getQueuePath() + " cannot be"
-                    + " deleted from the capacity scheduler configuration, "
-                    + "as the queue is not yet in stopped state. "
-                    + "Current State : " + oldQueue.getState());
+              + " deleted from the capacity scheduler configuration, as the"
+              + " queue is not yet in stopped state. Current State : "
+              + oldQueue.getState());
           }
         } else if (!oldQueue.getQueuePath().equals(newQueue.getQueuePath())) {
           //Queue's cannot be moved from one hierarchy to other
           throw new IOException(
-                  queueName + " is moved from:" + oldQueue.getQueuePath()
-                          + " to:" + newQueue.getQueuePath()
-                          + " after refresh, which is not allowed.");
+            queuePath + " is moved from:" + oldQueue.getQueuePath() + " to:"
+              + newQueue.getQueuePath()
+              + " after refresh, which is not allowed.");
         } else if (oldQueue instanceof ParentQueue
-                && !(oldQueue instanceof ManagedParentQueue)
-                && newQueue instanceof ManagedParentQueue) {
+            && !(oldQueue instanceof ManagedParentQueue)
+            && newQueue instanceof ManagedParentQueue) {
           throw new IOException(
-                  "Can not convert parent queue: " + oldQueue.getQueuePath()
-                          + " to auto create enabled parent queue since "
-                          + "it could have other pre-configured queues which is"
-                          + " not supported");
+            "Can not convert parent queue: " + oldQueue.getQueuePath()
+                + " to auto create enabled parent queue since "
+                + "it could have other pre-configured queues which is not "
+                + "supported");
         } else if (oldQueue instanceof ManagedParentQueue
-                && !(newQueue instanceof ManagedParentQueue)) {
+            && !(newQueue instanceof ManagedParentQueue)) {
           throw new IOException(
-                  "Cannot convert auto create enabled parent queue: " + oldQueue
-                          .getQueuePath() + " to leaf queue. Please check "
-                          + " parent queue's configuration "
-                          + CapacitySchedulerConfiguration
-                          .AUTO_CREATE_CHILD_QUEUE_ENABLED
-                          + " is set to true");
+            "Cannot convert auto create enabled parent queue: "
+              + oldQueue.getQueuePath() + " to leaf queue. Please check "
+              + " parent queue's configuration "
+              + CapacitySchedulerConfiguration
+              .AUTO_CREATE_CHILD_QUEUE_ENABLED
+              + " is set to true");
         } else if (oldQueue instanceof LeafQueue
                 && newQueue instanceof ParentQueue) {
           if (oldQueue.getState() == QueueState.STOPPED ||
               newQueueState == QueueState.STOPPED) {
             LOG.info("Converting the leaf queue: " + oldQueue.getQueuePath()
-                    + " to parent queue.");
+                + " to parent queue.");
           } else{
             throw new IOException(
-                    "Can not convert the leaf queue: " + oldQueue.getQueuePath()
-                            + " to parent queue since "
-                            + "it is not yet in stopped state. Current State : "
-                            + oldQueue.getState());
+              "Can not convert the leaf queue: " + oldQueue.getQueuePath()
+                + " to parent queue since "
+                + "it is not yet in stopped state. Current State : "
+                + oldQueue.getState());
           }
         } else if (oldQueue instanceof ParentQueue
-                && newQueue instanceof LeafQueue) {
+            && newQueue instanceof LeafQueue) {
           LOG.info("Converting the parent queue: " + oldQueue.getQueuePath()
-                  + " to leaf queue.");
+              + " to leaf queue.");
         }
       }
     }
