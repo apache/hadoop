@@ -847,7 +847,8 @@ public class TestCapacitySchedulerSurgicalPreemption
       Assert.assertNotNull("Should reserve on nm-" + i,
           cs.getNode(rmNodes[i].getNodeID()).getReservedContainer());
       Assert.assertEquals(cs.getNode(rmNodes[i].getNodeID())
-          .getReservedContainer().getQueueName(), queues[0]);
+          .getReservedContainer()
+          .getQueueName(), cs.normalizeQueueName(queues[0]));
     }
 
     // Submit app3 to queue-b and asks for a 0.5G container for AM (on n2)
@@ -877,7 +878,8 @@ public class TestCapacitySchedulerSurgicalPreemption
       Assert.assertNotNull("Should reserve on nm-" + i,
           cs.getNode(rmNodes[i].getNodeID()).getReservedContainer());
       Assert.assertEquals(cs.getNode(rmNodes[i].getNodeID())
-          .getReservedContainer().getQueueName(), queues[1]);
+          .getReservedContainer()
+          .getQueueName(), cs.normalizeQueueName(queues[1]));
     }
 
     // Sleep the timeout interval, we should be able to see 1 container selected

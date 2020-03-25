@@ -433,13 +433,13 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
 
     String appsConfig =
     // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
-        "a\t" // app1 in a
+        "root.a\t" // app1 in a
             + "(1,1,n1,,50,false,15);" + // app1 a
-            "a\t" // app2 in a
+            "root.a\t" // app2 in a
             + "(2,1,n1,,20,false,20);" + // app2 a
-            "b\t" // app3 in b
+            "root.b\t" // app3 in b
             + "(4,1,n1,,20,false,20);" + // app3 b
-            "b\t" // app1 in a
+            "root.b\t" // app1 in a
             + "(4,1,n1,,5,false,100)";
 
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
