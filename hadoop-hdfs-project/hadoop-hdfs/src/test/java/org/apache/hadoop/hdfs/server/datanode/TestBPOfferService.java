@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
@@ -1206,6 +1207,9 @@ public class TestBPOfferService {
       assertTrue("Process command nums is not expected.",
           getLongCounter("NumProcessedCommands", mrb) > 0);
       assertEquals(0, getLongCounter("SumOfActorCommandQueueLength", mrb));
+      // Check new metric result about processedCommandsOp.
+      // One command send back to DataNode here is #FinalizeCommand.
+      assertCounter("ProcessedCommandsOpNumOps", 1L, mrb);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

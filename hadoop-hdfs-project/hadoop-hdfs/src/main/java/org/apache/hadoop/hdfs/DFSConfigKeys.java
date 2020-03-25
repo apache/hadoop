@@ -443,6 +443,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_DATANODE_PMEM_CACHE_RECOVERY_DEFAULT =
       true;
 
+  public static final String DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_KEY =
+      "dfs.datanode.processcommands.threshold";
+  public static final long DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_DEFAULT =
+      TimeUnit.SECONDS.toMillis(2);
+
   public static final String DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_KEY = "dfs.namenode.datanode.registration.ip-hostname-check";
   public static final boolean DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_DEFAULT = true;
 
