@@ -1114,6 +1114,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String  DFS_STORAGE_POLICY_ENABLED_KEY = "dfs.storage.policy.enabled";
   public static final boolean DFS_STORAGE_POLICY_ENABLED_DEFAULT = true;
+  public static final String DFS_STORAGE_POLICY_PERMISSIONS_SUPERUSER_ONLY_KEY =
+      "dfs.storage.policy.permissions.superuser-only";
+  public static final boolean
+      DFS_STORAGE_POLICY_PERMISSIONS_SUPERUSER_ONLY_DEFAULT = false;
 
   public static final String  DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY = "dfs.quota.by.storage.type.enabled";
   public static final boolean DFS_QUOTA_BY_STORAGETYPE_ENABLED_DEFAULT = true;
