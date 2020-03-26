@@ -288,4 +288,37 @@ public class TestJobOutputCommitter extends HadoopTestCase {
                   MyOutputFormatWithCustomCleanup.class, 
                   new String[] {FileOutputCommitter.SUCCEEDED_FILE_NAME});
   }
+
+  static class MyOutputFormatWithMultiMergeThreads<K, V>
+    extends TextOutputFormat<K, V> {
+    private OutputCommitter committer = null;
+
+    public synchronized OutputCommitter getOutputCommitter(
+      TaskAttemptContext context) throws IOException {
+      if (committer == null) {
+        Path output = getOutputPath(context);
+        context.getConfiguration().setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_MERGE_THREADS, 5);
+        committer = new CommitterWithCustomDeprecatedCleanup(output, context);
+      }
+      return committer;
+    }
+  }
+
+  @Test
+  public void testMultiMergeThreads() throws Exception {
+    // check with a successful job
+    testSuccessfulJob(CUSTOM_CLEANUP_FILE_NAME,
+                      MyOutputFormatWithCustomCleanup.class,
+                      new String[] {});
+
+    // check with a failed job
+    testFailedJob(CUSTOM_CLEANUP_FILE_NAME,
+                  MyOutputFormatWithCustomCleanup.class,
+                  new String[] {FileOutputCommitter.SUCCEEDED_FILE_NAME});
+
+    // check with a killed job
+    testKilledJob(CUSTOM_CLEANUP_FILE_NAME,
+                  MyOutputFormatWithCustomCleanup.class,
+                  new String[] {FileOutputCommitter.SUCCEEDED_FILE_NAME});
+  }
 }

@@ -1626,6 +1626,15 @@
 </property>
 
 <property>
+  <name>mapreduce.fileoutputcommitter.merge.threads</name>
+  <value>1</value>
+  <description>The thread num used to merge paths during commitJob, which is 1 by defaults.
+    If it is bigger than 1, we will create a thread pool to merge paths, which has better
+    performance.
+  </description>
+</property>
+
+<property>
   <name>yarn.app.mapreduce.am.scheduler.heartbeat.interval-ms</name>
   <value>1000</value>
   <description>The interval in ms at which the MR AppMaster should send

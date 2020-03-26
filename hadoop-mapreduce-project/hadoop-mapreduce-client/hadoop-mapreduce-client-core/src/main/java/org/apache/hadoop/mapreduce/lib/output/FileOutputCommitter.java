@@ -20,6 +20,12 @@ package org.apache.hadoop.mapreduce.lib.output;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
+import java.util.LinkedList;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -29,6 +35,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.impl.FutureIOSupport;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -99,11 +106,18 @@ public class FileOutputCommitter extends PathOutputCommitter {
   public static final boolean
       FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED_DEFAULT = false;
 
+  // The thread num use to merge paths during commitJob. If it is bigger than 1,
+  // a thread pool would be created to merge paths, which has better performance.
+  public static final String FILEOUTPUTCOMMITTER_MERGE_THREADS =
+      "mapreduce.fileoutputcommitter.merge.threads";
+  public static final int FILEOUTPUTCOMMITTER_MERGE_THREADS_DEFAULT = 1;
+
   private Path outputPath = null;
   private Path workPath = null;
   private final int algorithmVersion;
   private final boolean skipCleanup;
   private final boolean ignoreCleanupFailures;
+  private final int mergeThreadNum;
 
   /**
    * Create a file output committer
@@ -142,6 +156,9 @@ public class FileOutputCommitter extends PathOutputCommitter {
     if (algorithmVersion != 1 && algorithmVersion != 2) {
       throw new IOException("Only 1 or 2 algorithm version is supported");
     }
+
+    mergeThreadNum = conf.getInt(FILEOUTPUTCOMMITTER_MERGE_THREADS,
+        FILEOUTPUTCOMMITTER_MERGE_THREADS_DEFAULT);
 
     // if skip cleanup
     skipCleanup = conf.getBoolean(
@@ -454,6 +471,27 @@ public class FileOutputCommitter extends PathOutputCommitter {
    */
   private void mergePaths(FileSystem fs, final FileStatus from,
       final Path to, JobContext context) throws IOException {
+    final List<Future<Void>> futures = new LinkedList<>();
+    final ExecutorService pool = mergeThreadNum > 1 ?
+      Executors.newFixedThreadPool(Math.min(mergeThreadNum, 128)) : null;
+
+    try {
+      doMergePaths(fs, from, to, context, pool, futures);
+      if (null != pool) {
+        for (Future<Void> future: futures) {
+          FutureIOSupport.awaitFuture(future);
+        }
+      }
+    } finally {
+      if (null != pool) {
+        pool.shutdown();
+      }
+    }
+  }
+
+  private void doMergePaths(FileSystem fs, final FileStatus from,
+      final Path to, JobContext context, ExecutorService pool,
+      List<Future<Void>> futures) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Merging data from " + from + " to " + to);
     }
@@ -466,14 +504,33 @@ public class FileOutputCommitter extends PathOutputCommitter {
     }
 
     if (from.isFile()) {
-      if (toStat != null) {
-        if (!fs.delete(to, true)) {
-          throw new IOException("Failed to delete " + to);
-        }
-      }
+      if (null != pool) {
+        FileStatus finalToStat = toStat;
+        futures.add(pool.submit(new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            if (finalToStat != null) {
+              if (!fs.delete(to, true)) {
+                throw new IOException("Failed to delete " + to);
+              }
+            }
 
-      if (!fs.rename(from.getPath(), to)) {
-        throw new IOException("Failed to rename " + from + " to " + to);
+            if (!fs.rename(from.getPath(), to)) {
+              throw new IOException("Failed to rename " + from + " to " + to);
+            }
+            return null;
+          }
+        }));
+      } else {
+        if (toStat != null) {
+          if (!fs.delete(to, true)) {
+            throw new IOException("Failed to delete " + to);
+          }
+        }
+
+        if (!fs.rename(from.getPath(), to)) {
+          throw new IOException("Failed to rename " + from + " to " + to);
+        }
       }
     } else if (from.isDirectory()) {
       if (toStat != null) {
@@ -481,16 +538,16 @@ public class FileOutputCommitter extends PathOutputCommitter {
           if (!fs.delete(to, true)) {
             throw new IOException("Failed to delete " + to);
           }
-          renameOrMerge(fs, from, to, context);
+          renameOrMerge(fs, from, to, context, pool, futures);
         } else {
           //It is a directory so merge everything in the directories
           for (FileStatus subFrom : fs.listStatus(from.getPath())) {
             Path subTo = new Path(to, subFrom.getPath().getName());
-            mergePaths(fs, subFrom, subTo, context);
+            doMergePaths(fs, subFrom, subTo, context, pool, futures);
           }
         }
       } else {
-        renameOrMerge(fs, from, to, context);
+        renameOrMerge(fs, from, to, context, pool, futures);
       }
     }
   }
@@ -502,16 +559,28 @@ public class FileOutputCommitter extends PathOutputCommitter {
   }
 
   private void renameOrMerge(FileSystem fs, FileStatus from, Path to,
-      JobContext context) throws IOException {
+      JobContext context, ExecutorService pool, List<Future<Void>> futures) throws IOException {
     if (algorithmVersion == 1) {
-      if (!fs.rename(from.getPath(), to)) {
-        throw new IOException("Failed to rename " + from + " to " + to);
+      if (null != pool) {
+        futures.add(pool.submit(new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            if (!fs.rename(from.getPath(), to)) {
+              throw new IOException("Failed to rename " + from + " to " + to);
+            }
+            return null;
+          }
+        }));
+      } else {
+        if (!fs.rename(from.getPath(), to)) {
+          throw new IOException("Failed to rename " + from + " to " + to);
+        }
       }
     } else {
       fs.mkdirs(to);
       for (FileStatus subFrom : fs.listStatus(from.getPath())) {
         Path subTo = new Path(to, subFrom.getPath().getName());
-        mergePaths(fs, subFrom, subTo, context);
+        doMergePaths(fs, subFrom, subTo, context, pool, futures);
       }
     }
   }
