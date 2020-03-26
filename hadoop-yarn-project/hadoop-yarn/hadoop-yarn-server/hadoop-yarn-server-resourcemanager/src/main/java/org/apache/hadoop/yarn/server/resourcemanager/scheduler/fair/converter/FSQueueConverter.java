@@ -21,10 +21,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
@@ -43,8 +41,11 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  *
  */
 public class FSQueueConverter {
+  public static final float QUEUE_MAX_AM_SHARE_DISABLED = -1.0f;
   private static final int MAX_RUNNING_APPS_UNSET = Integer.MIN_VALUE;
-  private final Set<String> leafQueueNames;
+  private static final String FAIR_POLICY = "fair";
+  private static final String FIFO_POLICY = "fifo";
+
   private final FSConfigToCSConfigRuleHandler ruleHandler;
   private Configuration capacitySchedulerConfig;
   private final boolean preemptionEnabled;
@@ -59,7 +60,6 @@ public class FSQueueConverter {
   private ConversionOptions conversionOptions;
 
   public FSQueueConverter(FSQueueConverterBuilder builder) {
-    this.leafQueueNames = new HashSet<>();
     this.ruleHandler = builder.ruleHandler;
     this.capacitySchedulerConfig = builder.capacitySchedulerConfig;
     this.preemptionEnabled = builder.preemptionEnabled;
@@ -75,15 +75,6 @@ public class FSQueueConverter {
   public void convertQueueHierarchy(FSQueue queue) {
     List<FSQueue> children = queue.getChildQueues();
     final String queueName = queue.getName();
-
-    if (queue instanceof FSLeafQueue) {
-      String shortName = getQueueShortName(queueName);
-      if (!leafQueueNames.add(shortName)) {
-        String msg = String.format("Leaf queues must be unique, "
-                + "%s is defined at least twice", shortName);
-        conversionOptions.handleConversionError(msg);
-      }
-    }
 
     emitChildQueues(queueName, children);
     emitMaxAMShare(queueName, queue);
@@ -132,14 +123,15 @@ public class FSQueueConverter {
     // Direct floating point comparison is OK here
     if (queueMaxAmShare != 0.0f
         && queueMaxAmShare != queueMaxAMShareDefault
-        && queueMaxAmShare != -1.0f) {
-      capacitySchedulerConfig.set(PREFIX + queueName +
-          ".maximum-am-resource-percent", String.valueOf(queueMaxAmShare));
+        && queueMaxAmShare != QUEUE_MAX_AM_SHARE_DISABLED) {
+      capacitySchedulerConfig.setFloat(PREFIX + queueName +
+          ".maximum-am-resource-percent", queueMaxAmShare);
     }
 
-    if (queueMaxAmShare == -1.0f) {
-      capacitySchedulerConfig.set(PREFIX + queueName +
-          ".maximum-am-resource-percent", "1.0");
+    if (queueMaxAmShare == QUEUE_MAX_AM_SHARE_DISABLED
+        && queueMaxAmShare != queueMaxAMShareDefault) {
+      capacitySchedulerConfig.setFloat(PREFIX + queueName +
+          ".maximum-am-resource-percent", 1.0f);
     }
   }
 
@@ -265,18 +257,18 @@ public class FSQueueConverter {
       switch (policy) {
       case DominantResourceFairnessPolicy.NAME:
         capacitySchedulerConfig.set(PREFIX + queueName
-            + ".ordering-policy", FairSharePolicy.NAME);
+            + ".ordering-policy", FAIR_POLICY);
         break;
       case FairSharePolicy.NAME:
         capacitySchedulerConfig.set(PREFIX + queueName
-            + ".ordering-policy", FairSharePolicy.NAME);
+            + ".ordering-policy", FAIR_POLICY);
         if (drfUsed) {
           ruleHandler.handleFairAsDrf(queueName);
         }
         break;
       case FifoPolicy.NAME:
         capacitySchedulerConfig.set(PREFIX + queueName
-            + ".ordering-policy", FifoPolicy.NAME);
+            + ".ordering-policy", FIFO_POLICY);
         break;
       default:
         String msg = String.format("Unexpected ordering policy " +
