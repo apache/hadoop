@@ -86,6 +86,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.Schedulabl
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
+import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -209,6 +210,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
   private String nodeLabelExpression;
 
+  private final long startTime;
+
   public SchedulerApplicationAttempt(ApplicationAttemptId applicationAttemptId, 
       String user, Queue queue, AbstractUsersManager abstractUsersManager,
       RMContext rmContext) {
@@ -242,6 +245,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
+    startTime = SystemClock.getInstance().getTime();
   }
 
   public void setOpportunisticContainerContext(
@@ -1486,5 +1490,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   @Override
   public String getPartition() {
     return nodeLabelExpression == null ? "" : nodeLabelExpression;
+  }
+
+
+  @Override
+  public long getStartTime() {
+    return startTime;
   }
 }

@@ -60,4 +60,10 @@ public interface SchedulableEntity {
    * @return partition
    */
   String getPartition();
+
+  /**
+   * Start time of the job.
+   * @return start time
+   */
+  long getStartTime();
 }
