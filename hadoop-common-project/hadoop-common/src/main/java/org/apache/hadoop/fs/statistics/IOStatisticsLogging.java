@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.fs.statistics;
 
+import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationSupport.retrieveIOStatistics;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsSupport.retrieveIOStatistics;
 
 /**
  * Utility operations to work with IO Statistics, especially log them.
@@ -35,49 +35,40 @@ public class IOStatisticsLogging {
       LoggerFactory.getLogger(IOStatisticsLogging.class);
 
   /**
-   * Convert a set of statistics to a string form.
+   * Convert IOStatistics to a string form.
    * @param statistics A statistics instance.
-   * @return string value
+   * @return string value or the emtpy string if null
    */
-  private static String statisticsToString(
-      final Optional<IOStatistics> statistics) {
-    return statistics.map(IOStatisticsLogging::statisticsToString)
-        .orElse("");
-  }
-
-  /**
-   * Convert a set of statistics to a string form.
-   * @param statistics A statistics instance.
-   * @return string value
-   */
-  private static String statisticsToString(
-      final IOStatistics statistics) {
-    StringBuilder sb = new StringBuilder(" {");
-    for (Map.Entry entry : statistics) {
-      sb.append("{")
-          .append(entry.getKey())
-          .append("=")
-          .append(entry.getValue())
-          .append("} ");
+  private static String iostatisticsToString(
+      @Nullable final IOStatistics statistics) {
+    if (statistics != null) {
+      StringBuilder sb = new StringBuilder(" {");
+      for (Map.Entry entry : statistics) {
+        sb.append("{")
+            .append(entry.getKey())
+            .append("=")
+            .append(entry.getValue())
+            .append("} ");
+      }
+      sb.append('}');
+      return sb.toString();
+    } else {
+      return null;
     }
-    sb.append('}');
-    return sb.toString();
   }
 
   /**
    * Extract the statistics from a source.
    * Exceptions are caught and downgraded to debug logging.
    * @param source source of statistics.
-   * @return a string for logging.n
+   * @return a string for logging.
    */
-  public static String sourceToString(final IOStatisticsSource source) {
+  public static String iostatisticsSourceToString(final IOStatisticsSource source) {
     try {
-      return retrieveIOStatistics(source)
-          .map(p -> statisticsToString(p))
-          .orElse("");
+      return iostatisticsToString(retrieveIOStatistics(source));
     } catch (RuntimeException e) {
       LOG.debug("Ignoring", e);
-      return "{}";
+      return "";
     }
   }
 
@@ -86,7 +77,7 @@ public class IOStatisticsLogging {
    * Whenever this object's toString() method is called, it
    * retrieves the latest statistics instance and re-evaluates it.
    */
-  public static class SourceToString {
+  public static final class SourceToString {
 
     private final String origin;
 
@@ -99,7 +90,9 @@ public class IOStatisticsLogging {
 
     @Override
     public String toString() {
-      return "Statistics of " + origin + " " + sourceToString(source);
+      return source != null
+          ? ("Statistics of " + origin + " " + iostatisticsSourceToString(source))
+          : "";
     }
   }
 
@@ -107,22 +100,11 @@ public class IOStatisticsLogging {
    * Stringifier of statistics: low cost to instantiate and every
    * toString/logging will re-evaluate the statistics.
    */
-  public static class StatisticsToString {
+  public static final class StatisticsToString {
 
     private final String origin;
 
-    private final Optional<IOStatistics> statistics;
-
-    /**
-     * Constructor.
-     * @param origin source (for message)
-     * @param statistics statistics
-     */
-    public StatisticsToString(String origin,
-        Optional<IOStatistics> statistics) {
-      this.origin = origin;
-      this.statistics = statistics;
-    }
+    private final IOStatistics statistics;
 
     /**
      * Constructor.
@@ -131,12 +113,14 @@ public class IOStatisticsLogging {
      */
     public StatisticsToString(String origin, IOStatistics statistics) {
       this.origin = origin;
-      this.statistics = Optional.of(statistics);
+      this.statistics = statistics;
     }
 
     @Override
     public String toString() {
-      return "Statistics of " + origin + " " + statisticsToString(statistics);
+      return statistics != null
+          ? ("Statistics of " + origin + " " + iostatisticsToString(statistics))
+          : "";
     }
   }
 }

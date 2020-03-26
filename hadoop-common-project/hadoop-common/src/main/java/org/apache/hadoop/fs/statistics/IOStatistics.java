@@ -95,10 +95,9 @@ public interface IOStatistics extends Iterable<Map.Entry<String, Long>> {
   /**
    * Get the value of a statistic.
    *
-   * @return null if the statistic is not being tracked or is not a
-   *                 long statistic. The value of the statistic, otherwise.
+   * @return The value of the statistic, or null if not tracked.
    */
-  Long getLong(String key);
+  Long getStatistic(String key);
 
   /**
    * Return true if a statistic is being tracked.
@@ -128,8 +127,12 @@ public interface IOStatistics extends Iterable<Map.Entry<String, Long>> {
    * This is very limited right now
    */
   enum Attributes {
+    /** The attributes never update. */
+    Static,
+
     /** The statistics are dynamic: when you re-read a value it may change. */
     Dynamic,
+
     /**
      * The statistics are actually snapshots, updated when you call snapshot(),
      * or iterator();

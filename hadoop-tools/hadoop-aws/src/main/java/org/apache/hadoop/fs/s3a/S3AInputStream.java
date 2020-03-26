@@ -47,7 +47,6 @@ import org.slf4j.LoggerFactory;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
-import java.util.Optional;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
@@ -860,7 +859,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   @Override
-  public Optional<IOStatistics> getIOStatistics() {
-    return Optional.of(ioStatistics);
+  public IOStatistics getIOStatistics() {
+    return ioStatistics;
   }
 }

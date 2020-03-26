@@ -20,34 +20,19 @@ package org.apache.hadoop.fs.statistics.impl;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.TreeMap;
+import java.util.NoSuchElementException;
 
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
 /**
- * Snapshotted IO statistics; will update on a call to snapshot().
+ * An empty IO Statistics implementation for classes which always
+ * want to return a non-null value.
  */
-class SnapshotIOStatistics implements IOStatistics {
-
-  /**
-   * Treemaps sort their insertions so the iterator is ordered.
-   */
-  private final Map<String, Long> entries
-      = new TreeMap<>();
-
-  /**
-   * Snapshot source.
-   */
-  private final IOStatistics source;
-
-  SnapshotIOStatistics(final IOStatistics source) {
-    this.source = source;
-    snapshot();
-  }
+public class EmptyIOStatistics implements IOStatistics {
 
   @Override
   public Long getStatistic(final String key) {
-    return entries.get(key);
+    return null;
   }
 
   @Override
@@ -56,21 +41,28 @@ class SnapshotIOStatistics implements IOStatistics {
   }
 
   @Override
-  public Iterator<Map.Entry<String, Long>> iterator() {
-    return entries.entrySet().iterator();
-  }
-
-  @Override
   public boolean hasAttribute(final Attributes attr) {
-    return Attributes.Snapshotted == attr;
+    return Attributes.Static == attr;
   }
 
   @Override
-  public synchronized boolean snapshot() {
-    entries.clear();
-    for (Map.Entry<String, Long> sourceEntry : source) {
-      entries.put(sourceEntry.getKey(), sourceEntry.getValue());
-    }
-    return true;
+  public Iterator<Map.Entry<String, Long>> iterator() {
+    return new EmptyIterator();
   }
+
+  private static class EmptyIterator implements
+      Iterator<Map.Entry<String, Long>> {
+
+    @Override
+    public boolean hasNext() {
+      return false;
+    }
+
+    @SuppressWarnings("NewExceptionWithoutArguments")
+    @Override
+    public Map.Entry<String, Long> next() {
+      throw new NoSuchElementException();
+    }
+  }
+
 }

@@ -33,9 +33,9 @@ public interface IOStatisticsSource {
    * Return a statistics instance.
    * It is not a requirement that the same instance is returned every time.
    * {@link IOStatisticsSource}.
-   * @return an IOStatistics instance or an empty value.
+   * @return an IOStatistics instance or null
    */
-  default Optional<IOStatistics> getIOStatistics() {
-    return Optional.empty();
+  default IOStatistics getIOStatistics() {
+    return null;
   }
 }

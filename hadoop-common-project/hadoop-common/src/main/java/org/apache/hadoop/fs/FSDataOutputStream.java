@@ -21,13 +21,12 @@ import java.io.DataOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Optional;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationSupport;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsSupport;
 
 /** Utility that wraps a {@link OutputStream} in a {@link DataOutputStream}.
  */
@@ -168,7 +167,7 @@ public class FSDataOutputStream extends DataOutputStream
    * @return an IOStatistics instance.
    */
   @Override
-  public Optional<IOStatistics> getIOStatistics() {
-    return IOStatisticsImplementationSupport.retrieveIOStatistics(wrappedStream);
+  public IOStatistics getIOStatistics() {
+    return IOStatisticsSupport.retrieveIOStatistics(wrappedStream);
   }
 }

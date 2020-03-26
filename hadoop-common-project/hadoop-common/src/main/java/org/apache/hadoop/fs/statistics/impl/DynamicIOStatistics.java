@@ -62,7 +62,7 @@ final class DynamicIOStatistics implements IOStatistics {
    * @return the latest value of that statistic, if found, else null.
    */
   @Override
-  public Long getLong(final String key) {
+  public Long getStatistic(final String key) {
     ToLongFunction<String> fn = evaluators.get(key);
     return fn != null
         ? fn.applyAsLong(key)
@@ -104,7 +104,7 @@ final class DynamicIOStatistics implements IOStatistics {
     @Override
     public Map.Entry<String, Long> next() {
       final Map.Entry<String, ToLongFunction<String>> entry = iterator.next();
-      return new IOStatisticsImplementationSupport.StatsMapEntry(
+      return new IOStatisticsSupport.StatsMapEntry(
           entry.getKey(),
           entry.getValue().applyAsLong(entry.getKey()));
     }

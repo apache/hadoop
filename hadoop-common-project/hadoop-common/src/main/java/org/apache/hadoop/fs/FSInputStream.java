@@ -24,7 +24,6 @@ import java.io.InputStream;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
@@ -150,8 +149,9 @@ public abstract class FSInputStream extends InputStream
   public String toString() {
     final StringBuilder sb = new StringBuilder(super.toString());
     sb.append('{');
-    if (this instanceof IOStatistics) {
-      sb.append(IOStatisticsLogging.sourceToString((IOStatisticsSource) this));
+    if (this instanceof IOStatisticsSource) {
+      sb.append(IOStatisticsLogging.iostatisticsSourceToString(
+          (IOStatisticsSource) this));
     }
     sb.append('}');
     return sb.toString();

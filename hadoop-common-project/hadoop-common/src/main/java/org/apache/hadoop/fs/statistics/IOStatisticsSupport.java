@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.statistics;
 
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationSupport;
-
 /**
  * Support for working with statistics.
  */
@@ -34,6 +32,6 @@ public final class IOStatisticsSupport {
    * @return a wrapped instance.
    */
   public static IOStatistics wrapWithSnapshot(IOStatistics source) {
-    return IOStatisticsImplementationSupport.wrapWithSnapshot(source);
+    return org.apache.hadoop.fs.statistics.impl.IOStatisticsSupport.wrapWithSnapshot(source);
   }
 }

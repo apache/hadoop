@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.statistics.impl;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -35,7 +34,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 public class IOStatisticsFromStorageStatistics
     implements IOStatisticsSource {
 
-  private final Optional<IOStatistics> binding;
+  private final IOStatistics binding;
 
   /**
    * Instantiate from a storage statistics instance, which may be null,
@@ -45,9 +44,9 @@ public class IOStatisticsFromStorageStatistics
   public IOStatisticsFromStorageStatistics(
       final StorageStatistics storageStatistics) {
     if (storageStatistics != null) {
-      binding = Optional.of(new IOStatisticsBinding(storageStatistics));
+      binding = new IOStatisticsBinding(storageStatistics);
     } else {
-      binding = Optional.empty();
+      binding = null;
     }
   }
 
@@ -56,14 +55,14 @@ public class IOStatisticsFromStorageStatistics
    * @return the IO statistics bound to.
    */
   @Override
-  public Optional<IOStatistics> getIOStatistics() {
+  public IOStatistics getIOStatistics() {
     return binding;
   }
 
   /**
    * The internal binding.
    */
-  private static class IOStatisticsBinding implements IOStatistics {
+  private static final class IOStatisticsBinding implements IOStatistics {
 
     /**
      * Source.
@@ -80,7 +79,7 @@ public class IOStatisticsFromStorageStatistics
     }
 
     @Override
-    public Long getLong(final String key) {
+    public Long getStatistic(final String key) {
       return storageStatistics.getLong(key);
     }
 
@@ -103,7 +102,7 @@ public class IOStatisticsFromStorageStatistics
       implements Iterator<Map.Entry<String, Long>> {
 
     /**
-     * The iterator over the storage statisticis.
+     * The iterator over the storage statistic s.
      */
     private final Iterator<StorageStatistics.LongStatistic> iterator;
 
@@ -119,7 +118,7 @@ public class IOStatisticsFromStorageStatistics
     @Override
     public Map.Entry<String, Long> next() {
       final StorageStatistics.LongStatistic entry = iterator.next();
-      return new IOStatisticsImplementationSupport.StatsMapEntry(
+      return new IOStatisticsSupport.StatsMapEntry(
           entry.getName(), entry.getValue());
     }
 

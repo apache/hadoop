@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.statistics.impl;
 
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -28,9 +27,9 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 /**
  * Support for implementing IOStatistics interfaces.
  */
-public class IOStatisticsImplementationSupport {
+public final class IOStatisticsSupport {
 
-  private IOStatisticsImplementationSupport() {
+  private IOStatisticsSupport() {
   }
 
   /**
@@ -40,11 +39,11 @@ public class IOStatisticsImplementationSupport {
    * @return an optional IOStatistics instance.
    */
 
-  public static Optional<IOStatistics> retrieveIOStatistics(
+  public static IOStatistics retrieveIOStatistics(
       final Object source) {
     return (source instanceof IOStatisticsSource)
         ? ((IOStatisticsSource) source).getIOStatistics()
-        : Optional.empty();
+        : null;
   }
 
   /**
@@ -61,7 +60,7 @@ public class IOStatisticsImplementationSupport {
    * @return a builder to be completed.
    */
   public static DynamicIOStatisticsBuilder
-    createDynamicIOStatistics() {
+  createDynamicIOStatistics() {
     return new DynamicIOStatisticsBuilder();
   }
 

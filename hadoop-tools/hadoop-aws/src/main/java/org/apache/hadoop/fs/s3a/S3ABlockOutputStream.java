@@ -23,7 +23,6 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -54,6 +53,7 @@ import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.impl.EmptyIOStatistics;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
@@ -87,7 +87,7 @@ class S3ABlockOutputStream extends OutputStream implements
   private final int blockSize;
 
   /** IO Statistics. */
-  private final Optional<IOStatistics> iostatistics;
+  private final IOStatistics iostatistics;
 
   /** Total bytes for uploads submitted so far. */
   private long bytesSubmitted;
@@ -163,6 +163,10 @@ class S3ABlockOutputStream extends OutputStream implements
     this.blockFactory = blockFactory;
     this.blockSize = (int) blockSize;
     this.statistics = statistics;
+    // test instantiations may not provide statistics;
+    iostatistics = statistics != null
+        ? statistics.createIOStatistics()
+        : new EmptyIOStatistics();
     this.writeOperationHelper = writeOperationHelper;
     this.putTracker = putTracker;
     Preconditions.checkArgument(blockSize >= Constants.MULTIPART_MIN_SIZE,
@@ -172,10 +176,6 @@ class S3ABlockOutputStream extends OutputStream implements
     this.progressListener = (progress instanceof ProgressListener) ?
         (ProgressListener) progress
         : new ProgressableListener(progress);
-    // test instantiations may not provide statistics;
-    iostatistics = statistics != null
-        ? Optional.of(statistics.createIOStatistics())
-        : Optional.empty();
     // create that first block. This guarantees that an open + close sequence
     // writes a 0-byte entry.
     createBlockIfNeeded();
@@ -478,7 +478,7 @@ class S3ABlockOutputStream extends OutputStream implements
     if (block != null) {
       sb.append(", activeBlock=").append(block);
     }
-    sb.append(IOStatisticsLogging.sourceToString(this));
+    sb.append(IOStatisticsLogging.iostatisticsSourceToString(this));
     sb.append('}');
     return sb.toString();
   }
@@ -532,7 +532,7 @@ class S3ABlockOutputStream extends OutputStream implements
   }
 
   @Override
-  public Optional<IOStatistics> getIOStatistics() {
+  public IOStatistics getIOStatistics() {
     return iostatistics;
   }
 
