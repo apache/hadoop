@@ -20,10 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.nio.ByteBuffer;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutionException;
@@ -79,6 +77,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
    */
   private static AbfsByteBufferPool byteBufferPool;
 
+  private static volatile Boolean isFirstObj = true;
+
   public AbfsOutputStream(
       final AbfsClient client,
       final String path,
@@ -105,8 +105,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     buffer = new byte[bufferSize];
   }
 
-  private static synchronized void init(final AbfsConfiguration conf) {
-    if (threadExecutor != null) {
+  private void init(final AbfsConfiguration conf) {
+    if (isCommonPoolsInitialised()) {
       return;
     }
 
@@ -129,14 +129,29 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         new LinkedBlockingQueue<>(), daemonThreadFactory);
   }
 
-  @VisibleForTesting
-  public static void initWriteBufferPool(AbfsConfiguration conf) {
-    if (bufferSize == conf.getWriteBufferSize()) {
-      return;
+  private boolean isCommonPoolsInitialised() {
+    if (threadExecutor != null) {
+      return true;
     }
+
+    boolean shouldInitialiseCommonPools = isFirstObj;
+    if (shouldInitialiseCommonPools) {
+      synchronized (AbfsOutputStream.class) {
+        shouldInitialiseCommonPools = isFirstObj;
+        if (shouldInitialiseCommonPools) {
+          isFirstObj = false;
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  @VisibleForTesting
+  public static synchronized void initWriteBufferPool(AbfsConfiguration conf) {
     bufferSize = conf.getWriteBufferSize();
     int corePoolSize =
-        1 + ( conf.getWriteConcurrencyFactor() * Runtime.getRuntime()
+        1 + (conf.getWriteConcurrencyFactor() * Runtime.getRuntime()
             .availableProcessors());
     byteBufferPool = new AbfsByteBufferPool(bufferSize, corePoolSize,
         conf.getMaxWriteMemoryUsagePercentage());
@@ -311,7 +326,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       return;
     }
 
-    final byte[] byteArray = buffer;
+    final byte[] bytes = buffer;
     final int bytesLength = bufferIndex;
     buffer = byteBufferPool.get();
     bufferIndex = 0;
@@ -319,10 +334,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     position += bytesLength;
 
     if (this.appendBlob) {
-        client.append(path, offset, byteArray, 0,
+        client.append(path, offset, bytes, 0,
             bytesLength, flush, isClose);
         lastTotalAppendOffset += bytesLength;
-      byteBufferPool.release(byteArray);
+      byteBufferPool.release(bytes);
         if (flush) {
           lastFlushOffset = lastTotalAppendOffset;
         }
@@ -342,10 +357,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
              */
             while(lastTotalAppendOffset <  lastFlushOffset);
           }
-          AbfsRestOperation op = client.append(path, offset, byteArray, 0,
+          AbfsRestOperation op = client.append(path, offset, bytes, 0,
               bytesLength, flush, isClose);
           perfInfo.registerResult(op.getResult());
-          byteBufferPool.release(byteArray);
+          byteBufferPool.release(bytes);
           perfInfo.registerSuccess(true);
           return null;
         }

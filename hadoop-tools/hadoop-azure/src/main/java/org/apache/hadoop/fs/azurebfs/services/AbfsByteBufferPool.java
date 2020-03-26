@@ -31,7 +31,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.M
  */
 public class AbfsByteBufferPool {
 
-  private static final Object LOCK = new Object();
   /**
    * Queue holding the free buffers.
    */
@@ -63,8 +62,8 @@ public class AbfsByteBufferPool {
         "maxWriteMemUsagePercentage should be in range (%s - %s)",
         MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE,
         MAX_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE);
-    Preconditions.checkArgument(maxFreeBuffers > 0,
-        "maxFreeBuffers cannot be < 1");
+    Preconditions
+        .checkArgument(maxFreeBuffers > 0, "maxFreeBuffers cannot be < 1");
     this.bufferSize = bufferSize;
     this.numBuffersInUse = 0;
     freeBuffers = new ArrayBlockingQueue<>(maxFreeBuffers);
@@ -87,18 +86,23 @@ public class AbfsByteBufferPool {
    * Waits if pool is empty and already maximum number of buffers are in use.
    */
   public byte[] get() {
-    synchronized (LOCK) {
-      numBuffersInUse++;
-      byte[] byteArray = freeBuffers.poll();
-      if (byteArray != null) {
-        return byteArray;
+    byte[] byteArray = null;
+    synchronized (this) {
+      byteArray = freeBuffers.poll();
+      if (byteArray == null && numBuffersInUse < maxBuffersInUse) {
+        byteArray = new byte[bufferSize];
       }
-      if (numBuffersInUse <= maxBuffersInUse) {
-        return new byte[bufferSize];
+      if (byteArray != null) {
+        numBuffersInUse++;
+        return byteArray;
       }
     }
     try {
-      return freeBuffers.take();
+      byteArray = freeBuffers.take();
+      synchronized (this) {
+        numBuffersInUse++;
+        return byteArray;
+      }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return null;
@@ -108,15 +112,13 @@ public class AbfsByteBufferPool {
   /**
    * @param byteArray The buffer to be offered back to the pool.
    */
-  public void release(byte[] byteArray) {
-    synchronized (LOCK) {
-      Preconditions.checkArgument(byteArray.length == bufferSize,
-          "Buffer size has" + " to be %s (Received buffer length: %s)",
-          bufferSize, byteArray.length);
-      numBuffersInUse--;
-      if (numBuffersInUse < 0) {
-        numBuffersInUse = 0;
-      }
+  public synchronized void release(byte[] byteArray) {
+    Preconditions.checkArgument(byteArray.length == bufferSize,
+        "Buffer size has" + " to be %s (Received buffer length: %s)",
+        bufferSize, byteArray.length);
+    numBuffersInUse--;
+    if (numBuffersInUse < 0) {
+      numBuffersInUse = 0;
     }
     freeBuffers.offer(byteArray);
   }
@@ -124,6 +126,11 @@ public class AbfsByteBufferPool {
   @VisibleForTesting
   public synchronized int getMaxBuffersInUse() {
     return this.maxBuffersInUse;
+  }
+
+  @VisibleForTesting
+  public synchronized int getBuffersInUse() {
+    return this.numBuffersInUse;
   }
 
   @VisibleForTesting

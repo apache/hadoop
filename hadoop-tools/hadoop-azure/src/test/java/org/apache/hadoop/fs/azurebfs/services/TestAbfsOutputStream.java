@@ -328,8 +328,8 @@ public final class TestAbfsOutputStream {
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean())).thenReturn(op);
 
     abfsConf.setWriteBufferSize(bufferSize);
-    AbfsOutputStream.initWriteBufferPool(abfsConf);
     AbfsOutputStream out = new AbfsOutputStream(client, path, 0, true, false, true, false, abfsConf);
+    out.initWriteBufferPool(abfsConf);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
 
