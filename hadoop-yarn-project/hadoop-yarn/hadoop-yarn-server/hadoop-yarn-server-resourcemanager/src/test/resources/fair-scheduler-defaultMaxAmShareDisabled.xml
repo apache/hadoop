@@ -45,7 +45,6 @@
                 <schedulingPolicy>drf</schedulingPolicy>
                 <aclSubmitApps>joe </aclSubmitApps>
                 <aclAdministerApps>joe </aclAdministerApps>
-                <maxAMShare>0.16</maxAMShare>
             </queue>
         </queue>
         <queue name="admins" type="parent">
@@ -83,7 +82,7 @@
     <defaultFairSharePreemptionThreshold>0.12</defaultFairSharePreemptionThreshold>
     <queueMaxAppsDefault>15</queueMaxAppsDefault>
     <defaultQueueSchedulingPolicy>fair</defaultQueueSchedulingPolicy>
-    <queueMaxAMShareDefault>0.16</queueMaxAMShareDefault>
+    <queueMaxAMShareDefault>-1.0</queueMaxAMShareDefault>
     <queuePlacementPolicy>
         <rule name="nestedUserQueue" create="false">
             <rule name="default" create="false" queue="admins.devs"/>

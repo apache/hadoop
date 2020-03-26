@@ -36,7 +36,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
@@ -82,7 +81,8 @@ public class TestFSConfigToCSConfigConverter {
       prepareFileName("fair-scheduler-orderingpolicy-mixed.xml");
   private static final String FS_NO_PLACEMENT_RULES_XML =
       prepareFileName("fair-scheduler-noplacementrules.xml");
-
+  private static final String FS_MAX_AM_SHARE_DISABLED_XML =
+      prepareFileName("fair-scheduler-defaultMaxAmShareDisabled.xml");
 
   @Mock
   private FSConfigToCSConfigRuleHandler ruleHandler;
@@ -95,8 +95,6 @@ public class TestFSConfigToCSConfigConverter {
 
   private FSConfigToCSConfigConverter converter;
   private Configuration config;
-
-  private ByteArrayOutputStream csConfigOut;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -141,11 +139,6 @@ public class TestFSConfigToCSConfigConverter {
     converter = new FSConfigToCSConfigConverter(ruleHandler,
         createDefaultConversionOptions());
     converter.setClusterResource(CLUSTER_RESOURCE);
-    ByteArrayOutputStream yarnSiteOut = new ByteArrayOutputStream();
-    csConfigOut = new ByteArrayOutputStream();
-
-    converter.setCapacitySchedulerConfigOutputStream(csConfigOut);
-    converter.setYarnSiteOutputStream(yarnSiteOut);
   }
 
   private FSConfigToCSConfigConverterParams.Builder
@@ -166,7 +159,7 @@ public class TestFSConfigToCSConfigConverter {
   public void testDefaultMaxApplications() throws Exception {
     converter.convert(config);
 
-    Configuration conf = getConvertedCSConfig();
+    Configuration conf = converter.getCapacitySchedulerConfig();
     int maxApps =
         conf.getInt(
             CapacitySchedulerConfiguration.MAXIMUM_SYSTEM_APPLICATIONS, -1);
@@ -178,19 +171,54 @@ public class TestFSConfigToCSConfigConverter {
   public void testDefaultMaxAMShare() throws Exception {
     converter.convert(config);
 
-    Configuration conf = getConvertedCSConfig();
+    Configuration conf = converter.getCapacitySchedulerConfig();
     String maxAmShare =
         conf.get(CapacitySchedulerConfiguration.
             MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT);
 
     assertEquals("Default max AM share", "0.16", maxAmShare);
+
+    assertEquals("root.admins.alice max-am-resource-percent", "0.15",
+        conf.get(PREFIX + "root.admins.alice.maximum-am-resource-percent"));
+
+    assertNull("root.users.joe maximum-am-resource-percent should be null",
+        conf.get(PREFIX + "root.users.joe maximum-am-resource-percent"));
+  }
+
+  @Test
+  public void testDefaultMaxAMShareDisabled() throws Exception {
+    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+        .withClusterResource(CLUSTER_RESOURCE_STRING)
+        .withFairSchedulerXmlConfig(FS_MAX_AM_SHARE_DISABLED_XML)
+        .build();
+
+    converter.convert(params);
+
+    Configuration conf = converter.getCapacitySchedulerConfig();
+
+    // -1.0 means disabled ==> 1.0 in CS
+    assertEquals("Default max-am-resource-percent", "1.0",
+        conf.get(CapacitySchedulerConfiguration.
+            MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT));
+
+    // root.admins.bob -1.0 equals to the default -1.0
+    assertNull("root.admins.bob maximum-am-resource-percent should be null",
+        conf.get(PREFIX + "root.admins.bob.maximum-am-resource-percent"));
+
+    // root.admins.alice 0.15 != -1.0
+    assertEquals("root.admins.alice max-am-resource-percent", "0.15",
+        conf.get(PREFIX + "root.admins.alice.maximum-am-resource-percent"));
+
+    // root.users.joe is unset, inherits -1.0
+    assertNull("root.users.joe maximum-am-resource-percent should be null",
+        conf.get(PREFIX + "root.users.joe.maximum-am-resource-percent"));
   }
 
   @Test
   public void testConvertACLs() throws Exception {
     converter.convert(config);
 
-    Configuration conf = getConvertedCSConfig();
+    Configuration conf = converter.getCapacitySchedulerConfig();
 
     // root
     assertEquals("root submit ACL", "alice,bob,joe,john hadoop_users",
@@ -227,7 +255,7 @@ public class TestFSConfigToCSConfigConverter {
   public void testDefaultMaxRunningApps() throws Exception {
     converter.convert(config);
 
-    Configuration conf = getConvertedCSConfig();
+    Configuration conf = converter.getCapacitySchedulerConfig();
 
     // default setting
     assertEquals("Default max apps", 15,
@@ -547,7 +575,7 @@ public class TestFSConfigToCSConfigConverter {
 
     converter.convert(config);
 
-    Configuration convertedConf = getConvertedCSConfig();
+    Configuration convertedConf = converter.getCapacitySchedulerConfig();
 
     String expectedMappingRules =
         "u:%user:root.admins.devs.%user,u:%user:root.users.%user,u:%user:root.default";
@@ -580,7 +608,7 @@ public class TestFSConfigToCSConfigConverter {
     converter.setConvertPlacementRules(true);
     converter.convert(config);
 
-    Configuration convertedConf = getConvertedCSConfig();
+    Configuration convertedConf = converter.getCapacitySchedulerConfig();
     String mappingRules =
         convertedConf.get(CapacitySchedulerConfiguration.QUEUE_MAPPING);
 
@@ -602,7 +630,7 @@ public class TestFSConfigToCSConfigConverter {
 
     converter.convert(config);
 
-    Configuration convertedConf = getConvertedCSConfig();
+    Configuration convertedConf = converter.getCapacitySchedulerConfig();
     String property =
         "yarn.scheduler.capacity.root.auto-create-child-queue.enabled";
     assertNull("Auto-create queue shouldn't be set",
@@ -632,7 +660,7 @@ public class TestFSConfigToCSConfigConverter {
 
     converter.convert(config);
 
-    Configuration convertedConf = getConvertedCSConfig();
+    Configuration convertedConf = converter.getCapacitySchedulerConfig();
     String property =
         "yarn.scheduler.capacity.root.auto-create-child-queue.enabled";
 
@@ -674,17 +702,6 @@ public class TestFSConfigToCSConfigConverter {
         any(PlacementManager.class),
         any(FSConfigToCSConfigRuleHandler.class),
         any(Boolean.class));
-  }
-
-  private Configuration getConvertedCSConfig() {
-    ByteArrayInputStream input =
-        new ByteArrayInputStream(csConfigOut.toByteArray());
-    assertTrue("CS config output has length of 0!",
-        csConfigOut.toByteArray().length > 0);
-    Configuration conf = new Configuration(false);
-    conf.addResource(input);
-
-    return conf;
   }
 
   private Configuration getConvertedCSConfig(String dir) throws IOException {
