@@ -38,8 +38,6 @@ public final class HttpQueryParams {
   public static final String QUERY_PARAM_RETAIN_UNCOMMITTED_DATA = "retainUncommittedData";
   public static final String QUERY_PARAM_CLOSE = "close";
   public static final String QUERY_PARAM_UPN = "upn";
-  public static final String QUERY_PARAM_FLUSH = "flush";
-  public static final String QUERY_PARAM_BLOBTYPE = "blobtype";
 
   private HttpQueryParams() {}
 }
