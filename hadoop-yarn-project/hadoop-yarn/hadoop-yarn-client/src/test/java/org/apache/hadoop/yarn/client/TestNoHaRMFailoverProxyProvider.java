@@ -54,7 +54,7 @@ public class TestNoHaRMFailoverProxyProvider {
 
   private static final int NUMNODEMANAGERS = 1;
   private Configuration conf;
-  
+
   private class TestProxy extends Proxy implements Closeable {
     protected TestProxy(InvocationHandler h) {
       super(h);
