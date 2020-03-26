@@ -643,10 +643,6 @@ Consult the javadocs for `org.apache.hadoop.fs.azurebfs.constants.ConfigurationK
 `org.apache.hadoop.fs.azurebfs.AbfsConfiguration` for the full list
 of configuration options and their default values.
 
-### <a name="appendblobkeyconfigoptions"></a> Append Blob Directories Options
-#### Config `fs.azure.appendblob.key` provides
-an option for using append blob for the files prefixed by the config value.
-
 ### <a name="flushconfigoptions"></a> Flush Options
 
 #### <a name="abfsflushconfigoptions"></a> 1. Azure Blob File System Flush Options
