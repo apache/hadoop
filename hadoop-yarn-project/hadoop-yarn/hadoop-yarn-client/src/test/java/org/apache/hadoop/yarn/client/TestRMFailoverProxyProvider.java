@@ -53,7 +53,7 @@ public class TestRMFailoverProxyProvider {
 
   private Configuration conf;
 
-  class TestProxy extends Proxy implements Closeable {
+  private class TestProxy extends Proxy implements Closeable {
     protected TestProxy(InvocationHandler h) {
       super(h);
     }
