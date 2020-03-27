@@ -76,6 +76,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
+import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -964,6 +965,14 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       // Delete the file without S3Guard (raw)
       deleteFile(rawFS, testFilePath);
 
+      // now, versioned FS or not, it will not be readable from the
+      // raw FS, and this will fail in both open APIs during the open
+      // phase, rather than when a read is attempted.
+      interceptFuture(FileNotFoundException.class, "",
+          rawFS.openFile(testFilePath).build());
+      intercept(FileNotFoundException.class, () ->
+          rawFS.open(testFilePath).close());
+
       // File status will be still readable from s3guard
       S3AFileStatus status = (S3AFileStatus)
           guardedFs.getFileStatus(testFilePath);
@@ -985,8 +994,6 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
         Assertions.assertThat(toChar(bytes))
             .describedAs("open(%s)", testFilePath)
             .isEqualTo(text);
-        expectExceptionWhenReadingOpenFileAPI(rawFS, testFilePath, text,
-            null);
       } else {
         // unversioned sequence
         expectExceptionWhenReading(testFilePath, text);
