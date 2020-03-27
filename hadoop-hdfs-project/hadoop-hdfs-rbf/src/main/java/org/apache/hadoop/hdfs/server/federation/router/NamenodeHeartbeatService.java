@@ -79,6 +79,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
 
   /** Namenode HA target. */
   private NNHAServiceTarget localTarget;
+  /** Cache HA protocol. */
+  private HAServiceProtocol localTargetHAProtocol;
   /** RPC address for the namenode. */
   private String rpcAddress;
   /** Service RPC address for the namenode. */
@@ -293,8 +295,10 @@ public class NamenodeHeartbeatService extends PeriodicService {
         try {
           // Determine if NN is active
           // TODO: dynamic timeout
-          HAServiceProtocol haProtocol = localTarget.getProxy(conf, 30*1000);
-          HAServiceStatus status = haProtocol.getServiceStatus();
+          if (localTargetHAProtocol == null) {
+            localTargetHAProtocol = localTarget.getProxy(conf, 30*1000);
+          }
+          HAServiceStatus status = localTargetHAProtocol.getServiceStatus();
           report.setHAServiceState(status.getState());
         } catch (Throwable e) {
           if (e.getMessage().startsWith("HA for namenode is not enabled")) {
@@ -305,6 +309,7 @@ public class NamenodeHeartbeatService extends PeriodicService {
             LOG.error("Cannot fetch HA status for {}: {}",
                 getNamenodeDesc(), e.getMessage(), e);
           }
+          localTargetHAProtocol = null;
         }
       }
     } catch(IOException e) {
