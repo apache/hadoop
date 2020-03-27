@@ -248,31 +248,34 @@ public class BlockTokenIdentifier extends TokenIdentifier {
       modes.add(WritableUtils.readEnum(in, AccessMode.class));
     }
 
-    length = WritableUtils.readVInt(in);
-    StorageType[] readStorageTypes = new StorageType[length];
-    for (int i = 0; i < length; i++) {
-      readStorageTypes[i] = WritableUtils.readEnum(in, StorageType.class);
-    }
-    storageTypes = readStorageTypes;
-
-    length = WritableUtils.readVInt(in);
-    String[] readStorageIds = new String[length];
-    for (int i = 0; i < length; i++) {
-      readStorageIds[i] = WritableUtils.readString(in);
-    }
-    storageIds = readStorageIds;
-
-    useProto = false;
-
     try {
+      length = WritableUtils.readVInt(in);
+      StorageType[] readStorageTypes = new StorageType[length];
+      for (int i = 0; i < length; i++) {
+        readStorageTypes[i] = WritableUtils.readEnum(in, StorageType.class);
+      }
+      storageTypes = readStorageTypes;
+
+      length = WritableUtils.readVInt(in);
+      String[] readStorageIds = new String[length];
+      for (int i = 0; i < length; i++) {
+        readStorageIds[i] = WritableUtils.readString(in);
+      }
+      storageIds = readStorageIds;
+
       int handshakeMsgLen = WritableUtils.readVInt(in);
       if (handshakeMsgLen != 0) {
         handshakeMsg = new byte[handshakeMsgLen];
         in.readFully(handshakeMsg);
       }
     } catch (EOFException eof) {
-
+      // If the NameNode is on a version before HDFS-6708 and HDFS-9807, then
+      // the block token won't have storage types or storage IDs. For backward
+      // compatibility, swallow the EOF that we get when we try to read those
+      // fields. Same for the handshake secret field from HDFS-14611.
     }
+
+    useProto = false;
   }
 
   @VisibleForTesting
@@ -332,13 +335,17 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     for (AccessMode aMode : modes) {
       WritableUtils.writeEnum(out, aMode);
     }
-    WritableUtils.writeVInt(out, storageTypes.length);
-    for (StorageType type: storageTypes){
-      WritableUtils.writeEnum(out, type);
+    if (storageTypes != null) {
+      WritableUtils.writeVInt(out, storageTypes.length);
+      for (StorageType type : storageTypes) {
+        WritableUtils.writeEnum(out, type);
+      }
     }
-    WritableUtils.writeVInt(out, storageIds.length);
-    for (String id: storageIds) {
-      WritableUtils.writeString(out, id);
+    if (storageIds != null) {
+      WritableUtils.writeVInt(out, storageIds.length);
+      for (String id : storageIds) {
+        WritableUtils.writeString(out, id);
+      }
     }
     if (handshakeMsg != null && handshakeMsg.length > 0) {
       WritableUtils.writeVInt(out, handshakeMsg.length);
