@@ -187,7 +187,7 @@ public class TestAbfsInputStream extends
     // First Read request leads to 3 readahead calls: Fail all 3 readahead-client.read()
     // A second read request will see that readahead had failed for data in
     // the requested offset range and also that its is an older readahead request.
-    // System issue could have resolved by now, so attempt a new read only for the requested range.
+    // So attempt a new read only for the requested range.
     doThrow(new TimeoutException("Internal Server error for RAH-X"))
         .doThrow(new TimeoutException("Internal Server error for RAH-Y"))
         .doThrow(new TimeoutException("Internal Server error for RAH-Z"))
@@ -206,7 +206,7 @@ public class TestAbfsInputStream extends
     // Only the 3 readAhead threads should have triggered client.read
     verifyReadCallCount(client, 3);
 
-    // Sleep for 30 sec so that the read ahead buffers qualify for being old.
+    // Sleep for 30 sec so that the read ahead buffer qualifies for being old.
     Thread.sleep(ReadBufferManager.getBufferManager().getThreshold_age_milliseconds());
 
     // Second read request should retry the read (and not issue any new readaheads)
@@ -273,7 +273,7 @@ public class TestAbfsInputStream extends
 
   /**
    * This test expects ReadAheadManager to throw exception if the read ahead
-   * thread had failed for the same queueRequestId.
+   * thread had failed within the last 30 sec.
    * Also checks that the ReadBuffers are evicted as per the ReadBufferManager
    * threshold criteria.
    * @throws Exception
