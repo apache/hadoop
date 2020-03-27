@@ -1420,4 +1420,9 @@ public abstract class AbstractYarnScheduler
       updateThreadMonitor.notify();
     }
   }
+
+  @Override
+  public void resetSchedulerMetrics() {
+    // reset scheduler metrics
+  }
 }

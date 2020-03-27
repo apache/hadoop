@@ -1171,6 +1171,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   void reinitialize(boolean initialize) {
     ClusterMetrics.destroy();
     QueueMetrics.clearQueueMetrics();
+    getResourceScheduler().resetSchedulerMetrics();
     if (initialize) {
       resetRMContext();
       createAndInitActiveServices(true);

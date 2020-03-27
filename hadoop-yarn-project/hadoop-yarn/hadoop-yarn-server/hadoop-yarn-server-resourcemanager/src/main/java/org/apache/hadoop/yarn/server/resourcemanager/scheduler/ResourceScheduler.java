@@ -58,4 +58,9 @@ public interface ResourceScheduler extends YarnScheduler, Recoverable {
    * @return the number of available {@link NodeId} by resource name.
    */
   List<NodeId> getNodeIds(String resourceName);
+
+  /**
+   * Reset scheduler metrics.
+   */
+  void resetSchedulerMetrics();
 }
