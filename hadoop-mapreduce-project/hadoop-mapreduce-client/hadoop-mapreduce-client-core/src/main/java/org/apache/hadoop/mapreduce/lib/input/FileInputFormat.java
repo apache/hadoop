@@ -325,7 +325,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
                   addInputPathRecursively(result, fs, stat.getPath(),
                       inputFilter);
                 } else {
-                  result.add(stat);
+                  result.add(shrinkStatus(stat));
                 }
               }
             }
@@ -364,13 +364,29 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
         if (stat.isDirectory()) {
           addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
         } else {
-          result.add(stat);
+          result.add(shrinkStatus(stat));
         }
       }
     }
   }
-  
-  
+
+  public static FileStatus shrinkStatus(FileStatus origStat) {
+    if (origStat.isDirectory() || origStat.getLen() == 0 ||
+        !(origStat instanceof LocatedFileStatus)) {
+      return origStat;
+    } else {
+      BlockLocation[] blockLocations =
+          ((LocatedFileStatus)origStat).getBlockLocations();
+      BlockLocation[] locs = new BlockLocation[blockLocations.length];
+      int i = 0;
+      for (BlockLocation location : blockLocations) {
+        locs[i++] = new BlockLocation(location);
+      }
+      LocatedFileStatus newStat = new LocatedFileStatus(origStat, locs);
+      return newStat;
+    }
+  }
+
   /**
    * A factory that makes the split for this class. It can be overridden
    * by sub-classes to make sub-types
