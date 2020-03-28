@@ -367,17 +367,18 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
   }
 
   public static FileStatus shrinkStatus(FileStatus origStat) {
-    if (origStat.isDirectory() || origStat.getLen() == 0
-      || !(origStat instanceof LocatedFileStatus)) {
+    if (origStat.isDirectory() || origStat.getLen() == 0 ||
+        !(origStat instanceof LocatedFileStatus)) {
       return origStat;
     } else {
-      BlockLocation[] blockLocations = ((LocatedFileStatus)origStat).getBlockLocations();
-      BlockLocation[] dupLocs = new BlockLocation[blockLocations.length];
+      BlockLocation[] blockLocations =
+          ((LocatedFileStatus)origStat).getBlockLocations();
+      BlockLocation[] locs = new BlockLocation[blockLocations.length];
       int i = 0;
       for (BlockLocation location : blockLocations) {
-        dupLocs[i++] = new BlockLocation(location);
+        locs[i++] = new BlockLocation(location);
       }
-      LocatedFileStatus newStat = new LocatedFileStatus(origStat, dupLocs);
+      LocatedFileStatus newStat = new LocatedFileStatus(origStat, locs);
       return newStat;
     }
   }

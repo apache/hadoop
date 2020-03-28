@@ -247,17 +247,26 @@ public class TestFileInputFormat {
     RemoteIterator<LocatedFileStatus> statuses = mockFs.listLocatedStatus(dir1);
     while (statuses.hasNext()) {
       LocatedFileStatus orig = statuses.next();
-      LocatedFileStatus shrink = (LocatedFileStatus) FileInputFormat.shrinkStatus(orig);
+      LocatedFileStatus shrink =
+          (LocatedFileStatus)FileInputFormat.shrinkStatus(orig);
       Assert.assertTrue(orig.equals(shrink));
       if (shrink.getBlockLocations() != null) {
         BlockLocation location = shrink.getBlockLocations()[0];
         BlockLocation actual = orig.getBlockLocations()[0];
         Assert.assertArrayEquals(actual.getHosts(), location.getHosts());
-        Assert.assertArrayEquals(actual.getCachedHosts(), location.getCachedHosts());
-        Assert.assertArrayEquals(actual.getStorageIds(), location.getStorageIds());
-        Assert.assertArrayEquals(actual.getStorageTypes(), location.getStorageTypes());
+        Assert.assertArrayEquals(
+            actual.getCachedHosts(), location.getCachedHosts()
+        );
+        Assert.assertArrayEquals(
+            actual.getStorageIds(), location.getStorageIds()
+        );
+        Assert.assertArrayEquals(
+            actual.getStorageTypes(), location.getStorageTypes()
+        );
+        Assert.assertArrayEquals(
+            actual.getTopologyPaths(), location.getTopologyPaths()
+        );
         Assert.assertArrayEquals(actual.getNames(), location.getNames());
-        Assert.assertArrayEquals(actual.getTopologyPaths(), location.getTopologyPaths());
         Assert.assertEquals(actual.getLength(), location.getLength());
         Assert.assertEquals(actual.getOffset(), location.getOffset());
         Assert.assertEquals(actual.isCorrupt(), location.isCorrupt());
