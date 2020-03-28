@@ -4141,7 +4141,9 @@
   <name>dfs.short.circuit.num</name>
   <value>1</value>
   <description>
-    Number of short-circuit caches.
+    Number of short-circuit caches. This setting should
+    be in the range 1 - 5. Lower values will result in lower CPU consumption; higher
+    values may speed up massive parallel reading files.
   </description>
 </property>
 
