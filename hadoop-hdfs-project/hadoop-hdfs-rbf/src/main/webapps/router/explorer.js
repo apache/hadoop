@@ -377,6 +377,13 @@
   }
 
 
+  $('#parentDir').click(function () {
+     var current = current_directory;
+     var lastIndex = current.lastIndexOf('/');
+     var parent = current.substr(0, lastIndex);
+     browse_directory(parent);
+  })
+
   function init() {
     dust.loadSource(dust.compile($('#tmpl-explorer').html(), 'explorer'));
     dust.loadSource(dust.compile($('#tmpl-block-info').html(), 'block-info'));
