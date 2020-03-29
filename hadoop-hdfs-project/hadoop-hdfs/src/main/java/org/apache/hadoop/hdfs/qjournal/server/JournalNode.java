@@ -19,8 +19,10 @@ package org.apache.hadoop.hdfs.qjournal.server;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.hadoop.util.VersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -57,7 +59,9 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * The JournalNode is a daemon which allows namenodes using
@@ -392,7 +396,25 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
 
     return JSON.toString(status);
   }
-  
+
+  @Override // JournalNodeMXBean
+  public String getHostAndPort() {
+    return NetUtils.getHostPortString(rpcServer.getAddress());
+  }
+
+  @Override // JournalNodeMXBean
+  public List<String> getClusterIds() {
+    return journalsById.values().stream()
+        .map(j -> j.getStorage().getClusterID())
+        .filter(cid -> !Strings.isNullOrEmpty(cid))
+        .distinct().collect(Collectors.toList());
+  }
+
+  @Override // JournalNodeMXBean
+  public String getVersion() {
+    return VersionInfo.getVersion() + ", r" + VersionInfo.getRevision();
+  }
+
   /**
    * Register JournalNodeMXBean
    */
