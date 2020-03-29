@@ -319,6 +319,8 @@
               { 'orderDataType': 'ng-value', 'searchable': true },
               { 'orderDataType': 'ng-value', 'type': 'numeric' },
               { 'orderDataType': 'ng-value', 'type': 'numeric' },
+              { 'orderDataType': 'ng-value', 'type': 'numeric' },
+              { 'orderDataType': 'ng-value', 'type': 'numeric' },
               { 'orderDataType': 'ng-value', 'type': 'numeric'}
             ]});
           $('#ui-tabs a[href="#tab-datanode"]').tab('show');

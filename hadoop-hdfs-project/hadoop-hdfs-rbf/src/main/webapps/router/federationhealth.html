@@ -153,6 +153,8 @@
       <th>Nameservice</th>
       <th>Namenode</th>
       <th>Last Contact</th>
+      <th>Used</th>
+      <th>Non DFS Used</th>
       <th>Capacity</th>
       <th>Files</th>
       <th>Total</th>
@@ -172,6 +174,8 @@
       <td><a href="{webScheme}://{webAddress}">{nameserviceId}</a></td>
       <td><a href="{webScheme}://{webAddress}">{namenodeId}</a></td>
       <td>{lastHeartbeat}</td>
+      <td ng-value="{used}">{used|fmt_bytes}</td>
+      <td ng-value="{nonDfsUsedSpace}">{nonDfsUsedSpace|fmt_bytes}</td>
       <td ng-value="{usedPercentage}" style="width:210px">
         <div>
           <div style="display:inline-block; float: left; padding-right: 10px; width:60px;">{totalSpace|fmt_bytes}</div>
@@ -220,6 +224,8 @@
       <th colspan="2">Namenode</th>
       <th>Web address</th>
       <th>Last Contact</th>
+      <th>Used</th>
+      <th>Non DFS Used</th>
       <th>Capacity</th>
       <th>Files</th>
       <th>Total</th>
@@ -240,6 +246,8 @@
       <td>{namenodeId}</td>
       <td><a href="{webScheme}://{webAddress}">{webScheme}://{webAddress}</a></td>
       <td>{lastHeartbeat}</td>
+      <td ng-value="{used}">{used|fmt_bytes}</td>
+      <td ng-value="{nonDfsUsedSpace}">{nonDfsUsedSpace|fmt_bytes}</td>
       <td ng-value="{usedPercentage}" style="width:210px">
         <div>
           <div style="display:inline-block; float: left; padding-right: 10px; width:60px;">{totalSpace|fmt_bytes}</div>
