@@ -327,16 +327,30 @@ public class MockResolver
 
   @Override
   public List<String> getMountPoints(String path) throws IOException {
-    // Mounts only supported under root level
-    if (!path.equals("/")) {
-      return null;
-    }
     List<String> mounts = new ArrayList<>();
-    for (String mount : this.locations.keySet()) {
-      if (mount.length() > 1) {
-        // Remove leading slash, this is the behavior of the mount tree,
-        // return only names.
-        mounts.add(mount.replace("/", ""));
+    // for root path search, returning all downstream root level mapping
+    if (path.equals("/")) {
+      // Mounts only supported under root level
+      for (String mount : this.locations.keySet()) {
+        if (mount.length() > 1) {
+          // Remove leading slash, this is the behavior of the mount tree,
+          // return only names.
+          mounts.add(mount.replace("/", ""));
+        }
+      }
+    } else {
+      // a simplified version of MountTableResolver implementation
+      for (String key : this.locations.keySet()) {
+        if (key.startsWith(path)) {
+          String child = key.substring(path.length());
+          if (child.length() > 0) {
+            // only take children so remove parent path and /
+            mounts.add(key.substring(path.length()+1));
+          }
+        }
+      }
+      if (mounts.size() == 0) {
+        mounts = null;
       }
     }
     return mounts;
