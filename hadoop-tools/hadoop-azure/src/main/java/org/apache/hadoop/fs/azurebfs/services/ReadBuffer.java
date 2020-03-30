@@ -96,7 +96,7 @@ class ReadBuffer {
     return errException;
   }
 
-  public void setErrException(final java.io.IOException errException) {
+  public void setErrException(final IOException errException) {
     this.errException = errException;
   }
 

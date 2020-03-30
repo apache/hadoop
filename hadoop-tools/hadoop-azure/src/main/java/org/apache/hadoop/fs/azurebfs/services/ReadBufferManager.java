@@ -145,7 +145,7 @@ final class ReadBufferManager {
    * @return the number of bytes read
    */
   int getBlock(final AbfsInputStream stream, final long position, final int length, final byte[] buffer)
-      throws java.io.IOException {
+      throws IOException {
     // not synchronized, so have to be careful with locking
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("getBlock for file {}  position {}  thread {}",
