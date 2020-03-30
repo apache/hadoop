@@ -259,7 +259,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       expectedAbsChildQueueCapacity =
           populateExpectedAbsCapacityByLabelForParentQueue(1);
 
-      validateInitialQueueEntitlement(parentQueue, leafQueue.getQueueName(),
+      validateInitialQueueEntitlement(parentQueue, leafQueue.getQueuePath(),
           expectedAbsChildQueueCapacity, accessibleNodeLabelsOnC);
 
     } finally {

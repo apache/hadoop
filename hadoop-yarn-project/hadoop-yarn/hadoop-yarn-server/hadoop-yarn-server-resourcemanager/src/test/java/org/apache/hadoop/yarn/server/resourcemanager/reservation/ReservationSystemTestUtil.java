@@ -73,7 +73,8 @@ public class ReservationSystemTestUtil {
 
   private static Random rand = new Random();
 
-  public final static String reservationQ = "dedicated";
+  public final static String RESERVATION_Q_SHORT = "dedicated";
+  public final static String reservationQ = "root." + RESERVATION_Q_SHORT;
 
   public static ReservationId getNewReservationId() {
     return ReservationId.newInstance(rand.nextLong(), rand.nextLong());
@@ -296,13 +297,13 @@ public class ReservationSystemTestUtil {
 
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] { "default", "a", reservationQ });
+        new String[] {"default", "a", RESERVATION_Q_SHORT});
 
     final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 10);
 
     final String dedicated = CapacitySchedulerConfiguration.ROOT
-        + CapacitySchedulerConfiguration.DOT + reservationQ;
+        + CapacitySchedulerConfiguration.DOT + RESERVATION_Q_SHORT;
     conf.setCapacity(dedicated, 80);
     // Set as reservation queue
     conf.setReservable(dedicated, true);
@@ -310,7 +311,7 @@ public class ReservationSystemTestUtil {
     // Define 2nd-level queues
     final String A1 = A + ".a1";
     final String A2 = A + ".a2";
-    conf.setQueues(A, new String[] { "a1", "a2" });
+    conf.setQueues(A, new String[] {"a1", "a2"});
     conf.setCapacity(A1, 30);
     conf.setCapacity(A2, 70);
   }
@@ -319,9 +320,9 @@ public class ReservationSystemTestUtil {
       CapacitySchedulerConfiguration conf) {
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] { reservationQ });
+        new String[] {RESERVATION_Q_SHORT});
     final String dedicated = CapacitySchedulerConfiguration.ROOT
-        + CapacitySchedulerConfiguration.DOT + reservationQ;
+        + CapacitySchedulerConfiguration.DOT + RESERVATION_Q_SHORT;
     conf.setCapacity(dedicated, 100);
     // Set as reservation queue
     conf.setReservable(dedicated, true);
@@ -329,7 +330,7 @@ public class ReservationSystemTestUtil {
 
   public static String getFullReservationQueueName() {
     return CapacitySchedulerConfiguration.ROOT
-        + CapacitySchedulerConfiguration.DOT + reservationQ;
+        + CapacitySchedulerConfiguration.DOT + RESERVATION_Q_SHORT;
   }
 
   public static String getReservationQueueName() {
@@ -346,12 +347,12 @@ public class ReservationSystemTestUtil {
 
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] { "default", "a", reservationQ, newQ });
+        new String[] {"default", "a", RESERVATION_Q_SHORT, newQ});
 
     final String A = prefix + "a";
     conf.setCapacity(A, 5);
 
-    final String dedicated = prefix + reservationQ;
+    final String dedicated = prefix + RESERVATION_Q_SHORT;
     conf.setCapacity(dedicated, 10);
     // Set as reservation queue
     conf.setReservable(dedicated, true);

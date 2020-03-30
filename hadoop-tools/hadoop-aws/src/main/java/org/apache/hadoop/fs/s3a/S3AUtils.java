@@ -1726,6 +1726,21 @@ public final class S3AUtils {
     return conf.get(FS_S3A_BUCKET_PREFIX + bucket + '.' + baseKey);
   }
 
+  /**
+   * Turns a path (relative or otherwise) into an S3 key, adding a trailing
+   * "/" if the path is not the root <i>and</i> does not already have a "/"
+   * at the end.
+   *
+   * @param key s3 key or ""
+   * @return the with a trailing "/", or, if it is the root key, "",
+   */
+  public static String maybeAddTrailingSlash(String key) {
+    if (!key.isEmpty() && !key.endsWith("/")) {
+      return key + '/';
+    } else {
+      return key;
+    }
+  }
 
   /**
    * Path filter which ignores any file which starts with . or _.

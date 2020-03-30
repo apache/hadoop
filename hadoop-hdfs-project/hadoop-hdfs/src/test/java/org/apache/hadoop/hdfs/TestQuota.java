@@ -150,12 +150,12 @@ public class TestQuota {
     resetStream();
   }
 
-  private void runCommand(DFSAdmin admin, boolean expectError, String... args) 
+  static void runCommand(DFSAdmin admin, boolean expectError, String... args)
                          throws Exception {
     runCommand(admin, args, expectError);
   }
-  
-  private void runCommand(DFSAdmin admin, String args[], boolean expectEror)
+
+  static void runCommand(DFSAdmin admin, String[] args, boolean expectEror)
   throws Exception {
     int val = admin.run(args);
     if (expectEror) {

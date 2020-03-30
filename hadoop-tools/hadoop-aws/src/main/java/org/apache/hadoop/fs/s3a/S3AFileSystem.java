@@ -974,11 +974,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @InterfaceAudience.Private
   public String maybeAddTrailingSlash(String key) {
-    if (!key.isEmpty() && !key.endsWith("/")) {
-      return key + '/';
-    } else {
-      return key;
-    }
+    return S3AUtils.maybeAddTrailingSlash(key);
   }
 
   /**

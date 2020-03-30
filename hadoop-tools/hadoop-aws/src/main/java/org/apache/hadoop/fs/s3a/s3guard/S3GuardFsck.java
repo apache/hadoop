@@ -159,7 +159,9 @@ public class S3GuardFsck {
     // Create a handler and handle each violated pairs
     S3GuardFsckViolationHandler handler =
         new S3GuardFsckViolationHandler(rawFS, metadataStore);
-    comparePairs.forEach(handler::handle);
+    for (ComparePair comparePair : comparePairs) {
+      handler.logError(comparePair);
+    }
 
     LOG.info("Total scan time: {}s", stopwatch.now(TimeUnit.SECONDS));
     LOG.info("Scanned entries: {}", scannedItems);
@@ -342,6 +344,31 @@ public class S3GuardFsck {
 
   private Path path(String s) {
     return rawFS.makeQualified(new Path(s));
+  }
+
+  /**
+   * Fix violations found during check.
+   *
+   * Currently only supports handling the following violation:
+   * - Violation.ORPHAN_DDB_ENTRY
+   *
+   * @param violations to be handled
+   * @throws IOException throws the error if there's any during handling
+   */
+  public void fixViolations(List<ComparePair> violations) throws IOException {
+    S3GuardFsckViolationHandler handler =
+        new S3GuardFsckViolationHandler(rawFS, metadataStore);
+
+    for (ComparePair v : violations) {
+      if (v.getViolations().contains(Violation.ORPHAN_DDB_ENTRY)) {
+        try {
+          handler.doFix(v);
+        } catch (IOException e) {
+          LOG.error("Error during handling the violation: ", e);
+          throw e;
+        }
+      }
+    }
   }
 
   /**
@@ -542,7 +569,9 @@ public class S3GuardFsck {
     // Create a handler and handle each violated pairs
     S3GuardFsckViolationHandler handler =
         new S3GuardFsckViolationHandler(rawFS, metadataStore);
-    comparePairs.forEach(handler::handle);
+    for (ComparePair comparePair : comparePairs) {
+      handler.logError(comparePair);
+    }
 
     stopwatch.stop();
     LOG.info("Total scan time: {}s", stopwatch.now(TimeUnit.SECONDS));

@@ -966,11 +966,13 @@ public class TestProportionalCapacityPreemptionPolicy {
     // which is likely triggered since we use small numbers for readability
     //run with Logger.getRootLogger().setLevel(Level.DEBUG);
     verify(mDisp, times(9)).handle(argThat(new IsPreemptionRequestFor(appC)));
-    assertEquals(10, policy.getQueuePartitions().get("queueE").get("").preemptableExtra.getMemorySize());
+    assertEquals(10, policy
+        .getQueuePartitions().get("root.queueA.queueC.queueE").get("")
+        .preemptableExtra.getMemorySize());
     //2nd level child(E) preempts 10, but parent A has only 9 extra
     //check the parent can prempt only the extra from > 2 level child
     TempQueuePerPartition tempQueueAPartition = policy.getQueuePartitions().get(
-        "queueA").get("");
+        "root.queueA").get("");
     assertEquals(0, tempQueueAPartition.untouchableExtra.getMemorySize());
     long extraForQueueA =
         tempQueueAPartition.getUsed().getMemorySize() - tempQueueAPartition
@@ -999,12 +1001,13 @@ public class TestProportionalCapacityPreemptionPolicy {
     policy.editSchedule();
 
     verify(mDisp, times(9)).handle(argThat(new IsPreemptionRequestFor(appC)));
-    assertEquals(10, policy.getQueuePartitions().get("queueE")
+    assertEquals(10, policy
+        .getQueuePartitions().get("root.queueA.queueC.queueE")
         .get("").preemptableExtra.getMemorySize());
     //2nd level child(E) preempts 10, but parent A has only 9 extra
     //check the parent can prempt only the extra from > 2 level child
     TempQueuePerPartition tempQueueAPartition = policy.getQueuePartitions().get(
-        "queueA").get("");
+        "root.queueA").get("");
     assertEquals(0, tempQueueAPartition.untouchableExtra.getMemorySize());
     long extraForQueueA =
         tempQueueAPartition.getUsed().getMemorySize() - tempQueueAPartition
@@ -1189,7 +1192,7 @@ public class TestProportionalCapacityPreemptionPolicy {
     ResourceUsage resUsage = new ResourceUsage();
     resUsage.setUsed(used[0]);
     resUsage.setReserved(reserved[0]);
-    when(root.getQueueName()).thenReturn(CapacitySchedulerConfiguration.ROOT);
+    when(root.getQueuePath()).thenReturn(CapacitySchedulerConfiguration.ROOT);
     when(root.getAbsoluteUsedCapacity()).thenReturn(
         Resources.divide(rc, tot, used[0], tot));
     when(root.getAbsoluteCapacity()).thenReturn(
@@ -1231,7 +1234,7 @@ public class TestProportionalCapacityPreemptionPolicy {
         q = mockLeafQueue(p, tot, i, abs, used, pending, reserved, apps, gran);
       }
       when(q.getParent()).thenReturn(p);
-      when(q.getQueueName()).thenReturn(queueName);
+      when(q.getQueuePath()).thenReturn(queueName);
       when(q.getAbsoluteUsedCapacity()).thenReturn(
           Resources.divide(rc, tot, used[i], tot));
       when(q.getAbsoluteCapacity()).thenReturn(

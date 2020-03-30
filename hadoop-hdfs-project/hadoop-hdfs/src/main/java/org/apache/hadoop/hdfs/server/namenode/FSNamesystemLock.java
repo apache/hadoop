@@ -164,9 +164,9 @@ class FSNamesystemLock {
 
   public void readUnlock(String opName) {
     final boolean needReport = coarseLock.getReadHoldCount() == 1;
-    final long currentTimeStampNanos = timer.monotonicNowNanos();
     final long readLockIntervalNanos =
-        currentTimeStampNanos - readLockHeldTimeStampNanos.get();
+        timer.monotonicNowNanos() - readLockHeldTimeStampNanos.get();
+    final long currentTimeMs = timer.now();
     coarseLock.readLock().unlock();
 
     if (needReport) {
@@ -175,8 +175,6 @@ class FSNamesystemLock {
     }
     final long readLockIntervalMs =
         TimeUnit.NANOSECONDS.toMillis(readLockIntervalNanos);
-    final long currentTimeMs =
-        TimeUnit.NANOSECONDS.toMillis(currentTimeStampNanos);
     if (needReport && readLockIntervalMs >= this.readLockReportingThresholdMs) {
       LockHeldInfo localLockHeldInfo;
       do {
@@ -246,10 +244,9 @@ class FSNamesystemLock {
   public void writeUnlock(String opName, boolean suppressWriteLockReport) {
     final boolean needReport = !suppressWriteLockReport && coarseLock
         .getWriteHoldCount() == 1 && coarseLock.isWriteLockedByCurrentThread();
-    final long currentTimeNanos = timer.monotonicNowNanos();
     final long writeLockIntervalNanos =
-        currentTimeNanos - writeLockHeldTimeStampNanos;
-    final long currentTimeMs = TimeUnit.NANOSECONDS.toMillis(currentTimeNanos);
+        timer.monotonicNowNanos() - writeLockHeldTimeStampNanos;
+    final long currentTimeMs = timer.now();
     final long writeLockIntervalMs =
         TimeUnit.NANOSECONDS.toMillis(writeLockIntervalNanos);
 

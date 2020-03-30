@@ -126,7 +126,6 @@ public class AzureBlobFileSystemStore implements Closeable {
   private static final String DATE_TIME_PATTERN = "E, dd MMM yyyy HH:mm:ss z";
   private static final String TOKEN_DATE_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS'Z'";
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
-  private static final int LIST_MAX_RESULTS = 500;
   private static final int GET_SET_AGGREGATE_COUNT = 2;
 
   private final AbfsConfiguration abfsConfiguration;
@@ -682,7 +681,8 @@ public class AzureBlobFileSystemStore implements Closeable {
     ArrayList<FileStatus> fileStatuses = new ArrayList<>();
     do {
       try (AbfsPerfInfo perfInfo = startTracking("listStatus", "listPath")) {
-        AbfsRestOperation op = client.listPath(relativePath, false, LIST_MAX_RESULTS, continuation);
+        AbfsRestOperation op = client.listPath(relativePath, false,
+            abfsConfiguration.getListMaxResults(), continuation);
         perfInfo.registerResult(op.getResult());
         continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         ListResultSchema retrievedSchema = op.getResult().getListResultSchema();

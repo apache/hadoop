@@ -337,7 +337,8 @@ public class TestAbsoluteResourceConfiguration {
       Assert.assertEquals(
           "Failed to re-init queues : Min resource configuration "
               + "<memory:153600, vCores:30> is greater than its "
-              + "max value:<memory:40960, vCores:10> in queue:queueB1",
+              + "max value:<memory:40960, vCores:10> "
+              + "in queue:root.queueB.queueB1",
           e.getMessage());
     }
 
@@ -358,7 +359,7 @@ public class TestAbsoluteResourceConfiguration {
           .assertEquals(
               "Failed to re-init queues : Max resource configuration "
                   + "<memory:204800, vCores:30> is greater than parents max value:"
-                  + "<memory:153600, vCores:30> in queue:queueB1",
+                  + "<memory:153600, vCores:30> in queue:root.queueB.queueB1",
               e.getMessage());
     }
     rm.stop();
@@ -408,8 +409,9 @@ public class TestAbsoluteResourceConfiguration {
     } catch (IOException e) {
       Assert.assertTrue(e instanceof IOException);
       Assert.assertEquals(
-          "Failed to re-init queues : Parent queue 'queueA' "
-              + "and child queue 'queueA1' should use either percentage based"
+          "Failed to re-init queues : Parent queue 'root.queueA' "
+              + "and child queue 'root.queueA.queueA1'"
+              + " should use either percentage based"
               + " capacity configuration or absolute resource together.",
           e.getMessage());
     }

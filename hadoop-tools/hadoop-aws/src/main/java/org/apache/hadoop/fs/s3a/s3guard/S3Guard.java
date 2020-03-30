@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -974,13 +975,43 @@ public final class S3Guard {
   }
 
   public static Collection<String> getAuthoritativePaths(S3AFileSystem fs) {
+    return getAuthoritativePaths(
+        fs.getUri(),
+        fs.getConf(),
+        p -> fs.maybeAddTrailingSlash(fs.qualify(p).toString()));
+  }
+
+  /**
+   * Get the authoritative paths of a filesystem.
+   *
+   * @param uri FS URI
+   * @param conf configuration
+   * @param qualifyToDir a qualification operation
+   * @return list of URIs valid for this FS.
+   */
+  @VisibleForTesting
+  static Collection<String> getAuthoritativePaths(
+      final URI uri,
+      final Configuration conf,
+      final Function<Path, String> qualifyToDir) {
     String[] rawAuthoritativePaths =
-        fs.getConf().getTrimmedStrings(AUTHORITATIVE_PATH, DEFAULT_AUTHORITATIVE_PATH);
+        conf.getTrimmedStrings(AUTHORITATIVE_PATH, DEFAULT_AUTHORITATIVE_PATH);
     Collection<String> authoritativePaths = new ArrayList<>();
     if (rawAuthoritativePaths.length > 0) {
       for (int i = 0; i < rawAuthoritativePaths.length; i++) {
-        Path qualified = fs.qualify(new Path(rawAuthoritativePaths[i]));
-        authoritativePaths.add(fs.maybeAddTrailingSlash(qualified.toString()));
+        Path path = new Path(rawAuthoritativePaths[i]);
+        URI pathURI = path.toUri();
+        if (pathURI.getAuthority() != null &&
+            !pathURI.getAuthority().equals(uri.getAuthority())) {
+          // skip on auth
+          continue;
+        }
+        if (pathURI.getScheme() != null &&
+            !pathURI.getScheme().equals(uri.getScheme())) {
+          // skip on auth
+          continue;
+        }
+        authoritativePaths.add(qualifyToDir.apply(path));
       }
     }
     return authoritativePaths;
