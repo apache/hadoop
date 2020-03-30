@@ -539,6 +539,8 @@ token when its `getAccessToken()` method is invoked.
 The declared class must implement `org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee`
 and optionally `org.apache.hadoop.fs.azurebfs.extensions.BoundDTExtension`.
 
+The declared class also holds responsibility to implement retry logic while fetching access tokens.
+
 ## <a name="technical"></a> Technical notes
 
 ### <a name="proxy"></a> Proxy setup

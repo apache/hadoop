@@ -79,12 +79,13 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
   }
 
   @Test
-  public void testRequestRetryConfig() throws Exception {
-    testRetryLogic(0);
-    testRetryLogic(3);
+  public void testCustomTokenFetchRetryCount() throws Exception {
+    testWithDifferentCustomTokenFetchRetry(0);
+    testWithDifferentCustomTokenFetchRetry(3);
+    testWithDifferentCustomTokenFetchRetry(5);
   }
 
-  public void testRetryLogic(int numOfRetries) throws Exception {
+  public void testWithDifferentCustomTokenFetchRetry(int numOfRetries) throws Exception {
     AzureBlobFileSystem fs = this.getFileSystem();
 
     Configuration config = new Configuration(this.getRawConfiguration());
@@ -93,7 +94,7 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     config.set("fs.azure.account.auth.type." + accountName, "Custom");
     config.set("fs.azure.account.oauth.provider.type." + accountName, "org.apache.hadoop.fs"
         + ".azurebfs.oauth2.RetryTestTokenProvider");
-    config.set("fs.azure.io.retry.max.retries", Integer.toString(numOfRetries));
+    config.set("fs.azure.custom.token.fetch.retry.count", Integer.toString(numOfRetries));
     // Stop filesystem creation as it will lead to calls to store.
     config.set("fs.azure.createRemoteFileSystemDuringInitialization", "false");
 
@@ -110,7 +111,7 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     // Number of retries done should be as configured
     Assert.assertTrue(
         "Number of token fetch retries (" + RetryTestTokenProvider.reTryCount
-            + ") done, does not match with max " + "retry count configured (" + numOfRetries
+            + ") done, does not match with fs.azure.custom.token.fetch.retry.count configured (" + numOfRetries
             + ")", RetryTestTokenProvider.reTryCount == numOfRetries);
   }
 }
