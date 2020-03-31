@@ -35,7 +35,7 @@ pipeline {
         DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='rel/0.11.1'
+        YETUS_VERSION='YETUS-895'
     }
 
     parameters {
@@ -51,7 +51,7 @@ pipeline {
                     checkout([
                         $class: 'GitSCM',
                         branches: [[name: "${env.YETUS_VERSION}"]],
-                        userRemoteConfigs: [[ url: 'https://github.com/apache/yetus.git']]]
+                        userRemoteConfigs: [[ url: 'https://github.com/aajisaka/yetus.git']]]
                     )
                 }
             }
