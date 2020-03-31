@@ -39,6 +39,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.io.ElasticByteBufferPool;
+import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
@@ -78,14 +79,18 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private final ElasticByteBufferPool byteBufferPool
           = new ElasticByteBufferPool();
 
+  private final Statistics statistics;
+
   public AbfsOutputStream(
       final AbfsClient client,
+      final Statistics statistics,
       final String path,
       final long position,
       final int bufferSize,
       final boolean supportFlush,
       final boolean disableOutputStreamFlush) {
     this.client = client;
+    this.statistics = statistics;
     this.path = path;
     this.position = position;
     this.closed = false;
@@ -180,6 +185,16 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       }
 
       writableBytes = bufferSize - bufferIndex;
+    }
+    incrementWriteOps();
+  }
+
+  /**
+   * Increment Write Operations.
+   */
+  private void incrementWriteOps() {
+    if (statistics != null) {
+      statistics.incrementWriteOps(1);
     }
   }
 

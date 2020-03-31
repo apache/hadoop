@@ -51,6 +51,8 @@ import java.util.Set;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -97,8 +99,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.client.utils.URIBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_FORWARD_SLASH;
@@ -391,8 +391,10 @@ public class AzureBlobFileSystemStore implements Closeable {
     }
   }
 
-  public OutputStream createFile(final Path path, final boolean overwrite, final FsPermission permission,
-                                 final FsPermission umask) throws AzureBlobFileSystemException {
+  public OutputStream createFile(final Path path,
+      final FileSystem.Statistics statistics,
+      final boolean overwrite, final FsPermission permission,
+      final FsPermission umask) throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("createFile", "createPath")) {
       boolean isNamespaceEnabled = getIsNamespaceEnabled();
       LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} isNamespaceEnabled: {}",
@@ -409,12 +411,13 @@ public class AzureBlobFileSystemStore implements Closeable {
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
 
       return new AbfsOutputStream(
-              client,
-              AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
-              0,
-              abfsConfiguration.getWriteBufferSize(),
-              abfsConfiguration.isFlushEnabled(),
-              abfsConfiguration.isOutputStreamFlushDisabled());
+          client,
+          statistics,
+          AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
+          0,
+          abfsConfiguration.getWriteBufferSize(),
+          abfsConfiguration.isFlushEnabled(),
+          abfsConfiguration.isOutputStreamFlushDisabled());
     }
   }
 
@@ -468,7 +471,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     }
   }
 
-  public OutputStream openFileForWrite(final Path path, final boolean overwrite) throws
+  public OutputStream openFileForWrite(final Path path, final FileSystem.Statistics statistics, final boolean overwrite) throws
           AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("openFileForWrite", "getPathStatus")) {
       LOG.debug("openFileForWrite filesystem: {} path: {} overwrite: {}",
@@ -495,12 +498,13 @@ public class AzureBlobFileSystemStore implements Closeable {
       perfInfo.registerSuccess(true);
 
       return new AbfsOutputStream(
-              client,
-              AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
-              offset,
-              abfsConfiguration.getWriteBufferSize(),
-              abfsConfiguration.isFlushEnabled(),
-              abfsConfiguration.isOutputStreamFlushDisabled());
+          client,
+          statistics,
+          AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
+          offset,
+          abfsConfiguration.getWriteBufferSize(),
+          abfsConfiguration.isFlushEnabled(),
+          abfsConfiguration.isOutputStreamFlushDisabled());
     }
   }
 
