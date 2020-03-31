@@ -175,7 +175,7 @@ RUN apt-get -q update \
 # https://github.com/PyCQA/pylint/issues/2294
 ####
 RUN pip2 install \
-    configparser=4.0.2 \
+    configparser==4.0.2 \
     pylint==1.9.2
 
 ####
