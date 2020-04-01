@@ -56,8 +56,7 @@ import com.google.common.annotations.VisibleForTesting;
 @SuppressWarnings("unchecked")
 public class RMProxy<T> {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(RMProxy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RMProxy.class);
   private UserGroupInformation user;
 
   protected RMProxy() {
@@ -125,16 +124,13 @@ public class RMProxy<T> {
   private static <T> T newProxyInstance(final YarnConfiguration conf,
       final Class<T> protocol, RMProxy<T> instance, RetryPolicy retryPolicy)
           throws IOException{
+    RMFailoverProxyProvider<T> provider;
     if (HAUtil.isHAEnabled(conf) || HAUtil.isFederationEnabled(conf)) {
-      RMFailoverProxyProvider<T> provider =
-          instance.createRMFailoverProxyProvider(conf, protocol);
-      return (T) RetryProxy.create(protocol, provider, retryPolicy);
+      provider = instance.createRMFailoverProxyProvider(conf, protocol);
     } else {
-      InetSocketAddress rmAddress = instance.getRMAddress(conf, protocol);
-      LOG.info("Connecting to ResourceManager at " + rmAddress);
-      T proxy = instance.getProxy(conf, protocol, rmAddress);
-      return (T) RetryProxy.create(protocol, proxy, retryPolicy);
+      provider = instance.createNonHaRMFailoverProxyProvider(conf, protocol);
     }
+    return (T) RetryProxy.create(protocol, provider, retryPolicy);
   }
 
   /**
@@ -152,6 +148,28 @@ public class RMProxy<T> {
           return (T) YarnRPC.create(conf).getProxy(protocol, rmAddress, conf);
         }
       });
+  }
+
+  /**
+   * Helper method to create non-HA RMFailoverProxyProvider.
+   */
+  private <T> RMFailoverProxyProvider<T> createNonHaRMFailoverProxyProvider(
+      Configuration conf, Class<T> protocol) {
+    Class<? extends RMFailoverProxyProvider<T>> defaultProviderClass;
+    try {
+      defaultProviderClass = (Class<? extends RMFailoverProxyProvider<T>>)
+          Class.forName(
+              YarnConfiguration.DEFAULT_CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER);
+    } catch (Exception e) {
+      throw new YarnRuntimeException("Invalid default failover provider class" +
+          YarnConfiguration.DEFAULT_CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER, e);
+    }
+
+    RMFailoverProxyProvider<T> provider = ReflectionUtils.newInstance(
+        conf.getClass(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,
+            defaultProviderClass, RMFailoverProxyProvider.class), conf);
+    provider.init(conf, (RMProxy<T>) this, protocol);
+    return provider;
   }
 
   /**

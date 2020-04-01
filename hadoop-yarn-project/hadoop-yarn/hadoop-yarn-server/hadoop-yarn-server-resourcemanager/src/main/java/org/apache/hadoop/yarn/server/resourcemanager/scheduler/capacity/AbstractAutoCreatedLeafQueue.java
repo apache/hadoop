@@ -93,7 +93,7 @@ public class AbstractAutoCreatedLeafQueue extends LeafQueue {
       // this might be revised later
       setMaxCapacity(nodeLabel, entitlement.getMaxCapacity());
       LOG.debug("successfully changed to {} for queue {}", capacity, this
-            .getQueueName());
+            .getQueuePath());
 
       //update queue used capacity etc
       CSQueueUtils.updateQueueStatistics(resourceCalculator,

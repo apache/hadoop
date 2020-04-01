@@ -380,6 +380,6 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
       throw new YarnException("Can't find the queue by the given name: " + queue
           + "! Please check if queue " + queue + " is in the allocation file.");
     }
-    return getQueue(queue).getQueueName();
+    return getQueue(queue).getQueuePath();
   }
 }

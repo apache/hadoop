@@ -66,7 +66,7 @@ public class RouterPermissionChecker extends FSPermissionChecker {
    * @param mountTable
    *          MountTable being accessed
    * @param access
-   *          type of action being performed on the cache pool
+   *          type of action being performed on the mount table entry
    * @throws AccessControlException
    *           if mount table cannot be accessed
    */

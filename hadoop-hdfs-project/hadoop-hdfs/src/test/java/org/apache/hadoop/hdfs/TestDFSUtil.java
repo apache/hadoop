@@ -79,6 +79,7 @@ import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -1096,4 +1097,16 @@ public class TestDFSUtil {
     }
   }
 
+  @Test
+  public void testErrorMessageForInvalidNameservice() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, "ns1, ns2");
+    String expectedErrorMessage = "Incorrect configuration: namenode address "
+            + DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + ".[ns1, ns2]"
+            + " or "
+            + DFS_NAMENODE_RPC_ADDRESS_KEY + ".[ns1, ns2]"
+            + " is not configured.";
+    LambdaTestUtils.intercept(IOException.class, expectedErrorMessage,
+        ()->DFSUtil.getNNServiceRpcAddressesForCluster(conf));
+  }
 }
