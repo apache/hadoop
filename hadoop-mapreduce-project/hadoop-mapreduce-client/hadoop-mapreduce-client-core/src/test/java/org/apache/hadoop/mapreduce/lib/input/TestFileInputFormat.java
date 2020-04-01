@@ -258,6 +258,8 @@ public class TestFileInputFormat {
           (LocatedFileStatus)FileInputFormat.shrinkStatus(orig);
       Assert.assertTrue(orig.equals(shrink));
       if (shrink.getBlockLocations() != null) {
+        Assert.assertEquals(orig.getBlockLocations().length,
+            shrink.getBlockLocations().length);
         for (int i = 0; i < shrink.getBlockLocations().length; i++) {
           verified = true;
           BlockLocation location = shrink.getBlockLocations()[i];
@@ -266,18 +268,14 @@ public class TestFileInputFormat {
           Assert.assertEquals(BlockLocation.class.getName(),
               location.getClass().getName());
           Assert.assertArrayEquals(actual.getHosts(), location.getHosts());
-          Assert.assertArrayEquals(
-              actual.getCachedHosts(), location.getCachedHosts()
-          );
-          Assert.assertArrayEquals(
-              actual.getStorageIds(), location.getStorageIds()
-          );
-          Assert.assertArrayEquals(
-              actual.getStorageTypes(), location.getStorageTypes()
-          );
-          Assert.assertArrayEquals(
-              actual.getTopologyPaths(), location.getTopologyPaths()
-          );
+          Assert.assertArrayEquals(actual.getCachedHosts(),
+              location.getCachedHosts());
+          Assert.assertArrayEquals(actual.getStorageIds(),
+              location.getStorageIds());
+          Assert.assertArrayEquals(actual.getStorageTypes(),
+              location.getStorageTypes());
+          Assert.assertArrayEquals(actual.getTopologyPaths(),
+              location.getTopologyPaths());
           Assert.assertArrayEquals(actual.getNames(), location.getNames());
           Assert.assertEquals(actual.getLength(), location.getLength());
           Assert.assertEquals(actual.getOffset(), location.getOffset());
@@ -500,8 +498,8 @@ public class TestFileInputFormat {
       ExtendedBlock b1 = new ExtendedBlock("bpid", 0, blockLen, 0);
       ExtendedBlock b2 = new ExtendedBlock("bpid", 1, blockLen, 1);
       ExtendedBlock b3 = new ExtendedBlock("bpid", 2, len - 2 * blockLen, 2);
-      String[] names = new String[] { "localhost:9866", "otherhost:9866" };
-      String[] hosts = new String[] { "localhost", "otherhost" };
+      String[] names = new String[]{ "localhost:9866", "otherhost:9866" };
+      String[] hosts = new String[]{ "localhost", "otherhost" };
       String[] cachedHosts = {"localhost"};
       BlockLocation loc1 = new BlockLocation(names, hosts, cachedHosts,
           new String[0], 0, blockLen, false);
@@ -512,8 +510,7 @@ public class TestFileInputFormat {
       return new BlockLocation[]{
           new HdfsBlockLocation(loc1, new LocatedBlock(b1, ds)),
           new HdfsBlockLocation(loc2, new LocatedBlock(b2, ds)),
-          new HdfsBlockLocation(loc3, new LocatedBlock(b3, ds))
-      };
+          new HdfsBlockLocation(loc3, new LocatedBlock(b3, ds)) };
     }
 
     @Override
