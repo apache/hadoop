@@ -71,7 +71,7 @@ public class RouterFsck {
     try {
       String warnMsg = "Now FSCK to DFSRouter is unstable feature. " +
           "There may be incompatible changes between releases.";
-      LOG.info(warnMsg);
+      LOG.warn(warnMsg);
       out.println(warnMsg);
       String msg = "Federated FSCK started by " +
           UserGroupInformation.getCurrentUser() + " from " + remoteAddress +
