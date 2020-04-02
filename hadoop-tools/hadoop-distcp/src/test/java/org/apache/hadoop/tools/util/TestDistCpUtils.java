@@ -45,6 +45,7 @@ import org.junit.Test;
 
 import com.google.common.collect.Lists;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.EnumSet;
@@ -200,6 +201,44 @@ public class TestDistCpUtils {
     Assert.assertTrue(srcStatus.getAccessTime() == dstStatus.getAccessTime());
     Assert.assertTrue(srcStatus.getModificationTime() == dstStatus.getModificationTime());
     Assert.assertTrue(srcStatus.getReplication() == dstStatus.getReplication());
+  }
+
+  @Test
+  public void testSkipsNeedlessAttributes() throws Exception {
+    FileSystem fs = FileSystem.get(config);
+
+    // preserve replication, block size, user, group, permission,
+    // checksum type and timestamps
+
+    Path src = new Path("/tmp/testSkipsNeedlessAttributes/source");
+    Path dst = new Path("/tmp/testSkipsNeedlessAttributes/dest");
+
+    // there is no need to actually create a source file, just a file
+    // status of one
+    CopyListingFileStatus srcStatus = new CopyListingFileStatus(
+        new FileStatus(0, false, 1, 32, 0, src));
+
+    // if an attribute is needed, preserve will fail to find the file
+    EnumSet<FileAttribute> attrs = EnumSet.of(FileAttribute.ACL,
+        FileAttribute.GROUP,
+        FileAttribute.PERMISSION,
+        FileAttribute.TIMES,
+        FileAttribute.XATTR);
+    for (FileAttribute attr : attrs) {
+      intercept(FileNotFoundException.class, () ->
+          DistCpUtils.preserve(fs, dst, srcStatus,
+              EnumSet.of(attr),
+              false));
+    }
+
+    // but with the preservation flags only used
+    // in file creation, this does not happen
+    DistCpUtils.preserve(fs, dst, srcStatus,
+        EnumSet.of(
+            FileAttribute.BLOCKSIZE,
+            FileAttribute.CHECKSUMTYPE,
+            FileAttribute.REPLICATION),
+        false);
   }
 
   @Test

@@ -199,6 +199,10 @@ public class DistCpUtils {
                               EnumSet<FileAttribute> attributes,
                               boolean preserveRawXattrs) throws IOException {
 
+    // strip out those attributes we don't need any more
+    attributes.remove(FileAttribute.BLOCKSIZE);
+    attributes.remove(FileAttribute.CHECKSUMTYPE);
+    attributes.remove(FileAttribute.REPLICATION);
     // If not preserving anything from FileStatus, don't bother fetching it.
     FileStatus targetFileStatus = attributes.isEmpty() ? null :
         targetFS.getFileStatus(path);
