@@ -270,7 +270,7 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, path, 0, bufferSize, true, false, true, false);
+    AbfsOutputStream out = new AbfsOutputStream(client, null, path, 0, bufferSize, true, false, true, true);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
 
