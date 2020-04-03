@@ -272,7 +272,8 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation createPath(final String path, final boolean isFile, final boolean overwrite,
-                                      final String permission, final String umask) throws AzureBlobFileSystemException {
+                                      final String permission, final String umask,
+                                      final boolean appendBlob) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     if (!overwrite) {
       requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, AbfsHttpConstants.STAR));
@@ -288,6 +289,9 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, isFile ? FILE : DIRECTORY);
+    if (appendBlob) {
+      abfsUriQueryBuilder.addQuery(QUERY_PARAM_BLOBTYPE, APPEND_BLOB_TYPE);
+    }
 
     String operation = isFile
         ? SASTokenProvider.CREATE_FILE_OPERATION
@@ -380,7 +384,7 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation append(final String path, final long position, final byte[] buffer, final int offset,
-                                  final int length, final String cachedSasToken) throws AzureBlobFileSystemException {
+                                  final int length, final String cachedSasToken, final boolean isAppendBlob) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
@@ -400,7 +404,7 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_PUT,
             url,
-            requestHeaders, buffer, offset, length, sasTokenForReuse);
+            requestHeaders, buffer, offset, length, sasTokenForReuse, isAppendBlob);
     op.execute();
     return op;
   }
@@ -507,7 +511,7 @@ public class AbfsClient implements Closeable {
             requestHeaders,
             buffer,
             bufferOffset,
-            bufferLength, sasTokenForReuse);
+            bufferLength, sasTokenForReuse, false);
     op.execute();
 
     return op;

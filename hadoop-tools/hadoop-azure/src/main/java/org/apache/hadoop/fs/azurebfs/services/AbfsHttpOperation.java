@@ -69,6 +69,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private String storageErrorMessage  = "";
   private String clientRequestId = "";
   private String requestId  = "";
+  private String expectedAppendPos = "";
   private ListResultSchema listResultSchema = null;
 
   // metrics
@@ -126,6 +127,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return clientRequestId;
   }
 
+  public String getExpectedAppendPos() {
+    return expectedAppendPos;
+  }
+
   public String getRequestId() {
     return requestId;
   }
@@ -154,6 +159,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     sb.append(statusCode);
     sb.append(",");
     sb.append(storageErrorCode);
+    sb.append(",");
+    sb.append(expectedAppendPos);
     sb.append(",cid=");
     sb.append(clientRequestId);
     sb.append(",rid=");
@@ -337,7 +344,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     if (this.isTraceEnabled) {
       startTime = System.nanoTime();
     }
-
     if (statusCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
       processStorageErrorResponse();
       if (this.isTraceEnabled) {
@@ -448,6 +454,9 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
                 break;
               case "message":
                 storageErrorMessage = fieldValue;
+                break;
+              case "ExpectedAppendPos":
+                expectedAppendPos = fieldValue;
                 break;
               default:
                 break;

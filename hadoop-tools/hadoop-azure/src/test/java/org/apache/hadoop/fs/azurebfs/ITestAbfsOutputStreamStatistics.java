@@ -113,6 +113,11 @@ public class ITestAbfsOutputStreamStatistics
     final AzureBlobFileSystem fs = getFileSystem();
     Path queueShrinkFilePath = path(getMethodName());
     String testQueueShrink = "testQueue";
+    if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(queueShrinkFilePath).toString()))
+    {
+      // writeOperationsQueue is not used for appendBLob, hence queueShrink is 0
+      return;
+    }
 
     try (AbfsOutputStream outForOneOp = createAbfsOutputStreamWithFlushEnabled(
         fs, queueShrinkFilePath)) {

@@ -21,8 +21,11 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +36,11 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
+
+import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_ACTION;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_POSITION;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -65,6 +72,8 @@ public class AbfsRestOperation {
   private int bufferOffset;
   private int bufferLength;
   private int retryCount = 0;
+  private boolean isAppendBlobAppend;
+  private String appendPos;
 
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
@@ -134,6 +143,8 @@ public class AbfsRestOperation {
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
+    this.isAppendBlobAppend = false;
+    this.appendPos = "0";
   }
 
   /**
@@ -158,12 +169,24 @@ public class AbfsRestOperation {
                     byte[] buffer,
                     int bufferOffset,
                     int bufferLength,
-                    String sasToken) {
+                    String sasToken,
+                    boolean isAppendBlobAppend) {
     this(operationType, client, method, url, requestHeaders, sasToken);
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
     this.abfsCounters = client.getAbfsCounters();
+    this.isAppendBlobAppend = isAppendBlobAppend;
+    String query = url.getQuery();
+    String[] pairs = query.split("&");
+    Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+    for (String pair : pairs) {
+        int idx = pair.indexOf("=");
+        query_pairs.put(pair.substring(0, idx), pair.substring(idx + 1));
+    }
+    if (query_pairs.get(QUERY_PARAM_ACTION) !=null) {
+      this.appendPos = query_pairs.get(QUERY_PARAM_POSITION);
+    }
   }
 
   /**
@@ -185,6 +208,7 @@ public class AbfsRestOperation {
       try {
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
+
         Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
@@ -192,6 +216,10 @@ public class AbfsRestOperation {
     }
 
     if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
+      if (this.isAppendBlobAppend && retryCount > 0 && result.getStorageErrorCode().equals("InvalidQueryParameterValue")) {
+        //Do length check once available.
+        return;
+      }
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
           result.getStorageErrorMessage(), null, result);
     }

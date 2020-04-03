@@ -153,6 +153,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_ATOMIC_RENAME_DIRECTORIES)
   private String azureAtomicDirs;
 
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APPEND_BLOB_KEY,
+      DefaultValue = DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES)
+  private String azureAppendBlobDirs;
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
       DefaultValue = DEFAULT_AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION)
   private boolean createRemoteFileSystemDuringInitialization;
@@ -542,6 +546,10 @@ public class AbfsConfiguration{
 
   public String getAzureAtomicRenameDirs() {
     return this.azureAtomicDirs;
+  }
+
+  public String getAppendBlobDirs() {
+    return this.azureAppendBlobDirs;
   }
 
   public boolean getCreateRemoteFileSystemDuringInitialization() {
