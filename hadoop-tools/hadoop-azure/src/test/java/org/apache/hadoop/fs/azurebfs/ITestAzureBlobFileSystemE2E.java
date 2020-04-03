@@ -206,10 +206,13 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
     FSDataOutputStream stream = fs.create(testFilePath);
     assertTrue(fs.exists(testFilePath));
+    stream.write(TEST_BYTE);
 
     fs.delete(testFilePath, true);
     assertFalse(fs.exists(testFilePath));
+    AbfsConfiguration configuration = this.getConfiguration();
 
+    // trigger flush call
     intercept(FileNotFoundException.class,
             () -> stream.close());
   }
