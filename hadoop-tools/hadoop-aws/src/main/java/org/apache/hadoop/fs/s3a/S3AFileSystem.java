@@ -4283,39 +4283,52 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     RemoteIterator<? extends LocatedFileStatus> iterator =
         once("listLocatedStatus", path.toString(),
           () -> {
-            // lookup dir triggers existence check
-            final S3AFileStatus fileStatus =
-                (S3AFileStatus) getFileStatus(path);
-            if (fileStatus.isFile()) {
-              // simple case: File
-              LOG.debug("Path is a file");
-              return new Listing.SingleStatusRemoteIterator(
-                  filter.accept(path) ? toLocatedFileStatus(fileStatus) : null);
-            } else {
               // directory: trigger a lookup
-              final String key = maybeAddTrailingSlash(pathToKey(path));
-              final Listing.FileStatusAcceptor acceptor =
-                  new Listing.AcceptAllButSelfAndS3nDirs(path);
-              boolean allowAuthoritative = allowAuthoritative(f);
-              DirListingMetadata meta =
-                  S3Guard.listChildrenWithTtl(metadataStore, path,
-                      ttlTimeProvider, allowAuthoritative);
-              final RemoteIterator<S3AFileStatus> cachedFileStatusIterator =
-                  listing.createProvidedFileStatusIterator(
-                      S3Guard.dirMetaToStatuses(meta), filter, acceptor);
-              return (allowAuthoritative && meta != null
-                  && meta.isAuthoritative())
-                  ? listing.createLocatedFileStatusIterator(
-                  cachedFileStatusIterator)
-                  : listing.createLocatedFileStatusIterator(
-                      listing.createFileStatusListingIterator(path,
-                          createListObjectsRequest(key, "/"),
-                          filter,
-                          acceptor,
-                          cachedFileStatusIterator));
+            RemoteIterator<S3ALocatedFileStatus> locatedFileStatusIteratorForDir =
+                    getLocatedFileStatusIteratorForDir(path, filter);
+            // If no listing is present then path might be a file.
+            if (!locatedFileStatusIteratorForDir.hasNext()) {
+              final S3AFileStatus fileStatus =
+                      (S3AFileStatus) getFileStatus(path);
+              if (fileStatus.isFile()) {
+                // simple case: File
+                LOG.debug("Path is a file");
+                return new Listing.SingleStatusRemoteIterator(
+                        filter.accept(path) ? toLocatedFileStatus(fileStatus) : null);
+              }
             }
+            return locatedFileStatusIteratorForDir;
           });
     return toLocatedFileStatusIterator(iterator);
+  }
+
+  private RemoteIterator<S3ALocatedFileStatus> getLocatedFileStatusIteratorForDir(
+          Path path, PathFilter filter) throws IOException {
+    final String key = maybeAddTrailingSlash(pathToKey(path));
+    final Listing.FileStatusAcceptor acceptor =
+        new Listing.AcceptAllButSelfAndS3nDirs(path);
+    boolean allowAuthoritative = allowAuthoritative(path);
+    DirListingMetadata meta =
+        S3Guard.listChildrenWithTtl(metadataStore, path,
+            ttlTimeProvider, allowAuthoritative);
+    Set<Path> tombstones = meta != null
+            ? meta.listTombstones()
+            : null;
+    final RemoteIterator<S3AFileStatus> cachedFileStatusIterator =
+        listing.createProvidedFileStatusIterator(
+            S3Guard.dirMetaToStatuses(meta), filter, acceptor);
+    return (allowAuthoritative && meta != null
+        && meta.isAuthoritative())
+        ? listing.createLocatedFileStatusIterator(
+        cachedFileStatusIterator)
+        : listing.createTombstoneReconcilingIterator(
+            listing.createLocatedFileStatusIterator(
+            listing.createFileStatusListingIterator(path,
+                createListObjectsRequest(key, "/"),
+                filter,
+                acceptor,
+                cachedFileStatusIterator)),
+            tombstones);
   }
 
   /**
