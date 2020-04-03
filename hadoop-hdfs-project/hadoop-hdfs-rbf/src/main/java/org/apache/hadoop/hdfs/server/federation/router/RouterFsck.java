@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -48,6 +49,7 @@ import org.slf4j.LoggerFactory;
  * Wrapper for the Router to offer the Namenode FSCK.
  */
 @InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class RouterFsck {
 
   public static final Logger LOG =
