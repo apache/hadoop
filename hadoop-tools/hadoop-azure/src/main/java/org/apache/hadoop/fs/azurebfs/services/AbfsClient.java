@@ -702,6 +702,7 @@ public class AbfsClient implements Closeable {
     sb.append(System.getProperty(OS_VERSION));
     sb.append(FORWARD_SLASH);
     sb.append(System.getProperty(OS_ARCH));
+    sb.append(SEMICOLON);
 
     appendIfNotEmpty(sb, sslProviderName, true);
     appendIfNotEmpty(sb,
@@ -719,16 +720,16 @@ public class AbfsClient implements Closeable {
     return String.format(Locale.ROOT, sb.toString());
   }
 
-  private void appendIfNotEmpty(StringBuilder sb, String str,
-      boolean shouldPrependSemiColon) {
-    if (str == null || str.trim().isEmpty()) {
+  private void appendIfNotEmpty(StringBuilder sb, String regEx,
+      boolean shouldAppendSemiColon) {
+    if (regEx == null || regEx.trim().isEmpty()) {
       return;
     }
-    if (shouldPrependSemiColon) {
+    sb.append(SINGLE_WHITE_SPACE);
+    sb.append(regEx);
+    if (shouldAppendSemiColon) {
       sb.append(SEMICOLON);
     }
-    sb.append(SINGLE_WHITE_SPACE);
-    sb.append(str);
   }
 
   @VisibleForTesting

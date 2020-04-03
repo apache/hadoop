@@ -23,6 +23,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.util.VersionInfo;
 import org.assertj.core.api.Assertions;
@@ -39,9 +40,16 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APN_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CLIENT_VERSION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JAVA_VERSION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_ARCH;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_TYPE;
 
 /**
  * Test useragent of abfs client.
@@ -65,20 +73,23 @@ public final class TestAbfsClient {
     regEx.append("\\(");
     regEx.append("JavaJRE");
     regEx.append(SINGLE_WHITE_SPACE);
-    regEx.append("\\d+(\\.\\d+_?\\d+)*"); //  Regex for java version
+    regEx.append("\\d+\\.\\d+([\\._]\\d+)*"); //  Regex for java version
     regEx.append(SEMICOLON);
     regEx.append(SINGLE_WHITE_SPACE);
     regEx.append("[a-zA-Z].*");           //   Regex for OS name and version
     regEx.append(FORWARD_SLASH);
     regEx.append(".*");                   //  Regex for OS arch
-    regEx.append("(; [a-zA-Z].*)?");      // Regex for sslProviderName
-    regEx.append("(; [a-zA-Z].*)?");      // Regex for tokenProvider
+    regEx.append(SEMICOLON);
     regEx.append(SINGLE_WHITE_SPACE);
-    regEx.append(".+");                   //cluster name
+
+    regEx.append("([a-zA-Z].*; )?");      // Regex for sslProviderName
+    regEx.append("([a-zA-Z].*; )?");      // Regex for tokenProvider
+    regEx.append(".+");                   // cluster name
     regEx.append(FORWARD_SLASH);
     regEx.append(".+");            // cluster type
     regEx.append("\\)");
     regEx.append("( .*)?");        //  Regex for user agent prefix
+
     this.userAgentStringPattern = Pattern.compile(regEx.toString());
   }
 
@@ -95,23 +106,27 @@ public final class TestAbfsClient {
   }
 
   @Test
-  public void verifyUnknownUserAgent()
-      throws IOException, IllegalAccessException {
+  public void verifybBasicInfo() throws Exception {
     final Configuration configuration = new Configuration();
-    configuration.unset(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY);
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
         ACCOUNT_NAME);
-    String userAgentStr = getUserAgentString(
-        abfsConfiguration, false);
+    String userAgentStr = getUserAgentString(abfsConfiguration, false);
 
     Assertions.assertThat(userAgentStr)
-        .describedAs("User-Agent string [" + userAgentStr
-            + "] should be of the pattern: "+this.userAgentStringPattern.pattern())
-        .matches(this.userAgentStringPattern);
+        .describedAs("User-Agent string should contain java version")
+        .contains(System.getProperty(JAVA_VERSION))
+        .describedAs("User-Agent string should contain  OS name")
+        .contains(System.getProperty(OS_NAME)
+            .replaceAll(SINGLE_WHITE_SPACE, EMPTY_STRING))
+        .describedAs("User-Agent string should contain OS version")
+        .contains(System.getProperty(OS_VERSION))
+        .describedAs("User-Agent string should contain OS arch")
+        .contains(System.getProperty(OS_ARCH));
   }
 
   @Test
-  public void verifyUserAgent() throws Exception {
+  public void verifyUserAgentPrefix()
+      throws IOException, IllegalAccessException {
     final Configuration configuration = new Configuration();
     configuration.set(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY, FS_AZURE_USER_AGENT_PREFIX);
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
@@ -124,12 +139,23 @@ public final class TestAbfsClient {
         .matches(this.userAgentStringPattern)
         .describedAs("User-Agent string should contain " + FS_AZURE_USER_AGENT_PREFIX)
         .contains(FS_AZURE_USER_AGENT_PREFIX);
+
+    configuration.unset(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY);
+    abfsConfiguration = new AbfsConfiguration(configuration,
+        ACCOUNT_NAME);
+    userAgentStr = getUserAgentString(abfsConfiguration, false);
+
+    Assertions.assertThat(userAgentStr)
+        .describedAs("User-Agent string [" + userAgentStr
+            + "] should be of the pattern: "+this.userAgentStringPattern.pattern())
+        .matches(this.userAgentStringPattern)
+        .describedAs("User-Agent string should not contain " + FS_AZURE_USER_AGENT_PREFIX)
+        .doesNotContain(FS_AZURE_USER_AGENT_PREFIX);
   }
 
   @Test
-  public void verifyUserAgentWithSSLProvider() throws Exception {
+  public void verifyUserAgentWithoutSSLProvider() throws Exception {
     final Configuration configuration = new Configuration();
-    configuration.set(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY, FS_AZURE_USER_AGENT_PREFIX);
     configuration.set(ConfigurationKeys.FS_AZURE_SSL_CHANNEL_MODE_KEY,
         DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE.name());
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
@@ -140,9 +166,76 @@ public final class TestAbfsClient {
         .describedAs("User-Agent string [" + userAgentStr
             + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
         .matches(this.userAgentStringPattern)
-        .describedAs("User-Agent string should contain " + FS_AZURE_USER_AGENT_PREFIX)
-        .contains(FS_AZURE_USER_AGENT_PREFIX)
         .describedAs("User-Agent string should contain sslProvider")
         .contains(DelegatingSSLSocketFactory.getDefaultFactory().getProviderName());
+
+    userAgentStr = getUserAgentString(abfsConfiguration, false);
+
+    Assertions.assertThat(userAgentStr)
+        .describedAs("User-Agent string [" + userAgentStr
+            + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
+        .matches(this.userAgentStringPattern)
+        .describedAs("User-Agent string should not contain sslProvider")
+        .doesNotContain(DelegatingSSLSocketFactory.getDefaultFactory().getProviderName());
+  }
+
+  @Test
+  public void verifyUserAgentClusterName() throws Exception {
+    final String clusterName = "testClusterName";
+    final Configuration configuration = new Configuration();
+    configuration.set(FS_AZURE_CLUSTER_NAME, clusterName);
+    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
+        ACCOUNT_NAME);
+    String userAgentStr = getUserAgentString(abfsConfiguration, false);
+
+    Assertions.assertThat(userAgentStr)
+        .describedAs("User-Agent string [" + userAgentStr
+            + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
+        .matches(this.userAgentStringPattern)
+        .describedAs("User-Agent string should contain cluster name")
+        .contains(clusterName);
+
+    configuration.unset(FS_AZURE_CLUSTER_NAME);
+    abfsConfiguration = new AbfsConfiguration(configuration,
+        ACCOUNT_NAME);userAgentStr = getUserAgentString(abfsConfiguration, false);
+
+    Assertions.assertThat(userAgentStr)
+        .describedAs("User-Agent string [" + userAgentStr
+            + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
+        .matches(this.userAgentStringPattern)
+        .describedAs("User-Agent string should not contain cluster name")
+        .doesNotContain(clusterName)
+        .describedAs("User-Agent string should contain cluster UNKNOWN")
+        .contains("UNKNOWN");;
+  }
+
+  @Test
+  public void verifyUserAgentClusterType() throws Exception {
+    final String clusterType = "testClusterType";
+    final Configuration configuration = new Configuration();
+    configuration.set(FS_AZURE_CLUSTER_TYPE, clusterType);
+    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
+        ACCOUNT_NAME);
+    String userAgentStr = getUserAgentString(abfsConfiguration, false);
+
+    Assertions.assertThat(userAgentStr)
+        .describedAs("User-Agent string [" + userAgentStr
+            + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
+        .matches(this.userAgentStringPattern)
+        .describedAs("User-Agent string should contain cluster type")
+        .contains(clusterType);
+
+    configuration.unset(FS_AZURE_CLUSTER_TYPE);
+    abfsConfiguration = new AbfsConfiguration(configuration,
+        ACCOUNT_NAME);userAgentStr = getUserAgentString(abfsConfiguration, false);
+
+    Assertions.assertThat(userAgentStr)
+        .describedAs("User-Agent string [" + userAgentStr
+            + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
+        .matches(this.userAgentStringPattern)
+        .describedAs("User-Agent string should not contain cluster type")
+        .doesNotContain(clusterType)
+        .describedAs("User-Agent string should contain cluster UNKNOWN")
+        .contains("UNKNOWN");
   }
 }
