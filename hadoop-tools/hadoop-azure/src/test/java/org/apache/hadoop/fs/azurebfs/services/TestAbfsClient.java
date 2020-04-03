@@ -23,6 +23,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.util.VersionInfo;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Test;
@@ -63,31 +65,31 @@ public final class TestAbfsClient {
     regEx.append("\\(");
     regEx.append("JavaJRE");
     regEx.append(SINGLE_WHITE_SPACE);
-    regEx.append("\\d+(\\.\\d+_?\\d*)*");  //  Regex for java version
+    regEx.append("\\d+(\\.\\d+_?\\d+)*"); //  Regex for java version
     regEx.append(SEMICOLON);
     regEx.append(SINGLE_WHITE_SPACE);
-    regEx.append("[a-zA-Z].*");            //   Regex for OS name and version
+    regEx.append("[a-zA-Z].*");           //   Regex for OS name and version
     regEx.append(FORWARD_SLASH);
-    regEx.append(".*");                    //  Regex for OS arch
-    regEx.append("(;[a-zA-Z].*)?");         // Regex for sslProviderName
-    regEx.append("(;[a-zA-Z].*)?");         // Regex for tokenProvider
+    regEx.append(".*");                   //  Regex for OS arch
+    regEx.append("(; [a-zA-Z].*)?");      // Regex for sslProviderName
+    regEx.append("(; [a-zA-Z].*)?");      // Regex for tokenProvider
     regEx.append(SINGLE_WHITE_SPACE);
-    regEx.append(".+");                      //cluster name
+    regEx.append(".+");                   //cluster name
     regEx.append(FORWARD_SLASH);
     regEx.append(".+");            // cluster type
     regEx.append("\\)");
-    regEx.append("( .*)?");                      //  Regex for user agent prefix
+    regEx.append("( .*)?");        //  Regex for user agent prefix
     this.userAgentStringPattern = Pattern.compile(regEx.toString());
   }
 
   private String getUserAgentString(AbfsConfiguration config,
-                                 boolean includeSSLProvider)
-      throws MalformedURLException {
-    AbfsClient client = new AbfsClient(new URL("http://azure.com"), null,
+      boolean includeSSLProvider) throws MalformedURLException {
+    AbfsClient client = new AbfsClient(new URL("https://azure.com"), null,
         config, null, (AccessTokenProvider) null, null);
     String sslProviderName = null;
     if (includeSSLProvider) {
-      sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory().getProviderName();
+      sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory()
+          .getProviderName();
     }
     return client.initializeUserAgent(config, sslProviderName);
   }
@@ -101,8 +103,11 @@ public final class TestAbfsClient {
         ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(
         abfsConfiguration, false);
-    Assertions.assertThat(userAgentStr).describedAs("User-Agent string ["+userAgentStr
-        + "] should be of the pattern: "+this.userAgentStringPattern.pattern()).matches(this.userAgentStringPattern);
+
+    Assertions.assertThat(userAgentStr)
+        .describedAs("User-Agent string [" + userAgentStr
+            + "] should be of the pattern: "+this.userAgentStringPattern.pattern())
+        .matches(this.userAgentStringPattern);
   }
 
   @Test
@@ -112,10 +117,12 @@ public final class TestAbfsClient {
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
         ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(abfsConfiguration, false);
-    Assertions.assertThat(userAgentStr).describedAs("User-Agent string ["+userAgentStr
-        + "] should be of the pattern: " + this.userAgentStringPattern
-        .pattern()).matches(this.userAgentStringPattern).describedAs(
-        "User-Agent string should contain " + FS_AZURE_USER_AGENT_PREFIX)
+
+    Assertions.assertThat(userAgentStr)
+        .describedAs("User-Agent string [" + userAgentStr
+            + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
+        .matches(this.userAgentStringPattern)
+        .describedAs("User-Agent string should contain " + FS_AZURE_USER_AGENT_PREFIX)
         .contains(FS_AZURE_USER_AGENT_PREFIX);
   }
 
@@ -128,13 +135,14 @@ public final class TestAbfsClient {
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
         ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(abfsConfiguration, true);
-    Assertions.assertThat(userAgentStr).describedAs("User-Agent string ["+userAgentStr
-        + "] should be of the pattern: " + this.userAgentStringPattern
-        .pattern()).matches(this.userAgentStringPattern).describedAs(
-        "User-Agent string should contain " + FS_AZURE_USER_AGENT_PREFIX)
+
+    Assertions.assertThat(userAgentStr)
+        .describedAs("User-Agent string [" + userAgentStr
+            + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
+        .matches(this.userAgentStringPattern)
+        .describedAs("User-Agent string should contain " + FS_AZURE_USER_AGENT_PREFIX)
         .contains(FS_AZURE_USER_AGENT_PREFIX)
-        .describedAs("User-Agent string " + "should contain sslProvider")
-        .contains(
-            DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE.name());
+        .describedAs("User-Agent string should contain sslProvider")
+        .contains(DelegatingSSLSocketFactory.getDefaultFactory().getProviderName());
   }
 }
