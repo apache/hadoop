@@ -47,7 +47,7 @@ public class WebServiceClient {
    * Construct a new WebServiceClient based on the configuration. It will try to
    * load SSL certificates when it is specified.
    *
-   * @param config
+   * @param conf
    * @throws Exception
    */
   public static void initialize(Configuration conf) throws Exception {
