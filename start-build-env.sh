@@ -23,8 +23,8 @@ DOCKER_DIR=dev-support/docker
 DOCKER_FILE="${DOCKER_DIR}/Dockerfile"
 
 CPU_ARCH=$(echo "$MACHTYPE" | cut -d- -f1)
-if [ "$CPU_ARCH" = "aarch64" ]; then
-  DOCKER_FILE="${DOCKER_DIR}/Dockerfile_aarch64"
+if [ "$CPU_ARCH" = "aarch64" ] || [ "$CPU_ARCH" = "arm" ]; then
+  DOCKER_FILE="${DOCKER_DIR}/Dockerfile_arm"
 fi
 
 docker build -t hadoop-build -f $DOCKER_FILE $DOCKER_DIR

@@ -26,6 +26,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 #####
 # Disable suggests/recommends
 #####
+
 RUN echo APT::Install-Recommends "0"\; > /etc/apt/apt.conf.d/10disableextras
 RUN echo APT::Install-Suggests "0"\; >>  /etc/apt/apt.conf.d/10disableextras
 
@@ -56,6 +57,8 @@ RUN apt-get -q update \
         libbz2-dev \
         libcurl4-openssl-dev \
         libfuse-dev \
+	libfontconfig1 \
+	libfreetype6 \
         libprotobuf-dev \
         libprotoc-dev \
         libsasl2-dev \
@@ -108,7 +111,7 @@ RUN mkdir -p /opt/cmake/src \
     && cd cmake-3.1.0 && patch -p0 -i ../cmake-3.1.0-1.patch && mkdir .build && cd .build \
     && ../bootstrap --parallel=2 \
     && make -j2 && ./bin/cpack \
-    && tar xzf cmake-3.1.0-Linux-aarch64.tar.gz --strip-components 1 -C /opt/cmake \
+    && tar xzf "cmake-3.1.0-Linux-$(uname -m).tar.gz" --strip-components 1 -C /opt/cmake \
     && cd /opt/cmake && rm -rf /opt/cmake/src
 ENV CMAKE_HOME /opt/cmake
 ENV PATH "${PATH}:/opt/cmake/bin"
@@ -201,15 +204,21 @@ RUN curl -s -S https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
     && rm -rf /var/lib/apt/lists/*
 
 ###
-# Install phantomjs built for aarch64
+# Install phantomjs
 ####
-RUN mkdir -p /opt/phantomjs \
+
+RUN if [ "$(echo "$MACHTYPE" | cut -d- -f1)" = "aarch64" ]; \
+  then mkdir -p /opt/phantomjs \
   && curl -L -s -S \
     https://github.com/liusheng/phantomjs/releases/download/2.1.1/phantomjs-2.1.1-linux-aarch64.tar.bz2 \
    -o /opt/phantomjs/phantomjs-2.1.1-linux-aarch64.tar.bz2 \
   && tar xvjf /opt/phantomjs/phantomjs-2.1.1-linux-aarch64.tar.bz2 --strip-components 1 -C /opt/phantomjs \
   && cp /opt/phantomjs/bin/phantomjs /usr/bin/ \
-  && rm -rf /opt/phantomjs
+  && rm -rf /opt/phantomjs; else \
+  mkdir -p /opt/phantomjs \
+  && curl -L -s -S https://github.com/fg2it/phantomjs-on-raspberry/releases/download/v2.1.1-wheezy-jessie-armv6/phantomjs -o /opt/phantomjs/phantomjs \
+  && cp /opt/phantomjs/phantomjs /usr/bin/ \
+  && rm -rf /opt/phantomjs; fi
 
 ###
 # Avoid out of memory errors in builds
@@ -223,7 +232,9 @@ ENV MAVEN_OPTS -Xms256m -Xmx1536m
 ###
 
 # Hugo static website generator (for new hadoop site docs)
-RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.58.3/hugo_0.58.3_Linux-ARM64.deb \
+RUN if [ "$(echo "$MACHTYPE" | cut -d- -f1)" = "aarch64" ]; \
+    then curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.58.3/hugo_0.58.3_Linux-ARM64.deb; else \
+    curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.58.3/hugo_0.58.3_Linux-ARM.deb; fi \
     && dpkg --install hugo.deb \
     && rm hugo.deb
 
