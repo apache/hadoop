@@ -690,6 +690,9 @@ public class AbfsClient implements Closeable {
 
     sb.append("(");
 
+    sb.append(System.getProperty(JAVA_VENDOR)
+        .replaceAll(SINGLE_WHITE_SPACE, EMPTY_STRING));
+    sb.append(SINGLE_WHITE_SPACE);
     sb.append("JavaJRE");
     sb.append(SINGLE_WHITE_SPACE);
     sb.append(System.getProperty(JAVA_VERSION));
