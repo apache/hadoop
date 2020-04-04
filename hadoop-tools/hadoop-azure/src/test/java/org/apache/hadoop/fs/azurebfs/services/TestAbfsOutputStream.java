@@ -373,6 +373,7 @@ public final class TestAbfsOutputStream {
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
+    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean())).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(client, null, path, 0, bufferSize, true, false, true, false);
     final byte[] b = new byte[bufferSize];
@@ -381,6 +382,7 @@ public final class TestAbfsOutputStream {
     for (int i = 0; i < 2; i++) {
       out.write(b);
     }
+    Thread.sleep(1000);
     out.flush();
     Thread.sleep(1000);
 
