@@ -54,7 +54,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Test useragent of abfs client.
  *
  */
-@RunWith(JUnit4.class)
 public final class TestAbfsClient {
 
   private static final String ACCOUNT_NAME = "bogusAccountName.dfs.core.windows.net";
