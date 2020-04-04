@@ -877,7 +877,8 @@ public class TestShortCircuitCache {
             return peerCache;
           });
 
-      Mockito.when(clientContext.getShortCircuitCache(blk.getBlock().getBlockId())).thenAnswer(
+      Mockito.when(clientContext.getShortCircuitCache(
+          blk.getBlock().getBlockId())).thenAnswer(
           (Answer<ShortCircuitCache>) shortCircuitCacheCall -> {
             ShortCircuitCache cache = Mockito.mock(ShortCircuitCache.class);
             Mockito.when(cache.allocShmSlot(
