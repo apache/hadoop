@@ -22,6 +22,11 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
 
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsPerfTracker;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,6 +35,7 @@ import org.mockito.ArgumentCaptor;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.conf.Configuration;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_WRITE_BUFFER_SIZE;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
@@ -62,6 +68,7 @@ public final class TestAbfsOutputStream {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     AbfsConfiguration abfsConf;
     final Configuration conf = new Configuration();
+    conf.setInt(AZURE_WRITE_BUFFER_SIZE, bufferSize);
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
@@ -69,7 +76,6 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(client, path, 0, true, false, true, false, abfsConf);
-    abfsConf.setWriteBufferSize(bufferSize);
     out.initWriteBufferPool(abfsConf);
     final byte[] b = new byte[writeSize];
     new Random().nextBytes(b);
@@ -113,6 +119,7 @@ public final class TestAbfsOutputStream {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     AbfsConfiguration abfsConf;
     final Configuration conf = new Configuration();
+    conf.setInt(AZURE_WRITE_BUFFER_SIZE, bufferSize);
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
@@ -121,7 +128,6 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(client, path, 0, true, false, true, false, abfsConf);
-    abfsConf.setWriteBufferSize(bufferSize);
     out.initWriteBufferPool(abfsConf);
     final byte[] b = new byte[writeSize];
     new Random().nextBytes(b);
@@ -170,7 +176,6 @@ public final class TestAbfsOutputStream {
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean())).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(client, path, 0, true, false, true, false, abfsConf);
-    abfsConf.setWriteBufferSize(bufferSize);
     out.initWriteBufferPool(abfsConf);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
@@ -222,6 +227,7 @@ public final class TestAbfsOutputStream {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     AbfsConfiguration abfsConf;
     final Configuration conf = new Configuration();
+    conf.setInt(AZURE_WRITE_BUFFER_SIZE, bufferSize);
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
@@ -230,7 +236,6 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(client, path, 0, true, false, true, false, abfsConf);
-    abfsConf.setWriteBufferSize(bufferSize);
     out.initWriteBufferPool(abfsConf);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
@@ -271,6 +276,7 @@ public final class TestAbfsOutputStream {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     AbfsConfiguration abfsConf;
     final Configuration conf = new Configuration();
+    conf.setInt(AZURE_WRITE_BUFFER_SIZE, bufferSize);
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
@@ -279,7 +285,6 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(client, path, 0, true, false, true, false, abfsConf);
-    abfsConf.setWriteBufferSize(bufferSize);
     out.initWriteBufferPool(abfsConf);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);
@@ -319,6 +324,7 @@ public final class TestAbfsOutputStream {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     AbfsConfiguration abfsConf;
     final Configuration conf = new Configuration();
+    conf.setInt(AZURE_WRITE_BUFFER_SIZE, bufferSize);
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
@@ -327,7 +333,6 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    abfsConf.setWriteBufferSize(bufferSize);
     AbfsOutputStream out = new AbfsOutputStream(client, path, 0, true, false, true, false, abfsConf);
     out.initWriteBufferPool(abfsConf);
     final byte[] b = new byte[bufferSize];
@@ -380,6 +385,7 @@ public final class TestAbfsOutputStream {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     AbfsConfiguration abfsConf;
     final Configuration conf = new Configuration();
+    conf.setInt(AZURE_WRITE_BUFFER_SIZE, bufferSize);
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
@@ -388,7 +394,6 @@ public final class TestAbfsOutputStream {
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean())).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(client, path, 0, true, false, true, false, abfsConf);
-    abfsConf.setWriteBufferSize(bufferSize);
     out.initWriteBufferPool(abfsConf);
     final byte[] b = new byte[bufferSize];
     new Random().nextBytes(b);

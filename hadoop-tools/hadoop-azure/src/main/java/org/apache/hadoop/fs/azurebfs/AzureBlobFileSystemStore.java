@@ -417,20 +417,23 @@ public class AzureBlobFileSystemStore implements Closeable {
                                  final FsPermission umask) throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("createFile", "createPath")) {
       boolean isNamespaceEnabled = getIsNamespaceEnabled();
-      LOG.debug(
-          "createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} isNamespaceEnabled: {}",
-          client.getFileSystem(), path, overwrite, permission.toString(), umask.toString(),
+      LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} isNamespaceEnabled: {}",
+          client.getFileSystem(),
+          path,
+          overwrite,
+          permission.toString(),
+          umask.toString(),
           isNamespaceEnabled);
 
-      boolean appendBlob = false;
-      if (isAppendBlobKey(path.toString())) {
-        appendBlob = true;
-      }
+        boolean appendBlob = false;
+        if (isAppendBlobKey(path.toString())) {
+          appendBlob = true;
+        }
 
-      client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
-          true, overwrite,
+      client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), true, overwrite,
           isNamespaceEnabled ? getOctalNotation(permission) : null,
-          isNamespaceEnabled ? getOctalNotation(umask) : null, appendBlob);
+          isNamespaceEnabled ? getOctalNotation(umask) : null,
+          appendBlob);
 
       if (abfsConfiguration.shouldUseOlderAbfsOutputStream()) {
         return new AbfsOutputStreamOld(
@@ -443,6 +446,7 @@ public class AzureBlobFileSystemStore implements Closeable {
             abfsConfiguration.isAppendWithFlushEnabled(),
             appendBlob);
       }
+
       return new AbfsOutputStream(client,
           AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), 0,
           abfsConfiguration.isFlushEnabled(),
