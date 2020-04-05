@@ -112,8 +112,10 @@ public final class TestAbfsClient {
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
         ACCOUNT_NAME);
-    String userAgentStr = getUserAgentString(abfsConfiguration, false);
+    verifybBasicInfo(getUserAgentString(abfsConfiguration, false));
+  }
 
+  private void verifybBasicInfo(String userAgentStr) {
     assertThat(userAgentStr)
         .describedAs("User-Agent string [" + userAgentStr
             + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
@@ -142,10 +144,8 @@ public final class TestAbfsClient {
         ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(abfsConfiguration, false);
 
+    verifybBasicInfo(userAgentStr);
     assertThat(userAgentStr)
-      .describedAs("User-Agent string [" + userAgentStr
-          + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
-      .matches(this.userAgentStringPattern)
       .describedAs("User-Agent string should contain " + FS_AZURE_USER_AGENT_PREFIX)
       .contains(FS_AZURE_USER_AGENT_PREFIX);
 
@@ -154,10 +154,8 @@ public final class TestAbfsClient {
         ACCOUNT_NAME);
     userAgentStr = getUserAgentString(abfsConfiguration, false);
 
+    verifybBasicInfo(userAgentStr);
     assertThat(userAgentStr)
-      .describedAs("User-Agent string [" + userAgentStr
-          + "] should be of the pattern: "+this.userAgentStringPattern.pattern())
-      .matches(this.userAgentStringPattern)
       .describedAs("User-Agent string should not contain " + FS_AZURE_USER_AGENT_PREFIX)
       .doesNotContain(FS_AZURE_USER_AGENT_PREFIX);
   }
@@ -172,19 +170,15 @@ public final class TestAbfsClient {
         ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(abfsConfiguration, true);
 
+    verifybBasicInfo(userAgentStr);
     assertThat(userAgentStr)
-      .describedAs("User-Agent string [" + userAgentStr
-          + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
-      .matches(this.userAgentStringPattern)
       .describedAs("User-Agent string should contain sslProvider")
       .contains(DelegatingSSLSocketFactory.getDefaultFactory().getProviderName());
 
     userAgentStr = getUserAgentString(abfsConfiguration, false);
 
+    verifybBasicInfo(userAgentStr);
     assertThat(userAgentStr)
-      .describedAs("User-Agent string [" + userAgentStr
-          + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
-      .matches(this.userAgentStringPattern)
       .describedAs("User-Agent string should not contain sslProvider")
       .doesNotContain(DelegatingSSLSocketFactory.getDefaultFactory().getProviderName());
   }
@@ -199,24 +193,21 @@ public final class TestAbfsClient {
         ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(abfsConfiguration, false);
 
+    verifybBasicInfo(userAgentStr);
     assertThat(userAgentStr)
-      .describedAs("User-Agent string [" + userAgentStr
-          + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
-      .matches(this.userAgentStringPattern)
       .describedAs("User-Agent string should contain cluster name")
       .contains(clusterName);
 
     configuration.unset(FS_AZURE_CLUSTER_NAME);
     abfsConfiguration = new AbfsConfiguration(configuration,
-        ACCOUNT_NAME);userAgentStr = getUserAgentString(abfsConfiguration, false);
+        ACCOUNT_NAME);
+    userAgentStr = getUserAgentString(abfsConfiguration, false);
 
+    verifybBasicInfo(userAgentStr);
     assertThat(userAgentStr)
-      .describedAs("User-Agent string [" + userAgentStr
-          + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
-      .matches(this.userAgentStringPattern)
       .describedAs("User-Agent string should not contain cluster name")
       .doesNotContain(clusterName)
-      .describedAs("User-Agent string should contain cluster UNKNOWN")
+      .describedAs("User-Agent string should contain UNKNOWN as cluster name config is absent")
       .contains("UNKNOWN");;
   }
 
@@ -230,24 +221,22 @@ public final class TestAbfsClient {
         ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(abfsConfiguration, false);
 
+    verifybBasicInfo(userAgentStr);
     assertThat(userAgentStr)
-      .describedAs("User-Agent string [" + userAgentStr
-          + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
-      .matches(this.userAgentStringPattern)
       .describedAs("User-Agent string should contain cluster type")
       .contains(clusterType);
 
     configuration.unset(FS_AZURE_CLUSTER_TYPE);
     abfsConfiguration = new AbfsConfiguration(configuration,
-        ACCOUNT_NAME);userAgentStr = getUserAgentString(abfsConfiguration, false);
+        ACCOUNT_NAME);
+    userAgentStr = getUserAgentString(abfsConfiguration, false);
 
+    verifybBasicInfo(userAgentStr);
     assertThat(userAgentStr)
-      .describedAs("User-Agent string [" + userAgentStr
-          + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
-      .matches(this.userAgentStringPattern)
       .describedAs("User-Agent string should not contain cluster type")
       .doesNotContain(clusterType)
-      .describedAs("User-Agent string should contain cluster UNKNOWN")
+      .describedAs("User-Agent string should contain UNKNOWN as cluster type config is absent")
       .contains("UNKNOWN");
   }
+
 }
