@@ -731,7 +731,7 @@ public class AbfsConfiguration{
   }
 
   @VisibleForTesting
-  public void setWriteBufferSize(int bufferSize) {
+  void setWriteBufferSize(int bufferSize) {
     this.writeBufferSize = bufferSize;
   }
 

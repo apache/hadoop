@@ -134,11 +134,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       return true;
     }
 
-    boolean shouldInitialiseCommonPools = isFirstObj;
-    if (shouldInitialiseCommonPools) {
+    boolean isFirstObjTemp = isFirstObj;
+    if (isFirstObjTemp) {
       synchronized (AbfsOutputStream.class) {
-        shouldInitialiseCommonPools = isFirstObj;
-        if (shouldInitialiseCommonPools) {
+        isFirstObjTemp = isFirstObj;
+        if (isFirstObjTemp) {
           isFirstObj = false;
           return false;
         }
