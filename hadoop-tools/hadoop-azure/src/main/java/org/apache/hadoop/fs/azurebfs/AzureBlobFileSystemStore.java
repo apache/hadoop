@@ -419,11 +419,11 @@ public class AzureBlobFileSystemStore implements Closeable {
       boolean isNamespaceEnabled = getIsNamespaceEnabled();
       LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} isNamespaceEnabled: {}",
               client.getFileSystem(),
-               path,
-               overwrite,
-               permission.toString(),
-               umask.toString(),
-               isNamespaceEnabled);
+              path,
+              overwrite,
+              permission.toString(),
+              umask.toString(),
+              isNamespaceEnabled);
 
         boolean appendBlob = false;
         if (isAppendBlobKey(path.toString())) {
