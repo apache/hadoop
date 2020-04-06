@@ -100,6 +100,11 @@ public class CapacityReservationSystem extends AbstractReservationSystem {
   }
 
   @Override
+  public Plan getPlan(String planName) {
+    return super.getPlan(capScheduler.normalizeQueueName(planName));
+  }
+
+  @Override
   protected ReservationSchedulerConfiguration
       getReservationSchedulerConfiguration() {
     return capScheduler.getConfiguration();

@@ -42,6 +42,7 @@ import java.util.GregorianCalendar;
 import java.util.Set;
 
 import org.mockito.Mockito;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -617,6 +618,24 @@ public class TestBlockToken {
     readToken.readFields(dib);
   }
 
+  /**
+   * If the NameNode predates HDFS-6708 and HDFS-9807, then the LocatedBlocks
+   * that it returns to the client will have block tokens that don't include
+   * the storage types or storage IDs. Simulate this by setting the storage
+   * type and storage ID to null to test backwards compatibility.
+   */
+  @Test
+  public void testLegacyBlockTokenWithoutStorages() throws IOException,
+          IllegalAccessException {
+    BlockTokenIdentifier identifier = new BlockTokenIdentifier("user",
+            "blockpool", 123,
+            EnumSet.allOf(BlockTokenIdentifier.AccessMode.class), null, null,
+            false);
+    FieldUtils.writeField(identifier, "storageTypes", null, true);
+    FieldUtils.writeField(identifier, "storageIds", null, true);
+    testCraftedBlockTokenIdentifier(identifier, false, false, false);
+  }
+
   @Test
   public void testProtobufBlockTokenBytesIsProtobuf() throws IOException {
     final boolean useProto = true;
@@ -662,13 +681,17 @@ public class TestBlockToken {
     assertEquals(protobufToken, readToken);
   }
 
-  private void testCraftedProtobufBlockTokenIdentifier(
+  private void testCraftedBlockTokenIdentifier(
       BlockTokenIdentifier identifier, boolean expectIOE,
-      boolean expectRTE) throws IOException {
+      boolean expectRTE, boolean isProtobuf) throws IOException {
     DataOutputBuffer dob = new DataOutputBuffer(4096);
     DataInputBuffer dib = new DataInputBuffer();
 
-    identifier.writeProtobuf(dob);
+    if (isProtobuf) {
+      identifier.writeProtobuf(dob);
+    } else {
+      identifier.writeLegacy(dob);
+    }
     byte[] identBytes = Arrays.copyOf(dob.getData(), dob.getLength());
 
     BlockTokenIdentifier legacyToken = new BlockTokenIdentifier();
@@ -691,22 +714,23 @@ public class TestBlockToken {
       invalidLegacyMessage = true;
     }
 
-    assertTrue(invalidLegacyMessage);
+    if (isProtobuf) {
+      assertTrue(invalidLegacyMessage);
 
-    dib.reset(identBytes, identBytes.length);
-    protobufToken.readFieldsProtobuf(dib);
-
-    dib.reset(identBytes, identBytes.length);
-    readToken.readFieldsProtobuf(dib);
-    assertEquals(protobufToken, readToken);
-    assertEquals(identifier, readToken);
+      dib.reset(identBytes, identBytes.length);
+      protobufToken.readFieldsProtobuf(dib);
+      dib.reset(identBytes, identBytes.length);
+      readToken.readFields(dib);
+      assertEquals(identifier, readToken);
+      assertEquals(protobufToken, readToken);
+    }
   }
 
   @Test
   public void testEmptyProtobufBlockTokenBytesIsProtobuf() throws IOException {
     // Empty BlockTokenIdentifiers throw IOException
     BlockTokenIdentifier identifier = new BlockTokenIdentifier();
-    testCraftedProtobufBlockTokenIdentifier(identifier, true, false);
+    testCraftedBlockTokenIdentifier(identifier, true, false, true);
   }
 
   @Test
@@ -727,10 +751,10 @@ public class TestBlockToken {
     datetime = ((datetime / 1000) * 1000); // strip milliseconds.
     datetime = datetime + 71; // 2017-02-09 00:12:35,071+0100
     identifier.setExpiryDate(datetime);
-    testCraftedProtobufBlockTokenIdentifier(identifier, false, true);
+    testCraftedBlockTokenIdentifier(identifier, false, true, true);
     datetime += 1; // 2017-02-09 00:12:35,072+0100
     identifier.setExpiryDate(datetime);
-    testCraftedProtobufBlockTokenIdentifier(identifier, true, false);
+    testCraftedBlockTokenIdentifier(identifier, true, false, true);
   }
 
   private BlockTokenIdentifier writeAndReadBlockToken(

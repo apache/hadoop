@@ -399,8 +399,12 @@ public abstract class INodeAttributeProvider {
      *                     operation.
      * @throws AccessControlException
      */
-    void checkPermissionWithContext(AuthorizationContext authzContext)
-        throws AccessControlException;
+    default void checkPermissionWithContext(AuthorizationContext authzContext)
+        throws AccessControlException {
+      throw new AccessControlException("The authorization provider does not "
+          + "implement the checkPermissionWithContext(AuthorizationContext) "
+          + "API.");
+    }
   }
   /**
    * Initialize the provider. This method is called at NameNode startup

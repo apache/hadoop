@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueuePlacementRuleUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -1049,7 +1050,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
             "Illegal queue mapping " + mappingValue);
       }
 
-      QueueMappingEntity m = new QueueMappingEntity(mapping[0], mapping[1]);
+      //Mappings should be consistent, and have the parent path parsed
+      // from the beginning
+      QueueMappingEntity m = new QueueMappingEntity(
+          mapping[0],
+          QueuePlacementRuleUtils.extractQueuePath(mapping[1]));
 
       mappings.add(m);
     }
@@ -1120,10 +1125,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
           throw new IllegalArgumentException(
               "unknown mapping prefix " + mapping[0]);
         }
+        //forcing the queue path to be split to parent and leafQueue, to make
+        //queue mapping parentPath and queueName consistent
         m = QueueMappingBuilder.create()
                 .type(mappingType)
                 .source(mapping[1])
-                .queue(mapping[2])
+                .queuePath(QueuePlacementRuleUtils.extractQueuePath(mapping[2]))
                 .build();
       } catch (Throwable t) {
         throw new IllegalArgumentException(

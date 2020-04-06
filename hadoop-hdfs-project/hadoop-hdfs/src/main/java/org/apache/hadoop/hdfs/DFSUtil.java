@@ -627,8 +627,9 @@ public class DFSUtil {
                                                DFS_NAMENODE_RPC_ADDRESS_KEY);
     if (addressList.isEmpty()) {
       throw new IOException("Incorrect configuration: namenode address "
-              + DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + " or "
-              + DFS_NAMENODE_RPC_ADDRESS_KEY
+              + DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + "." + parentNameServices
+              + " or "
+              + DFS_NAMENODE_RPC_ADDRESS_KEY + "." + parentNameServices
               + " is not configured.");
     }
     return addressList;

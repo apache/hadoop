@@ -994,6 +994,30 @@ public class TestWebHDFS {
         .assertTrue((contentSummary.getTypeQuota(StorageType.DISK) == 100000));
   }
 
+  /**
+   * Test Snapshot related information in ContentSummary.
+   */
+  @Test
+  public void testSnapshotInContentSummary() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    Path dirPath = new Path("/dir");
+    final Path filePath = new Path("/dir/file");
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    final WebHdfsFileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+        WebHdfsConstants.WEBHDFS_SCHEME);
+    final DistributedFileSystem dfs = cluster.getFileSystem();
+    DFSTestUtil.createFile(dfs, filePath, 10, (short) 3, 0L);
+    dfs.allowSnapshot(dirPath);
+    dfs.createSnapshot(dirPath);
+    dfs.delete(filePath, true);
+    ContentSummary contentSummary = webHdfs.getContentSummary(dirPath);
+    assertEquals(1, contentSummary.getSnapshotFileCount());
+    assertEquals(10, contentSummary.getSnapshotLength());
+    assertEquals(30, contentSummary.getSnapshotSpaceConsumed());
+    assertEquals(dfs.getContentSummary(dirPath),
+        webHdfs.getContentSummary(dirPath));
+  }
+
   @Test
   public void testQuotaUsage() throws Exception {
     final Configuration conf = WebHdfsTestUtil.createConf();

@@ -34,6 +34,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -553,9 +554,15 @@ public abstract class AbstractYarnScheduler
           }
         }
 
+        Queue queue = schedulerApp.getQueue();
+        //To make sure we don't face ambiguity, CS queues should be referenced
+        //by their full queue names
+        String queueName =  queue instanceof CSQueue ?
+            ((CSQueue)queue).getQueuePath() : queue.getQueueName();
+
         // create container
         RMContainer rmContainer = recoverAndCreateContainer(container, nm,
-            schedulerApp.getQueue().getQueueName());
+            queueName);
 
         // recover RMContainer
         rmContainer.handle(
@@ -566,8 +573,8 @@ public abstract class AbstractYarnScheduler
         schedulerNode.recoverContainer(rmContainer);
 
         // recover queue: update headroom etc.
-        Queue queue = schedulerAttempt.getQueue();
-        queue.recoverContainer(getClusterResource(), schedulerAttempt,
+        Queue queueToRecover = schedulerAttempt.getQueue();
+        queueToRecover.recoverContainer(getClusterResource(), schedulerAttempt,
             rmContainer);
 
         // recover scheduler attempt
@@ -903,8 +910,8 @@ public abstract class AbstractYarnScheduler
 
   @Override
   public Priority checkAndGetApplicationPriority(
-      Priority priorityRequestedByApp, UserGroupInformation user,
-      String queueName, ApplicationId applicationId) throws YarnException {
+          Priority priorityRequestedByApp, UserGroupInformation user,
+          String queuePath, ApplicationId applicationId) throws YarnException {
     // Dummy Implementation till Application Priority changes are done in
     // specific scheduler.
     return Priority.newInstance(0);

@@ -142,12 +142,6 @@ public class TestFSQueueConverter {
         .withConversionOptions(conversionOptions);
   }
 
-  private FSQueueConverter prepareDryRunConverter() {
-    conversionOptions.setDryRun(true);
-    converter = builder.withConversionOptions(conversionOptions).build();
-    return converter;
-  }
-
   @Test
   public void testConvertQueueHierarchy() {
     converter = builder.build();
@@ -177,24 +171,6 @@ public class TestFSQueueConverter {
             "root.users"));
 
     assertNoValueForQueues(leafs, ".queues", csConfig);
-  }
-
-  @Test
-  public void testConvertQueueHierarchyWithSameLeafQueues() throws Exception {
-    converter = builder.build();
-    expectedException.expect(ConversionException.class);
-    expectedException.expectMessage("Leaf queues must be unique");
-
-    String absolutePath =
-        new File("src/test/resources/fair-scheduler-sameleafqueue.xml")
-          .getAbsolutePath();
-    yarnConfig.set(FairSchedulerConfiguration.ALLOCATION_FILE,
-        FILE_PREFIX + absolutePath);
-    fs.close();
-    fs = createFairScheduler();
-    rootQueue = fs.getQueueManager().getRootQueue();
-
-    converter.convertQueueHierarchy(rootQueue);
   }
 
   @Test
@@ -417,11 +393,11 @@ public class TestFSQueueConverter {
     // root.users
     assertEquals("root.users.joe ordering policy", "fair",
         csConfig.get(PREFIX + "root.users.joe.ordering-policy"));
-    assertEquals("root.users.john ordering policy", "FIFO",
+    assertEquals("root.users.john ordering policy", "fifo",
         csConfig.get(PREFIX + "root.users.john.ordering-policy"));
 
     // root.admins
-    assertEquals("root.admins.alice ordering policy", "FIFO",
+    assertEquals("root.admins.alice ordering policy", "fifo",
         csConfig.get(PREFIX + "root.admins.alice.ordering-policy"));
     assertEquals("root.admins.bob ordering policy", "fair",
         csConfig.get(PREFIX + "root.admins.bob.ordering-policy"));
@@ -468,28 +444,6 @@ public class TestFSQueueConverter {
         true);
 
     converter.convertQueueHierarchy(rootQueue);
-  }
-
-  @Test
-  public void testDryRunWithMultipleLeafQueueNames() throws IOException {
-    String absolutePath =
-        new File("src/test/resources/fair-scheduler-sameleafqueue.xml")
-          .getAbsolutePath();
-    yarnConfig.set(FairSchedulerConfiguration.ALLOCATION_FILE,
-        FILE_PREFIX + absolutePath);
-    fs.close();
-    fs = createFairScheduler();
-    rootQueue = fs.getQueueManager().getRootQueue();
-
-    prepareDryRunConverter();
-    converter.convertQueueHierarchy(rootQueue);
-
-    assertEquals("Dry run errors", 1, dryRunResultHolder.getErrors().size());
-    assertEquals("Dry run warnings", 0,
-        dryRunResultHolder.getWarnings().size());
-    String error = dryRunResultHolder.getErrors().iterator().next();
-    assertTrue("Unexpected error message",
-        error.contains("Leaf queues must be unique"));
   }
 
   private void assertNoValueForQueues(Set<String> queues, String postfix,

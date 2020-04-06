@@ -80,6 +80,18 @@ public class MutableRatesWithAggregation extends MutableMetric {
   }
 
   /**
+   * Initialize the registry with all rate names passed in.
+   * This is an alternative to the above init function since this metric
+   * can be used more than just for rpc name.
+   * @param names the array of all rate names
+   */
+  public void init(String[] names) {
+    for (String name : names) {
+      addMetricIfNotExists(name);
+    }
+  }
+
+  /**
    * Add a rate sample for a rate metric.
    * @param name of the rate metric
    * @param elapsed time

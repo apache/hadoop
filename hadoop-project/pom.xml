@@ -20,10 +20,10 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-main</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-project</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -52,7 +52,7 @@
 
     <kafka.version>2.4.0</kafka.version>
 
-    <hadoop.assemblies.version>3.3.0-SNAPSHOT</hadoop.assemblies.version>
+    <hadoop.assemblies.version>3.4.0-SNAPSHOT</hadoop.assemblies.version>
     <commons-daemon.version>1.0.13</commons-daemon.version>
 
     <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
@@ -91,7 +91,7 @@
     <hadoop.protobuf.version>3.7.1</hadoop.protobuf.version>
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
 
-    <hadoop-thirdparty-protobuf.version>1.0.0-SNAPSHOT</hadoop-thirdparty-protobuf.version>
+    <hadoop-thirdparty-protobuf.version>1.0.0</hadoop-thirdparty-protobuf.version>
     <hadoop-thirdparty-shaded-prefix>org.apache.hadoop.thirdparty</hadoop-thirdparty-shaded-prefix>
     <hadoop-thirdparty-shaded-protobuf-prefix>${hadoop-thirdparty-shaded-prefix}.protobuf</hadoop-thirdparty-shaded-protobuf-prefix>
 

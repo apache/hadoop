@@ -357,9 +357,10 @@ public class TestCapacitySchedulerQueueMappingFactory {
       assertEquals("Queue", user, ctx.getQueue());
 
       if (primary) {
-        assertEquals("Primary Group", user + "group", ctx.getParentQueue());
+        assertEquals(
+            "Primary Group", "root." + user + "group", ctx.getParentQueue());
       } else {
-        assertEquals("Secondary Group", user + "subgroup1",
+        assertEquals("Secondary Group", "root." + user + "subgroup1",
             ctx.getParentQueue());
       }
     } finally {
