@@ -229,7 +229,7 @@ class DataXceiverServer implements Runnable {
         int curXceiverCount = datanode.getXceiverCount();
         if (curXceiverCount > maxXceiverCount) {
           throw new IOException("Xceiver count " + curXceiverCount
-              + " exceeds the limit of concurrent xcievers: "
+              + " exceeds the limit of concurrent xceivers: "
               + maxXceiverCount);
         }
 
