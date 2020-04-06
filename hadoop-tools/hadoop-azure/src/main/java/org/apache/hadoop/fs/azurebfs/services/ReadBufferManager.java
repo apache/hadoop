@@ -445,7 +445,7 @@ final class ReadBufferManager {
   }
 
   @VisibleForTesting
-  int getThreshold_age_milliseconds() {
+  int getThresholdAgeMilliseconds() {
     return THRESHOLD_AGE_MILLISECONDS;
   }
 
