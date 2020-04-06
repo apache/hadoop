@@ -130,13 +130,14 @@ public class TestBlockReaderLocal {
         throws IOException {
       // default: no-op
     }
-    public void doTest(BlockReaderLocal reader, byte original[], int shift)
+    public void doTest(BlockReaderLocal reader, int shift, byte original[])
             throws IOException {
       // default: no-op
     }  }
 
   public void runBlockReaderLocalTest(BlockReaderLocalTest test,
-      boolean checksum, long readahead, int shortCircuitCachesNum) throws IOException {
+      boolean checksum, long readahead, int shortCircuitCachesNum)
+          throws IOException {
     Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
     MiniDFSCluster cluster = null;
     HdfsConfiguration conf = new HdfsConfiguration();
@@ -146,7 +147,8 @@ public class TestBlockReaderLocal {
         BlockReaderLocalTest.BYTES_PER_CHECKSUM);
     conf.set(DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY, "CRC32C");
     conf.setLong(HdfsClientConfigKeys.DFS_CLIENT_CACHE_READAHEAD, readahead);
-    conf.setInt(HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM, shortCircuitCachesNum);
+    conf.setInt(HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_NUM,
+        shortCircuitCachesNum);
     test.setConfiguration(conf);
     FileInputStream dataIn = null, metaIn = null;
     final Path TEST_PATH = new Path("/a");
@@ -180,16 +182,18 @@ public class TestBlockReaderLocal {
       fsIn.close();
       fsIn = null;
       for (int i = 0; i < shortCircuitCachesNum; i++) {
-        ExtendedBlock block = DFSTestUtil.getAllBlocks(fs, TEST_PATH).get(i).getBlock();
+        ExtendedBlock block = DFSTestUtil.getAllBlocks(
+                fs, TEST_PATH).get(i).getBlock();
         File dataFile = cluster.getBlockFile(0, block);
         File metaFile = cluster.getBlockMetadataFile(0, block);
 
         ShortCircuitCache shortCircuitCache =
-                ClientContext.getFromConf(conf).getShortCircuitCache(block.getBlockId());
+                ClientContext.getFromConf(conf).getShortCircuitCache(
+                        block.getBlockId());
         test.setup(dataFile, checksum);
-        FileInputStream streams[] = {
-                new FileInputStream(dataFile),
-                new FileInputStream(metaFile)
+        FileInputStream[] streams = {
+            new FileInputStream(dataFile),
+            new FileInputStream(metaFile)
         };
         dataIn = streams[0];
         metaIn = streams[1];
@@ -215,7 +219,7 @@ public class TestBlockReaderLocal {
                 build();
         dataIn = null;
         metaIn = null;
-        test.doTest(blockReaderLocal, original, i * blockSize);
+        test.doTest(blockReaderLocal, i * blockSize, original );
         // BlockReaderLocal should not alter the file position.
         Assert.assertEquals(0, streams[0].getChannel().position());
         Assert.assertEquals(0, streams[1].getChannel().position());
@@ -242,8 +246,10 @@ public class TestBlockReaderLocal {
 
   @Test
   public void testBlockReaderLocalImmediateClose() throws IOException {
-    runBlockReaderLocalTest(new TestBlockReaderLocalImmediateClose(), true, 0, 1);
-    runBlockReaderLocalTest(new TestBlockReaderLocalImmediateClose(), false, 0, 1);
+    runBlockReaderLocalTest(new TestBlockReaderLocalImmediateClose(),
+        true, 0, 1);
+    runBlockReaderLocalTest(new TestBlockReaderLocalImmediateClose(),
+        false, 0, 1);
   }
 
   private static class TestBlockReaderSimpleReads
@@ -251,7 +257,7 @@ public class TestBlockReaderLocal {
     @Override
     public void doTest(BlockReaderLocal reader, byte original[])
         throws IOException {
-      byte buf[] = new byte[TEST_LENGTH];
+      byte[] buf = new byte[TEST_LENGTH];
       reader.readFully(buf, 0, 512);
       assertArrayRegionsEqual(original, 0, buf, 0, 512);
       reader.readFully(buf, 512, 512);
@@ -300,7 +306,7 @@ public class TestBlockReaderLocal {
     @Override
     public void doTest(BlockReaderLocal reader, byte original[])
         throws IOException {
-      byte buf[] = new byte[TEST_LENGTH];
+      byte[] buf = new byte[TEST_LENGTH];
       reader.readFully(buf, 0, 10);
       assertArrayRegionsEqual(original, 0, buf, 0, 10);
       reader.readFully(buf, 10, 100);
@@ -378,7 +384,7 @@ public class TestBlockReaderLocal {
   public void testBlockReaderLocalByteBufferReadsNoReadahead()
       throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderLocalByteBufferReads(),
-        true, 0, 1);
+         true, 0, 1);
   }
 
   @Test
@@ -477,7 +483,7 @@ public class TestBlockReaderLocal {
 
     public void doTest(BlockReaderLocal reader, byte original[])
         throws IOException {
-      byte buf[] = new byte[TEST_LENGTH];
+      byte[] buf = new byte[TEST_LENGTH];
       if (usingChecksums) {
         try {
           reader.readFully(buf, 0, 10);
@@ -517,7 +523,7 @@ public class TestBlockReaderLocal {
 
     public void doTest(BlockReaderLocal reader, byte original[])
         throws IOException {
-      byte buf[] = new byte[TEST_LENGTH];
+      byte[] buf = new byte[TEST_LENGTH];
       try {
         reader.readFully(buf, 0, 10);
         assertArrayRegionsEqual(original, 0, buf, 0, 10);
@@ -858,9 +864,9 @@ public class TestBlockReaderLocal {
   private static class TestBlockReaderFiveShortCircutCachesReads
           extends BlockReaderLocalTest {
     @Override
-    public void doTest(BlockReaderLocal reader, byte original[], int shift)
+    public void doTest(BlockReaderLocal reader, int shift, byte original[])
             throws IOException {
-      byte buf[] = new byte[TEST_LENGTH];
+      byte[] buf = new byte[TEST_LENGTH];
       reader.readFully(buf, 0, 512);
       assertArrayRegionsEqual(original, shift, buf, 0, 512);
       reader.readFully(buf, 512, 512);
@@ -877,43 +883,50 @@ public class TestBlockReaderLocal {
 
   @Test
   public void testBlockReaderFiveShortCircutCachesReads() throws IOException {
-    runBlockReaderLocalTest(new TestBlockReaderFiveShortCircutCachesReads(), true,
-            HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT, 5);
+    runBlockReaderLocalTest(new TestBlockReaderFiveShortCircutCachesReads(),
+            true, HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT,
+            5);
   }
 
   @Test
   public void testBlockReaderFiveShortCircutCachesReadsShortReadahead() throws IOException {
-    runBlockReaderLocalTest(new TestBlockReaderFiveShortCircutCachesReads(), true,
-            BlockReaderLocalTest.BYTES_PER_CHECKSUM - 1, 5);
+    runBlockReaderLocalTest(new TestBlockReaderFiveShortCircutCachesReads(),
+            true,BlockReaderLocalTest.BYTES_PER_CHECKSUM - 1,
+            5);
   }
 
   @Test
   public void testBlockReaderFiveShortCircutCachesReadsNoChecksum() throws IOException {
-    runBlockReaderLocalTest(new TestBlockReaderFiveShortCircutCachesReads(), false,
-            HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT, 5);
+    runBlockReaderLocalTest(new TestBlockReaderFiveShortCircutCachesReads(),
+            false, HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT,
+            5);
   }
 
   @Test
   public void testBlockReaderFiveShortCircutCachesReadsNoReadahead() throws IOException {
-    runBlockReaderLocalTest(new TestBlockReaderFiveShortCircutCachesReads(), true, 0, 5);
+    runBlockReaderLocalTest(new TestBlockReaderFiveShortCircutCachesReads(),
+            true, 0, 5);
   }
 
   @Test
   public void testBlockReaderFiveShortCircutCachesReadsNoChecksumNoReadahead()
           throws IOException {
-    runBlockReaderLocalTest(new TestBlockReaderFiveShortCircutCachesReads(), false, 0, 5);
+    runBlockReaderLocalTest(new TestBlockReaderFiveShortCircutCachesReads(),
+            false, 0, 5);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testBlockReaderShortCircutCachesOutOfRangeBelow() throws IOException {
-    runBlockReaderLocalTest(new TestBlockReaderFiveShortCircutCachesReads(), true,
-            HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT, 0);
+    runBlockReaderLocalTest(new TestBlockReaderFiveShortCircutCachesReads(),
+            true, HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT,
+            0);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testBlockReaderShortCircutCachesOutOfRangeAbove() throws IOException {
-    runBlockReaderLocalTest(new TestBlockReaderFiveShortCircutCachesReads(), true,
-            HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT, 555);
+    runBlockReaderLocalTest(new TestBlockReaderFiveShortCircutCachesReads(),
+            true, HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT,
+            555);
   }
 
 }
