@@ -230,11 +230,23 @@ public final class AzureADAuthenticator {
       final StringBuilder sb = new StringBuilder();
       sb.append("HTTP Error ");
       sb.append(httpErrorCode);
-      if (!url.isEmpty()) { sb.append("; url='").append(url).append('\'').append(' '); }
+      if (!url.isEmpty()) {
+        sb.append("; url='").append(url).append('\'').append(' ');
+      }
+
       sb.append(super.getMessage());
-      if (!requestId.isEmpty()) { sb.append("; requestId='").append(requestId).append('\''); }
-      if (!contentType.isEmpty()) { sb.append("; contentType='").append(contentType).append('\''); }
-      if (!body.isEmpty()) { sb.append("; response '").append(body).append('\''); }
+      if (!requestId.isEmpty()) {
+        sb.append("; requestId='").append(requestId).append('\'');
+      }
+
+      if (!contentType.isEmpty()) {
+        sb.append("; contentType='").append(contentType).append('\'');
+      }
+
+      if (!body.isEmpty()) {
+        sb.append("; response '").append(body).append('\'');
+      }
+
       return sb.toString();
     }
   }

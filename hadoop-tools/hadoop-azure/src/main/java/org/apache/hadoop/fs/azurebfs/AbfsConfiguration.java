@@ -422,7 +422,9 @@ public class AbfsConfiguration{
     return this.maxIoRetries;
   }
 
-  public int getCustomTokenFetchRetryCount() { return this.customTokenFetchRetryCount; }
+  public int getCustomTokenFetchRetryCount() {
+    return this.customTokenFetchRetryCount;
+  }
 
   public long getAzureBlockSize() {
     return this.azureBlockSize;
