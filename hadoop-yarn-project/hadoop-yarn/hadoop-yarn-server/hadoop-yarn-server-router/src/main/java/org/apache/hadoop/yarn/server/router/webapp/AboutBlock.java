@@ -52,7 +52,7 @@ public class AboutBlock extends HtmlBlock {
 
     ClusterMetricsInfo metrics = RouterWebServiceUtil.genericForward(
         webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null);
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null, conf);
     boolean isEnabled = conf.getBoolean(
         YarnConfiguration.FEDERATION_ENABLED,
         YarnConfiguration.DEFAULT_FEDERATION_ENABLED);

@@ -37,6 +37,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 import net.jcip.annotations.NotThreadSafe;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,6 +157,50 @@ public class TestDataNodeMetrics {
       assertQuantileGauges("FsyncNanos" + sec, dnMetrics);
     } finally {
       if (cluster != null) {cluster.shutdown();}
+    }
+  }
+
+  /**
+   * HDFS-15242: This function ensures that writing causes some metrics
+   * of FSDatasetImpl to increment.
+   */
+  @Test
+  public void testFsDatasetMetrics() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitActive();
+      String bpid = cluster.getNameNode().getNamesystem().getBlockPoolId();
+      List<DataNode> datanodes = cluster.getDataNodes();
+      DataNode datanode = datanodes.get(0);
+
+      // Verify both of metrics set to 0 when initialize.
+      MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
+      assertCounter("CreateRbwOpNumOps", 0L, rb);
+      assertCounter("CreateTemporaryOpNumOps", 0L, rb);
+      assertCounter("FinalizeBlockOpNumOps", 0L, rb);
+
+      // Write into a file to trigger DN metrics.
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path testFile = new Path("/testBlockMetrics.txt");
+      FSDataOutputStream fout = fs.create(testFile);
+      fout.write(new byte[1]);
+      fout.hsync();
+      fout.close();
+
+      // Create temporary block file to trigger DN metrics.
+      final ExtendedBlock block = new ExtendedBlock(bpid, 1, 1, 2001);
+      datanode.data.createTemporary(StorageType.DEFAULT, null, block, false);
+
+      // Verify both of metrics value has updated after do some operations.
+      rb = getMetrics(datanode.getMetrics().name());
+      assertCounter("CreateRbwOpNumOps", 1L, rb);
+      assertCounter("CreateTemporaryOpNumOps", 1L, rb);
+      assertCounter("FinalizeBlockOpNumOps", 1L, rb);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 

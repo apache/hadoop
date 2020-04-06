@@ -26,6 +26,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.server.federation.router.RouterAdminServer;
 import org.apache.hadoop.hdfs.server.federation.router.RouterPermissionChecker;
@@ -61,24 +62,69 @@ public class MountTableStoreImpl extends MountTableStore {
     super(driver);
   }
 
+  /**
+   * Whether a mount table entry can be accessed by the current context.
+   *
+   * @param src mount entry being accessed
+   * @param action type of action being performed on the mount entry
+   * @throws AccessControlException if mount table cannot be accessed
+   */
+  private void checkMountTableEntryPermission(String src, FsAction action)
+      throws IOException {
+    final MountTable partial = MountTable.newInstance();
+    partial.setSourcePath(src);
+    final Query<MountTable> query = new Query<>(partial);
+    final MountTable entry = getDriver().get(getRecordClass(), query);
+    if (entry != null) {
+      RouterPermissionChecker pc = RouterAdminServer.getPermissionChecker();
+      if (pc != null) {
+        pc.checkPermission(entry, action);
+      }
+    }
+  }
+
+  /**
+   * Check parent path permission recursively. It needs WRITE permission
+   * of the nearest parent entry and other EXECUTE permission.
+   * @param src mount entry being checked
+   * @throws AccessControlException if mount table cannot be accessed
+   */
+  private void checkMountTablePermission(final String src) throws IOException {
+    String parent = src.substring(0, src.lastIndexOf(Path.SEPARATOR));
+    checkMountTableEntryPermission(parent, FsAction.WRITE);
+    while (!parent.isEmpty()) {
+      parent = parent.substring(0, parent.lastIndexOf(Path.SEPARATOR));
+      checkMountTableEntryPermission(parent, FsAction.EXECUTE);
+    }
+  }
+
+  /**
+   * When add mount table entry, it needs WRITE permission of the nearest parent
+   * entry if exist, and EXECUTE permission of other ancestor entries.
+   * @param request add mount table entry request
+   * @return add mount table entry response
+   * @throws IOException if mount table cannot be accessed
+   */
   @Override
   public AddMountTableEntryResponse addMountTableEntry(
       AddMountTableEntryRequest request) throws IOException {
     MountTable mountTable = request.getEntry();
     if (mountTable != null) {
-      RouterPermissionChecker pc = RouterAdminServer.getPermissionChecker();
-      if (pc != null) {
-        pc.checkPermission(mountTable, FsAction.WRITE);
-      }
       mountTable.validate();
+      final String src = mountTable.getSourcePath();
+      checkMountTablePermission(src);
+      boolean status = getDriver().put(mountTable, false, true);
+      AddMountTableEntryResponse response =
+          AddMountTableEntryResponse.newInstance();
+      response.setStatus(status);
+      updateCacheAllRouters();
+      return response;
+    } else {
+      AddMountTableEntryResponse response =
+          AddMountTableEntryResponse.newInstance();
+      response.setStatus(false);
+      return response;
     }
-
-    boolean status = getDriver().put(mountTable, false, true);
-    AddMountTableEntryResponse response =
-        AddMountTableEntryResponse.newInstance();
-    response.setStatus(status);
-    updateCacheAllRouters();
-    return response;
   }
 
   @Override
@@ -86,19 +132,21 @@ public class MountTableStoreImpl extends MountTableStore {
       UpdateMountTableEntryRequest request) throws IOException {
     MountTable mountTable = request.getEntry();
     if (mountTable != null) {
-      RouterPermissionChecker pc = RouterAdminServer.getPermissionChecker();
-      if (pc != null) {
-        pc.checkPermission(mountTable, FsAction.WRITE);
-      }
       mountTable.validate();
+      final String srcPath = mountTable.getSourcePath();
+      checkMountTableEntryPermission(srcPath, FsAction.WRITE);
+      boolean status = getDriver().put(mountTable, true, true);
+      UpdateMountTableEntryResponse response =
+          UpdateMountTableEntryResponse.newInstance();
+      response.setStatus(status);
+      updateCacheAllRouters();
+      return response;
+    } else {
+      UpdateMountTableEntryResponse response =
+          UpdateMountTableEntryResponse.newInstance();
+      response.setStatus(false);
+      return response;
     }
-
-    boolean status = getDriver().put(mountTable, true, true);
-    UpdateMountTableEntryResponse response =
-        UpdateMountTableEntryResponse.newInstance();
-    response.setStatus(status);
-    updateCacheAllRouters();
-    return response;
   }
 
   @Override
