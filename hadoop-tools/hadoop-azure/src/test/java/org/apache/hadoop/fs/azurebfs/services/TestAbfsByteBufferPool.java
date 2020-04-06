@@ -67,7 +67,7 @@ public class TestAbfsByteBufferPool {
     List<Integer> invalidMaxFreeBuffers = Arrays.asList(0, -1);
     for (int val : invalidMaxFreeBuffers) {
       intercept(IllegalArgumentException.class, String
-              .format("maxFreeBuffers cannot be < 1",
+              .format("queueCapacity cannot be < 1",
                   MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE,
                   MAX_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE),
           () -> new AbfsByteBufferPool(TWO_MB, val, 20));
@@ -165,44 +165,6 @@ public class TestAbfsByteBufferPool {
     byteBuffer = (byte[]) futureTask.get();
     assertThat(byteBuffer.length).describedAs("The blocked get call unblocks "
         + "when an object is released back to the pool.").isEqualTo(TWO_MB);
-  }
-
-  @Test
-  public void testMaxBuffersInUse() {
-    List<Object[]> testData = Arrays.asList(
-        new Object[][] {{1, 1, 20}, {1, 100000, 90}, {1, 2, 30},
-            {100, 100, 90}});
-    for (int i = 0; i < testData.size(); i++) {
-      int bufferSize = (int) testData.get(i)[0] * 1024 * 1024;
-      int maxFreeBuffers = (int) testData.get(i)[1];
-      int maxWriteMemUsagePercentage = (int) testData.get(i)[2];
-      AbfsByteBufferPool pool = new AbfsByteBufferPool(bufferSize,
-          maxFreeBuffers, maxWriteMemUsagePercentage);
-
-      double maxMemoryAllowedForPoolMB =
-          Runtime.getRuntime().maxMemory() * maxWriteMemUsagePercentage / 100;
-      double bufferCountByMemory = maxMemoryAllowedForPoolMB / bufferSize;
-      double bufferCountByMaxFreeBuffers =
-          maxFreeBuffers + Runtime.getRuntime().availableProcessors();
-
-      int expectedMaxBuffersInUse = (int) Math
-          .ceil(Math.min(bufferCountByMemory, bufferCountByMaxFreeBuffers));
-      if (expectedMaxBuffersInUse < 2) {
-        expectedMaxBuffersInUse = 2;
-      }
-
-      assertThat(pool.getMaxBuffersInUse())
-          .describedAs("Max buffers in use should be always greater than 1")
-          .isGreaterThan(1)
-          .describedAs("Max buffers in use should be equal to as expected")
-          .isEqualTo(expectedMaxBuffersInUse).describedAs(
-          "Max buffers in use should be <= number of "
-              + "buffers calculated by memory percentage")
-          .isLessThanOrEqualTo((int) Math.ceil(bufferCountByMemory))
-          .describedAs("Max buffers in use should <= number of buffers "
-              + "calculated by maxFreeBuffers")
-          .isLessThanOrEqualTo((int) Math.ceil(bufferCountByMemory));
-    }
   }
 
   @Test

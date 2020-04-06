@@ -23,6 +23,8 @@ import com.google.common.base.Preconditions;
 
 import java.util.concurrent.ArrayBlockingQueue;
 
+import static java.lang.Math.ceil;
+import static java.lang.Math.min;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE;
 
@@ -36,24 +38,35 @@ public class AbfsByteBufferPool {
    */
   private ArrayBlockingQueue<byte[]> freeBuffers;
   /**
-   * Count to track the buffers issued and yet to be returned.
+   * Count to track the buffers issued from AbfsByteBufferPool and yet to be
+   * returned.
    */
   private int numBuffersInUse;
-  /**
-   * Maximum number of buffers that can be in use.
-   */
-  private int maxBuffersInUse;
+
   private int bufferSize;
 
+  private int queueCapacity;
+  private int maxMemUsagePercentage;
+
   /**
-   * @param bufferSize                 Size of the byte[] to be returned.
-   * @param maxFreeBuffers             Maximum number of buffers that cab
-   *                                   reside in the pool.
-   * @param maxWriteMemUsagePercentage Maximum percentage of memory that can
-   *                                   be used by the pool from the max
-   *                                   available memory.
+   * @param bufferSize            Size of the byte[] to be returned.
+   * @param queueCapacity         Maximum number of buffers that the pool can
+   *                              keep within the pool.
+   * @param maxMemUsagePercentage Maximum percentage of memory that can
+   *                              be used by the pool from the max
+   *                              available memory.
    */
-  public AbfsByteBufferPool(final int bufferSize, final int maxFreeBuffers,
+  public AbfsByteBufferPool(final int bufferSize, final int queueCapacity,
+      final int maxMemUsagePercentage) {
+    validate(queueCapacity, maxMemUsagePercentage);
+    this.maxMemUsagePercentage = maxMemUsagePercentage;
+    this.bufferSize = bufferSize;
+    this.numBuffersInUse = 0;
+    this.queueCapacity = queueCapacity;
+    freeBuffers = new ArrayBlockingQueue<>(queueCapacity);
+  }
+
+  private void validate(final int queueCapacity,
       final int maxWriteMemUsagePercentage) {
     Preconditions.checkArgument(maxWriteMemUsagePercentage
             >= MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE
@@ -63,22 +76,27 @@ public class AbfsByteBufferPool {
         MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE,
         MAX_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE);
     Preconditions
-        .checkArgument(maxFreeBuffers > 0, "maxFreeBuffers cannot be < 1");
-    this.bufferSize = bufferSize;
-    this.numBuffersInUse = 0;
-    freeBuffers = new ArrayBlockingQueue<>(maxFreeBuffers);
+        .checkArgument(queueCapacity > 0, "queueCapacity cannot be < 1");
+  }
 
-    double maxMemoryAllowedForPool =
-        Runtime.getRuntime().maxMemory() * maxWriteMemUsagePercentage / 100;
-    double bufferCountByMemory = maxMemoryAllowedForPool / bufferSize;
-    double bufferCountByMaxFreeBuffers =
-        maxFreeBuffers + Runtime.getRuntime().availableProcessors();
-
-    maxBuffersInUse = (int) Math
-        .ceil(Math.min(bufferCountByMemory, bufferCountByMaxFreeBuffers));
-    if (maxBuffersInUse < 2) {
-      maxBuffersInUse = 2;
+  private boolean isPossibleToIssueNewBuffer() {
+    Runtime rt = Runtime.getRuntime();
+    double bufferCountByMaxFreeBuffers = ceil(
+        queueCapacity + rt.availableProcessors());
+    if (numBuffersInUse >= bufferCountByMaxFreeBuffers) {
+      return false;
     }
+
+    double freeMemory = rt.maxMemory() - (rt.totalMemory() - rt.freeMemory());
+    double bufferCountByMemory = ceil(
+        (freeMemory * maxMemUsagePercentage / 100) / bufferSize);
+    int numBuffersCanBeInUse = (int) min(bufferCountByMemory,
+        bufferCountByMaxFreeBuffers);
+    if (numBuffersCanBeInUse < 2) {
+      numBuffersCanBeInUse = 2;
+    }
+
+    return numBuffersInUse < numBuffersCanBeInUse;
   }
 
   /**
@@ -86,10 +104,11 @@ public class AbfsByteBufferPool {
    * Waits if pool is empty and already maximum number of buffers are in use.
    */
   public byte[] get() {
+    isPossibleToIssueNewBuffer();
     byte[] byteArray = null;
     synchronized (this) {
       byteArray = freeBuffers.poll();
-      if (byteArray == null && numBuffersInUse < maxBuffersInUse) {
+      if (byteArray == null && isPossibleToIssueNewBuffer()) {
         byteArray = new byte[bufferSize];
       }
       if (byteArray != null) {
@@ -121,11 +140,6 @@ public class AbfsByteBufferPool {
       numBuffersInUse = 0;
     }
     freeBuffers.offer(byteArray);
-  }
-
-  @VisibleForTesting
-  public synchronized int getMaxBuffersInUse() {
-    return this.maxBuffersInUse;
   }
 
   @VisibleForTesting
