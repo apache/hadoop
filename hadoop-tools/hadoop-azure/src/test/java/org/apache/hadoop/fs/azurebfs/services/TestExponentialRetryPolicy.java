@@ -51,8 +51,8 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   public void testDefaultMaxIORetryCount() throws Exception {
     AbfsConfiguration abfsConfig = getAbfsConfig();
     Assert.assertTrue(
-        "default maxIORetry count is 30."
-        , abfsConfig.getMaxIoRetries() == 30);
+        "default maxIORetry count is 30.",
+        abfsConfig.getMaxIoRetries() == 30);
     testMaxIOConfig(abfsConfig);
   }
 
@@ -69,13 +69,13 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
 
     while (localRetryCount < abfsConfig.getMaxIoRetries()) {
       Assert.assertTrue(
-          "Retry should be allowed when retryCount less than max count configured."
-          , retryPolicy.shouldRetry(localRetryCount, -1));
+          "Retry should be allowed when retryCount less than max count configured.",
+          retryPolicy.shouldRetry(localRetryCount, -1));
       localRetryCount++;
     }
 
     Assert.assertTrue(
-        "When all retries are exhausted, the retryCount will be same as max configured"
-        , localRetryCount == abfsConfig.getMaxIoRetries());
+        "When all retries are exhausted, the retryCount will be same as max configured",
+        localRetryCount == abfsConfig.getMaxIoRetries());
   }
 }
