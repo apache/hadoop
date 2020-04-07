@@ -22,7 +22,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 import org.mockito.ArgumentCaptor;
@@ -44,9 +43,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public final class TestAbfsOutputStream {
 
-  private static final int bufferSize = 4096;
-  private static final int writeSize = 1000;
-  private static final String path = "~/testpath";
+  private static final int BUFFER_SIZE = 4096;
+  private static final int WRITE_SIZE = 1000;
+  private static final String PATH = "~/testpath";
   private final String globalKey = "fs.azure.configuration";
   private final String accountName1 = "account1";
   private final String accountKey1 = globalKey + "." + accountName1;
@@ -68,8 +67,8 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, path, 0, bufferSize, true, false, true, false);
-    final byte[] b = new byte[writeSize];
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, BUFFER_SIZE, true, false, true, false);
+    final byte[] b = new byte[WRITE_SIZE];
     new Random().nextBytes(b);
     out.write(b);
     out.hsync();
@@ -81,7 +80,7 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acClose = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
 
-    final byte[] b1 = new byte[2*writeSize];
+    final byte[] b1 = new byte[2*WRITE_SIZE];
     new Random().nextBytes(b1);
     out.write(b1);
     out.flush();
@@ -91,18 +90,18 @@ public final class TestAbfsOutputStream {
 
     verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
                                     acFlush.capture(), acClose.capture());
-    assertThat(Arrays.asList(path, path)).describedAs("Path of the requests").isEqualTo(acString.getAllValues());
-    assertThat(Arrays.asList(Long.valueOf(0), Long.valueOf(writeSize))).describedAs("Write Position").isEqualTo(acLong.getAllValues());
+    assertThat(Arrays.asList(PATH, PATH)).describedAs("Path of the requests").isEqualTo(acString.getAllValues());
+    assertThat(Arrays.asList(Long.valueOf(0), Long.valueOf(WRITE_SIZE))).describedAs("Write Position").isEqualTo(acLong.getAllValues());
     //flush=true, close=false, flush=true, close=false
     assertThat(Arrays.asList(true, true)).describedAs("Flush = true/false").isEqualTo(acFlush.getAllValues());
     assertThat(Arrays.asList(false, false)).describedAs("Close = true/false").isEqualTo(acClose.getAllValues());
-    assertThat(Arrays.asList(0,0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
-    assertThat(Arrays.asList(writeSize, 2*writeSize)).describedAs("Buffer length").isEqualTo(acBufferLength.getAllValues());
+    assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
+    assertThat(Arrays.asList(WRITE_SIZE, 2*WRITE_SIZE)).describedAs("Buffer length").isEqualTo(acBufferLength.getAllValues());
 
   }
 
   /**
-   * The test verifies OutputStream Write of writeSize(1000 bytes) followed by a close is making correct HTTP calls to the server
+   * The test verifies OutputStream Write of WRITE_SIZE(1000 bytes) followed by a close is making correct HTTP calls to the server
    */
   @Test
   public void verifyWriteRequest() throws Exception {
@@ -118,8 +117,8 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, path, 0, bufferSize, true, false, true, false);
-    final byte[] b = new byte[writeSize];
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, BUFFER_SIZE, true, false, true, false);
+    final byte[] b = new byte[WRITE_SIZE];
     new Random().nextBytes(b);
 
     for (int i = 0; i < 5; i++) {
@@ -137,18 +136,18 @@ public final class TestAbfsOutputStream {
 
     verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
                                     acFlush.capture(), acClose.capture());
-    assertThat(Arrays.asList(path, path)).describedAs("Path").isEqualTo(acString.getAllValues());
-    assertThat(Arrays.asList(Long.valueOf(0), Long.valueOf(bufferSize))).describedAs("Position").isEqualTo(acLong.getAllValues());
+    assertThat(Arrays.asList(PATH, PATH)).describedAs("Path").isEqualTo(acString.getAllValues());
+    assertThat(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE))).describedAs("Position").isEqualTo(acLong.getAllValues());
     //flush=false,close=false, flush=true,close=true
     assertThat(Arrays.asList(false, true)).describedAs("Flush = true/false").isEqualTo(acFlush.getAllValues());
     assertThat(Arrays.asList(false, true)).describedAs("Close = true/false").isEqualTo(acClose.getAllValues());
     assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
-    assertThat(Arrays.asList(bufferSize, 5*writeSize-bufferSize)).describedAs("Buffer Length").isEqualTo(acBufferLength.getAllValues());
+    assertThat(Arrays.asList(BUFFER_SIZE, 5*WRITE_SIZE-BUFFER_SIZE)).describedAs("Buffer Length").isEqualTo(acBufferLength.getAllValues());
 
   }
 
   /**
-   * The test verifies OutputStream Write of bufferSize(4KB) followed by a close is making correct HTTP calls to the server
+   * The test verifies OutputStream Write of BUFFER_SIZE(4KB) followed by a close is making correct HTTP calls to the server
    */
   @Test
   public void verifyWriteRequestOfBufferSizeAndClose() throws Exception {
@@ -165,8 +164,8 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, path, 0, bufferSize, true, false, true, false);
-    final byte[] b = new byte[bufferSize];
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, BUFFER_SIZE, true, false, true, false);
+    final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
     for (int i = 0; i < 2; i++) {
@@ -184,14 +183,14 @@ public final class TestAbfsOutputStream {
 
     verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
                                     acFlush.capture(), acClose.capture());
-    assertThat(Arrays.asList(path, path)).describedAs("path").isEqualTo(acString.getAllValues());
-    assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(bufferSize)))).describedAs("Position").isEqualTo(new HashSet<Long>(
+    assertThat(Arrays.asList(PATH, PATH)).describedAs("path").isEqualTo(acString.getAllValues());
+    assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("Position").isEqualTo(new HashSet<Long>(
                acLong.getAllValues()));
     //flush=false, close=false, flush=false, close=false
     assertThat(Arrays.asList(false, false)).describedAs("Flush = true/false").isEqualTo(acFlush.getAllValues());
     assertThat(Arrays.asList(false, false)).describedAs("Close = true/false").isEqualTo(acClose.getAllValues());
     assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
-    assertThat(Arrays.asList(bufferSize, bufferSize)).describedAs("Buffer Length").isEqualTo(acBufferLength.getAllValues());
+    assertThat(Arrays.asList(BUFFER_SIZE, BUFFER_SIZE)).describedAs("Buffer Length").isEqualTo(acBufferLength.getAllValues());
 
     ArgumentCaptor<String> acFlushString = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<Long> acFlushLong = ArgumentCaptor.forClass(Long.class);
@@ -199,15 +198,15 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acFlushClose = ArgumentCaptor.forClass(Boolean.class);
 
     verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture());
-    assertThat(Arrays.asList(path)).describedAs("path").isEqualTo(acFlushString.getAllValues());
-    assertThat(Arrays.asList(Long.valueOf(2*bufferSize))).describedAs("position").isEqualTo(acFlushLong.getAllValues());
+    assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushString.getAllValues());
+    assertThat(Arrays.asList(Long.valueOf(2*BUFFER_SIZE))).describedAs("position").isEqualTo(acFlushLong.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("RetainUnCommittedData flag").isEqualTo(acFlushRetainUnCommittedData.getAllValues());
     assertThat(Arrays.asList(true)).describedAs("Close flag").isEqualTo(acFlushClose.getAllValues());
 
   }
 
   /**
-   * The test verifies OutputStream Write of bufferSize(4KB) is making correct HTTP calls to the server
+   * The test verifies OutputStream Write of BUFFER_SIZE(4KB) is making correct HTTP calls to the server
    */
   @Test
   public void verifyWriteRequestOfBufferSize() throws Exception {
@@ -223,8 +222,8 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, path, 0, bufferSize, true, false, true, false);
-    final byte[] b = new byte[bufferSize];
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, BUFFER_SIZE, true, false, true, false);
+    final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
     for (int i = 0; i < 2; i++) {
@@ -242,19 +241,19 @@ public final class TestAbfsOutputStream {
 
     verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
                                     acFlush.capture(), acClose.capture());
-    assertThat(Arrays.asList(path, path)).describedAs("File Path").isEqualTo(acString.getAllValues());
-    assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(bufferSize)))).describedAs("Position in file").isEqualTo(
+    assertThat(Arrays.asList(PATH, PATH)).describedAs("File Path").isEqualTo(acString.getAllValues());
+    assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("Position in file").isEqualTo(
                new HashSet<Long>(acLong.getAllValues()));
     //flush=false, close=false, flush=false, close=false
     assertThat(Arrays.asList(false, false)).describedAs("flush flag").isEqualTo(acFlush.getAllValues());
     assertThat(Arrays.asList(false, false)).describedAs("close flag").isEqualTo(acClose.getAllValues());
     assertThat(Arrays.asList(0, 0)).describedAs("buffer offset").isEqualTo(acBufferOffset.getAllValues());
-    assertThat(Arrays.asList(bufferSize, bufferSize)).describedAs("buffer length").isEqualTo(acBufferLength.getAllValues());
+    assertThat(Arrays.asList(BUFFER_SIZE, BUFFER_SIZE)).describedAs("buffer length").isEqualTo(acBufferLength.getAllValues());
 
   }
 
   /**
-   * The test verifies OutputStream Write of bufferSize(4KB) on a AppendBlob based stream is making correct HTTP calls to the server
+   * The test verifies OutputStream Write of BUFFER_SIZE(4KB) on a AppendBlob based stream is making correct HTTP calls to the server
    */
   @Test
   public void verifyWriteRequestOfBufferSizeWithAppendBlob() throws Exception {
@@ -270,8 +269,8 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, path, 0, bufferSize, true, false, true, true);
-    final byte[] b = new byte[bufferSize];
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, BUFFER_SIZE, true, false, true, true);
+    final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
     for (int i = 0; i < 2; i++) {
@@ -289,18 +288,18 @@ public final class TestAbfsOutputStream {
 
     verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
                                     acFlush.capture(), acClose.capture());
-    assertThat(Arrays.asList(path, path)).describedAs("File Path").isEqualTo(acString.getAllValues());
-    assertThat(Arrays.asList(Long.valueOf(0), Long.valueOf(bufferSize))).describedAs("File Position").isEqualTo(acLong.getAllValues());
+    assertThat(Arrays.asList(PATH, PATH)).describedAs("File Path").isEqualTo(acString.getAllValues());
+    assertThat(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE))).describedAs("File Position").isEqualTo(acLong.getAllValues());
     //flush=false, close=false, flush=false, close=false
     assertThat(Arrays.asList(false, false)).describedAs("Flush Flag").isEqualTo(acFlush.getAllValues());
     assertThat(Arrays.asList(false, false)).describedAs("Close Flag").isEqualTo(acClose.getAllValues());
     assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
-    assertThat(Arrays.asList(bufferSize, bufferSize)).describedAs("Buffer Length").isEqualTo(acBufferLength.getAllValues());
+    assertThat(Arrays.asList(BUFFER_SIZE, BUFFER_SIZE)).describedAs("Buffer Length").isEqualTo(acBufferLength.getAllValues());
 
   }
 
   /**
-   * The test verifies OutputStream Write of bufferSize(4KB)  followed by a hflush call is making correct HTTP calls to the server
+   * The test verifies OutputStream Write of BUFFER_SIZE(4KB)  followed by a hflush call is making correct HTTP calls to the server
    */
   @Test
   public void verifyWriteRequestOfBufferSizeAndHFlush() throws Exception {
@@ -317,8 +316,8 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, path, 0, bufferSize, true, false, true, false);
-    final byte[] b = new byte[bufferSize];
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, BUFFER_SIZE, true, false, true, false);
+    final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
     for (int i = 0; i < 2; i++) {
@@ -336,14 +335,14 @@ public final class TestAbfsOutputStream {
 
     verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
                                     acFlush.capture(), acClose.capture());
-    assertThat(Arrays.asList(path, path)).describedAs("File Path").isEqualTo(acString.getAllValues());
-    assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(bufferSize)))).describedAs("File Position").isEqualTo(
+    assertThat(Arrays.asList(PATH, PATH)).describedAs("File Path").isEqualTo(acString.getAllValues());
+    assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("File Position").isEqualTo(
                new HashSet<Long>(acLong.getAllValues()));
     //flush=false, close=false, flush=false, close=false
     assertThat(Arrays.asList(false, false)).describedAs("Flush Flag").isEqualTo(acFlush.getAllValues());
     assertThat(Arrays.asList(false, false)).describedAs("Close Flag").isEqualTo(acClose.getAllValues());
     assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
-    assertThat(Arrays.asList(bufferSize, bufferSize)).describedAs("Buffer Length").isEqualTo(acBufferLength.getAllValues());
+    assertThat(Arrays.asList(BUFFER_SIZE, BUFFER_SIZE)).describedAs("Buffer Length").isEqualTo(acBufferLength.getAllValues());
 
     ArgumentCaptor<String> acFlushString = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<Long> acFlushLong = ArgumentCaptor.forClass(Long.class);
@@ -351,15 +350,15 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acFlushClose = ArgumentCaptor.forClass(Boolean.class);
 
     verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture());
-    assertThat(Arrays.asList(path)).describedAs("path").isEqualTo(acFlushString.getAllValues());
-    assertThat(Arrays.asList(Long.valueOf(2*bufferSize))).describedAs("position").isEqualTo(acFlushLong.getAllValues());
+    assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushString.getAllValues());
+    assertThat(Arrays.asList(Long.valueOf(2*BUFFER_SIZE))).describedAs("position").isEqualTo(acFlushLong.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("RetainUnCommittedData flag").isEqualTo(acFlushRetainUnCommittedData.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("Close flag").isEqualTo(acFlushClose.getAllValues());
 
   }
 
   /**
-   * The test verifies OutputStream Write of bufferSize(4KB)  followed by a flush call is making correct HTTP calls to the server
+   * The test verifies OutputStream Write of BUFFER_SIZE(4KB)  followed by a flush call is making correct HTTP calls to the server
    */
   @Test
   public void verifyWriteRequestOfBufferSizeAndFlush() throws Exception {
@@ -375,8 +374,8 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), anyBoolean(), anyBoolean())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, path, 0, bufferSize, true, false, true, false);
-    final byte[] b = new byte[bufferSize];
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, BUFFER_SIZE, true, false, true, false);
+    final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
     for (int i = 0; i < 2; i++) {
@@ -396,14 +395,14 @@ public final class TestAbfsOutputStream {
 
     verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
                                     acFlush.capture(), acClose.capture());
-    assertThat(Arrays.asList(path, path)).describedAs("path").isEqualTo(acString.getAllValues());
-    assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(bufferSize)))).describedAs("Position").isEqualTo(
+    assertThat(Arrays.asList(PATH, PATH)).describedAs("path").isEqualTo(acString.getAllValues());
+    assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("Position").isEqualTo(
                new HashSet<Long>(acLong.getAllValues()));
     //flush=false, close=false, flush=false, close=false
     assertThat(Arrays.asList(false, false)).describedAs("Flush = true/false").isEqualTo(acFlush.getAllValues());
     assertThat(Arrays.asList(false, false)).describedAs("Close = true/false").isEqualTo(acClose.getAllValues());
     assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
-    assertThat(Arrays.asList(bufferSize, bufferSize)).describedAs("Buffer Length").isEqualTo(acBufferLength.getAllValues());
+    assertThat(Arrays.asList(BUFFER_SIZE, BUFFER_SIZE)).describedAs("Buffer Length").isEqualTo(acBufferLength.getAllValues());
 
   }
 }
