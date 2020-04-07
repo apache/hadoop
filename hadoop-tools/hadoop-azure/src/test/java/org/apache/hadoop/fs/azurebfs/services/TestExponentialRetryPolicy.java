@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.Random;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,6 +33,11 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
  */
 public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
 
+  private final int maxRetryCount = 30;
+  private final int noRetryCount = 0;
+  private final int retryCount = new Random().nextInt(maxRetryCount);
+  private final int retryCountBeyondMax = maxRetryCount + 1;
+
 
   public TestExponentialRetryPolicy() throws Exception {
     super();
@@ -39,11 +46,11 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   @Test
   public void testDifferentMaxIORetryCount() throws Exception {
     AbfsConfiguration abfsConfig = getAbfsConfig();
-    abfsConfig.setMaxIoRetries(0);
+    abfsConfig.setMaxIoRetries(noRetryCount);
     testMaxIOConfig(abfsConfig);
-    abfsConfig.setMaxIoRetries(15);
+    abfsConfig.setMaxIoRetries(retryCount);
     testMaxIOConfig(abfsConfig);
-    abfsConfig.setMaxIoRetries(31);
+    abfsConfig.setMaxIoRetries(retryCountBeyondMax);
     testMaxIOConfig(abfsConfig);
   }
 
@@ -51,8 +58,8 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   public void testDefaultMaxIORetryCount() throws Exception {
     AbfsConfiguration abfsConfig = getAbfsConfig();
     Assert.assertTrue(
-        "default maxIORetry count is 30.",
-        abfsConfig.getMaxIoRetries() == 30);
+        String.format("default maxIORetry count is %s.", maxRetryCount),
+        abfsConfig.getMaxIoRetries() == maxRetryCount);
     testMaxIOConfig(abfsConfig);
   }
 
