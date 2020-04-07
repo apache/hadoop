@@ -579,13 +579,17 @@ public class AggregatedLogFormat {
 
     public LogReader(Configuration conf, Path remoteAppLogFile)
         throws IOException {
-      FileContext fileContext =
-          FileContext.getFileContext(remoteAppLogFile.toUri(), conf);
-      this.fsDataIStream = fileContext.open(remoteAppLogFile);
-      reader =
-          new TFile.Reader(this.fsDataIStream, fileContext.getFileStatus(
-              remoteAppLogFile).getLen(), conf);
-      this.scanner = reader.createScanner();
+      try {
+        FileContext fileContext =
+            FileContext.getFileContext(remoteAppLogFile.toUri(), conf);
+        this.fsDataIStream = fileContext.open(remoteAppLogFile);
+        reader = new TFile.Reader(this.fsDataIStream,
+            fileContext.getFileStatus(remoteAppLogFile).getLen(), conf);
+        this.scanner = reader.createScanner();
+      } catch (IOException ioe) {
+        close();
+        throw new IOException("Error in creating LogReader", ioe);
+      }
     }
 
     private boolean atBeginning = true;
