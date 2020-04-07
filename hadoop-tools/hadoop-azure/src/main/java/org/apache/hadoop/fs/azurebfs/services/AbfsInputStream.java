@@ -43,7 +43,7 @@ import static org.apache.hadoop.util.StringUtils.toLowerCase;
  */
 public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities {
-  private static Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
 
   private final AbfsClient client;
   private final Statistics statistics;
