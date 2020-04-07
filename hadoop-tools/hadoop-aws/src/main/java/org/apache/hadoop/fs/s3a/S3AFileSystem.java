@@ -4283,9 +4283,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     RemoteIterator<? extends LocatedFileStatus> iterator =
         once("listLocatedStatus", path.toString(),
           () -> {
-              // directory: trigger a lookup
+            // Assuming the path to be a directory,
+            // trigger a list call directly.
             RemoteIterator<S3ALocatedFileStatus> locatedFileStatusIteratorForDir =
                     getLocatedFileStatusIteratorForDir(path, filter);
+
             // If no listing is present then path might be a file.
             if (!locatedFileStatusIteratorForDir.hasNext()) {
               final S3AFileStatus fileStatus =
@@ -4297,19 +4299,28 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                         filter.accept(path) ? toLocatedFileStatus(fileStatus) : null);
               }
             }
+            // Either empty or non-empty directory.
             return locatedFileStatusIteratorForDir;
           });
     return toLocatedFileStatusIterator(iterator);
   }
 
+  /**
+   * Generate list located status for a directory.
+   * Also performing tombstone reconciliation for guarded directories.
+   * @param dir directory to check.
+   * @param filter a path filter.
+   * @return an iterator that traverses statuses of the given dir.
+   * @throws IOException in case of failure.
+   */
   private RemoteIterator<S3ALocatedFileStatus> getLocatedFileStatusIteratorForDir(
-          Path path, PathFilter filter) throws IOException {
-    final String key = maybeAddTrailingSlash(pathToKey(path));
+          Path dir, PathFilter filter) throws IOException {
+    final String key = maybeAddTrailingSlash(pathToKey(dir));
     final Listing.FileStatusAcceptor acceptor =
-        new Listing.AcceptAllButSelfAndS3nDirs(path);
-    boolean allowAuthoritative = allowAuthoritative(path);
+        new Listing.AcceptAllButSelfAndS3nDirs(dir);
+    boolean allowAuthoritative = allowAuthoritative(dir);
     DirListingMetadata meta =
-        S3Guard.listChildrenWithTtl(metadataStore, path,
+        S3Guard.listChildrenWithTtl(metadataStore, dir,
             ttlTimeProvider, allowAuthoritative);
     Set<Path> tombstones = meta != null
             ? meta.listTombstones()
@@ -4323,7 +4334,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         cachedFileStatusIterator)
         : listing.createTombstoneReconcilingIterator(
             listing.createLocatedFileStatusIterator(
-            listing.createFileStatusListingIterator(path,
+            listing.createFileStatusListingIterator(dir,
                 createListObjectsRequest(key, "/"),
                 filter,
                 acceptor,
