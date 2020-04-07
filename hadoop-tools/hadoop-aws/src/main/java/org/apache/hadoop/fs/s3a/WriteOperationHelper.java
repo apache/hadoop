@@ -49,6 +49,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
@@ -57,6 +59,7 @@ import org.apache.hadoop.util.DurationInfo;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
 
 /**
  * Helper for low-level operations against an S3 Bucket for writing data,
@@ -384,6 +387,7 @@ public class WriteOperationHelper {
    * A subset of the file may be posted, by providing the starting point
    * in {@code offset} and a length of block in {@code size} equal to
    * or less than the remaining bytes.
+   * The part number must be less than 10000.
    * @param destKey destination key of ongoing operation
    * @param uploadId ID of ongoing upload
    * @param partNumber current part number of the upload
@@ -392,6 +396,8 @@ public class WriteOperationHelper {
    * @param sourceFile optional source file.
    * @param offset offset in file to start reading.
    * @return the request.
+   * @throws IllegalArgumentException if the parameters are invalid -including
+   * @throws PathIOException if the part number is out of range.
    */
   public UploadPartRequest newUploadPartRequest(
       String destKey,
@@ -400,18 +406,22 @@ public class WriteOperationHelper {
       int size,
       InputStream uploadStream,
       File sourceFile,
-      Long offset) {
+      Long offset) throws PathIOException {
     checkNotNull(uploadId);
     // exactly one source must be set; xor verifies this
     checkArgument((uploadStream != null) ^ (sourceFile != null),
         "Data source");
     checkArgument(size >= 0, "Invalid partition size %s", size);
-    checkArgument(partNumber > 0 && partNumber <= 10000,
-        "partNumber must be between 1 and 10000 inclusive, but is %s",
-        partNumber);
+    checkArgument(partNumber > 0,
+        "partNumber must be between 1 and %s inclusive, but is %s",
+        UPLOAD_PART_COUNT_LIMIT, partNumber);
 
     LOG.debug("Creating part upload request for {} #{} size {}",
         uploadId, partNumber, size);
+    if (partNumber >= InternalConstants.UPLOAD_PART_COUNT_LIMIT) {
+      throw new PathIOException(destKey,
+          "Number of parts in multipart upload exceeded.");
+    }
     UploadPartRequest request = new UploadPartRequest()
         .withBucketName(bucket)
         .withKey(destKey)
