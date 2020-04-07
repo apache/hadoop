@@ -228,8 +228,10 @@ public class TestDistCpUtils {
     CopyListingFileStatus dstStatus = new CopyListingFileStatus(
         destStatus);
 
-    String text = String.format("Source %s; dest %s: wrong ", srcStatus, destStatus);
-    // FileStatus.equals only compares path field, must explicitly compare all fields
+    String text = String.format("Source %s; dest %s: wrong ",
+        srcStatus, destStatus);
+    // FileStatus.equals only compares path field,
+    // must explicitly compare all fields
     assertNotEquals(text + "permission",
         srcStatus.getPermission(), dstStatus.getPermission());
     assertNotEquals(text + "owner",
