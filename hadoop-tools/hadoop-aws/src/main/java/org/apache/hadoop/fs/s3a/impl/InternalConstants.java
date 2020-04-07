@@ -93,4 +93,10 @@ public final class InternalConstants {
   /** Directory marker attribute: see HADOOP-16613. Value: {@value}. */
   public static final String X_DIRECTORY =
       "application/x-directory";
+
+  /**
+   * Maximum entries you can upload in a single file write/copy/upload.
+   * Value: {@value}.
+   */
+  public static final int UPLOAD_PART_COUNT_LIMIT = 10000;
 }
