@@ -69,6 +69,7 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -207,8 +208,14 @@ public class FSDirectory implements Closeable {
   // authorizeWithContext() API or not.
   private boolean useAuthorizationWithContextAPI = false;
 
-  public void setINodeAttributeProvider(INodeAttributeProvider provider) {
+  public void setINodeAttributeProvider(
+      @Nullable INodeAttributeProvider provider) {
     attributeProvider = provider;
+
+    if (attributeProvider == null) {
+      // attributeProvider is set to null during NN shutdown.
+      return;
+    }
 
     // if the runtime external authorization provider doesn't support
     // checkPermissionWithContext(), fall back to the old API
