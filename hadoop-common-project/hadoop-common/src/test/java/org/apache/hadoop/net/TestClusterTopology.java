@@ -18,6 +18,7 @@
 package org.apache.hadoop.net;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Arrays;
@@ -193,6 +194,10 @@ public class TestClusterTopology extends Assert {
     }
     assertEquals("Random is not selecting the nodes it should",
         2, histogram.size());
+
+    Node val = cluster.chooseRandom("/d1", "/d", Collections.emptyList());
+    assertNotNull(val);
+
   }
 
   @Test

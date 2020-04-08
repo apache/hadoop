@@ -487,10 +487,10 @@ public class NetworkTopology {
   protected Node chooseRandom(final String scope, String excludedScope,
       final Collection<Node> excludedNodes) {
     if (excludedScope != null) {
-      if (scope.startsWith(excludedScope)) {
+      if (isChildScope(scope, excludedScope)) {
         return null;
       }
-      if (!excludedScope.startsWith(scope)) {
+      if (!isChildScope(excludedScope, scope)) {
         excludedScope = null;
       }
     }
@@ -668,8 +668,7 @@ public class NetworkTopology {
           if (node == null) {
             continue;
           }
-          if ((NodeBase.getPath(node) + NodeBase.PATH_SEPARATOR_STR)
-              .startsWith(scope + NodeBase.PATH_SEPARATOR_STR)) {
+          if (isNodeInScope(node, scope)) {
             if (node instanceof InnerNode) {
               excludedCountInScope += ((InnerNode) node).getNumOfLeaves();
             } else {
@@ -993,5 +992,34 @@ public class NetworkTopology {
     }
     Preconditions.checkState(idx == activeLen,
         "Sorted the wrong number of nodes!");
+  }
+
+  /**
+   * Checks whether one scope is contained in the other scope.
+   * @param parentScope the parent scope to check
+   * @param childScope  the child scope which needs to be checked.
+   * @return true if childScope is contained within the parentScope
+   */
+  protected static boolean isChildScope(final String parentScope,
+      final String childScope) {
+    String pScope = parentScope.endsWith(NodeBase.PATH_SEPARATOR_STR) ?
+        parentScope :  parentScope + NodeBase.PATH_SEPARATOR_STR;
+    String cScope = childScope.endsWith(NodeBase.PATH_SEPARATOR_STR) ?
+        childScope :  childScope + NodeBase.PATH_SEPARATOR_STR;
+    return pScope.startsWith(cScope);
+  }
+
+  /**
+   * Checks whether a node belongs to the scope.
+   * @param node  the node to check.
+   * @param scope scope to check.
+   * @return true if node lies within the scope
+   */
+  protected static boolean isNodeInScope(Node node, String scope) {
+    if (!scope.endsWith(NodeBase.PATH_SEPARATOR_STR)) {
+      scope += NodeBase.PATH_SEPARATOR_STR;
+    }
+    String nodeLocation = NodeBase.getPath(node) + NodeBase.PATH_SEPARATOR_STR;
+    return nodeLocation.startsWith(scope);
   }
 }
