@@ -89,11 +89,16 @@ public class FSPermissionChecker implements AccessControlEnforcer {
 
   private static ThreadLocal<String> operationType = new ThreadLocal<>();
 
-
   protected FSPermissionChecker(String fsOwner, String supergroup,
       UserGroupInformation callerUgi,
       INodeAttributeProvider attributeProvider) {
-    boolean useNewAuthorizationWithContextAPI;
+    this(fsOwner, supergroup, callerUgi, attributeProvider, false);
+  }
+
+  protected FSPermissionChecker(String fsOwner, String supergroup,
+      UserGroupInformation callerUgi,
+      INodeAttributeProvider attributeProvider,
+      boolean useAuthorizationWithContextAPI) {
     this.fsOwner = fsOwner;
     this.supergroup = supergroup;
     this.callerUgi = callerUgi;
@@ -102,36 +107,15 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     isSuper = user.equals(fsOwner) || groups.contains(supergroup);
     this.attributeProvider = attributeProvider;
 
-    // If the AccessControlEnforcer supports context enrichment, call
-    // the new API. Otherwise choose the old API.
-    Class[] cArg = new Class[1];
-    cArg[0] = INodeAttributeProvider.AuthorizationContext.class;
-
-    AccessControlEnforcer ace;
     if (attributeProvider == null) {
       // If attribute provider is null, use FSPermissionChecker default
       // implementation to authorize, which supports authorization with context.
-      useNewAuthorizationWithContextAPI = true;
-      LOG.info("Default authorization provider supports the new authorization" +
+      authorizeWithContext = true;
+      LOG.debug("Default authorization provider supports the new authorization" +
           " provider API");
     } else {
-      ace = attributeProvider.getExternalAccessControlEnforcer(this);
-      // if the runtime external authorization provider doesn't support
-      // checkPermissionWithContext(), fall back to the old API
-      // checkPermission().
-      try {
-        Class<?> clazz = ace.getClass();
-        clazz.getDeclaredMethod("checkPermissionWithContext", cArg);
-        useNewAuthorizationWithContextAPI = true;
-        LOG.info("Use the new authorization provider API");
-      } catch (NoSuchMethodException e) {
-        useNewAuthorizationWithContextAPI = false;
-        LOG.info("Fallback to the old authorization provider API because " +
-            "the expected method is not found.");
-      }
+      authorizeWithContext = useAuthorizationWithContextAPI;
     }
-
-    authorizeWithContext = useNewAuthorizationWithContextAPI;
   }
 
   public static void setOperationType(String opType) {
