@@ -613,12 +613,20 @@ public class ResourceManager extends CompositeService
   // sanity check for configurations
   protected static void validateConfigs(Configuration conf) {
     // validate max-attempts
-    int globalMaxAppAttempts =
-        conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+    int rmMaxAppAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    if (rmMaxAppAttempts <= 0) {
+      throw new YarnRuntimeException("Invalid rm am max attempts configuration"
+          + ", " + YarnConfiguration.RM_AM_MAX_ATTEMPTS
+          + "=" + rmMaxAppAttempts + ", it should be a positive integer.");
+    }
+    int globalMaxAppAttempts = conf.getInt(
+        YarnConfiguration.GLOBAL_RM_AM_MAX_ATTEMPTS,
+        conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS));
     if (globalMaxAppAttempts <= 0) {
       throw new YarnRuntimeException("Invalid global max attempts configuration"
-          + ", " + YarnConfiguration.RM_AM_MAX_ATTEMPTS
+          + ", " + YarnConfiguration.GLOBAL_RM_AM_MAX_ATTEMPTS
           + "=" + globalMaxAppAttempts + ", it should be a positive integer.");
     }
 

@@ -502,12 +502,19 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_ADMIN_CLIENT_THREAD_COUNT = 1;
   
   /**
-   * The maximum number of application attempts.
-   * It's a global setting for all application masters.
+   * The maximum number of application attempts for
+   * an application, if unset by user.
    */
   public static final String RM_AM_MAX_ATTEMPTS =
     RM_PREFIX + "am.max-attempts";
   public static final int DEFAULT_RM_AM_MAX_ATTEMPTS = 2;
+
+  /**
+   * The maximum number of application attempts.
+   * It's a global setting for all application masters.
+   */
+  public static final String GLOBAL_RM_AM_MAX_ATTEMPTS =
+      RM_PREFIX + "am.global.max-attempts";
   
   /** The keytab for the resource manager.*/
   public static final String RM_KEYTAB = 

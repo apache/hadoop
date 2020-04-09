@@ -237,7 +237,7 @@ public class TestResourceManager {
   @Test (timeout = 30000)
   public void testResourceManagerInitConfigValidation() throws Exception {
     Configuration conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, -1);
+    conf.setInt(YarnConfiguration.GLOBAL_RM_AM_MAX_ATTEMPTS, -1);
     try {
       resourceManager = new MockRM(conf);
       fail("Exception is expected because the global max attempts" +
@@ -246,6 +246,17 @@ public class TestResourceManager {
       // Exception is expected.
       if (!e.getMessage().startsWith(
               "Invalid global max attempts configuration")) throw e;
+    }
+    Configuration yarnConf = new YarnConfiguration();
+    yarnConf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, -1);
+    try {
+      resourceManager = new MockRM(yarnConf);
+      fail("Exception is expected because AM max attempts" +
+          " is negative.");
+    } catch (YarnRuntimeException e) {
+      // Exception is expected.
+      if (!e.getMessage().startsWith(
+              "Invalid rm am max attempts configuration")) throw e;
     }
   }
 
