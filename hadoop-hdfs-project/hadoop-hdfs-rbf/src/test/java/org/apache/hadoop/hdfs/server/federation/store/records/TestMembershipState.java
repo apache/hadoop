@@ -57,6 +57,11 @@ public class TestMembershipState {
   private static final int NUM_MAIN_DEAD = 303;
   private static final int NUM_ENTER_MAIN = 144;
   private static final long NUM_BLOCK_MISSING = 1000;
+  private static final int CORRUPT_FILES_COUNT = 123;
+  private static final long SCHEDULED_REPLICATION_BLOCKS = 112;
+  private static final long MISSING_BLOCK_WITH_REPLICATION_ONE = 221;
+  private static final long HIGHEST_PRIORITY_LOW_REDUNDANCY_REPL_BLOCK = 212;
+  private static final long HIGHEST_PRIORITY_LOW_REDUNDANCY_EC_BLOCK = 122;
 
   private static final long TOTAL_SPACE = 1100;
   private static final long AVAILABLE_SPACE = 1200;
@@ -88,6 +93,14 @@ public class TestMembershipState {
     stats.setNumOfBlocksMissing(NUM_BLOCK_MISSING);
     stats.setTotalSpace(TOTAL_SPACE);
     stats.setAvailableSpace(AVAILABLE_SPACE);
+    stats.setCorruptFilesCount(CORRUPT_FILES_COUNT);
+    stats.setScheduledReplicationBlocks(SCHEDULED_REPLICATION_BLOCKS);
+    stats.setNumberOfMissingBlocksWithReplicationFactorOne(
+        MISSING_BLOCK_WITH_REPLICATION_ONE);
+    stats.setHighestPriorityLowRedundancyReplicatedBlocks(
+        HIGHEST_PRIORITY_LOW_REDUNDANCY_REPL_BLOCK);
+    stats.setHighestPriorityLowRedundancyECBlocks(
+        HIGHEST_PRIORITY_LOW_REDUNDANCY_EC_BLOCK);
     record.setStats(stats);
     return record;
   }
@@ -120,6 +133,15 @@ public class TestMembershipState {
     assertEquals(NUM_ENTER_MAIN, stats.getNumOfEnteringMaintenanceDataNodes());
     assertEquals(TOTAL_SPACE, stats.getTotalSpace());
     assertEquals(AVAILABLE_SPACE, stats.getAvailableSpace());
+    assertEquals(CORRUPT_FILES_COUNT, stats.getCorruptFilesCount());
+    assertEquals(SCHEDULED_REPLICATION_BLOCKS,
+        stats.getScheduledReplicationBlocks());
+    assertEquals(MISSING_BLOCK_WITH_REPLICATION_ONE,
+        stats.getNumberOfMissingBlocksWithReplicationFactorOne());
+    assertEquals(HIGHEST_PRIORITY_LOW_REDUNDANCY_REPL_BLOCK,
+        stats.getHighestPriorityLowRedundancyReplicatedBlocks());
+    assertEquals(HIGHEST_PRIORITY_LOW_REDUNDANCY_EC_BLOCK,
+        stats.getHighestPriorityLowRedundancyECBlocks());
   }
 
   @Test

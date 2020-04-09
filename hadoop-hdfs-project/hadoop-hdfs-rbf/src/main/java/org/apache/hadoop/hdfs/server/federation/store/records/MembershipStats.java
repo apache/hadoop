@@ -109,6 +109,30 @@ public abstract class MembershipStats extends BaseRecord {
 
   public abstract int getNumOfEnteringMaintenanceDataNodes();
 
+  public abstract void setCorruptFilesCount(int num);
+
+  public abstract int getCorruptFilesCount();
+
+  public abstract void setScheduledReplicationBlocks(long blocks);
+
+  public abstract long getScheduledReplicationBlocks();
+
+  public abstract void setNumberOfMissingBlocksWithReplicationFactorOne(
+      long blocks);
+
+  public abstract long getNumberOfMissingBlocksWithReplicationFactorOne();
+
+  public abstract void setHighestPriorityLowRedundancyReplicatedBlocks(
+      long blocks);
+
+  public abstract long getHighestPriorityLowRedundancyReplicatedBlocks();
+
+
+  public abstract void setHighestPriorityLowRedundancyECBlocks(
+      long blocks);
+
+  public abstract long getHighestPriorityLowRedundancyECBlocks();
+
   @Override
   public SortedMap<String, String> getPrimaryKeys() {
     // This record is not stored directly, no key needed

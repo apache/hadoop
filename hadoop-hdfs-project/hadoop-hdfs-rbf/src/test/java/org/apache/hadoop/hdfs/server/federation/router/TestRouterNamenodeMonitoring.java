@@ -320,10 +320,10 @@ public class TestRouterNamenodeMonitoring {
       heartbeatService.getNamenodeStatusReport();
     }
     if (HttpConfig.Policy.HTTPS_ONLY.name().equals(scheme)) {
-      assertEquals(1, appender.countLinesWithMessage("JMX URL: https://"));
+      assertEquals(2, appender.countLinesWithMessage("JMX URL: https://"));
       assertEquals(0, appender.countLinesWithMessage("JMX URL: http://"));
     } else {
-      assertEquals(1, appender.countLinesWithMessage("JMX URL: http://"));
+      assertEquals(2, appender.countLinesWithMessage("JMX URL: http://"));
       assertEquals(0, appender.countLinesWithMessage("JMX URL: https://"));
     }
   }

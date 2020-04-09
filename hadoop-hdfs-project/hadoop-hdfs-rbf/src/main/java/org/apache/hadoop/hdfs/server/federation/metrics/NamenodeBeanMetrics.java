@@ -366,21 +366,46 @@ public class NamenodeBeanMetrics
 
   @Override
   public long getScheduledReplicationBlocks() {
-    return -1;
+    try {
+      return getRBFMetrics().getScheduledReplicationBlocks();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of scheduled replication blocks.",
+          e.getMessage());
+    }
+    return 0;
   }
 
   @Override
   public long getNumberOfMissingBlocksWithReplicationFactorOne() {
+    try {
+      return getRBFMetrics().getNumberOfMissingBlocksWithReplicationFactorOne();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of missing blocks with replication "
+          + "factor one.", e.getMessage());
+    }
     return 0;
   }
 
   @Override
   public long getHighestPriorityLowRedundancyReplicatedBlocks() {
+    try {
+      return getRBFMetrics().getHighestPriorityLowRedundancyReplicatedBlocks();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of highest priority low redundancy "
+          + "replicated blocks.", e.getMessage());
+    }
     return 0;
   }
 
   @Override
   public long getHighestPriorityLowRedundancyECBlocks() {
+    try {
+      return getRBFMetrics().getHighestPriorityLowRedundancyECBlocks();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of highest priority low redundancy EC "
+              + "blocks.",
+          e.getMessage());
+    }
     return 0;
   }
 
@@ -391,6 +416,11 @@ public class NamenodeBeanMetrics
 
   @Override
   public int getCorruptFilesCount() {
+    try {
+      return getRBFMetrics().getCorruptFilesCount();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of corrupt files.", e.getMessage());
+    }
     return 0;
   }
 
