@@ -149,11 +149,11 @@ public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
       throws NoSuchAlgorithmException, KeyManagementException {
     switch (preferredChannelMode) {
     case Default:
-      if (!openSSLProviderRegistered) {
-        OpenSSLProvider.register();
-        openSSLProviderRegistered = true;
-      }
       try {
+        if (!openSSLProviderRegistered) {
+          OpenSSLProvider.register();
+          openSSLProviderRegistered = true;
+        }
         java.util.logging.Logger logger = java.util.logging.Logger.getLogger(
                 SSL.class.getName());
         logger.setLevel(Level.WARNING);
@@ -163,8 +163,9 @@ public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
         // SSLContext finished (see HADOOP-16174):
         logger.setLevel(Level.INFO);
         channelMode = SSLChannelMode.OpenSSL;
-      } catch (NoSuchAlgorithmException e) {
-        LOG.debug("Failed to load OpenSSL. Falling back to the JSSE default.");
+      } catch (LinkageError | NoSuchAlgorithmException | RuntimeException e) {
+        LOG.debug("Failed to load OpenSSL. Falling back to the JSSE default.",
+            e);
         ctx = SSLContext.getDefault();
         channelMode = SSLChannelMode.Default_JSSE;
       }

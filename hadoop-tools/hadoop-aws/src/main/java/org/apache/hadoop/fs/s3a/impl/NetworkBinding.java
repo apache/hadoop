@@ -60,10 +60,12 @@ public class NetworkBinding {
    *             #SSL_CHANNEL_MODE}
    * @param awsConf the {@link ClientConfiguration} to set the
    *                SSLConnectionSocketFactory for.
+   * @return true if the binding was successful; false if the binding
+   * fell back to the default.
    * @throws IOException if there is an error while initializing the
-   *                     {@link SSLSocketFactory}.
+   * {@link SSLSocketFactory} other than classloader problems.
    */
-  public static void bindSSLChannelMode(Configuration conf,
+  public static boolean bindSSLChannelMode(Configuration conf,
       ClientConfiguration awsConf) throws IOException {
     try {
       // Validate that SSL_CHANNEL_MODE is set to a valid value.
@@ -96,11 +98,13 @@ public class NetworkBinding {
                       .newInstance(DelegatingSSLSocketFactory
                                       .getDefaultFactory(),
                               (HostnameVerifier) null));
+      return true;
     } catch (ClassNotFoundException | NoSuchMethodException |
             IllegalAccessException | InstantiationException |
-            InvocationTargetException e) {
+            InvocationTargetException | LinkageError  e) {
       LOG.debug("Unable to create class {}, value of {} will be ignored",
               AWS_SOCKET_FACTORY_CLASSNAME, SSL_CHANNEL_MODE, e);
+      return false;
     }
   }
 
