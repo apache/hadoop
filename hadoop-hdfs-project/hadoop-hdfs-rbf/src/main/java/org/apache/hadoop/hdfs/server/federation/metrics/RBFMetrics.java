@@ -655,6 +655,35 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
+  public int getCorruptFilesCount() {
+    return getNameserviceAggregatedInt(MembershipStats::getCorruptFilesCount);
+  }
+
+  @Override
+  public long getScheduledReplicationBlocks() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getScheduledReplicationBlocks);
+  }
+
+  @Override
+  public long getNumberOfMissingBlocksWithReplicationFactorOne() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getNumberOfMissingBlocksWithReplicationFactorOne);
+  }
+
+  @Override
+  public long getHighestPriorityLowRedundancyReplicatedBlocks() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getHighestPriorityLowRedundancyReplicatedBlocks);
+  }
+
+  @Override
+  public long getHighestPriorityLowRedundancyECBlocks() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getHighestPriorityLowRedundancyECBlocks);
+  }
+
+  @Override
   public String getSafemode() {
     if (this.router.isRouterState(RouterServiceState.SAFEMODE)) {
       return "Safe mode is ON. " + this.getSafeModeTip();

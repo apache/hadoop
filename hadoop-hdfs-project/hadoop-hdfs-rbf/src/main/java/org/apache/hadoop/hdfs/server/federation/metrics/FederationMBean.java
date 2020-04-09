@@ -276,4 +276,45 @@ public interface FederationMBean {
    */
   @Deprecated
   boolean isSecurityEnabled();
+
+  /**
+   * Get the number of corrupts files.
+   *
+   * @return the total number of corrupt files.
+   */
+  int getCorruptFilesCount();
+
+  /**
+   * Blocks scheduled for replication.
+   *
+   * @return num of blocks scheduled for replication.
+   */
+  long getScheduledReplicationBlocks();
+
+  /**
+   * Gets the total number of missing blocks on the cluster with
+   * replication factor 1.
+   *
+   * @return the total number of missing blocks on the cluster with
+   * replication factor 1.
+   */
+  long getNumberOfMissingBlocksWithReplicationFactorOne();
+
+  /**
+   * Gets the total number of replicated low redundancy blocks on the cluster
+   * with the highest risk of loss.
+   *
+   * @return the total number of low redundancy blocks on the cluster
+   * with the highest risk of loss.
+   */
+  long getHighestPriorityLowRedundancyReplicatedBlocks();
+
+  /**
+   * Gets the total number of erasure coded low redundancy blocks on the cluster
+   * with the highest risk of loss.
+   *
+   * @return the total number of low redundancy blocks on the cluster
+   * with the highest risk of loss.
+   */
+  long getHighestPriorityLowRedundancyECBlocks();
 }

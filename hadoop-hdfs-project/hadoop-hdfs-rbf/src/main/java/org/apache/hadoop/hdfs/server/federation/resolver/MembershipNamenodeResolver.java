@@ -295,6 +295,15 @@ public class MembershipNamenodeResolver
           report.getNumInMaintenanceDeadDataNodes());
       stats.setNumOfEnteringMaintenanceDataNodes(
           report.getNumEnteringMaintenanceDataNodes());
+      stats.setCorruptFilesCount(report.getCorruptFilesCount());
+      stats.setScheduledReplicationBlocks(
+          report.getScheduledReplicationBlocks());
+      stats.setNumberOfMissingBlocksWithReplicationFactorOne(
+          report.getNumberOfMissingBlocksWithReplicationFactorOne());
+      stats.setHighestPriorityLowRedundancyReplicatedBlocks(
+          report.getHighestPriorityLowRedundancyReplicatedBlocks());
+      stats.setHighestPriorityLowRedundancyECBlocks(
+          report.getHighestPriorityLowRedundancyECBlocks());
       record.setStats(stats);
     }
 
