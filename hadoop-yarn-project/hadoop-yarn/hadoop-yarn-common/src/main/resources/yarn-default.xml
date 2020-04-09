@@ -327,11 +327,10 @@
   </property>
 
   <property>
-    <description>The maximum number of application attempts. It's a global
-    setting for all application masters. Each application master can specify
-    its individual maximum number of application attempts via the API, but the
-    individual number cannot be more than the global upper bound. If it is,
-    the resourcemanager will override it. The default number is set to 2, to
+    <description>The default maximum number of application attempts, if unset by
+    the user. Each application master can specify its individual maximum number of application
+    attempts via the API, but the individual number cannot be more than the global upper bound in
+    yarn.resourcemanager.am.global.max-attempts. The default number is set to 2, to
     allow at least one retry for AM.</description>
     <name>yarn.resourcemanager.am.max-attempts</name>
     <value>2</value>
@@ -4534,4 +4533,18 @@
     <name>yarn.webapp.enable-rest-app-submissions</name>
     <value>true</value>
   </property>
+
+   <property>
+    <description>
+      The maximum number of application attempts. It's a global
+      setting for all application masters. Each application master can specify
+      its individual maximum number of application attempts via the API, but the
+      individual number cannot be more than the global upper bound. If it is,
+      the resourcemanager will override it. The default number value is set to
+      yarn.resourcemanager.am.max-attempts.
+    </description>
+    <name>yarn.resourcemanager.am.global.max-attempts</name>
+    <value></value>
+  </property>
+
 </configuration>

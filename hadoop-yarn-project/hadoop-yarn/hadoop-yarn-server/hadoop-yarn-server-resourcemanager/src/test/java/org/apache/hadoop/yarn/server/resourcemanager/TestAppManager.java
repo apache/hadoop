@@ -980,17 +980,20 @@ public class TestAppManager extends AppManagerTestBase{
   @Test (timeout = 30000)
   public void testRMAppSubmitMaxAppAttempts() throws Exception {
     int[] globalMaxAppAttempts = new int[] { 10, 1 };
+    int[] rmAmMaxAttempts = new int[] { 8, 1 };
     int[][] individualMaxAppAttempts = new int[][]{
         new int[]{ 9, 10, 11, 0 },
         new int[]{ 1, 10, 0, -1 }};
     int[][] expectedNums = new int[][]{
-        new int[]{ 9, 10, 10, 10 },
+        new int[]{ 9, 10, 10, 8 },
         new int[]{ 1, 1, 1, 1 }};
     for (int i = 0; i < globalMaxAppAttempts.length; ++i) {
       for (int j = 0; j < individualMaxAppAttempts.length; ++j) {
         ResourceScheduler scheduler = mockResourceScheduler();
         Configuration conf = new Configuration();
-        conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, globalMaxAppAttempts[i]);
+        conf.setInt(YarnConfiguration.GLOBAL_RM_AM_MAX_ATTEMPTS,
+            globalMaxAppAttempts[i]);
+        conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, rmAmMaxAttempts[i]);
         ApplicationMasterService masterService =
             new ApplicationMasterService(rmContext, scheduler);
         TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
