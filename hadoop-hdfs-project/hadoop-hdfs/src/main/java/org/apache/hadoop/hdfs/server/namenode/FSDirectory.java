@@ -69,6 +69,7 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -203,8 +204,37 @@ public class FSDirectory implements Closeable {
   // will be bypassed
   private HashSet<String> usersToBypassExtAttrProvider = null;
 
-  public void setINodeAttributeProvider(INodeAttributeProvider provider) {
+  // If external inode attribute provider is configured, use the new
+  // authorizeWithContext() API or not.
+  private boolean useAuthorizationWithContextAPI = false;
+
+  public void setINodeAttributeProvider(
+      @Nullable INodeAttributeProvider provider) {
     attributeProvider = provider;
+
+    if (attributeProvider == null) {
+      // attributeProvider is set to null during NN shutdown.
+      return;
+    }
+
+    // if the runtime external authorization provider doesn't support
+    // checkPermissionWithContext(), fall back to the old API
+    // checkPermission().
+    // This check is done only once during NameNode initialization to reduce
+    // runtime overhead.
+    Class[] cArg = new Class[1];
+    cArg[0] = INodeAttributeProvider.AuthorizationContext.class;
+
+    try {
+      Class<?> clazz = attributeProvider.getClass();
+      clazz.getDeclaredMethod("checkPermissionWithContext", cArg);
+      useAuthorizationWithContextAPI = true;
+      LOG.info("Use the new authorization provider API");
+    } catch (NoSuchMethodException e) {
+      useAuthorizationWithContextAPI = false;
+      LOG.info("Fallback to the old authorization provider API because " +
+          "the expected method is not found.");
+    }
   }
 
   /**
@@ -1784,7 +1814,8 @@ public class FSDirectory implements Closeable {
   FSPermissionChecker getPermissionChecker(String fsOwner, String superGroup,
       UserGroupInformation ugi) throws AccessControlException {
     return new FSPermissionChecker(
-        fsOwner, superGroup, ugi, getUserFilteredAttributeProvider(ugi));
+        fsOwner, superGroup, ugi, getUserFilteredAttributeProvider(ugi),
+        useAuthorizationWithContextAPI);
   }
 
   void checkOwner(FSPermissionChecker pc, INodesInPath iip)
