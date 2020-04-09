@@ -1690,7 +1690,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return true;
     else if (StringUtils.equalsIgnoreCase("false", valueString))
       return false;
-    else return defaultValue;
+    else {
+      LOG.warn("Invalid value for boolean: " + valueString +
+               ", choose default value: " + defaultValue + " for " + name);
+      return defaultValue;
+    }
   }
 
   /** 
