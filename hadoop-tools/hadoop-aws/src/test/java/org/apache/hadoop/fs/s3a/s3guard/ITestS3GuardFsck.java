@@ -64,8 +64,8 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     super.setup();
     S3AFileSystem fs = getFileSystem();
     // These test will fail if no ms
-    assumeTrue("FS needs to have a metadatastore.",
-        fs.hasMetadataStore());
+    assumeTrue("FS needs to have a DynamoDB metadatastore.",
+        fs.getMetadataStore() instanceof DynamoDBMetadataStore);
     assumeTrue("Metadatastore should persist authoritative bit",
         metadataStorePersistsAuthoritativeBit(fs.getMetadataStore()));
 
