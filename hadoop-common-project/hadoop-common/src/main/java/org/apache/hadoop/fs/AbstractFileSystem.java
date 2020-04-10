@@ -467,7 +467,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
           "user.name", ex);
       username = System.getProperty("user.name");
     }
-    return new Path("/user/" + username)
+    return new Path(CommonConfigurationKeys.FS_HOME_DIR_DEFAULT +"/"+ username)
         .makeQualified(getUri(), null);
   }
   
