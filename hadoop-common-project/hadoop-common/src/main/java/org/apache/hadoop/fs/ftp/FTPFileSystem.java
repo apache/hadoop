@@ -111,7 +111,9 @@ public class FTPFileSystem extends FileSystem {
 
     // get port information from uri, (overrides info in conf)
     int port = uri.getPort();
-    port = (port == -1) ? conf.getInt(FS_FTP_HOST_PORT, FTP.DEFAULT_PORT) : port;
+    if(port == -1){
+      port = conf.getInt(FS_FTP_HOST_PORT, FTP.DEFAULT_PORT);
+    }
     conf.setInt(FS_FTP_HOST_PORT, port);
 
     // get user/password information from URI (overrides info in conf)

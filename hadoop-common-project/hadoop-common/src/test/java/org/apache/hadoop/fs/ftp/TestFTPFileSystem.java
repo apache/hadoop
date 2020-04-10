@@ -21,7 +21,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Comparator;
 
 import com.google.common.base.Preconditions;
@@ -76,7 +75,7 @@ public class TestFTPFileSystem {
   }
 
   @Test
-  public void testCreateOutputStreamForUserWithWritePermissions() throws Exception {
+  public void testCreateWithWritePermissions() throws Exception {
     BaseUser user = server.addUser("test", "password", new WritePermission());
     Configuration configuration = new Configuration();
     configuration.set("fs.defaultFS", "ftp:///");
@@ -97,7 +96,7 @@ public class TestFTPFileSystem {
   }
 
   @Test
-  public void testCreateGracefullyReleasesResourcesWhenUserLacksWritePermissions() throws Exception {
+  public void testCreateWithoutWritePermissions() throws Exception {
     BaseUser user = server.addUser("test", "password");
     Configuration configuration = new Configuration();
     configuration.set("fs.defaultFS", "ftp:///");
@@ -113,7 +112,10 @@ public class TestFTPFileSystem {
     try (FSDataOutputStream outputStream = fs.create(new Path("test1.txt"))) {
       outputStream.write(bytesExpected);
     } catch (IOException ioException) {
-      assertThat(ioException.getMessage(), is("Unable to create file: test1.txt, Aborting"));
+      assertThat(
+          ioException.getMessage(),
+          is("Unable to create file: test1.txt, Aborting")
+      );
     }
   }
 

@@ -35,61 +35,62 @@ import org.apache.ftpserver.usermanager.PropertiesUserManagerFactory;
 import org.apache.ftpserver.usermanager.impl.BaseUser;
 
 /**
- * Helper class facilitating to manage a local ftp server for unit tests purposes only.
+ * Helper class facilitating to manage a local ftp
+ * server for unit tests purposes only.
  */
 public class TestFtpServer {
 
-    private int port;
-    private Path ftpRoot;
-    private UserManager userManager;
-    private FtpServer server;
+  private int port;
+  private Path ftpRoot;
+  private UserManager userManager;
+  private FtpServer server;
 
-    public TestFtpServer(Path ftpRoot) {
-        this.ftpRoot = ftpRoot;
-        this.userManager = new PropertiesUserManagerFactory().createUserManager();
-        FtpServerFactory serverFactory = createServerFactory();
-        serverFactory.setUserManager(userManager);
-        this.server = serverFactory.createServer();
-    }
+  public TestFtpServer(Path ftpRoot) {
+    this.ftpRoot = ftpRoot;
+    this.userManager = new PropertiesUserManagerFactory().createUserManager();
+    FtpServerFactory serverFactory = createServerFactory();
+    serverFactory.setUserManager(userManager);
+    this.server = serverFactory.createServer();
+  }
 
-    public TestFtpServer start() throws Exception {
-        server.start();
-        Listener listener = ((DefaultFtpServer) server).getListeners().get("default");
-        port = listener.getPort();
-        return this;
-    }
+  public TestFtpServer start() throws Exception {
+    server.start();
+    Listener listener = ((DefaultFtpServer) server).getListeners().get("default");
+    port = listener.getPort();
+    return this;
+  }
 
-    public Path getFtpRoot() {
-        return ftpRoot;
-    }
+  public Path getFtpRoot() {
+    return ftpRoot;
+  }
 
-    public int getPort() {
-        return port;
-    }
+  public int getPort() {
+    return port;
+  }
 
-    public void stop() {
-        if (!server.isStopped()) {
-            server.stop();
-        }
+  public void stop() {
+    if (!server.isStopped()) {
+      server.stop();
     }
+  }
 
-    public BaseUser addUser(String name, String password, Authority... authorities)
-        throws IOException, FtpException {
-        BaseUser user = new BaseUser();
-        user.setName(name);
-        user.setPassword(password);
-        Path userHome = Files.createDirectory(ftpRoot.resolve(name));
-        user.setHomeDirectory(userHome.toString());
-        user.setAuthorities(Arrays.asList(authorities));
-        userManager.save(user);
-        return user;
-    }
+  public BaseUser addUser(String name, String password, Authority... authorities)
+      throws IOException, FtpException {
+    BaseUser user = new BaseUser();
+    user.setName(name);
+    user.setPassword(password);
+    Path userHome = Files.createDirectory(ftpRoot.resolve(name));
+    user.setHomeDirectory(userHome.toString());
+    user.setAuthorities(Arrays.asList(authorities));
+    userManager.save(user);
+    return user;
+  }
 
-    private FtpServerFactory createServerFactory() {
-        FtpServerFactory serverFactory = new FtpServerFactory();
-        ListenerFactory defaultListener = new ListenerFactory();
-        defaultListener.setPort(0);
-        serverFactory.addListener("default", defaultListener.createListener());
-        return serverFactory;
-    }
+  private FtpServerFactory createServerFactory() {
+    FtpServerFactory serverFactory = new FtpServerFactory();
+    ListenerFactory defaultListener = new ListenerFactory();
+    defaultListener.setPort(0);
+    serverFactory.addListener("default", defaultListener.createListener());
+    return serverFactory;
+  }
 }
