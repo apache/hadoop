@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.ftp;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.URI;
 
@@ -110,7 +111,7 @@ public class FTPFileSystem extends FileSystem {
 
     // get port information from uri, (overrides info in conf)
     int port = uri.getPort();
-    port = (port == -1) ? FTP.DEFAULT_PORT : port;
+    port = (port == -1) ? conf.getInt(FS_FTP_HOST_PORT, FTP.DEFAULT_PORT) : port;
     conf.setInt(FS_FTP_HOST_PORT, port);
 
     // get user/password information from URI (overrides info in conf)
@@ -340,8 +341,19 @@ public class FTPFileSystem extends FileSystem {
     // file. The FTP client connection is closed when close() is called on the
     // FSDataOutputStream.
     client.changeWorkingDirectory(parent.toUri().getPath());
-    FSDataOutputStream fos = new FSDataOutputStream(client.storeFileStream(file
-        .getName()), statistics) {
+    OutputStream outputStream = client.storeFileStream(file.getName());
+
+    if (!FTPReply.isPositivePreliminary(client.getReplyCode())) {
+      // The ftpClient is an inconsistent state. Must close the stream
+      // which in turn will logout and disconnect from FTP server
+      if (outputStream != null) {
+        outputStream.close();
+      }
+      disconnect(client);
+      throw new IOException("Unable to create file: " + file + ", Aborting");
+    }
+
+    FSDataOutputStream fos = new FSDataOutputStream(outputStream, statistics) {
       @Override
       public void close() throws IOException {
         super.close();
@@ -356,12 +368,6 @@ public class FTPFileSystem extends FileSystem {
         }
       }
     };
-    if (!FTPReply.isPositivePreliminary(client.getReplyCode())) {
-      // The ftpClient is an inconsistent state. Must close the stream
-      // which in turn will logout and disconnect from FTP server
-      fos.close();
-      throw new IOException("Unable to create file: " + file + ", Aborting");
-    }
     return fos;
   }
 
