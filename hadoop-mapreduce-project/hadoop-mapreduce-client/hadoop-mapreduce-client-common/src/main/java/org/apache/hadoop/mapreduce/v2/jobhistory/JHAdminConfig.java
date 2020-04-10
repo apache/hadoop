@@ -102,6 +102,17 @@ public class JHAdminConfig {
       MR_HISTORY_PREFIX + "intermediate-user-done-dir.permissions";
   public static final short
       DEFAULT_MR_HISTORY_INTERMEDIATE_USER_DONE_DIR_PERMISSIONS = 0770;
+
+  /**
+   * Scan for history files to read from done dir every X ms.
+   */
+  public static final String MR_HISTORY_READ_ONLY_INTERVAL_MS =
+      MR_HISTORY_PREFIX + "read-only.interval-ms";
+  public static final long DEFAULT_MR_HISTORY_READ_ONLY_INTERVAL_MS =
+      60 * 1000l; //60 seconds
+  /** Setting to check path pattern for history files in done directory */
+  public static final String MR_HISTORY_READ_ONLY_DIR_PATTERN =
+      MR_HISTORY_PREFIX + "read-only.dir-pattern";
   
   /** Size of the job list cache.*/
   public static final String MR_HISTORY_JOBLIST_CACHE_SIZE =

@@ -70,6 +70,8 @@ public class JobHistory extends AbstractService implements HistoryContext {
   // Time interval for the move thread.
   private long moveThreadInterval;
 
+  private long readOnlyModeScanInterval;
+
   private Configuration conf;
 
   private ScheduledThreadPoolExecutor scheduledExecutor = null;
@@ -92,6 +94,10 @@ public class JobHistory extends AbstractService implements HistoryContext {
     moveThreadInterval = conf.getLong(
         JHAdminConfig.MR_HISTORY_MOVE_INTERVAL_MS,
         JHAdminConfig.DEFAULT_MR_HISTORY_MOVE_INTERVAL_MS);
+
+    readOnlyModeScanInterval = conf.getLong(
+        JHAdminConfig.MR_HISTORY_READ_ONLY_INTERVAL_MS,
+        JHAdminConfig.DEFAULT_MR_HISTORY_READ_ONLY_INTERVAL_MS);
 
     hsManager = createHistoryFileManager();
     hsManager.init(conf);
@@ -132,11 +138,17 @@ public class JobHistory extends AbstractService implements HistoryContext {
         new ThreadFactoryBuilder().setNameFormat("Log Scanner/Cleaner #%d")
             .build());
 
-    scheduledExecutor.scheduleAtFixedRate(new MoveIntermediateToDoneRunnable(),
-        moveThreadInterval, moveThreadInterval, TimeUnit.MILLISECONDS);
+    if (hsManager.isReadOnlyMode()) {
+        scheduledExecutor.scheduleAtFixedRate(new ScanDoneDirectoryRunnable(),
+            readOnlyModeScanInterval, readOnlyModeScanInterval, TimeUnit.MILLISECONDS);
+    } else {
+        scheduledExecutor.scheduleAtFixedRate(new MoveIntermediateToDoneRunnable(),
+            moveThreadInterval, moveThreadInterval, TimeUnit.MILLISECONDS);
 
-    // Start historyCleaner
-    scheduleHistoryCleaner();
+        // Start historyCleaner
+        scheduleHistoryCleaner();
+    }
+
     super.serviceStart();
   }
 
@@ -192,6 +204,19 @@ public class JobHistory extends AbstractService implements HistoryContext {
         hsManager.scanIntermediateDirectory();
       } catch (IOException e) {
         LOG.error("Error while scanning intermediate done dir ", e);
+      }
+    }
+  }
+
+  private class ScanDoneDirectoryRunnable implements Runnable {
+    @Override
+    public void run() {
+      try {
+        LOG.info("Starting scan of history files in done directory");
+        hsManager.scanDoneDirectoryUpdate();
+        LOG.info("Completed scan of history files in done directory");
+      } catch (IOException e) {
+        LOG.error("Error while scanning done dir ", e);
       }
     }
   }
