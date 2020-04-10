@@ -55,7 +55,9 @@ public class TestFtpServer {
 
   public TestFtpServer start() throws Exception {
     server.start();
-    Listener listener = ((DefaultFtpServer) server).getListeners().get("default");
+    Listener listener = ((DefaultFtpServer) server)
+        .getListeners()
+        .get("default");
     port = listener.getPort();
     return this;
   }
@@ -74,8 +76,9 @@ public class TestFtpServer {
     }
   }
 
-  public BaseUser addUser(String name, String password, Authority... authorities)
-      throws IOException, FtpException {
+  public BaseUser addUser(String name, String password,
+      Authority... authorities) throws IOException, FtpException {
+
     BaseUser user = new BaseUser();
     user.setName(name);
     user.setPassword(password);
