@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
+import static org.apache.hadoop.http.HttpServer2.HTTP_KERBEROS_PRINCIPAL_KEY_DEFAULT;
 import static org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig.DEFAULT_MR_HISTORY_PORT;
 import static org.apache.hadoop.security.UserGroupInformation.loginUserFromKeytabAndReturnUGI;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.*;
@@ -253,7 +254,7 @@ public class MiniKerberizedHadoopCluster extends CompositeService {
     conf.set(DFS_NAMENODE_KEYTAB_FILE_KEY, path);
     conf.set(DFS_DATANODE_KERBEROS_PRINCIPAL_KEY, hdfsPrincipal);
     conf.set(DFS_DATANODE_KEYTAB_FILE_KEY, path);
-    conf.set(DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY, spnegoPrincipal);
+    conf.set(HTTP_KERBEROS_PRINCIPAL_KEY_DEFAULT, spnegoPrincipal);
     conf.set(DFS_JOURNALNODE_KEYTAB_FILE_KEY, path);
     conf.set(DFS_JOURNALNODE_KERBEROS_PRINCIPAL_KEY, hdfsPrincipal);
     conf.set(DFS_JOURNALNODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,

@@ -31,6 +31,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.
     KMS_CLIENT_ENC_KEY_CACHE_SIZE;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.
     DFS_DATA_TRANSFER_PROTECTION_KEY;
+import static org.apache.hadoop.http.HttpServer2.HTTP_KERBEROS_PRINCIPAL_KEY_DEFAULT;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
@@ -154,8 +155,7 @@ public class TestTrashWithSecureEncryptionZones {
     baseConf.set(DFS_NAMENODE_KEYTAB_FILE_KEY, keytab);
     baseConf.set(DFS_DATANODE_KERBEROS_PRINCIPAL_KEY, hdfsPrincipal);
     baseConf.set(DFS_DATANODE_KEYTAB_FILE_KEY, keytab);
-    baseConf.set(DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
-        spnegoPrincipal);
+    baseConf.set(HTTP_KERBEROS_PRINCIPAL_KEY_DEFAULT, spnegoPrincipal);
     baseConf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     baseConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY, "authentication");
     baseConf.set(DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());

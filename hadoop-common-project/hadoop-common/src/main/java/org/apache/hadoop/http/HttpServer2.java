@@ -166,6 +166,15 @@ public final class HttpServer2 implements FilterContainer {
       = "hadoop.http.sni.host.check.enabled";
   public static final boolean HTTP_SNI_HOST_CHECK_ENABLED_DEFAULT = false;
 
+  public static final String HTTP_FILTER_CONFIGURATION_PREFIX_DEFAULT
+      = "hadoop.http.authentication.";
+  public static final String KERBEROS_PRINCIPAL = "kerberos.principal";
+  public static final String KERBEROS_KEYTAB = "kerberos.keytab";
+  public static final String HTTP_KERBEROS_PRINCIPAL_KEY_DEFAULT
+      = HTTP_FILTER_CONFIGURATION_PREFIX_DEFAULT + KERBEROS_PRINCIPAL;
+  public static final String HTTP_KERBEROS_KEYTAB_KEY_DEFAULT
+      = HTTP_FILTER_CONFIGURATION_PREFIX_DEFAULT + KERBEROS_KEYTAB;
+
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
   public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
@@ -243,7 +252,8 @@ public final class HttpServer2 implements FilterContainer {
 
     private String hostName;
     private boolean disallowFallbackToRandomSignerSecretProvider;
-    private String authFilterConfigurationPrefix = "hadoop.http.authentication.";
+    private String authFilterConfigurationPrefix
+        = HTTP_FILTER_CONFIGURATION_PREFIX_DEFAULT;
     private String excludeCiphers;
 
     private boolean xFrameEnabled;
@@ -1280,12 +1290,12 @@ public final class HttpServer2 implements FilterContainer {
     Map<String, String> params = new HashMap<>();
     String principalInConf = conf.get(usernameConfKey);
     if (principalInConf != null && !principalInConf.isEmpty()) {
-      params.put("kerberos.principal", SecurityUtil.getServerPrincipal(
+      params.put(KERBEROS_PRINCIPAL, SecurityUtil.getServerPrincipal(
           principalInConf, hostName));
     }
     String httpKeytab = conf.get(keytabConfKey);
     if (httpKeytab != null && !httpKeytab.isEmpty()) {
-      params.put("kerberos.keytab", httpKeytab);
+      params.put(KERBEROS_KEYTAB, httpKeytab);
     }
     params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
     defineFilter(webAppContext, SPNEGO_FILTER,
