@@ -45,7 +45,7 @@ public class AbfsByteBufferPool {
 
   private int bufferSize;
 
-  private int queueCapacity;
+  private int maxBuffersToPool;
   private int maxMemUsagePercentage;
 
   /**
@@ -62,7 +62,7 @@ public class AbfsByteBufferPool {
     this.maxMemUsagePercentage = maxMemUsagePercentage;
     this.bufferSize = bufferSize;
     this.numBuffersInUse = 0;
-    this.queueCapacity = queueCapacity;
+    this.maxBuffersToPool = queueCapacity;
     freeBuffers = new ArrayBlockingQueue<>(queueCapacity);
   }
 
@@ -82,7 +82,7 @@ public class AbfsByteBufferPool {
   private boolean isPossibleToIssueNewBuffer() {
     Runtime rt = Runtime.getRuntime();
     double bufferCountByMaxFreeBuffers = ceil(
-        queueCapacity + rt.availableProcessors());
+        maxBuffersToPool + rt.availableProcessors());
     if (numBuffersInUse >= bufferCountByMaxFreeBuffers) {
       return false;
     }
@@ -90,13 +90,13 @@ public class AbfsByteBufferPool {
     double freeMemory = rt.maxMemory() - (rt.totalMemory() - rt.freeMemory());
     double bufferCountByMemory = ceil(
         (freeMemory * maxMemUsagePercentage / 100) / bufferSize);
-    int numBuffersCanBeInUse = (int) min(bufferCountByMemory,
+    int maxBuffersThatCanBeInUse = (int) min(bufferCountByMemory,
         bufferCountByMaxFreeBuffers);
-    if (numBuffersCanBeInUse < 2) {
-      numBuffersCanBeInUse = 2;
+    if (maxBuffersThatCanBeInUse < 2) {
+      maxBuffersThatCanBeInUse = 2;
     }
 
-    return numBuffersInUse < numBuffersCanBeInUse;
+    return numBuffersInUse < maxBuffersThatCanBeInUse;
   }
 
   /**
