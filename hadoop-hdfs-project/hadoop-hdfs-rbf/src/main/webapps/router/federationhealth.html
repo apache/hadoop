@@ -326,6 +326,8 @@
     <tr>
       <th>Node</th>
       <th>Last contact</th>
+      <th>Used</th>
+      <th>Non DFS Used</th>
       <th style="width:180px; text-align:center">Capacity</th>
       <!--th>Blocks</th-->
       <th>Block pool used</th>
@@ -336,6 +338,8 @@
   <tr>
     <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{location}/{name} ({xferaddr})</td>
     <td ng-value="{lastContact}">{#helper_relative_time value="{lastContact}"/}</td>
+    <td ng-value="{used}">{used|fmt_bytes}</td>
+    <td ng-value="{nonDfsUsedSpace}">{nonDfsUsedSpace|fmt_bytes}</td>
     <td ng-value="{usedPercentage}" style="width:210px">
       <div>
         <div style="display:inline-block; float: left; padding-right: 10px; width:60px;">{capacity|fmt_bytes}</div>
