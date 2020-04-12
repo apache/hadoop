@@ -2070,12 +2070,9 @@
   <name>dfs.web.authentication.kerberos.principal</name>
   <value></value>
   <description>
-    The server principal used by the NameNode for WebHDFS SPNEGO
-    authentication.
-
-    Required when WebHDFS and security are enabled. In most secure clusters this
-    setting is also used to specify the values for
-    dfs.namenode.kerberos.internal.spnego.principal and
+    This setting can be used to specify the values for
+    dfs.namenode.kerberos.internal.spnego.principal,
+    dfs.secondary.namenode.kerberos.internal.spnego.principal and
     dfs.journalnode.kerberos.internal.spnego.principal.
   </description>
 </property>
