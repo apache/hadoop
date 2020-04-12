@@ -38,14 +38,14 @@ import org.apache.ftpserver.usermanager.impl.BaseUser;
  * Helper class facilitating to manage a local ftp
  * server for unit tests purposes only.
  */
-public class TestFtpServer {
+public class FtpTestServer {
 
   private int port;
   private Path ftpRoot;
   private UserManager userManager;
   private FtpServer server;
 
-  public TestFtpServer(Path ftpRoot) {
+  public FtpTestServer(Path ftpRoot) {
     this.ftpRoot = ftpRoot;
     this.userManager = new PropertiesUserManagerFactory().createUserManager();
     FtpServerFactory serverFactory = createServerFactory();
@@ -53,7 +53,7 @@ public class TestFtpServer {
     this.server = serverFactory.createServer();
   }
 
-  public TestFtpServer start() throws Exception {
+  public FtpTestServer start() throws Exception {
     server.start();
     Listener listener = ((DefaultFtpServer) server)
         .getListeners()

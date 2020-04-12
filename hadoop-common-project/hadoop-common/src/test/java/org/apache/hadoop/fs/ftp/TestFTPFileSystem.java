@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -44,7 +45,6 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 
@@ -54,14 +54,14 @@ import static org.junit.Assert.assertEquals;
  */
 public class TestFTPFileSystem {
 
-  private TestFtpServer server;
+  private FtpTestServer server;
 
   @Rule
   public Timeout testTimeout = new Timeout(180000);
 
   @Before
   public void setUp() throws Exception {
-    server = new TestFtpServer(GenericTestUtils.getTestDir().toPath()).start();
+    server = new FtpTestServer(GenericTestUtils.getTestDir().toPath()).start();
   }
 
   @After
@@ -83,7 +83,7 @@ public class TestFTPFileSystem {
     configuration.setInt("fs.ftp.host.port", server.getPort());
     configuration.set("fs.ftp.user.localhost", user.getName());
     configuration.set("fs.ftp.password.localhost", user.getPassword());
-    configuration.set("fs.ftp.impl.disable.cache", "true");
+    configuration.setBoolean("fs.ftp.impl.disable.cache", true);
 
     FileSystem fs = FileSystem.get(configuration);
     byte[] bytesExpected = "hello world".getBytes(StandardCharsets.UTF_8);
@@ -104,19 +104,18 @@ public class TestFTPFileSystem {
     configuration.setInt("fs.ftp.host.port", server.getPort());
     configuration.set("fs.ftp.user.localhost", user.getName());
     configuration.set("fs.ftp.password.localhost", user.getPassword());
-    configuration.set("fs.ftp.impl.disable.cache", "true");
+    configuration.setBoolean("fs.ftp.impl.disable.cache", true);
 
     FileSystem fs = FileSystem.get(configuration);
     byte[] bytesExpected = "hello world".getBytes(StandardCharsets.UTF_8);
-
-    try (FSDataOutputStream outputStream = fs.create(new Path("test1.txt"))) {
-      outputStream.write(bytesExpected);
-    } catch (IOException ioException) {
-      assertThat(
-          ioException.getMessage(),
-          is("Unable to create file: test1.txt, Aborting")
-      );
-    }
+    LambdaTestUtils.intercept(
+        IOException.class, "Unable to create file: test1.txt, Aborting",
+        () -> {
+          try (FSDataOutputStream outputStream = fs.create(new Path("test1.txt"))) {
+            outputStream.write(bytesExpected);
+          }
+        }
+    );
   }
 
   @Test
