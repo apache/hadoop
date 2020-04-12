@@ -111,8 +111,8 @@ public class TestFTPFileSystem {
     LambdaTestUtils.intercept(
         IOException.class, "Unable to create file: test1.txt, Aborting",
         () -> {
-          try (FSDataOutputStream outputStream = fs.create(new Path("test1.txt"))) {
-            outputStream.write(bytesExpected);
+          try (FSDataOutputStream out = fs.create(new Path("test1.txt"))) {
+            out.write(bytesExpected);
           }
         }
     );
