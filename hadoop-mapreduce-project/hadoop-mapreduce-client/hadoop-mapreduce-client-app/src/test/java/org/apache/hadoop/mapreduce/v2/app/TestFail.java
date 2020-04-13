@@ -271,6 +271,7 @@ public class TestFail {
         protected void serviceInit(Configuration conf) throws Exception {
           conf.setInt(MRJobConfig.TASK_TIMEOUT, 1*1000);//reduce timeout
           conf.setInt(MRJobConfig.TASK_TIMEOUT_CHECK_INTERVAL_MS, 1*1000);
+          conf.setDouble(MRJobConfig.TASK_LOG_PROGRESS_DELTA_THRESHOLD, 0.01);
           super.serviceInit(conf);
         }
       };
