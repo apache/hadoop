@@ -246,4 +246,9 @@
         <Class name="org.apache.hadoop.hdfs.server.datanode.checker.AbstractFuture" />
         <Bug pattern="NS_DANGEROUS_NON_SHORT_CIRCUIT" />
     </Match>
+    <Match>
+        <Class name="org.apache.hadoop.hdfs.server.datanode.DirectoryScanner" />
+        <Method name="reconcile" />
+        <Bug pattern="SWL_SLEEP_WITH_LOCK_HELD" />
+    </Match>
  </FindBugsFilter>
