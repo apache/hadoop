@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
+import java.net.InetAddress;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.text.DateFormat;
@@ -469,6 +470,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * S3AFileSystem initialization. When set to 1 or 2, bucket existence check
    * will be performed which is potentially slow.
    * If 3 or higher: warn and use the v2 check.
+   * Also logging DNS address of the s3 endpoint.
    * @throws UnknownStoreException the bucket is absent
    * @throws IOException any other problem talking to S3
    */
@@ -478,6 +480,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             .getInt(S3A_BUCKET_PROBE, S3A_BUCKET_PROBE_DEFAULT);
     Preconditions.checkArgument(bucketProbe >= 0,
             "Value of " + S3A_BUCKET_PROBE + " should be >= 0");
+    String endPoint = getConf().getTrimmed(ENDPOINT, "");
+    if (!endPoint.isEmpty() && LOG.isDebugEnabled()) {
+      LOG.debug("Bucket endpoint : {}", InetAddress.getByName(endPoint).toString());
+    }
     switch (bucketProbe) {
     case 0:
       LOG.debug("skipping check for bucket existence");
