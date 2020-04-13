@@ -4285,7 +4285,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           () -> {
             // Assuming the path to be a directory,
             // trigger a list call directly.
-            RemoteIterator<S3ALocatedFileStatus> locatedFileStatusIteratorForDir =
+            final RemoteIterator<S3ALocatedFileStatus>
+                    locatedFileStatusIteratorForDir =
                     getLocatedFileStatusIteratorForDir(path, filter);
 
             // If no listing is present then path might be a file.
@@ -4296,7 +4297,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 // simple case: File
                 LOG.debug("Path is a file");
                 return new Listing.SingleStatusRemoteIterator(
-                        filter.accept(path) ? toLocatedFileStatus(fileStatus) : null);
+                        filter.accept(path)
+                                ? toLocatedFileStatus(fileStatus)
+                                : null);
               }
             }
             // Either empty or non-empty directory.

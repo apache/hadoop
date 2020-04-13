@@ -131,14 +131,18 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     describe("performing listLocatedStatus on an empty dir");
     Path dir = path(getMethodName());
     S3AFileSystem fs = getFileSystem();
-    mkdirs(dir);
+    fs.mkdirs(dir);
     resetMetricDiffs();
     fs.listLocatedStatus(dir);
     if (!fs.hasMetadataStore()) {
       // Unguarded FS.
       verifyOperationCount(2, 1);
     } else {
-      verifyOperationCount(0, 0);
+      if(fs.allowAuthoritative(dir)) {
+        verifyOperationCount(0, 0);
+      } else {
+        verifyOperationCount(0, 1);
+      }
     }
   }
 
@@ -147,8 +151,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     describe("performing listLocatedStatus on a non empty dir");
     Path dir = path(getMethodName() + "dir");
     S3AFileSystem fs = getFileSystem();
-    mkdirs(dir);
-    Path file = new Path( dir, "file.txt");
+    fs.mkdirs(dir);
+    Path file = new Path(dir, "file.txt");
     touch(fs, file);
     resetMetricDiffs();
     fs.listLocatedStatus(dir);
@@ -156,7 +160,11 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
       // Unguarded FS.
       verifyOperationCount(0, 1);
     } else {
-      verifyOperationCount(0, 0);
+      if(fs.allowAuthoritative(dir)) {
+        verifyOperationCount(0, 0);
+      } else {
+        verifyOperationCount(0, 1);
+      }
     }
   }
 
