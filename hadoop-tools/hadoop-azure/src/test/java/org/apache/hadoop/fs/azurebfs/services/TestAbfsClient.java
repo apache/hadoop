@@ -46,6 +46,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLO
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_VALUE_UNKNOWN;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
 /**
@@ -208,7 +209,7 @@ public final class TestAbfsClient {
       .describedAs("User-Agent string should not contain cluster name")
       .doesNotContain(clusterName)
       .describedAs("User-Agent string should contain UNKNOWN as cluster name config is absent")
-      .contains("UNKNOWN");;
+      .contains(DEFAULT_VALUE_UNKNOWN);
   }
 
   @Test
@@ -236,7 +237,7 @@ public final class TestAbfsClient {
       .describedAs("User-Agent string should not contain cluster type")
       .doesNotContain(clusterType)
       .describedAs("User-Agent string should contain UNKNOWN as cluster type config is absent")
-      .contains("UNKNOWN");
+      .contains(DEFAULT_VALUE_UNKNOWN);
   }
 
 }
