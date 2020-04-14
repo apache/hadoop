@@ -138,7 +138,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
       // Unguarded FS.
       verifyOperationCount(2, 1);
     } else {
-      if(fs.allowAuthoritative(dir)) {
+      if (fs.allowAuthoritative(dir)) {
         verifyOperationCount(0, 0);
       } else {
         verifyOperationCount(0, 1);
