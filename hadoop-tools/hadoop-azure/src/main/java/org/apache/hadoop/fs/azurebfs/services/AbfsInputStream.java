@@ -61,23 +61,28 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private boolean closed = false;
 
   public AbfsInputStream(
-      final AbfsClient client,
-      final Statistics statistics,
-      final String path,
-      final long contentLength,
-      final int bufferSize,
-      final int readAheadQueueDepth,
-      final boolean tolerateOobAppends,
-      final String eTag) {
+          final AbfsClient client,
+          final Statistics statistics,
+          final String path,
+          final long contentLength,
+          AbfsInputStreamConfiguration abfsInputStreamConfiguration,
+          final String eTag) {
     this.client = client;
     this.statistics = statistics;
     this.path = path;
     this.contentLength = contentLength;
-    this.bufferSize = bufferSize;
-    this.readAheadQueueDepth = (readAheadQueueDepth >= 0) ? readAheadQueueDepth : Runtime.getRuntime().availableProcessors();
-    this.tolerateOobAppends = tolerateOobAppends;
+    this.bufferSize = abfsInputStreamConfiguration.getReadBufferSize();
+    this.readAheadQueueDepth = getReadAheadQueueDepth(
+            abfsInputStreamConfiguration.getReadAheadQueueDepth());
+    this.tolerateOobAppends = abfsInputStreamConfiguration.isTolerateOobAppends();
     this.eTag = eTag;
     this.readAheadEnabled = true;
+  }
+
+  private int getReadAheadQueueDepth(int readAheadQueueDepthVal) {
+    return (readAheadQueueDepthVal >= 0)
+            ? readAheadQueueDepthVal
+            : Runtime.getRuntime().availableProcessors();
   }
 
   public String getPath() {
