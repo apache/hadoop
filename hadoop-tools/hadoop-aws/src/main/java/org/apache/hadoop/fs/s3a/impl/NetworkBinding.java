@@ -60,29 +60,29 @@ public class NetworkBinding {
    *             #SSL_CHANNEL_MODE}
    * @param awsConf the {@link ClientConfiguration} to set the
    *                SSLConnectionSocketFactory for.
-   * @return true if the binding was successful; false if the binding
-   * fell back to the default.
    * @throws IOException if there is an error while initializing the
    * {@link SSLSocketFactory} other than classloader problems.
    */
-  public static boolean bindSSLChannelMode(Configuration conf,
+  public static void bindSSLChannelMode(Configuration conf,
       ClientConfiguration awsConf) throws IOException {
-    try {
-      // Validate that SSL_CHANNEL_MODE is set to a valid value.
-      String channelModeString = conf.get(
-              SSL_CHANNEL_MODE, DEFAULT_SSL_CHANNEL_MODE.name());
-      DelegatingSSLSocketFactory.SSLChannelMode channelMode = null;
-      for (DelegatingSSLSocketFactory.SSLChannelMode mode :
-              DelegatingSSLSocketFactory.SSLChannelMode.values()) {
-        if (mode.name().equalsIgnoreCase(channelModeString)) {
-          channelMode = mode;
-        }
-      }
-      if (channelMode == null) {
-        throw new IllegalArgumentException(channelModeString +
-                " is not a valid value for " + SSL_CHANNEL_MODE);
-      }
 
+    // Validate that SSL_CHANNEL_MODE is set to a valid value.
+    String channelModeString = conf.getTrimmed(
+            SSL_CHANNEL_MODE, DEFAULT_SSL_CHANNEL_MODE.name());
+    DelegatingSSLSocketFactory.SSLChannelMode channelMode = null;
+    for (DelegatingSSLSocketFactory.SSLChannelMode mode :
+            DelegatingSSLSocketFactory.SSLChannelMode.values()) {
+      if (mode.name().equalsIgnoreCase(channelModeString)) {
+        channelMode = mode;
+      }
+    }
+    if (channelMode == null) {
+      throw new IllegalArgumentException(channelModeString +
+              " is not a valid value for " + SSL_CHANNEL_MODE);
+    }
+
+    DelegatingSSLSocketFactory.initializeDefaultFactory(channelMode);
+    try {
       // Look for AWS_SOCKET_FACTORY_CLASSNAME on the classpath and instantiate
       // an instance using the DelegatingSSLSocketFactory as the
       // SSLSocketFactory.
@@ -91,20 +91,17 @@ public class NetworkBinding {
       Constructor<?> factoryConstructor =
               sslConnectionSocketFactory.getDeclaredConstructor(
                       SSLSocketFactory.class, HostnameVerifier.class);
-      DelegatingSSLSocketFactory.initializeDefaultFactory(channelMode);
       awsConf.getApacheHttpClientConfig().setSslSocketFactory(
               (com.amazonaws.thirdparty.apache.http.conn.ssl.
                       SSLConnectionSocketFactory) factoryConstructor
                       .newInstance(DelegatingSSLSocketFactory
                                       .getDefaultFactory(),
                               (HostnameVerifier) null));
-      return true;
     } catch (ClassNotFoundException | NoSuchMethodException |
             IllegalAccessException | InstantiationException |
             InvocationTargetException | LinkageError  e) {
       LOG.debug("Unable to create class {}, value of {} will be ignored",
               AWS_SOCKET_FACTORY_CLASSNAME, SSL_CHANNEL_MODE, e);
-      return false;
     }
   }
 

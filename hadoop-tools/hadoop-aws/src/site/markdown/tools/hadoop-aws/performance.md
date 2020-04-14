@@ -539,7 +539,7 @@ in Java 9, so if `default_jsse` is specified and applications run on Java
 includes GCM in the list of cipher suites on Java 8, so it is equivalent to
 running with the vanilla JSSE.
 
-### OpenSSL Acceleration
+### <a name="openssl"></> OpenSSL Acceleration
 
 **Experimental Feature**
 
@@ -596,18 +596,36 @@ exception and S3A initialization will fail.
 
 Supported values for `fs.s3a.ssl.channel.mode`:
 
-| fs.s3a.ssl.channel.mode Value | Description |
+| `fs.s3a.ssl.channel.mode` Value | Description |
 |-------------------------------|-------------|
-| default_jsse | Uses Java JSSE without GCM on Java 8 |
-| default_jsse_with_gcm | Uses Java JSSE |
-| default | Uses OpenSSL, falls back to default_jsse if OpenSSL cannot be loaded |
-| openssl | Uses OpenSSL, fails if OpenSSL cannot be loaded |
+| `default_jsse` | Uses Java JSSE without GCM on Java 8 |
+| `default_jsse_with_gcm` | Uses Java JSSE |
+| `default` | Uses OpenSSL, falls back to `default_jsse` if OpenSSL cannot be loaded |
+| `openssl` | Uses OpenSSL, fails if OpenSSL cannot be loaded |
 
 The naming convention is setup in order to preserve backwards compatibility
 with HADOOP-15669.
 
 Other options may be added to `fs.s3a.ssl.channel.mode` in the future as
 further SSL optimizations are made.
+
+### Wildfly classpath requirements
+
+For OpenSSL acceleration to work, a compatible version of the
+wildfly JAR must be on the classpath. This is not explicitly declared
+in the dependencies of the published `hadoop-aws` module, as it is
+optional.
+
+If the wildfly JAR is not found, the network acceleration will fall back
+to the JVM, always.
+
+Note: there have been compatibility problems with wildfly JARs and openSSL
+releases in the past: version 1.0.4.Final is not compatible with openssl 1.1.1.
+An extra complication was older versions of the `azure-data-lake-store-sdk`
+JAR used in `hadoop-azure-datalake` contained an unshaded copy of the 1.0.4.Final
+classes, causing binding problems even when a later version was explicitly
+being placed on the classpath.
+
 
 ## Tuning FileSystem Initialization.
 

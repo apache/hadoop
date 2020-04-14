@@ -18,53 +18,30 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.io.IOException;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.Constants.SSL_CHANNEL_MODE;
+import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.bindSSLChannelMode;
+import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.SSLChannelMode.Default;
+import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE;
+import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE_with_GCM;
+import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Make sure that wildfly is not on this classpath and that we can still
- * create connections.
+ * create connections in the default option, but that openssl fails.
  */
-@RunWith(Parameterized.class)
 public class TestOpenSSLClasspaths extends AbstractHadoopTestBase {
-
-  /**
-   * Parameterization.
-   */
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> params() {
-    return Arrays.asList(new Object[][]{
-        {DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL, false},
-        {DelegatingSSLSocketFactory.SSLChannelMode.Default, true},
-        {DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE, true},
-        {DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE_with_GCM, true},
-    });
-  }
-
-  private final DelegatingSSLSocketFactory.SSLChannelMode mode;
-  private final boolean expectSuccess;
-
-  public TestOpenSSLClasspaths(
-      final DelegatingSSLSocketFactory.SSLChannelMode mode,
-      final boolean expectSuccess) {
-    this.mode = mode;
-    this.expectSuccess = expectSuccess;
-  }
 
   @Test
   public void testWildflyOffCP() throws Throwable {
@@ -76,14 +53,69 @@ public class TestOpenSSLClasspaths extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testOpenSSLBindingDowngrades() throws Throwable {
+  public void testModeRejection() throws Throwable {
+    DelegatingSSLSocketFactory.resetDefaultFactory();
     Configuration conf = new Configuration(false);
-    conf.set(SSL_CHANNEL_MODE, mode.name());
+    conf.set(SSL_CHANNEL_MODE, "no-such-mode ");
+    intercept(IllegalArgumentException.class, () ->
+        bindSSLChannelMode(conf, new ClientConfiguration()));
+  }
+
+  @Test
+  public void testOpenSSL() throws Throwable {
+    intercept(NoClassDefFoundError.class, "wildfly", () -> {
+      bindSocketFactory(OpenSSL);
+      return DelegatingSSLSocketFactory.getDefaultFactory()
+          .getChannelMode();
+    });
+  }
+
+  @Test
+  public void testDefaultDowngrades() throws Throwable {
+    expectBound(Default, Default_JSSE);
+  }
+
+  @Test
+  public void testJSSE() throws Throwable {
+    expectBound(Default_JSSE, Default_JSSE);
+  }
+
+  @Test
+  public void testGCM() throws Throwable {
+    expectBound(Default_JSSE_with_GCM, Default_JSSE_with_GCM);
+  }
+
+  /**
+   * Bind to a socket mode and verify that the result matches
+   * that expected -which does not have to be the one requested.
+   * @param channelMode mode to use
+   * @param finalMode mode to test for
+   */
+  private void expectBound(
+      DelegatingSSLSocketFactory.SSLChannelMode channelMode,
+      DelegatingSSLSocketFactory.SSLChannelMode finalMode)
+      throws Throwable {
+    bindSocketFactory(channelMode);
+    assertThat(
+        DelegatingSSLSocketFactory.getDefaultFactory().getChannelMode())
+        .describedAs("Channel mode of socket factory created with mode %s",
+            channelMode)
+        .isEqualTo(finalMode);
+  }
+
+  /**
+   * Bind the socket factory to a given channel mode.
+   * @param channelMode mode to use
+   */
+  private void bindSocketFactory(
+      final DelegatingSSLSocketFactory.SSLChannelMode channelMode)
+      throws IOException {
+    DelegatingSSLSocketFactory.resetDefaultFactory();
+    Configuration conf = new Configuration(false);
+    conf.set(SSL_CHANNEL_MODE, channelMode.name());
     ClientConfiguration awsConf = new ClientConfiguration();
     awsConf.setProtocol(Protocol.HTTPS);
-    Assertions.assertThat(
-        NetworkBinding.bindSSLChannelMode(conf, awsConf))
-        .describedAs("SSL binding for channel mode %s", mode)
-        .isEqualTo(expectSuccess);
+    bindSSLChannelMode(conf, awsConf);
   }
+
 }
