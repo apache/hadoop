@@ -79,8 +79,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   public static final String OPERATION_OPEN = "open";
   public static final String OPERATION_REOPEN = "re-open";
 
-  private final IOStatistics ioStatistics;
-
   /**
    * This is the public position; the one set in {@link #seek(long)}
    * and returned in {@link #getPos()}.
@@ -129,6 +127,11 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private final ChangeTracker changeTracker;
 
   /**
+   * IOStatistics report.
+   */
+  private final IOStatistics ioStatistics;
+
+  /**
    * Create the stream.
    * This does not attempt to open it; that is only done on the first
    * actual read() operation.
@@ -153,6 +156,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     this.uri = "s3a://" + this.bucket + "/" + this.key;
     this.streamStatistics = ctx.getS3AStatisticsContext()
         .newInputStreamStatistics();
+    this.ioStatistics = streamStatistics.createIOStatistics();
     this.serverSideEncryptionAlgorithm =
         s3Attributes.getServerSideEncryptionAlgorithm();
     this.serverSideEncryptionKey = s3Attributes.getServerSideEncryptionKey();
@@ -162,7 +166,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         s3Attributes);
     setInputPolicy(ctx.getInputPolicy());
     setReadahead(ctx.getReadahead());
-    this.ioStatistics = streamStatistics.createIOStatistics();
   }
 
   /**

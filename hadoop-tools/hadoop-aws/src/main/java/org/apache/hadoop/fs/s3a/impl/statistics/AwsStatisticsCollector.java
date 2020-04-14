@@ -73,15 +73,15 @@ public class AwsStatisticsCollector extends RequestMetricCollector {
         collector::updateAwsThrottleExceptionsCount);
 
     timing(timingInfo, ClientExecuteTime.name(),
-        collector::addAwsClientExecuteTime);
+        collector::noteAwsClientExecuteTime);
     timing(timingInfo, HttpRequestTime.name(),
-        collector::addAwsRequestTime);
+        collector::noteAwsRequestTime);
     timing(timingInfo, RequestMarshallTime.name(),
-        collector::addRequestMarshallTime);
+        collector::noteRequestMarshallTime);
     timing(timingInfo, RequestSigningTime.name(),
-        collector::addRequestSigningTime);
+        collector::noteRequestSigningTime);
     timing(timingInfo, ResponseProcessingTime.name(),
-        collector::addResponseProcessingTime);
+        collector::noteResponseProcessingTime);
   }
 
   /**

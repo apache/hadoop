@@ -642,7 +642,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       throttleRateQuantile.stop();
       s3GuardThrottleRateQuantile.stop();
       metricsSystem.unregisterSource(metricsSourceName);
-      int activeSources = --metricsSourceActiveCounter;
+      metricsSourceActiveCounter--;
+      int activeSources = metricsSourceActiveCounter;
       if (activeSources == 0) {
         LOG.debug("Shutting down metrics publisher");
         metricsSystem.publishMetricsNow();
@@ -690,8 +691,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private final AtomicLong versionMismatches = new AtomicLong(0);
     private InputStreamStatisticsImpl mergedStats;
 
-    private InputStreamStatisticsImpl(FileSystem.Statistics filesystemStatistics) {
-
+    private InputStreamStatisticsImpl(
+        FileSystem.Statistics filesystemStatistics) {
       this.filesystemStatistics = filesystemStatistics;
     }
 
@@ -892,8 +893,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       if (!isClosed) {
         mergedStats = copy();
       } else {
+        // stream is being closed.
+        // increment the filesystem statistics for this thread.
         if (filesystemStatistics != null) {
-          // increment the read counter
           filesystemStatistics.incrementBytesReadByDistance(DISTANCE,
               bytesRead + bytesReadInClose);
         }
@@ -905,7 +907,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      * the given {@link InputStreamStatisticsImpl} instance.
      */
     private InputStreamStatisticsImpl diff(InputStreamStatisticsImpl inputStats) {
-      InputStreamStatisticsImpl diff = new InputStreamStatisticsImpl(filesystemStatistics);
+      InputStreamStatisticsImpl diff =
+          new InputStreamStatisticsImpl(filesystemStatistics);
       diff.openOperations = openOperations - inputStats.openOperations;
       diff.closeOperations = closeOperations - inputStats.closeOperations;
       diff.closed = closed - inputStats.closed;
@@ -963,8 +966,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     /**
-     * Convert to an IOStatistics source which is
-     * dynamically updated.
+     * Convert to an IOStatistics source which is dynamically updated.
      * @return statistics
      */
     @Override
@@ -1327,8 +1329,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     /**
-     * Convert to an IOStatistics source which is
-     * dynamically updated.
+     * Convert to an IOStatistics source which is dynamically updated.
      * @return statistics
      */
     @Override
@@ -1594,6 +1595,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
   /**
    * Hook up AWS SDK Statistics to the S3 counters.
+   * Durations are not currently being used; that could be
+   * changed in future once an effective strategy for reporting
+   * them is determined.
    */
   private static final class StatisticsFromAwsSdkImpl implements
       StatisticsFromAwsSdk {
@@ -1622,27 +1626,27 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     @Override
-    public void addAwsRequestTime(final Duration duration) {
+    public void noteAwsRequestTime(final Duration duration) {
 
     }
 
     @Override
-    public void addAwsClientExecuteTime(final Duration duration) {
+    public void noteAwsClientExecuteTime(final Duration duration) {
 
     }
 
     @Override
-    public void addRequestMarshallTime(final Duration duration) {
+    public void noteRequestMarshallTime(final Duration duration) {
 
     }
 
     @Override
-    public void addRequestSigningTime(final Duration duration) {
+    public void noteRequestSigningTime(final Duration duration) {
 
     }
 
     @Override
-    public void addResponseProcessingTime(final Duration duration) {
+    public void noteResponseProcessingTime(final Duration duration) {
 
     }
   }

@@ -21,17 +21,26 @@ package org.apache.hadoop.fs.statistics;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.statistics.impl.EmptyIOStatistics;
-import org.apache.hadoop.test.HadoopTestBase;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.*;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertDoesNotHaveAttribute;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertHasAttribute;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticTracked;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticUnknown;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticUntracked;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticHasValue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class TestEmptyIOStatistics extends HadoopTestBase {
+/**
+ * Test handling of the empty IO statistics class.
+ */
+public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
 
-  private final IOStatistics stats = new EmptyIOStatistics();
+  private final IOStatistics stats = EmptyIOStatistics.getInstance();
 
   @Test
   public void testAttributes() throws Throwable {
@@ -42,7 +51,7 @@ public class TestEmptyIOStatistics extends HadoopTestBase {
 
   @Test
   public void testSnapshotUnsupported() throws Throwable {
-    Assertions.assertThat(stats.snapshot())
+    assertThat(stats.snapshot())
         .describedAs("Snapshot of %s", stats)
         .isFalse();
   }
@@ -51,10 +60,10 @@ public class TestEmptyIOStatistics extends HadoopTestBase {
   public void testIterator() throws Throwable {
     Iterator<Map.Entry<String, Long>> iterator = stats.iterator();
 
-    Assertions.assertThat(iterator.hasNext())
+    assertThat(iterator.hasNext())
         .describedAs("iterator.hasNext()")
         .isFalse();
-    Assertions.assertThatThrownBy(iterator::next);
+    assertThatThrownBy(iterator::next);
   }
 
   @Test
@@ -63,10 +72,10 @@ public class TestEmptyIOStatistics extends HadoopTestBase {
     assertStatisticUntracked(stats, "anything");
 
     // These actually test the assertion coverage
-    Assertions.assertThatThrownBy(() ->
+    assertThatThrownBy(() ->
         assertStatisticTracked(stats, "anything"));
-    Assertions.assertThatThrownBy(() ->
-        assertStatisticsValue(stats, "anything", 0));
+    assertThatThrownBy(() ->
+        assertStatisticHasValue(stats, "anything", 0));
   }
 
 

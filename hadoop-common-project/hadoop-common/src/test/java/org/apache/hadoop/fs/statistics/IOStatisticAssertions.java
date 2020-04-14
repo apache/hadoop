@@ -18,13 +18,16 @@
 
 package org.apache.hadoop.fs.statistics;
 
-import org.assertj.core.api.Assertions;
-
 import org.apache.hadoop.classification.InterfaceStability;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 /**
- * Assertions and other helper classes for IOStatistics testing.
+ * Assertions and any other support for IOStatistics testing.
  * If used downstream, know it is unstable.
+ * There's some oddness here related to AssertJ's handling of iterables;
+ * we need to explicitly cast it to call methods on the interface
+ * other than iterator().
  */
 @InterfaceStability.Unstable
 public final class IOStatisticAssertions {
@@ -37,15 +40,16 @@ public final class IOStatisticAssertions {
    * Note: some type inference in Assertions causes confusion
    * with the .matches predicate; it needs to be cast down to its type
    * again.
-   * @param stats statistics
+   * @param stats statistics source
    * @param attr attribute to probe for
    */
-  static void assertHasAttribute(IOStatistics stats,
-      IOStatistics.Attributes attr) {
-    Assertions.assertThat(stats)
+  public static void assertHasAttribute(
+      final IOStatistics stats,
+      final IOStatistics.Attributes attr) {
+    assertThat(stats)
         .describedAs("Statistics %s and attribute %s", stats, attr)
         .isNotNull()
-        .matches(s -> ((IOStatistics)s).hasAttribute(attr),
+        .matches(s -> ((IOStatistics) s).hasAttribute(attr),
             "Does not have attribute " + attr);
   }
 
@@ -54,21 +58,30 @@ public final class IOStatisticAssertions {
    * Note: some type inference in Assertions causes confusion
    * with the .matches predicate; it needs to be cast down to its type
    * again.
-   * @param stats statistics
+   * @param stats statistics source
    * @param attr attribute to probe for
    */
-  static void assertDoesNotHaveAttribute(IOStatistics stats,
-      IOStatistics.Attributes attr) {
-    Assertions.assertThat(stats)
+  public static void assertDoesNotHaveAttribute(
+      final IOStatistics stats,
+      final IOStatistics.Attributes attr) {
+    assertThat(stats)
         .describedAs("Statistics %s and attribute %s", stats, attr)
         .isNotNull()
-        .matches(s -> !((IOStatistics)s).hasAttribute(attr),
-            "Should not have attribute " +   attr);
+        .matches(s -> !((IOStatistics) s).hasAttribute(attr),
+            "Should not have attribute " + attr);
   }
 
-  static void assertStatisticsValue(IOStatistics stats,
-      String key, long value) {
-    Assertions.assertThat(stats)
+  /**
+   * Assert that a given statistic has an expected value.
+   * @param stats statistics source
+   * @param key statistic key
+   * @param value expected value.
+   */
+  public static void assertStatisticHasValue(
+      final IOStatistics stats,
+      final String key,
+      final long value) {
+    assertThat(stats)
         .describedAs("Statistics %s and key %s with expected value %s", stats,
             key, value)
         .isNotNull()
@@ -77,24 +90,42 @@ public final class IOStatisticAssertions {
         .isEqualTo(value);
   }
 
-  static void assertStatisticUnknown(IOStatistics stats,
-      String key) {
-    Assertions.assertThat(stats.getStatistic(key))
+  /**
+   * Assert that a given statistic is unknown.
+   * @param stats statistics source
+   * @param key statistic key
+   */
+  public static void assertStatisticUnknown(
+      final IOStatistics stats,
+      final String key) {
+    assertThat(stats.getStatistic(key))
         .describedAs("Statistics %s and key %s", stats,
             key)
         .isNull();
   }
 
-  static void assertStatisticTracked(IOStatistics stats,
-      String key) {
-    Assertions.assertThat(stats.isTracked(key))
+  /**
+   * Assert that a given statistic is tracked.
+   * @param stats statistics source
+   * @param key statistic key
+   */
+  public static void assertStatisticTracked(
+      final IOStatistics stats,
+      final String key) {
+    assertThat(stats.isTracked(key))
         .describedAs("Statistic %s is not tracked in %s", key, stats)
         .isTrue();
   }
 
-  static void assertStatisticUntracked(IOStatistics stats,
-      String key) {
-    Assertions.assertThat(stats.isTracked(key))
+  /**
+   * Assert that a given statistic is untracked.
+   * @param stats statistics source
+   * @param key statistic key
+   */
+  public static void assertStatisticUntracked(
+      final IOStatistics stats,
+      final String key) {
+    assertThat(stats.isTracked(key))
         .describedAs("Statistic %s is tracked in %s", key, stats)
         .isFalse();
   }

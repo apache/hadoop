@@ -25,6 +25,10 @@ import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
  */
 public interface S3AStatisticsContext extends CountersAndGauges {
 
+  /**
+   * Get the metastore instrumentation.
+   * @return an instance of the metastore statistics tracking.
+   */
   MetastoreInstrumentation getMetastoreInstrumentation();
 
   /**

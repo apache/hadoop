@@ -26,20 +26,55 @@ import java.time.Duration;
  */
 public interface StatisticsFromAwsSdk {
 
+  /**
+   * Record a number of AWS requests.
+   * @param count number of events.
+   */
   void updateAwsRequestCount(long count);
 
+  /**
+   * Record a number of AWS request retries.
+   * @param count number of events.
+   */
   void updateAwsRetryCount(long count);
 
+  /**
+   * Record a number of throttle exceptions received.
+   * @param count number of events.
+   */
   void updateAwsThrottleExceptionsCount(long count);
 
-  void addAwsRequestTime(Duration duration);
+  /**
+   * Record how long a request took overall.
+   * @param duration duration of operation.
+   */
+  void noteAwsRequestTime(Duration duration);
 
-  void addAwsClientExecuteTime(Duration duration);
+  /**
+   * Record how long a request took to execute on the
+   * client.
+   * @param duration duration of operation.
+   */
+  void noteAwsClientExecuteTime(Duration duration);
 
-  void addRequestMarshallTime(Duration duration);
+  /**
+   * Record how long a request took to marshall into
+   * XML.
+   * @param duration duration of operation.
+   */
+  void noteRequestMarshallTime(Duration duration);
 
-  void addRequestSigningTime(Duration duration);
+  /**
+   * Record how long a request took to sign, including
+   * any calls to EC2 credential endpoints.
+   * @param duration duration of operation.
+   */
+  void noteRequestSigningTime(Duration duration);
 
-  void addResponseProcessingTime(Duration duration);
+  /**
+   * Record how long it took to process the response.
+   * @param duration duration of operation.
+   */
+  void noteResponseProcessingTime(Duration duration);
 }
 

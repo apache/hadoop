@@ -150,17 +150,18 @@ public class DefaultS3ClientFactory extends Configured
   /**
    * Given an endpoint string, return an endpoint config, or null, if none
    * is needed.
-   * @param endpoint possibly empty endpoint.
+   * @param endpoint possibly null endpoint.
    * @return a configuration for the S3 client builder.
    */
   @VisibleForTesting
-  static AwsClientBuilder.EndpointConfiguration createEndpointConfiguration(
+  public static AwsClientBuilder.EndpointConfiguration createEndpointConfiguration(
       final String endpoint) {
     if (endpoint.isEmpty()) {
       return null;
     }
 
-    String region= AwsHostNameUtils.parseRegionName(endpoint, "s3");;
+    String region = AwsHostNameUtils.parseRegionName(endpoint, "s3");;
+    LOG.debug("Region for endpoint {} is determined as {}", endpoint, region);
     return new AwsClientBuilder.EndpointConfiguration(endpoint, region);
   }
 }

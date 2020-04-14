@@ -166,7 +166,7 @@ class S3ABlockOutputStream extends OutputStream implements
     // test instantiations may not provide statistics;
     iostatistics = statistics != null
         ? statistics.createIOStatistics()
-        : new EmptyIOStatistics();
+        : EmptyIOStatistics.getInstance();
     this.writeOperationHelper = writeOperationHelper;
     this.putTracker = putTracker;
     Preconditions.checkArgument(blockSize >= Constants.MULTIPART_MIN_SIZE,

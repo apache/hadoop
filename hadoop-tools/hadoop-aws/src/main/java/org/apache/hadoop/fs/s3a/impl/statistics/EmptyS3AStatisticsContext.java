@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentationImpl;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.impl.EmptyIOStatistics;
 
 /**
  * Special statistics context, all of whose context operations are no-ops.
@@ -86,6 +87,9 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
   }
 
+  /**
+   * Input Stream statistics callbacks.
+   */
   private static final class EmptyInputStreamStatistics
       implements S3AInputStreamStatistics {
 
@@ -150,9 +154,13 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     }
 
+    /**
+     * Return an IO statistics instance.
+     * @return an empty IO statistics instance.
+     */
     @Override
     public IOStatistics createIOStatistics() {
-      return null;
+      return EmptyIOStatistics.getInstance();
     }
 
     @Override
@@ -365,7 +373,7 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     @Override
     public IOStatistics createIOStatistics() {
-      return null;
+      return EmptyIOStatistics.getInstance();
     }
 
     @Override
@@ -393,7 +401,7 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
   }
 
-  public static final class EmptyStatisticsFromAwsSdk implements
+  private static final class EmptyStatisticsFromAwsSdk implements
       StatisticsFromAwsSdk {
 
     @Override
@@ -412,27 +420,27 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
-    public void addAwsRequestTime(final Duration ofMillis) {
+    public void noteAwsRequestTime(final Duration ofMillis) {
 
     }
 
     @Override
-    public void addAwsClientExecuteTime(final Duration ofMillis) {
+    public void noteAwsClientExecuteTime(final Duration ofMillis) {
 
     }
 
     @Override
-    public void addRequestMarshallTime(final Duration duration) {
+    public void noteRequestMarshallTime(final Duration duration) {
 
     }
 
     @Override
-    public void addRequestSigningTime(final Duration duration) {
+    public void noteRequestSigningTime(final Duration duration) {
 
     }
 
     @Override
-    public void addResponseProcessingTime(final Duration duration) {
+    public void noteResponseProcessingTime(final Duration duration) {
 
     }
   }
