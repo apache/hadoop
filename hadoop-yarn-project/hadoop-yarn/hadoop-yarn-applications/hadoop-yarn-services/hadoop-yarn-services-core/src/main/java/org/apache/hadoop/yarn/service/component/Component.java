@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.api.records.ExecutionType;
 import static org.apache.hadoop.yarn.service.api.records.Component
     .RestartPolicyEnum;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
+import org.apache.hadoop.yarn.api.records.NodeAttributeOpCode;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceSizing;
@@ -811,16 +812,12 @@ public class Component implements EventHandler<ComponentEvent> {
           PlacementConstraint constraint = null;
           switch (yarnServiceConstraint.getType()) {
           case AFFINITY:
-            constraint = PlacementConstraints
-                .targetIn(yarnServiceConstraint.getScope().getValue(),
-                    targetExpressions.toArray(new TargetExpression[0]))
-                .build();
+            constraint = getAffinityConstraint(yarnServiceConstraint,
+              targetExpressions);
             break;
           case ANTI_AFFINITY:
-            constraint = PlacementConstraints
-                .targetNotIn(yarnServiceConstraint.getScope().getValue(),
-                    targetExpressions.toArray(new TargetExpression[0]))
-                .build();
+            constraint = getAntiAffinityConstraint(yarnServiceConstraint,
+              targetExpressions);
             break;
           case AFFINITY_WITH_CARDINALITY:
             constraint = PlacementConstraints.targetCardinality(
@@ -863,6 +860,46 @@ public class Component implements EventHandler<ComponentEvent> {
       schedulingRequests.add(request);
       amrmClient.addSchedulingRequests(schedulingRequests);
     }
+  }
+
+  private PlacementConstraint getAffinityConstraint(
+      org.apache.hadoop.yarn.service.api.records.PlacementConstraint
+      yarnServiceConstraint, List<TargetExpression> targetExpressions) {
+    PlacementConstraint constraint = null;
+    if (!yarnServiceConstraint.getTargetTags().isEmpty() ||
+        !yarnServiceConstraint.getNodePartitions().isEmpty()) {
+      constraint = PlacementConstraints
+        .targetIn(yarnServiceConstraint.getScope().getValue(),
+            targetExpressions.toArray(new TargetExpression[0]))
+                .build();
+    }
+    if (!yarnServiceConstraint.getNodeAttributes().isEmpty()) {
+      constraint = PlacementConstraints
+        .targetNodeAttribute(yarnServiceConstraint.getScope().getValue(),
+            NodeAttributeOpCode.EQ, targetExpressions.toArray(
+                new TargetExpression[0])).build();
+    }
+    return constraint;
+  }
+
+  private PlacementConstraint getAntiAffinityConstraint(
+      org.apache.hadoop.yarn.service.api.records.PlacementConstraint
+      yarnServiceConstraint, List<TargetExpression> targetExpressions) {
+    PlacementConstraint constraint = null;
+    if (!yarnServiceConstraint.getTargetTags().isEmpty() ||
+        !yarnServiceConstraint.getNodePartitions().isEmpty()) {
+      constraint = PlacementConstraints
+        .targetNotIn(yarnServiceConstraint.getScope().getValue(),
+            targetExpressions.toArray(new TargetExpression[0]))
+                .build();
+    }
+    if (!yarnServiceConstraint.getNodeAttributes().isEmpty()) {
+      constraint = PlacementConstraints
+        .targetNodeAttribute(yarnServiceConstraint.getScope().getValue(),
+            NodeAttributeOpCode.NE, targetExpressions.toArray(
+                new TargetExpression[0])).build();
+    }
+    return constraint;
   }
 
   private void setDesiredContainers(int n) {
