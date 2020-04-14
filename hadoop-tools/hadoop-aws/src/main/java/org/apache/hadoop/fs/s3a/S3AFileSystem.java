@@ -23,7 +23,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
-import java.net.InetAddress;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.text.DateFormat;
@@ -115,6 +114,7 @@ import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
@@ -480,18 +480,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             .getInt(S3A_BUCKET_PROBE, S3A_BUCKET_PROBE_DEFAULT);
     Preconditions.checkArgument(bucketProbe >= 0,
             "Value of " + S3A_BUCKET_PROBE + " should be >= 0");
-    String endPoint = getConf().getTrimmed(ENDPOINT, "");
-    if (!endPoint.isEmpty() && LOG.isDebugEnabled()) {
-      LOG.debug("Bucket endpoint : {}", InetAddress.getByName(endPoint).toString());
-    }
     switch (bucketProbe) {
     case 0:
       LOG.debug("skipping check for bucket existence");
       break;
     case 1:
+      logDnsLookup();
       verifyBucketExists();
       break;
     case 2:
+      logDnsLookup();
       verifyBucketExistsV2();
       break;
     default:
@@ -500,6 +498,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           S3A_BUCKET_PROBE, bucketProbe);
       verifyBucketExistsV2();
       break;
+    }
+  }
+
+  private void logDnsLookup() {
+    String endPoint = getConf().getTrimmed(ENDPOINT, "");
+    if (!endPoint.isEmpty() && LOG.isDebugEnabled()) {
+      LOG.debug("Bucket endpoint : {}/{}",
+              endPoint,
+              NetUtils.normalizeHostName(endPoint));
     }
   }
 
