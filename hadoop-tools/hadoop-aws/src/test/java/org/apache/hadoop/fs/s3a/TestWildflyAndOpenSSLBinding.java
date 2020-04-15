@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
+import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -36,24 +37,39 @@ import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.SSLChann
 import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Make sure that wildfly is not on this classpath and that we can still
  * create connections in the default option, but that openssl fails.
+ * This test suite is designed to work whether or not wildfly JAR is on
+ * the classpath, and when openssl native libraries are/are not
+ * on the path.
+ * Some of the tests are skipped in a maven build because wildfly
+ * is always on the classpath -but they are retained as in-IDE
+ * runs may be different, and if wildfly is removed from
+ * the compile or test CP then different test cases will execute.
  */
-public class TestOpenSSLClasspaths extends AbstractHadoopTestBase {
+public class TestWildflyAndOpenSSLBinding extends AbstractHadoopTestBase {
 
-  @Test
-  public void testWildflyOffCP() throws Throwable {
-    // make sure wildfly is off the CP, and yet
-    // all our tests work
+  /** Was wildfly found. */
+  private boolean hasWildfly;
+
+  @Before
+  public void setup() throws Exception {
+    // determine whether or not wildfly is on the classpath
     ClassLoader loader = this.getClass().getClassLoader();
-    intercept(ClassNotFoundException.class, () ->
-        loader.loadClass("org.wildfly.openssl.OpenSSLProvider"));
+    try {
+      loader.loadClass("org.wildfly.openssl.OpenSSLProvider");
+      hasWildfly = true;
+    } catch (ClassNotFoundException e) {
+      hasWildfly = false;
+    }
   }
 
+
   @Test
-  public void testModeRejection() throws Throwable {
+  public void testUnknownMode() throws Throwable {
     DelegatingSSLSocketFactory.resetDefaultFactory();
     Configuration conf = new Configuration(false);
     conf.set(SSL_CHANNEL_MODE, "no-such-mode ");
@@ -62,17 +78,32 @@ public class TestOpenSSLClasspaths extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testOpenSSL() throws Throwable {
-    intercept(NoClassDefFoundError.class, "wildfly", () -> {
-      bindSocketFactory(OpenSSL);
-      return DelegatingSSLSocketFactory.getDefaultFactory()
-          .getChannelMode();
-    });
+  public void testOpenSSLNoWildfly() throws Throwable {
+    assumeThat(hasWildfly).isFalse();
+    intercept(NoClassDefFoundError.class, "wildfly", () ->
+      bindSocketFactory(OpenSSL));
   }
 
+  /**
+   * If there is no WF on the CP, then we always downgrade
+   * to default.
+   */
   @Test
-  public void testDefaultDowngrades() throws Throwable {
+  public void testDefaultDowngradesNoWildfly() throws Throwable {
+    assumeThat(hasWildfly).isFalse();
     expectBound(Default, Default_JSSE);
+  }
+
+  /**
+   * Wildfly is on the CP; if openssl native is on the
+   * path then openssl will load, otherwise JSSE.
+   */
+  @Test
+  public void testWildflyOpenSSL() throws Throwable {
+    assumeThat(hasWildfly).isTrue();
+    assertThat(bindSocketFactory(Default))
+        .describedAs("Sockets from mode " + Default)
+        .isIn(OpenSSL, Default_JSSE);
   }
 
   @Test
@@ -95,9 +126,7 @@ public class TestOpenSSLClasspaths extends AbstractHadoopTestBase {
       DelegatingSSLSocketFactory.SSLChannelMode channelMode,
       DelegatingSSLSocketFactory.SSLChannelMode finalMode)
       throws Throwable {
-    bindSocketFactory(channelMode);
-    assertThat(
-        DelegatingSSLSocketFactory.getDefaultFactory().getChannelMode())
+    assertThat(bindSocketFactory(channelMode))
         .describedAs("Channel mode of socket factory created with mode %s",
             channelMode)
         .isEqualTo(finalMode);
@@ -106,8 +135,9 @@ public class TestOpenSSLClasspaths extends AbstractHadoopTestBase {
   /**
    * Bind the socket factory to a given channel mode.
    * @param channelMode mode to use
+   * @return the actual channel mode.
    */
-  private void bindSocketFactory(
+  private DelegatingSSLSocketFactory.SSLChannelMode bindSocketFactory(
       final DelegatingSSLSocketFactory.SSLChannelMode channelMode)
       throws IOException {
     DelegatingSSLSocketFactory.resetDefaultFactory();
@@ -116,6 +146,7 @@ public class TestOpenSSLClasspaths extends AbstractHadoopTestBase {
     ClientConfiguration awsConf = new ClientConfiguration();
     awsConf.setProtocol(Protocol.HTTPS);
     bindSSLChannelMode(conf, awsConf);
+    return DelegatingSSLSocketFactory.getDefaultFactory().getChannelMode();
   }
 
 }
