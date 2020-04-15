@@ -151,7 +151,8 @@ public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
 
   private void initializeSSLContext(SSLChannelMode preferredChannelMode)
       throws NoSuchAlgorithmException, KeyManagementException, IOException {
-    LOG.debug("Initializing SSL Context to channel mode {}", preferredChannelMode);
+    LOG.debug("Initializing SSL Context to channel mode {}",
+        preferredChannelMode);
     switch (preferredChannelMode) {
     case Default:
       try {
@@ -184,8 +185,8 @@ public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
 
   /**
    * Bind to the OpenSSL provider via wildfly.
-   * This MUST be the only place where wildfly classes are referenced, so ensuring
-   * that any linkage problems only surface here where they may
+   * This MUST be the only place where wildfly classes are referenced,
+   * so ensuring that any linkage problems only surface here where they may
    * be caught by the initialization code.
    */
   private void bindToOpenSSLProvider()

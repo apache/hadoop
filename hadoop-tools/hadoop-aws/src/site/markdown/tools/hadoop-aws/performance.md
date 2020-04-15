@@ -539,7 +539,7 @@ in Java 9, so if `default_jsse` is specified and applications run on Java
 includes GCM in the list of cipher suites on Java 8, so it is equivalent to
 running with the vanilla JSSE.
 
-### <a name="openssl"></> OpenSSL Acceleration
+### <a name="openssl"></a> OpenSSL Acceleration
 
 **Experimental Feature**
 
@@ -552,8 +552,8 @@ significant performance benefit over the JSSE.
 S3A uses the
 [WildFly OpenSSL](https://github.com/wildfly-security/wildfly-openssl) library
 to bind OpenSSL to the Java JSSE APIs. This library allows S3A to
-transparently read data using OpenSSL. The wildfly-openssl library is a
-runtime dependency of S3A and contains native libraries for binding the Java
+transparently read data using OpenSSL. The `wildfly-openssl` library is an
+optional runtime dependency of S3A and contains native libraries for binding the Java
 JSSE to OpenSSL.
 
 WildFly OpenSSL must load OpenSSL itself. This can be done using the system
@@ -604,12 +604,12 @@ Supported values for `fs.s3a.ssl.channel.mode`:
 | `openssl` | Uses OpenSSL, fails if OpenSSL cannot be loaded |
 
 The naming convention is setup in order to preserve backwards compatibility
-with HADOOP-15669.
+with the ABFS support of [HADOOP-15669](https://issues.apache.org/jira/browse/HADOOP-15669).
 
 Other options may be added to `fs.s3a.ssl.channel.mode` in the future as
 further SSL optimizations are made.
 
-### Wildfly classpath requirements
+### WildFly classpath requirements
 
 For OpenSSL acceleration to work, a compatible version of the
 wildfly JAR must be on the classpath. This is not explicitly declared
