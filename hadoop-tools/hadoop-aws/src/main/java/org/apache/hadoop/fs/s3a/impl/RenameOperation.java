@@ -325,6 +325,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
       // marker.
       LOG.debug("Deleting fake directory marker at destination {}",
           destStatus.getPath());
+      // TODO: dir marker policy doesn't always need to do this.
       callbacks.deleteObjectAtPath(destStatus.getPath(), dstKey, false, null);
     }
 

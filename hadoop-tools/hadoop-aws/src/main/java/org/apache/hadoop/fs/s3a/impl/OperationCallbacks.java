@@ -105,6 +105,24 @@ public interface OperationCallbacks {
       throws IOException;
 
   /**
+   * Delete a directory marker also updating the metastore.
+   * If the marker retention policy is to keep markers under this
+   * path, the marker is not deleted.
+   * This call does <i>not</i> create any mock parent entries.
+   * Retry policy: retry untranslated; delete considered idempotent.
+   * @param path path to delete
+   * @param key key of entry
+   * @param operationState (nullable) operational state for a bulk update
+   * @throws AmazonClientException problems working with S3
+   * @throws IOException IO failure in the metastore
+   */
+  @Retries.RetryTranslated
+  void deleteDirectoryMarkers(final Path path,
+      final String key,
+      final BulkOperationState operationState)
+      throws IOException;
+
+  /**
    * Recursive list of files and empty directories.
    *
    * @param path path to list from

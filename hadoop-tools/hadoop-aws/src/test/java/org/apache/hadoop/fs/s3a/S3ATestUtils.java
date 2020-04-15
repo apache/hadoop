@@ -618,6 +618,12 @@ public final class S3ATestUtils {
     // add this so that even on tests where the FS is shared,
     // the FS is always "magic"
     conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
+    String directoryRetention = getTestProperty(
+        conf,
+        DIRECTORY_MARKER_POLICY,
+        DEFAULT_DIRECTORY_MARKER_POLICY);
+    conf.set(DIRECTORY_MARKER_POLICY, directoryRetention);
+
     return conf;
   }
 
@@ -882,7 +888,8 @@ public final class S3ATestUtils {
   public static S3AFileStatus getStatusWithEmptyDirFlag(
       final S3AFileSystem fs,
       final Path dir) throws IOException {
-    return fs.innerGetFileStatus(dir, true, StatusProbeEnum.ALL);
+    return fs.innerGetFileStatus(dir, true,
+        StatusProbeEnum.ALL);
   }
 
   /**

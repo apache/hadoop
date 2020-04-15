@@ -51,6 +51,7 @@
     <!-- Set a longer timeout for integration test (in milliseconds) -->
     <test.integration.timeout>200000</test.integration.timeout>
 
+    <fs.s3a.directory.marker></fs.s3a.directory.marker>
   </properties>
 
   <profiles>
@@ -122,6 +123,7 @@
                 <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                 <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                 <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
+                <fs.s3a.directory.marker>${fs.s3a.directory.marker}</fs.s3a.directory.marker>
               </systemPropertyVariables>
             </configuration>
           </plugin>
@@ -162,6 +164,7 @@
                     <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
                     <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
                     <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
+                    <fs.s3a.directory.marker>${fs.s3a.directory.marker}</fs.s3a.directory.marker>
 
                     <test.default.timeout>${test.integration.timeout}</test.default.timeout>
                   </systemPropertyVariables>
@@ -214,6 +217,7 @@
                     <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
                     <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
                     <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
+                    <fs.s3a.directory.marker>${fs.s3a.directory.marker}</fs.s3a.directory.marker>
                   </systemPropertyVariables>
                   <!-- Do a sequential run for tests that cannot handle -->
                   <!-- parallel execution. -->
@@ -268,6 +272,7 @@
                     <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
                     <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
                     <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
+                    <fs.s3a.directory.marker>${fs.s3a.directory.marker}</fs.s3a.directory.marker>
                   </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>${fs.s3a.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                 </configuration>
@@ -328,6 +333,44 @@
       </activation>
       <properties >
         <fs.s3a.s3guard.test.authoritative>true</fs.s3a.s3guard.test.authoritative>
+      </properties>
+    </profile>
+
+    <!-- Directory marker retention options, all from the -Dmarkers value-->
+    <profile>
+      <id>keep-markers</id>
+      <activation>
+        <property>
+          <name>markers</name>
+          <value>keep</value>
+        </property>
+      </activation>
+      <properties >
+        <fs.s3a.directory.marker>keep</fs.s3a.directory.marker>
+      </properties>
+    </profile>
+    <profile>
+      <id>delete-markers</id>
+      <activation>
+        <property>
+          <name>markers</name>
+          <value>delete</value>
+        </property>
+      </activation>
+      <properties >
+        <fs.s3a.directory.marker>delete</fs.s3a.directory.marker>
+      </properties>
+    </profile>
+    <profile>
+      <id>auth-markers</id>
+      <activation>
+        <property>
+          <name>markers</name>
+          <value>authoritative</value>
+        </property>
+      </activation>
+      <properties >
+        <fs.s3a.directory.marker>authoritative</fs.s3a.directory.marker>
       </properties>
     </profile>
 

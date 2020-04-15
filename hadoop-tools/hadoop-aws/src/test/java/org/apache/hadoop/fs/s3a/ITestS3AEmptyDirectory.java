@@ -80,7 +80,7 @@ public class ITestS3AEmptyDirectory extends AbstractS3ATestBase {
   private S3AFileStatus getS3AFileStatus(S3AFileSystem fs, Path p) throws
       IOException {
     return fs.innerGetFileStatus(p, true,
-        StatusProbeEnum.ALL);
+        StatusProbeEnum.FILES_AND_DIRECTORIES);
   }
 
 }

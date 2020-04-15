@@ -953,4 +953,40 @@ public final class Constants {
    * Value: {@value} seconds.
    */
   public static final int THREAD_POOL_SHUTDOWN_DELAY_SECONDS = 30;
+
+  /**
+   * Policy for directory markers.
+   * This is a new feature of HADOOP-13230 which addresses
+   * some scale, performance and permissions issues -but
+   * at the risk of backwards compatibility.
+   */
+  public static final String DIRECTORY_MARKER_POLICY =
+      "fs.s3a.directory.markers";
+
+  /**
+   * Retain directory markers.
+   * Value: {@value}.
+   */
+  public static final String DIRECTORY_MARKER_POLICY_KEEP =
+      "keep";
+
+  /**
+   * Delete directory markers. This is the backwards compatible option.
+   * Value: {@value}.
+   */
+  public static final String DIRECTORY_MARKER_POLICY_DELETE =
+      "delete";
+
+  /**
+   * Retain directory markers in authoritative directory trees only.
+   * Value: {@value}.
+   */
+  public static final String DIRECTORY_MARKER_POLICY_AUTHORITATIVE =
+      "authoritative";
+
+  /**
+   * Default retention policy.
+   */
+  public static final String DEFAULT_DIRECTORY_MARKER_POLICY =
+      DIRECTORY_MARKER_POLICY_DELETE;
 }

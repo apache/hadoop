@@ -125,10 +125,25 @@ public class Listing {
       Listing.FileStatusAcceptor acceptor,
       RemoteIterator<S3AFileStatus> providedStatus) throws IOException {
     return new FileStatusListingIterator(
-        new ObjectListingIterator(listPath, request),
+        createObjectListingIterator(listPath, request),
         filter,
         acceptor,
         providedStatus);
+  }
+
+  /**
+   * Create an object listing iterator against a path, with a given
+   * list object request.
+   * @param listPath path of the listing
+   * @param request initial request to make
+   * @return the iterator
+   * @throws IOException IO Problems
+   */
+  @Retries.RetryRaw
+  public ObjectListingIterator createObjectListingIterator(
+      final Path listPath,
+      final S3ListRequest request) throws IOException {
+    return new ObjectListingIterator(listPath, request);
   }
 
   /**

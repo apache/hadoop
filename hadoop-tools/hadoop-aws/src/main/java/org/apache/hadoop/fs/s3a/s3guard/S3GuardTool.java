@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.select.SelectTool;
+import org.apache.hadoop.fs.s3a.tools.MarkerTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -98,6 +99,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
       "Commands: \n" +
       "\t" + Init.NAME + " - " + Init.PURPOSE + "\n" +
       "\t" + Destroy.NAME + " - " + Destroy.PURPOSE + "\n" +
+      "\t" + MarkerTool.NAME + " - " + MarkerTool.PURPOSE + "\n" +
       "\t" + Import.NAME + " - " + Import.PURPOSE + "\n" +
       "\t" + BucketInfo.NAME + " - " + BucketInfo.PURPOSE + "\n" +
       "\t" + Uploads.NAME + " - " + Uploads.PURPOSE + "\n" +
@@ -106,7 +108,8 @@ public abstract class S3GuardTool extends Configured implements Tool,
       "\t" + SetCapacity.NAME + " - " + SetCapacity.PURPOSE + "\n" +
       "\t" + SelectTool.NAME + " - " + SelectTool.PURPOSE + "\n" +
       "\t" + Fsck.NAME + " - " + Fsck.PURPOSE + "\n" +
-      "\t" + Authoritative.NAME + " - " + Authoritative.PURPOSE + "\n";
+      "\t" + Authoritative.NAME + " - " + Authoritative.PURPOSE + "\n"
+      ;
   private static final String DATA_IN_S3_IS_PRESERVED
       = "(all data in S3 is preserved)";
 
