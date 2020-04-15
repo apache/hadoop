@@ -3036,7 +3036,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final Set<StatusProbeEnum> probes,
       @Nullable final Set<Path> tombstones,
       final boolean needEmptyDirectoryFlag) throws IOException {
-    LOG.debug("S3GetFileStatus");
+    LOG.debug("S3GetFileStatus {}", path);
     Preconditions.checkArgument(!needEmptyDirectoryFlag
         || probes.contains(StatusProbeEnum.List),
         "s3GetFileStatus(%s) wants to know if a directory is empty but"

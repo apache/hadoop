@@ -563,16 +563,16 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
         + "keeping the source dir present");
 
     Path baseDir = dir(methodPath());
-    final Path srcFilePath = file(new Path(baseDir, "source.txt"));
+    final Path sourceFile = file(new Path(baseDir, "source.txt"));
 
     // create a new source file.
     // Explicitly use a new path object to guarantee that the parent paths
     // are different object instances and so equals() rather than ==
     // is
-    Path parent2 = srcFilePath.getParent();
-    Path srcFile2 = file(new Path(parent2, "source2.txt"));
+    Path parent2 = sourceFile.getParent();
+    Path destFile = file(new Path(parent2, "dest"));
     verifyMetrics(() ->
-            execRename(srcFilePath, srcFile2),
+            execRename(sourceFile, destFile),
         raw(metadataRequests, HEAD_REQUESTS_SINGLE_FILE_RENAME - 1),
         raw(listRequests, LIST_REQUESTS_SINGLE_FILE_RENAME_DIFFERENT_DIR),
         always(directoriesCreated, 0),
@@ -580,11 +580,11 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
         always(fakeDirectoriesDeleted, 0));
   }
 
-  public String execRename(final Path srcFilePath,
-      final Path srcFile2) throws IOException {
-    getFileSystem().rename(srcFile2, srcFilePath);
+  public String execRename(final Path source,
+      final Path dest) throws IOException {
+    getFileSystem().rename(source, dest);
     return String.format("rename(%s, %s)",
-        srcFile2, srcFilePath);
+        dest, source);
   }
 
   @Test
