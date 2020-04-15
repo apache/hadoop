@@ -82,7 +82,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
@@ -746,8 +745,8 @@ public class TestApplicationMasterService {
     MockRM rm = new MockRM(yarnConf);
     rm.start();
 
-    MockNM nm1 = rm.registerNode("199.99.99.1:1234", TestUtils
-        .createResource(DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+    MockNM nm1 = rm.registerNode("199.99.99.1:1234", ResourceTypesTestHelper
+        .newResource(DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
             DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES, null));
 
     RMApp app1 = rm.submitApp(GB, "app", "user", null, "default");
@@ -894,10 +893,10 @@ public class TestApplicationMasterService {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("default");
 
-    MockNM nm1 = rm.registerNode("199.99.99.1:1234", TestUtils
-        .createResource(DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+    MockNM nm1 = rm.registerNode("199.99.99.1:1234", ResourceTypesTestHelper
+        .newResource(DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
             DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
-            ImmutableMap.of("res_1", 4)));
+            ImmutableMap.of("res_1", "4")));
 
     RMApp app1 = rm.submitApp(GB, "app", "user", null, "default");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
@@ -909,8 +908,8 @@ public class TestApplicationMasterService {
     boolean exception = false;
     try {
       am1.allocate(Collections.singletonList(ResourceRequest.newBuilder()
-              .capability(TestUtils.createResource(9 * GB, 1,
-                      ImmutableMap.of("res_1", 1)))
+              .capability(ResourceTypesTestHelper.newResource(9 * GB, 1,
+                      ImmutableMap.of("res_1", "1")))
               .numContainers(1)
               .resourceName("*")
               .build()), null);
@@ -924,7 +923,8 @@ public class TestApplicationMasterService {
       // Now request resource, vcores > allowed
       am1.allocate(Collections.singletonList(ResourceRequest.newBuilder()
           .capability(
-              TestUtils.createResource(8 * GB, 18, ImmutableMap.of("res_1", 1)))
+              ResourceTypesTestHelper.newResource(8 * GB, 18,
+                  ImmutableMap.of("res_1", "1")))
               .numContainers(1)
               .resourceName("*")
               .build()), null);
@@ -937,8 +937,8 @@ public class TestApplicationMasterService {
     try {
       // Now request resource, res_1 > allowed
       am1.allocate(Collections.singletonList(ResourceRequest.newBuilder()
-              .capability(TestUtils.createResource(8 * GB, 1,
-                      ImmutableMap.of("res_1", 100)))
+              .capability(ResourceTypesTestHelper.newResource(8 * GB, 1,
+                      ImmutableMap.of("res_1", "100")))
               .numContainers(1)
               .resourceName("*")
               .build()), null);
