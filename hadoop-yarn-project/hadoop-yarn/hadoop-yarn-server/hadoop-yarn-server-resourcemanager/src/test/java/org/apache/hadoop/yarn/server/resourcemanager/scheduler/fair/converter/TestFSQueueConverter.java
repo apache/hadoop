@@ -316,7 +316,7 @@ public class TestFSQueueConverter {
 
     converter.convertQueueHierarchy(rootQueue);
 
-    Set<String> parentQueues = Sets.newHashSet("root",
+    Set<String> parentQueues = Sets.newHashSet(
         "root.admins",
         "root.users");
 
