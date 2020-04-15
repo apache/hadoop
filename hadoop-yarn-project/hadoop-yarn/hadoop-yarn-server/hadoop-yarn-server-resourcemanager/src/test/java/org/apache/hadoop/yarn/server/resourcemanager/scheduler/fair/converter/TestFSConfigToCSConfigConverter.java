@@ -649,6 +649,7 @@ public class TestFSConfigToCSConfigConverter {
     testAutoCreateChildQueuesWithoutPlacementRules(false);
   }
 
+  @SuppressWarnings("checkstyle:linelength")
   private void testAutoCreateChildQueuesWithoutPlacementRules(
       boolean allowUndeclaredPools) throws Exception {
     config = new Configuration(false);
@@ -661,15 +662,27 @@ public class TestFSConfigToCSConfigConverter {
     converter.convert(config);
 
     Configuration convertedConf = converter.getCapacitySchedulerConfig();
-    String property =
+    String rootUserAutoCreate =
+        "yarn.scheduler.capacity.root.users.auto-create-child-queue.enabled";
+    String rootAutoCreate =
         "yarn.scheduler.capacity.root.auto-create-child-queue.enabled";
+    String leafQueueAutoCreate =
+        "yarn.scheduler.capacity.root.users.joe.auto-create-child-queue.enabled";
 
     if (allowUndeclaredPools) {
-      assertEquals("Auto-create queue wasn't enabled", true,
-          convertedConf.getBoolean(property, false));
+      assertEquals("Auto-create queue wasn't enabled for root.users", true,
+          convertedConf.getBoolean(rootUserAutoCreate, false));
+      assertNull("Auto-create queue shouldn't be set for root",
+          convertedConf.get(rootAutoCreate));
+      assertNull("Auto-create queue shouldn't be set for leaf",
+          convertedConf.get(leafQueueAutoCreate));
     } else {
-      assertNull("Auto-create queue shouldn't be set",
-          convertedConf.get(property));
+      assertNull("Auto-create queue shouldn't be set for root.users",
+          convertedConf.get(rootUserAutoCreate));
+      assertNull("Auto-create queue shouldn't be set for root",
+          convertedConf.get(rootAutoCreate));
+      assertNull("Auto-create queue shouldn't be set for leaf",
+          convertedConf.get(leafQueueAutoCreate));
     }
   }
 
