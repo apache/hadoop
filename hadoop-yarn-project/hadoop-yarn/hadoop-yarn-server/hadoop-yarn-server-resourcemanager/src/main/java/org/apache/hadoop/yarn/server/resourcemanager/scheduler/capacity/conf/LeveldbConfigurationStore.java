@@ -333,6 +333,7 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
   }
 
   @VisibleForTesting
+  @Override
   protected LinkedList<LogMutation> getLogs() throws Exception {
     return deserLogMutations(db.get(bytes(LOG_KEY)));
   }

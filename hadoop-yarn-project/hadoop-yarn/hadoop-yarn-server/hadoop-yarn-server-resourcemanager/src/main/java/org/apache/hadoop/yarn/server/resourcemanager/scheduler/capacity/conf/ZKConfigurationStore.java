@@ -120,6 +120,7 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
   }
 
   @VisibleForTesting
+  @Override
   protected LinkedList<LogMutation> getLogs() throws Exception {
     return (LinkedList<LogMutation>)
         deserializeObject(zkManager.getData(logsPath));
