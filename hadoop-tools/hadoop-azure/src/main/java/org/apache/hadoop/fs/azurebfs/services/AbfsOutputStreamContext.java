@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 /**
  * Class to hold extra output stream configs.
  */
-public class AbfsOutputStreamConfiguration extends AbfsStreamConfiguration {
+public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private int writeBufferSize;
 
@@ -29,12 +29,29 @@ public class AbfsOutputStreamConfiguration extends AbfsStreamConfiguration {
 
   private boolean disableOutputStreamFlush;
 
-  public AbfsOutputStreamConfiguration(int writeBufferSize,
-                                       boolean enableFlush,
-                                       boolean disableOutputStreamFlush) {
+  public AbfsOutputStreamContext() {
+  }
+
+  public AbfsOutputStreamContext withWriteBufferSize(
+          final int writeBufferSize) {
     this.writeBufferSize = writeBufferSize;
+    return this;
+  }
+
+  public AbfsOutputStreamContext enableFlush(final boolean enableFlush) {
     this.enableFlush = enableFlush;
+    return this;
+  }
+
+  public AbfsOutputStreamContext disableOutputStreamFlush(
+          final boolean disableOutputStreamFlush) {
     this.disableOutputStreamFlush = disableOutputStreamFlush;
+    return this;
+  }
+
+  public AbfsOutputStreamContext build() {
+    // Validation of parameters to be done here.
+    return this;
   }
 
   public int getWriteBufferSize() {

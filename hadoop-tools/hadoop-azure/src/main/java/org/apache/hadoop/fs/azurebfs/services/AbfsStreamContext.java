@@ -22,5 +22,5 @@ package org.apache.hadoop.fs.azurebfs.services;
  * Base stream configuration class which is going
  * to store common configs among input and output streams.
  */
-public abstract class AbfsStreamConfiguration {
+public abstract class AbfsStreamContext {
 }

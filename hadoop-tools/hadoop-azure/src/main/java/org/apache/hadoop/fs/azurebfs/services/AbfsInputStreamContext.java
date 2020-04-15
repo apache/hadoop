@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 /**
  * Class to hold extra input stream configs.
  */
-public class AbfsInputStreamConfiguration extends AbfsStreamConfiguration {
+public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private int readBufferSize;
 
@@ -29,12 +29,31 @@ public class AbfsInputStreamConfiguration extends AbfsStreamConfiguration {
 
   private boolean tolerateOobAppends;
 
-  public AbfsInputStreamConfiguration(int readBufferSize,
-                                      int readAheadQueueDepth,
-                                      boolean tolerateOobAppends) {
+  public AbfsInputStreamContext() {
+  }
+
+  public AbfsInputStreamContext withReadBufferSize(final int readBufferSize) {
     this.readBufferSize = readBufferSize;
-    this.readAheadQueueDepth = readAheadQueueDepth;
+    return this;
+  }
+
+  public AbfsInputStreamContext withReadAheadQueueDepth(
+          final int readAheadQueueDepth) {
+    this.readAheadQueueDepth = (readAheadQueueDepth >= 0)
+            ? readAheadQueueDepth
+            : Runtime.getRuntime().availableProcessors();;
+    return this;
+  }
+
+  public AbfsInputStreamContext withTolerateOobAppends(
+          final boolean tolerateOobAppends) {
     this.tolerateOobAppends = tolerateOobAppends;
+    return this;
+  }
+
+  public AbfsInputStreamContext build() {
+    // Validation of parameters to be done here.
+    return this;
   }
 
   public int getReadBufferSize() {
