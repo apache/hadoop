@@ -33,17 +33,12 @@ public enum StatusProbeEnum {
   /** LIST under the path. */
   List;
 
-  /** All probes. */
-  public static final Set<StatusProbeEnum> REALLY_ALL = EnumSet.allOf(
-      StatusProbeEnum.class);
-
   /** Look for files and directories. */
   public static final Set<StatusProbeEnum> FILES_AND_DIRECTORIES =
       EnumSet.of(Head, List);
 
   /**
    * This used to mean "all probes", now it means "all file type.
-   * @deprecated use {@link #FILES_AND_DIRECTORIES}
    */
   public static final Set<StatusProbeEnum> ALL = FILES_AND_DIRECTORIES;
 

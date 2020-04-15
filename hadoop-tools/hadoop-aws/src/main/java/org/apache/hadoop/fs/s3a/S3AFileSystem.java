@@ -1449,11 +1449,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("rename: destination path {} not found", dst);
       // Parent must exist
       Path parent = dst.getParent();
-      if (!pathToKey(parent).isEmpty()) {
+      if (!pathToKey(parent).isEmpty()
+          && !parent.equals(src.getParent()) ) {
         try {
           // only look against S3 for directories; saves
           // a HEAD request on all normal operations.
-          S3AFileStatus dstParentStatus = innerGetFileStatus(dst.getParent(),
+          S3AFileStatus dstParentStatus = innerGetFileStatus(parent,
               false, StatusProbeEnum.DIRECTORIES);
           if (!dstParentStatus.isDirectory()) {
             throw new RenameFailedException(src, dst,
