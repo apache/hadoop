@@ -48,7 +48,7 @@ public interface AbfsOutputStreamStatistics {
   void uploadFailed(long bytes);
 
   /**
-   * Time spent in waiting for tasks to be completed in the blocking Queue.
+   * Time spent in waiting for tasks to be completed in the blocking queue.
    *
    * @param start millisecond at which the wait for task to be complete begins.
    * @param end   millisecond at which the wait is completed for the task.
@@ -56,20 +56,18 @@ public interface AbfsOutputStreamStatistics {
   void timeSpentTaskWait(long start, long end);
 
   /**
-   * Number of times {@code AbfsOutputStream#shrinkWriteOperationQueue()}
-   * method was called.
+   * Number of times task queue is shrunk.
    */
   void queueShrunk();
 
   /**
-   * Number of times
-   * {@code AbfsOutputStream#writeCurrentBufferToService(boolean, boolean)}
-   * method was called.
+   * Number of times buffer is written to the service after a write operation.
    */
   void writeCurrentBuffer();
 
   /**
-   * Method to form a String of all AbfsOutputStream counters and their values.
+   * Method to form a string of all AbfsOutputStream statistics and their
+   * values.
    *
    * @return AbfsOutputStream statistics.
    */

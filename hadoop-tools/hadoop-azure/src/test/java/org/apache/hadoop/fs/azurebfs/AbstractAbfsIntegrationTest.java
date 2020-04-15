@@ -393,18 +393,6 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
   /**
-   * Generic assert method.
-   *
-   * @param operation     operation being asserted.
-   * @param expectedValue value that is expected.
-   * @param actualValue   value that is actual.
-   */
-  protected void assertValues(String operation, long expectedValue,
-      long actualValue) {
-    assertEquals("Mismatch in " + operation, expectedValue, actualValue);
-  }
-
-  /**
    * Generic create File and enabling AbfsOutputStream Flush.
    *
    * @param fs   AzureBlobFileSystem that is initialised in the test.

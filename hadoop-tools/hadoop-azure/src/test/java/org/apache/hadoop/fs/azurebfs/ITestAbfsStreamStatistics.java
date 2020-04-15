@@ -60,10 +60,10 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
     statistics.reset();
 
     //Test for zero write operation
-    assertValues("write", 0, statistics.getWriteOps());
+    assertReadWriteOps("write", 0, statistics.getWriteOps());
 
     //Test for zero read operation
-    assertValues("read", 0, statistics.getReadOps());
+    assertReadWriteOps("read", 0, statistics.getReadOps());
 
     FSDataOutputStream outForOneOperation = null;
     FSDataInputStream inForOneOperation = null;
@@ -73,7 +73,7 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
       outForOneOperation.write(testReadWriteOps.getBytes());
 
       //Test for a single write operation
-      assertValues("write", 1, statistics.getWriteOps());
+      assertReadWriteOps("write", 1, statistics.getWriteOps());
 
       //Flushing output stream to see content to read
       outForOneOperation.hflush();
@@ -89,7 +89,7 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
       Reason: read() call gives read_ops=1,
       reading from AbfsClient(http GET) gives read_ops=2.
        */
-      assertValues("read", 2, statistics.getReadOps());
+      assertReadWriteOps("read", 2, statistics.getReadOps());
 
     } finally {
       IOUtils.cleanupWithLogger(LOG, inForOneOperation,
@@ -118,7 +118,7 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
           largeOperationsValidationString.toString().getBytes().length);
 
       //Test for 1000000 write operations
-      assertValues("write", largeValue, statistics.getWriteOps());
+      assertReadWriteOps("write", largeValue, statistics.getWriteOps());
 
       inForLargeOperations = fs.open(largeOperationsFile);
       for (int i = 0; i < largeValue; i++) {
@@ -128,7 +128,7 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
       }
 
       //Test for 1000000 read operations
-      assertValues("read", largeValue, statistics.getReadOps());
+      assertReadWriteOps("read", largeValue, statistics.getReadOps());
 
     } finally {
       IOUtils.cleanupWithLogger(LOG, inForLargeOperations,
@@ -139,5 +139,19 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
         validateContent(fs, largeOperationsFile,
             largeOperationsValidationString.toString().getBytes()));
 
+  }
+
+  /**
+   * Generic method to assert both Read an write operations.
+   *
+   * @param operation     what operation is being asserted
+   * @param expectedValue value which is expected
+   * @param actualValue   value which is actual
+   */
+
+  private void assertReadWriteOps(String operation, long expectedValue,
+      long actualValue) {
+    assertEquals("Mismatch in " + operation + " operations", expectedValue,
+        actualValue);
   }
 }

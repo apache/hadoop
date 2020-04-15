@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 /**
- * OutputStream Statistics Implementation for Abfs.
+ * OutputStream statistics implementation for Abfs.
  */
 public class AbfsOutputStreamStatisticsImpl
     implements AbfsOutputStreamStatistics {
@@ -27,23 +27,21 @@ public class AbfsOutputStreamStatisticsImpl
   private long bytesUploadSuccessful;
   private long bytesUploadFailed;
   /**
-   * counter to get the total time spent while waiting for tasks to complete
-   * in the Blocking queue inside the thread executor.
+   * Counter to get the total time spent while waiting for tasks to complete
+   * in the blocking queue inside the thread executor.
    */
-  private long timeSpendOnTaskWait;
+  private long timeSpentOnTaskWait;
   /**
-   * counter to get the total number of queue shrink operations done{@code
-   * AbfsOutputStream#shrinkWriteOperationQueue()} by
-   * AbfsOutputStream to remove the write operations which were successfully
-   * done by AbfsOutputStream from the Blocking Queue.
+   * Counter to get the total number of queue shrink operations done {@code
+   * AbfsOutputStream#shrinkWriteOperationQueue()} by AbfsOutputStream to
+   * remove the write operations which were successfully done by
+   * AbfsOutputStream from the task queue.
    */
   private long queueShrunkOps;
   /**
-   * counter to get the total number of times the current buffer is written
-   * to the service{@code AbfsOutputStream#writeCurrentBufferToService()} via
-   * AbfsClient and appended to the
-   * Data store by
-   * AbfsResOperation.
+   * Counter to get the total number of times the current buffer is written
+   * to the service {@code AbfsOutputStream#writeCurrentBufferToService()} via
+   * AbfsClient and appended to the data store by AbfsRestOperation.
    */
   private long writeCurrentBufferOperations;
 
@@ -51,7 +49,7 @@ public class AbfsOutputStreamStatisticsImpl
    * Records the need to upload bytes and increments the total bytes that
    * needs to be uploaded.
    *
-   * @param bytes Total bytes to upload. Negative bytes are ignored.
+   * @param bytes total bytes to upload. Negative bytes are ignored.
    */
   @Override
   public void bytesToUpload(long bytes) {
@@ -88,11 +86,12 @@ public class AbfsOutputStreamStatisticsImpl
   /**
    * {@inheritDoc}
    *
-   * Records the total time spent waiting for a task.
-   * When the thread executor has a task
-   * queue{@link java.util.concurrent.BlockingQueue} of size greater than or equal to 2
-   * times the maxConcurrentRequestCounts then, it waits for a task in that
-   * queue to finish, then do the next task in the queue.
+   * Records the total time spent waiting for a task to complete.
+   *
+   * When the thread executor has a task queue
+   * {@link java.util.concurrent.BlockingQueue} of size greater than or
+   * equal to 2 times the maxConcurrentRequestCounts then, it waits for a
+   * task in that queue to finish, then do the next task in the queue.
    *
    * This time spent while waiting for the task to be completed is being
    * recorded in this counter.
@@ -104,14 +103,14 @@ public class AbfsOutputStreamStatisticsImpl
    */
   @Override
   public void timeSpentTaskWait(long startTime, long endTime) {
-    timeSpendOnTaskWait += endTime - startTime;
+    timeSpentOnTaskWait += endTime - startTime;
   }
 
   /**
    * {@inheritDoc}
    *
    * Records the number of times AbfsOutputStream try to remove the completed
-   * write operations from the beginning of write operation FIFO queue.
+   * write operations from the beginning of write operation task queue.
    */
   @Override
   public void queueShrunk() {
@@ -141,8 +140,8 @@ public class AbfsOutputStreamStatisticsImpl
     return bytesUploadFailed;
   }
 
-  public long getTimeSpendOnTaskWait() {
-    return timeSpendOnTaskWait;
+  public long getTimeSpentOnTaskWait() {
+    return timeSpentOnTaskWait;
   }
 
   public long getQueueShrunkOps() {
@@ -161,15 +160,15 @@ public class AbfsOutputStreamStatisticsImpl
   @Override public String toString() {
     final StringBuilder outputStreamStats = new StringBuilder(
         "OutputStream Statistics{");
-    outputStreamStats.append(", BYTES_UPLOAD=").append(bytesToUpload);
-    outputStreamStats.append(", BYTES_UPLOAD_SUCCESSFUL=")
+    outputStreamStats.append(", bytes_upload=").append(bytesToUpload);
+    outputStreamStats.append(", bytes_upload_successfully=")
         .append(bytesUploadSuccessful);
-    outputStreamStats.append(", BYTES_UPLOAD_FAILED=")
+    outputStreamStats.append(", bytes_upload_failed=")
         .append(bytesUploadFailed);
-    outputStreamStats.append(", TIME_SPEND_WAIT_TASK=")
-        .append(timeSpendOnTaskWait);
-    outputStreamStats.append(", QUEUE_SHRINK=").append(queueShrunkOps);
-    outputStreamStats.append(", WRITE_CURRENT_BUFFER=")
+    outputStreamStats.append(", time_spent_task_wait=")
+        .append(timeSpentOnTaskWait);
+    outputStreamStats.append(", queue_shrunk_ops=").append(queueShrunkOps);
+    outputStreamStats.append(", write_current_buffer_ops=")
         .append(writeCurrentBufferOperations);
     outputStreamStats.append("}");
     return outputStreamStats.toString();

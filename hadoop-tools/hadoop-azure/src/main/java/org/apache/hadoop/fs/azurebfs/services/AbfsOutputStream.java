@@ -35,6 +35,8 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
@@ -44,7 +46,6 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
-import static org.apache.hadoop.io.IOUtils.LOG;
 import static org.apache.hadoop.io.IOUtils.wrapException;
 
 /**
@@ -83,6 +84,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   private final Statistics statistics;
   private final AbfsOutputStreamStatistics outputStreamStatistics;
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbfsOutputStream.class);
 
   public AbfsOutputStream(
           final AbfsClient client,
@@ -454,7 +458,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   }
 
   /**
-   * Getter method for AbfsOutputStream Statistics.
+   * Getter method for AbfsOutputStream statistics.
    *
    * @return statistics for AbfsOutputStream.
    */
@@ -464,7 +468,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   }
 
   /**
-   * Appending AbfsOutputStream Statistics to base toString().
+   * Appending AbfsOutputStream statistics to base toString().
    *
    * @return String with AbfsOutputStream statistics.
    */

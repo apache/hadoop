@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import java.io.IOException;
 import java.util.Random;
 
 import org.junit.Test;
@@ -27,67 +26,73 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStreamStatisticsImpl;
 
 /**
- * Unit Tests for AbfsOutputStream Statistics.
+ * Unit tests for AbfsOutputStream statistics.
  */
 public class TestAbfsOutputStreamStatistics
     extends AbstractAbfsIntegrationTest {
 
   private static final int LOW_RANGE_FOR_RANDOM_VALUE = 49;
   private static final int HIGH_RANGE_FOR_RANDOM_VALUE = 9999;
+  private static final int OPERATIONS = 10;
 
   public TestAbfsOutputStreamStatistics() throws Exception {
   }
 
   /**
-   * Tests to check bytes failed to Upload in {@link AbfsOutputStream}.
-   *
-   * @throws IOException
+   * Tests to check number of bytes failed to upload in
+   * {@link AbfsOutputStream}.
    */
   @Test
   public void testAbfsOutputStreamBytesFailed() {
-    describe("Testing Bytes Failed during uploading in AbfsOutputSteam");
+    describe("Testing number of bytes failed during upload in AbfsOutputSteam");
 
     AbfsOutputStreamStatisticsImpl abfsOutputStreamStatistics =
         new AbfsOutputStreamStatisticsImpl();
 
     //Test for zero bytes uploaded.
-    assertValues("number fo bytes failed to upload", 0,
+    assertEquals("Mismatch in number of bytes failed to upload", 0,
         abfsOutputStreamStatistics.getBytesUploadFailed());
 
     //Populating small random value for bytesFailed.
     int randomBytesFailed = new Random().nextInt(LOW_RANGE_FOR_RANDOM_VALUE);
     abfsOutputStreamStatistics.uploadFailed(randomBytesFailed);
     //Test for bytes failed to upload.
-    assertValues("number fo bytes failed to upload", randomBytesFailed,
-        abfsOutputStreamStatistics.getBytesUploadFailed());
+    assertEquals("Mismatch in number of bytes failed to upload",
+        randomBytesFailed, abfsOutputStreamStatistics.getBytesUploadFailed());
 
-    //Initializing again to reset the statistics.
+    //Reset statistics for the next test.
     abfsOutputStreamStatistics = new AbfsOutputStreamStatisticsImpl();
 
-    //Populating large random values for bytesFailed.
-    randomBytesFailed = new Random().nextInt(HIGH_RANGE_FOR_RANDOM_VALUE);
-    abfsOutputStreamStatistics.uploadFailed(randomBytesFailed);
+    /*
+     * Entering multiple random values for bytesFailed to check correct
+     * summation of values.
+     */
+    int expectedBytesFailed = 0;
+    for (int i = 0; i < OPERATIONS; i++) {
+      randomBytesFailed = new Random().nextInt(HIGH_RANGE_FOR_RANDOM_VALUE);
+      abfsOutputStreamStatistics.uploadFailed(randomBytesFailed);
+      expectedBytesFailed += randomBytesFailed;
+    }
     //Test for bytes failed to upload.
-    assertValues("number fo bytes failed to upload", randomBytesFailed,
-        abfsOutputStreamStatistics.getBytesUploadFailed());
+    assertEquals("Mismatch in number of bytes failed to upload",
+        expectedBytesFailed, abfsOutputStreamStatistics.getBytesUploadFailed());
   }
 
   /**
    * Tests to check time spent on waiting for tasks to be complete on a
    * blocking queue in {@link AbfsOutputStream}.
-   *
-   * @throws IOException
    */
   @Test
   public void testAbfsOutputStreamTimeSpentOnWaitTask() {
-    describe("Testing Time Spend on Waiting for Task to be complete");
+    describe("Testing time Spent on waiting for task to be completed in "
+        + "AbfsOutputStream");
 
     AbfsOutputStreamStatisticsImpl abfsOutputStreamStatistics =
         new AbfsOutputStreamStatisticsImpl();
 
     //Test for initial value of timeSpentWaitTask.
-    assertValues("Time spend on waiting for tasks to complete", 0,
-        abfsOutputStreamStatistics.getTimeSpendOnTaskWait());
+    assertEquals("Mismatch in time spent on waiting for tasks to complete", 0,
+        abfsOutputStreamStatistics.getTimeSpentOnTaskWait());
 
     int smallRandomStartTime =
         new Random().nextInt(LOW_RANGE_FOR_RANDOM_VALUE);
@@ -98,23 +103,33 @@ public class TestAbfsOutputStreamStatistics
     abfsOutputStreamStatistics
         .timeSpentTaskWait(smallRandomStartTime, smallRandomEndTime);
     //Test for small random value of timeSpentWaitTask.
-    assertValues("Time spend on waiting for tasks to complete", smallDiff,
-        abfsOutputStreamStatistics.getTimeSpendOnTaskWait());
+    assertEquals("Mismatch in time spent on waiting for tasks to complete",
+        smallDiff, abfsOutputStreamStatistics.getTimeSpentOnTaskWait());
 
-    int largeRandomStartTime =
-        new Random().nextInt(HIGH_RANGE_FOR_RANDOM_VALUE);
-    int largeRandomEndTime = new Random().nextInt(HIGH_RANGE_FOR_RANDOM_VALUE)
-        + largeRandomStartTime;
-    int randomDiff = largeRandomEndTime - largeRandomStartTime;
-    abfsOutputStreamStatistics
-        .timeSpentTaskWait(largeRandomStartTime, largeRandomEndTime);
-      /*
-      Test for large random value of timeSpentWaitTask plus the time spent
-      waiting in previous test.
-       */
-    assertValues("Time spend on waiting for tasks to complete",
-        smallDiff + randomDiff,
-        abfsOutputStreamStatistics.getTimeSpendOnTaskWait());
+    //Reset statistics for the next test.
+    abfsOutputStreamStatistics = new AbfsOutputStreamStatisticsImpl();
+
+    /*
+     * Entering multiple values for timeSpentTaskWait() to check the
+     * summation is happening correctly. Also calculating the expected result.
+     */
+    int expectedRandomDiff = 0;
+    for (int i = 0; i < OPERATIONS; i++) {
+      int largeRandomStartTime =
+          new Random().nextInt(HIGH_RANGE_FOR_RANDOM_VALUE);
+      int largeRandomEndTime = new Random().nextInt(HIGH_RANGE_FOR_RANDOM_VALUE)
+          + largeRandomStartTime;
+      abfsOutputStreamStatistics
+          .timeSpentTaskWait(largeRandomStartTime, largeRandomEndTime);
+      expectedRandomDiff += largeRandomEndTime - largeRandomStartTime;
+    }
+
+    /*
+     * Test to check correct value of timeSpentTaskWait after multiple
+     * random values are passed in it.
+     */
+    assertEquals("Mismatch in time spent on waiting for tasks to complete",
+        expectedRandomDiff,
+        abfsOutputStreamStatistics.getTimeSpentOnTaskWait());
   }
-
 }
