@@ -34,32 +34,24 @@ public enum StatusProbeEnum {
   List;
 
   /** Look for files and directories. */
-  public static final Set<StatusProbeEnum> FILES_AND_DIRECTORIES =
+  public static final Set<StatusProbeEnum> ALL =
       EnumSet.of(Head, List);
-
-  /**
-   * This used to mean "all probes", now it means "all file type.
-   */
-  public static final Set<StatusProbeEnum> ALL = FILES_AND_DIRECTORIES;
-
-  /** Skip the HEAD and only look for directories. */
-  public static final Set<StatusProbeEnum> DIRECTORIES =
-      EnumSet.of(DirMarker, List);
-
-  /** We only want the HEAD or dir marker. */
-  public static final Set<StatusProbeEnum> HEAD_OR_DIR_MARKER =
-      EnumSet.of(Head, DirMarker);
 
   /** We only want the HEAD. */
   public static final Set<StatusProbeEnum> HEAD_ONLY =
       EnumSet.of(Head);
 
-  /** We only want the dir marker. */
-  public static final Set<StatusProbeEnum> DIR_MARKER_ONLY =
-      EnumSet.of(DirMarker);
-
-  /** We only want the dir marker. */
+  /** List operation only. */
   public static final Set<StatusProbeEnum> LIST_ONLY =
       EnumSet.of(List);
+
+  /** Look for files and directories. */
+  public static final Set<StatusProbeEnum> FILE =
+      HEAD_ONLY;
+
+  /** Skip the HEAD and only look for directories. */
+  public static final Set<StatusProbeEnum> DIRECTORIES =
+      LIST_ONLY;
+
 
 }

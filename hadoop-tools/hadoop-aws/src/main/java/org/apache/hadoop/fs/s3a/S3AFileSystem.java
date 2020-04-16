@@ -2553,7 +2553,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // we only make the LIST call; the codepaths to get here should not
     // be reached if there is an empty dir marker -and if they do, it
     // is mostly harmless to create a new one.
-    if (!key.isEmpty() && !s3Exists(f, EnumSet.of(StatusProbeEnum.List))) {
+    if (!key.isEmpty() && !s3Exists(f, StatusProbeEnum.DIRECTORIES)) {
       LOG.debug("Creating new fake directory at {}", f);
       createFakeDirectory(key);
     }
@@ -3067,8 +3067,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     // execute the list
-    boolean executeList = probes.contains(StatusProbeEnum.List);
-    if (executeList) {
+    if (probes.contains(StatusProbeEnum.List)) {
       try {
         // this will find a marker dir / as well as an entry.
         // When making a simple "is this a dir check" all is good.
@@ -3128,45 +3127,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
     }
 
-    // Neither any normal file HEAD nor a LIST found an object
-    // Look for the dir marker
-    // TODO: decide whether to cut or not. We currently skip this entire probe.
-    boolean checkMarker = false && probes.contains(StatusProbeEnum.DirMarker);
-    if (!key.isEmpty() && checkMarker) {
-      String newKey = maybeAddTrailingSlash(key);
-      try {
-        ObjectMetadata meta = getObjectMetadata(newKey);
-
-        if (objectRepresentsDirectory(newKey, meta.getContentLength())) {
-          LOG.debug("Found file (with /): fake directory");
-          // this used to self-declare as empty; now it decides
-          // based on whether a list was also executed in the current
-          // series of probes
-          return new S3AFileStatus(
-              executeList
-                  ? Tristate.TRUE
-                  : Tristate.UNKNOWN,
-              path, username);
-        } else {
-          LOG.warn("Found file (with /): real file? should not happen: {}",
-              key);
-
-          return new S3AFileStatus(meta.getContentLength(),
-              dateToLong(meta.getLastModified()),
-              path,
-              getDefaultBlockSize(path),
-              username,
-              meta.getETag(),
-              meta.getVersionId());
-        }
-      } catch (AmazonServiceException e) {
-        if (e.getStatusCode() != SC_404 || isUnknownBucket(e)) {
-          throw translateException("getFileStatus", newKey, e);
-        }
-      } catch (AmazonClientException e) {
-        throw translateException("getFileStatus", newKey, e);
-      }
-    }
     LOG.debug("Not Found: {}", path);
     throw new FileNotFoundException("No such file or directory: " + path);
   }
@@ -3588,6 +3548,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           copyObjectRequest.setNewObjectMetadata(dstom);
           Optional.ofNullable(srcom.getStorageClass())
               .ifPresent(copyObjectRequest::setStorageClass);
+          incrementStatistic(OBJECT_COPY_REQUESTS);
           Copy copy = transfers.copy(copyObjectRequest);
           copy.addProgressListener(progressListener);
           CopyOutcome copyOutcome = CopyOutcome.waitForCopy(copy);
