@@ -23,6 +23,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
@@ -127,12 +128,29 @@ public class NetworkBinding {
         : region;
   }
 
+  /**
+   * Log the dns address associated with s3 endpoint. If endpoint is
+   * not set in the configuration, the {@code Constants#DEFAULT_ENDPOINT}
+   * will be used.
+   * @param conf input configuration.
+   */
   public static void logDnsLookup(Configuration conf) {
     String endPoint = conf.getTrimmed(ENDPOINT, DEFAULT_ENDPOINT);
+    String hostName = endPoint;
     if (!endPoint.isEmpty() && LOG.isDebugEnabled()) {
-      LOG.debug("Bucket endpoint : {}/{}",
+      // Updating the hostname if there is a scheme present.
+      if (endPoint.contains("://")) {
+        try {
+          URI uri = new URI(endPoint);
+          hostName = uri.getHost();
+        } catch (URISyntaxException e) {
+          LOG.debug("Got URISyntaxException, ignoring");
+        }
+      }
+      LOG.debug("Bucket endpoint : {}, Hostname : {}, DNSAddress : {}",
               endPoint,
-              NetUtils.normalizeHostName(endPoint));
+              hostName,
+              NetUtils.normalizeHostName(hostName));
     }
   }
 }
