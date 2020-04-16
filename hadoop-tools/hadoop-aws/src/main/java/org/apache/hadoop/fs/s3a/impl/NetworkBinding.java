@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.InetAddress;
+import java.net.URI;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
@@ -30,9 +32,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SSL_CHANNEL_MODE;
+import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.SSL_CHANNEL_MODE;
 
 /**
@@ -120,5 +125,14 @@ public class NetworkBinding {
     return region == null || region.equals("US")
         ? "us-east-1"
         : region;
+  }
+
+  public static void logDnsLookup(Configuration conf) {
+    String endPoint = conf.getTrimmed(ENDPOINT, DEFAULT_ENDPOINT);
+    if (!endPoint.isEmpty() && LOG.isDebugEnabled()) {
+      LOG.debug("Bucket endpoint : {}/{}",
+              endPoint,
+              NetUtils.normalizeHostName(endPoint));
+    }
   }
 }

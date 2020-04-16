@@ -177,6 +177,7 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIg
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
+import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -470,7 +471,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * S3AFileSystem initialization. When set to 1 or 2, bucket existence check
    * will be performed which is potentially slow.
    * If 3 or higher: warn and use the v2 check.
-   * Also logging DNS address of the s3 endpoint.
+   * Also logging DNS address of the s3 endpoint if the bucket probe value is
+   * greater than 0 else skipping it for increased performance.
    * @throws UnknownStoreException the bucket is absent
    * @throws IOException any other problem talking to S3
    */
@@ -485,11 +487,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("skipping check for bucket existence");
       break;
     case 1:
-      logDnsLookup();
+      logDnsLookup(getConf());
       verifyBucketExists();
       break;
     case 2:
-      logDnsLookup();
+      logDnsLookup(getConf());
       verifyBucketExistsV2();
       break;
     default:
@@ -498,15 +500,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           S3A_BUCKET_PROBE, bucketProbe);
       verifyBucketExistsV2();
       break;
-    }
-  }
-
-  private void logDnsLookup() {
-    String endPoint = getConf().getTrimmed(ENDPOINT, "");
-    if (!endPoint.isEmpty() && LOG.isDebugEnabled()) {
-      LOG.debug("Bucket endpoint : {}/{}",
-              endPoint,
-              NetUtils.normalizeHostName(endPoint));
     }
   }
 
