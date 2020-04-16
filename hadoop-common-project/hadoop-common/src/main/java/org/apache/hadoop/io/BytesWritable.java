@@ -226,7 +226,7 @@ public class BytesWritable extends BinaryComparable
     @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
-      return compareBytes(b1, s1 + LENGTH_BYTES, l1 - LENGTH_BYTES, 
+      return compareBytes(b1, s1 + LENGTH_BYTES, l1 - LENGTH_BYTES,
                           b2, s2 + LENGTH_BYTES, l2 - LENGTH_BYTES);
     }
   }

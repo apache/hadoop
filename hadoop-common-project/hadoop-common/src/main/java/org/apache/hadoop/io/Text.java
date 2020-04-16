@@ -361,6 +361,11 @@ public class Text extends BinaryComparable
     return false;
   }
 
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
+
   /** A WritableComparator optimized for Text keys. */
   public static class Comparator extends WritableComparator {
     public Comparator() {
