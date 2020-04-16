@@ -403,12 +403,13 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
    * operation FIFO queue.
    */
   private synchronized void shrinkWriteOperationQueue() throws IOException {
-    outputStreamStatistics.queueShrunk();
     try {
       while (writeOperations.peek() != null && writeOperations.peek().task.isDone()) {
         writeOperations.peek().task.get();
         lastTotalAppendOffset += writeOperations.peek().length;
         writeOperations.remove();
+        // Incrementing statistics to indicate queue has been shrunk.
+        outputStreamStatistics.queueShrunk();
       }
     } catch (Exception e) {
       if (e.getCause() instanceof AzureBlobFileSystemException) {
@@ -465,6 +466,16 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   @VisibleForTesting
   public AbfsOutputStreamStatisticsImpl getOutputStreamStatistics() {
     return (AbfsOutputStreamStatisticsImpl) outputStreamStatistics;
+  }
+
+  /**
+   * Getter to get the size of the task queue.
+   *
+   * @return the number of writeOperations in AbfsOutputStream.
+   */
+  @VisibleForTesting
+  public int getWriteOperationsSize() {
+    return writeOperations.size();
   }
 
   /**

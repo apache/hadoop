@@ -132,4 +132,45 @@ public class TestAbfsOutputStreamStatistics
         expectedRandomDiff,
         abfsOutputStreamStatistics.getTimeSpentOnTaskWait());
   }
+
+  /**
+   * Unit Tests to check correct values of queue shrunk operations in
+   * AbfsOutputStream.
+   *
+   */
+  @Test
+  public void testAbfsOutputStreamQueueShrink() {
+    describe("Testing queue shrink operations by AbfsOutputStream");
+
+    AbfsOutputStreamStatisticsImpl abfsOutputStreamStatistics =
+        new AbfsOutputStreamStatisticsImpl();
+
+    //Test for shrinking queue zero time.
+    assertEquals("Mismatch in queue shrunk operations", 0,
+        abfsOutputStreamStatistics.getQueueShrunkOps());
+
+    abfsOutputStreamStatistics.queueShrunk();
+
+    //Test for shrinking queue 1 time.
+    assertEquals("Mismatch in queue shrunk operations", 1,
+        abfsOutputStreamStatistics.getQueueShrunkOps());
+
+    //Reset statistics for the next test.
+    abfsOutputStreamStatistics = new AbfsOutputStreamStatisticsImpl();
+
+    /*
+     * Entering random values for queueShrunkOps and checking the correctness
+     * of summation for the statistic.
+     */
+    int randomQueueValues = new Random().nextInt(HIGH_RANGE_FOR_RANDOM_VALUE);
+    for (int i = 0; i < randomQueueValues * OPERATIONS; i++) {
+      abfsOutputStreamStatistics.queueShrunk();
+    }
+    /*
+     * Test for random times incrementing queue shrunk operations.
+     */
+    assertEquals("Mismatch in queue shrunk operations",
+        randomQueueValues * OPERATIONS,
+        abfsOutputStreamStatistics.getQueueShrunkOps());
+  }
 }

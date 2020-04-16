@@ -120,18 +120,8 @@ public class ITestAbfsOutputStreamStatistics
       AbfsOutputStreamStatisticsImpl abfsOutputStreamStatistics =
           outForOneOp.getOutputStreamStatistics();
 
-      //Test for shrinking Queue zero time.
+      //Test for shrinking queue zero time.
       assertEquals("Mismatch in queue shrunk operations", 0,
-          abfsOutputStreamStatistics.getQueueShrunkOps());
-
-      outForOneOp.write(testQueueShrink.getBytes());
-      //Queue is shrunk 2 times when outputStream is flushed.
-      outForOneOp.flush();
-
-      abfsOutputStreamStatistics = outForOneOp.getOutputStreamStatistics();
-
-      //Test for shrinking Queue 2 times.
-      assertEquals("Mismatch in queue shrunk operations", 2,
           abfsOutputStreamStatistics.getQueueShrunkOps());
 
     }
@@ -155,15 +145,16 @@ public class ITestAbfsOutputStreamStatistics
 
       AbfsOutputStreamStatisticsImpl abfsOutputStreamStatistics =
           outForLargeOps.getOutputStreamStatistics();
-
       /*
-       * After each write operation we trigger the shrinkWriteOperationQueue
-       * () method 2 times. Hence, after running the write operations 10
-       * times inside the loop. We expect 20(2 * number_of_operations)
-       * shrinkWriteOperationQueue() calls.
+       * After a write operation is done, it is in a task queue where it is
+       * removed. Hence, to get the correct expected value we get the size of
+       * the task queue from AbfsOutputStream and subtract it with total
+       * write operations done to get the number of queue shrinks done.
+       *
        */
       assertEquals("Mismatch in queue shrunk operations",
-          2 * OPERATIONS, abfsOutputStreamStatistics.getQueueShrunkOps());
+          OPERATIONS - outForLargeOps.getWriteOperationsSize(),
+          abfsOutputStreamStatistics.getQueueShrunkOps());
     }
 
   }
