@@ -75,15 +75,13 @@ public class Text extends BinaryComparable
 
   private static final byte[] EMPTY_BYTES = new byte[0];
 
-  private byte[] bytes;
-  private int length;
+  private byte[] bytes = EMPTY_BYTES;
+  private int length = 0;
 
   /**
    * Construct an empty text string.
    */
   public Text() {
-    this.bytes = EMPTY_BYTES;
-    this.length = 0;
   }
 
   /**

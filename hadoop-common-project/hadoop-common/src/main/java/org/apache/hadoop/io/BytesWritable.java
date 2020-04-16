@@ -199,6 +199,11 @@ public class BytesWritable extends BinaryComparable
     return false;
   }
 
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
+
   /**
    * Generate the stream of bytes as hex pairs separated by ' '.
    */
