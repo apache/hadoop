@@ -31,6 +31,7 @@ import org.apache.hadoop.registry.client.impl.zk.RegistrySecurity;
 import org.apache.hadoop.registry.client.impl.zk.ZookeeperConfigOptions;
 import org.apache.zookeeper.Environment;
 import org.apache.zookeeper.data.ACL;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -179,10 +180,15 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
   public void testValidKerberosName() throws Throwable {
 
     new HadoopKerberosName(ZOOKEEPER).getShortName();
-    new HadoopKerberosName(ZOOKEEPER_LOCALHOST).getShortName();
     new HadoopKerberosName(ZOOKEEPER_REALM).getShortName();
-    // standard rules don't pick this up
-    // new HadoopKerberosName(ZOOKEEPER_LOCALHOST_REALM).getShortName();
+    new HadoopKerberosName(ZOOKEEPER_LOCALHOST_REALM).getShortName();
+    try {
+      new HadoopKerberosName(ZOOKEEPER_LOCALHOST).getShortName();
+      Assert.fail("Unexpected success for invalid principal: " +
+          ZOOKEEPER_LOCALHOST);
+    } catch (IOException e) {
+      LOG.info("Expected exception: " + e.getMessage());
+    }
   }
 
 
