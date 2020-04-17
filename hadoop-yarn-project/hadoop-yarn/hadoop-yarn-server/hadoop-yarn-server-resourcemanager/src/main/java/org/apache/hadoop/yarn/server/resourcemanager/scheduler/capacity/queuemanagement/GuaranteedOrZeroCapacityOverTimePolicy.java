@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
@@ -51,6 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica
     .FiCaSchedulerApp;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -679,6 +681,19 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
               LOG.debug("Queue is already de-activated. Skipping "
                   + "de-activation : {}", leafQueue.getQueuePath());
             } else{
+              /**
+               * While deactivating queues of type ABSOLUTE_RESOURCE, configured
+               * min resource has to be set based on updated capacity (which is
+               * again based on updated queue entitlements). Otherwise,
+               * ParentQueue#calculateEffectiveResourcesAndCapacity calculations
+               * leads to incorrect results.
+               */
+              leafQueue
+                  .mergeCapacities(updatedQueueTemplate.getQueueCapacities());
+              leafQueue.getQueueResourceQuotas()
+                  .setConfiguredMinResource(Resources.multiply(
+                      this.scheduler.getClusterResource(), updatedQueueTemplate
+                          .getQueueCapacities().getCapacity(nodeLabel)));
               deactivate(leafQueue, nodeLabel);
             }
           }
