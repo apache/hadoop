@@ -424,9 +424,9 @@ public abstract class ApplicationSubmissionContext {
 
   /**
    * Set tags for the application. A maximum of
-   * {@link YarnConfiguration#APPLICATION_MAX_TAGS} are allowed
+   * {@link YarnConfiguration#RM_APPLICATION_MAX_TAGS} are allowed
    * per application. Each tag can be at most
-   * {@link YarnConfiguration#APPLICATION_MAX_TAG_LENGTH}
+   * {@link YarnConfiguration#RM_APPLICATION_MAX_TAG_LENGTH}
    * characters, and can contain only ASCII characters.
    *
    * @param tags tags to set

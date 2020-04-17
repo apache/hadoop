@@ -181,6 +181,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.CharMatcher;
 
 /**
  * The client interface to the Resource Manager. This module handles all the rpc
@@ -584,6 +585,8 @@ public class ClientRMService extends AbstractService implements
       throw RPCUtil.getRemoteException(ie);
     }
 
+    checkTags(submissionContext.getApplicationTags());
+
     if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
       // Sanity check for flow run
       String value = null;
@@ -723,6 +726,31 @@ public class ClientRMService extends AbstractService implements
         attemptId);
 
     return response;
+  }
+
+  private void checkTags(Set<String> tags) throws YarnException {
+    int appMaxTags = getConfig().getInt(
+        YarnConfiguration.RM_APPLICATION_MAX_TAGS,
+        YarnConfiguration.DEFAULT_RM_APPLICATION_MAX_TAGS);
+    int appMaxTagLength = getConfig().getInt(
+        YarnConfiguration.RM_APPLICATION_MAX_TAG_LENGTH,
+        YarnConfiguration.DEFAULT_RM_APPLICATION_MAX_TAG_LENGTH);
+    if (tags.size() > appMaxTags) {
+      throw RPCUtil.getRemoteException(new IllegalArgumentException(
+          "Too many applicationTags, a maximum of only " + appMaxTags
+              + " are allowed!"));
+    }
+    for (String tag : tags) {
+      if (tag.length() > appMaxTagLength) {
+        throw RPCUtil.getRemoteException(
+            new IllegalArgumentException("Tag " + tag + " is too long, "
+                + "maximum allowed length of a tag is " + appMaxTagLength));
+      }
+      if (!CharMatcher.ASCII.matchesAllOf(tag)) {
+        throw RPCUtil.getRemoteException(new IllegalArgumentException(
+            "A tag can only have ASCII " + "characters! Invalid tag - " + tag));
+      }
+    }
   }
 
   @SuppressWarnings("unchecked")
