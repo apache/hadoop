@@ -870,12 +870,19 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    * Destroy any thread pools; wait for that to finish,
    * but don't overreact if it doesn't finish in time.
    */
-  protected synchronized void destroyThreadPool() {
-    if (threadPool != null) {
-      LOG.debug("Destroying thread pool");
-      HadoopExecutors.shutdown(threadPool, LOG,
-          THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
+  protected void destroyThreadPool() {
+    ExecutorService pool;
+    // reset the thread pool in a sync block, then shut it down
+    // afterwards. This allows for other threads to create a
+    // new thread pool on demand.
+    synchronized(this) {
+      pool = this.threadPool;
       threadPool = null;
+    }
+    if (pool != null) {
+      LOG.debug("Destroying thread pool");
+      HadoopExecutors.shutdown(pool, LOG,
+          THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
     }
   }
 
