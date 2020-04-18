@@ -34,6 +34,8 @@ import org.apache.hadoop.hdfs.server.federation.store.StateStoreUnavailableExcep
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -170,7 +172,12 @@ public class MountTableRefresherService extends AbstractService {
   @VisibleForTesting
   protected RouterClient createRouterClient(InetSocketAddress routerSocket,
       Configuration config) throws IOException {
-    return new RouterClient(routerSocket, config);
+    return SecurityUtil.doAsLoginUser(() -> {
+      if (UserGroupInformation.isSecurityEnabled()) {
+        UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
+      }
+      return new RouterClient(routerSocket, config);
+    });
   }
 
   @Override
