@@ -35,7 +35,7 @@ pipeline {
         DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='rel/0.11.1'
+        YETUS_VERSION='rel/0.12.0'
     }
 
     parameters {
@@ -61,7 +61,7 @@ pipeline {
             steps {
                 withCredentials(
                     [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
-                                  passwordVariable: 'GITHUB_PASSWORD',
+                                  passwordVariable: 'GITHUB_TOKEN',
                                   usernameVariable: 'GITHUB_USER'),
                     usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
                                         passwordVariable: 'JIRA_PASSWORD',
@@ -105,8 +105,7 @@ pipeline {
                         YETUS_ARGS+=("--html-report-file=${WORKSPACE}/${PATCHDIR}/report.html")
 
                         # enable writing back to Github
-                        YETUS_ARGS+=(--github-password="${GITHUB_PASSWORD}")
-                        YETUS_ARGS+=(--github-user=${GITHUB_USER})
+                        YETUS_ARGS+=(--github-token="${GITHUB_TOKEN}")
 
                         # enable writing back to ASF JIRA
                         YETUS_ARGS+=(--jira-password="${JIRA_PASSWORD}")
