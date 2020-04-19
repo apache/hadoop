@@ -25,10 +25,10 @@
 
      <!-- This is intentional. The unsynchronized field access is safe
           and only synchronized access is used when using the sasToken
-	  for authorization. -->
+          for authorization. -->
      <Match>
        <Class name="org.apache.hadoop.fs.azurebfs.utils.CachedSASToken" />
-       <Method name="sasToken" />
+       <Field name="sasToken" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
 
@@ -41,7 +41,7 @@
      </Match>
 
      <!-- Returning fully loaded array to iterate through is a convenience
-	  and helps performance. -->
+          and helps performance. -->
      <Match>
        <Class name="org.apache.hadoop.fs.azure.NativeAzureFileSystem$FolderRenamePending" />
        <Method name="getFiles" />
@@ -57,7 +57,7 @@
      </Match>
      
      <!-- Using a key set iterator is fine because this is not a performance-critical
-	  method. -->
+          method. -->
      <Match>
        <Class name="org.apache.hadoop.fs.azure.PageBlobOutputStream" />
        <Method name="logAllStackTraces" />
