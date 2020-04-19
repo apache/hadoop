@@ -74,8 +74,9 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_ENABLE_HTTPS = true;
 
   public static final boolean DEFAULT_USE_UPN = false;
-  public static final boolean DEFAULT_ENABLE_CHECK_ACCESS = false;
+  public static final boolean DEFAULT_ENABLE_CHECK_ACCESS = true;
   public static final boolean DEFAULT_ABFS_LATENCY_TRACK = false;
+  public static final long DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS = 120;
 
   public static final String DEFAULT_FS_AZURE_USER_AGENT_PREFIX = EMPTY_STRING;
   public static final String DEFAULT_VALUE_UNKNOWN = "UNKNOWN";
