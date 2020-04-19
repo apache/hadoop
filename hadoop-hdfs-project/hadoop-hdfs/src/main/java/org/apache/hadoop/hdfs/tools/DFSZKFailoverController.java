@@ -111,8 +111,11 @@ public class DFSZKFailoverController extends ZKFailoverController {
   @Override
   protected InetSocketAddress getRpcAddressToBindTo() {
     int zkfcPort = getZkfcPort(conf);
-    return new InetSocketAddress(localTarget.getAddress().getAddress(),
-          zkfcPort);
+    String zkfcBindAddr = getZkfcServerBindHost(conf);
+    if (zkfcBindAddr == null || zkfcBindAddr.isEmpty()) {
+      zkfcBindAddr = localTarget.getAddress().getAddress().getHostAddress();
+    }
+    return new InetSocketAddress(zkfcBindAddr, zkfcPort);
   }
   
 
@@ -125,7 +128,21 @@ public class DFSZKFailoverController extends ZKFailoverController {
     return conf.getInt(DFSConfigKeys.DFS_HA_ZKFC_PORT_KEY,
         DFSConfigKeys.DFS_HA_ZKFC_PORT_DEFAULT);
   }
-  
+ 
+  /** Given a configuration get the bind host that could be used by ZKFC.
+   * We derive it from NN service rpc bind host or NN rpc bind host.
+   */
+  protected String getZkfcServerBindHost(Configuration conf) {
+    String addr = conf.getTrimmed(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY);
+    if (addr == null || addr.isEmpty()) {
+      addr = conf.getTrimmed(DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KEY);
+      if (addr == null || addr.isEmpty()) {
+        return null;
+      }
+    }
+    return addr;
+  }
+ 
   public static DFSZKFailoverController create(Configuration conf) {
     Configuration localNNConf = DFSHAAdmin.addSecurityConfiguration(conf);
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
