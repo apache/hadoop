@@ -39,7 +39,6 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProtoOrBuilder;
@@ -277,24 +276,6 @@ extends ApplicationSubmissionContext {
     builder.setApplicationType((applicationType));
   }
 
-  private void checkTags(Set<String> tags) {
-    if (tags.size() > YarnConfiguration.APPLICATION_MAX_TAGS) {
-      throw new IllegalArgumentException("Too many applicationTags, a maximum of only "
-          + YarnConfiguration.APPLICATION_MAX_TAGS + " are allowed!");
-    }
-    for (String tag : tags) {
-      if (tag.length() > YarnConfiguration.APPLICATION_MAX_TAG_LENGTH) {
-        throw new IllegalArgumentException("Tag " + tag + " is too long, " +
-            "maximum allowed length of a tag is " +
-            YarnConfiguration.APPLICATION_MAX_TAG_LENGTH);
-      }
-      if (!org.apache.commons.lang3.StringUtils.isAsciiPrintable(tag)) {
-        throw new IllegalArgumentException("A tag can only have ASCII " +
-            "characters! Invalid tag - " + tag);
-      }
-    }
-  }
-
   @Override
   public synchronized void setApplicationTags(Set<String> tags) {
     maybeInitBuilder();
@@ -303,7 +284,6 @@ extends ApplicationSubmissionContext {
       this.applicationTags = null;
       return;
     }
-    checkTags(tags);
     // Convert applicationTags to lower case and add
     this.applicationTags = new TreeSet<>();
     for (String tag : tags) {

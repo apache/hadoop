@@ -482,7 +482,7 @@ public final class S3ATestUtils {
       // S3Guard is enabled.
       boolean authoritative = getTestPropertyBool(conf,
           TEST_S3GUARD_AUTHORITATIVE,
-          conf.getBoolean(TEST_S3GUARD_AUTHORITATIVE, true));
+          conf.getBoolean(TEST_S3GUARD_AUTHORITATIVE, false));
       String impl = getTestProperty(conf, TEST_S3GUARD_IMPLEMENTATION,
           conf.get(TEST_S3GUARD_IMPLEMENTATION,
               TEST_S3GUARD_IMPLEMENTATION_LOCAL));

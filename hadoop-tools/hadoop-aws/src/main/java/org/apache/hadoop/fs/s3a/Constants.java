@@ -163,6 +163,12 @@ public final class Constants {
   //use a custom endpoint?
   public static final String ENDPOINT = "fs.s3a.endpoint";
 
+  /**
+   * Default value of s3 endpoint. If not set explicitly using
+   * {@code AmazonS3#setEndpoint()}, this is used.
+   */
+  public static final String DEFAULT_ENDPOINT = "s3.amazonaws.com";
+
   //Enable path style access? Overrides default virtual hosting
   public static final String PATH_STYLE_ACCESS = "fs.s3a.path.style.access";
 

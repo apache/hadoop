@@ -1071,6 +1071,10 @@ public class CacheManager {
       if (p.getLimit() != null)
         b.setLimit(p.getLimit());
 
+      if (p.getMaxRelativeExpiryMs() != null) {
+        b.setMaxRelativeExpiry(p.getMaxRelativeExpiryMs());
+      }
+
       pools.add(b.build());
     }
 
@@ -1135,6 +1139,10 @@ public class CacheManager {
 
       if (p.hasLimit())
         info.setLimit(p.getLimit());
+
+      if (p.hasMaxRelativeExpiry()) {
+        info.setMaxRelativeExpiryMs(p.getMaxRelativeExpiry());
+      }
 
       addCachePool(info);
     }
