@@ -70,7 +70,9 @@ public class AbfsRestOperation {
     return result;
   }
 
-  String getSasToken() { return sasToken; }
+  String getSasToken() {
+    return sasToken;
+  }
 
   /**
    * Initializes a new REST operation.

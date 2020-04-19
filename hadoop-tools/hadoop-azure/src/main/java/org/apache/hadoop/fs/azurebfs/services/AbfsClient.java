@@ -633,7 +633,11 @@ public class AbfsClient implements Closeable {
    * @return sasToken - returned for optional re-use.
    * @throws SASTokenProviderException
    */
-  private String appendSASTokenToQuery(String path, String operation, AbfsUriQueryBuilder queryBuilder, String cachedSasToken) throws SASTokenProviderException {
+  private String appendSASTokenToQuery(String path,
+                                       String operation,
+                                       AbfsUriQueryBuilder queryBuilder,
+                                       String cachedSasToken)
+      throws SASTokenProviderException {
     String sasToken = null;
     if (this.authType == AuthType.SAS) {
       try {

@@ -109,24 +109,24 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     assertEquals("The directory permissions are not expected.", "rwxr-xr-x", dirStatus.getPermission().toString());
     assertEquals("The file permissions are not expected.", "r--r-----", fileStatus.getPermission().toString());
 
-    assertTrue(isAccessible(fs, dirPath,FsAction.READ_WRITE));
-    assertFalse(isAccessible(fs, filePath,FsAction.READ_WRITE));
+    assertTrue(isAccessible(fs, dirPath, FsAction.READ_WRITE));
+    assertFalse(isAccessible(fs, filePath, FsAction.READ_WRITE));
 
     fs.setPermission(filePath, new FsPermission(FsAction.READ_WRITE, FsAction.READ, FsAction.NONE));
     fileStatus = fs.getFileStatus(filePath);
     assertEquals("The file permissions are not expected.", "rw-r-----", fileStatus.getPermission().toString());
-    assertTrue(isAccessible(fs, filePath,FsAction.READ_WRITE));
+    assertTrue(isAccessible(fs, filePath, FsAction.READ_WRITE));
 
     fs.setPermission(dirPath, new FsPermission(FsAction.EXECUTE, FsAction.NONE, FsAction.NONE));
     dirStatus = fs.getFileStatus(dirPath);
     assertEquals("The file permissions are not expected.", "--x------", dirStatus.getPermission().toString());
-    assertFalse(isAccessible(fs, dirPath,FsAction.READ_WRITE));
-    assertTrue(isAccessible(fs, dirPath,FsAction.EXECUTE));
+    assertFalse(isAccessible(fs, dirPath, FsAction.READ_WRITE));
+    assertTrue(isAccessible(fs, dirPath, FsAction.EXECUTE));
 
     fs.setPermission(dirPath, new FsPermission(FsAction.NONE, FsAction.NONE, FsAction.NONE));
     dirStatus = fs.getFileStatus(dirPath);
     assertEquals("The file permissions are not expected.", "---------", dirStatus.getPermission().toString());
-    assertFalse(isAccessible(fs, filePath,FsAction.READ_WRITE));
+    assertFalse(isAccessible(fs, filePath, FsAction.READ_WRITE));
   }
 
   private boolean isAccessible(FileSystem fs, Path path, FsAction fsAction)
@@ -336,7 +336,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     }
     assertEquals(0, count);
 
-    aclSpec.add(aclEntry(DEFAULT, USER, "cd548981-afec-4ab9-9d39-f6f2add2fd9b",FsAction.EXECUTE));
+    aclSpec.add(aclEntry(DEFAULT, USER, "cd548981-afec-4ab9-9d39-f6f2add2fd9b", FsAction.EXECUTE));
 
     fs.modifyAclEntries(rootPath, aclSpec);
 
