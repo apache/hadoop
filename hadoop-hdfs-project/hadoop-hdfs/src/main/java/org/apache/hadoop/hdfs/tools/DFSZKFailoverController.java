@@ -117,18 +117,17 @@ public class DFSZKFailoverController extends ZKFailoverController {
     }
     return new InetSocketAddress(zkfcBindAddr, zkfcPort);
   }
-  
 
   @Override
   protected PolicyProvider getPolicyProvider() {
     return new HDFSPolicyProvider();
   }
-  
+
   static int getZkfcPort(Configuration conf) {
     return conf.getInt(DFSConfigKeys.DFS_HA_ZKFC_PORT_KEY,
         DFSConfigKeys.DFS_HA_ZKFC_PORT_DEFAULT);
   }
- 
+
   /** Given a configuration get the bind host that could be used by ZKFC.
    * We derive it from NN service rpc bind host or NN rpc bind host.
    */
@@ -142,7 +141,7 @@ public class DFSZKFailoverController extends ZKFailoverController {
     }
     return addr;
   }
- 
+
   public static DFSZKFailoverController create(Configuration conf) {
     Configuration localNNConf = DFSHAAdmin.addSecurityConfiguration(conf);
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
