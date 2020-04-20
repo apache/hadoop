@@ -377,10 +377,11 @@ The parent queue which has been enabled for auto leaf queue creation,supports
 
 | Property | Description |
 |:---- |:---- |
-| `yarn.scheduler.capacity.<queue-path>.leaf-queue-template.capacity` | *Mandatory* parameter: Specifies the minimum guaranteed capacity for the  auto-created leaf queues. Currently *Absolute Resource* configurations are not supported on auto-created leaf queues |
+| `yarn.scheduler.capacity.<queue-path>.leaf-queue-template.capacity` | *Mandatory* parameter: Specifies the minimum guaranteed capacity for the  auto-created leaf queues. |
+| `yarn.scheduler.capacity.<queue-path>.leaf-queue-template.maximum-capacity` | *Optional* parameter: Specifies the maximum capacity for the  auto-created leaf queues. This value must be smaller than or equal to the cluster maximum. |
 | `yarn.scheduler.capacity.<queue-path>.leaf-queue-template.<leaf-queue-property>` |  *Optional* parameter: For other queue parameters that can be configured on auto-created leaf queues like maximum-capacity, user-limit-factor, maximum-am-resource-percent ...  - Refer **Queue Properties** section |
 
-Example:
+Example 1:
 
 ```
  <property>
@@ -421,6 +422,22 @@ Example:
  </property>
 ```
 
+Example 2:
+
+```
+ <property>
+   <name>yarn.scheduler.capacity.root.parent2.auto-create-child-queue.enabled</name>
+   <value>true</value>
+ </property>
+ <property>
+    <name>yarn.scheduler.capacity.root.parent2.leaf-queue-template.capacity</name>
+    <value>[memory=1024,vcores=1]</value>
+ </property>
+ <property>
+    <name>yarn.scheduler.capacity.root.parent2.leaf-queue-template.maximum-capacity</name>
+    <value>[memory=10240,vcores=10]</value>
+ </property>
+```
 * Scheduling Edit Policy configuration for auto-created queue management
 
 Admins need to specify an additional `org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueManagementDynamicEditPolicy` scheduling edit policy to the

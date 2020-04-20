@@ -354,19 +354,6 @@ public class ServiceApiUtil {
               constraint.getName() == null ? "" : constraint.getName() + " ",
               comp.getName()));
           }
-          if (constraint.getTargetTags().isEmpty()) {
-            throw new IllegalArgumentException(String.format(
-              RestApiErrorMessages.ERROR_PLACEMENT_POLICY_CONSTRAINT_TAGS_NULL,
-              constraint.getName() == null ? "" : constraint.getName() + " ",
-              comp.getName()));
-          }
-          for (String targetTag : constraint.getTargetTags()) {
-            if (!comp.getName().equals(targetTag)) {
-              throw new IllegalArgumentException(String.format(
-                  RestApiErrorMessages.ERROR_PLACEMENT_POLICY_TAG_NAME_NOT_SAME,
-                  targetTag, comp.getName(), comp.getName(), comp.getName()));
-            }
-          }
         }
       }
     }

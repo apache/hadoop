@@ -22,15 +22,16 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.URI;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.qcloud.cos.auth.COSCredentialsProvider;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.cosn.auth.COSCredentialProviderList;
-import org.apache.hadoop.fs.cosn.auth.EnvironmentVariableCredentialProvider;
-import org.apache.hadoop.fs.cosn.auth.SimpleCredentialProvider;
+import org.apache.hadoop.fs.cosn.auth.COSCredentialsProviderList;
+import org.apache.hadoop.fs.cosn.auth.EnvironmentVariableCredentialsProvider;
+import org.apache.hadoop.fs.cosn.auth.SimpleCredentialsProvider;
 
 /**
  * Utility methods for CosN code.
@@ -48,21 +49,23 @@ public final class CosNUtils {
   private CosNUtils() {
   }
 
-  public static COSCredentialProviderList createCosCredentialsProviderSet(
+  public static COSCredentialsProviderList createCosCredentialsProviderSet(
+      URI uri,
       Configuration conf) throws IOException {
-    COSCredentialProviderList credentialProviderList =
-        new COSCredentialProviderList();
+    COSCredentialsProviderList credentialProviderList =
+        new COSCredentialsProviderList();
 
     Class<?>[] cosClasses = CosNUtils.loadCosProviderClasses(
         conf,
         CosNConfigKeys.COSN_CREDENTIALS_PROVIDER);
     if (0 == cosClasses.length) {
-      credentialProviderList.add(new SimpleCredentialProvider(conf));
-      credentialProviderList.add(new EnvironmentVariableCredentialProvider());
+      credentialProviderList.add(
+          new SimpleCredentialsProvider(uri, conf));
+      credentialProviderList.add(
+          new EnvironmentVariableCredentialsProvider(uri, conf));
     } else {
       for (Class<?> credClass : cosClasses) {
-        credentialProviderList.add(createCOSCredentialProvider(
-            conf,
+        credentialProviderList.add(createCOSCredentialProvider(uri, conf,
             credClass));
       }
     }
@@ -83,16 +86,17 @@ public final class CosNUtils {
   }
 
   public static COSCredentialsProvider createCOSCredentialProvider(
+      URI uri,
       Configuration conf,
       Class<?> credClass) throws IOException {
     COSCredentialsProvider credentialsProvider;
     if (!COSCredentialsProvider.class.isAssignableFrom(credClass)) {
-      throw new IllegalArgumentException(
-          "class " + credClass + " " + NOT_COS_CREDENTIAL_PROVIDER);
+      throw new IllegalArgumentException("class " + credClass + " " +
+          NOT_COS_CREDENTIAL_PROVIDER);
     }
     if (Modifier.isAbstract(credClass.getModifiers())) {
-      throw new IllegalArgumentException(
-          "class " + credClass + " " + ABSTRACT_CREDENTIAL_PROVIDER);
+      throw new IllegalArgumentException("class " + credClass + " " +
+          ABSTRACT_CREDENTIAL_PROVIDER);
     }
     LOG.debug("Credential Provider class: " + credClass.getName());
 
@@ -112,8 +116,18 @@ public final class CosNUtils {
         return credentialsProvider;
       }
 
-      Method factory = getFactoryMethod(
-          credClass, COSCredentialsProvider.class, "getInstance");
+      // new credClass(uri, conf)
+      constructor = getConstructor(credClass, URI.class,
+          Configuration.class);
+      if (null != constructor) {
+        credentialsProvider =
+            (COSCredentialsProvider) constructor.newInstance(uri,
+                conf);
+        return credentialsProvider;
+      }
+
+      Method factory = getFactoryMethod(credClass,
+          COSCredentialsProvider.class, "getInstance");
       if (null != factory) {
         credentialsProvider = (COSCredentialsProvider) factory.invoke(null);
         return credentialsProvider;

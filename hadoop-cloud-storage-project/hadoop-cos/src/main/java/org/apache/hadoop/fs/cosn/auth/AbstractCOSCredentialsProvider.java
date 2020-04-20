@@ -17,38 +17,32 @@
  */
 package org.apache.hadoop.fs.cosn.auth;
 
-import com.qcloud.cos.auth.BasicCOSCredentials;
-import com.qcloud.cos.auth.COSCredentials;
 import com.qcloud.cos.auth.COSCredentialsProvider;
-import com.qcloud.cos.exception.CosClientException;
-
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.cosn.CosNConfigKeys;
+
+import javax.annotation.Nullable;
+import java.net.URI;
 
 /**
- * Get the credentials from the hadoop configuration.
+ * The base class for COS credential providers which take a URI or
+ * configuration in their constructor.
  */
-public class SimpleCredentialProvider implements COSCredentialsProvider {
-  private String secretId;
-  private String secretKey;
+public abstract class AbstractCOSCredentialsProvider
+    implements COSCredentialsProvider {
+  private final URI uri;
+  private final Configuration conf;
 
-  public SimpleCredentialProvider(Configuration conf) {
-    this.secretId = conf.get(
-        CosNConfigKeys.COSN_SECRET_ID_KEY
-    );
-    this.secretKey = conf.get(
-        CosNConfigKeys.COSN_SECRET_KEY_KEY
-    );
+  public AbstractCOSCredentialsProvider(@Nullable URI uri,
+                                        Configuration conf) {
+    this.uri = uri;
+    this.conf = conf;
   }
 
-  @Override
-  public COSCredentials getCredentials() {
-    if (!StringUtils.isEmpty(this.secretId)
-        && !StringUtils.isEmpty(this.secretKey)) {
-      return new BasicCOSCredentials(this.secretId, this.secretKey);
-    }
-    throw new CosClientException("secret id or secret key is unset");
+  public URI getUri() {
+    return uri;
   }
 
+  public Configuration getConf() {
+    return conf;
+  }
 }

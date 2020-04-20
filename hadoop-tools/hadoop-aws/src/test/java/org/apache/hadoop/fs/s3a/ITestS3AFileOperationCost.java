@@ -112,6 +112,63 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
   }
 
   @Test
+  public void testCostOfLocatedFileStatusOnFile() throws Throwable {
+    describe("performing listLocatedStatus on a file");
+    Path file = path(getMethodName() + ".txt");
+    S3AFileSystem fs = getFileSystem();
+    touch(fs, file);
+    resetMetricDiffs();
+    fs.listLocatedStatus(file);
+    if (!fs.hasMetadataStore()) {
+      // Unguarded FS.
+      metadataRequests.assertDiffEquals(1);
+    }
+    listRequests.assertDiffEquals(1);
+  }
+
+  @Test
+  public void testCostOfListLocatedStatusOnEmptyDir() throws Throwable {
+    describe("performing listLocatedStatus on an empty dir");
+    Path dir = path(getMethodName());
+    S3AFileSystem fs = getFileSystem();
+    fs.mkdirs(dir);
+    resetMetricDiffs();
+    fs.listLocatedStatus(dir);
+    if (!fs.hasMetadataStore()) {
+      // Unguarded FS.
+      verifyOperationCount(2, 1);
+    } else {
+      if (fs.allowAuthoritative(dir)) {
+        verifyOperationCount(0, 0);
+      } else {
+        verifyOperationCount(0, 1);
+      }
+    }
+  }
+
+  @Test
+  public void testCostOfListLocatedStatusOnNonEmptyDir() throws Throwable {
+    describe("performing listLocatedStatus on a non empty dir");
+    Path dir = path(getMethodName() + "dir");
+    S3AFileSystem fs = getFileSystem();
+    fs.mkdirs(dir);
+    Path file = new Path(dir, "file.txt");
+    touch(fs, file);
+    resetMetricDiffs();
+    fs.listLocatedStatus(dir);
+    if (!fs.hasMetadataStore()) {
+      // Unguarded FS.
+      verifyOperationCount(0, 1);
+    } else {
+      if(fs.allowAuthoritative(dir)) {
+        verifyOperationCount(0, 0);
+      } else {
+        verifyOperationCount(0, 1);
+      }
+    }
+  }
+
+  @Test
   public void testCostOfGetFileStatusOnFile() throws Throwable {
     describe("performing getFileStatus on a file");
     Path simpleFile = path("simple.txt");
