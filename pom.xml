@@ -117,6 +117,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <shell-executable>bash</shell-executable>
 
     <leveldbjni.group>org.fusesource.leveldbjni</leveldbjni.group>
+    <netty4.group>io.netty</netty4.group>
   </properties>
 
   <modules>
@@ -684,6 +685,10 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
       <id>aarch64</id>
       <properties>
         <leveldbjni.group>org.openlabtesting.leveldbjni</leveldbjni.group>
+        <!-- To make hadoop fully support ARM64 now, here add a workaround using an unofficial
+        netty-all package which support ARM64. Once the Netty officially support ARM64 in a
+        new release, we need to remove this and upgrade to use Netty official package -->
+        <netty4.group>org.openlabtesting.netty</netty4.group>
       </properties>
       <activation>
         <os>
