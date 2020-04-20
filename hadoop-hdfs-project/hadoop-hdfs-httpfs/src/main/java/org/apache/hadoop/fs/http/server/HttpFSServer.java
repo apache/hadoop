@@ -629,23 +629,21 @@ public class HttpFSServer {
     switch (op.value()) {
       case APPEND: {
         Boolean hasData = params.get(DataParam.NAME, DataParam.class);
-        if (!hasData) {
-          URI redirectURL = createUploadRedirectionURL(
-              uriInfo, HttpFSFileSystem.Operation.APPEND);
-          Boolean noRedirect = params.get(
-              NoRedirectParam.NAME, NoRedirectParam.class);
-          if (noRedirect) {
+        URI redirectURL = createUploadRedirectionURL(uriInfo,
+            HttpFSFileSystem.Operation.APPEND);
+        Boolean noRedirect =
+            params.get(NoRedirectParam.NAME, NoRedirectParam.class);
+        if (noRedirect) {
             final String js = JsonUtil.toJsonString("Location", redirectURL);
             response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
-          } else {
-            response = Response.temporaryRedirect(redirectURL).build();
-          }
-        } else {
+        } else if (hasData) {
           FSOperations.FSAppend command =
             new FSOperations.FSAppend(is, path);
           fsExecute(user, command);
           AUDIT_LOG.info("[{}]", path);
           response = Response.ok().type(MediaType.APPLICATION_JSON).build();
+        } else {
+          response = Response.temporaryRedirect(redirectURL).build();
         }
         break;
       }
@@ -703,7 +701,8 @@ public class HttpFSServer {
   protected URI createUploadRedirectionURL(UriInfo uriInfo, Enum<?> uploadOperation) {
     UriBuilder uriBuilder = uriInfo.getRequestUriBuilder();
     uriBuilder = uriBuilder.replaceQueryParam(OperationParam.NAME, uploadOperation).
-      queryParam(DataParam.NAME, Boolean.TRUE);
+            queryParam(DataParam.NAME, Boolean.TRUE)
+            .replaceQueryParam(NoRedirectParam.NAME, (Object[]) null);
     return uriBuilder.build(null);
   }
 
@@ -771,18 +770,14 @@ public class HttpFSServer {
     switch (op.value()) {
       case CREATE: {
         Boolean hasData = params.get(DataParam.NAME, DataParam.class);
-        if (!hasData) {
-          URI redirectURL = createUploadRedirectionURL(
-              uriInfo, HttpFSFileSystem.Operation.CREATE);
-          Boolean noRedirect = params.get(
-              NoRedirectParam.NAME, NoRedirectParam.class);
-          if (noRedirect) {
+        URI redirectURL = createUploadRedirectionURL(uriInfo,
+            HttpFSFileSystem.Operation.CREATE);
+        Boolean noRedirect =
+            params.get(NoRedirectParam.NAME, NoRedirectParam.class);
+        if (noRedirect) {
             final String js = JsonUtil.toJsonString("Location", redirectURL);
             response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
-          } else {
-            response = Response.temporaryRedirect(redirectURL).build();
-          }
-        } else {
+        } else if (hasData) {
           Short permission = params.get(PermissionParam.NAME,
                                          PermissionParam.class);
           Short unmaskedPermission = params.get(UnmaskedPermissionParam.NAME,
@@ -806,6 +801,8 @@ public class HttpFSServer {
               "Location", uriInfo.getAbsolutePath());
           response = Response.created(uriInfo.getAbsolutePath())
               .type(MediaType.APPLICATION_JSON).entity(js).build();
+        } else {
+          response = Response.temporaryRedirect(redirectURL).build();
         }
         break;
       }
