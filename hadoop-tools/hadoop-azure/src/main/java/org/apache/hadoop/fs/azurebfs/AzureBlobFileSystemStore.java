@@ -428,15 +428,16 @@ public class AzureBlobFileSystemStore implements Closeable {
               umask.toString(),
               isNamespaceEnabled);
 
-        boolean appendBlob = false;
-        if (isAppendBlobKey(path.toString())) {
-          appendBlob = true;
-        }
+      boolean appendBlob = false;
+      if (isAppendBlobKey(path.toString())) {
+        appendBlob = true;
+      }
 
-      client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), true, overwrite,
-          isNamespaceEnabled ? getOctalNotation(permission) : null,
-          isNamespaceEnabled ? getOctalNotation(umask) : null,
-          appendBlob);
+      final AbfsRestOperation op = client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), true, overwrite,
+              isNamespaceEnabled ? getOctalNotation(permission) : null,
+              isNamespaceEnabled ? getOctalNotation(umask) : null,
+              appendBlob);
+      perfInfo.registerResult(op.getResult()).registerSuccess(true);
 
       return new AbfsOutputStream(
           client,

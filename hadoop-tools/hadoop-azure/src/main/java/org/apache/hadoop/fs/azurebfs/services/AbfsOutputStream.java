@@ -57,7 +57,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private boolean supportFlush;
   private boolean disableOutputStreamFlush;
   private boolean supportAppendWithFlush;
-  private boolean appendBlob;
+  private boolean isAppendBlob;
   private volatile IOException lastError;
 
   private long lastFlushOffset;
@@ -99,7 +99,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
             .isDisableOutputStreamFlush();
     this.supportAppendWithFlush = abfsOutputStreamContext
             .isEnableAppendWithFlush();
-    this.appendBlob = aabfsOutputStreamContext.isEnableAppendBlob();
+    this.isAppendBlob = aabfsOutputStreamContext.isEnableAppendBlob();
     this.lastError = null;
     this.lastFlushOffset = 0;
     this.bufferSize = abfsOutputStreamContext.getWriteBufferSize();
@@ -307,7 +307,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     final long offset = position;
     position += bytesLength;
 
-    if (this.appendBlob) {
+    if (this.isAppendBlob) {
         client.append(path, offset, bytes, 0,
             bytesLength, flush, isClose);
         lastTotalAppendOffset += bytesLength;
