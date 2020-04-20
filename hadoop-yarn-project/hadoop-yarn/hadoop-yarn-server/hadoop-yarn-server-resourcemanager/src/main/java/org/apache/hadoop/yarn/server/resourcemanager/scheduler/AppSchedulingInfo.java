@@ -107,12 +107,13 @@ public class AppSchedulingInfo {
   private boolean unmanagedAM;
 
   private final String defaultResourceRequestAppPlacementType;
+  private final SchedulerApplicationAttempt appAttempt;
 
   public AppSchedulingInfo(ApplicationAttemptId appAttemptId, String user,
       Queue queue, AbstractUsersManager abstractUsersManager, long epoch,
       ResourceUsage appResourceUsage,
       Map<String, String> applicationSchedulingEnvs, RMContext rmContext,
-      boolean unmanagedAM) {
+      boolean unmanagedAM, SchedulerApplicationAttempt appAttempt) {
     this.applicationAttemptId = appAttemptId;
     this.applicationId = appAttemptId.getApplicationId();
     this.queue = queue;
@@ -127,6 +128,7 @@ public class AppSchedulingInfo {
          YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_RETRY_ATTEMPTS,
          YarnConfiguration.DEFAULT_RM_PLACEMENT_CONSTRAINTS_RETRY_ATTEMPTS);
     this.unmanagedAM = unmanagedAM;
+    this.appAttempt = appAttempt;
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     updateContext = new ContainerUpdateContext(this);
@@ -343,7 +345,7 @@ public class AppSchedulingInfo {
         schedulerRequestKey)) == null) {
       appPlacementAllocator =
           ApplicationPlacementAllocatorFactory.getAppPlacementAllocator(
-              placementTypeClass, this, schedulerRequestKey, rmContext);
+              placementTypeClass, this, schedulerRequestKey, rmContext, appAttempt);
       schedulerKeyToAppPlacementAllocator.put(schedulerRequestKey,
           appPlacementAllocator);
     }

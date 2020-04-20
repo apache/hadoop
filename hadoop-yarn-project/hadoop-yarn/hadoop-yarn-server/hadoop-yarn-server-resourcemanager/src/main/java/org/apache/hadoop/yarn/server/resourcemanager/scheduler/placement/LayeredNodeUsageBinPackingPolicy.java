@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,7 +93,7 @@ public class LayeredNodeUsageBinPackingPolicy<N extends SchedulerNode>
     };
   }
 
-  private float calculateScore(N node) {
+  protected float calculateScore(N node) {
     LOG.debug("{}'s used resource is {}", node.getNodeID().toString(), node.getAllocatedResource());
     float nodeResourceUsage = getNodeResourceUsage(node.getAllocatedResource(),
         node.getTotalResource());
@@ -151,7 +152,7 @@ public class LayeredNodeUsageBinPackingPolicy<N extends SchedulerNode>
 
   @Override
   public Iterator<N> getPreferredNodeIterator(Collection<N> nodes,
-      String partition) {
+      String partition, SchedulerApplicationAttempt appAttempt) {
     return getNodesPerPartition(partition).iterator();
   }
 

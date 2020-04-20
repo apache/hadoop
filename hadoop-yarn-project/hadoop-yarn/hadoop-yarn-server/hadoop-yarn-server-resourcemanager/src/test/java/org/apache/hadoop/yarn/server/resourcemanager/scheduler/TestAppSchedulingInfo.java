@@ -53,7 +53,7 @@ public class TestAppSchedulingInfo {
     doReturn(new YarnConfiguration()).when(rmContext).getYarnConfiguration();
     AppSchedulingInfo appSchedulingInfo = new AppSchedulingInfo(appAttemptId,
         "test", queue, null, 0, new ResourceUsage(),
-        new HashMap<String, String>(), rmContext, false);
+        new HashMap<String, String>(), rmContext, false, null);
 
     appSchedulingInfo.updatePlacesBlacklistedByApp(new ArrayList<String>(),
         new ArrayList<String>());
@@ -127,7 +127,7 @@ public class TestAppSchedulingInfo {
     doReturn(new YarnConfiguration()).when(rmContext).getYarnConfiguration();
     AppSchedulingInfo  info = new AppSchedulingInfo(
         appAttemptId, "test", queue, mock(ActiveUsersManager.class), 0,
-        new ResourceUsage(), new HashMap<>(), rmContext, false);
+        new ResourceUsage(), new HashMap<>(), rmContext, false, null);
     Assert.assertEquals(0, info.getSchedulerKeys().size());
 
     Priority pri1 = Priority.newInstance(1);
@@ -192,7 +192,7 @@ public class TestAppSchedulingInfo {
     Queue queue = mock(Queue.class);
     AppSchedulingInfo info = new AppSchedulingInfo(appAttemptId, "test", queue,
         mock(ActiveUsersManager.class), 0, new ResourceUsage(), new HashMap<>(),
-        rmContext, false);
+        rmContext, false, null);
     Assert.assertEquals(info.getApplicationSchedulingEnvs(), new HashMap<>());
     // This should return null as nothing is set in the conf.
     Assert.assertNull(info.getDefaultResourceRequestAppPlacementType());
@@ -202,7 +202,7 @@ public class TestAppSchedulingInfo {
     when(rmContext.getYarnConfiguration()).thenReturn(conf);
     info = new AppSchedulingInfo(appAttemptId, "test", queue,
         mock(ActiveUsersManager.class), 0, new ResourceUsage(), new HashMap<>(),
-        rmContext, false);
+        rmContext, false, null);
     Assert.assertEquals(info.getDefaultResourceRequestAppPlacementType(),
         DEFAULT_APPLICATION_PLACEMENT_TYPE_CLASS);
   }
@@ -221,7 +221,7 @@ public class TestAppSchedulingInfo {
         LocalityAppPlacementAllocator.class.getName());
     AppSchedulingInfo info = new AppSchedulingInfo(appAttemptId, "test", queue,
         mock(ActiveUsersManager.class), 0, new ResourceUsage(),
-        applicationSchedulingEnvs, rmContext, false);
+        applicationSchedulingEnvs, rmContext, false, null);
     // This should be set from applicationSchedulingEnvs
     Assert.assertEquals(info.getDefaultResourceRequestAppPlacementType(),
         LocalityAppPlacementAllocator.class.getName());

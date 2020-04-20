@@ -46,7 +46,8 @@ public class ApplicationPlacementAllocatorFactory {
    */
   public static AppPlacementAllocator<SchedulerNode> getAppPlacementAllocator(
       String appPlacementAllocatorName, AppSchedulingInfo appSchedulingInfo,
-      SchedulerRequestKey schedulerRequestKey, RMContext rmContext) {
+      SchedulerRequestKey schedulerRequestKey, RMContext rmContext,
+      SchedulerApplicationAttempt appAttempt) {
     Class<?> policyClass;
     try {
       if (StringUtils.isEmpty(appPlacementAllocatorName)) {
@@ -66,7 +67,7 @@ public class ApplicationPlacementAllocatorFactory {
     AppPlacementAllocator<SchedulerNode> placementAllocatorInstance = (AppPlacementAllocator<SchedulerNode>) ReflectionUtils
         .newInstance(policyClass, null);
     placementAllocatorInstance.initialize(appSchedulingInfo,
-        schedulerRequestKey, rmContext);
+        schedulerRequestKey, rmContext, appAttempt);
     return placementAllocatorInstance;
   }
 }

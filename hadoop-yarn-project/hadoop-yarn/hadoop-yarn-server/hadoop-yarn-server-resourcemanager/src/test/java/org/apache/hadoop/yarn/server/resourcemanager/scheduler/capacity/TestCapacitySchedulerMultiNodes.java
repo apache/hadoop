@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.waitforNMRegistered;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -468,15 +470,20 @@ public class TestCapacitySchedulerMultiNodes {
         .getMultiNodePolicy(POLICY_CLASS_NAME);
     sorter.reSortClusterNodes();
 
+    SchedulerApplicationAttempt mockAppAttempt = mock(
+        SchedulerApplicationAttempt.class);
+    when(mockAppAttempt.isWaitingForAMContainer()).
+        thenReturn(true);
+
     Iterator<SchedulerNode> nodeIterator = mns.getMultiNodeSortIterator(
-        nodes, partition, POLICY_CLASS_NAME);
+        nodes, partition, POLICY_CLASS_NAME, mockAppAttempt);
     Assert.assertEquals(4, Iterators.size(nodeIterator));
 
     // Validate the count after missing 3 node heartbeats
     Thread.sleep(YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS * 3);
 
     nodeIterator = mns.getMultiNodeSortIterator(
-        nodes, partition, POLICY_CLASS_NAME);
+        nodes, partition, POLICY_CLASS_NAME, mockAppAttempt);
     Assert.assertEquals(0, Iterators.size(nodeIterator));
 
     rm.stop();

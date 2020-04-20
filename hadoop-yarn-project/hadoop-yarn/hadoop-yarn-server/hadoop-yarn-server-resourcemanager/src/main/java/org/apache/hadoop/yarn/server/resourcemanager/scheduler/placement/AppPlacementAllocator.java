@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ApplicationSchedulingConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
@@ -68,6 +69,7 @@ public abstract class AppPlacementAllocator<N extends SchedulerNode> {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AppPlacementAllocator.class);
+  protected SchedulerApplicationAttempt appAttempt;
 
   /**
    * Get iterator of preferred node depends on requirement and/or availability.
@@ -90,7 +92,7 @@ public abstract class AppPlacementAllocator<N extends SchedulerNode> {
     return multiNodeSortingManager.getMultiNodeSortIterator(
         candidateNodeSet.getAllNodes().values(),
         candidateNodeSet.getPartition(),
-        multiNodeSortPolicyName);
+        multiNodeSortPolicyName, appAttempt);
   }
 
   /**
@@ -221,10 +223,12 @@ public abstract class AppPlacementAllocator<N extends SchedulerNode> {
    * @param rmContext rmContext
    */
   public void initialize(AppSchedulingInfo appSchedulingInfo,
-      SchedulerRequestKey schedulerRequestKey, RMContext rmContext) {
+      SchedulerRequestKey schedulerRequestKey, RMContext rmContext,
+      SchedulerApplicationAttempt appAttempt) {
     this.appSchedulingInfo = appSchedulingInfo;
     this.rmContext = rmContext;
     this.schedulerRequestKey = schedulerRequestKey;
+    this.appAttempt = appAttempt;
     multiNodeSortPolicyName = appSchedulingInfo
         .getApplicationSchedulingEnvs().get(
         ApplicationSchedulingConfig.ENV_MULTI_NODE_SORTING_POLICY_CLASS);

@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
@@ -70,8 +71,9 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
   @SuppressWarnings("unchecked")
   @Override
   public void initialize(AppSchedulingInfo appSchedulingInfo,
-      SchedulerRequestKey schedulerRequestKey, RMContext rmContext) {
-    super.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+      SchedulerRequestKey schedulerRequestKey, RMContext rmContext,
+      SchedulerApplicationAttempt appAttempt) {
+    super.initialize(appSchedulingInfo, schedulerRequestKey, rmContext, appAttempt);
   }
 
   private boolean hasRequestLabelChanged(ResourceRequest requestOne,

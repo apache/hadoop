@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 
 import java.util.Collection;
 import java.util.Iterator;
@@ -44,7 +45,7 @@ public interface MultiNodeLookupPolicy<N extends SchedulerNode> {
    *
    * @return iterator of preferred node
    */
-  Iterator<N> getPreferredNodeIterator(Collection<N> nodes, String partition);
+  Iterator<N> getPreferredNodeIterator(Collection<N> nodes, String partition, SchedulerApplicationAttempt appAttempt);
 
   /**
    * Refresh working nodes set for re-ordering based on the algorithm selected.

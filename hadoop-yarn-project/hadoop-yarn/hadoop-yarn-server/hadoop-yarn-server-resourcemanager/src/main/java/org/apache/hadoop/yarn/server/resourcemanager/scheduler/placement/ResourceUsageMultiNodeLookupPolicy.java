@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 
 import java.util.Comparator;
 import java.util.Collection;
@@ -60,7 +61,7 @@ public class ResourceUsageMultiNodeLookupPolicy<N extends SchedulerNode>
 
   @Override
   public Iterator<N> getPreferredNodeIterator(Collection<N> nodes,
-      String partition) {
+      String partition, SchedulerApplicationAttempt appAttempt) {
     return getNodesPerPartition(partition).iterator();
   }
 

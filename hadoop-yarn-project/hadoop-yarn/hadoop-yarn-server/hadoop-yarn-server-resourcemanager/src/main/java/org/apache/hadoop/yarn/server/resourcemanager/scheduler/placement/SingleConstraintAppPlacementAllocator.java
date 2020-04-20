@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
@@ -436,8 +437,9 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
 
   @Override
   public void initialize(AppSchedulingInfo appSchedulingInfo,
-      SchedulerRequestKey schedulerRequestKey, RMContext rmContext) {
-    super.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+      SchedulerRequestKey schedulerRequestKey, RMContext rmContext,
+      SchedulerApplicationAttempt appAttempt) {
+    super.initialize(appSchedulingInfo, schedulerRequestKey, rmContext, appAttempt);
     this.allocationTagsManager = rmContext.getAllocationTagsManager();
     this.placementConstraintManager = rmContext.getPlacementConstraintManager();
   }

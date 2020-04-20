@@ -84,14 +84,14 @@ public class TestSingleConstraintAppPlacementAllocator {
 
     // Create allocator
     allocator = new SingleConstraintAppPlacementAllocator();
-    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext, null);
   }
 
   private void assertValidSchedulingRequest(
       SchedulingRequest schedulingRequest) {
     // Create allocator to avoid fields polluted by previous runs
     allocator = new SingleConstraintAppPlacementAllocator();
-    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext, null);
     allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest, false);
   }
 
@@ -101,7 +101,7 @@ public class TestSingleConstraintAppPlacementAllocator {
       // Create allocator
       if (recreateAllocator) {
         allocator = new SingleConstraintAppPlacementAllocator();
-        allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+        allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext, null);
       }
       allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest, false);
     } catch (SchedulerInvalidResoureRequestException e) {
@@ -306,7 +306,7 @@ public class TestSingleConstraintAppPlacementAllocator {
         any(LongBinaryOperator.class));
 
     allocator = new SingleConstraintAppPlacementAllocator();
-    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext, null);
     // Valid (with partition)
     schedulingRequest = SchedulingRequest.newBuilder().executionType(
         ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
@@ -381,7 +381,7 @@ public class TestSingleConstraintAppPlacementAllocator {
             .build();
     // Create allocator
     allocator = new SingleConstraintAppPlacementAllocator();
-    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext, null);
     allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest2, false);
     attributes = new HashSet<>();
     result = allocator.canAllocate(NodeType.NODE_LOCAL,
@@ -392,7 +392,7 @@ public class TestSingleConstraintAppPlacementAllocator {
 
     // 3. verify python!=3 validation when node has python=2
     allocator = new SingleConstraintAppPlacementAllocator();
-    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext, null);
     allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest2, false);
     attributes = new HashSet<>();
     attributes.add(
@@ -406,7 +406,7 @@ public class TestSingleConstraintAppPlacementAllocator {
 
     // 4. verify python!=3 validation when node has python=3
     allocator = new SingleConstraintAppPlacementAllocator();
-    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext, null);
     allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest2, false);
     attributes = new HashSet<>();
     attributes.add(
@@ -441,7 +441,7 @@ public class TestSingleConstraintAppPlacementAllocator {
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
             .build();
     allocator = new SingleConstraintAppPlacementAllocator();
-    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext, null);
     allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest1, false);
     Set<NodeAttribute> attributes = new HashSet<>();
     attributes.add(
@@ -457,7 +457,7 @@ public class TestSingleConstraintAppPlacementAllocator {
     // 2. verify and(python!=3:java=1.8) validation when node has python=2
     // and java=1.8
     allocator = new SingleConstraintAppPlacementAllocator();
-    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext, null);
     allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest1, false);
     attributes = new HashSet<>();
     attributes.add(
@@ -491,7 +491,7 @@ public class TestSingleConstraintAppPlacementAllocator {
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
             .build();
     allocator = new SingleConstraintAppPlacementAllocator();
-    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext, null);
     allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest2, false);
     attributes = new HashSet<>();
     attributes.add(
@@ -507,7 +507,7 @@ public class TestSingleConstraintAppPlacementAllocator {
     // 4. verify or(python!=3:java=1.8) validation when node has python=3
     // and java=1.7.
     allocator = new SingleConstraintAppPlacementAllocator();
-    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext, null);
     allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest2, false);
     attributes = new HashSet<>();
     attributes.add(

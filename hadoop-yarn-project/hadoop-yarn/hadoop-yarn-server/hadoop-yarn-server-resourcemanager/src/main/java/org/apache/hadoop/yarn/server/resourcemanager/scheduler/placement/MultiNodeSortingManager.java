@@ -34,6 +34,7 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 
 /**
@@ -112,7 +113,7 @@ public class MultiNodeSortingManager<N extends SchedulerNode>
   }
 
   public Iterator<N> getMultiNodeSortIterator(Collection<N> nodes,
-      String partition, String policyName) {
+      String partition, String policyName, SchedulerApplicationAttempt appAttempt) {
     // nodeLookupPolicy can be null if app is configured with invalid policy.
     // in such cases, use the the first node.
     if(policyName == null) {
@@ -140,7 +141,7 @@ public class MultiNodeSortingManager<N extends SchedulerNode>
     }
 
     Iterator<N> nodesIterator = policy.getPreferredNodeIterator(nodes,
-        partition);
+        partition, appAttempt);
 
     // Skip node which missed YarnConfiguration.SCHEDULER_SKIP_NODE_MULTIPLIER
     // heartbeats since the node might be dead and we should not continue
