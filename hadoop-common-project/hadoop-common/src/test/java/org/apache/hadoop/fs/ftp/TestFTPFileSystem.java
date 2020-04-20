@@ -67,11 +67,13 @@ public class TestFTPFileSystem {
   @After
   @SuppressWarnings("ResultOfMethodCallIgnored")
   public void tearDown() throws Exception {
-    server.stop();
-    Files.walk(server.getFtpRoot())
-        .sorted(Comparator.reverseOrder())
-        .map(java.nio.file.Path::toFile)
-        .forEach(File::delete);
+    if (server != null) {
+      server.stop();
+      Files.walk(server.getFtpRoot())
+          .sorted(Comparator.reverseOrder())
+          .map(java.nio.file.Path::toFile)
+          .forEach(File::delete);
+    }
   }
 
   @Test

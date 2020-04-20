@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
@@ -349,7 +350,7 @@ public class FTPFileSystem extends FileSystem {
       // The ftpClient is an inconsistent state. Must close the stream
       // which in turn will logout and disconnect from FTP server
       if (outputStream != null) {
-        outputStream.close();
+        IOUtils.closeStream(outputStream);
       }
       disconnect(client);
       throw new IOException("Unable to create file: " + file + ", Aborting");
