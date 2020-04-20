@@ -477,7 +477,7 @@ public final class FederationTestUtils {
    * available. If there are multiple routers,
    * {@link #createMountTableEntry(List, String, DestinationOrder, Collection)}
    * should be used instead because the method does not refresh
-   * the other routers.
+   * the mount tables of the other routers.
    * @param router Router to change.
    * @param mountPoint Name of the mount point.
    * @param order Order of the mount table entry.
