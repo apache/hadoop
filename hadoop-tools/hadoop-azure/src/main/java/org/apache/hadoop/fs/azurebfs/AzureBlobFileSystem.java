@@ -1197,4 +1197,5 @@ public class AzureBlobFileSystem extends FileSystem {
       return super.hasPathCapability(p, capability);
     }
   }
+
 }
