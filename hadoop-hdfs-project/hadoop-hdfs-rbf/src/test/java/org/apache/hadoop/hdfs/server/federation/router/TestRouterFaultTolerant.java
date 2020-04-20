@@ -248,6 +248,7 @@ public class TestRouterFaultTolerant {
     LOG.info("Setup {} with order {}", mountPoint, order);
     createMountTableEntry(
         getRandomRouter(), mountPoint, order, namenodes.keySet());
+    refreshRoutersCaches(routers);
 
     LOG.info("Write in {} should succeed writing in ns0 and fail for ns1",
         mountPath);
