@@ -41,7 +41,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
+import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.ExitUtil;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
@@ -429,11 +431,17 @@ public class TestS3Guard extends Assert {
         S3Guard.DisabledWarnLevel.WARN.toString()
             .toLowerCase(Locale.US), "bucket");
 
-    LambdaTestUtils.intercept(UnsupportedOperationException.class,
-        S3Guard.DISABLED_LOG_MSG, () -> S3Guard.logS3GuardDisabled(
+    ExitUtil.ExitException ex = LambdaTestUtils.intercept(
+        ExitUtil.ExitException.class,
+        String.format(S3Guard.DISABLED_LOG_MSG, "bucket"),
+        () -> S3Guard.logS3GuardDisabled(
             localLogger, S3Guard.DisabledWarnLevel.FAIL.toString(), "bucket"));
+    if (ex.getExitCode() != LauncherExitCodes.EXIT_BAD_CONFIGURATION) {
+      throw ex;
+    }
     LambdaTestUtils.intercept(IllegalArgumentException.class,
-        S3Guard.UNKNOWN_WARN_LEVEL, () -> S3Guard.logS3GuardDisabled(
+        S3Guard.UNKNOWN_WARN_LEVEL,
+        () -> S3Guard.logS3GuardDisabled(
             localLogger, "FOO_BAR_LEVEL", "bucket"));
   }
 
