@@ -61,15 +61,15 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
   @Test
   public void testXNSAccount() throws IOException {
     Assume.assumeTrue("Skip this test because the account being used for test is a non XNS account",
-        isUsingXNSAccount);
+            isUsingXNSAccount);
     assertTrue("Expecting getIsNamespaceEnabled() return true",
-        getFileSystem().getIsNamespaceEnabled());
+            getFileSystem().getIsNamespaceEnabled());
   }
 
   @Test
   public void testNonXNSAccount() throws IOException {
     Assume.assumeFalse("Skip this test because the account being used for test is a XNS account",
-        isUsingXNSAccount);
+            isUsingXNSAccount);
     assertFalse("Expecting getIsNamespaceEnabled() return false",
         getFileSystem().getIsNamespaceEnabled());
   }

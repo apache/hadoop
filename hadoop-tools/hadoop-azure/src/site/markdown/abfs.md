@@ -663,13 +663,14 @@ Hflush() being the only documented API that can provide persistent data
 transfer, Flush() also attempting to persist buffered data will lead to
 performance issues.
 
-### <a name="flushconfigoptions"></a> HNS Options
+### <a name="hnscheckconfigoptions"></a> HNS Check Options
 Config `fs.azure.account.hns.enabled` provides an option to specify whether
  the storage account is HNS enabled or not. In case the config is not provided,
   a server call is made to check the same.
 
 ### <a name="flushconfigoptions"></a> Access Options
-
+Config `fs.azure.enable.check.access` needs to be set true to enable
+ the AzureBlobFileSystem.access().
 
 ### <a name="perfoptions"></a> Perf Options
 
