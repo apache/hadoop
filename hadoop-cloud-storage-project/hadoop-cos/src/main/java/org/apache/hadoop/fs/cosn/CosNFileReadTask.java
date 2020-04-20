@@ -80,7 +80,6 @@ public class CosNFileReadTask implements Runnable {
   public void run() {
     int retries = 0;
     RetryPolicy.RetryAction retryAction;
-    LOG.info(Thread.currentThread().getName() + "read ...");
     try {
       this.readBuffer.lock();
       do {

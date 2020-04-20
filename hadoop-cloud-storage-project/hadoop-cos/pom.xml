@@ -81,6 +81,31 @@
           <forkedProcessTimeoutInSeconds>3600</forkedProcessTimeoutInSeconds>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>deplist</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>list</goal>
+            </goals>
+            <configuration>
+              <outputFile>${project.basedir}/target/hadoop-cloud-storage-deps/${project.artifactId}.cloud-storage-optional.txt</outputFile>
+            </configuration>
+          </execution>
+          <execution>
+            <id>package</id>
+            <goals>
+              <goal>copy-dependencies</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/lib</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
@@ -93,8 +118,8 @@
 
     <dependency>
       <groupId>com.qcloud</groupId>
-      <artifactId>cos_api</artifactId>
-      <version>5.4.9</version>
+      <artifactId>cos_api-bundle</artifactId>
+      <version>5.6.19</version>
       <scope>compile</scope>
     </dependency>
 

@@ -130,20 +130,19 @@ Each user needs to properly configure the credentials ( User's secreteId and sec
 ```xml
     <property>
         <name>fs.cosn.credentials.provider</name>
-        <value>org.apache.hadoop.fs.auth.SimpleCredentialProvider</value>
+        <value>org.apache.hadoop.fs.auth.SimpleCredentialsProvider</value>
         <description>
 
             This option allows the user to specify how to get the credentials.
             Comma-separated class names of credential provider classes which implement
             com.qcloud.cos.auth.COSCredentialsProvider:
 
-            1.org.apache.hadoop.fs.auth.SimpleCredentialProvider: Obtain the secret id and secret key
-            from fs.cosn.userinfo.secretId and fs.cosn.userinfo.secretKey in core-site.xml
-            2.org.apache.hadoop.fs.auth.EnvironmentVariableCredentialProvider: Obtain the secret id and secret key               from system environment variables named COS_SECRET_ID and COS_SECRET_KEY
+            1.org.apache.hadoop.fs.auth.SimpleCredentialsProvider: Obtain the secret id and secret key from fs.cosn.userinfo.secretId and fs.cosn.userinfo.secretKey in core-site.xml
+            2.org.apache.hadoop.fs.auth.EnvironmentVariableCredentialsProvider: Obtain the secret id and secret key from system environment variables named COS_SECRET_ID and COS_SECRET_KEY
 
             If unspecified, the default order of credential providers is:
-            1. org.apache.hadoop.fs.auth.SimpleCredentialProvider
-            2. org.apache.hadoop.fs.auth.EnvironmentVariableCredentialProvider
+            1. org.apache.hadoop.fs.auth.SimpleCredentialsProvider
+            2. org.apache.hadoop.fs.auth.EnvironmentVariableCredentialsProvider
 
         </description>
     </property>
@@ -237,7 +236,7 @@ Hadoop-COS provides rich runtime properties to set, and most of these do not req
 | properties | description | default value | required |
 |:----------:|:-----------|:-------------:|:--------:|
 | fs.defaultFS | Configure the default file system used by Hadoop.| None | NO |
-| fs.cosn.credentials.provider | This option allows the user to specify how to get the credentials. Comma-separated class names of credential provider classes which implement com.qcloud.cos.auth.COSCredentialsProvider: <br/> 1. org.apache.hadoop.fs.cos.auth.SimpleCredentialProvider: Obtain the secret id and secret key from `fs.cosn.userinfo.secretId` and `fs.cosn.userinfo.secretKey` in core-site.xml; <br/> 2. org.apache.hadoop.fs.auth.EnvironmentVariableCredentialProvider: Obtain the secret id and secret key from system environment variables named `COSN_SECRET_ID` and `COSN_SECRET_KEY`. <br/> <br/> If unspecified, the default order of credential providers is: <br/> 1. org.apache.hadoop.fs.auth.SimpleCredentialProvider; <br/> 2. org.apache.hadoop.fs.auth.EnvironmentVariableCredentialProvider. | None | NO |
+| fs.cosn.credentials.provider | This option allows the user to specify how to get the credentials. Comma-separated class names of credential provider classes which implement com.qcloud.cos.auth.COSCredentialsProvider: <br/> 1. org.apache.hadoop.fs.cos.auth.SimpleCredentialsProvider: Obtain the secret id and secret key from `fs.cosn.userinfo.secretId` and `fs.cosn.userinfo.secretKey` in core-site.xml; <br/> 2. org.apache.hadoop.fs.auth.EnvironmentVariableCredentialsProvider: Obtain the secret id and secret key from system environment variables named `COSN_SECRET_ID` and `COSN_SECRET_KEY`. <br/> <br/> If unspecified, the default order of credential providers is: <br/> 1. org.apache.hadoop.fs.auth.SimpleCredentialsProvider; <br/> 2. org.apache.hadoop.fs.auth.EnvironmentVariableCredentialsProvider. | None | NO |
 | fs.cosn.userinfo.secretId/secretKey | The API key information of your account | None | YES |
 | fs.cosn.bucket.region | The region where the bucket is located. | None | YES |
 | fs.cosn.impl | The implementation class of the CosN filesystem. | None | YES |
