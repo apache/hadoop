@@ -746,9 +746,9 @@ public final class Constants {
    * The warn level if S3Guard is disabled.
    */
   public static final String S3GUARD_DISABLED_WARN_LEVEL
-      = "org.apache.hadoop.fs.s3a.s3guard.disabled.warn.level";
+      = "fs.s3a.s3guard.disabled.warn.level";
   public static final String DEFAULT_S3GUARD_DISABLED_WARN_LEVEL =
-      "INFORM";
+      "SILENT";
 
   /**
    * Inconsistency (visibility delay) injection settings.
