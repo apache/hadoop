@@ -29,11 +29,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class ConfigurationKeys {
 
   /**
-   * Each time a FS instance is created a Getacl call is made. If the call
-   * fails with 400 Bad request, the account is determined to be a non-HNS
-   * account.
-   * If this config is present, use that to determine account HNS status. If
-   * config is not present, default behaviour will be calling getAcl.
+   * Config to specify if the configured account is HNS enabled or not.
+   * If this config is not set,
+   * getacl call is made on account filesystem root path to determine HNS 
+   * status.
    */
   public static final String FS_AZURE_ACCOUNT_IS_HNS_ENABLED = "fs.azure.account.hns.enabled";
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME = "fs.azure.account.key";
