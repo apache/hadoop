@@ -730,6 +730,14 @@ By defaul this will be 500.
 
 `fs.azure.user.agent.prefix`: The value specified for this config will be part of the User-Agent header for the server calls.
 
+### <a name="throttlingconfigoptions"></a> Throttling Options
+`fs.azure.enable.autothrottling`: The driver has the capability to throttle the server calls. This config provides a control to enable/disable the same. By default this will be true.
+
+### <a name="renameconfigoptions"></a> Rename Options
+`fs.azure.atomic.rename.key`: Prints the following log if the source of the rename belongs to one of the configured directories.
+"The atomic rename feature is not supported by the ABFS scheme; however, rename, create and delete operations are atomic if Namespace is enabled for your Azure Storage account."
+The directories can be specified as comma separated values. By default the value is "/hbase"
+
 ### <a name="perfoptions"></a> Perf Options
 
 #### <a name="abfstracklatencyoptions"></a> 1. HTTP Request Tracking Options
