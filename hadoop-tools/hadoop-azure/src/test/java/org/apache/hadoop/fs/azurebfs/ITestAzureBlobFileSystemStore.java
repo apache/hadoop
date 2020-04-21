@@ -66,27 +66,29 @@ public class ITestAzureBlobFileSystemStore extends AbstractAbfsIntegrationTest {
 
   private void unsetAndAssert() throws IOException {
     final AzureBlobFileSystemStore abfsStore = getFileSystem().getAbfsStore();
-    this.getConfiguration().unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
+    abfsStore.getAbfsConfiguration()
+        .setIsNamespaceEnabledAccount(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
     Assertions.assertThat(abfsStore.isNameSpaceEnabledSetFromConfig())
         .describedAs(
-            "shouldMakeServerCallForHnsCheck should return true when the"
-                + " conf is not present").isTrue();
+            "isNameSpaceEnabledSetFromConfig should return false when the"
+                + " conf is not present").isFalse();
   }
 
   private void setValidValueAndAssert(String validConf) throws IOException {
     final AzureBlobFileSystemStore abfsStore = getFileSystem().getAbfsStore();
-    this.getConfiguration().set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, validConf);
+    abfsStore.getAbfsConfiguration().setIsNamespaceEnabledAccount(validConf);
     Assertions.assertThat(abfsStore.isNameSpaceEnabledSetFromConfig())
         .describedAs(
-            "shouldMakeServerCallForHnsCheck should return false when valid"
-                + " conf is present").isFalse();
+            "isNameSpaceEnabledSetFromConfig should return true when valid"
+                + " conf is present").isTrue();
   }
 
   private void setInvalidValueAndAssert(String invalidConf) throws IOException {
     final AzureBlobFileSystemStore abfsStore = getFileSystem().getAbfsStore();
-    this.getConfiguration().set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, invalidConf);
+    abfsStore.getAbfsConfiguration().setIsNamespaceEnabledAccount(invalidConf);
     Assertions.assertThat(abfsStore.isNameSpaceEnabledSetFromConfig())
-        .describedAs("shouldMakeServerCallForHnsCheck should return true when"
-            + " conf present is invalid").isTrue();
+        .describedAs("isNameSpaceEnabledSetFromConfig should return false when"
+            + " conf present is invalid").isFalse();
   }
+
 }
