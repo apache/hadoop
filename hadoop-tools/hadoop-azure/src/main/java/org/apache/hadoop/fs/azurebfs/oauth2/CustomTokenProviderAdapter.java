@@ -71,9 +71,11 @@ public final class CustomTokenProviderAdapter extends AccessTokenProvider
       ex = null;
       try {
         accessToken = adaptee.getAccessToken();
-        LOG.trace("CustomTokenProvider Access token fetch was successful with retry count {}", retryCount);
+        LOG.trace("CustomTokenProvider Access token fetch was successful with retry count {}",
+            (fetchTokenRetryCount - retryCount));
       } catch (Exception e) {
-        LOG.debug("CustomTokenProvider Access token fetch failed with retry count {}", retryCount);
+        LOG.debug("CustomTokenProvider Access token fetch failed with retry count {}",
+            (fetchTokenRetryCount - retryCount));
         ex = e;
       }
 
