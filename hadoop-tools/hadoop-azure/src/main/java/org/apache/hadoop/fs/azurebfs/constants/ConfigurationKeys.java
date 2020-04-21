@@ -31,7 +31,7 @@ public final class ConfigurationKeys {
   /**
    * Config to specify if the configured account is HNS enabled or not.
    * If this config is not set,
-   * getacl call is made on account filesystem root path to determine HNS 
+   * getacl call is made on account filesystem root path to determine HNS
    * status.
    */
   public static final String FS_AZURE_ACCOUNT_IS_HNS_ENABLED = "fs.azure.account.hns.enabled";

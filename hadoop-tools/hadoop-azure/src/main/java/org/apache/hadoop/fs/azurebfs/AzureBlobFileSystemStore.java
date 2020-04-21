@@ -266,7 +266,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   @VisibleForTesting
   boolean isNameSpaceEnabledSetFromConfig() {
     final String hnsEnabledConfig = abfsConfiguration
-        .get(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
+    .getIsNamespaceEnabledAccount();
     if (TRUE_STR.equalsIgnoreCase(hnsEnabledConfig)
         || FALSE_STR.equalsIgnoreCase(hnsEnabledConfig)) {
       this.isNamespaceEnabled = Boolean.valueOf(hnsEnabledConfig);
