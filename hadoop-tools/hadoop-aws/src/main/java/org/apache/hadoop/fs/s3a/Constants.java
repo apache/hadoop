@@ -549,6 +549,14 @@ public final class Constants {
   @InterfaceStability.Unstable
   public static final String INPUT_FADV_RANDOM = "random";
 
+  /**
+   * What is the length of the file.
+   * This is used in open() to let the caller specify the length
+   * of the file.
+   */
+  @InterfaceStability.Unstable
+  public static final String INPUT_OPTION_LENGTH = "fs.s3a.input.length";
+
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public static final String S3_CLIENT_FACTORY_IMPL =

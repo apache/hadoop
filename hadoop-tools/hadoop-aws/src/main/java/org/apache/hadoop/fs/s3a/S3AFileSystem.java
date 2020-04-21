@@ -1091,18 +1091,33 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     entryPoint(INVOCATION_OPEN);
     final Path path = qualify(file);
-    S3AFileStatus fileStatus = extractOrFetchSimpleFileStatus(path,
-        providedStatus);
+    S3AFileStatus fileStatus;
+    Configuration opts = options.orElse(null);
+    if (!providedStatus.isPresent()
+        && opts != null
+        && opts.get(INPUT_OPTION_LENGTH) != null) {
+      // build a minimal S3A FileStatus From the input length alone.
+      // this is all we actually need.
+      long length = opts.getLong(INPUT_OPTION_LENGTH, 0);
+      LOG.debug("Fixing length of file to read {} as {}", path, length);
+      fileStatus = new S3AFileStatus(
+          length,
+          0, path,
+          getDefaultBlockSize(path),
+          username, null, null);
+    } else {
+      fileStatus = extractOrFetchSimpleFileStatus(path,
+          providedStatus);
+    }
 
     S3AReadOpContext readContext;
-    if (options.isPresent()) {
-      Configuration o = options.get();
+    if (opts != null) {
       // normal path. Open the file with the chosen seek policy, if different
       // from the normal one.
       // and readahead.
       S3AInputPolicy policy = S3AInputPolicy.getPolicy(
-          o.get(INPUT_FADVISE, inputPolicy.toString()));
-      long readAheadRange2 = o.getLong(READAHEAD_RANGE, readAhead);
+          opts.get(INPUT_FADVISE, inputPolicy.toString()));
+      long readAheadRange2 = opts.getLong(READAHEAD_RANGE, readAhead);
       // TODO support change detection policy from options?
       readContext = createReadContext(
           fileStatus,
@@ -1121,7 +1136,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return new FSDataInputStream(
         new S3AInputStream(
             readContext,
-            createObjectAttributes(fileStatus),
+            createObjectAttributes(path, fileStatus),
             s3));
   }
 
@@ -1175,13 +1190,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Create the attributes of an object for subsequent use.
+   * @param path path -this is used over the file status path.
    * @param fileStatus file status to build from.
    * @return attributes to use when building the query.
    */
   private S3ObjectAttributes createObjectAttributes(
-      final S3AFileStatus fileStatus) {
+      final Path path, final S3AFileStatus fileStatus) {
     return createObjectAttributes(
-        fileStatus.getPath(),
+        path,
         fileStatus.getETag(),
         fileStatus.getVersionId(),
         fileStatus.getLen());
@@ -1507,7 +1523,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public S3ObjectAttributes createObjectAttributes(
         final S3AFileStatus fileStatus) {
-      return S3AFileSystem.this.createObjectAttributes(fileStatus);
+      return S3AFileSystem.this.createObjectAttributes(
+          fileStatus.getPath(),
+          fileStatus);
     }
 
     @Override
@@ -4620,7 +4638,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     // readahead range can be dynamically set
     long ra = options.getLong(READAHEAD_RANGE, readAhead);
-    S3ObjectAttributes objectAttributes = createObjectAttributes(fileStatus);
+    S3ObjectAttributes objectAttributes = createObjectAttributes(
+        path, fileStatus);
     S3AReadOpContext readContext = createReadContext(fileStatus, inputPolicy,
         changeDetectionPolicy, ra);
 
@@ -4751,8 +4770,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             providedStatus);
         fileStatus = ((S3ALocatedFileStatus) providedStatus).toS3AFileStatus();
       } else {
-        LOG.debug("Ignoring file status {}", providedStatus);
-        fileStatus = null;
+        // it is another type.
+        // build a status struct without etag or version.
+        LOG.debug("Converting file status {}", providedStatus);
+        fileStatus = new S3AFileStatus(providedStatus.getLen(),
+            providedStatus.getModificationTime(),
+            path,
+            getDefaultBlockSize(path),
+            username,
+            null, null);
       }
     } else {
       fileStatus = null;
