@@ -80,18 +80,17 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       final AbfsClient client,
       final String path,
       final long position,
-      final int bufferSize,
-      final boolean supportFlush,
-      final boolean disableOutputStreamFlush) {
+      AbfsOutputStreamContext abfsOutputStreamContext) {
     this.client = client;
     this.path = path;
     this.position = position;
     this.closed = false;
-    this.supportFlush = supportFlush;
-    this.disableOutputStreamFlush = disableOutputStreamFlush;
+    this.supportFlush = abfsOutputStreamContext.isEnableFlush();
+    this.disableOutputStreamFlush = abfsOutputStreamContext
+            .isDisableOutputStreamFlush();
     this.lastError = null;
     this.lastFlushOffset = 0;
-    this.bufferSize = bufferSize;
+    this.bufferSize = abfsOutputStreamContext.getWriteBufferSize();
     this.buffer = byteBufferPool.getBuffer(false, bufferSize).array();
     this.bufferIndex = 0;
     this.writeOperations = new ConcurrentLinkedDeque<>();
