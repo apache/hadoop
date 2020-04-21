@@ -41,7 +41,7 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
           final int readAheadQueueDepth) {
     this.readAheadQueueDepth = (readAheadQueueDepth >= 0)
             ? readAheadQueueDepth
-            : Runtime.getRuntime().availableProcessors();;
+            : Runtime.getRuntime().availableProcessors();
     return this;
   }
 

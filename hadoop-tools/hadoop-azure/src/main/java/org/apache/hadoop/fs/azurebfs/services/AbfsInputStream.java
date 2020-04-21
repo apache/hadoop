@@ -65,7 +65,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           final Statistics statistics,
           final String path,
           final long contentLength,
-          AbfsInputStreamContext abfsInputStreamContext,
+          final AbfsInputStreamContext abfsInputStreamContext,
           final String eTag) {
     this.client = client;
     this.statistics = statistics;
