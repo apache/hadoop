@@ -62,6 +62,8 @@ public final class ConfigurationKeys {
    *  Default value of this config is true. **/
   public static final String FS_AZURE_DISABLE_OUTPUTSTREAM_FLUSH = "fs.azure.disable.outputstream.flush";
   public static final String FS_AZURE_USER_AGENT_PREFIX_KEY = "fs.azure.user.agent.prefix";
+  public static final String FS_AZURE_CLUSTER_NAME = "fs.azure.cluster.name";
+  public static final String FS_AZURE_CLUSTER_TYPE = "fs.azure.cluster.type";
   public static final String FS_AZURE_SSL_CHANNEL_MODE_KEY = "fs.azure.ssl.channel.mode";
   /** Provides a config to enable/disable the checkAccess API.
    *  By default this will be

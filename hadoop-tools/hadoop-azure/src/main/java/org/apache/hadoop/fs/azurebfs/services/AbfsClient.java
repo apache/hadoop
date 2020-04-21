@@ -679,32 +679,60 @@ public class AbfsClient implements Closeable {
 
   @VisibleForTesting
   String initializeUserAgent(final AbfsConfiguration abfsConfiguration,
-                             final String sslProviderName) {
+      final String sslProviderName) {
+
     StringBuilder sb = new StringBuilder();
-    sb.append("(JavaJRE ");
+
+    sb.append(APN_VERSION);
+    sb.append(SINGLE_WHITE_SPACE);
+    sb.append(CLIENT_VERSION);
+    sb.append(SINGLE_WHITE_SPACE);
+
+    sb.append("(");
+
+    sb.append(System.getProperty(JAVA_VENDOR)
+        .replaceAll(SINGLE_WHITE_SPACE, EMPTY_STRING));
+    sb.append(SINGLE_WHITE_SPACE);
+    sb.append("JavaJRE");
+    sb.append(SINGLE_WHITE_SPACE);
     sb.append(System.getProperty(JAVA_VERSION));
-    sb.append("; ");
-    sb.append(
-        System.getProperty(OS_NAME).replaceAll(SINGLE_WHITE_SPACE, EMPTY_STRING));
-    sb.append(" ");
+    sb.append(SEMICOLON);
+    sb.append(SINGLE_WHITE_SPACE);
+
+    sb.append(System.getProperty(OS_NAME)
+        .replaceAll(SINGLE_WHITE_SPACE, EMPTY_STRING));
+    sb.append(SINGLE_WHITE_SPACE);
     sb.append(System.getProperty(OS_VERSION));
-    if (sslProviderName != null && !sslProviderName.isEmpty()) {
-      sb.append("; ");
-      sb.append(sslProviderName);
-    }
-    String tokenProviderField =
-        ExtensionHelper.getUserAgentSuffix(tokenProvider, "");
-    if (!tokenProviderField.isEmpty()) {
-      sb.append("; ").append(tokenProviderField);
-    }
+    sb.append(FORWARD_SLASH);
+    sb.append(System.getProperty(OS_ARCH));
+    sb.append(SEMICOLON);
+
+    appendIfNotEmpty(sb, sslProviderName, true);
+    appendIfNotEmpty(sb,
+        ExtensionHelper.getUserAgentSuffix(tokenProvider, EMPTY_STRING), true);
+
+    sb.append(SINGLE_WHITE_SPACE);
+    sb.append(abfsConfiguration.getClusterName());
+    sb.append(FORWARD_SLASH);
+    sb.append(abfsConfiguration.getClusterType());
+
     sb.append(")");
-    final String userAgentComment = sb.toString();
-    String customUserAgentId = abfsConfiguration.getCustomUserAgentPrefix();
-    if (customUserAgentId != null && !customUserAgentId.isEmpty()) {
-      return String.format(Locale.ROOT, CLIENT_VERSION + " %s %s",
-          userAgentComment, customUserAgentId);
+
+    appendIfNotEmpty(sb, abfsConfiguration.getCustomUserAgentPrefix(), false);
+
+    return String.format(Locale.ROOT, sb.toString());
+  }
+
+  private void appendIfNotEmpty(StringBuilder sb, String regEx,
+      boolean shouldAppendSemiColon) {
+    if (regEx == null || regEx.trim().isEmpty()) {
+      return;
     }
-    return String.format(Locale.ROOT, CLIENT_VERSION + " %s", userAgentComment);
+    sb.append(SINGLE_WHITE_SPACE);
+    sb.append(regEx);
+    if (shouldAppendSemiColon) {
+      sb.append(SEMICOLON);
+    }
   }
 
   @VisibleForTesting
