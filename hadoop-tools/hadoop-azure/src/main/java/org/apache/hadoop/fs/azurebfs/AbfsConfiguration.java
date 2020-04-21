@@ -168,8 +168,16 @@ public class AbfsConfiguration{
   private boolean enableAutoThrottling;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_USER_AGENT_PREFIX_KEY,
-      DefaultValue = "")
+      DefaultValue = DEFAULT_FS_AZURE_USER_AGENT_PREFIX)
   private String userAgentId;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLUSTER_NAME,
+      DefaultValue = DEFAULT_VALUE_UNKNOWN)
+  private String clusterName;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLUSTER_TYPE,
+      DefaultValue = DEFAULT_VALUE_UNKNOWN)
+  private String clusterType;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_DELEGATION_TOKEN,
       DefaultValue = DEFAULT_ENABLE_DELEGATION_TOKEN)
@@ -477,6 +485,14 @@ public class AbfsConfiguration{
 
   public String getCustomUserAgentPrefix() {
     return this.userAgentId;
+  }
+
+  public String getClusterName() {
+    return this.clusterName;
+  }
+
+  public String getClusterType() {
+    return this.clusterType;
   }
 
   public DelegatingSSLSocketFactory.SSLChannelMode getPreferredSSLFactoryOption() {

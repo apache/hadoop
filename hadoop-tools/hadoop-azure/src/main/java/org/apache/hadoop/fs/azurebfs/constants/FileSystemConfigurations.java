@@ -22,6 +22,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+
 /**
  * Responsible to keep all the Azure Blob File System related configurations.
  */
@@ -70,6 +72,9 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_USE_UPN = false;
   public static final boolean DEFAULT_ENABLE_CHECK_ACCESS = false;
   public static final boolean DEFAULT_ABFS_LATENCY_TRACK = false;
+
+  public static final String DEFAULT_FS_AZURE_USER_AGENT_PREFIX = EMPTY_STRING;
+  public static final String DEFAULT_VALUE_UNKNOWN = "UNKNOWN";
 
   private FileSystemConfigurations() {}
 }
