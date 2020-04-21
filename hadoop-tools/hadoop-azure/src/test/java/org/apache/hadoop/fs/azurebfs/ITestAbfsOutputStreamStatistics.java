@@ -52,7 +52,7 @@ public class ITestAbfsOutputStreamStatistics
     ) {
 
       AbfsOutputStreamStatisticsImpl abfsOutputStreamStatisticsForUploadBytes =
-          outForSomeBytes.getOutputStreamStatistics();
+          getAbfsOutputStreamStatistics(outForSomeBytes);
 
       //Test for zero bytes To upload.
       assertEquals("Mismatch in bytes to upload", 0,
@@ -61,7 +61,7 @@ public class ITestAbfsOutputStreamStatistics
       outForSomeBytes.write(testBytesToUpload.getBytes());
       outForSomeBytes.flush();
       abfsOutputStreamStatisticsForUploadBytes =
-          outForSomeBytes.getOutputStreamStatistics();
+          getAbfsOutputStreamStatistics(outForSomeBytes);
 
       //Test for bytes to upload.
       assertEquals("Mismatch in bytes to upload",
@@ -84,7 +84,7 @@ public class ITestAbfsOutputStreamStatistics
       }
       outForLargeBytes.flush();
       AbfsOutputStreamStatisticsImpl abfsOutputStreamStatistics =
-          outForLargeBytes.getOutputStreamStatistics();
+          getAbfsOutputStreamStatistics(outForLargeBytes);
 
       //Test for bytes to upload.
       assertEquals("Mismatch in bytes to upload",
@@ -118,7 +118,7 @@ public class ITestAbfsOutputStreamStatistics
         fs, queueShrinkFilePath)) {
 
       AbfsOutputStreamStatisticsImpl abfsOutputStreamStatistics =
-          outForOneOp.getOutputStreamStatistics();
+          getAbfsOutputStreamStatistics(outForOneOp);
 
       //Test for shrinking queue zero time.
       assertEquals("Mismatch in queue shrunk operations", 0,
@@ -144,7 +144,7 @@ public class ITestAbfsOutputStreamStatistics
       }
 
       AbfsOutputStreamStatisticsImpl abfsOutputStreamStatistics =
-          outForLargeOps.getOutputStreamStatistics();
+          getAbfsOutputStreamStatistics(outForLargeOps);
       /*
        * After a write operation is done, it is in a task queue where it is
        * removed. Hence, to get the correct expected value we get the size of
@@ -177,7 +177,7 @@ public class ITestAbfsOutputStreamStatistics
         fs, writeBufferFilePath)) {
 
       AbfsOutputStreamStatisticsImpl abfsOutputStreamStatistics =
-          outForOneOp.getOutputStreamStatistics();
+          getAbfsOutputStreamStatistics(outForOneOp);
 
       //Test for zero time writing buffer to service.
       assertEquals("Mismatch in write current buffer operations", 0,
@@ -186,7 +186,7 @@ public class ITestAbfsOutputStreamStatistics
       outForOneOp.write(testWriteBuffer.getBytes());
       outForOneOp.flush();
 
-      abfsOutputStreamStatistics = outForOneOp.getOutputStreamStatistics();
+      abfsOutputStreamStatistics = getAbfsOutputStreamStatistics(outForOneOp);
 
       //Test for one time writing buffer to service.
       assertEquals("Mismatch in write current buffer operations", 1,
@@ -207,11 +207,23 @@ public class ITestAbfsOutputStreamStatistics
         outForLargeOps.flush();
       }
       AbfsOutputStreamStatisticsImpl abfsOutputStreamStatistics =
-          outForLargeOps.getOutputStreamStatistics();
+          getAbfsOutputStreamStatistics(outForLargeOps);
       //Test for 10 times writing buffer to service.
       assertEquals("Mismatch in write current buffer operations",
           OPERATIONS,
           abfsOutputStreamStatistics.getWriteCurrentBufferOperations());
     }
+  }
+
+  /**
+   * Method to get the AbfsOutputStream statistics.
+   *
+   * @param out AbfsOutputStream whose statistics is needed.
+   * @return AbfsOutputStream statistics implementation class to get the
+   * values of the counters.
+   */
+  private static AbfsOutputStreamStatisticsImpl getAbfsOutputStreamStatistics(
+      AbfsOutputStream out) {
+    return (AbfsOutputStreamStatisticsImpl) out.getOutputStreamStatistics();
   }
 }

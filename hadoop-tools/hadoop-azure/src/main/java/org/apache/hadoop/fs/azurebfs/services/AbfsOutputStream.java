@@ -464,8 +464,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
    * @return statistics for AbfsOutputStream.
    */
   @VisibleForTesting
-  public AbfsOutputStreamStatisticsImpl getOutputStreamStatistics() {
-    return (AbfsOutputStreamStatisticsImpl) outputStreamStatistics;
+  public AbfsOutputStreamStatistics getOutputStreamStatistics() {
+    return outputStreamStatistics;
   }
 
   /**
