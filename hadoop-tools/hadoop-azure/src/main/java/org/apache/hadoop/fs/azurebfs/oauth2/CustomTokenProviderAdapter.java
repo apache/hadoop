@@ -47,6 +47,7 @@ public final class CustomTokenProviderAdapter extends AccessTokenProvider
    * Constructs a token provider based on the custom token provider.
    *
    * @param adaptee the custom token provider
+   * @param customTokenFetchRetryCount max retry count for customTokenFetch
    */
   public CustomTokenProviderAdapter(CustomTokenProviderAdaptee adaptee, int customTokenFetchRetryCount) {
     Preconditions.checkNotNull(adaptee, "adaptee");
