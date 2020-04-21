@@ -2446,7 +2446,11 @@ public abstract class TaskAttemptImpl implements
       // register it to finishing state
       taskAttempt.appContext.getTaskAttemptFinishingMonitor().register(
           taskAttempt.attemptId);
-      notifyTaskAttemptFailed(taskAttempt, false);
+      boolean isFastFail = false;
+      if (event instanceof TaskAttemptFailEvent) {
+        isFastFail = ((TaskAttemptFailEvent) event).isFastFail();
+      }
+      notifyTaskAttemptFailed(taskAttempt, isFastFail);
     }
   }
 
