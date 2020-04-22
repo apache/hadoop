@@ -39,8 +39,9 @@ final class ReadBufferManager {
   private static final int NUM_BUFFERS = 16;
   private static final int BLOCK_SIZE = 4 * 1024 * 1024;
   private static final int NUM_THREADS = 8;
-  private static final int THRESHOLD_AGE_MILLISECONDS = 3000; // have to see if 3 seconds is a good threshold
+  private static final int DEFAULT_THRESHOLD_AGE_MILLISECONDS = 3000; // have to see if 3 seconds is a good threshold
 
+  private static int thresholdAgeMilliseconds = DEFAULT_THRESHOLD_AGE_MILLISECONDS;
   private Thread[] threads = new Thread[NUM_THREADS];
   private byte[][] buffers;    // array of byte[] buffers, to hold the data that is read
   private Stack<Integer> freeList = new Stack<>();   // indices in buffers[] array that are available
@@ -248,7 +249,7 @@ final class ReadBufferManager {
         earliestBirthday = buf.getTimeStamp();
       }
     }
-    if ((currentTimeMillis() - earliestBirthday > THRESHOLD_AGE_MILLISECONDS) && (nodeToEvict != null)) {
+    if ((currentTimeMillis() - earliestBirthday > thresholdAgeMilliseconds) && (nodeToEvict != null)) {
       return evict(nodeToEvict);
     }
 
@@ -299,7 +300,7 @@ final class ReadBufferManager {
   }
 
   /**
-   * Returns buffers that failed or passed from completed queue
+   * Returns buffers that failed or passed from completed queue.
    * @param stream
    * @param requestedOffset
    * @return
@@ -338,8 +339,8 @@ final class ReadBufferManager {
 
     if (buf.getStatus() == ReadBufferStatus.READ_FAILED) {
       // To prevent new read requests to fail due to old read-ahead attempts,
-      // return exception only from buffers that failed within last THRESHOLD_AGE_MILLISECONDS
-      if ((currentTimeMillis() - (buf.getTimeStamp()) < THRESHOLD_AGE_MILLISECONDS)) {
+      // return exception only from buffers that failed within last thresholdAgeMilliseconds
+      if ((currentTimeMillis() - (buf.getTimeStamp()) < thresholdAgeMilliseconds)) {
         throw buf.getErrException();
       } else {
         return 0;
@@ -446,7 +447,12 @@ final class ReadBufferManager {
 
   @VisibleForTesting
   int getThresholdAgeMilliseconds() {
-    return THRESHOLD_AGE_MILLISECONDS;
+    return thresholdAgeMilliseconds;
+  }
+
+  @VisibleForTesting
+  void setThresholdAgeMilliseconds(int thresholdAgeMs) {
+    thresholdAgeMilliseconds = thresholdAgeMs;
   }
 
   @VisibleForTesting

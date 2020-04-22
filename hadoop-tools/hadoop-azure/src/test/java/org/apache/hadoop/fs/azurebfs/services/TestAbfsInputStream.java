@@ -43,7 +43,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_
 public class TestAbfsInputStream extends
     AbstractAbfsIntegrationTest {
 
-  private static final int KILOBYTE = 1024;
+  private static final int _1KB = 1 * 1024;
+  private static final int _2KB = 2 * 1024;
+  private static final int _3KB = 3 * 1024;
 
   private AbfsRestOperation getMockRestOp() {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
@@ -71,8 +73,8 @@ public class TestAbfsInputStream extends
         mockAbfsClient,
         null,
         FORWARD_SLASH + fileName,
-        3 * KILOBYTE,
-        1 * KILOBYTE, // Setting read ahead buffer size of 1 KB
+        _3KB,
+        _1KB, // Setting read ahead buffer size of 1 KB
         this.getConfiguration().getReadAheadQueueDepth(),
         this.getConfiguration().getTolerateOobAppends(),
         "eTag");
@@ -83,11 +85,11 @@ public class TestAbfsInputStream extends
   private void queueReadAheads(AbfsInputStream inputStream) {
     // Mimic AbfsInputStream readAhead queue requests
     ReadBufferManager.getBufferManager()
-        .queueReadAhead(inputStream, 0, 1 * KILOBYTE);
+        .queueReadAhead(inputStream, 0, _1KB);
     ReadBufferManager.getBufferManager()
-        .queueReadAhead(inputStream, 1 * KILOBYTE, 1 * KILOBYTE);
+        .queueReadAhead(inputStream, _1KB, _1KB);
     ReadBufferManager.getBufferManager()
-        .queueReadAhead(inputStream, 2 * KILOBYTE, 1 * KILOBYTE);
+        .queueReadAhead(inputStream, _2KB, _2KB);
   }
 
   private void verifyReadCallCount(AbfsClient client, int count) throws
@@ -117,14 +119,16 @@ public class TestAbfsInputStream extends
 
     if (expectedToThrowException) {
       intercept(IOException.class,
-          () -> inputStream.read(position, new byte[1 * KILOBYTE], 0, 1 * KILOBYTE));
+          () -> inputStream.read(position, new byte[_1KB], 0, _1KB));
     } else {
-      inputStream.read(position, new byte[1 * KILOBYTE], 0, 1 * KILOBYTE);
+      inputStream.read(position, new byte[_1KB], 0, _1KB);
     }
   }
 
   public TestAbfsInputStream() throws Exception {
     super();
+    // Reduce thresholdAgeMilliseconds to 3 sec for the tests
+    ReadBufferManager.getBufferManager().setThresholdAgeMilliseconds(3000);
   }
 
   /**
@@ -161,7 +165,7 @@ public class TestAbfsInputStream extends
     // and readahead buffer size set in AbfsInputStream is 1 KB
     // There should only be a total of 3 client.read() in this test.
     intercept(IOException.class,
-        () -> inputStream.read(new byte[1 * KILOBYTE]));
+        () -> inputStream.read(new byte[_1KB]));
 
     // Only the 3 readAhead threads should have triggered client.read
     verifyReadCallCount(client, 3);
@@ -201,16 +205,16 @@ public class TestAbfsInputStream extends
 
     // First read request that fails as the readahead triggered from this request failed.
     intercept(IOException.class,
-        () -> inputStream.read(new byte[1 * KILOBYTE]));
+        () -> inputStream.read(new byte[_1KB]));
 
     // Only the 3 readAhead threads should have triggered client.read
     verifyReadCallCount(client, 3);
 
-    // Sleep for 30 sec so that the read ahead buffer qualifies for being old.
+    // Sleep for thresholdAgeMs so that the read ahead buffer qualifies for being old.
     Thread.sleep(ReadBufferManager.getBufferManager().getThresholdAgeMilliseconds());
 
     // Second read request should retry the read (and not issue any new readaheads)
-    inputStream.read(1 * KILOBYTE, new byte[1 * KILOBYTE], 0, 1 * KILOBYTE);
+    inputStream.read(_1KB, new byte[_1KB], 0, _1KB);
 
     // Once created, mock will remember all interactions. So total number of read
     // calls will be one more from earlier (there is a reset mock which will reset the
@@ -253,13 +257,13 @@ public class TestAbfsInputStream extends
     AbfsInputStream inputStream = getAbfsInputStream(client, "testSuccessfulReadAhead.txt");
 
     // First read request that triggers readAheads.
-    inputStream.read(new byte[1 * KILOBYTE]);
+    inputStream.read(new byte[_1KB]);
 
     // Only the 3 readAhead threads should have triggered client.read
     verifyReadCallCount(client, 3);
 
     // Another read request whose requested data is already read ahead.
-    inputStream.read(1 * KILOBYTE, new byte[1 * KILOBYTE], 0, 1 * KILOBYTE);
+    inputStream.read(_1KB, new byte[_1KB], 0, _1KB);
 
     // Once created, mock will remember all interactions.
     // As the above read should not have triggered any server calls, total
@@ -273,7 +277,7 @@ public class TestAbfsInputStream extends
 
   /**
    * This test expects ReadAheadManager to throw exception if the read ahead
-   * thread had failed within the last 30 sec.
+   * thread had failed within the last thresholdAgeMilliseconds.
    * Also checks that the ReadBuffers are evicted as per the ReadBufferManager
    * threshold criteria.
    * @throws Exception
@@ -304,13 +308,13 @@ public class TestAbfsInputStream extends
     Thread.sleep(1000);
 
     // if readAhead failed for specific offset, getBlock should
-    // throw exception from the ReadBuffer that failed within last 30 sec
+    // throw exception from the ReadBuffer that failed within last thresholdAgeMilliseconds sec
     intercept(IOException.class,
         () -> ReadBufferManager.getBufferManager().getBlock(
             inputStream,
             0,
-            1 * KILOBYTE,
-            new byte[1 * KILOBYTE]));
+            _1KB,
+            new byte[_1KB]));
 
     // Only the 3 readAhead threads should have triggered client.read
     verifyReadCallCount(client, 3);
@@ -351,7 +355,7 @@ public class TestAbfsInputStream extends
     queueReadAheads(inputStream);
 
     // AbfsInputStream Read would have waited for the read-ahead for the requested offset
-    // as we are testing from ReadAheadManager directly, sleep for 30 secs so that
+    // as we are testing from ReadAheadManager directly, sleep for thresholdAgeMilliseconds so that
     // read buffer qualifies for to be an old buffer
     Thread.sleep(ReadBufferManager.getBufferManager().getThresholdAgeMilliseconds());
 
@@ -362,11 +366,11 @@ public class TestAbfsInputStream extends
     // 30 sec before in read ahead buffer for respective offset.
     int bytesRead = ReadBufferManager.getBufferManager().getBlock(
         inputStream,
-        1 * KILOBYTE,
-        1 * KILOBYTE,
-        new byte[1 * KILOBYTE]);
-    Assert.assertTrue("bytesRead should be zero when previously read "
-        + "ahead buffer had failed", bytesRead == 0);
+        _1KB,
+        _1KB,
+        new byte[_1KB]);
+    Assert.assertEquals("bytesRead should be zero when previously read "
+        + "ahead buffer had failed", 0, bytesRead);
 
     // Stub returns success for the 5th read request, if ReadBuffers still
     // persisted request would have failed for position 0.
@@ -414,9 +418,9 @@ public class TestAbfsInputStream extends
     // getBlock for a new read should return the buffer read-ahead
     int bytesRead = ReadBufferManager.getBufferManager().getBlock(
         inputStream,
-        1 * KILOBYTE,
-        1 * KILOBYTE,
-        new byte[1 * KILOBYTE]);
+        _1KB,
+        _1KB,
+        new byte[_1KB]);
 
     Assert.assertTrue("bytesRead should be non-zero from the "
         + "buffer that was read-ahead", bytesRead > 0);
@@ -430,4 +434,5 @@ public class TestAbfsInputStream extends
     // if not using the read-ahead buffer exception will be thrown on read
     checkEvictedStatus(inputStream, 0, true);
   }
+
 }
