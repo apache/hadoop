@@ -185,6 +185,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     this.identityTransformer = new IdentityTransformer(abfsConfiguration.getRawConfiguration());
     LOG.trace("IdentityTransformer init complete");
     // Extract the directories that should contain append blobs
+
     String appendBlobDirs = abfsConfiguration.getAppendBlobDirs();
     if (appendBlobDirs.trim().isEmpty()) {
       this.appendBlobDirSet = new HashSet<String>();
@@ -453,7 +454,7 @@ public class AzureBlobFileSystemStore implements Closeable {
             .withWriteBufferSize(abfsConfiguration.getWriteBufferSize())
             .enableFlush(abfsConfiguration.isFlushEnabled())
             .disableOutputStreamFlush(abfsConfiguration.isOutputStreamFlushDisabled())
-            .enableFlush(abfsConfiguration.isAppendWithFlushEnabled())
+            .enableAppendWithFlush(abfsConfiguration.isAppendWithFlushEnabled())
             .withAppendBlob(isAppendBlob)
             .build();
   }
@@ -1335,6 +1336,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   }
 
   private boolean isKeyForDirectorySet(String key, Set<String> dirSet) {
+
     for (String dir : dirSet) {
       if (dir.isEmpty() || key.startsWith(dir + AbfsHttpConstants.FORWARD_SLASH)) {
         return true;
