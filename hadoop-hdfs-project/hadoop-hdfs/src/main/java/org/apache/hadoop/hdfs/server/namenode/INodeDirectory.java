@@ -510,7 +510,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
     }
 
     final INode removed = children.remove(i);
-    Preconditions.checkState(removed == child);
+    Preconditions.checkState(removed.equals(child));
     return true;
   }
 
