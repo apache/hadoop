@@ -1319,4 +1319,38 @@ public class TestFileTruncate {
     assertEquals(fs.getContentSummary(root).getSpaceConsumed(),
         fs.getQuotaUsage(root).getSpaceConsumed());
   }
+
+  /**
+   * Test concat on file which is a reference.
+   */
+  @Test
+  public void testConcatOnInodeRefernce() throws IOException {
+    String dir = "/testConcat";
+    Path trgDir = new Path(dir);
+    fs.mkdirs(new Path(dir), FsPermission.getDirDefault());
+
+    // Create a target file
+    Path trg = new Path(dir, "file");
+    DFSTestUtil.createFile(fs, trg, 512, (short) 2, 0);
+
+    String dir2 = "/dir2";
+    Path srcDir = new Path(dir2);
+    // create a source file
+    fs.mkdirs(srcDir);
+    fs.allowSnapshot(srcDir);
+    Path src = new Path(srcDir, "file1");
+    DFSTestUtil.createFile(fs, src, 512, (short) 2, 0);
+
+    // make the file as an Inode reference and delete the reference
+    fs.createSnapshot(srcDir, "s1");
+    fs.rename(src, trgDir);
+    fs.deleteSnapshot(srcDir, "s1");
+    Path[] srcs = new Path[1];
+    srcs[0] = new Path(dir, "file1");
+    assertEquals(2, fs.getContentSummary(new Path(dir)).getFileCount());
+
+    // perform concat
+    fs.concat(trg, srcs);
+    assertEquals(1, fs.getContentSummary(new Path(dir)).getFileCount());
+  }
 }
