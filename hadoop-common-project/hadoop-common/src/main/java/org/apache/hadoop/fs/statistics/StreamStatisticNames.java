@@ -39,21 +39,29 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class StreamStatisticNames {
 
   /** {@value}. */
+  public static final String STREAM_ABORTED = "stream_aborted";
+
+  /** {@value}. */
+  public static final String STREAM_ABORT_BYTES_DISCARDED
+      = "stream_bytes_discarded_in_abort";
+
+  /** {@value}. */
   public static final String STREAM_CLOSED = "stream_closed";
+
+  /** {@value}. */
+  public static final String STREAM_CLOSE_BYTES_READ
+      = "stream_bytes_read_in_close";
 
   /** {@value}. */
   public static final String STREAM_CLOSE_OPERATIONS
       = "stream_close_operations";
 
   /** {@value}. */
-  public static final String STREAM_FORWARD_SEEK_OPERATIONS
-      = "stream_forward_seek_operations";
-
-  /** {@value}. */
   public static final String STREAM_OPENED = "stream_opened";
 
   /** {@value}. */
-  public static final String STREAM_ABORTED = "stream_aborted";
+  public static final String STREAM_READ_BYTES
+      = "stream_write_bytes";
 
   /** {@value}. */
   public static final String STREAM_READ_EXCEPTIONS = "stream_read_exceptions";
@@ -85,18 +93,15 @@ public class StreamStatisticNames {
       = "stream_bytes_skipped_on_seek";
 
   /** {@value}. */
+  public static final String STREAM_SEEK_FORWARD_OPERATIONS
+      = "stream_seek_forward_operations";
+
+  /** {@value}. */
   public static final String STREAM_SEEK_OPERATIONS = "stream_seek_operations";
 
   /** {@value}. */
-  public static final String STREAM_BACKWARD_SEEK_OPERATIONS = "stream_backward_seek_operations";
+  public static final String STREAM_SEEK_BACKWARD_OPERATIONS = "stream_seek_backward_operations";
 
-  /** {@value}. */
-  public static final String STREAM_CLOSE_BYTES_READ
-      = "stream_bytes_read_in_close";
-
-  /** {@value}. */
-  public static final String STREAM_ABORT_BYTES_DISCARDED
-      = "stream_bytes_discarded_in_abort";
 
   /** {@value}. */
   public static final String STREAM_WRITE_FAILURES = "stream_write_failures";
@@ -104,6 +109,10 @@ public class StreamStatisticNames {
   /** {@value}. */
   public static final String STREAM_WRITE_BLOCK_UPLOADS
       = "stream_write_block_uploads";
+
+  /** {@value}. */
+  public static final String STREAM_WRITE_BLOCK_UPLOADS_ABORTED
+      = "stream_write_block_uploads_aborted";
 
   /** {@value}. */
   public static final String STREAM_WRITE_BLOCK_UPLOADS_ACTIVE
@@ -114,10 +123,6 @@ public class StreamStatisticNames {
       = "stream_write_block_uploads_committed";
 
   /** {@value}. */
-  public static final String STREAM_WRITE_BLOCK_UPLOADS_ABORTED
-      = "stream_write_block_uploads_aborted";
-
-  /** {@value}. */
   public static final String STREAM_WRITE_BLOCK_UPLOADS_PENDING
       = "stream_write_block_uploads_pending";
 
@@ -126,12 +131,12 @@ public class StreamStatisticNames {
       "stream_write_block_uploads_data_pending";
 
   /** {@value}. */
-  public static final String STREAM_WRITE_TOTAL_TIME
-      = "stream_write_total_time";
+  public static final String STREAM_WRITE_BYTES
+      = "stream_write_bytes";
 
   /** {@value}. */
-  public static final String STREAM_WRITE_TOTAL_DATA
-      = "stream_write_total_data";
+  public static final String STREAM_WRITE_TOTAL_TIME
+      = "stream_write_total_time";
 
   /** {@value}. */
   public static final String STREAM_WRITE_QUEUE_DURATION

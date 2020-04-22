@@ -26,11 +26,11 @@ import org.junit.Test;
 import org.apache.hadoop.fs.statistics.impl.EmptyIOStatistics;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertDoesNotHaveAttribute;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertHasAttribute;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticTracked;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticUnknown;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticUntracked;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertIOStatisticsAttributeNotFound;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertIOStatisticsHasAttribute;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsTracked;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUnknown;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUntracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticHasValue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -44,9 +44,9 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testAttributes() throws Throwable {
-    assertHasAttribute(stats, IOStatistics.Attributes.Static);
-    assertDoesNotHaveAttribute(stats, IOStatistics.Attributes.Dynamic);
-    assertDoesNotHaveAttribute(stats, IOStatistics.Attributes.Snapshotted);
+    assertIOStatisticsHasAttribute(stats, IOStatistics.Attributes.Static);
+    assertIOStatisticsAttributeNotFound(stats, IOStatistics.Attributes.Dynamic);
+    assertIOStatisticsAttributeNotFound(stats, IOStatistics.Attributes.Snapshotted);
   }
 
   @Test
@@ -68,12 +68,12 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testUnknownStatistic() throws Throwable {
-    assertStatisticUnknown(stats, "anything");
-    assertStatisticUntracked(stats, "anything");
+    assertStatisticIsUnknown(stats, "anything");
+    assertStatisticIsUntracked(stats, "anything");
 
     // These actually test the assertion coverage
     assertThatThrownBy(() ->
-        assertStatisticTracked(stats, "anything"));
+        assertStatisticIsTracked(stats, "anything"));
     assertThatThrownBy(() ->
         assertStatisticHasValue(stats, "anything", 0));
   }

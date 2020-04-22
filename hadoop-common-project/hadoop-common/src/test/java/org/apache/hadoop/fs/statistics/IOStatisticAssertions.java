@@ -43,7 +43,7 @@ public final class IOStatisticAssertions {
    * @param stats statistics source
    * @param attr attribute to probe for
    */
-  public static void assertHasAttribute(
+  public static void assertIOStatisticsHasAttribute(
       final IOStatistics stats,
       final IOStatistics.Attributes attr) {
     assertThat(stats)
@@ -61,7 +61,7 @@ public final class IOStatisticAssertions {
    * @param stats statistics source
    * @param attr attribute to probe for
    */
-  public static void assertDoesNotHaveAttribute(
+  public static void assertIOStatisticsAttributeNotFound(
       final IOStatistics stats,
       final IOStatistics.Attributes attr) {
     assertThat(stats)
@@ -81,11 +81,9 @@ public final class IOStatisticAssertions {
       final IOStatistics stats,
       final String key,
       final long value) {
-    assertThat(stats)
+    assertThat(stats.getStatistic(key))
         .describedAs("Statistics %s and key %s with expected value %s", stats,
             key, value)
-        .isNotNull()
-        .extracting(s -> ((IOStatistics) s).getStatistic(key))
         .isNotNull()
         .isEqualTo(value);
   }
@@ -95,7 +93,7 @@ public final class IOStatisticAssertions {
    * @param stats statistics source
    * @param key statistic key
    */
-  public static void assertStatisticUnknown(
+  public static void assertStatisticIsUnknown(
       final IOStatistics stats,
       final String key) {
     assertThat(stats.getStatistic(key))
@@ -109,7 +107,7 @@ public final class IOStatisticAssertions {
    * @param stats statistics source
    * @param key statistic key
    */
-  public static void assertStatisticTracked(
+  public static void assertStatisticIsTracked(
       final IOStatistics stats,
       final String key) {
     assertThat(stats.isTracked(key))
@@ -122,11 +120,41 @@ public final class IOStatisticAssertions {
    * @param stats statistics source
    * @param key statistic key
    */
-  public static void assertStatisticUntracked(
+  public static void assertStatisticIsUntracked(
       final IOStatistics stats,
       final String key) {
     assertThat(stats.isTracked(key))
         .describedAs("Statistic %s is tracked in %s", key, stats)
         .isFalse();
+  }
+
+  /**
+   * Assert that an object is a statistics source and that the
+   * statistics is not null.
+   * @param source source object.
+   */
+  public static void assertIsStatisticsSource(Object source) {
+    assertThat(source)
+        .describedAs("Object %s", source )
+        .isInstanceOf(IOStatisticsSource.class)
+        .extracting(o -> ((IOStatisticsSource)o).getIOStatistics())
+        .isNotNull();
+  }
+
+  /**
+   * query the source for the statistics; fails if the statistics
+   * returned are null.
+   * @param source source object.
+   * @return the statistics it provides.
+   */
+  public static IOStatistics extractStatistics(Object source) {
+    assertThat(source)
+        .describedAs("Object %s", source)
+        .isInstanceOf(IOStatisticsSource.class);
+    IOStatistics statistics = ((IOStatisticsSource) source).getIOStatistics();
+    assertThat(statistics)
+        .describedAs("Statistics from %s", source)
+        .isNotNull();
+    return statistics;
   }
 }

@@ -128,7 +128,7 @@ public enum Statistic {
       StreamStatisticNames.STREAM_ABORTED,
       "Count of times the TCP stream was aborted"),
   STREAM_BACKWARD_SEEK_OPERATIONS(
-      StreamStatisticNames.STREAM_BACKWARD_SEEK_OPERATIONS,
+      StreamStatisticNames.STREAM_SEEK_BACKWARD_OPERATIONS,
       "Number of executed seek operations which went backwards in a stream"),
   STREAM_CLOSED(
       StreamStatisticNames.STREAM_CLOSED,
@@ -137,7 +137,7 @@ public enum Statistic {
       StreamStatisticNames.STREAM_CLOSE_OPERATIONS,
       "Total count of times an attempt to close a data stream was made"),
   STREAM_FORWARD_SEEK_OPERATIONS(
-      StreamStatisticNames.STREAM_FORWARD_SEEK_OPERATIONS,
+      StreamStatisticNames.STREAM_SEEK_FORWARD_OPERATIONS,
       "Number of executed seek operations which went forward in a stream"),
   STREAM_OPENED(
       StreamStatisticNames.STREAM_OPENED,
@@ -200,7 +200,7 @@ public enum Statistic {
   STREAM_WRITE_TOTAL_TIME("stream_write_total_time",
       "Count of total time taken for uploads to complete"),
   STREAM_WRITE_TOTAL_DATA(
-      StreamStatisticNames.STREAM_WRITE_TOTAL_DATA,
+      StreamStatisticNames.STREAM_WRITE_BYTES,
       "Count of total data uploaded in block output"),
   STREAM_WRITE_QUEUE_DURATION("stream_write_queue_duration",
       "Total queue duration of all block uploads"),

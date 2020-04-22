@@ -1338,7 +1338,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
       builder.add(StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,
           blocksSubmitted);
-      builder.add(StreamStatisticNames.STREAM_WRITE_TOTAL_DATA,
+      builder.add(StreamStatisticNames.STREAM_WRITE_BYTES,
           bytesUploaded);
       builder.add(StreamStatisticNames.STREAM_WRITE_FAILURES,
           blockUploadsFailed);
