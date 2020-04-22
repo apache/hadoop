@@ -221,6 +221,6 @@ public class Lz4Codec implements Configurable, CompressionCodec {
    */
   @Override
   public String getDefaultExtension() {
-    return ".lz4";
+    return CodecConstants.LZ4_CODEC_EXTENSION;
   }
 }
