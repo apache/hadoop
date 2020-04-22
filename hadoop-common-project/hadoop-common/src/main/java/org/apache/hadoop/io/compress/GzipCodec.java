@@ -206,7 +206,7 @@ public class GzipCodec extends DefaultCodec {
 
   @Override
   public String getDefaultExtension() {
-    return ".gz";
+    return CodecConstants.GZIP_CODEC_EXTENSION;
   }
 
   static final class GzipZlibCompressor extends ZlibCompressor {
