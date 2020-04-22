@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.azurebfs.diagnostics.BooleanConfigurationBasicValida
 import org.apache.hadoop.fs.azurebfs.diagnostics.IntegerConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.LongConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.StringConfigurationBasicValidator;
+import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
@@ -236,8 +237,8 @@ public class AbfsConfiguration{
     }
   }
 
-  public String getIsNamespaceEnabledAccount(){
-    return  isNamespaceEnabledAccount;
+  public Trilean getIsNamespaceEnabledAccount() {
+    return Trilean.getTrilean(isNamespaceEnabledAccount);
   }
 
   /**

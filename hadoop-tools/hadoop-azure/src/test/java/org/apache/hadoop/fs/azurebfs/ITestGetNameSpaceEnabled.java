@@ -21,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.junit.Assume;
 import org.junit.Test;
 import org.assertj.core.api.Assertions;
@@ -196,8 +197,8 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   private void ensureGetAclCallIsMadeOnceForInvalidConf(String invalidConf)
       throws Exception {
-    this.getFileSystem().getAbfsStore().getAbfsConfiguration()
-        .setIsNamespaceEnabledAccount(invalidConf);
+    this.getFileSystem().getAbfsStore()
+        .setNamespaceEnabled(Trilean.getTrilean(invalidConf));
     AbfsClient mockClient =
         callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient();
     verify(mockClient, times(1)).getAclStatus(anyString());
@@ -205,16 +206,15 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   private void ensureGetAclCallIsNeverMadeForValidConf(String validConf)
       throws Exception {
-    this.getFileSystem().getAbfsStore().getAbfsConfiguration()
-        .setIsNamespaceEnabledAccount(validConf);
+    this.getFileSystem().getAbfsStore()
+        .setNamespaceEnabled(Trilean.getTrilean(validConf));
     AbfsClient mockClient =
         callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient();
     verify(mockClient, never()).getAclStatus(anyString());
   }
 
   private void unsetConfAndEnsureGetAclCallIsMadeOnce() throws IOException {
-    this.getFileSystem().getAbfsStore().getAbfsConfiguration()
-        .setIsNamespaceEnabledAccount(DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
+    this.getFileSystem().getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
     AbfsClient mockClient =
         callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient();
     verify(mockClient, times(1)).getAclStatus(anyString());
@@ -228,7 +228,6 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     doReturn(mock(AbfsRestOperation.class)).when(mockClient)
         .getAclStatus(anyString());
     abfsStore.setClient(mockClient);
-    abfsStore.setNamespaceEnabledSet(false);
     abfs.getIsNamespaceEnabled();
     return mockClient;
   }
