@@ -99,7 +99,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
             .isDisableOutputStreamFlush();
     this.supportAppendWithFlush = abfsOutputStreamContext
             .isEnableAppendWithFlush();
-    this.isAppendBlob = aabfsOutputStreamContext.isEnableAppendBlob();
+    this.isAppendBlob = abfsOutputStreamContext.isAppendBlob();
     this.lastError = null;
     this.lastFlushOffset = 0;
     this.bufferSize = abfsOutputStreamContext.getWriteBufferSize();
