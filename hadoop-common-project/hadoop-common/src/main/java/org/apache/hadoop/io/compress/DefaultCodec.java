@@ -114,7 +114,7 @@ public class DefaultCodec implements Configurable, CompressionCodec, DirectDecom
   
   @Override
   public String getDefaultExtension() {
-    return ".deflate";
+    return CodecConstants.DEFAULT_CODEC_EXTENSION;
   }
 
 }
