@@ -51,8 +51,6 @@ import java.util.Set;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
-import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,6 +73,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
+import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
@@ -239,8 +239,8 @@ public class AzureBlobFileSystemStore implements Closeable {
     try {
       return this.isNamespaceEnabled.toBoolean();
     } catch (TrileanConversionException e) {
-      LOG.debug("isNamespaceEnabled is not set; fall back and determine "
-          + "through getAcl server call");
+      LOG.debug("isNamespaceEnabled is UNKNOWN; fall back and determine through"
+          + " getAcl server call", e);
     }
 
     LOG.debug("Get root ACL status");
