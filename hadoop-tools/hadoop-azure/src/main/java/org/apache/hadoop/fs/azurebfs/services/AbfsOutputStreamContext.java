@@ -31,7 +31,7 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private boolean enableAppendWithFlush;
 
-  private boolean enableAppendBlob;
+  private boolean isAppendBlob;
 
   public AbfsOutputStreamContext() {
   }
@@ -53,13 +53,15 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
-  public AbfsOutputStreamContext enableFlush(final boolean enableAppendWithFlush) {
+  public AbfsOutputStreamContext enableAppendWithFlush(
+          final boolean enableAppendWithFlush) {
     this.enableAppendWithFlush = enableAppendWithFlush;
     return this;
   }
 
-  public AbfsOutputStreamContext withAppendBlob(final boolean isAppendBlob) {
-    this.enableAppendWithFlush = isAppendWithFlush;
+  public AbfsOutputStreamContext withAppendBlob(
+          final boolean isAppendBlob) {
+    this.isAppendBlob = isAppendBlob;
     return this;
   }
 
@@ -87,5 +89,4 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
   public boolean isAppendBlob() {
     return isAppendBlob;
   }
-
 }
