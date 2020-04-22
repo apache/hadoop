@@ -428,15 +428,15 @@ public class AzureBlobFileSystemStore implements Closeable {
               umask.toString(),
               isNamespaceEnabled);
 
-      boolean appendBlob = false;
+      boolean isAppendBlob = false;
       if (isAppendBlobKey(path.toString())) {
-        appendBlob = true;
+        isAppendBlob = true;
       }
 
       final AbfsRestOperation op = client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), true, overwrite,
               isNamespaceEnabled ? getOctalNotation(permission) : null,
               isNamespaceEnabled ? getOctalNotation(umask) : null,
-              appendBlob);
+              isAppendBlob);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
 
       return new AbfsOutputStream(
@@ -444,7 +444,7 @@ public class AzureBlobFileSystemStore implements Closeable {
           statistics,
           AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
           0,
-          populateAbfsOutputStreamContext(appendBlob));
+          populateAbfsOutputStreamContext(isAppendBlob));
     }
   }
 
@@ -542,9 +542,9 @@ public class AzureBlobFileSystemStore implements Closeable {
 
       perfInfo.registerSuccess(true);
 
-      boolean appendBlob = false;
+      boolean isAppendBlob = false;
       if (isAppendBlobKey(path.toString())) {
-        appendBlob = true;
+        isAppendBlob = true;
       }
 
       return new AbfsOutputStream(
@@ -552,7 +552,7 @@ public class AzureBlobFileSystemStore implements Closeable {
           statistics,
           AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
           offset,
-          populateAbfsOutputStreamContext(appendBlob));
+          populateAbfsOutputStreamContext(isAppendBlob));
     }
   }
 
