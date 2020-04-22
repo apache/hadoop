@@ -108,7 +108,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.buffer = byteBufferPool.getBuffer(false, bufferSize).array();
     this.bufferIndex = 0;
     this.writeOperations = new ConcurrentLinkedDeque<>();
-    this.outputStreamStatistics = new AbfsOutputStreamStatisticsImpl();
+    this.outputStreamStatistics = abfsOutputStreamContext.getStreamStatistics();
 
     this.maxConcurrentRequestCount = 4 * Runtime.getRuntime().availableProcessors();
 
