@@ -125,14 +125,15 @@ public class DFSZKFailoverController extends ZKFailoverController {
 
   static int getZkfcPort(Configuration conf) {
     return conf.getInt(DFSConfigKeys.DFS_HA_ZKFC_PORT_KEY,
-        DFSConfigKeys.DFS_HA_ZKFC_PORT_DEFAULT);
+      DFSConfigKeys.DFS_HA_ZKFC_PORT_DEFAULT);
   }
 
   /** Given a configuration get the bind host that could be used by ZKFC.
    * We derive it from NN service rpc bind host or NN rpc bind host.
    */
-  protected String getZkfcServerBindHost(Configuration conf) {
-    String addr = conf.getTrimmed(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY);
+  private static String getZkfcServerBindHost(Configuration conf) {
+    String addr = conf.getTrimmed(
+      DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY);
     if (addr == null || addr.isEmpty()) {
       addr = conf.getTrimmed(DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KEY);
       if (addr == null || addr.isEmpty()) {
