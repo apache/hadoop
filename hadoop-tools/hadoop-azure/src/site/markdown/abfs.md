@@ -257,7 +257,8 @@ will have the URL `abfs://container1@abfswales1.dfs.core.windows.net/`
 
 
 You can create a new container through the ABFS connector, by setting the option
- `fs.azure.createRemoteFileSystemDuringInitialization` to `true`. Though the same is not support the same when AuthType is SAS.
+ `fs.azure.createRemoteFileSystemDuringInitialization` to `true`. Though the
+  same is not supported when AuthType is SAS.
 
 If the container does not exist, an attempt to list it with `hadoop fs -ls`
 will fail
@@ -316,7 +317,13 @@ driven by them.
 
 What can be changed is what secrets/credentials are used to authenticate the caller.
 
-The authentication mechanism is set in `fs.azure.account.auth.type` (or the account specific variant). Possible values:   SharedKey, OAuth, Custom, SAS. For the various OAuth options use the config `fs.azure.account.oauth.provider.type`. Following are the implementations supported ClientCredsTokenProvider, UserPasswordTokenProvider, MsiTokenProvider and RefreshTokenBasedTokenProvider. IllegalArgumentException is thrown if the specified provider type is not one of the supported ones.
+The authentication mechanism is set in `fs.azure.account.auth.type` (or the
+ account specific variant). The possible values are SharedKey, OAuth, Custom
+ and SAS. For the various OAuth options use the config `fs.azure.account
+ .oauth.provider.type`. Following are the implementations supported
+  ClientCredsTokenProvider, UserPasswordTokenProvider, MsiTokenProvider and
+   RefreshTokenBasedTokenProvider. An IllegalArgumentException is thown if 
+   the specified provider type is not one of the supported.
 
 All secrets can be stored in JCEKS files. These are encrypted and password
 protected —use them or a compatible Hadoop Key Management Store wherever
@@ -558,9 +565,11 @@ and optionally `org.apache.hadoop.fs.azurebfs.extensions.BoundDTExtension`.
 
 #### <a name="delegationtokensupportconfigoptions"></a> Delegation token support
 
-Delegation token support can be achieved by making the following config true `fs.azure.enable.delegation.token`.
-
-In case delegation token is enabled, the CustomDelegationTokenManager implementation specified in the config `fs.azure.delegation.token.provider.type` will be used within the AbfsDelegationTokenManager, will thow IlleagalArgumentException if not provided.
+Delegation token support can be achieved by making the following config true
+ `fs.azure.enable.delegation.token` and specifying the config
+  CustomDelegationTokenManager to be used with the config `fs.azure.delegation.token.provider.type`.
+In case delegation token is enabled, and the config `fs.azure.delegation.token.provider.type`
+ is not provided an IlleagalArgumentException is thrown.
 
 #### <a name="sastokensupportconfigoptions"></a> SAS token support
 
