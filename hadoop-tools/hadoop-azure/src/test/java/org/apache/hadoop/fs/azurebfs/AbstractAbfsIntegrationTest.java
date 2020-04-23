@@ -33,7 +33,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
@@ -43,6 +45,7 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX;
@@ -270,6 +273,11 @@ public abstract class AbstractAbfsIntegrationTest extends
   protected void setFileSystemName(String fileSystemName) {
     this.fileSystemName = fileSystemName;
   }
+
+  protected String getMethodName() {
+    return methodName.getMethodName();
+  }
+
   protected String getFileSystemName() {
     return fileSystemName;
   }
@@ -382,5 +390,23 @@ public abstract class AbstractAbfsIntegrationTest extends
   protected AbfsDelegationTokenManager getDelegationTokenManager()
       throws IOException {
     return getFileSystem().getDelegationTokenManager();
+  }
+
+  /**
+   * Generic create File and enabling AbfsOutputStream Flush.
+   *
+   * @param fs   AzureBlobFileSystem that is initialised in the test.
+   * @param path Path of the file to be created.
+   * @return AbfsOutputStream for writing.
+   * @throws AzureBlobFileSystemException
+   */
+  protected AbfsOutputStream createAbfsOutputStreamWithFlushEnabled(
+      AzureBlobFileSystem fs,
+      Path path) throws AzureBlobFileSystemException {
+    AzureBlobFileSystemStore abfss = fs.getAbfsStore();
+    abfss.getAbfsConfiguration().setDisableOutputStreamFlush(false);
+
+    return (AbfsOutputStream) abfss.createFile(path, fs.getFsStatistics(),
+        true, FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
   }
 }
