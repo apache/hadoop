@@ -72,7 +72,8 @@ public class HttpExceptionUtils {
     json.put(ERROR_MESSAGE_JSON, getOneLineMessage(ex));
     json.put(ERROR_EXCEPTION_JSON, ex.getClass().getSimpleName());
     json.put(ERROR_CLASSNAME_JSON, ex.getClass().getName());
-    Map<String, Object> jsonResponse = Collections.singletonMap(ERROR_JSON, json);
+    Map<String, Object> jsonResponse =
+        Collections.singletonMap(ERROR_JSON, json);
     Writer writer = response.getWriter();
     JsonSerialization.writer().writeValue(writer, jsonResponse);
     writer.flush();
