@@ -1032,7 +1032,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    */
   @InterfaceAudience.LimitedPrivate( { "HDFS", "MapReduce" })
   public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    return new ArrayList<Token<?>>(0);
+    return Collections.emptyList();
   }
 
   /**

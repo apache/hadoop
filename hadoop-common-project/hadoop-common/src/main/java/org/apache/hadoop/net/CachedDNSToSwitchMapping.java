@@ -18,6 +18,7 @@
 package org.apache.hadoop.net;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -130,8 +131,7 @@ public class CachedDNSToSwitchMapping extends AbstractDNSToSwitchMapping {
    */
   @Override
   public Map<String, String> getSwitchMap() {
-    Map<String, String > switchMap = new HashMap<String, String>(cache);
-    return switchMap;
+    return Collections.unmodifiableMap(new HashMap<>(cache));
   }
 
 

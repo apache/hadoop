@@ -196,10 +196,8 @@ public class NetworkTopology {
         loc = loc.substring(1);
       }
       InnerNode rack = (InnerNode) clusterMap.getLoc(loc);
-      if (rack == null) {
-        return null;
-      }
-      return new ArrayList<Node>(rack.getChildren());
+      return (rack == null) ? Collections.emptyList()
+          : Collections.unmodifiableList(new ArrayList<>(rack.getChildren()));
     } finally {
       netlock.readLock().unlock();
     }
