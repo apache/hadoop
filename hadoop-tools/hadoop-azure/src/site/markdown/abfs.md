@@ -257,7 +257,7 @@ will have the URL `abfs://container1@abfswales1.dfs.core.windows.net/`
 
 
 You can create a new container through the ABFS connector, by setting the option
- `fs.azure.createRemoteFileSystemDuringInitialization` to `true`.
+ `fs.azure.createRemoteFileSystemDuringInitialization` to `true`. Though the same is not support the same when AuthType is SAS.
 
 If the container does not exist, an attempt to list it with `hadoop fs -ls`
 will fail
@@ -316,8 +316,7 @@ driven by them.
 
 What can be changed is what secrets/credentials are used to authenticate the caller.
 
-The authentication mechanism is set in `fs.azure.account.auth.type` (or the account specific variant),
-and, for the various OAuth options `fs.azure.account.oauth.provider.type`
+The authentication mechanism is set in `fs.azure.account.auth.type` (or the account specific variant). Possible values:   SharedKey, OAuth, Custom, SAS. For the various OAuth options use the config `fs.azure.account.oauth.provider.type`. Following are the implementations supported ClientCredsTokenProvider, UserPasswordTokenProvider, MsiTokenProvider and RefreshTokenBasedTokenProvider. IllegalArgumentException is thrown if the specified provider type is not one of the supported ones.
 
 All secrets can be stored in JCEKS files. These are encrypted and password
 protected —use them or a compatible Hadoop Key Management Store wherever
@@ -348,6 +347,10 @@ the password, "key", retrieved from the XML/JCECKs configuration files.
 
 *Note*: The source of the account key can be changed through a custom key provider;
 one exists to execute a shell script to retrieve it.
+
+A custom key provider class can be provided with the config `fs.azure.account.keyprovider`. If a key provider class is specified the same will be used to get account key. Otherwise the Simple key provider will be used which will use the key specified for the config `fs.azure.account.key`.
+
+To retrieve using shell script, specify the path to the script for the config  `fs.azure.shellkeyprovider.script`. ShellDecryptionKeyProvider class use the script specified to retrieve the key.
 
 ### <a name="oauth-client-credentials"></a> OAuth 2.0 Client Credentials
 
@@ -465,6 +468,13 @@ With an existing Oauth 2.0 token, make a request of the Active Directory endpoin
   </description>
 </property>
 <property>
+  <name>fs.azure.account.oauth2.refresh.endpoint</name>
+  <value></value>
+  <description>
+  Refresh token endpoint
+  </description>
+</property>
+<property>
   <name>fs.azure.account.oauth2.client.id</name>
   <value></value>
   <description>
@@ -506,6 +516,13 @@ The Azure Portal/CLI is used to create the service identity.
   </description>
 </property>
 <property>
+  <name>fs.azure.account.oauth2.msi.endpoint</name>
+  <value></value>
+  <description>
+   MSI endpoint
+  </description>
+</property>
+<property>
   <name>fs.azure.account.oauth2.client.id</name>
   <value></value>
   <description>
@@ -538,6 +555,18 @@ token when its `getAccessToken()` method is invoked.
 
 The declared class must implement `org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee`
 and optionally `org.apache.hadoop.fs.azurebfs.extensions.BoundDTExtension`.
+
+#### <a name="delegationtokensupportconfigoptions"></a> Delegation token support
+
+Delegation token support can be achieved by making the following config true `fs.azure.enable.delegation.token`.
+
+In case delegation token is enabled, the CustomDelegationTokenManager implementation specified in the config `fs.azure.delegation.token.provider.type` will be used within the AbfsDelegationTokenManager, will thow IlleagalArgumentException if not provided.
+
+#### <a name="sastokensupportconfigoptions"></a> SAS token support
+
+`fs.azure.sas.token.provider.type`
+If the auth type is set as AuthType.SAS then it is expected to specify a class which is an implementation of SASTokenProvider otherwise IlleagalArgumentException will be thrown.
+
 
 ## <a name="technical"></a> Technical notes
 
@@ -665,49 +694,12 @@ performance issues.
 Config `fs.azure.enable.check.access` needs to be set true to enable
  the AzureBlobFileSystem.access().
 
-### <a name="authconfigoptions"></a> Auth Options
-`fs.azure.account.key`: To set the account access key. Access keys can be used to authenticate the requests made from the ABFS driver to the Azure storage account.
-
-`fs.azure.account.keyprovider`: If a key provider class is provided the same will be used to get Storage Account key. Else the Simple key provider will be used which will use the given key from the config.
-
-`fs.azure.shellkeyprovider.script`: ShellDecryptionKeyProvider class invokes an external script that will perform the key decryption. The script path has to be set via this config.
-
-`fs.azure.enable.delegation.token`: To enable delegation token manager. Instantiates the class declared in fs.azure.delegation.token.provider.type and issues tokens from the same.
-
-`fs.azure.delegation.token.provider.type`: In case delegation token manager is enabled the AbfsDelegationTokenManager implementation specified in this config will be used as the AbfsDelegationTokenManager implementation.
-
-`fs.azure.sas.token.provider.type`: If the auth type is AuthType.SAS, instantiates the class declared in fs.azure.sas.token.provider.type and issues tokens from it.
-
-`fs.azure.account.auth.type`: To set the auth type to be used. Possible values:   SharedKey, OAuth, Custom, SAS.
-
-`fs.azure.account.oauth.provider.type`: To set the auth provider class to be used.
-
-`fs.azure.account.oauth2.client.id`: To set the OAuth AAD client id when ClientCredsTokenProvider is used.
-
-`fs.azure.account.oauth2.client.secret`: To set the OAuth AAD client secret when ClientCredsTokenProvider is used.
-
-`fs.azure.account.oauth2.client.endpoint`: To set the OAuth AAD client endpoint when ClientCredsTokenProvider is used.
-
-`fs.azure.account.oauth2.msi.tenant`: To set OAuth MSI tenant id when MSITokenProvider is used.
-
-`fs.azure.account.oauth2.msi.endpoint`: To set OAuth MSI endpoint when MSITokenProvider is used.
-
-`fs.azure.account.oauth2.msi.authority`: To set OAuth MSI authority when MSITokenProvider is used.
-
-`fs.azure.account.oauth2.user.name`: To set username when UserPasswordTokenProvider is used.
-
-`fs.azure.account.oauth2.user.password`: To set password when UserPasswordTokenProvider is used.
-
-`fs.azure.account.oauth2.refresh.token`: To set OAuth refreshtoken when RefreshTokenBasedTokenProvider is used.
-
-`fs.azure.account.oauth2.refresh.token.endpoint`: To set OAuth refresh token end point when RefreshTokenBasedTokenProvider is used.
-
-### <a name="featureconfigoptions"></a> Feature Options
-`fs.azure.createRemoteFileSystemDuringInitialization`: Flag to create FS during initialisation. ABFS does not support the same when AuthType is SAS.
-
-`fs.azure.skipUserGroupMetadataDuringInitialization`: Whether to set primary user group name from the user group information or just keep it as the username itself.
+### <a name="featureconfigoptions"></a> Primary User Group Options
+The group name which is part FileStatus and AclStatus will be set the same as the username if the following config is set to true `fs.azure.skipUserGroupMetadataDuringInitialization`.
 
 ### <a name="ioconfigoptions"></a> IO Options
+The following configs are related to read, write and r.
+
 `fs.azure.io.retry.max.retries`: Sets the number of retries for IO operations. Currently this is used only for the server call retry logic. Used within AbfsClient class as part of the ExponentialRetryPolicy. The value should be >= 0.
 
 `fs.azure.write.request.size`: To set the write buffer size. Specify the value in bytes. Specify the value in bytes. The value should be between 16384 to 104857600 both inclusive (16 KB to 100 MB). The default value will be 8388608 (8 MB).
@@ -723,18 +715,22 @@ Irrespective of the flag, AbfsClient will use HTTPS if the secure scheme (ABFSS)
 `fs.azure.ssl.channel.mode`: Initializing DelegatingSSLSocketFactory with the specified SSL channel mode. Value should be of the enum DelegatingSSLSocketFactory.SSLChannelMode. The default value will be DelegatingSSLSocketFactory.SSLChannelMode.Default.
 
 ### <a name="serverconfigoptions"></a> Server Options
-`fs.azure.io.read.tolerate.concurrent.append`: To set the field AbfsInputStream.stolerateOobAppends so that read will tolerate concurrent appends. By default this will be false.
+When the config `fs.azure.io.read.tolerate.concurrent.append` is made true, the If-Match header sent to the server for read calls will be set as * otherwise the same will be set with ETag. This is basically a mechanism in place to handle the reads with optimistic concurrency.
+Please refer the following link for further information.
+1.	https://docs.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read
+2.	https://azure.microsoft.com/de-de/blog/managing-concurrency-in-microsoft-azure-storage-2/
 
-`fs.azure.list.max.results`: Sets the list status response page size for the liststatus API. The value should be > 0.
-By defaul this will be 500.
-
-`fs.azure.user.agent.prefix`: The value specified for this config will be part of the User-Agent header for the server calls.
+listStatus API fetches the FileStatus information from server in a page by page manner. The config 
+`fs.azure.list.max.results` used to set the maxResults URI param which sets the pagesize(maximum results per call). The value should be > 0. By defaul this will be 500. Server has a maximum value for this paramater as 5000. So even if the config is sabove 5000 the response will only contain 5000 entries.
+Please refer the following link for further information.
+https://docs.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/list
 
 ### <a name="throttlingconfigoptions"></a> Throttling Options
-`fs.azure.enable.autothrottling`: The driver has the capability to throttle the server calls. This config provides a control to enable/disable the same. By default this will be true.
+ABFS driver has the capability to throttle read and write operations to achieve maximum throughput by minimizing errors. The errors occur when the account ingress or egress limits are exceeded and the server-side throttles requests. Server-side throttling causes the retry policy to be used, but the retry policy sleeps for long periods of time causing the total ingress or egress throughput to be as much as 35% lower than optimal. The retry policy is also after the fact, in that it applies after a request fails. On the other hand, the client-side throttling implemented here happens before requests are made and sleeps just enough to minimize errors, allowing optimal ingress and/or egress throughput.
+By default the throttling mechanism is enabled in the driver. The same can be disabled by setting the config `fs.azure.enable.autothrottling` to false.
 
 ### <a name="renameconfigoptions"></a> Rename Options
-`fs.azure.atomic.rename.key`: Prints the following log if the source of the rename belongs to one of the configured directories.
+`fs.azure.atomic.rename.key`: Directories for atomic rename support can be specified comma separated in this config. The driver prints the following warning log if the source of the rename belongs to one of the configured directories.
 "The atomic rename feature is not supported by the ABFS scheme; however, rename, create and delete operations are atomic if Namespace is enabled for your Azure Storage account."
 The directories can be specified as comma separated values. By default the value is "/hbase"
 
