@@ -29,6 +29,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private boolean disableOutputStreamFlush;
 
+  private AbfsOutputStreamStatistics streamStatistics;
+
   public AbfsOutputStreamContext() {
   }
 
@@ -49,6 +51,12 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsOutputStreamContext withStreamStatistics(
+      final AbfsOutputStreamStatistics streamStatistics) {
+    this.streamStatistics = streamStatistics;
+    return this;
+  }
+
   public AbfsOutputStreamContext build() {
     // Validation of parameters to be done here.
     return this;
@@ -64,5 +72,9 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public boolean isDisableOutputStreamFlush() {
     return disableOutputStreamFlush;
+  }
+
+  public AbfsOutputStreamStatistics getStreamStatistics() {
+    return streamStatistics;
   }
 }

@@ -23,6 +23,8 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_TIMEOUT;
 
@@ -31,6 +33,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST
  * This class does not attempt to bind to Azure.
  */
 public class AbstractAbfsTestWithTimeout extends Assert {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractAbfsTestWithTimeout.class);
+
   /**
    * The name of the current method.
    */
@@ -66,5 +71,17 @@ public class AbstractAbfsTestWithTimeout extends Assert {
    */
   protected int getTestTimeoutMillis() {
     return TEST_TIMEOUT;
+  }
+
+  /**
+   * Describe a test in the logs.
+   *
+   * @param text text to print
+   * @param args arguments to format in the printing
+   */
+  protected void describe(String text, Object... args) {
+    LOG.info("\n\n{}: {}\n",
+        methodName.getMethodName(),
+        String.format(text, args));
   }
 }
