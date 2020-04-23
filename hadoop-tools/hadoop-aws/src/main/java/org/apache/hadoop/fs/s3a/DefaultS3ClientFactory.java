@@ -28,7 +28,9 @@ import com.amazonaws.metrics.RequestMetricCollector;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.internal.ServiceUtils;
 import com.amazonaws.util.AwsHostNameUtils;
+import com.amazonaws.util.RuntimeHttpUtils;
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 
@@ -54,6 +56,10 @@ import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 @InterfaceStability.Unstable
 public class DefaultS3ClientFactory extends Configured
     implements S3ClientFactory {
+
+  private static final String S3_SERVICE_NAME = "s3";
+  private static final String S3_SIGNER = "S3SignerType";
+  private static final String S3_V4_SIGNER = "AWSS3V4SignerType";
 
   protected static final Logger LOG = S3AFileSystem.LOG;
 
@@ -117,12 +123,15 @@ public class DefaultS3ClientFactory extends Configured
     }
 
     // endpoint set up is a PITA
+    //  client.setEndpoint("") is no longer available
     AwsClientBuilder.EndpointConfiguration epr
-        = createEndpointConfiguration(endpoint);
+        = createEndpointConfiguration(endpoint, awsConf);
     if (epr != null) {
+      // an endpoint binding was constructed: use it.
       b.withEndpointConfiguration(epr);
     }
-    return b.build();
+    final AmazonS3 client = b.build();
+    return client;
   }
 
   /**
@@ -150,17 +159,37 @@ public class DefaultS3ClientFactory extends Configured
   /**
    * Given an endpoint string, return an endpoint config, or null, if none
    * is needed.
+   * This is a pretty painful piece of code. It is trying to replicate
+   * what AwsClient.setEndpoint() does, because you can't
+   * call that setter on an AwsClient constructed via
+   * the builder, and you can't pass a metrics collector
+   * down except through the builder.
+   * Note also that AWS signing is a mystery which nobody fully
+   * understands, especially given all problems surface in a
+   * "400 bad request" response, which, like all security systems,
+   * provides no meaningful diagnostics at all.
+   *
    * @param endpoint possibly null endpoint.
+   * @param awsConf
    * @return a configuration for the S3 client builder.
    */
   @VisibleForTesting
-  public static AwsClientBuilder.EndpointConfiguration createEndpointConfiguration(
-      final String endpoint) {
-    if (endpoint.isEmpty()) {
+  public static AwsClientBuilder.EndpointConfiguration
+      createEndpointConfiguration(
+          final String endpoint, final ClientConfiguration awsConf) {
+    if (endpoint == null || endpoint.isEmpty()) {
       return null;
     }
 
-    String region = AwsHostNameUtils.parseRegionName(endpoint, "s3");;
+    final URI epr = RuntimeHttpUtils.toUri(endpoint, awsConf);
+    String region;
+    if (!ServiceUtils.isS3USStandardEndpoint(endpoint)) {
+      region = AwsHostNameUtils.parseRegion(epr.getHost(),
+          S3_SERVICE_NAME);
+    } else {
+      // US-east, set region == null.
+      region = null;
+    }
     LOG.debug("Region for endpoint {} is determined as {}", endpoint, region);
     return new AwsClientBuilder.EndpointConfiguration(endpoint, region);
   }

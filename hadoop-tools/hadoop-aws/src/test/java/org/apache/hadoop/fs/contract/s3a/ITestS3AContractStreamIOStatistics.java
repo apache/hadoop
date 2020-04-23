@@ -18,18 +18,21 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.AbstractConstractStreamIOStatisticsTest;
-import org.apache.hadoop.fs.contract.AbstractContractUnbufferTest;
+import org.apache.hadoop.fs.contract.AbstractContractStreamIOStatisticsTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.*;
 
 /**
  * Test the S3A Streams IOStatistics support.
  */
-public class ITestS3AStreamIOStatistics extends
-    AbstractConstractStreamIOStatisticsTest {
+public class ITestS3AContractStreamIOStatistics extends
+    AbstractContractStreamIOStatisticsTest {
 
   @Override
   protected Configuration createConfiguration() {
@@ -43,4 +46,16 @@ public class ITestS3AStreamIOStatistics extends
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
   }
+
+  /**
+   * Keys which the output stream must support.
+   * @return a list of keys
+   */
+  @Override
+  public List<String> outputStreamStatisticKeys() {
+    return Arrays.asList(STREAM_WRITE_BYTES,
+        STREAM_WRITE_BLOCK_UPLOADS,
+        STREAM_WRITE_FAILURES);
+  }
+
 }

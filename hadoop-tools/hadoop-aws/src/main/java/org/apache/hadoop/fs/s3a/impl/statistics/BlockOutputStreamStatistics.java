@@ -84,6 +84,18 @@ public interface BlockOutputStreamStatistics extends Closeable {
   int getBlocksActivelyAllocated();
 
   /**
+   * Record bytes written.
+   * @param count number of bytes
+   */
+  void writeBytes(long count);
+
+  /**
+   * Get the current count of bytes written.
+   * @return the counter value.
+   */
+  long getBytesWritten();
+
+  /**
    * Convert to an IOStatistics source which is
    * dynamically updated.
    * @return statistics

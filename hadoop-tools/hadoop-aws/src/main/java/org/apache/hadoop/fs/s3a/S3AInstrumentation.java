@@ -1129,6 +1129,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private final AtomicLong blockUploadsFailed = new AtomicLong(0);
     private final AtomicLong bytesPendingUpload = new AtomicLong(0);
 
+    private final AtomicLong bytesWritten = new AtomicLong(0);
     private final AtomicLong bytesUploaded = new AtomicLong(0);
     private final AtomicLong transferDuration = new AtomicLong(0);
     private final AtomicLong queueDuration = new AtomicLong(0);
@@ -1300,6 +1301,23 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       return blocksAllocated.get() - blocksReleased.get();
     }
 
+    /**
+     * Record bytes written.
+     * @param count number of bytes
+     */
+    @Override
+    public void writeBytes(long count) {
+      bytesWritten.addAndGet(count);
+    }
+
+    /**
+     * Get the current count of bytes written.
+     * @return the counter value.
+     */
+    @Override
+    public long getBytesWritten() {
+      return bytesWritten.get();
+    }
 
     @Override
     public String toString() {
@@ -1312,6 +1330,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       sb.append(", blockUploadsFailed=").append(blockUploadsFailed);
       sb.append(", bytesPendingUpload=").append(bytesPendingUpload);
       sb.append(", bytesUploaded=").append(bytesUploaded);
+      sb.append(", bytesWritten=").append(bytesWritten);
       sb.append(", blocksAllocated=").append(blocksAllocated);
       sb.append(", blocksReleased=").append(blocksReleased);
       sb.append(", blocksActivelyAllocated=").append(getBlocksActivelyAllocated());
@@ -1339,7 +1358,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       builder.add(StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,
           blocksSubmitted);
       builder.add(StreamStatisticNames.STREAM_WRITE_BYTES,
-          bytesUploaded);
+          bytesWritten);
       builder.add(StreamStatisticNames.STREAM_WRITE_FAILURES,
           blockUploadsFailed);
       return builder.build();

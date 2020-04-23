@@ -157,4 +157,20 @@ public final class IOStatisticAssertions {
         .isNotNull();
     return statistics;
   }
+
+  /**
+   * Update IO statistics from the source if they are static.
+   * @param statistics current statistics (or null)
+   * @param origin origin of the statistics.
+   * @return the possibly updated statistics
+   */
+  public static IOStatistics maybeUpdate(final IOStatistics statistics,
+      final Object origin) {
+    if (statistics == null
+        || !statistics.hasAttribute(IOStatistics.Attributes.Dynamic)) {
+      return extractStatistics(origin);
+    } else {
+      return statistics;
+    }
+  }
 }

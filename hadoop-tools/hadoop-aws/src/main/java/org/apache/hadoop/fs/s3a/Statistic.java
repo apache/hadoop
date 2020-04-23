@@ -199,9 +199,11 @@ public enum Statistic {
       "Gauge of block/partitions data uploads queued to be written"),
   STREAM_WRITE_TOTAL_TIME("stream_write_total_time",
       "Count of total time taken for uploads to complete"),
-  STREAM_WRITE_TOTAL_DATA(
-      StreamStatisticNames.STREAM_WRITE_BYTES,
+  STREAM_WRITE_TOTAL_DATA("stream_write_total_data",
       "Count of total data uploaded in block output"),
+  STREAM_WRITE_BYTES(
+      StreamStatisticNames.STREAM_WRITE_BYTES,
+      "Count of bytes written to output stream (including all not yet uploaded"),
   STREAM_WRITE_QUEUE_DURATION("stream_write_queue_duration",
       "Total queue duration of all block uploads"),
 

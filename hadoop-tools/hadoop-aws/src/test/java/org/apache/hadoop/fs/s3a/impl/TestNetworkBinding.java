@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import org.junit.Test;
 
@@ -81,7 +82,7 @@ public class TestNetworkBinding extends AbstractHadoopTestBase {
       final boolean expectNull,
       final String expectRegion) {
     AwsClientBuilder.EndpointConfiguration epr =
-        createEndpointConfiguration(src);
+        createEndpointConfiguration(src, new ClientConfiguration());
     String eprStr = epr == null
         ? "(empty)"
         : ("(" + epr.getServiceEndpoint() + " " + epr.getSigningRegion());

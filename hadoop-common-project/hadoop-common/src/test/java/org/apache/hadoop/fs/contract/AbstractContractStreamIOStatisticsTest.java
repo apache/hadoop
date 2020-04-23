@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.contract;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -40,12 +40,11 @@ import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_
  * Tests {@link IOStatistics} support in input streams.
  * Requires both the input and output streams to offer statistics.
  */
-public abstract class AbstractConstractStreamIOStatisticsTest
+public abstract class AbstractContractStreamIOStatisticsTest
     extends AbstractFSContractTestBase {
 
-
   @Test
-  public void testWriteByteStats() throws Throwable {
+  public void testWriteSingleByteStats() throws Throwable {
     describe("Write a byte to a file and verify"
         + " the stream statistics are updated");
     Path path = methodPath();
@@ -57,33 +56,26 @@ public abstract class AbstractConstractStreamIOStatisticsTest
       IOStatistics st = statistics;
       attrs.forEach(a ->
           assertIOStatisticsHasAttribute(st, a));
-      final boolean isDynamic = statistics.hasAttribute(Attributes.Dynamic);
       final List<String> keys = outputStreamStatisticKeys();
       Assertions.assertThat(keys).contains(STREAM_WRITE_BYTES);
       // before a write, no bytes
       assertStatisticHasValue(statistics, STREAM_WRITE_BYTES, 0);
       out.write('0');
+      final boolean isDynamic = statistics.hasAttribute(Attributes.Dynamic);
       if (!isDynamic) {
         statistics = extractStatistics(out);
       }
+      statistics = maybeUpdate(statistics, out);
       assertStatisticHasValue(statistics, STREAM_WRITE_BYTES, 1);
       // close the stream
       out.close();
-      // statistics are still valid
+      // statistics are still valid after the close
+      // always call the output stream to check that behavior
       statistics = extractStatistics(out);
       assertStatisticHasValue(statistics, STREAM_WRITE_BYTES, 1);
     } finally {
       fs.delete(path, false);
     }
-  }
-
-
-  /**
-   * Keys which the output stream must support.
-   * @return a list of keys
-   */
-  public List<String> outputStreamStatisticKeys() {
-    return Arrays.asList(STREAM_WRITE_BYTES);
   }
 
   /**
@@ -92,6 +84,14 @@ public abstract class AbstractConstractStreamIOStatisticsTest
    */
   public Set<Attributes> outputStreamAttributes() {
     return EnumSet.of(Attributes.Dynamic);
+  }
+
+  /**
+   * Keys which the output stream must support.
+   * @return a list of keys
+   */
+  public List<String> outputStreamStatisticKeys() {
+    return Collections.singletonList(STREAM_WRITE_BYTES);
   }
 
   /**
@@ -106,8 +106,8 @@ public abstract class AbstractConstractStreamIOStatisticsTest
    * Keys which the output stream must support.
    * @return a list of keys
    */
-  public List<String> intputStreamStatisticKeys() {
-    return Arrays.asList(STREAM_READ_BYTES);
+  public List<String> inputStreamStatisticKeys() {
+    return Collections.singletonList(STREAM_READ_BYTES);
   }
 
 }

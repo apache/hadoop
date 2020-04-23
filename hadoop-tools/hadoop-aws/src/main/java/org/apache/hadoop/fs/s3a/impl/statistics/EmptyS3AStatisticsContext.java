@@ -387,6 +387,15 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
+    public void writeBytes(final long count) {
+    }
+
+    @Override
+    public long getBytesWritten() {
+      return 0;
+    }
+
+    @Override
     public void close() throws IOException {
 
     }
