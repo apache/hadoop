@@ -68,13 +68,13 @@ public class TrileanTests {
   }
 
   private void testInvalidString(String invalidString) {
-    assertThat(Trilean.getTrilean("falsee")).describedAs(
+    assertThat(Trilean.getTrilean(invalidString)).describedAs(
         "getTrilean should return Trilean.UNKNOWN for anything not true/false")
         .isEqualTo(Trilean.UNKNOWN);
   }
 
   @Test
-  public void testToBeeleanForTrueAndFalse() throws TrileanConversionException {
+  public void testToBoolean() throws TrileanConversionException {
     assertThat(Trilean.TRUE.toBoolean())
         .describedAs("toBoolean should return true for Trilean.TRUE").isTrue();
     assertThat(Trilean.FALSE.toBoolean())
