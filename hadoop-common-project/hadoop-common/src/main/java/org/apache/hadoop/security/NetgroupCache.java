@@ -61,7 +61,7 @@ public class NetgroupCache {
    * @return list of cached groups
    */
   public static List<String> getNetgroupNames() {
-    return Collections.unmodifiableList(new ArrayList<>(getGroups()));
+    return new ArrayList<>(getGroups());
   }
 
   private static Set<String> getGroups() {

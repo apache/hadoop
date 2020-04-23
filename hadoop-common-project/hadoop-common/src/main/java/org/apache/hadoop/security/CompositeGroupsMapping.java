@@ -70,8 +70,8 @@ public class CompositeGroupsMapping
   public synchronized List<String> getGroups(String user) throws IOException {
     Set<String> groupSet = new TreeSet<String>();
 
-    List<String> groups = Collections.emptyList();
     for (GroupMappingServiceProvider provider : providersList) {
+      List<String> groups = Collections.emptyList();
       try {
         groups = provider.getGroups(user);
       } catch (Exception e) {
@@ -85,9 +85,9 @@ public class CompositeGroupsMapping
       }
     }
 
-    return Collections.unmodifiableList(new ArrayList<>(groupSet));
+    return new ArrayList<>(groupSet);
   }
-  
+
   /**
    * Caches groups, no need to do that for this provider
    */
