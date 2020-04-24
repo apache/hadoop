@@ -25,6 +25,7 @@ import java.util.LinkedList;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assume.assumeFalse;
 
 /**
  * Base class for the persistent {@link YarnConfigurationStore}
@@ -94,6 +95,9 @@ public abstract class PersistentConfigurationStoreBaseTest extends
 
   @Test
   public void testMaxLogs() throws Exception {
+    assumeFalse("test should be skipped for TestFSSchedulerConfigurationStore",
+      this instanceof TestFSSchedulerConfigurationStore);
+
     conf.setLong(YarnConfiguration.RM_SCHEDCONF_MAX_LOGS, 2);
     confStore.initialize(conf, schedConf, rmContext);
     LinkedList<YarnConfigurationStore.LogMutation> logs = confStore.getLogs();
