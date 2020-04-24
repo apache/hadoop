@@ -137,7 +137,7 @@ public class DFSZKFailoverController extends ZKFailoverController {
    */
   private static String getZkfcServerBindHost(Configuration conf) {
     String addr = conf.getTrimmed(
-      DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY);
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY);
     if (addr == null || addr.isEmpty()) {
       addr = conf.getTrimmed(DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KEY);
     }
