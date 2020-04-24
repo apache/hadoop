@@ -21,7 +21,6 @@ package org.apache.hadoop.security.ssl;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.SocketException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -31,11 +30,9 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.wildfly.openssl.OpenSSLProvider;
-import org.wildfly.openssl.SSL;
-
 
 /**
  * A {@link SSLSocketFactory} that can delegate to various SSL implementations.
@@ -60,8 +57,8 @@ import org.wildfly.openssl.SSL;
  * </p>
  *
  * In order to load OpenSSL, applications must ensure the wildfly-openssl
- * artifact is on the classpath. Currently, only ABFS and S3A provide
- * wildfly-openssl as a runtime dependency.
+ * artifact is on the classpath. Currently, only ABFS declares
+ * wildfly-openssl as an explicit dependency.
  */
 public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
 
@@ -110,7 +107,16 @@ public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
   }
 
   /**
-   * Singletone instance of the SSLSocketFactory.
+   * For testing only: reset the socket factory.
+   */
+  @VisibleForTesting
+  public static synchronized void resetDefaultFactory() {
+    LOG.info("Resetting default SSL Socket Factory");
+    instance = null;
+  }
+
+  /**
+   * Singleton instance of the SSLSocketFactory.
    *
    * SSLSocketFactory must be initialized with appropriate SSLChannelMode
    * using initializeDefaultFactory method.
@@ -126,9 +132,7 @@ public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
       throws IOException {
     try {
       initializeSSLContext(preferredChannelMode);
-    } catch (NoSuchAlgorithmException e) {
-      throw new IOException(e);
-    } catch (KeyManagementException e) {
+    } catch (NoSuchAlgorithmException | KeyManagementException e) {
       throw new IOException(e);
     }
 
@@ -146,42 +150,23 @@ public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
   }
 
   private void initializeSSLContext(SSLChannelMode preferredChannelMode)
-      throws NoSuchAlgorithmException, KeyManagementException {
+      throws NoSuchAlgorithmException, KeyManagementException, IOException {
+    LOG.debug("Initializing SSL Context to channel mode {}",
+        preferredChannelMode);
     switch (preferredChannelMode) {
     case Default:
-      if (!openSSLProviderRegistered) {
-        OpenSSLProvider.register();
-        openSSLProviderRegistered = true;
-      }
       try {
-        java.util.logging.Logger logger = java.util.logging.Logger.getLogger(
-                SSL.class.getName());
-        logger.setLevel(Level.WARNING);
-        ctx = SSLContext.getInstance("openssl.TLS");
-        ctx.init(null, null, null);
-        // Strong reference needs to be kept to logger until initialization of
-        // SSLContext finished (see HADOOP-16174):
-        logger.setLevel(Level.INFO);
+        bindToOpenSSLProvider();
         channelMode = SSLChannelMode.OpenSSL;
-      } catch (NoSuchAlgorithmException e) {
-        LOG.debug("Failed to load OpenSSL. Falling back to the JSSE default.");
+      } catch (LinkageError | NoSuchAlgorithmException | RuntimeException e) {
+        LOG.debug("Failed to load OpenSSL. Falling back to the JSSE default.",
+            e);
         ctx = SSLContext.getDefault();
         channelMode = SSLChannelMode.Default_JSSE;
       }
       break;
     case OpenSSL:
-      if (!openSSLProviderRegistered) {
-        OpenSSLProvider.register();
-        openSSLProviderRegistered = true;
-      }
-      java.util.logging.Logger logger = java.util.logging.Logger.getLogger(
-                SSL.class.getName());
-      logger.setLevel(Level.WARNING);
-      ctx = SSLContext.getInstance("openssl.TLS");
-      ctx.init(null, null, null);
-      // Strong reference needs to be kept to logger until initialization of
-      // SSLContext finished (see HADOOP-16174):
-      logger.setLevel(Level.INFO);
+      bindToOpenSSLProvider();
       channelMode = SSLChannelMode.OpenSSL;
       break;
     case Default_JSSE:
@@ -193,8 +178,35 @@ public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
       channelMode = SSLChannelMode.Default_JSSE_with_GCM;
       break;
     default:
-      throw new NoSuchAlgorithmException("Unknown channel mode: "
+      throw new IOException("Unknown channel mode: "
           + preferredChannelMode);
+    }
+  }
+
+  /**
+   * Bind to the OpenSSL provider via wildfly.
+   * This MUST be the only place where wildfly classes are referenced,
+   * so ensuring that any linkage problems only surface here where they may
+   * be caught by the initialization code.
+   */
+  private void bindToOpenSSLProvider()
+      throws NoSuchAlgorithmException, KeyManagementException {
+    if (!openSSLProviderRegistered) {
+      LOG.debug("Attempting to register OpenSSL provider");
+      org.wildfly.openssl.OpenSSLProvider.register();
+      openSSLProviderRegistered = true;
+    }
+    // Strong reference needs to be kept to logger until initialization of
+    // SSLContext finished (see HADOOP-16174):
+    java.util.logging.Logger logger = java.util.logging.Logger.getLogger(
+        "org.wildfly.openssl.SSL");
+    Level originalLevel = logger.getLevel();
+    try {
+      logger.setLevel(Level.WARNING);
+      ctx = SSLContext.getInstance("openssl.TLS");
+      ctx.init(null, null, null);
+    } finally {
+      logger.setLevel(originalLevel);
     }
   }
 
@@ -212,21 +224,26 @@ public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
     return ciphers.clone();
   }
 
+  /**
+   * Get the channel mode of this instance.
+   * @return a channel mode.
+   */
+  public SSLChannelMode getChannelMode() {
+    return channelMode;
+  }
+
   public Socket createSocket() throws IOException {
     SSLSocketFactory factory = ctx.getSocketFactory();
-    SSLSocket ss = (SSLSocket) factory.createSocket();
-    configureSocket(ss);
-    return ss;
+    return configureSocket(factory.createSocket());
   }
 
   @Override
   public Socket createSocket(Socket s, String host, int port,
                              boolean autoClose) throws IOException {
     SSLSocketFactory factory = ctx.getSocketFactory();
-    SSLSocket ss = (SSLSocket) factory.createSocket(s, host, port, autoClose);
 
-    configureSocket(ss);
-    return ss;
+    return configureSocket(
+        factory.createSocket(s, host, port, autoClose));
   }
 
   @Override
@@ -234,52 +251,41 @@ public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
                              InetAddress localAddress, int localPort)
       throws IOException {
     SSLSocketFactory factory = ctx.getSocketFactory();
-    SSLSocket ss = (SSLSocket) factory
-        .createSocket(address, port, localAddress, localPort);
-
-    configureSocket(ss);
-    return ss;
+    return configureSocket(factory
+        .createSocket(address, port, localAddress, localPort));
   }
 
   @Override
   public Socket createSocket(String host, int port, InetAddress localHost,
                              int localPort) throws IOException {
     SSLSocketFactory factory = ctx.getSocketFactory();
-    SSLSocket ss = (SSLSocket) factory
-        .createSocket(host, port, localHost, localPort);
 
-    configureSocket(ss);
-
-    return ss;
+    return configureSocket(factory
+        .createSocket(host, port, localHost, localPort));
   }
 
   @Override
   public Socket createSocket(InetAddress host, int port) throws IOException {
     SSLSocketFactory factory = ctx.getSocketFactory();
-    SSLSocket ss = (SSLSocket) factory.createSocket(host, port);
 
-    configureSocket(ss);
-
-    return ss;
+    return configureSocket(factory.createSocket(host, port));
   }
 
   @Override
   public Socket createSocket(String host, int port) throws IOException {
     SSLSocketFactory factory = ctx.getSocketFactory();
-    SSLSocket ss = (SSLSocket) factory.createSocket(host, port);
 
-    configureSocket(ss);
-
-    return ss;
+    return configureSocket(factory.createSocket(host, port));
   }
 
-  private void configureSocket(SSLSocket ss) throws SocketException {
-    ss.setEnabledCipherSuites(ciphers);
+  private Socket configureSocket(Socket socket) {
+    ((SSLSocket) socket).setEnabledCipherSuites(ciphers);
+    return socket;
   }
 
   private String[] alterCipherList(String[] defaultCiphers) {
 
-    ArrayList<String> preferredSuits = new ArrayList<>();
+    ArrayList<String> preferredSuites = new ArrayList<>();
 
     // Remove GCM mode based ciphers from the supported list.
     for (int i = 0; i < defaultCiphers.length; i++) {
@@ -287,11 +293,11 @@ public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
         LOG.debug("Removed Cipher - {} from list of enabled SSLSocket ciphers",
                 defaultCiphers[i]);
       } else {
-        preferredSuits.add(defaultCiphers[i]);
+        preferredSuites.add(defaultCiphers[i]);
       }
     }
 
-    ciphers = preferredSuits.toArray(new String[0]);
+    ciphers = preferredSuites.toArray(new String[0]);
     return ciphers;
   }
 }

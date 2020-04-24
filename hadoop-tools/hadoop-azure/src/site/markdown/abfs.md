@@ -568,6 +568,8 @@ token when its `getAccessToken()` method is invoked.
 The declared class must implement `org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee`
 and optionally `org.apache.hadoop.fs.azurebfs.extensions.BoundDTExtension`.
 
+The declared class also holds responsibility to implement retry logic while fetching access tokens.
+
 #### <a name="delegationtokensupportconfigoptions"></a> Delegation token support
 
 Delegation token support can be achieved by making the following config true 
@@ -579,11 +581,9 @@ and the config `fs.azure.delegation.token.provider.type` is not provided an
 
 #### <a name="sastokensupportconfigoptions"></a> SAS token support
 
-`fs.azure.sas.token.provider.type`
-If the auth type is set as AuthType.SAS then it is expected to specify a class 
-which is an implementation of SASTokenProvider otherwise 
-IlleagalArgumentException will be thrown.
-
+`fs.azure.sas.token.provider.type` If the auth type is set as AuthType.SAS then 
+it is expected to specify a class which is an implementation of SASTokenProvider 
+otherwise IlleagalArgumentException will be thrown.
 
 ## <a name="technical"></a> Technical notes
 
@@ -706,6 +706,11 @@ config will be set to true.
 Hflush() being the only documented API that can provide persistent data
 transfer, Flush() also attempting to persist buffered data will lead to
 performance issues.
+
+### <a name="hnscheckconfigoptions"></a> HNS Check Options
+Config `fs.azure.account.hns.enabled` provides an option to specify whether
+ the storage account is HNS enabled or not. In case the config is not provided,
+  a server call is made to check the same.
 
 ### <a name="flushconfigoptions"></a> Access Options
 Config `fs.azure.enable.check.access` needs to be set true to enable

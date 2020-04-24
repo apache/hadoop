@@ -474,7 +474,10 @@ public final class FederationTestUtils {
 
   /**
    * Add a mount table entry in some name services and wait until it is
-   * available.
+   * available. If there are multiple routers,
+   * {@link #createMountTableEntry(List, String, DestinationOrder, Collection)}
+   * should be used instead because the method does not refresh
+   * the mount tables of the other routers.
    * @param router Router to change.
    * @param mountPoint Name of the mount point.
    * @param order Order of the mount table entry.

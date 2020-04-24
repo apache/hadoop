@@ -15,4 +15,9 @@
    limitations under the License.
 -->
 <FindBugsFilter>
+  <Match>
+    <Class name="org.apache.hadoop.fs.cosn.CosNInputStream.ReadBuffer"/>
+    <Method name="getBuffer"/>
+    <Bug pattern="EI_EXPOSE_REP"/>h_LIB
+  </Match>
 </FindBugsFilter>

@@ -20,36 +20,41 @@ package org.apache.hadoop.fs.cosn.auth;
 import com.qcloud.cos.auth.BasicCOSCredentials;
 import com.qcloud.cos.auth.COSCredentials;
 import com.qcloud.cos.auth.COSCredentialsProvider;
-import com.qcloud.cos.exception.CosClientException;
 import com.qcloud.cos.utils.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.cosn.CosNConfigKeys;
 
-import org.apache.hadoop.fs.cosn.Constants;
+import javax.annotation.Nullable;
+import java.net.URI;
 
 /**
- * the provider obtaining the cos credentials from the environment variables.
+ * Get the credentials from the hadoop configuration.
  */
-public class EnvironmentVariableCredentialProvider
-    implements COSCredentialsProvider {
-  @Override
-  public COSCredentials getCredentials() {
-    String secretId = System.getenv(Constants.COSN_SECRET_ID_ENV);
-    String secretKey = System.getenv(Constants.COSN_SECRET_KEY_ENV);
+public class SimpleCredentialsProvider
+    extends AbstractCOSCredentialsProvider implements COSCredentialsProvider {
+  private String secretId;
+  private String secretKey;
 
-    secretId = StringUtils.trim(secretId);
-    secretKey = StringUtils.trim(secretKey);
-
-    if (!StringUtils.isNullOrEmpty(secretId)
-        && !StringUtils.isNullOrEmpty(secretKey)) {
-      return new BasicCOSCredentials(secretId, secretKey);
-    } else {
-      throw new CosClientException(
-          "Unable to load COS credentials from environment variables" +
-              "(COS_SECRET_ID or COS_SECRET_KEY)");
+  public SimpleCredentialsProvider(@Nullable URI uri, Configuration conf) {
+    super(uri, conf);
+    if (null != conf) {
+      this.secretId = conf.get(
+          CosNConfigKeys.COSN_SECRET_ID_KEY);
+      this.secretKey = conf.get(
+          CosNConfigKeys.COSN_SECRET_KEY_KEY);
     }
   }
 
   @Override
-  public String toString() {
-    return "EnvironmentVariableCredentialProvider{}";
+  public COSCredentials getCredentials() {
+    if (!StringUtils.isNullOrEmpty(this.secretId)
+        && !StringUtils.isNullOrEmpty(this.secretKey)) {
+      return new BasicCOSCredentials(this.secretId, this.secretKey);
+    }
+    return null;
+  }
+
+  @Override
+  public void refresh() {
   }
 }
