@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.statistics.impl;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -63,6 +64,11 @@ class SnapshotIOStatistics implements IOStatistics {
   @Override
   public boolean hasAttribute(final Attributes attr) {
     return Attributes.Snapshotted == attr;
+  }
+
+  @Override
+  public Set<String> keys() {
+    return entries.keySet();
   }
 
   @Override

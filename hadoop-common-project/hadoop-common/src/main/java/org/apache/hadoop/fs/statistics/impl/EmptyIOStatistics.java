@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
@@ -56,6 +58,11 @@ public final class EmptyIOStatistics implements IOStatistics {
   @Override
   public Iterator<Map.Entry<String, Long>> iterator() {
     return new EmptyIterator();
+  }
+
+  @Override
+  public Set<String> keys() {
+    return Collections.emptySet();
   }
 
   /**

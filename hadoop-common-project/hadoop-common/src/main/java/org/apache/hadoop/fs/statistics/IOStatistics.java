@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.statistics;
 
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -121,6 +122,14 @@ public interface IOStatistics extends Iterable<Map.Entry<String, Long>> {
   default boolean snapshot() {
     return false;
   }
+
+  /**
+   * Get the set of keys.
+   * No guarantees are made about the mutability/immutability
+   * of this set.
+   * @return the set of keys.
+   */
+  public Set<String> keys();
 
   /**
    * Possible attributes of the statistics.

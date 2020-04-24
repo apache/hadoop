@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.statistics.impl;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.ToLongFunction;
 
@@ -82,6 +83,11 @@ final class DynamicIOStatistics implements IOStatistics {
   @Override
   public boolean hasAttribute(final Attributes attr) {
     return Attributes.Dynamic == attr;
+  }
+
+  @Override
+  public Set<String> keys() {
+    return evaluators.keySet();
   }
 
   /**

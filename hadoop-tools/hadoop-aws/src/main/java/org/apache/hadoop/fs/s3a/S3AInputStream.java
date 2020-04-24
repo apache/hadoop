@@ -300,8 +300,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         long skipped = wrappedStream.skip(diff);
         if (skipped > 0) {
           pos += skipped;
-          // as these bytes have been read, they are included in the counter
-          incrementBytesRead(diff);
         }
 
         if (pos == targetPos) {

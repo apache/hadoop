@@ -76,16 +76,19 @@ public final class IOStatisticAssertions {
    * @param stats statistics source
    * @param key statistic key
    * @param value expected value.
+   * @return the value (which always equals the expected value)
    */
-  public static void assertStatisticHasValue(
+  public static long verifyStatisticValue(
       final IOStatistics stats,
       final String key,
       final long value) {
-    assertThat(stats.getStatistic(key))
+    final Long statistic = stats.getStatistic(key);
+    assertThat(statistic)
         .describedAs("Statistics %s and key %s with expected value %s", stats,
             key, value)
         .isNotNull()
         .isEqualTo(value);
+    return statistic;
   }
 
   /**
@@ -159,7 +162,8 @@ public final class IOStatisticAssertions {
   }
 
   /**
-   * Update IO statistics from the source if they are static.
+   * Update IO statistics from the source if they are static;
+   * dynamic stats are returned as is.
    * @param statistics current statistics (or null)
    * @param origin origin of the statistics.
    * @return the possibly updated statistics

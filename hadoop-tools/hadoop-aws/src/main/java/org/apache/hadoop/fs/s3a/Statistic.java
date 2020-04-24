@@ -128,7 +128,7 @@ public enum Statistic {
       StreamStatisticNames.STREAM_ABORTED,
       "Count of times the TCP stream was aborted"),
   STREAM_BACKWARD_SEEK_OPERATIONS(
-      StreamStatisticNames.STREAM_SEEK_BACKWARD_OPERATIONS,
+      StreamStatisticNames.STREAM_READ_SEEK_BACKWARD_OPERATIONS,
       "Number of executed seek operations which went backwards in a stream"),
   STREAM_CLOSED(
       StreamStatisticNames.STREAM_CLOSED,
@@ -137,7 +137,7 @@ public enum Statistic {
       StreamStatisticNames.STREAM_CLOSE_OPERATIONS,
       "Total count of times an attempt to close a data stream was made"),
   STREAM_FORWARD_SEEK_OPERATIONS(
-      StreamStatisticNames.STREAM_SEEK_FORWARD_OPERATIONS,
+      StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS,
       "Number of executed seek operations which went forward in a stream"),
   STREAM_OPENED(
       StreamStatisticNames.STREAM_OPENED,
@@ -158,22 +158,22 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES,
       "Count of version mismatches encountered while reading streams"),
   STREAM_SEEK_BYTES_BACKWARDS(
-      StreamStatisticNames.STREAM_SEEK_BYTES_BACKWARDS,
+      StreamStatisticNames.STREAM_READ_SEEK_BYTES_BACKWARDS,
       "Count of bytes moved backwards during seek operations"),
   STREAM_SEEK_BYTES_READ(
-      StreamStatisticNames.STREAM_SEEK_BYTES_READ,
+      StreamStatisticNames.STREAM_READ_SEEK_BYTES_READ,
       "Count of bytes read during seek() in stream operations"),
   STREAM_SEEK_BYTES_SKIPPED(
-      StreamStatisticNames.STREAM_SEEK_BYTES_SKIPPED,
+      StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED,
       "Count of bytes skipped during forward seek operation"),
   STREAM_SEEK_OPERATIONS(
-      StreamStatisticNames.STREAM_SEEK_OPERATIONS,
+      StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS,
       "Number of seek operations during stream IO."),
   STREAM_CLOSE_BYTES_READ(
       StreamStatisticNames.STREAM_CLOSE_BYTES_READ,
       "Count of bytes read when closing streams during seek operations."),
   STREAM_ABORT_BYTES_DISCARDED(
-      StreamStatisticNames.STREAM_ABORT_BYTES_DISCARDED,
+      StreamStatisticNames.STREAM_BYTES_DISCARDED_ABORT,
       "Count of bytes discarded by aborting the stream"),
   STREAM_WRITE_FAILURES(
       StreamStatisticNames.STREAM_WRITE_FAILURES,

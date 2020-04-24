@@ -20,6 +20,10 @@ package org.apache.hadoop.fs.statistics.impl;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -69,8 +73,22 @@ public class IOStatisticsFromStorageStatistics
      */
     private final StorageStatistics storageStatistics;
 
+    /**
+     * Keys, calculated in the constructor.
+     */
+    private final Set<String> keys;
+
     private IOStatisticsBinding(final StorageStatistics storageStatistics) {
+      Preconditions.checkArgument(storageStatistics != null,
+          "Null storage statistics");
       this.storageStatistics = storageStatistics;
+      // build the keys.
+      keys = new TreeSet<>();
+      final Iterator<StorageStatistics.LongStatistic> st
+          = storageStatistics.getLongStatistics();
+      while (st.hasNext()) {
+        keys.add(st.next().getName());
+      }
     }
 
     @Override
@@ -91,6 +109,11 @@ public class IOStatisticsFromStorageStatistics
     @Override
     public Iterator<Map.Entry<String, Long>> iterator() {
       return new MapEntryIterator(storageStatistics.getLongStatistics());
+    }
+
+    @Override
+    public Set<String> keys() {
+      return keys;
     }
   }
 

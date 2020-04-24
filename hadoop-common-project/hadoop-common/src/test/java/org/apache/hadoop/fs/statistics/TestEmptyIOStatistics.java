@@ -31,7 +31,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertIOStat
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsTracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUnknown;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUntracked;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticHasValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticValue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -75,7 +75,7 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
     assertThatThrownBy(() ->
         assertStatisticIsTracked(stats, "anything"));
     assertThatThrownBy(() ->
-        assertStatisticHasValue(stats, "anything", 0));
+        verifyStatisticValue(stats, "anything", 0));
   }
 
 

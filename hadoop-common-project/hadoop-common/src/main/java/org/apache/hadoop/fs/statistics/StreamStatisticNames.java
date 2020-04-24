@@ -42,8 +42,12 @@ public class StreamStatisticNames {
   public static final String STREAM_ABORTED = "stream_aborted";
 
   /** {@value}. */
-  public static final String STREAM_ABORT_BYTES_DISCARDED
+  public static final String STREAM_BYTES_DISCARDED_ABORT
       = "stream_bytes_discarded_in_abort";
+
+  /** {@value}. */
+  public static final String STREAM_BYTES_DISCARDED_SEEK
+      = "stream_bytes_discarded_in_seek";
 
   /** {@value}. */
   public static final String STREAM_CLOSED = "stream_closed";
@@ -61,17 +65,19 @@ public class StreamStatisticNames {
 
   /** {@value}. */
   public static final String STREAM_READ_BYTES
-      = "stream_write_bytes";
+      = "stream_read_bytes";
 
   /** {@value}. */
-  public static final String STREAM_READ_EXCEPTIONS = "stream_read_exceptions";
+  public static final String STREAM_READ_EXCEPTIONS =
+      "stream_read_exceptions";
 
   /** {@value}. */
   public static final String STREAM_READ_FULLY_OPERATIONS
       = "stream_read_fully_operations";
 
   /** {@value}. */
-  public static final String STREAM_READ_OPERATIONS = "stream_read_operations";
+  public static final String STREAM_READ_OPERATIONS =
+      "stream_read_operations";
 
   /** {@value}. */
   public static final String STREAM_READ_OPERATIONS_INCOMPLETE
@@ -82,29 +88,33 @@ public class StreamStatisticNames {
       = "stream_read_version_mismatches";
 
   /** {@value}. */
-  public static final String STREAM_SEEK_BYTES_BACKWARDS
+  public static final String STREAM_READ_SEEK_BYTES_BACKWARDS
       = "stream_bytes_backwards_on_seek";
 
   /** {@value}. */
-  public static final String STREAM_SEEK_BYTES_READ = "stream_seek_bytes_read";
+  public static final String STREAM_READ_SEEK_BYTES_READ =
+      "stream_read_seek_bytes_read";
 
   /** {@value}. */
-  public static final String STREAM_SEEK_BYTES_SKIPPED
+  public static final String STREAM_READ_SEEK_BYTES_SKIPPED
       = "stream_bytes_skipped_on_seek";
 
   /** {@value}. */
-  public static final String STREAM_SEEK_FORWARD_OPERATIONS
-      = "stream_seek_forward_operations";
+  public static final String STREAM_READ_SEEK_FORWARD_OPERATIONS
+      = "stream_read_seek_forward_operations";
 
   /** {@value}. */
-  public static final String STREAM_SEEK_OPERATIONS = "stream_seek_operations";
+  public static final String STREAM_READ_SEEK_OPERATIONS =
+      "stream_read_seek_operations";
 
   /** {@value}. */
-  public static final String STREAM_SEEK_BACKWARD_OPERATIONS = "stream_seek_backward_operations";
+  public static final String STREAM_READ_SEEK_BACKWARD_OPERATIONS =
+      "stream_read_seek_backward_operations";
 
 
   /** {@value}. */
-  public static final String STREAM_WRITE_FAILURES = "stream_write_failures";
+  public static final String STREAM_WRITE_FAILURES =
+      "stream_write_failures";
 
   /** {@value}. */
   public static final String STREAM_WRITE_BLOCK_UPLOADS
