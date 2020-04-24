@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.azurebfs.diagnostics.BooleanConfigurationBasicValida
 import org.apache.hadoop.fs.azurebfs.diagnostics.IntegerConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.LongConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.StringConfigurationBasicValidator;
+import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
@@ -80,6 +81,10 @@ public class AbfsConfiguration{
   private final String accountName;
   private final boolean isSecure;
   private static final Logger LOG = LoggerFactory.getLogger(AbfsConfiguration.class);
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
+      DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED)
+  private String isNamespaceEnabledAccount;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_BUFFER_SIZE,
       MinValue = MIN_BUFFER_SIZE,
@@ -230,6 +235,10 @@ public class AbfsConfiguration{
         field.set(this, validateBoolean(field));
       }
     }
+  }
+
+  public Trilean getIsNamespaceEnabledAccount() {
+    return Trilean.getTrilean(isNamespaceEnabledAccount);
   }
 
   /**
@@ -744,6 +753,11 @@ public class AbfsConfiguration{
   @VisibleForTesting
   public void setMaxIoRetries(int maxIoRetries) {
     this.maxIoRetries = maxIoRetries;
+  }
+
+  @VisibleForTesting
+  void setIsNamespaceEnabledAccount(String isNamespaceEnabledAccount) {
+    this.isNamespaceEnabledAccount = isNamespaceEnabledAccount;
   }
 
   private String getTrimmedPasswordString(String key, String defaultValue) throws IOException {
