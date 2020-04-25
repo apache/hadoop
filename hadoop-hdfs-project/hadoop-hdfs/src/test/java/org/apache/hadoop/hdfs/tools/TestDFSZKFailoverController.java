@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -50,6 +51,8 @@ import org.junit.Test;
 import com.google.common.base.Supplier;
 
 public class TestDFSZKFailoverController extends ClientBaseWithFixes {
+  private static final String LOCALHOST_SERVER_ADDRESS = "127.0.0.1";
+  private static final String WILDCARD_ADDRESS = "0.0.0.0";
   private Configuration conf;
   private MiniDFSCluster cluster;
   private TestContext ctx;
@@ -198,6 +201,27 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     thr1.zkfc.getLocalTarget().getZKFCProxy(conf, 15000).gracefulFailover();
     waitForHAState(0, HAServiceState.ACTIVE);
     waitForHAState(1, HAServiceState.STANDBY);
+  }
+
+  @Test(timeout=30000)
+  public void testWithoutBindAddressSet() throws Exception {
+    DFSZKFailoverController zkfc = DFSZKFailoverController.create(
+        conf);
+
+    assertEquals("Bind address not expected to be wildcard by default.",
+        zkfc.getRpcAddressToBindTo().getHostString(),
+        LOCALHOST_SERVER_ADDRESS);
+  }
+
+  @Test(timeout=30000)
+  public void testWithBindAddressSet() throws Exception {
+    conf.set(DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY, WILDCARD_ADDRESS);
+    DFSZKFailoverController zkfc = DFSZKFailoverController.create(
+        conf);
+    String addr = zkfc.getRpcAddressToBindTo().getHostString();
+
+    assertEquals("Bind address " + addr + " is not wildcard.",
+        addr, WILDCARD_ADDRESS);
   }
   
   @Test(timeout=30000)

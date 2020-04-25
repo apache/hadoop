@@ -315,9 +315,10 @@ public abstract class ZKFailoverController {
     healthMonitor.addServiceStateCallback(new ServiceStateCallBacks());
     healthMonitor.start();
   }
-  
+
   protected void initRPC() throws IOException {
     InetSocketAddress bindAddr = getRpcAddressToBindTo();
+    LOG.info("ZKFC RpcServer binding to {}", bindAddr);
     rpcServer = new ZKFCRpcServer(conf, bindAddr, this, getPolicyProvider());
   }
 
