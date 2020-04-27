@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.statistics;
 
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationHelper;
+
 /**
  * Support for working with statistics.
  */
@@ -31,7 +33,22 @@ public final class IOStatisticsSupport {
    * @param source source
    * @return a wrapped instance.
    */
-  public static IOStatistics wrapWithSnapshot(IOStatistics source) {
-    return org.apache.hadoop.fs.statistics.impl.IOStatisticsSupport.wrapWithSnapshot(source);
+  public static IOStatistics takeSnapshot(IOStatistics source) {
+    return IOStatisticsImplementationHelper.wrapWithSnapshot(source);
+  }
+
+  /**
+   * Get the IOStatistics of the source, falling back to
+   * null if the source does not implement
+   * {@link IOStatisticsSource}, or the return value
+   * of {@link IOStatisticsSource#getIOStatistics()} was null.
+   * @return an IOStatistics instance or null
+   */
+
+  public static IOStatistics retrieveIOStatistics(
+      final Object source) {
+    return (source instanceof IOStatisticsSource)
+        ? ((IOStatisticsSource) source).getIOStatistics()
+        : null;
   }
 }

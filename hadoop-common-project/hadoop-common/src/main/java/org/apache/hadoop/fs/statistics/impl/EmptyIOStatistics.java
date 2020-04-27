@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 
 /**
  * An empty IO Statistics implementation for classes which always
- * want to return a non-null value.
+ * want to return a non-null set of statistics.
  */
 public final class EmptyIOStatistics implements IOStatistics {
 

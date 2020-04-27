@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.statistics;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import org.junit.Test;
 
@@ -32,6 +33,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatis
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUnknown;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUntracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticValue;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -44,9 +46,12 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testAttributes() throws Throwable {
-    assertIOStatisticsHasAttribute(stats, IOStatistics.Attributes.Static);
-    assertIOStatisticsAttributeNotFound(stats, IOStatistics.Attributes.Dynamic);
-    assertIOStatisticsAttributeNotFound(stats, IOStatistics.Attributes.Snapshotted);
+    assertIOStatisticsHasAttribute(stats,
+        IOStatistics.Attributes.Static);
+    assertIOStatisticsAttributeNotFound(stats,
+        IOStatistics.Attributes.Dynamic);
+    assertIOStatisticsAttributeNotFound(stats,
+        IOStatistics.Attributes.Snapshotted);
   }
 
   @Test
@@ -63,20 +68,33 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
     assertThat(iterator.hasNext())
         .describedAs("iterator.hasNext()")
         .isFalse();
-    assertThatThrownBy(iterator::next);
+    intercept(NoSuchElementException.class, iterator::next);
   }
 
   @Test
   public void testUnknownStatistic() throws Throwable {
     assertStatisticIsUnknown(stats, "anything");
     assertStatisticIsUntracked(stats, "anything");
-
-    // These actually test the assertion coverage
-    assertThatThrownBy(() ->
-        assertStatisticIsTracked(stats, "anything"));
-    assertThatThrownBy(() ->
-        verifyStatisticValue(stats, "anything", 0));
   }
+
+  @Test
+  public void testStatisticsTrackedAssertion() throws Throwable {
+    // expect an exception to be raised when an assertion
+    // is made that an unknown statistic is tracked,.
+    assertThatThrownBy(() ->
+        assertStatisticIsTracked(stats, "anything"))
+        .isInstanceOf(AssertionError.class);
+  }
+
+  @Test
+  public void testStatisticsValueAssertion() throws Throwable {
+    // expect an exception to be raised when the
+    //
+    assertThatThrownBy(() ->
+        verifyStatisticValue(stats, "anything", 0))
+        .isInstanceOf(AssertionError.class);
+  }
+
 
 
 }

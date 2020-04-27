@@ -19,7 +19,8 @@
 /**
  * Implementation support for statistics.
  * For use internally; external filesystems MAY use this if the implementors
- * accept that it is unstable.
+ * accept that it is unstable and that incompatible changes may take
+ * place over minor point releases.
  */
 @InterfaceAudience.LimitedPrivate("Filesystems")
 @InterfaceStability.Unstable

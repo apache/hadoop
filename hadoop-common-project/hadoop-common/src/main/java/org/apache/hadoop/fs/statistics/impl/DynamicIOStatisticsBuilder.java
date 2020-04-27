@@ -30,7 +30,7 @@ import static com.google.common.base.Preconditions.checkState;
 /**
  * Builder of Dynamic IO Statistics.
  * Instantiate through
- * {@link IOStatisticsSupport#createDynamicIOStatistics()}.
+ * {@link IOStatisticsImplementationHelper#createDynamicIOStatistics()}.
  */
 public class DynamicIOStatisticsBuilder {
 
@@ -53,9 +53,10 @@ public class DynamicIOStatisticsBuilder {
   }
 
   /**
-   * Add a new evaluator to the statistics being built up.
+   * Add a statistic to dynamically return the
+   * latest value of the source.
    * @param key key of this statistic
-   * @param source atomic counter
+   * @param source atomic long counter
    * @return the builder.
    */
   public DynamicIOStatisticsBuilder add(String key,
@@ -65,9 +66,10 @@ public class DynamicIOStatisticsBuilder {
   }
 
   /**
-   * Add a new evaluator to the statistics being built up.
+   * Add a statistic to dynamically return the
+   * latest value of the source.
    * @param key key of this statistic
-   * @param source atomic counter
+   * @param source atomic int counter
    * @return the builder.
    */
   public DynamicIOStatisticsBuilder add(String key,
@@ -77,9 +79,10 @@ public class DynamicIOStatisticsBuilder {
   }
 
   /**
-   * Build a statistic from a mutable counter.
+   * Build a dynamic statistic from a
+   * {@link MutableCounterLong}.
    * @param key key of this statistic
-   * @param source atomic counter
+   * @param source mutable long counter
    * @return the builder.
    */
   public DynamicIOStatisticsBuilder add(String key,
@@ -95,7 +98,7 @@ public class DynamicIOStatisticsBuilder {
    */
   public IOStatistics build() {
     final DynamicIOStatistics stats = activeInstance();
-    // stop use
+    // stop the builder from working any more.
     instance = null;
     return stats;
   }

@@ -117,7 +117,7 @@ import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsSupport;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationHelper;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -1851,7 +1851,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Override
   public IOStatistics getIOStatistics() {
-    return IOStatisticsSupport.createFromStorageStatistics(
+    return IOStatisticsImplementationHelper.createFromStorageStatistics(
         storageStatistics).getIOStatistics();
   }
 

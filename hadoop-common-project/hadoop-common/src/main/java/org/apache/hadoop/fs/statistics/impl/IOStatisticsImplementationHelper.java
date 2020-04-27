@@ -27,23 +27,9 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 /**
  * Support for implementing IOStatistics interfaces.
  */
-public final class IOStatisticsSupport {
+public final class IOStatisticsImplementationHelper {
 
-  private IOStatisticsSupport() {
-  }
-
-  /**
-   * Get the IO Statistics of the source, falling back to
-   * Optional.empty if the source does not implement
-   * {@link IOStatisticsSource}.
-   * @return an optional IOStatistics instance.
-   */
-
-  public static IOStatistics retrieveIOStatistics(
-      final Object source) {
-    return (source instanceof IOStatisticsSource)
-        ? ((IOStatisticsSource) source).getIOStatistics()
-        : null;
+  private IOStatisticsImplementationHelper() {
   }
 
   /**
@@ -60,7 +46,8 @@ public final class IOStatisticsSupport {
    * @return a builder to be completed.
    */
   public static DynamicIOStatisticsBuilder
-  createDynamicIOStatistics() {
+    createDynamicIOStatistics() {
+
     return new DynamicIOStatisticsBuilder();
   }
 

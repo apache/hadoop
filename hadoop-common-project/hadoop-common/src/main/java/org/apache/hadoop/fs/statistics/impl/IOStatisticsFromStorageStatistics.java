@@ -141,7 +141,7 @@ public class IOStatisticsFromStorageStatistics
     @Override
     public Map.Entry<String, Long> next() {
       final StorageStatistics.LongStatistic entry = iterator.next();
-      return new IOStatisticsSupport.StatsMapEntry(
+      return new IOStatisticsImplementationHelper.StatsMapEntry(
           entry.getName(), entry.getValue());
     }
 

@@ -109,7 +109,7 @@ public interface IOStatistics extends Iterable<Map.Entry<String, Long>> {
 
   /**
    * Probe for an attribute of this statistics set.
-   * @return attributes.
+   * @return true if the source has the attribute.
    */
   default boolean hasAttribute(Attributes attr) {
     return false;
@@ -129,7 +129,7 @@ public interface IOStatistics extends Iterable<Map.Entry<String, Long>> {
    * of this set.
    * @return the set of keys.
    */
-  public Set<String> keys();
+  Set<String> keys();
 
   /**
    * Possible attributes of the statistics.

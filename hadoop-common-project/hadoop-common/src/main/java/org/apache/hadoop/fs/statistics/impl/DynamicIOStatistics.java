@@ -110,7 +110,7 @@ final class DynamicIOStatistics implements IOStatistics {
     @Override
     public Map.Entry<String, Long> next() {
       final Map.Entry<String, ToLongFunction<String>> entry = iterator.next();
-      return new IOStatisticsSupport.StatsMapEntry(
+      return new IOStatisticsImplementationHelper.StatsMapEntry(
           entry.getKey(),
           entry.getValue().applyAsLong(entry.getKey()));
     }

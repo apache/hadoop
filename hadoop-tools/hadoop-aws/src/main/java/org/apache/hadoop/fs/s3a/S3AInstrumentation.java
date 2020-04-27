@@ -63,7 +63,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsSupport.createDynamicIOStatistics;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationHelper.createDynamicIOStatistics;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 
 /**
