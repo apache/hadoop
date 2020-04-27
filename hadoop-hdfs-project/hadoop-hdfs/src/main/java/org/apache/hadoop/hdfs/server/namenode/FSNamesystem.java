@@ -3210,6 +3210,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, src, dst, null);
       throw e;
     }
+    assert ret != null;
     boolean success = ret.success;
     if (success) {
       getEditLog().logSync();
@@ -3244,7 +3245,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw e;
     }
     getEditLog().logSync();
-
+    assert res != null;
     BlocksMapUpdateInfo collectedBlocks = res.collectedBlocks;
     if (!collectedBlocks.getToDeleteList().isEmpty()) {
       removeBlocks(collectedBlocks);
@@ -7441,6 +7442,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw ace;
     }
     getEditLog().logSync();
+    assert effectiveDirective != null;
     effectiveDirectiveStr = effectiveDirective.toString();
     logAuditEvent(true, operationName, effectiveDirectiveStr);
     return effectiveDirective.getId();
