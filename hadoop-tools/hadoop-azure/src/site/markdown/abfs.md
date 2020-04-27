@@ -318,12 +318,12 @@ driven by them.
 What can be changed is what secrets/credentials are used to authenticate the caller.
 
 The authentication mechanism is set in `fs.azure.account.auth.type` (or the
- account specific variant). The possible values are SharedKey, OAuth, Custom
- and SAS. For the various OAuth options use the config `fs.azure.account
- .oauth.provider.type`. Following are the implementations supported
-  ClientCredsTokenProvider, UserPasswordTokenProvider, MsiTokenProvider and
-   RefreshTokenBasedTokenProvider. An IllegalArgumentException is thown if 
-   the specified provider type is not one of the supported.
+account specific variant). The possible values are SharedKey, OAuth, Custom
+and SAS. For the various OAuth options use the config `fs.azure.account
+.oauth.provider.type`. Following are the implementations supported
+ClientCredsTokenProvider, UserPasswordTokenProvider, MsiTokenProvider and
+RefreshTokenBasedTokenProvider. An IllegalArgumentException is thrown if
+the specified provider type is not one of the supported.
 
 All secrets can be stored in JCEKS files. These are encrypted and password
 protected —use them or a compatible Hadoop Key Management Store wherever
@@ -356,12 +356,12 @@ the password, "key", retrieved from the XML/JCECKs configuration files.
 one exists to execute a shell script to retrieve it.
 
 A custom key provider class can be provided with the config
- `fs.azure.account.keyprovider`. If a key provider class is specified the same 
- will be used to get account key. Otherwise the Simple key provider will be used 
- which will use the key specified for the config `fs.azure.account.key`.
+`fs.azure.account.keyprovider`. If a key provider class is specified the same
+will be used to get account key. Otherwise the Simple key provider will be used
+which will use the key specified for the config `fs.azure.account.key`.
 
-To retrieve using shell script, specify the path to the script for the config  
-`fs.azure.shellkeyprovider.script`. ShellDecryptionKeyProvider class use the 
+To retrieve using shell script, specify the path to the script for the config
+`fs.azure.shellkeyprovider.script`. ShellDecryptionKeyProvider class use the
 script specified to retrieve the key.
 
 ### <a name="oauth-client-credentials"></a> OAuth 2.0 Client Credentials
@@ -572,17 +572,17 @@ The declared class also holds responsibility to implement retry logic while fetc
 
 #### <a name="delegationtokensupportconfigoptions"></a> Delegation token support
 
-Delegation token support can be achieved by making the following config true 
-`fs.azure.enable.delegation.token` and specifying the config 
-CustomDelegationTokenManager to be used with the config 
-`fs.azure.delegation.token.provider.type`. In case delegation token is enabled, 
+Delegation token support can be achieved by making the following config true
+`fs.azure.enable.delegation.token` and specifying the config
+CustomDelegationTokenManager to be used with the config
+`fs.azure.delegation.token.provider.type`. In case delegation token is enabled,
 and the config `fs.azure.delegation.token.provider.type` is not provided an
- IlleagalArgumentException is thrown.
+IlleagalArgumentException is thrown.
 
 #### <a name="sastokensupportconfigoptions"></a> SAS token support
 
-`fs.azure.sas.token.provider.type` If the auth type is set as AuthType.SAS then 
-it is expected to specify a class which is an implementation of SASTokenProvider 
+`fs.azure.sas.token.provider.type` If the auth type is set as AuthType.SAS then
+it is expected to specify a class which is an implementation of SASTokenProvider
 otherwise IlleagalArgumentException will be thrown.
 
 ## <a name="technical"></a> Technical notes
@@ -717,81 +717,82 @@ Config `fs.azure.enable.check.access` needs to be set true to enable
  the AzureBlobFileSystem.access().
 
 ### <a name="featureconfigoptions"></a> Primary User Group Options
-The group name which is part FileStatus and AclStatus will be set the same as 
-the username if the following config is set to true 
+The group name which is part FileStatus and AclStatus will be set the same as
+the username if the following config is set to true
 `fs.azure.skipUserGroupMetadataDuringInitialization`.
 
 ### <a name="ioconfigoptions"></a> IO Options
 The following configs are related to read, write and r.
 
-`fs.azure.io.retry.max.retries`: Sets the number of retries for IO operations. 
-Currently this is used only for the server call retry logic. Used within 
-AbfsClient class as part of the ExponentialRetryPolicy. The value should be >= 0.
+`fs.azure.io.retry.max.retries`: Sets the number of retries for IO operations.
+Currently this is used only for the server call retry logic. Used within
+AbfsClient class as part of the ExponentialRetryPolicy. The value should be
+>= 0.
 
-`fs.azure.write.request.size`: To set the write buffer size. Specify the value 
-in bytes. Specify the value in bytes. The value should be between 16384 to 
-104857600 both inclusive (16 KB to 100 MB). The default value will be 8388608 
+`fs.azure.write.request.size`: To set the write buffer size. Specify the value
+in bytes. Specify the value in bytes. The value should be between 16384 to
+104857600 both inclusive (16 KB to 100 MB). The default value will be 8388608
 (8 MB).
 
-`fs.azure.read.request.size`: To set the read buffer size.Specify the value in 
-bytes. The value should be between 16384 to 104857600 both inclusive (16 KB to 
+`fs.azure.read.request.size`: To set the read buffer size.Specify the value in
+bytes. The value should be between 16384 to 104857600 both inclusive (16 KB to
 100 MB). The default value will be 4194304 (4 MB).
 
-`fs.azure.readaheadqueue.depth`: Sets the readahead queue depth in 
-AbfsInputStream. In case the set value is negative the read ahead queue depth 
-will be set as Runtime.getRuntime().availableProcessors(). By default the value 
+`fs.azure.readaheadqueue.depth`: Sets the readahead queue depth in
+AbfsInputStream. In case the set value is negative the read ahead queue depth
+will be set as Runtime.getRuntime().availableProcessors(). By default the value
 will be -1.
 
 ### <a name="securityconfigoptions"></a> Security Options
-`fs.azure.always.use.https`: Enforces to use HTTPS instead of HTTP when the flag 
-is made true. Irrespective of the flag, AbfsClient will use HTTPS if the secure 
-scheme (ABFSS) is used or OAuth is used for authentication. By default this will 
+`fs.azure.always.use.https`: Enforces to use HTTPS instead of HTTP when the flag
+is made true. Irrespective of the flag, AbfsClient will use HTTPS if the secure
+scheme (ABFSS) is used or OAuth is used for authentication. By default this will
 be set to true.
 
-`fs.azure.ssl.channel.mode`: Initializing DelegatingSSLSocketFactory with the 
-specified SSL channel mode. Value should be of the enum 
-DelegatingSSLSocketFactory.SSLChannelMode. The default value will be 
+`fs.azure.ssl.channel.mode`: Initializing DelegatingSSLSocketFactory with the
+specified SSL channel mode. Value should be of the enum
+DelegatingSSLSocketFactory.SSLChannelMode. The default value will be
 DelegatingSSLSocketFactory.SSLChannelMode.Default.
 
 ### <a name="serverconfigoptions"></a> Server Options
-When the config `fs.azure.io.read.tolerate.concurrent.append` is made true, the 
-If-Match header sent to the server for read calls will be set as * otherwise the 
-same will be set with ETag. This is basically a mechanism in place to handle the 
+When the config `fs.azure.io.read.tolerate.concurrent.append` is made true, the
+If-Match header sent to the server for read calls will be set as * otherwise the
+same will be set with ETag. This is basically a mechanism in place to handle the
 reads with optimistic concurrency.
 Please refer the following link for further information.
 1.	https://docs.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read
 2.	https://azure.microsoft.com/de-de/blog/managing-concurrency-in-microsoft-azure-storage-2/
 
-listStatus API fetches the FileStatus information from server in a page by page 
+listStatus API fetches the FileStatus information from server in a page by page
 manner. The config `fs.azure.list.max.results` used to set the maxResults URI
- param which sets the pagesize(maximum results per call). The value should be > 
- 0. By defaul this will be 500. Server has a maximum value for this paramater as 
- 5000. So even if the config is sabove 5000 the response will only contain 5000 
- entries.
-Please refer the following link for further information. 
+ param which sets the pagesize(maximum results per call). The value should
+ be >  0. By defaul this will be 500. Server has a maximum value for this
+ paramater as 5000. So even if the config is above 5000 the response will only contain 5000 
+ entries. Please refer the following link for further information. 
 https://docs.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/list
 
 ### <a name="throttlingconfigoptions"></a> Throttling Options
-ABFS driver has the capability to throttle read and write operations to achieve 
-maximum throughput by minimizing errors. The errors occur when the account 
-ingress or egress limits are exceeded and the server-side throttles requests. 
-Server-side throttling causes the retry policy to be used, but the retry policy 
-sleeps for long periods of time causing the total ingress or egress throughput 
-to be as much as 35% lower than optimal. The retry policy is also after the fact, 
-in that it applies after a request fails. On the other hand, the client-side 
-throttling implemented here happens before requests are made and sleeps just 
-enough to minimize errors, allowing optimal ingress and/or egress throughput.
-By default the throttling mechanism is enabled in the driver. The same can be 
-disabled by setting the config `fs.azure.enable.autothrottling` to false.
+ABFS driver has the capability to throttle read and write operations to achieve
+maximum throughput by minimizing errors. The errors occur when the account
+ingress or egress limits are exceeded and the server-side throttles requests.
+Server-side throttling causes the retry policy to be used, but the retry policy
+sleeps for long periods of time causing the total ingress or egress throughput
+to be as much as 35% lower than optimal. The retry policy is also after the
+fact, in that it applies after a request fails. On the other hand, the
+client-side throttling implemented here happens before requests are made and
+sleeps just enough to minimize errors, allowing optimal ingress and/or egress
+throughput. By default the throttling mechanism is enabled in the driver. The
+same can be disabled by setting the config `fs.azure.enable.autothrottling`
+to false.
 
 ### <a name="renameconfigoptions"></a> Rename Options
-`fs.azure.atomic.rename.key`: Directories for atomic rename support can be 
-specified comma separated in this config. The driver prints the following 
-warning log if the source of the rename belongs to one of the configured 
+`fs.azure.atomic.rename.key`: Directories for atomic rename support can be
+specified comma separated in this config. The driver prints the following
+warning log if the source of the rename belongs to one of the configured
 directories. "The atomic rename feature is not supported by the ABFS scheme
-; however, rename, create and delete operations are atomic if Namespace is 
+; however, rename, create and delete operations are atomic if Namespace is
 enabled for your Azure Storage account."
-The directories can be specified as comma separated values. By default the value 
+The directories can be specified as comma separated values. By default the value
 is "/hbase"
 
 ### <a name="perfoptions"></a> Perf Options
