@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -149,5 +150,10 @@ public class InMemoryConfigurationStore extends YarnConfigurationStore {
   @Override
   public void checkVersion() {
     // Does nothing. (Version is always compatible since it's in memory)
+  }
+
+  @Override
+  public void close() throws IOException {
+    // Does nothing.
   }
 }

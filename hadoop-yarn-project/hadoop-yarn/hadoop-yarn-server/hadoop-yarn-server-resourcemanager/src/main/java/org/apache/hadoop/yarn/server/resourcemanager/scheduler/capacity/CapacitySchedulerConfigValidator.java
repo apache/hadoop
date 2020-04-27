@@ -42,14 +42,18 @@ public final class CapacitySchedulerConfigValidator {
   public static boolean validateCSConfiguration(
           final Configuration oldConf, final Configuration newConf,
           final RMContext rmContext) throws IOException {
-    //TODO: extract all the validation steps and replace reinitialize with
-    //the specific validation steps
     CapacityScheduler newCs = new CapacityScheduler();
-    newCs.setConf(oldConf);
-    newCs.setRMContext(rmContext);
-    newCs.init(oldConf);
-    newCs.reinitialize(newConf, rmContext, true);
-    return true;
+    try {
+      //TODO: extract all the validation steps and replace reinitialize with
+      //the specific validation steps
+      newCs.setConf(oldConf);
+      newCs.setRMContext(rmContext);
+      newCs.init(oldConf);
+      newCs.reinitialize(newConf, rmContext, true);
+      return true;
+    } finally {
+      newCs.stop();
+    }
   }
 
   public static Set<String> validatePlacementRules(
