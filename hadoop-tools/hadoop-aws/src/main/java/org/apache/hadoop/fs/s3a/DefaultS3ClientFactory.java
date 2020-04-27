@@ -33,6 +33,7 @@ import com.amazonaws.util.AwsHostNameUtils;
 import com.amazonaws.util.RuntimeHttpUtils;
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -61,7 +62,11 @@ public class DefaultS3ClientFactory extends Configured
   private static final String S3_SIGNER = "S3SignerType";
   private static final String S3_V4_SIGNER = "AWSS3V4SignerType";
 
-  protected static final Logger LOG = S3AFileSystem.LOG;
+  /**
+   * Subclasses refer to this.
+   */
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(DefaultS3ClientFactory.class);
 
   @Override
   public AmazonS3 createS3Client(URI name,
@@ -109,8 +114,8 @@ public class DefaultS3ClientFactory extends Configured
    * @return new AmazonS3 client
    */
   protected AmazonS3 newAmazonS3Client(
-      AWSCredentialsProvider credentials,
-      ClientConfiguration awsConf,
+      final AWSCredentialsProvider credentials,
+      final ClientConfiguration awsConf,
       final RequestMetricCollector metrics,
       final String endpoint,
       final boolean pathStyleAccess) {
@@ -131,6 +136,8 @@ public class DefaultS3ClientFactory extends Configured
       b.withEndpointConfiguration(epr);
     }
     final AmazonS3 client = b.build();
+    // if this worked life would be so much simpler
+    // client.setEndpoint(endpoint);
     return client;
   }
 
@@ -164,33 +171,44 @@ public class DefaultS3ClientFactory extends Configured
    * call that setter on an AwsClient constructed via
    * the builder, and you can't pass a metrics collector
    * down except through the builder.
+   * <p>
    * Note also that AWS signing is a mystery which nobody fully
    * understands, especially given all problems surface in a
    * "400 bad request" response, which, like all security systems,
-   * provides no meaningful diagnostics at all.
+   * provides minimal diagnostics out of fear of leaking
+   * secrets.
    *
    * @param endpoint possibly null endpoint.
-   * @param awsConf
+   * @param awsConf config to build the URI from.
    * @return a configuration for the S3 client builder.
    */
   @VisibleForTesting
   public static AwsClientBuilder.EndpointConfiguration
       createEndpointConfiguration(
           final String endpoint, final ClientConfiguration awsConf) {
+    LOG.debug("Creating endpoint configuration for {}", endpoint);
     if (endpoint == null || endpoint.isEmpty()) {
+      // the default endpoint...we should be using null at this point.
+      LOG.debug("Using default endpoint -no need to generate a configuration");
       return null;
     }
 
     final URI epr = RuntimeHttpUtils.toUri(endpoint, awsConf);
+    LOG.debug("Endpoint URI = {}", epr);
+
     String region;
     if (!ServiceUtils.isS3USStandardEndpoint(endpoint)) {
-      region = AwsHostNameUtils.parseRegion(epr.getHost(),
+      LOG.debug("Endpoint {} is not the default; parsing", epr);
+      region = AwsHostNameUtils.parseRegion(
+          epr.getHost(),
           S3_SERVICE_NAME);
     } else {
       // US-east, set region == null.
+      LOG.debug("Endpoint {} is the standard one; declare region as null", epr);
       region = null;
     }
-    LOG.debug("Region for endpoint {} is determined as {}", endpoint, region);
+    LOG.debug("Region for endpoint {}, URI {} is determined as {}",
+        endpoint, epr, region);
     return new AwsClientBuilder.EndpointConfiguration(endpoint, region);
   }
 }
