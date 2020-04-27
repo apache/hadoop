@@ -95,15 +95,6 @@
               <outputFile>${project.basedir}/target/hadoop-cloud-storage-deps/${project.artifactId}.cloud-storage-optional.txt</outputFile>
             </configuration>
           </execution>
-          <execution>
-            <id>package</id>
-            <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/lib</outputDirectory>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
     </plugins>
