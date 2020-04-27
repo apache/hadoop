@@ -766,15 +766,15 @@ Please refer the following link for further information.
 listStatus API fetches the FileStatus information from server in a page by page
 manner. The config `fs.azure.list.max.results` used to set the maxResults URI
  param which sets the pagesize(maximum results per call). The value should
- be >  0. By defaul this will be 500. Server has a maximum value for this
- paramater as 5000. So even if the config is above 5000 the response will only contain 5000 
- entries. Please refer the following link for further information. 
+ be >  0. By default this will be 500. Server has a maximum value for this
+ parameter as 5000. So even if the config is above 5000 the response will only
+contain 5000 entries. Please refer the following link for further information.
 https://docs.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/list
 
 ### <a name="throttlingconfigoptions"></a> Throttling Options
 ABFS driver has the capability to throttle read and write operations to achieve
 maximum throughput by minimizing errors. The errors occur when the account
-ingress or egress limits are exceeded and the server-side throttles requests.
+ingress or egress limits are exceeded and, the server-side throttles requests.
 Server-side throttling causes the retry policy to be used, but the retry policy
 sleeps for long periods of time causing the total ingress or egress throughput
 to be as much as 35% lower than optimal. The retry policy is also after the
