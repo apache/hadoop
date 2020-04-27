@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.io.IOUtils;
 
 import org.junit.BeforeClass;
@@ -94,16 +95,16 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
     Path dest = path("testBlocksClosed");
     describe(" testBlocksClosed");
     FSDataOutputStream stream = getFileSystem().create(dest, true);
-    S3AInstrumentation.OutputStreamStatistics statistics
+    BlockOutputStreamStatistics statistics
         = S3ATestUtils.getOutputStreamStatistics(stream);
     byte[] data = ContractTestUtils.dataset(16, 'a', 26);
     stream.write(data);
     LOG.info("closing output stream");
     stream.close();
     assertEquals("total allocated blocks in " + statistics,
-        1, statistics.blocksAllocated());
+        1, statistics.getBlocksAllocated());
     assertEquals("actively allocated blocks in " + statistics,
-        0, statistics.blocksActivelyAllocated());
+        0, statistics.getBlocksActivelyAllocated());
     LOG.info("end of test case");
   }
 
@@ -129,7 +130,7 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
       throws Exception {
     S3AInstrumentation instrumentation =
         new S3AInstrumentation(new URI("s3a://example"));
-    S3AInstrumentation.OutputStreamStatistics outstats
+    BlockOutputStreamStatistics outstats
         = instrumentation.newOutputStreamStatistics(null);
     S3ADataBlocks.DataBlock block = factory.create(1, BLOCK_SIZE, outstats);
     block.write(dataset, 0, dataset.length);

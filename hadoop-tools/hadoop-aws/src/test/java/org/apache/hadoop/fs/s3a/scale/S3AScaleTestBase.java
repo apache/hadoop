@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 
 import org.slf4j.Logger;
@@ -162,7 +163,7 @@ public class S3AScaleTestBase extends AbstractS3ATestBase {
    * @param in wrapper
    * @return the statistics for the inner stream
    */
-  protected S3AInstrumentation.InputStreamStatistics getInputStreamStatistics(
+  protected S3AInputStreamStatistics getInputStreamStatistics(
       FSDataInputStream in) {
     return getS3AInputStream(in).getS3AStreamStatistics();
   }

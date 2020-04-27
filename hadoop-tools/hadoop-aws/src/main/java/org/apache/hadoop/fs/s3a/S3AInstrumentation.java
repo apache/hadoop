@@ -18,14 +18,27 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import javax.annotation.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.s3a.impl.statistics.ChangeTrackerStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.CommitterStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.CountersAndGauges;
+import org.apache.hadoop.fs.s3a.impl.statistics.CountingChangeTracker;
+import org.apache.hadoop.fs.s3a.impl.statistics.DelegationTokenStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.StatisticsFromAwsSdk;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
+import org.apache.hadoop.fs.statistics.impl.DynamicIOStatisticsBuilder;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricStringBuilder;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -43,12 +56,14 @@ import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 
 import java.io.Closeable;
 import java.net.URI;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationHelper.createDynamicIOStatistics;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 
 /**
@@ -63,32 +78,33 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class S3AInstrumentation implements Closeable, MetricsSource {
+public class S3AInstrumentation implements Closeable, MetricsSource,
+    CountersAndGauges {
   private static final Logger LOG = LoggerFactory.getLogger(
       S3AInstrumentation.class);
 
   private static final String METRICS_SOURCE_BASENAME = "S3AMetrics";
 
   /**
-   * {@value #METRICS_SYSTEM_NAME} The name of the s3a-specific metrics
+   * {@value} The name of the s3a-specific metrics
    * system instance used for s3a metrics.
    */
   public static final String METRICS_SYSTEM_NAME = "s3a-file-system";
 
   /**
-   * {@value #CONTEXT} Currently all s3a metrics are placed in a single
+   * {@value} Currently all s3a metrics are placed in a single
    * "context". Distinct contexts may be used in the future.
    */
   public static final String CONTEXT = "s3aFileSystem";
 
   /**
-   * {@value #METRIC_TAG_FILESYSTEM_ID} The name of a field added to metrics
+   * {@value} The name of a field added to metrics
    * records that uniquely identifies a specific FileSystem instance.
    */
   public static final String METRIC_TAG_FILESYSTEM_ID = "s3aFileSystemId";
 
   /**
-   * {@value #METRIC_TAG_BUCKET} The name of a field added to metrics records
+   * {@value} The name of a field added to metrics records
    * that indicates the hostname portion of the FS URL.
    */
   public static final String METRIC_TAG_BUCKET = "bucket";
@@ -192,6 +208,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       S3GUARD_METADATASTORE_THROTTLED,
       S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED,
       STORE_IO_THROTTLED,
+      STORE_IO_REQUEST,
+      STORE_IO_RETRY,
       DELEGATION_TOKENS_ISSUED,
       FILES_DELETE_REJECTED
   };
@@ -561,9 +579,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
   /**
    * Create a stream input statistics instance.
    * @return the new instance
+   * @param filesystemStatistics FS Stats.
    */
-  public InputStreamStatistics newInputStreamStatistics() {
-    return new InputStreamStatistics();
+  public S3AInputStreamStatistics newInputStreamStatistics(
+      final FileSystem.Statistics filesystemStatistics) {
+    return new InputStreamStatisticsImpl(filesystemStatistics);
   }
 
   /**
@@ -579,8 +599,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
    * Create a new instance of the committer statistics.
    * @return a new committer statistics instance
    */
-  CommitterStatistics newCommitterStatistics() {
-    return new CommitterStatistics();
+  public CommitterStatistics newCommitterStatistics() {
+    return new CommitterStatisticsImpl();
   }
 
   /**
@@ -588,23 +608,23 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
    * the filesystem-wide statistics.
    * @param statistics stream statistics
    */
-  private void mergeInputStreamStatistics(InputStreamStatistics statistics) {
-    streamOpenOperations.incr(statistics.openOperations);
-    streamCloseOperations.incr(statistics.closeOperations);
-    streamClosed.incr(statistics.closed);
-    streamAborted.incr(statistics.aborted);
-    streamSeekOperations.incr(statistics.seekOperations);
-    streamReadExceptions.incr(statistics.readExceptions);
-    streamForwardSeekOperations.incr(statistics.forwardSeekOperations);
-    streamBytesSkippedOnSeek.incr(statistics.bytesSkippedOnSeek);
-    streamBackwardSeekOperations.incr(statistics.backwardSeekOperations);
-    streamBytesBackwardsOnSeek.incr(statistics.bytesBackwardsOnSeek);
-    streamBytesRead.incr(statistics.bytesRead);
-    streamReadOperations.incr(statistics.readOperations);
-    streamReadFullyOperations.incr(statistics.readFullyOperations);
-    streamReadsIncomplete.incr(statistics.readsIncomplete);
-    streamBytesReadInClose.incr(statistics.bytesReadInClose);
-    streamBytesDiscardedInAbort.incr(statistics.bytesDiscardedInAbort);
+  private void mergeInputStreamStatistics(InputStreamStatisticsImpl statistics) {
+    streamOpenOperations.incr(statistics.openOperations.get());
+    streamCloseOperations.incr(statistics.closeOperations.get());
+    streamClosed.incr(statistics.closed.get());
+    streamAborted.incr(statistics.aborted.get());
+    streamSeekOperations.incr(statistics.seekOperations.get());
+    streamReadExceptions.incr(statistics.readExceptions.get());
+    streamForwardSeekOperations.incr(statistics.forwardSeekOperations.get());
+    streamBytesSkippedOnSeek.incr(statistics.bytesSkippedOnSeek.get());
+    streamBackwardSeekOperations.incr(statistics.backwardSeekOperations.get());
+    streamBytesBackwardsOnSeek.incr(statistics.bytesBackwardsOnSeek.get());
+    streamBytesRead.incr(statistics.bytesRead.get());
+    streamReadOperations.incr(statistics.readOperations.get());
+    streamReadFullyOperations.incr(statistics.readFullyOperations.get());
+    streamReadsIncomplete.incr(statistics.readsIncomplete.get());
+    streamBytesReadInClose.incr(statistics.bytesReadInClose.get());
+    streamBytesDiscardedInAbort.incr(statistics.bytesDiscardedInAbort.get());
     incrementCounter(STREAM_READ_VERSION_MISMATCHES,
         statistics.versionMismatches.get());
   }
@@ -622,7 +642,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       throttleRateQuantile.stop();
       s3GuardThrottleRateQuantile.stop();
       metricsSystem.unregisterSource(metricsSourceName);
-      int activeSources = --metricsSourceActiveCounter;
+      metricsSourceActiveCounter--;
+      int activeSources = metricsSourceActiveCounter;
       if (activeSources == 0) {
         LOG.debug("Shutting down metrics publisher");
         metricsSystem.publishMetricsNow();
@@ -634,35 +655,44 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
 
   /**
    * Statistics updated by an input stream during its actual operation.
-   * These counters not thread-safe and are for use in a single instance
-   * of a stream.
+   * These counters are marked as volatile so that IOStatistics on the stream
+   * will get the latest values.
+   * They are only to be incremented within synchronized blocks.
    */
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
-  public final class InputStreamStatistics implements AutoCloseable {
-    public long openOperations;
-    public long closeOperations;
-    public long closed;
-    public long aborted;
-    public long seekOperations;
-    public long readExceptions;
-    public long forwardSeekOperations;
-    public long backwardSeekOperations;
-    public long bytesRead;
-    public long bytesSkippedOnSeek;
-    public long bytesBackwardsOnSeek;
-    public long readOperations;
-    public long readFullyOperations;
-    public long readsIncomplete;
-    public long bytesReadInClose;
-    public long bytesDiscardedInAbort;
-    public long policySetCount;
-    public long inputPolicy;
-    /** This is atomic so that it can be passed as a reference. */
-    private final AtomicLong versionMismatches = new AtomicLong(0);
-    private InputStreamStatistics mergedStats;
+  private final class InputStreamStatisticsImpl implements
+      S3AInputStreamStatistics {
 
-    private InputStreamStatistics() {
+    /**
+     * Distance used when incrementing FS stats.
+     */
+    private static final int DISTANCE = 5;
+
+    private final FileSystem.Statistics filesystemStatistics;
+
+    public final AtomicLong openOperations= new AtomicLong(0);
+    public final AtomicLong closeOperations= new AtomicLong(0);
+    public final AtomicLong closed= new AtomicLong(0);
+    public final AtomicLong aborted= new AtomicLong(0);
+    public final AtomicLong seekOperations= new AtomicLong(0);
+    public final AtomicLong readExceptions= new AtomicLong(0);
+    public final AtomicLong forwardSeekOperations= new AtomicLong(0);
+    public final AtomicLong backwardSeekOperations= new AtomicLong(0);
+    public final AtomicLong bytesRead= new AtomicLong(0);
+    public final AtomicLong bytesSkippedOnSeek= new AtomicLong(0);
+    public final AtomicLong bytesBackwardsOnSeek= new AtomicLong(0);
+    public final AtomicLong readOperations= new AtomicLong(0);
+    public final AtomicLong readFullyOperations= new AtomicLong(0);
+    public final AtomicLong readsIncomplete= new AtomicLong(0);
+    public final AtomicLong bytesReadInClose= new AtomicLong(0);
+    public final AtomicLong bytesDiscardedInAbort= new AtomicLong(0);
+    public final AtomicLong policySetCount= new AtomicLong(0);
+    public volatile long inputPolicy;
+    private final AtomicLong versionMismatches = new AtomicLong(0);
+    private InputStreamStatisticsImpl mergedStats;
+
+    private InputStreamStatisticsImpl(
+        FileSystem.Statistics filesystemStatistics) {
+      this.filesystemStatistics = filesystemStatistics;
     }
 
     /**
@@ -670,10 +700,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * @param negativeOffset how far was the seek?
      * This is expected to be negative.
      */
+    @Override
     public void seekBackwards(long negativeOffset) {
-      seekOperations++;
-      backwardSeekOperations++;
-      bytesBackwardsOnSeek -= negativeOffset;
+      seekOperations.incrementAndGet();
+      backwardSeekOperations.incrementAndGet();
+      bytesBackwardsOnSeek.addAndGet(-negativeOffset);
     }
 
     /**
@@ -682,11 +713,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * @param skipped number of bytes skipped by reading from the stream.
      * If the seek was implemented by a close + reopen, set this to zero.
      */
+    @Override
     public void seekForwards(long skipped) {
-      seekOperations++;
-      forwardSeekOperations++;
+      seekOperations.incrementAndGet();
+      forwardSeekOperations.incrementAndGet();
       if (skipped > 0) {
-        bytesSkippedOnSeek += skipped;
+        bytesSkippedOnSeek.addAndGet(skipped);
       }
     }
 
@@ -694,10 +726,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * The inner stream was opened.
      * @return the previous count
      */
+    @Override
     public long streamOpened() {
-      long count = openOperations;
-      openOperations++;
-      return count;
+      return openOperations.getAndIncrement();
     }
 
     /**
@@ -707,23 +738,25 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * @param remainingInCurrentRequest the number of bytes remaining in
      * the current request.
      */
+    @Override
     public void streamClose(boolean abortedConnection,
         long remainingInCurrentRequest) {
-      closeOperations++;
+      closeOperations.incrementAndGet();
       if (abortedConnection) {
-        this.aborted++;
-        bytesDiscardedInAbort += remainingInCurrentRequest;
+        aborted.incrementAndGet();
+        bytesDiscardedInAbort.addAndGet(remainingInCurrentRequest);
       } else {
-        closed++;
-        bytesReadInClose += remainingInCurrentRequest;
+        closed.incrementAndGet();
+        bytesReadInClose.addAndGet(remainingInCurrentRequest);
       }
     }
 
     /**
      * An ignored stream read exception was received.
      */
+    @Override
     public void readException() {
-      readExceptions++;
+      readExceptions.incrementAndGet();
     }
 
     /**
@@ -731,9 +764,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * no-op if the argument is negative.
      * @param bytes number of bytes read
      */
+    @Override
     public void bytesRead(long bytes) {
       if (bytes > 0) {
-        bytesRead += bytes;
+        bytesRead.addAndGet(bytes);
       }
     }
 
@@ -742,8 +776,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * @param pos starting position of the read
      * @param len length of bytes to read
      */
+    @Override
     public void readOperationStarted(long pos, long len) {
-      readOperations++;
+      readOperations.incrementAndGet();
     }
 
     /**
@@ -752,8 +787,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * @param pos starting position of the read
      * @param len length of bytes to read
      */
+    @Override
     public void readFullyOperationStarted(long pos, long len) {
-      readFullyOperations++;
+      readFullyOperations.incrementAndGet();
     }
 
     /**
@@ -761,9 +797,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * @param requested number of requested bytes
      * @param actual the actual number of bytes
      */
+    @Override
     public void readOperationCompleted(int requested, int actual) {
       if (requested > actual) {
-        readsIncomplete++;
+        readsIncomplete.incrementAndGet();
       }
     }
 
@@ -780,17 +817,20 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * The input policy has been switched.
      * @param updatedPolicy enum value of new policy.
      */
+    @Override
     public void inputPolicySet(int updatedPolicy) {
-      policySetCount++;
+      policySetCount.incrementAndGet();
       inputPolicy = updatedPolicy;
     }
 
     /**
-     * Get a reference to the version mismatch counter.
-     * @return a counter which can be incremented.
+     * The change tracker increments {@code versionMismatches} on any
+     * mismatch.
+     * @return change tracking.
      */
-    public AtomicLong getVersionMismatchCounter() {
-      return versionMismatches;
+    @Override
+    public ChangeTrackerStatistics getChangeTrackerStatistics() {
+      return new CountingChangeTracker(versionMismatches);
     }
 
     /**
@@ -804,26 +844,26 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     public String toString() {
       final StringBuilder sb = new StringBuilder(
           "StreamStatistics{");
-      sb.append("OpenOperations=").append(openOperations);
-      sb.append(", CloseOperations=").append(closeOperations);
-      sb.append(", Closed=").append(closed);
-      sb.append(", Aborted=").append(aborted);
-      sb.append(", SeekOperations=").append(seekOperations);
-      sb.append(", ReadExceptions=").append(readExceptions);
+      sb.append("OpenOperations=").append(openOperations.get());
+      sb.append(", CloseOperations=").append(closeOperations.get());
+      sb.append(", Closed=").append(closed.get());
+      sb.append(", Aborted=").append(aborted.get());
+      sb.append(", SeekOperations=").append(seekOperations.get());
+      sb.append(", ReadExceptions=").append(readExceptions.get());
       sb.append(", ForwardSeekOperations=")
-          .append(forwardSeekOperations);
+          .append(forwardSeekOperations.get());
       sb.append(", BackwardSeekOperations=")
-          .append(backwardSeekOperations);
-      sb.append(", BytesSkippedOnSeek=").append(bytesSkippedOnSeek);
-      sb.append(", BytesBackwardsOnSeek=").append(bytesBackwardsOnSeek);
-      sb.append(", BytesRead=").append(bytesRead);
+          .append(backwardSeekOperations.get());
+      sb.append(", BytesSkippedOnSeek=").append(bytesSkippedOnSeek.get());
+      sb.append(", BytesBackwardsOnSeek=").append(bytesBackwardsOnSeek.get());
+      sb.append(", BytesRead=").append(bytesRead.get());
       sb.append(", BytesRead excluding skipped=")
-          .append(bytesRead - bytesSkippedOnSeek);
-      sb.append(", ReadOperations=").append(readOperations);
-      sb.append(", ReadFullyOperations=").append(readFullyOperations);
-      sb.append(", ReadsIncomplete=").append(readsIncomplete);
-      sb.append(", BytesReadInClose=").append(bytesReadInClose);
-      sb.append(", BytesDiscardedInAbort=").append(bytesDiscardedInAbort);
+          .append(bytesRead.get() - bytesSkippedOnSeek.get());
+      sb.append(", ReadOperations=").append(readOperations.get());
+      sb.append(", ReadFullyOperations=").append(readFullyOperations.get());
+      sb.append(", ReadsIncomplete=").append(readsIncomplete.get());
+      sb.append(", BytesReadInClose=").append(bytesReadInClose.get());
+      sb.append(", BytesDiscardedInAbort=").append(bytesDiscardedInAbort.get());
       sb.append(", InputPolicy=").append(inputPolicy);
       sb.append(", InputPolicySetCount=").append(policySetCount);
       sb.append(", versionMismatches=").append(versionMismatches.get());
@@ -839,78 +879,217 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * stats into the fs-wide stats. <b>Behavior is undefined if called on a
      * closed instance.</b>
      */
-    void merge(boolean isClosed) {
+    @Override
+    public void merge(boolean isClosed) {
       if (mergedStats != null) {
-        mergeInputStreamStatistics(diff(mergedStats));
+        mergeInputStreamStatistics(setd(mergedStats));
       } else {
         mergeInputStreamStatistics(this);
       }
       // If stats are closed, no need to create another copy
       if (!isClosed) {
         mergedStats = copy();
+      } else {
+        // stream is being closed.
+        // increment the filesystem statistics for this thread.
+        if (filesystemStatistics != null) {
+          filesystemStatistics.incrementBytesReadByDistance(DISTANCE,
+              bytesRead.get() + bytesReadInClose.get());
+        }
       }
     }
 
     /**
-     * Returns a diff between this {@link InputStreamStatistics} instance and
-     * the given {@link InputStreamStatistics} instance.
+     * Set the dest variable to the difference of the two
+     * other values
+     * @param dest destination
+     * @param l left side
+     * @param r right side
      */
-    private InputStreamStatistics diff(InputStreamStatistics inputStats) {
-      InputStreamStatistics diff = new InputStreamStatistics();
-      diff.openOperations = openOperations - inputStats.openOperations;
-      diff.closeOperations = closeOperations - inputStats.closeOperations;
-      diff.closed = closed - inputStats.closed;
-      diff.aborted = aborted - inputStats.aborted;
-      diff.seekOperations = seekOperations - inputStats.seekOperations;
-      diff.readExceptions = readExceptions - inputStats.readExceptions;
-      diff.forwardSeekOperations =
-              forwardSeekOperations - inputStats.forwardSeekOperations;
-      diff.backwardSeekOperations =
-              backwardSeekOperations - inputStats.backwardSeekOperations;
-      diff.bytesRead = bytesRead - inputStats.bytesRead;
-      diff.bytesSkippedOnSeek =
-              bytesSkippedOnSeek - inputStats.bytesSkippedOnSeek;
-      diff.bytesBackwardsOnSeek =
-              bytesBackwardsOnSeek - inputStats.bytesBackwardsOnSeek;
-      diff.readOperations = readOperations - inputStats.readOperations;
-      diff.readFullyOperations =
-              readFullyOperations - inputStats.readFullyOperations;
-      diff.readsIncomplete = readsIncomplete - inputStats.readsIncomplete;
-      diff.bytesReadInClose = bytesReadInClose - inputStats.bytesReadInClose;
-      diff.bytesDiscardedInAbort =
-              bytesDiscardedInAbort - inputStats.bytesDiscardedInAbort;
-      diff.policySetCount = policySetCount - inputStats.policySetCount;
-      diff.inputPolicy = inputPolicy - inputStats.inputPolicy;
+    private void setd(AtomicLong dest, AtomicLong l, AtomicLong r) {
+      dest.set(l.get() - r.get());
+    }
+
+    /**
+     * Returns a diff between this {@link InputStreamStatisticsImpl} instance and
+     * the given {@link InputStreamStatisticsImpl} instance.
+     */
+    private InputStreamStatisticsImpl setd(InputStreamStatisticsImpl inputStats) {
+      InputStreamStatisticsImpl diff =
+          new InputStreamStatisticsImpl(filesystemStatistics);
+      setd(diff.openOperations, openOperations, inputStats.openOperations);
+      setd(diff.closeOperations, closeOperations, inputStats.closeOperations);
+      setd(diff.closed, closed, inputStats.closed);
+      setd(diff.aborted, aborted, inputStats.aborted);
+      setd(diff.seekOperations, seekOperations, inputStats.seekOperations);
+      setd(diff.readExceptions, readExceptions, inputStats.readExceptions);
+      setd(diff.forwardSeekOperations, forwardSeekOperations, inputStats.forwardSeekOperations);
+      setd(diff.backwardSeekOperations, backwardSeekOperations, inputStats.backwardSeekOperations);
+      setd(diff.bytesRead, bytesRead, inputStats.bytesRead);
+      setd(diff.bytesSkippedOnSeek, bytesSkippedOnSeek, inputStats.bytesSkippedOnSeek);
+      setd(diff.bytesBackwardsOnSeek, bytesBackwardsOnSeek, inputStats.bytesBackwardsOnSeek);
+      setd(diff.readOperations, readOperations, inputStats.readOperations);
+      setd(diff.readFullyOperations, readFullyOperations, inputStats.readFullyOperations);
+      setd(diff.readsIncomplete, readsIncomplete, inputStats.readsIncomplete);
+      setd(diff.bytesReadInClose, bytesReadInClose, inputStats.bytesReadInClose);
+      setd(diff.bytesDiscardedInAbort, bytesDiscardedInAbort, inputStats.bytesDiscardedInAbort);
+      setd(diff.policySetCount, policySetCount, inputStats.policySetCount);
+      diff.inputPolicy = inputPolicy -inputStats.inputPolicy;
       diff.versionMismatches.set(versionMismatches.longValue() -
               inputStats.versionMismatches.longValue());
       return diff;
     }
 
     /**
-     * Returns a new {@link InputStreamStatistics} instance with all the same
-     * values as this {@link InputStreamStatistics}.
+     * Returns a new {@link InputStreamStatisticsImpl} instance with
+     * all the same values as this {@link InputStreamStatisticsImpl}.
      */
-    private InputStreamStatistics copy() {
-      InputStreamStatistics copy = new InputStreamStatistics();
-      copy.openOperations = openOperations;
-      copy.closeOperations = closeOperations;
-      copy.closed = closed;
-      copy.aborted = aborted;
-      copy.seekOperations = seekOperations;
-      copy.readExceptions = readExceptions;
-      copy.forwardSeekOperations = forwardSeekOperations;
-      copy.backwardSeekOperations = backwardSeekOperations;
-      copy.bytesRead = bytesRead;
-      copy.bytesSkippedOnSeek = bytesSkippedOnSeek;
-      copy.bytesBackwardsOnSeek = bytesBackwardsOnSeek;
-      copy.readOperations = readOperations;
-      copy.readFullyOperations = readFullyOperations;
-      copy.readsIncomplete = readsIncomplete;
-      copy.bytesReadInClose = bytesReadInClose;
-      copy.bytesDiscardedInAbort = bytesDiscardedInAbort;
-      copy.policySetCount = policySetCount;
+    private InputStreamStatisticsImpl copy() {
+      InputStreamStatisticsImpl copy = new InputStreamStatisticsImpl(filesystemStatistics);
+      copy.openOperations.set(openOperations.get());
+      copy.closeOperations.set(closeOperations.get());
+      copy.closed.set(closed.get());
+      copy.aborted.set(aborted.get());
+      copy.seekOperations.set(seekOperations.get());
+      copy.readExceptions.set(readExceptions.get());
+      copy.forwardSeekOperations.set(forwardSeekOperations.get());
+      copy.backwardSeekOperations.set(backwardSeekOperations.get());
+      copy.bytesRead.set(bytesRead.get());
+      copy.bytesSkippedOnSeek.set(bytesSkippedOnSeek.get());
+      copy.bytesBackwardsOnSeek.set(bytesBackwardsOnSeek.get());
+      copy.readOperations.set(readOperations.get());
+      copy.readFullyOperations.set(readFullyOperations.get());
+      copy.readsIncomplete.set(readsIncomplete.get());
+      copy.bytesReadInClose.set(bytesReadInClose.get());
+      copy.bytesDiscardedInAbort.set(bytesDiscardedInAbort.get());
+      copy.policySetCount.set(policySetCount.get());
       copy.inputPolicy = inputPolicy;
       return copy;
+    }
+
+    /**
+     * Convert to an IOStatistics source which is dynamically updated.
+     * @return statistics
+     */
+    @Override
+    public IOStatistics createIOStatistics() {
+      DynamicIOStatisticsBuilder builder
+          = createDynamicIOStatistics();
+
+      builder.add(StreamStatisticNames.STREAM_BYTES_DISCARDED_ABORT,
+          bytesDiscardedInAbort);
+      builder.add(StreamStatisticNames.STREAM_CLOSED,
+          closed);
+      builder.add(StreamStatisticNames.STREAM_CLOSE_OPERATIONS,
+          closeOperations);
+      builder.add(StreamStatisticNames.STREAM_OPENED,
+          openOperations);
+      builder.add(StreamStatisticNames.STREAM_READ_BYTES,
+          bytesRead);
+      builder.add(StreamStatisticNames.STREAM_READ_EXCEPTIONS,
+          readExceptions);
+      builder.add(StreamStatisticNames.STREAM_READ_FULLY_OPERATIONS,
+          readFullyOperations);
+      builder.add(StreamStatisticNames.STREAM_READ_OPERATIONS,
+          readOperations);
+      builder.add(StreamStatisticNames.STREAM_READ_OPERATIONS_INCOMPLETE,
+          readsIncomplete);
+      return builder.build();
+    }
+
+    @Override
+    public long getCloseOperations() {
+      return closeOperations.get();
+    }
+
+    @Override
+    public long getClosed() {
+      return closed.get();
+    }
+
+    @Override
+    public long getAborted() {
+      return aborted.get();
+    }
+
+    @Override
+    public long getForwardSeekOperations() {
+      return forwardSeekOperations.get();
+    }
+
+    @Override
+    public long getBackwardSeekOperations() {
+      return backwardSeekOperations.get();
+    }
+
+    @Override
+    public long getBytesRead() {
+      return bytesRead.get();
+    }
+
+    @Override
+    public long getBytesSkippedOnSeek() {
+      return bytesSkippedOnSeek.get();
+    }
+
+    @Override
+    public long getBytesBackwardsOnSeek() {
+      return bytesBackwardsOnSeek.get();
+    }
+
+    @Override
+    public long getBytesReadInClose() {
+      return bytesReadInClose.get();
+    }
+
+    @Override
+    public long getBytesDiscardedInAbort() {
+      return bytesDiscardedInAbort.get();
+    }
+
+    @Override
+    public long getOpenOperations() {
+      return openOperations.get();
+    }
+
+    @Override
+    public long getSeekOperations() {
+      return seekOperations.get();
+    }
+
+    @Override
+    public long getReadExceptions() {
+      return readExceptions.get();
+    }
+
+    @Override
+    public long getReadOperations() {
+      return readOperations.get();
+    }
+
+    @Override
+    public long getReadFullyOperations() {
+      return readFullyOperations.get();
+    }
+
+    @Override
+    public long getReadsIncomplete() {
+      return readsIncomplete.get();
+    }
+
+    @Override
+    public long getPolicySetCount() {
+      return policySetCount.get();
+    }
+
+    @Override
+    public long getVersionMismatches() {
+      return versionMismatches.get();
+    }
+
+    @Override
+    public long getInputPolicy() {
+      return inputPolicy;
     }
   }
 
@@ -918,31 +1097,33 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
    * Create a stream output statistics instance.
    * @return the new instance
    */
-  OutputStreamStatistics newOutputStreamStatistics(Statistics statistics) {
-    return new OutputStreamStatistics(statistics);
+  public BlockOutputStreamStatistics newOutputStreamStatistics(
+      FileSystem.Statistics filesystemStatistics) {
+    return new BlockOutputStreamStatisticsImpl(filesystemStatistics);
   }
 
   /**
    * Merge in the statistics of a single output stream into
    * the filesystem-wide statistics.
-   * @param statistics stream statistics
+   * @param source stream statistics
    */
-  private void mergeOutputStreamStatistics(OutputStreamStatistics statistics) {
-    incrementCounter(STREAM_WRITE_TOTAL_TIME, statistics.totalUploadDuration());
-    incrementCounter(STREAM_WRITE_QUEUE_DURATION, statistics.queueDuration);
-    incrementCounter(STREAM_WRITE_TOTAL_DATA, statistics.bytesUploaded);
+  private void mergeOutputStreamStatistics(BlockOutputStreamStatisticsImpl source) {
+    incrementCounter(STREAM_WRITE_TOTAL_TIME, source.totalUploadDuration());
+    incrementCounter(STREAM_WRITE_QUEUE_DURATION, source.queueDuration);
+    incrementCounter(STREAM_WRITE_TOTAL_DATA, source.bytesUploaded);
     incrementCounter(STREAM_WRITE_BLOCK_UPLOADS,
-        statistics.blockUploadsCompleted);
+        source.blockUploadsCompleted);
+    incrementCounter(STREAM_WRITE_FAILURES, source.blockUploadsFailed);
   }
 
   /**
    * Statistics updated by an output stream during its actual operation.
-   * Some of these stats may be relayed. However, as block upload is
-   * spans multiple
+   * Some of these stats are propagated to any passed in
+   * {@link FileSystem.Statistics} instance; this is only done
+   * in close() for better cross-thread accounting.
    */
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
-  public final class OutputStreamStatistics implements Closeable {
+  private final class BlockOutputStreamStatisticsImpl implements
+      BlockOutputStreamStatistics {
     private final AtomicLong blocksSubmitted = new AtomicLong(0);
     private final AtomicLong blocksInQueue = new AtomicLong(0);
     private final AtomicLong blocksActive = new AtomicLong(0);
@@ -950,6 +1131,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     private final AtomicLong blockUploadsFailed = new AtomicLong(0);
     private final AtomicLong bytesPendingUpload = new AtomicLong(0);
 
+    private final AtomicLong bytesWritten = new AtomicLong(0);
     private final AtomicLong bytesUploaded = new AtomicLong(0);
     private final AtomicLong transferDuration = new AtomicLong(0);
     private final AtomicLong queueDuration = new AtomicLong(0);
@@ -957,30 +1139,34 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     private final AtomicInteger blocksAllocated = new AtomicInteger(0);
     private final AtomicInteger blocksReleased = new AtomicInteger(0);
 
-    private Statistics statistics;
+    private final FileSystem.Statistics filesystemStatistics;
 
-    public OutputStreamStatistics(Statistics statistics){
-      this.statistics = statistics;
+    private BlockOutputStreamStatisticsImpl(
+        @Nullable FileSystem.Statistics filesystemStatistics) {
+      this.filesystemStatistics = filesystemStatistics;
     }
 
     /**
      * A block has been allocated.
      */
-    void blockAllocated() {
+    @Override
+    public void blockAllocated() {
       blocksAllocated.incrementAndGet();
     }
 
     /**
      * A block has been released.
      */
-    void blockReleased() {
+    @Override
+    public void blockReleased() {
       blocksReleased.incrementAndGet();
     }
 
     /**
      * Block is queued for upload.
      */
-    void blockUploadQueued(int blockSize) {
+    @Override
+    public void blockUploadQueued(int blockSize) {
       blocksSubmitted.incrementAndGet();
       blocksInQueue.incrementAndGet();
       bytesPendingUpload.addAndGet(blockSize);
@@ -989,7 +1175,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     }
 
     /** Queued block has been scheduled for upload. */
-    void blockUploadStarted(long duration, int blockSize) {
+    @Override
+    public void blockUploadStarted(long duration, int blockSize) {
       queueDuration.addAndGet(duration);
       blocksInQueue.decrementAndGet();
       blocksActive.incrementAndGet();
@@ -998,8 +1185,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     }
 
     /** A block upload has completed. */
-    void blockUploadCompleted(long duration, int blockSize) {
-      this.transferDuration.addAndGet(duration);
+    @Override
+    public void blockUploadCompleted(long duration, int blockSize) {
+      transferDuration.addAndGet(duration);
       incrementGauge(STREAM_WRITE_BLOCK_UPLOADS_ACTIVE, -1);
       blocksActive.decrementAndGet();
       blockUploadsCompleted.incrementAndGet();
@@ -1010,14 +1198,15 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      *  A final transfer completed event is still expected, so this
      *  does not decrement the active block counter.
      */
-    void blockUploadFailed(long duration, int blockSize) {
+    @Override
+    public void blockUploadFailed(long duration, int blockSize) {
       blockUploadsFailed.incrementAndGet();
     }
 
     /** Intermediate report of bytes uploaded. */
-    void bytesTransferred(long byteCount) {
+    @Override
+    public void bytesTransferred(long byteCount) {
       bytesUploaded.addAndGet(byteCount);
-      statistics.incrementBytesWritten(byteCount);
       bytesPendingUpload.addAndGet(-byteCount);
       incrementGauge(STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING, -byteCount);
     }
@@ -1026,7 +1215,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * Note exception in a multipart complete.
      * @param count count of exceptions
      */
-    void exceptionInMultipartComplete(int count) {
+    @Override
+    public void exceptionInMultipartComplete(int count) {
       if (count > 0) {
         exceptionsInMultipartFinalize.addAndGet(count);
       }
@@ -1035,7 +1225,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     /**
      * Note an exception in a multipart abort.
      */
-    void exceptionInMultipartAbort() {
+    @Override
+    public void exceptionInMultipartAbort() {
       exceptionsInMultipartFinalize.incrementAndGet();
     }
 
@@ -1043,6 +1234,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * Get the number of bytes pending upload.
      * @return the number of bytes in the pending upload state.
      */
+    @Override
     public long getBytesPendingUpload() {
       return bytesPendingUpload.get();
     }
@@ -1052,6 +1244,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * to be called at the end of the write.
      * @param size size in bytes
      */
+    @Override
     public void commitUploaded(long size) {
       incrementCounter(COMMITTER_BYTES_UPLOADED, size);
     }
@@ -1067,6 +1260,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
             " as pending upload in {}", this);
       }
       mergeOutputStreamStatistics(this);
+      // and patch the FS statistics.
+      // provided the stream is closed in the worker thread, this will
+      // ensure that the thread-specific worker stats are updated.
+      if (filesystemStatistics != null) {
+        filesystemStatistics.incrementBytesWritten(bytesUploaded.get());
+      }
     }
 
     long averageQueueTime() {
@@ -1084,11 +1283,13 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       return queueDuration.get() + transferDuration.get();
     }
 
-    public int blocksAllocated() {
+    @Override
+    public int getBlocksAllocated() {
       return blocksAllocated.get();
     }
 
-    public int blocksReleased() {
+    @Override
+    public int getBlocksReleased() {
       return blocksReleased.get();
     }
 
@@ -1097,10 +1298,28 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * if the numbers change during the (non-synchronized) calculation.
      * @return the number of actively allocated blocks.
      */
-    public int blocksActivelyAllocated() {
+    @Override
+    public int getBlocksActivelyAllocated() {
       return blocksAllocated.get() - blocksReleased.get();
     }
 
+    /**
+     * Record bytes written.
+     * @param count number of bytes
+     */
+    @Override
+    public void writeBytes(long count) {
+      bytesWritten.addAndGet(count);
+    }
+
+    /**
+     * Get the current count of bytes written.
+     * @return the counter value.
+     */
+    @Override
+    public long getBytesWritten() {
+      return bytesWritten.get();
+    }
 
     @Override
     public String toString() {
@@ -1113,9 +1332,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       sb.append(", blockUploadsFailed=").append(blockUploadsFailed);
       sb.append(", bytesPendingUpload=").append(bytesPendingUpload);
       sb.append(", bytesUploaded=").append(bytesUploaded);
+      sb.append(", bytesWritten=").append(bytesWritten);
       sb.append(", blocksAllocated=").append(blocksAllocated);
       sb.append(", blocksReleased=").append(blocksReleased);
-      sb.append(", blocksActivelyAllocated=").append(blocksActivelyAllocated());
+      sb.append(", blocksActivelyAllocated=").append(getBlocksActivelyAllocated());
       sb.append(", exceptionsInMultipartFinalize=").append(
           exceptionsInMultipartFinalize);
       sb.append(", transferDuration=").append(transferDuration).append(" ms");
@@ -1127,6 +1347,23 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
           .append(" bytes/s");
       sb.append('}');
       return sb.toString();
+    }
+
+    /**
+     * Convert to an IOStatistics source which is dynamically updated.
+     * @return statistics
+     */
+    @Override
+    public IOStatistics createIOStatistics() {
+      DynamicIOStatisticsBuilder builder = createDynamicIOStatistics();
+
+      builder.add(StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,
+          blocksSubmitted);
+      builder.add(StreamStatisticNames.STREAM_WRITE_BYTES,
+          bytesWritten);
+      builder.add(StreamStatisticNames.STREAM_WRITE_FAILURES,
+          blockUploadsFailed);
+      return builder.build();
     }
   }
 
@@ -1192,13 +1429,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
   }
 
   /**
-   * Instrumentation exported to S3Guard Committers.
+   * Instrumentation exported to S3A Committers.
    */
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
-  public final class CommitterStatistics {
+  private final class CommitterStatisticsImpl implements CommitterStatistics {
 
     /** A commit has been created. */
+    @Override
     public void commitCreated() {
       incrementCounter(COMMITTER_COMMITS_CREATED, 1);
     }
@@ -1207,6 +1443,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * Data has been uploaded to be committed in a subsequent operation.
      * @param size size in bytes
      */
+    @Override
     public void commitUploaded(long size) {
       incrementCounter(COMMITTER_BYTES_UPLOADED, size);
     }
@@ -1215,24 +1452,29 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * A commit has been completed.
      * @param size size in bytes
      */
+    @Override
     public void commitCompleted(long size) {
       incrementCounter(COMMITTER_COMMITS_COMPLETED, 1);
       incrementCounter(COMMITTER_BYTES_COMMITTED, size);
     }
 
     /** A commit has been aborted. */
+    @Override
     public void commitAborted() {
       incrementCounter(COMMITTER_COMMITS_ABORTED, 1);
     }
 
+    @Override
     public void commitReverted() {
       incrementCounter(COMMITTER_COMMITS_REVERTED, 1);
     }
 
+    @Override
     public void commitFailed() {
       incrementCounter(COMMITTER_COMMITS_FAILED, 1);
     }
 
+    @Override
     public void taskCompleted(boolean success) {
       incrementCounter(
           success ? COMMITTER_TASKS_SUCCEEDED
@@ -1240,6 +1482,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
           1);
     }
 
+    @Override
     public void jobCompleted(boolean success) {
       incrementCounter(
           success ? COMMITTER_JOBS_SUCCEEDED
@@ -1253,20 +1496,20 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
    * @return an instance of delegation token statistics
    */
   public DelegationTokenStatistics newDelegationTokenStatistics() {
-    return new DelegationTokenStatistics();
+    return new DelegationTokenStatisticsImpl();
   }
 
   /**
    * Instrumentation exported to S3A Delegation Token support.
    */
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
-  public final class DelegationTokenStatistics {
+  private final class DelegationTokenStatisticsImpl implements
+      DelegationTokenStatistics {
 
-    private DelegationTokenStatistics() {
+    private DelegationTokenStatisticsImpl() {
     }
 
     /** A token has been issued. */
+    @Override
     public void tokenIssued() {
       incrementCounter(DELEGATION_TOKENS_ISSUED, 1);
     }
@@ -1364,6 +1607,68 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      */
     public Map<String, Long> getMap() {
       return map;
+    }
+  }
+
+  public StatisticsFromAwsSdk newStatisticsFromAwsSdk() {
+    return new StatisticsFromAwsSdkImpl(this);
+  }
+
+  /**
+   * Hook up AWS SDK Statistics to the S3 counters.
+   * Durations are not currently being used; that could be
+   * changed in future once an effective strategy for reporting
+   * them is determined.
+   */
+  private static final class StatisticsFromAwsSdkImpl implements
+      StatisticsFromAwsSdk {
+
+    private final CountersAndGauges countersAndGauges;
+
+    private StatisticsFromAwsSdkImpl(final CountersAndGauges countersAndGauges) {
+      this.countersAndGauges = countersAndGauges;
+    }
+
+    @Override
+    public void updateAwsRequestCount(final long count) {
+      countersAndGauges.incrementCounter(STORE_IO_REQUEST, count);
+    }
+
+    @Override
+    public void updateAwsRetryCount(final long count) {
+      countersAndGauges.incrementCounter(STORE_IO_RETRY, count);
+
+    }
+
+    @Override
+    public void updateAwsThrottleExceptionsCount(final long count) {
+      countersAndGauges.incrementCounter(STORE_IO_THROTTLED, count);
+      countersAndGauges.addValueToQuantiles(STORE_IO_THROTTLE_RATE, count);
+    }
+
+    @Override
+    public void noteAwsRequestTime(final Duration duration) {
+
+    }
+
+    @Override
+    public void noteAwsClientExecuteTime(final Duration duration) {
+
+    }
+
+    @Override
+    public void noteRequestMarshallTime(final Duration duration) {
+
+    }
+
+    @Override
+    public void noteRequestSigningTime(final Duration duration) {
+
+    }
+
+    @Override
+    public void noteResponseProcessingTime(final Duration duration) {
+
     }
   }
 }

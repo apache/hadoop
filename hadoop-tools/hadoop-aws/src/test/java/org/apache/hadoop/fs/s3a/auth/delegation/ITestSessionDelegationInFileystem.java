@@ -305,6 +305,9 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     describe("Delegation tokens can be passed to a new filesystem;"
         + " if role restricted, permissions are tightened.");
     S3AFileSystem fs = getFileSystem();
+    // force a probe of the remote FS to make sure its endpoint is valid
+    // (this always hits S3, even when S3Guard is enabled)
+    fs.getObjectMetadata(new Path("/"));
     readLandsatMetadata(fs);
 
     URI uri = fs.getUri();
@@ -562,7 +565,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     factory.setConf(conf);
     String host = landsat.getHost();
     AmazonS3 s3 = factory.createS3Client(landsat, host, testing,
-        "ITestSessionDelegationInFileystem");
+        "ITestSessionDelegationInFileystem", null);
 
     return Invoker.once("HEAD", host,
         () -> s3.getObjectMetadata(host, landsat.getPath().substring(1)));

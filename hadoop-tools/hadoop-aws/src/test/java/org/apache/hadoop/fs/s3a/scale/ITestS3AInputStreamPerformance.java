@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -58,7 +58,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   private Path testData;
   private FileStatus testDataStatus;
   private FSDataInputStream in;
-  private S3AInstrumentation.InputStreamStatistics streamStatistics;
+  private S3AInputStreamStatistics streamStatistics;
   public static final int BLOCK_SIZE = 32 * 1024;
   public static final int BIG_BLOCK_SIZE = 256 * 1024;
 
@@ -187,7 +187,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
    */
   private void assertOpenOperationCount(long expected) {
     assertEquals("open operations in\n" + in,
-        expected, streamStatistics.openOperations);
+        expected, streamStatistics.getOpenOperations());
   }
 
   /**
@@ -295,7 +295,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     logTimePerIOP("seek()", timer, blockCount);
     logStreamStatistics();
     assertOpenOperationCount(0);
-    assertEquals("bytes read", 0, streamStatistics.bytesRead);
+    assertEquals("bytes read", 0, streamStatistics.getBytesRead());
   }
 
   @Test
@@ -391,8 +391,8 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
         readahead);
     logTimePerIOP("seek(pos + " + blockCount+"); read()", timer, blockCount);
     LOG.info("Effective bandwidth {} MB/S",
-        timer.bandwidthDescription(streamStatistics.bytesRead -
-            streamStatistics.bytesSkippedOnSeek));
+        timer.bandwidthDescription(streamStatistics.getBytesRead() -
+            streamStatistics.getBytesSkippedOnSeek()));
     logStreamStatistics();
   }
 
@@ -419,7 +419,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   public void testRandomIORandomPolicy() throws Throwable {
     executeRandomIO(S3AInputPolicy.Random, (long) RANDOM_IO_SEQUENCE.length);
     assertEquals("streams aborted in " + streamStatistics,
-        0, streamStatistics.aborted);
+        0, streamStatistics.getAborted());
   }
 
   @Test
@@ -427,11 +427,12 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     long expectedOpenCount = RANDOM_IO_SEQUENCE.length;
     executeRandomIO(S3AInputPolicy.Normal, expectedOpenCount);
     assertEquals("streams aborted in " + streamStatistics,
-        1, streamStatistics.aborted);
+        1, streamStatistics.getAborted());
     assertEquals("policy changes in " + streamStatistics,
-        2, streamStatistics.policySetCount);
+        2, streamStatistics.getPolicySetCount());
     assertEquals("input policy in " + streamStatistics,
-        S3AInputPolicy.Random.ordinal(), streamStatistics.inputPolicy);
+        S3AInputPolicy.Random.ordinal(),
+        streamStatistics.getInputPolicy());
   }
 
   /**
@@ -466,8 +467,8 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     assertOpenOperationCount(expectedOpenCount);
     logTimePerIOP("byte read", timer, totalBytesRead);
     LOG.info("Effective bandwidth {} MB/S",
-        timer.bandwidthDescription(streamStatistics.bytesRead -
-            streamStatistics.bytesSkippedOnSeek));
+        timer.bandwidthDescription(streamStatistics.getBytesRead() -
+            streamStatistics.getBytesSkippedOnSeek()));
     logStreamStatistics();
     return timer;
   }
@@ -525,7 +526,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
               + " current position in stream " + currentPos
               + " in\n" + fs
               + "\n " + in,
-          1, streamStatistics.openOperations);
+          1, streamStatistics.getOpenOperations());
       for (int i = currentPos; i < currentPos + read; i++) {
         assertEquals("Wrong value from byte " + i,
             sourceData[i], buffer[i]);
