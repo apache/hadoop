@@ -56,13 +56,7 @@ public class InconsistentS3ClientFactory extends DefaultS3ClientFactory {
     LOG.warn("** FAILURE INJECTION ENABLED.  Do not run in production! **");
     InconsistentAmazonS3Client s3
         = new InconsistentAmazonS3Client(credentials, awsConf, getConf());
-    if (pathStyleAccess) {
-      LOG.debug("Enabling path style access!");
-      s3.setS3ClientOptions(S3ClientOptions.builder()
-          .setPathStyleAccess(true)
-          .build());
-    }
-    setEndpoint(s3, endpoint);
+    configureAmazonS3Client(s3, endpoint, pathStyleAccess);
     return s3;
   }
 }

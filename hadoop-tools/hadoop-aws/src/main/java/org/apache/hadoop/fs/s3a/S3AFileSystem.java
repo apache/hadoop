@@ -113,6 +113,7 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.impl.statistics.IntegratedS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.impl.statistics.S3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.impl.statistics.StatisticsFromAwsSdk;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -180,6 +181,7 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDe
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AWS_SDK_METRICS_ENABLED;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
@@ -678,9 +680,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         S3_CLIENT_FACTORY_IMPL, DEFAULT_S3_CLIENT_FACTORY_IMPL,
         S3ClientFactory.class);
 
+    StatisticsFromAwsSdk awsStats = null;
+//  TODO: when the S3 client building code works with different regions,
+//   then non-null stats can be passed in here.
+    if (AWS_SDK_METRICS_ENABLED) {
+      awsStats = statisticsContext.newStatisticsFromAwsSdk();
+    }
+
     s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
-        .createS3Client(getUri(), bucket, credentials, uaSuffix,
-            statisticsContext.newStatisticsFromAwsSdk());
+    .createS3Client(getUri(), bucket, credentials, uaSuffix,
+        awsStats);
   }
 
   /**
