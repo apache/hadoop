@@ -362,12 +362,23 @@ public class CallQueueManager<E extends Schedulable>
           CommonConfigurationKeys.IPC_CALLQUEUE_CAPACITY_WEIGHTS_KEY + " must "
               + "specify " + priorityLevels + " capacity weights: one for each "
               + "priority level");
+    } else {
+      // only allow positive numbers
+      for (int w : weights) {
+        if (w <= 0) {
+          throw new IllegalArgumentException(
+              CommonConfigurationKeys.IPC_CALLQUEUE_CAPACITY_WEIGHTS_KEY +
+                  " only takes positive weights. " + w + " capacity weight " +
+                  "found");
+        }
+      }
     }
     return weights;
   }
 
   /**
    * By default, queue capacity is the same for all priority levels.
+   *
    * @param priorityLevels number of levels
    * @return default weights
    */
