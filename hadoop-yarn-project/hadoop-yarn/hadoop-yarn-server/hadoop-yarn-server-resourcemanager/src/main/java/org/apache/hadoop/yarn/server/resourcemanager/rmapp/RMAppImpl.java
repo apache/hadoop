@@ -1765,16 +1765,6 @@ public class RMAppImpl implements RMApp, Recoverable {
     logAggregation.aggregateLogReport(nodeId, report, this);
   }
 
-  @Override
-  public boolean isLogAggregationFinished() {
-    return logAggregation.isFinished();
-  }
-
-  @Override
-  public boolean isLogAggregationEnabled() {
-    return logAggregation.isEnabled();
-  }
-
   public String getLogAggregationFailureMessagesForNM(NodeId nodeId) {
     return logAggregation.getLogAggregationFailureMessagesForNM(nodeId);
   }
