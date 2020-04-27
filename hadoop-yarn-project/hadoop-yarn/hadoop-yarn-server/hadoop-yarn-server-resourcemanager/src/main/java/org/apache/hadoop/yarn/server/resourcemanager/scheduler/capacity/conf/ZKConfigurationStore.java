@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.ACL;
 
+import java.io.IOException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
@@ -315,5 +316,12 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
   @SuppressWarnings("unchecked")
   private static <T> T unsafeCast(Object o) throws ClassCastException {
     return (T)o;
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (zkManager  != null) {
+      zkManager.close();
+    }
   }
 }
