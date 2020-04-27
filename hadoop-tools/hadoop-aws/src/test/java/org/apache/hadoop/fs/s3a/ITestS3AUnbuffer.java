@@ -71,7 +71,7 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
 
   /**
    * Test that calling {@link S3AInputStream#unbuffer()} merges a stream's
-   * {@link org.apache.hadoop.fs.s3a.S3AInstrumentation.InputStreamStatistics}
+   * {@code InputStreamStatistics}
    * into the {@link S3AFileSystem}'s {@link S3AInstrumentation} instance.
    */
   @Test
@@ -108,7 +108,7 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
     // Validate that the input stream stats are correct when the file is closed
     assertEquals("S3AInputStream statistics were not updated properly", 12,
             ((S3AInputStream) inputStream.getWrappedStream())
-                    .getS3AStreamStatistics().bytesRead);
+                    .getS3AStreamStatistics().getBytesRead());
   }
 
   private boolean isObjectStreamOpen(FSDataInputStream inputStream) {

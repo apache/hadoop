@@ -401,10 +401,6 @@ public class TestPartialDeleteFailures {
       return null;
     }
 
-    @Override
-    public Path makeQualified(final Path path) {
-      return path;
-    }
   }
   /**
    * MetadataStore which tracks what is deleted and added.
