@@ -18,16 +18,10 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu;
 
-import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourcesExceptionUtil.throwIfNecessary;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -39,10 +33,11 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.PerGpuDeviceInfo
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourcesExceptionUtil.throwIfNecessary;
 
 
 @InterfaceAudience.Private
@@ -113,6 +108,10 @@ public class GpuDiscoverer {
    */
   public synchronized GpuDeviceInformation getGpuDeviceInformation()
       throws YarnException {
+    if (lastDiscoveredGpuInformation !=null){
+      return lastDiscoveredGpuInformation;
+    }
+
     if (numOfErrorExecutionSinceLastSucceed == MAX_REPEATED_ERROR_ALLOWED) {
       String msg = getErrorMessageOfScriptExecutionThresholdReached();
       LOG.error(msg);
@@ -253,22 +252,24 @@ public class GpuDiscoverer {
       NvidiaBinaryHelper nvidiaHelper) throws YarnException {
     this.conf = config;
     this.nvidiaBinaryHelper = nvidiaHelper;
-    if (isAutoDiscoveryEnabled()) {
-      numOfErrorExecutionSinceLastSucceed = 0;
-      lookUpAutoDiscoveryBinary(config);
+    numOfErrorExecutionSinceLastSucceed = 0;
+    // auto or not , all should set binaryPath
+    lookUpAutoDiscoveryBinary(config);
 
-      // Try to discover GPU information once and print
-      try {
-        LOG.info("Trying to discover GPU information ...");
-        GpuDeviceInformation info = getGpuDeviceInformation();
-        LOG.info("Discovered GPU information: " + info.toString());
-      } catch (YarnException e) {
-        String msg =
-                "Failed to discover GPU information from system, exception message:"
-                        + e.getMessage() + " continue...";
-        LOG.warn(msg);
-      }
+    // Try to discover GPU information once and print
+    try {
+      LOG.info("Trying to discover GPU information ...");
+      GpuDeviceInformation info = getGpuDeviceInformation();
+      LOG.info("Discovered GPU information: " + info.toString());
+    } catch (YarnException e) {
+      String msg =
+              "Failed to discover GPU information from system, exception message:"
+                      + e.getMessage() + " continue...";
+      LOG.warn(msg);
     }
+
+
+
   }
 
   private void lookUpAutoDiscoveryBinary(Configuration config)
