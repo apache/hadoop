@@ -18,24 +18,34 @@
 
 package org.apache.hadoop.fs.statistics;
 
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationHelper;
+import java.io.Serializable;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
 /**
  * Support for working with statistics.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public final class IOStatisticsSupport {
 
   private IOStatisticsSupport() {
   }
 
   /**
-   * Wrap a (dynamic) source with a snapshot IOStatistics instance.
-   * @param source source
-   * @return a wrapped instance.
+   * Take a snapshot of the current statistics state.
+   * This is not an atomic option.
+   * The instance can be serialized.
+   * @param statistics statistics
+   * @return a snapshot of the current values.
    */
-  public static IOStatistics takeSnapshot(IOStatistics source) {
-    return IOStatisticsImplementationHelper.wrapWithSnapshot(source);
+  public static <X extends IOStatistics & Serializable> X snapshot(
+      IOStatistics statistics) {
+    return IOStatisticsBinding.snapshotStatistics(statistics);
   }
+
 
   /**
    * Get the IOStatistics of the source, falling back to

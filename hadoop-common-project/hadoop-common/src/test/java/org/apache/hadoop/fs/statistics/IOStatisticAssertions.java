@@ -18,13 +18,20 @@
 
 package org.apache.hadoop.fs.statistics;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+
 import org.apache.hadoop.classification.InterfaceStability;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Assertions and any other support for IOStatistics testing.
- * If used downstream, know it is unstable.
+ * If used downstream: know it is unstable.
  * There's some oddness here related to AssertJ's handling of iterables;
  * we need to explicitly cast it to call methods on the interface
  * other than iterator().
@@ -33,42 +40,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 public final class IOStatisticAssertions {
 
   private IOStatisticAssertions() {
-  }
-
-  /**
-   * Assert that a statistics instance has an attribute.
-   * Note: some type inference in Assertions causes confusion
-   * with the .matches predicate; it needs to be cast down to its type
-   * again.
-   * @param stats statistics source
-   * @param attr attribute to probe for
-   */
-  public static void assertIOStatisticsHasAttribute(
-      final IOStatistics stats,
-      final IOStatistics.Attributes attr) {
-    assertThat(stats)
-        .describedAs("Statistics %s and attribute %s", stats, attr)
-        .isNotNull()
-        .matches(s -> ((IOStatistics) s).hasAttribute(attr),
-            "Does not have attribute " + attr);
-  }
-
-  /**
-   * Assert that a statistics instance has an attribute.
-   * Note: some type inference in Assertions causes confusion
-   * with the .matches predicate; it needs to be cast down to its type
-   * again.
-   * @param stats statistics source
-   * @param attr attribute to probe for
-   */
-  public static void assertIOStatisticsAttributeNotFound(
-      final IOStatistics stats,
-      final IOStatistics.Attributes attr) {
-    assertThat(stats)
-        .describedAs("Statistics %s and attribute %s", stats, attr)
-        .isNotNull()
-        .matches(s -> !((IOStatistics) s).hasAttribute(attr),
-            "Should not have attribute " + attr);
   }
 
   /**
@@ -162,19 +133,22 @@ public final class IOStatisticAssertions {
   }
 
   /**
-   * Update IO statistics from the source if they are static;
-   * dynamic stats are returned as is.
-   * @param statistics current statistics (or null)
-   * @param origin origin of the statistics.
-   * @return the possibly updated statistics
+   * Perform a serialization round trip on a statistics instance.
+   * @param stat statistic
+   * @return the deserialized version.
    */
-  public static IOStatistics maybeUpdate(final IOStatistics statistics,
-      final Object origin) {
-    if (statistics == null
-        || !statistics.hasAttribute(IOStatistics.Attributes.Dynamic)) {
-      return extractStatistics(origin);
-    } else {
-      return statistics;
+  public static IOStatistics roundTrip(final IOStatistics stat)
+      throws IOException, ClassNotFoundException {
+    assertThat(stat).isInstanceOf(Serializable.class);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
+    try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+      oos.writeObject(stat);
     }
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    IOStatistics deser;
+    try (ObjectInputStream ois = new ObjectInputStream(bais)) {
+      deser = (IOStatistics) ois.readObject();
+    }
+    return deser;
   }
 }

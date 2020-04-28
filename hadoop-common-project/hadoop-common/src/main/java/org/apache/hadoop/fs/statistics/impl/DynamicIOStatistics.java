@@ -25,6 +25,9 @@ import java.util.TreeMap;
 import java.util.function.ToLongFunction;
 
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
+
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.snapshotStatistics;
 
 /**
  * These statistics are dynamically evaluated by the supplied
@@ -39,7 +42,8 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 final class DynamicIOStatistics implements IOStatistics {
 
   /**
-   * Treemaps sort their insertions so the iterator is ordered.
+   * Use a concurrent hash map for the ability to add across
+   * threads.
    */
   private final Map<String, ToLongFunction<String>> evaluators
       = new TreeMap<>();
@@ -75,14 +79,13 @@ final class DynamicIOStatistics implements IOStatistics {
     return evaluators.containsKey(key);
   }
 
+  /**
+   * Takes a snapshot and then provide an iterator around this.
+   * @return the iterator.
+   */
   @Override
   public Iterator<Map.Entry<String, Long>> iterator() {
-    return new DynamicIterator();
-  }
-
-  @Override
-  public boolean hasAttribute(final Attributes attr) {
-    return Attributes.Dynamic == attr;
+    return snapshotStatistics(this).iterator();
   }
 
   @Override
@@ -90,31 +93,8 @@ final class DynamicIOStatistics implements IOStatistics {
     return evaluators.keySet();
   }
 
-  /**
-   * Iterator over the entries, evaluating each one in the next() call.
-   */
-  private final class DynamicIterator
-      implements Iterator<Map.Entry<String, Long>> {
-
-    private final Iterator<Map.Entry<String, ToLongFunction<String>>>
-        iterator = evaluators.entrySet().iterator();
-
-    private DynamicIterator() {
-    }
-
-    @Override
-    public boolean hasNext() {
-      return iterator.hasNext();
-    }
-
-    @Override
-    public Map.Entry<String, Long> next() {
-      final Map.Entry<String, ToLongFunction<String>> entry = iterator.next();
-      return new IOStatisticsImplementationHelper.StatsMapEntry(
-          entry.getKey(),
-          entry.getValue().applyAsLong(entry.getKey()));
-    }
-
+  @Override
+  public String toString() {
+    return IOStatisticsLogging.iostatisticsToString(this);
   }
-
 }

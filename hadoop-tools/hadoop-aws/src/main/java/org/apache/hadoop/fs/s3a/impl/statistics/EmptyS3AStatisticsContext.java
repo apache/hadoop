@@ -25,7 +25,8 @@ import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentationImpl;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.impl.EmptyIOStatistics;
+
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
 
 /**
  * Special statistics context, all of whose context operations are no-ops.
@@ -160,7 +161,7 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
      */
     @Override
     public IOStatistics createIOStatistics() {
-      return EmptyIOStatistics.getInstance();
+      return emptyStatistics();
     }
 
     @Override
@@ -373,7 +374,7 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     @Override
     public IOStatistics createIOStatistics() {
-      return EmptyIOStatistics.getInstance();
+      return emptyStatistics();
     }
 
     @Override

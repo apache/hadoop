@@ -24,15 +24,15 @@ import java.util.NoSuchElementException;
 
 import org.junit.Test;
 
-import org.apache.hadoop.fs.statistics.impl.EmptyIOStatistics;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertIOStatisticsAttributeNotFound;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertIOStatisticsHasAttribute;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsTracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUnknown;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUntracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.iostatisticsToString;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -42,28 +42,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
 
-  private final IOStatistics stats = EmptyIOStatistics.getInstance();
-
-  @Test
-  public void testAttributes() throws Throwable {
-    assertIOStatisticsHasAttribute(stats,
-        IOStatistics.Attributes.Static);
-    assertIOStatisticsAttributeNotFound(stats,
-        IOStatistics.Attributes.Dynamic);
-    assertIOStatisticsAttributeNotFound(stats,
-        IOStatistics.Attributes.Snapshotted);
-  }
-
-  @Test
-  public void testSnapshotUnsupported() throws Throwable {
-    assertThat(stats.snapshot())
-        .describedAs("Snapshot of %s", stats)
-        .isFalse();
-  }
+  private final IOStatistics empty = emptyStatistics();
 
   @Test
   public void testIterator() throws Throwable {
-    Iterator<Map.Entry<String, Long>> iterator = stats.iterator();
+    Iterator<Map.Entry<String, Long>> iterator = empty.iterator();
 
     assertThat(iterator.hasNext())
         .describedAs("iterator.hasNext()")
@@ -73,8 +56,8 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testUnknownStatistic() throws Throwable {
-    assertStatisticIsUnknown(stats, "anything");
-    assertStatisticIsUntracked(stats, "anything");
+    assertStatisticIsUnknown(empty, "anything");
+    assertStatisticIsUntracked(empty, "anything");
   }
 
   @Test
@@ -82,19 +65,63 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
     // expect an exception to be raised when an assertion
     // is made that an unknown statistic is tracked,.
     assertThatThrownBy(() ->
-        assertStatisticIsTracked(stats, "anything"))
+        assertStatisticIsTracked(empty, "anything"))
         .isInstanceOf(AssertionError.class);
   }
 
   @Test
   public void testStatisticsValueAssertion() throws Throwable {
-    // expect an exception to be raised when the
-    //
+    // expect an exception to be raised when
+    // an assertion is made about the value of an unknown statistics
     assertThatThrownBy(() ->
-        verifyStatisticValue(stats, "anything", 0))
+        verifyStatisticValue(empty, "anything", 0))
         .isInstanceOf(AssertionError.class);
   }
 
+  @Test
+  public void testEmptySnapshot() throws Throwable {
+    final IOStatistics stat = IOStatisticsSupport.snapshot(empty);
+    assertThat(stat.keys())
+        .describedAs("keys of snapshot")
+        .isEmpty();
+    IOStatistics deser = IOStatisticAssertions.roundTrip(stat);
+    assertThat(deser.keys())
+        .describedAs("keys of deserialized snapshot")
+        .isEmpty();
+  }
 
+  @Test
+  public void testStringification() throws Throwable {
+    assertThat(iostatisticsToString(empty))
+        .isNotBlank();
+  }
+
+  @Test
+  public void testWrap() throws Throwable {
+    IOStatisticsSource statisticsSource = IOStatisticsBinding.wrap(empty);
+    assertThat(statisticsSource.getIOStatistics())
+        .isSameAs(empty);
+  }
+
+  @Test
+  public void testStringifyNullSource() throws Throwable {
+    assertThat(IOStatisticsLogging.sourceToString(null))
+        .isEmpty();
+  }
+
+  @Test
+  public void testStringifyNullStats() throws Throwable {
+    assertThat(
+        IOStatisticsLogging.sourceToString(
+            IOStatisticsBinding.wrap(null)))
+        .isEmpty();
+  }
+
+  @Test
+  public void testStringificationNull() throws Throwable {
+    assertThat(iostatisticsToString(null))
+        .describedAs("Null statistics should stringify to \"\"")
+        .isEmpty();
+  }
 
 }

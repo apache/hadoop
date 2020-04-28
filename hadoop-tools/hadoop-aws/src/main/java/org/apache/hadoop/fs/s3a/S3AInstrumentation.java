@@ -63,7 +63,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationHelper.createDynamicIOStatistics;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 
 /**
@@ -974,7 +974,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public IOStatistics createIOStatistics() {
       DynamicIOStatisticsBuilder builder
-          = createDynamicIOStatistics();
+          = dynamicIOStatistics();
 
       builder.add(StreamStatisticNames.STREAM_BYTES_DISCARDED_ABORT,
           bytesDiscardedInAbort);
@@ -1355,7 +1355,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     @Override
     public IOStatistics createIOStatistics() {
-      DynamicIOStatisticsBuilder builder = createDynamicIOStatistics();
+      DynamicIOStatisticsBuilder builder = dynamicIOStatistics();
 
       builder.add(StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,
           blocksSubmitted);

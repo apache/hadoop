@@ -53,11 +53,11 @@ import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.fs.statistics.impl.EmptyIOStatistics;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -166,7 +166,7 @@ class S3ABlockOutputStream extends OutputStream implements
     // test instantiations may not provide statistics;
     iostatistics = statistics != null
         ? statistics.createIOStatistics()
-        : EmptyIOStatistics.getInstance();
+        : emptyStatistics();
     this.writeOperationHelper = writeOperationHelper;
     this.putTracker = putTracker;
     Preconditions.checkArgument(blockSize >= Constants.MULTIPART_MIN_SIZE,
@@ -486,7 +486,7 @@ class S3ABlockOutputStream extends OutputStream implements
     if (block != null) {
       sb.append(", activeBlock=").append(block);
     }
-    sb.append(IOStatisticsLogging.iostatisticsSourceToString(this));
+    sb.append(IOStatisticsLogging.sourceToString(this));
     sb.append('}');
     return sb.toString();
   }

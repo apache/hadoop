@@ -30,7 +30,7 @@ import static com.google.common.base.Preconditions.checkState;
 /**
  * Builder of Dynamic IO Statistics.
  * Instantiate through
- * {@link IOStatisticsImplementationHelper#createDynamicIOStatistics()}.
+ * {@link IOStatisticsBinding#dynamicIOStatistics()}.
  */
 public class DynamicIOStatisticsBuilder {
 
