@@ -26,7 +26,6 @@ export default DS.JSONAPISerializer.extend({
         fileName: payload.fileName,
         fileSize: payload.fileSize,
         lastModifiedTime: payload.lastModifiedTime,
-        redirectedUrl: payload.redirectedUrl,
         containerId: containerId,
         nodeId: nodeId
       }
@@ -38,17 +37,15 @@ export default DS.JSONAPISerializer.extend({
     var normalizedArrayResponse = {
       data: []
     };
-    // If JSON payload is an object with a containerLogsInfo property
     if (payload && payload.containerLogsInfo && payload.containerLogsInfo.containerLogInfo) {
-      normalizedArrayResponse.data = payload.containerLogsInfo.containerLogInfo.map((signle_payload) => {
-        return this.internalNormalizeSingleResponse(store, primaryModelClass, signle_payload,
+      normalizedArrayResponse.data = payload.containerLogsInfo.containerLogInfo.map((paylog) => {
+        return this.internalNormalizeSingleResponse(store, primaryModelClass, paylog,
           payload.containerLogsInfo.containerId, payload.containerLogsInfo.nodeId);
       });
     }
-    // If JSON payload is an array
     if (payload && payload[0] && payload[0].containerLogInfo) {
-      normalizedArrayResponse.data = payload[0].containerLogInfo.map((signle_payload) => {
-        return this.internalNormalizeSingleResponse(store, primaryModelClass, signle_payload,
+      normalizedArrayResponse.data = payload[0].containerLogInfo.map((paylog) => {
+        return this.internalNormalizeSingleResponse(store, primaryModelClass, paylog,
           payload[0].containerId, payload[0].nodeId);
       });
     }

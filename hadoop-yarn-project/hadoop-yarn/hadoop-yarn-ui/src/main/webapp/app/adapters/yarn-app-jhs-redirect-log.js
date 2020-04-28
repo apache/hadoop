@@ -25,30 +25,14 @@ import RESTAbstractAdapter from './restabstract';
  * in plain text format and not JSON.
  */
 export default RESTAbstractAdapter.extend({
-  address: "jhsAddress",
-  restNameSpace: "jhs",
-  serverName: "JHS",
-
   headers: {
     Accept: 'text/plain'
   },
 
   urlForFindRecord(id/*, modelName, snapshot*/) {
     var splits = Converter.splitForAppLogs(id);
-    var containerId = splits[0];
-    var logFile = splits[1];
-    var url = this._buildURL();
-    url = url + '/containerlogs/' + containerId + '/' + logFile + '?manual_redirection=true';
-    Ember.Logger.info('The URL for getting the log: ' + url);
+    var url = splits[0];
     return url;
-  },
-
-  handleResponse(status, headers, payload, requestData) {
-    if (headers['location'] !== undefined && headers['location'] !== null) {
-      return { redirectedUrl: headers.location, data: "" }
-    } else {
-      return { data: payload }
-    }
   },
 
   /**
