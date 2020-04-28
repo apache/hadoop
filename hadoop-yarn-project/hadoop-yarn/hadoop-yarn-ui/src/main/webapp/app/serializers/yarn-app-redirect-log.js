@@ -21,17 +21,14 @@ import Converter from 'yarn-ui/utils/converter';
 
 export default DS.JSONAPISerializer.extend({
   normalizeSingleResponse(store, primaryModelClass, payload, id/*, requestType*/) {
-    // Convert plain text response into JSON.
-    // ID is of the form containerId!fileName
     var splits = Converter.splitForAppLogs(id);
     var convertedPayload = {
       id: id,
       type: primaryModelClass.modelName,
       attributes: {
-        logs: payload.data,
-        containerID: splits[0],
-        logFileName: splits[1],
-        redirectedUrl: payload.redirectedUrl
+        logs: payload,
+        containerID: splits[1],
+        logFileName: splits[2]
       }
     };
     return { data: convertedPayload };
