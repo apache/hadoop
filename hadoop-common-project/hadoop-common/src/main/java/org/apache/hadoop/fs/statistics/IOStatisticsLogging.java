@@ -27,7 +27,8 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 
 /**
- * Utility operations to work with IO Statistics, especially log them.
+ * Utility operations convert IO Statistics sources/instances
+ * to strings, especially for robustly logging.
  */
 public class IOStatisticsLogging {
 
@@ -37,23 +38,23 @@ public class IOStatisticsLogging {
   /**
    * Convert IOStatistics to a string form.
    * @param statistics A statistics instance.
-   * @return string value or the emtpy string if null
+   * @return string value or the empty string if null
    */
-  private static String iostatisticsToString(
+  public static String iostatisticsToString(
       @Nullable final IOStatistics statistics) {
     if (statistics != null) {
-      StringBuilder sb = new StringBuilder(" {");
+      StringBuilder sb = new StringBuilder("( ");
       for (Map.Entry entry : statistics) {
-        sb.append("{")
+        sb.append("(")
             .append(entry.getKey())
-            .append("=")
+            .append(", ")
             .append(entry.getValue())
-            .append("} ");
+            .append(") ");
       }
-      sb.append('}');
+      sb.append(")");
       return sb.toString();
     } else {
-      return null;
+      return "";
     }
   }
 
@@ -63,7 +64,7 @@ public class IOStatisticsLogging {
    * @param source source of statistics.
    * @return a string for logging.
    */
-  public static String iostatisticsSourceToString(final IOStatisticsSource source) {
+  public static String sourceToString(@Nullable IOStatisticsSource source) {
     try {
       return iostatisticsToString(retrieveIOStatistics(source));
     } catch (RuntimeException e) {
@@ -74,24 +75,43 @@ public class IOStatisticsLogging {
 
   /**
    * On demand stringifier.
+   * Whenever this object's toString() method is called, it evaluates the
+   * statistics.
+   * This is for use in log statements where for the cost of creation
+   * of this entry is low; it is affordable to use in log statements.
+   */
+   public static Object stringify(@Nullable IOStatisticsSource source) {
+     return new SourceToString(source);
+  }
+
+  /**
+   * On demand stringifier.
+   * Whenever this object's toString() method is called, it evaluates the
+   * statistics.
+   * This is for use in log statements where for the cost of creation
+   * of this entry is low; it is affordable to use in log statements.
+   */
+   public static Object stringify(@Nullable IOStatistics source) {
+     return new StatisticsToString(source);
+  }
+
+  /**
+   * On demand stringifier.
    * Whenever this object's toString() method is called, it
    * retrieves the latest statistics instance and re-evaluates it.
    */
-  public static final class SourceToString {
-
-    private final String origin;
+  private static final class SourceToString {
 
     private final IOStatisticsSource source;
 
-    public SourceToString(String origin, IOStatisticsSource source) {
-      this.origin = origin;
+    private SourceToString(@Nullable IOStatisticsSource source) {
       this.source = source;
     }
 
     @Override
     public String toString() {
       return source != null
-          ? ("Statistics of " + origin + " " + iostatisticsSourceToString(source))
+          ? sourceToString(source)
           : "";
     }
   }
@@ -100,26 +120,26 @@ public class IOStatisticsLogging {
    * Stringifier of statistics: low cost to instantiate and every
    * toString/logging will re-evaluate the statistics.
    */
-  public static final class StatisticsToString {
-
-    private final String origin;
+  private static final class StatisticsToString {
 
     private final IOStatistics statistics;
 
     /**
      * Constructor.
-     * @param origin source (for message)
      * @param statistics statistics
      */
-    public StatisticsToString(String origin, IOStatistics statistics) {
-      this.origin = origin;
+    private StatisticsToString(@Nullable IOStatistics statistics) {
       this.statistics = statistics;
     }
 
+    /**
+     * Evaluate and stringify the statistics.
+     * @return a string value.
+     */
     @Override
     public String toString() {
       return statistics != null
-          ? ("Statistics of " + origin + " " + iostatisticsToString(statistics))
+          ? iostatisticsToString(statistics)
           : "";
     }
   }

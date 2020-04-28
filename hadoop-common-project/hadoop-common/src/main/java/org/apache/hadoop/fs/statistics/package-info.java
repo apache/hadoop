@@ -45,8 +45,11 @@
  * to get its statistics.
  * If this is non-null, the client has statistics on the current
  * state of the statistics.
- * If dynamic, statistics can be enumerated and whenever
- * they are retrieved: the latest value will be returned.
+ *
+ * The expectation is that a statistics source is dynamic: when a value is
+ * looked up the most recent values are returned.
+ * When iterating through the set, the values of the iterator SHOULD
+ * be frozen at the time the iterator was requested.
  *
  * These statistics can be used to: log operations, profile applications, make
  * assertions about the state of the output.
@@ -68,7 +71,9 @@
  * IOStatistics keys SHOULD be standard names where possible.
  * </li>
  * <li>
- * MUST be unique to that specific instance of {@link IOStatisticsSource}.
+ * An IOStatistics instance MUST be unique to that specific instance of
+ * {@link org.apache.hadoop.fs.statistics.IOStatisticsSource}.
+ * (i.e. not shared the way StorageStatistics are)
  * </li>
  * <li>
  * MUST return the same values irrespective of which thread the statistics are

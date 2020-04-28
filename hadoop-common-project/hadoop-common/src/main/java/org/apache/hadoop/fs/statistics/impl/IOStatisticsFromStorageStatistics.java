@@ -27,7 +27,6 @@ import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 /**
  * This provides an IOStatistics implementation from a storage statistics
@@ -35,86 +34,51 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
  * If a null statistics instance is passed in, the statistics are empty.
  * This makes it possible to instantiate this from any filesystem.t
  */
-public class IOStatisticsFromStorageStatistics
-    implements IOStatisticsSource {
-
-  private final IOStatistics binding;
+final class IOStatisticsFromStorageStatistics
+    implements IOStatistics {
 
   /**
-   * Instantiate from a storage statistics instance, which may be null,
-   * in which case the statistics are empty.
-   * @param storageStatistics from storage statistics.
+   * Source.
    */
-  public IOStatisticsFromStorageStatistics(
+  private final StorageStatistics storageStatistics;
+
+  /**
+   * Keys, calculated in the constructor.
+   */
+  private final Set<String> keys;
+
+  IOStatisticsFromStorageStatistics(
       final StorageStatistics storageStatistics) {
-    if (storageStatistics != null) {
-      binding = new IOStatisticsBinding(storageStatistics);
-    } else {
-      binding = null;
+    Preconditions.checkArgument(storageStatistics != null,
+        "Null storage statistics");
+    this.storageStatistics = storageStatistics;
+    // build the keys.
+    keys = new TreeSet<>();
+    final Iterator<StorageStatistics.LongStatistic> st
+        = storageStatistics.getLongStatistics();
+    while (st.hasNext()) {
+      keys.add(st.next().getName());
     }
   }
 
-  /**
-   * Get any IO statistics.
-   * @return the IO statistics bound to.
-   */
   @Override
-  public IOStatistics getIOStatistics() {
-    return binding;
+  public Long getStatistic(final String key) {
+    return storageStatistics.getLong(key);
   }
 
-  /**
-   * The internal binding.
-   */
-  private static final class IOStatisticsBinding implements IOStatistics {
+  @Override
+  public boolean isTracked(final String key) {
+    return storageStatistics.isTracked(key);
+  }
 
-    /**
-     * Source.
-     */
-    private final StorageStatistics storageStatistics;
+  @Override
+  public Iterator<Map.Entry<String, Long>> iterator() {
+    return new MapEntryIterator(storageStatistics.getLongStatistics());
+  }
 
-    /**
-     * Keys, calculated in the constructor.
-     */
-    private final Set<String> keys;
-
-    private IOStatisticsBinding(final StorageStatistics storageStatistics) {
-      Preconditions.checkArgument(storageStatistics != null,
-          "Null storage statistics");
-      this.storageStatistics = storageStatistics;
-      // build the keys.
-      keys = new TreeSet<>();
-      final Iterator<StorageStatistics.LongStatistic> st
-          = storageStatistics.getLongStatistics();
-      while (st.hasNext()) {
-        keys.add(st.next().getName());
-      }
-    }
-
-    @Override
-    public boolean hasAttribute(final Attributes attr) {
-      return Attributes.Dynamic == attr;
-    }
-
-    @Override
-    public Long getStatistic(final String key) {
-      return storageStatistics.getLong(key);
-    }
-
-    @Override
-    public boolean isTracked(final String key) {
-      return storageStatistics.isTracked(key);
-    }
-
-    @Override
-    public Iterator<Map.Entry<String, Long>> iterator() {
-      return new MapEntryIterator(storageStatistics.getLongStatistics());
-    }
-
-    @Override
-    public Set<String> keys() {
-      return keys;
-    }
+  @Override
+  public Set<String> keys() {
+    return keys;
   }
 
   /**
@@ -125,7 +89,7 @@ public class IOStatisticsFromStorageStatistics
       implements Iterator<Map.Entry<String, Long>> {
 
     /**
-     * The iterator over the storage statistic s.
+     * The iterator over the storage statistics.
      */
     private final Iterator<StorageStatistics.LongStatistic> iterator;
 
@@ -141,8 +105,7 @@ public class IOStatisticsFromStorageStatistics
     @Override
     public Map.Entry<String, Long> next() {
       final StorageStatistics.LongStatistic entry = iterator.next();
-      return new IOStatisticsImplementationHelper.StatsMapEntry(
-          entry.getName(), entry.getValue());
+      return new StatsMapEntry(entry.getName(), entry.getValue());
     }
 
     @Override

@@ -126,7 +126,7 @@ import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationHelper;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
@@ -1966,8 +1966,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Override
   public IOStatistics getIOStatistics() {
-    return IOStatisticsImplementationHelper.createFromStorageStatistics(
-        storageStatistics).getIOStatistics();
+    return IOStatisticsBinding.fromStorageStatistics(
+        storageStatistics);
   }
 
   /**

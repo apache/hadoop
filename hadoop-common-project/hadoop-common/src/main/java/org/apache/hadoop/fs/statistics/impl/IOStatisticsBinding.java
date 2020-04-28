@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
-import java.util.Map;
+import java.io.Serializable;
 
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -27,78 +27,57 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 /**
  * Support for implementing IOStatistics interfaces.
  */
-public final class IOStatisticsImplementationHelper {
+public final class IOStatisticsBinding {
 
-  private IOStatisticsImplementationHelper() {
+  private IOStatisticsBinding() {
   }
 
   /**
-   * Wrap a (dynamic) source with a snapshot IOStatistics instance.
-   * @param source source
-   * @return a wrapped instance.
+   * Take a snapshot of the current statistics state.
+   * This is not an atomic option.
+   * The instance can be serialized.
+   * @param statistics statistics
+   * @return a snapshot of the current values.
    */
-  public static IOStatistics wrapWithSnapshot(IOStatistics source) {
-    return new SnapshotIOStatistics(source);
+  public static <X extends IOStatistics & Serializable> X snapshotStatistics(
+      IOStatistics statistics) {
+    return (X) new SnapshotIOStatistics(statistics);
   }
 
   /**
    * Create a builder for dynamic IO Statistics.
    * @return a builder to be completed.
    */
-  public static DynamicIOStatisticsBuilder
-    createDynamicIOStatistics() {
-
+  public static DynamicIOStatisticsBuilder dynamicIOStatistics() {
     return new DynamicIOStatisticsBuilder();
   }
 
   /**
-   * Create an IO statistics source from a storage statistics instance.
+   * Create  IOStatistics from a storage statistics instance.
    * This will be updated as the storage statistics change.
    * @param storageStatistics source data.
    * @return an IO statistics source.
    */
-  public static IOStatisticsSource createFromStorageStatistics(
+  public static IOStatistics fromStorageStatistics(
       StorageStatistics storageStatistics) {
     return new IOStatisticsFromStorageStatistics(storageStatistics);
   }
 
   /**
-   * A map entry for implementations to return.
+   * Get the shared instance of the immutable empty statistics
+   * object.
+   * @return an empty statistics object.
    */
-  static final class StatsMapEntry implements Map.Entry<String, Long> {
+  public static IOStatistics emptyStatistics() {
+    return EmptyIOStatistics.getInstance();
+  }
 
-    /**
-     * Key.
-     */
-    private final String key;
-
-    /**
-     * Value.
-     */
-    private Long value;
-
-    /**
-     * Constructor.
-     * @param key key
-     * @param value value
-     */
-    StatsMapEntry(final String key, final Long value) {
-      this.key = key;
-      this.value = value;
-    }
-
-    public String getKey() {
-      return key;
-    }
-
-    public Long getValue() {
-      return value;
-    }
-
-    @SuppressWarnings("NestedAssignment")
-    @Override
-    public Long setValue(final Long value) {
-      return this.value = value;
-    }
+  /**
+   * Take an IOStatistics instance and wrap it in a source.
+   * @param statistics statistics.
+   * @return a source which will return the values
+   */
+  public static IOStatisticsSource wrap(IOStatistics statistics) {
+    return new SourceWrappedStatistics(statistics);
   }
 }

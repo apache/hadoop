@@ -150,7 +150,7 @@ public abstract class FSInputStream extends InputStream
     final StringBuilder sb = new StringBuilder(super.toString());
     sb.append('{');
     if (this instanceof IOStatisticsSource) {
-      sb.append(IOStatisticsLogging.iostatisticsSourceToString(
+      sb.append(IOStatisticsLogging.sourceToString(
           (IOStatisticsSource) this));
     }
     sb.append('}');

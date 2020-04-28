@@ -19,22 +19,22 @@
 package org.apache.hadoop.fs.contract;
 
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
-import java.util.Set;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatistics.Attributes;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.*;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticValue;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_BYTES;
 
@@ -45,6 +45,9 @@ import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_
 public abstract class AbstractContractStreamIOStatisticsTest
     extends AbstractFSContractTestBase {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractContractStreamIOStatisticsTest.class);
+
   @Test
   public void testOutputStreamStatisticKeys() throws Throwable {
     describe("Look at the statistic keys of an output stream");
@@ -53,8 +56,6 @@ public abstract class AbstractContractStreamIOStatisticsTest
     fs.mkdirs(path.getParent());
     try (FSDataOutputStream out = fs.create(path, true)) {
       IOStatistics statistics = extractStatistics(out);
-      outputStreamAttributes().forEach(a ->
-          assertIOStatisticsHasAttribute(statistics, a));
       final List<String> keys = outputStreamStatisticKeys();
       Assertions.assertThat(statistics.keys())
           .describedAs("statistic keys of %s", statistics)
@@ -79,13 +80,14 @@ public abstract class AbstractContractStreamIOStatisticsTest
       // before a write, no bytes
       verifyStatisticValue(statistics, STREAM_WRITE_BYTES, 0);
       out.write('0');
-      statistics = maybeUpdate(statistics, out);
       verifyStatisticValue(statistics, STREAM_WRITE_BYTES, 1);
       // close the stream
       out.close();
       // statistics are still valid after the close
       // always call the output stream to check that behavior
       statistics = extractStatistics(out);
+      final String strVal = statistics.toString();
+      LOG.info("Statistics = {}", strVal);
       verifyStatisticValue(statistics, STREAM_WRITE_BYTES, 1);
     } finally {
       fs.delete(path, false);
@@ -108,7 +110,6 @@ public abstract class AbstractContractStreamIOStatisticsTest
       IOStatistics statistics = extractStatistics(out);
       verifyStatisticValue(statistics, STREAM_WRITE_BYTES, len);
       out.write(bytes);
-      statistics = maybeUpdate(statistics, out);
       verifyStatisticValue(statistics, STREAM_WRITE_BYTES, len * 2);
       // close the stream
       out.close();
@@ -129,8 +130,6 @@ public abstract class AbstractContractStreamIOStatisticsTest
     ContractTestUtils.touch(fs, path);
     try (FSDataInputStream in = fs.open(path)) {
       IOStatistics statistics = extractStatistics(in);
-      inputStreamAttributes().forEach(a ->
-          assertIOStatisticsHasAttribute(statistics, a));
       final List<String> keys = inputStreamStatisticKeys();
       Assertions.assertThat(statistics.keys())
           .describedAs("statistic keys of %s", statistics)
@@ -163,7 +162,7 @@ public abstract class AbstractContractStreamIOStatisticsTest
       byte[] buf128 = new byte[bufferLen];
       in.read(buf128);
       current = verifyStatisticValue(statistics, STREAM_READ_BYTES, current +
-          + bufferLen);
+          +bufferLen);
       in.readFully(buf128);
       current = verifyStatisticValue(statistics, STREAM_READ_BYTES, current
           + bufferLen);
@@ -202,27 +201,11 @@ public abstract class AbstractContractStreamIOStatisticsTest
   }
 
   /**
-   * Attributes of the output stream's statistics.
-   * @return all attributes which are expected.
-   */
-  public Set<Attributes> outputStreamAttributes() {
-    return EnumSet.of(Attributes.Dynamic);
-  }
-
-  /**
    * Keys which the output stream must support.
    * @return a list of keys
    */
   public List<String> outputStreamStatisticKeys() {
     return Collections.singletonList(STREAM_WRITE_BYTES);
-  }
-
-  /**
-   * Attributes of the input stream's statistics.
-   * @return all attributes which are expected.
-   */
-  public Set<Attributes> inputStreamAttributes() {
-    return EnumSet.of(Attributes.Dynamic);
   }
 
   /**

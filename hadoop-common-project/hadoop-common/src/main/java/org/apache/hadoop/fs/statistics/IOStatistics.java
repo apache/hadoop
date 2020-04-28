@@ -41,16 +41,11 @@ import org.apache.hadoop.classification.InterfaceStability;
  * The iterator is a possibly empty iterator over all monitored statistics.
  * <ol>
  *   <li>
- *     The attributes of an instance can be probed for with
- *     {@link #hasAttribute(Attributes)}.
- *   </li>
- *   <li>
  *     The set of statistic keys SHOULD remain unchanged, and MUST NOT
- *     ever remove keys.
+ *     remove keys.
  *   </li>
- *     The statistics MAY BE dynamic: every call to {@code iterator()}
+ *     The statistics SHOULD be dynamic: every call to {@code iterator()}
  *     MAY return a current/recent set of statistics.
- *     This
  *   </li>
  *   <li>
  *     The values MAY change across invocations of {@code iterator()}.
@@ -78,15 +73,6 @@ import org.apache.hadoop.classification.InterfaceStability;
  *     a call to @code iterator()} is thread safe.
  *     The actual Iterable returned MUST NOT be shared across threads.
  *   </li>
- *   <li>
- *     If the instance declares that it has the attribute {@link Attributes#Snapshotted},
- *     then it will take a snapshot of the attribute values in the call {@link #snapshot()}.
- *     These values MUST NOT change until a subsequent snapshot() operation.
- *   </li>
- *   <li>
- *     A snapshot MAY NOT be consistent, i.e. during the snapshot operation
- *     the underlying values may change.
- *   </li>
  *
  * </ol>
  */
@@ -108,22 +94,6 @@ public interface IOStatistics extends Iterable<Map.Entry<String, Long>> {
   boolean isTracked(String key);
 
   /**
-   * Probe for an attribute of this statistics set.
-   * @return true if the source has the attribute.
-   */
-  default boolean hasAttribute(Attributes attr) {
-    return false;
-  }
-
-  /**
-   * Create a snapshot; no-op if not supported.
-   * @return true if this call had any effect
-   */
-  default boolean snapshot() {
-    return false;
-  }
-
-  /**
    * Get the set of keys.
    * No guarantees are made about the mutability/immutability
    * of this set.
@@ -131,21 +101,4 @@ public interface IOStatistics extends Iterable<Map.Entry<String, Long>> {
    */
   Set<String> keys();
 
-  /**
-   * Possible attributes of the statistics.
-   * This is very limited right now
-   */
-  enum Attributes {
-    /** The attributes never update. */
-    Static,
-
-    /** The statistics are dynamic: when you re-read a value it may change. */
-    Dynamic,
-
-    /**
-     * The statistics are actually snapshots, updated when you call snapshot(),
-     * or iterator();
-     */
-    Snapshotted
-  }
 }

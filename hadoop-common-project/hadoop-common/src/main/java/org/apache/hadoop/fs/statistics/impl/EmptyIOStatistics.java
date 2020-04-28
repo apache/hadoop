@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
  * An empty IO Statistics implementation for classes which always
  * want to return a non-null set of statistics.
  */
-public final class EmptyIOStatistics implements IOStatistics {
+final class EmptyIOStatistics implements IOStatistics {
 
   /**
    * The sole instance of this class.
@@ -48,11 +48,6 @@ public final class EmptyIOStatistics implements IOStatistics {
   @Override
   public boolean isTracked(final String key) {
     return false;
-  }
-
-  @Override
-  public boolean hasAttribute(final Attributes attr) {
-    return Attributes.Static == attr;
   }
 
   @Override

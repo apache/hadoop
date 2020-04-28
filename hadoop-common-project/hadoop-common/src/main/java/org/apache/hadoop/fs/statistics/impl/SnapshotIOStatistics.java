@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
+import java.io.Serializable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -26,24 +27,35 @@ import java.util.TreeMap;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
 /**
- * Snapshotted IO statistics; will update on a call to snapshot().
+ * Snapshot of statistics from a different source.
+ * It is serializable so that frameworks which can use java serialization
+ * to propagate data (Spark, Flink...) can send the statistics
+ * back.
  */
-class SnapshotIOStatistics implements IOStatistics {
+class SnapshotIOStatistics implements IOStatistics, Serializable {
+
+
+  private static final long serialVersionUID = -1762522703841538084L;
 
   /**
    * Treemaps sort their insertions so the iterator is ordered.
+   * They are also serializable.
    */
-  private final Map<String, Long> entries
+  private final TreeMap<String, Long> entries
       = new TreeMap<>();
 
   /**
-   * Snapshot source.
+   * Construct from a source statistics instance.
+   * @param source source stats.
    */
-  private final IOStatistics source;
-
   SnapshotIOStatistics(final IOStatistics source) {
-    this.source = source;
-    snapshot();
+    snapshot(source);
+  }
+
+  /**
+   * Empty constructor is only for serialization.
+   */
+  private SnapshotIOStatistics() {
   }
 
   @Override
@@ -62,21 +74,22 @@ class SnapshotIOStatistics implements IOStatistics {
   }
 
   @Override
-  public boolean hasAttribute(final Attributes attr) {
-    return Attributes.Snapshotted == attr;
-  }
-
-  @Override
   public Set<String> keys() {
     return entries.keySet();
   }
 
-  @Override
-  public synchronized boolean snapshot() {
+  /**
+   * Take a snapshot.
+   * @param source statistics source.
+   */
+  private void snapshot(IOStatistics source) {
     entries.clear();
-    for (Map.Entry<String, Long> sourceEntry : source) {
-      entries.put(sourceEntry.getKey(), sourceEntry.getValue());
+    // MUST NOT use iterator() because IOStatistics implementations
+    // may create a snapshot when iterator() is invoked;
+    // enumerating keys and querying values avoids stack
+    // overflows
+    for (String key : source.keys()) {
+      entries.put(key, source.getStatistic(key));
     }
-    return true;
   }
 }
