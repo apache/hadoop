@@ -172,15 +172,6 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
   }
 
   @Test
-  public void testInitNegativeRead() throws Throwable {
-    intercept(CommandFormat.UnknownOptionException.class,
-        () -> run(Init.NAME,
-            "-meta", LOCAL_METADATA,
-            "-region", "eu-west-1",
-            "-read", "-10", "s3a://bucket"));
-  }
-
-  @Test
   public void testInit() throws Throwable {
     run(Init.NAME,
         "-meta", LOCAL_METADATA,
