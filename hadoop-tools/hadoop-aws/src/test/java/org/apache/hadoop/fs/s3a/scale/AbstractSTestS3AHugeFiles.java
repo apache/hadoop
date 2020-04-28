@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
+import org.assertj.core.api.Assertions;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -223,6 +224,9 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     LOG.info("Statistics after stream closed: {}", streamStatistics);
     long putRequestCount = storageStatistics.getLong(putRequests);
     Long putByteCount = storageStatistics.getLong(putBytes);
+    Assertions.assertThat(putRequestCount)
+        .describedAs("Put request count from filesystem stats")
+        .isGreaterThan(0);
     LOG.info("PUT {} bytes in {} operations; {} MB/operation",
         putByteCount, putRequestCount,
         putByteCount / (putRequestCount * _1MB));
