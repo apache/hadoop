@@ -19,16 +19,12 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.gpu;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -45,8 +41,10 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
-import org.junit.After;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformation;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.PerGpuDeviceInformation;
 import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -55,25 +53,15 @@ import org.junit.rules.ExpectedException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyList;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class TestGpuResourceHandler {
   private CGroupsHandler mockCGroupsHandler;
@@ -177,7 +165,66 @@ public class TestGpuResourceHandler {
     mockDiscoverer.initialize(conf, nvidiaBinaryHelper);
 
     expected.expect(ResourceHandlerException.class);
+
+
+  }
+  @Test
+  public void testHostDeniedGpuDevicesWithMockGpuDiscoverer() throws Exception {
+    GpuDiscoverer mockDiscoverer = mock(GpuDiscoverer.class);
+    PerGpuDeviceInformation perGpuDeviceInformation1=new PerGpuDeviceInformation();
+    perGpuDeviceInformation1.setMinorNumber(0);
+    PerGpuDeviceInformation perGpuDeviceInformation2=new PerGpuDeviceInformation();
+    perGpuDeviceInformation2.setMinorNumber(1);
+    PerGpuDeviceInformation perGpuDeviceInformation3=new PerGpuDeviceInformation();
+    perGpuDeviceInformation3.setMinorNumber(2);
+
+    List<PerGpuDeviceInformation> gpus= Lists.newArrayList(perGpuDeviceInformation1,perGpuDeviceInformation2,perGpuDeviceInformation3);
+    GpuDeviceInformation gpuDeviceInformation=new GpuDeviceInformation();
+    gpuDeviceInformation.setGpus(gpus);
+
+
+    GpuDevice gpuDevice1=new GpuDevice(0,0);
+    GpuDevice gpuDevice2=new GpuDevice(1,1);
+    List<GpuDevice> usableGpuDevices=Lists.newArrayList(gpuDevice1,gpuDevice2);
+    Configuration conf = new YarnConfiguration();
+    when(mockDiscoverer.getGpuDeviceInformation()).thenReturn(gpuDeviceInformation);
+    when(mockDiscoverer.getGpusUsableByYarn()).thenReturn(usableGpuDevices);
+
+    mockCGroupsHandler = mock(CGroupsHandler.class);
+    mockPrivilegedExecutor = mock(PrivilegedOperationExecutor.class);
+    mockNMStateStore = mock(NMStateStoreService.class);
+
+    Context nmContext = createMockNmContext(conf);
+
+    gpuResourceHandler = new GpuResourceHandlerImpl(nmContext,
+            mockCGroupsHandler, mockPrivilegedExecutor, mockDiscoverer);
+
+
     gpuResourceHandler.bootstrap(conf);
+    GpuResourceAllocator gpuAllocator=gpuResourceHandler.getGpuAllocator();
+    List<GpuDevice> deniedGpuDevices=gpuAllocator.getDeniedGpuDevices();
+    assertEquals("Expected deniedGpuDevices number not right", 1,
+            deniedGpuDevices.size());
+
+    Container container = mockContainerWithGpuRequest(1,
+            createResourceRequest(1));
+    GpuResourceAllocator.GpuAllocation gpuAllocation=gpuAllocator.assignGpus(container);
+    assertEquals("Expected deniedGpuDevices number not right", 2,
+            gpuAllocation.getDeniedGPUs().size());
+    assertEquals("Expected allowedGpuDevices number not right", 1,
+            gpuAllocation.getAllowedGPUs().size());
+
+
+
+
+
+
+
+
+
+
+
+
   }
 
   private static ContainerId getContainerId(int id) {
@@ -568,6 +615,7 @@ public class TestGpuResourceHandler {
     assertTrue(
         "Should fail since requested device Id is not in allowed list",
         caughtException);
+
 
     // Make sure internal state not changed.
     deviceAllocationMapping =
