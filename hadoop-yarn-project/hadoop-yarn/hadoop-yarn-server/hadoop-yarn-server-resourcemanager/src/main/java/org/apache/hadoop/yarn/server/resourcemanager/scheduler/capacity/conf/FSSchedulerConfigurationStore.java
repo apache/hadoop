@@ -348,6 +348,7 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
     return CURRENT_VERSION_INFO;
   }
 
+  @Override
   public void close() throws IOException {
     if (fileSystem != null) {
       fileSystem.close();
