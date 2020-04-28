@@ -57,6 +57,7 @@ public class GpuResourceAllocator {
   private static final int WAIT_MS_PER_LOOP = 1000;
 
   private Set<GpuDevice> allowedGpuDevices = new TreeSet<>();
+  private Set<GpuDevice> deniedGpuDevices = new TreeSet<>();
   private Map<GpuDevice, ContainerId> usedDevices = new TreeMap<>();
   private Context nmContext;
   private final int waitPeriodForResource;
@@ -106,6 +107,14 @@ public class GpuResourceAllocator {
    */
   public synchronized void addGpu(GpuDevice gpuDevice) {
     allowedGpuDevices.add(gpuDevice);
+  }
+
+  /**
+   * Add GPU to the denied list of GPUs.
+   * @param gpuDevice gpu device
+   */
+  public synchronized void addDeniedGpu(GpuDevice gpuDevice) {
+    deniedGpuDevices.add(gpuDevice);
   }
 
   @VisibleForTesting
@@ -263,9 +272,11 @@ public class GpuResourceAllocator {
           throw new ResourceHandlerException(e);
         }
       }
+      Set<GpuDevice> deniedGPUs=Sets.difference(allowedGpuDevices, assignedGpus);
+      deniedGPUs=Sets.union(deniedGpuDevices,deniedGPUs);
 
-      return new GpuAllocation(assignedGpus,
-          Sets.difference(allowedGpuDevices, assignedGpus));
+
+      return new GpuAllocation(assignedGpus,deniedGPUs);
     }
     return new GpuAllocation(null, allowedGpuDevices);
   }
@@ -303,6 +314,9 @@ public class GpuResourceAllocator {
 
   public synchronized List<GpuDevice> getAllowedGpus() {
     return ImmutableList.copyOf(allowedGpuDevices);
+  }
+  public synchronized List<GpuDevice> getDeniedGpuDevices() {
+    return ImmutableList.copyOf(deniedGpuDevices);
   }
 
   public synchronized List<AssignedGpuDevice> getAssignedGpus() {
