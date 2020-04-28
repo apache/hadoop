@@ -30,9 +30,9 @@ import java.util.List;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 
-import org.junit.Assume;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
@@ -40,6 +40,8 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.UnknownStoreException;
 
+import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_LOCAL;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVFile;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.*;
@@ -58,12 +60,17 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
       "-force", "-verbose"};
 
   @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_LOCAL);
+    return conf;
+  }
+
+  @Override
   public void setup() throws Exception {
     super.setup();
-    MetadataStore ms = getMetadataStore();
-    Assume.assumeTrue("Test only applies when a local store is used for S3Guard;"
-            + "Store is " + (ms == null ? "none" : ms.toString()),
-        ms instanceof LocalMetadataStore);
+    assertTrue("metadata store impl should be LocalMetadataStore.",
+        getMetadataStore() instanceof LocalMetadataStore);
   }
 
   @Test
