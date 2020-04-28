@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.UnknownStoreException;
-import org.apache.hadoop.fs.shell.CommandFormat;
 
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVFile;
