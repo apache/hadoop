@@ -203,8 +203,7 @@ import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class S3AFileSystem extends FileSystem implements StreamCapabilities,
-    AWSPolicyProvider, DelegationTokenProvider,
-    IOStatisticsSource {
+    AWSPolicyProvider, DelegationTokenProvider, IOStatisticsSource {
   /**
    * Default blocksize as used in blocksize and FS status queries.
    */
@@ -1755,6 +1754,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   protected void incrementStatistic(Statistic statistic, long count) {
     statisticsContext.incrementCounter(statistic, count);
+    storageStatistics.incrementCounter(statistic, count);
   }
 
   /**

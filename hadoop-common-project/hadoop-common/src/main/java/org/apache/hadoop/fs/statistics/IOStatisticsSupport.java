@@ -37,7 +37,8 @@ public final class IOStatisticsSupport {
   /**
    * Take a snapshot of the current statistics state.
    * This is not an atomic option.
-   * The instance can be serialized.
+   * The instance can be serialized,. and it's
+   * {@code toString()} method lists all the values.
    * @param statistics statistics
    * @return a snapshot of the current values.
    */

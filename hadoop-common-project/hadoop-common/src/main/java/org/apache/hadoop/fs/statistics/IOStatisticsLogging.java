@@ -43,13 +43,18 @@ public class IOStatisticsLogging {
   public static String iostatisticsToString(
       @Nullable final IOStatistics statistics) {
     if (statistics != null) {
-      StringBuilder sb = new StringBuilder("( ");
+      int count = 0;
+      StringBuilder sb = new StringBuilder("(");
       for (Map.Entry entry : statistics) {
+        if (count > 0) {
+          sb.append(' ');
+        }
+        count++;
         sb.append("(")
             .append(entry.getKey())
-            .append(", ")
+            .append("=")
             .append(entry.getValue())
-            .append(") ");
+            .append(")");
       }
       sb.append(")");
       return sb.toString();
@@ -80,7 +85,8 @@ public class IOStatisticsLogging {
    * This is for use in log statements where for the cost of creation
    * of this entry is low; it is affordable to use in log statements.
    */
-   public static Object stringify(@Nullable IOStatisticsSource source) {
+   public static Object demandStringify(
+       @Nullable IOStatisticsSource source) {
      return new SourceToString(source);
   }
 
@@ -91,7 +97,7 @@ public class IOStatisticsLogging {
    * This is for use in log statements where for the cost of creation
    * of this entry is low; it is affordable to use in log statements.
    */
-   public static Object stringify(@Nullable IOStatistics source) {
+   public static Object demandStringify(@Nullable IOStatistics source) {
      return new StatisticsToString(source);
   }
 

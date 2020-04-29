@@ -111,7 +111,6 @@ public class StreamStatisticNames {
   public static final String STREAM_READ_SEEK_BACKWARD_OPERATIONS =
       "stream_read_seek_backward_operations";
 
-
   /** {@value}. */
   public static final String STREAM_WRITE_FAILURES =
       "stream_write_failures";
