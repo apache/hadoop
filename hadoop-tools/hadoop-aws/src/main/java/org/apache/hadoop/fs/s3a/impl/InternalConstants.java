@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.Constants;
 
@@ -94,9 +96,13 @@ public final class InternalConstants {
   public static final String X_DIRECTORY =
       "application/x-directory";
 
+  @VisibleForTesting
+  public static final String UPLOAD_PART_COUNT_LIMIT =
+          "fs.s3a.upload.part.count.limit";
+
   /**
    * Maximum entries you can upload in a single file write/copy/upload.
    * Value: {@value}.
    */
-  public static final int UPLOAD_PART_COUNT_LIMIT = 10000;
+  public static final int DEFAULT_UPLOAD_PART_COUNT_LIMIT = 10000;
 }

@@ -483,7 +483,7 @@ public class CommitOperations {
       if (numParts == 0) {
         numParts = 1;
       }
-      if (numParts >= InternalConstants.UPLOAD_PART_COUNT_LIMIT) {
+      if (numParts > InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT) {
         // fail if the file is too big.
         // it would be possible to be clever here and recalculate the part size,
         // but this is not currently done.
