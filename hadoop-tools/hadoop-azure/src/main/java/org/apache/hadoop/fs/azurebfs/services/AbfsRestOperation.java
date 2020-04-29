@@ -61,10 +61,16 @@ public class AbfsRestOperation {
   private int bufferOffset;
   private int bufferLength;
 
+  private boolean isARetriedRequest = false;
+
   private AbfsHttpOperation result;
 
   public AbfsHttpOperation getResult() {
     return result;
+  }
+
+  public boolean isARetriedRequest() {
+    return isARetriedRequest;
   }
 
   /**
@@ -133,6 +139,7 @@ public class AbfsRestOperation {
     LOG.debug("First execution of REST operation - {}", operationType);
     while (!executeHttpOperation(retryCount++)) {
       try {
+        isARetriedRequest = true;
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
         Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));

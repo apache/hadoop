@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -321,6 +322,21 @@ public class AbfsClient implements Closeable {
             url,
             requestHeaders);
     op.execute();
+
+    if ((op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) &&
+        op.isARetriedRequest()) {
+      // Driver retried the rename request
+      // the first failing request might have succeeded at server.
+      // Server has returned HTTP 404, which means rename source no longer
+      // exists. Check if destination path is present and return success.
+
+      final AbfsRestOperation destStatusOp = getPathStatus(destination);
+      if (destStatusOp.getResult().getStatusCode() == HttpURLConnection.HTTP_OK) {
+        return destStatusOp;
+      }
+
+    }
+
     return op;
   }
 
@@ -459,6 +475,22 @@ public class AbfsClient implements Closeable {
             url,
             requestHeaders);
     op.execute();
+
+    if ((op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) &&
+        op.isARetriedRequest()) {
+      // Driver retried the delete request
+      // the first failing request might have succeeded at server.
+      // Server has returned HTTP 404, which means path no longer
+      // exists, return success.
+      final AbfsRestOperation successOp = new AbfsRestOperation(
+          AbfsRestOperationType.DeletePath,
+          this,
+          HTTP_METHOD_DELETE,
+          url,
+          requestHeaders);
+
+    }
+
     return op;
   }
 
