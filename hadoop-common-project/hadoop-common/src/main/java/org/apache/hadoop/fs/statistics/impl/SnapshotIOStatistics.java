@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 
 /**
  * Snapshot of statistics from a different source.
@@ -91,5 +92,10 @@ class SnapshotIOStatistics implements IOStatistics, Serializable {
     for (String key : source.keys()) {
       entries.put(key, source.getStatistic(key));
     }
+  }
+
+  @Override
+  public String toString() {
+    return IOStatisticsLogging.iostatisticsToString(this);
   }
 }

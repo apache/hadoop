@@ -215,7 +215,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testStringification2() throws Throwable {
-    assertThat(IOStatisticsLogging.stringify(statistics)
+    assertThat(IOStatisticsLogging.demandStringify(statistics)
         .toString())
         .contains(keys);
   }

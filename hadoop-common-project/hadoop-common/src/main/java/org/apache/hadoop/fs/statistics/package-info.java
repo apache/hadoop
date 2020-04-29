@@ -20,7 +20,7 @@
  * This package contains support for statistic collection and reporting.
  * This is the public API; implementation classes are to be kept elsewhere.
  *
- * This package is defines two interfaces
+ * This package defines two interfaces:
  *
  * {@link org.apache.hadoop.fs.statistics.IOStatisticsSource}:
  * a source of statistic data, which can be retrieved
@@ -37,23 +37,23 @@
  * that if a statistics instance is dynamic, there is no atomicity when querying
  * multiple statistics. If the statistics source was a closeable object (e.g. a
  * stream), the statistics MUST remain valid after the stream is closed.
- *
+ * <p>
  * Use pattern:
- *
+ * <p>
  * An application probes an object (filesystem, stream etc) for implementation of
  * {@code IOStatisticsSource}, and, if it is, calls {@code getIOStatistics()}
  * to get its statistics.
  * If this is non-null, the client has statistics on the current
  * state of the statistics.
- *
+ * <p>
  * The expectation is that a statistics source is dynamic: when a value is
  * looked up the most recent values are returned.
  * When iterating through the set, the values of the iterator SHOULD
  * be frozen at the time the iterator was requested.
- *
+ * <p>
  * These statistics can be used to: log operations, profile applications, make
  * assertions about the state of the output.
- *
+ * <p>
  * The names of statistics are a matter of choice of the specific source.
  * However, {@link org.apache.hadoop.fs.statistics.StoreStatisticNames}
  * contains a
@@ -61,10 +61,22 @@
  * {@link org.apache.hadoop.fs.statistics.StreamStatisticNames} declares
  * recommended names for statistics provided for
  * input and output streams.
+ * <p>
+ * Utility classes are includes to assist use
+ * <ul>
+ *   <li>
+ *     {@link org.apache.hadoop.fs.statistics.IOStatisticsSupport}.
+ *     General support, including the ability to take a serializable
+ *     snapshot of the current state of an IOStatistics instance.
+ *   </li>
+ *   <li>
+ *     {@link org.apache.hadoop.fs.statistics.IOStatisticsLogging}.
+ *     Methods for robust/on-demand string conversion, designed
+ *     for use in logging statements and {@code toString()} implementations.
+ *   </li>
+ * </ul>
  *
- * They can also be serialized to build statistics on the overall cost of
- * operations, or printed to help diagnose performance/cost issues.
- *
+ * <p>
  * Implementors notes
  * <ol>
  * <li>

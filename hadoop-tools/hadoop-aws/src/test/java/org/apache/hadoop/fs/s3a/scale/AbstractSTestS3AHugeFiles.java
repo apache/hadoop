@@ -43,11 +43,16 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringify;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshot;
 
 /**
  * Scale test which creates a huge file.
@@ -104,7 +109,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         KEY_HUGE_PARTITION_SIZE,
         DEFAULT_HUGE_PARTITION_SIZE);
     assertTrue("Partition size too small: " + partitionSize,
-        partitionSize > MULTIPART_MIN_SIZE);
+        partitionSize >= MULTIPART_MIN_SIZE);
     conf.setLong(SOCKET_SEND_BUFFER, _1MB);
     conf.setLong(SOCKET_RECV_BUFFER, _1MB);
     conf.setLong(MIN_MULTIPART_THRESHOLD, partitionSize);
@@ -222,10 +227,18 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     logFSState();
     bandwidth(timer, filesize);
     LOG.info("Statistics after stream closed: {}", streamStatistics);
+    IOStatistics iostats = snapshot(retrieveIOStatistics(getFileSystem()));
+    LOG.info("IOStatistics after upload: {}",
+        demandStringify(iostats));
     long putRequestCount = storageStatistics.getLong(putRequests);
     Long putByteCount = storageStatistics.getLong(putBytes);
     Assertions.assertThat(putRequestCount)
-        .describedAs("Put request count from filesystem stats")
+        .describedAs("Put request count from filesystem stats %s",
+            iostats)
+        .isGreaterThan(0);
+    Assertions.assertThat(putByteCount)
+        .describedAs("putByteCount count from filesystem stats %s",
+            iostats)
         .isGreaterThan(0);
     LOG.info("PUT {} bytes in {} operations; {} MB/operation",
         putByteCount, putRequestCount,

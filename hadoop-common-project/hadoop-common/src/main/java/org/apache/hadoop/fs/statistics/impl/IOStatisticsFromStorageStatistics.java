@@ -31,8 +31,6 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 /**
  * This provides an IOStatistics implementation from a storage statistics
  * instance.
- * If a null statistics instance is passed in, the statistics are empty.
- * This makes it possible to instantiate this from any filesystem.t
  */
 final class IOStatisticsFromStorageStatistics
     implements IOStatistics {
@@ -93,7 +91,8 @@ final class IOStatisticsFromStorageStatistics
      */
     private final Iterator<StorageStatistics.LongStatistic> iterator;
 
-    private MapEntryIterator(final Iterator<StorageStatistics.LongStatistic> iterator) {
+    private MapEntryIterator(
+        final Iterator<StorageStatistics.LongStatistic> iterator) {
       this.iterator = iterator;
     }
 
@@ -108,10 +107,6 @@ final class IOStatisticsFromStorageStatistics
       return new StatsMapEntry(entry.getName(), entry.getValue());
     }
 
-    @Override
-    public void remove() {
-      iterator.remove();
-    }
   }
 
 }
