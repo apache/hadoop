@@ -984,7 +984,10 @@ public class NetworkTopology {
     int idx = 0;
     for (List<T> list: tree.values()) {
       if (list != null) {
-        secondarySort.accept(list);
+        Collections.shuffle(list, r);
+        if (secondarySort != null) {
+          secondarySort.accept(list);
+        }
         for (T n: list) {
           nodes[idx] = n;
           idx++;
