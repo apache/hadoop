@@ -548,8 +548,7 @@ public class DatanodeManager {
   }
 
   private Consumer<List<DatanodeInfo>> createSecondaryNodeSorter() {
-    Consumer<List<DatanodeInfo>> secondarySort =
-        list -> Collections.shuffle(list);
+    Consumer<List<DatanodeInfo>> secondarySort = null;
     if (readConsiderLoad) {
       Comparator<DatanodeInfo> comp =
           Comparator.comparingInt(DatanodeInfo::getXceiverCount);
